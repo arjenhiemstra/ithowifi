@@ -85,6 +85,6 @@ power supply (about 16,3 volts and definitely able to handle more than the 500mA
 but will probably generate lots of heat (up to 5 watts) because of big voltage drop.
 Therefore I selected the DC-DC converter from recom, very small package, high efficiency (90%).
 
-Credits:
-Basic web interface based on: https://github.com/SasaKaranovic/ESP-IoT-Dimmer
-MQTT implementation based on: https://github.com/srijansaxena11/ESP8266-MQTT-WiFi-Dimmer-PIR/
+Credits:  
+   Basic web interface based on: https://github.com/SasaKaranovic/ESP-IoT-Dimmer  
+   MQTT implementation based on: https://github.com/srijansaxena11/ESP8266-MQTT-WiFi-Dimmer-PIR/  
