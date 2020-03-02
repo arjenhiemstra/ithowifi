@@ -1,0 +1,264 @@
+EESchema Schematic File Version 4
+EELAYER 30 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L Regulator_Switching:R-78E5.0-0.5 R-78E5.0-1.0
+U 1 1 5E596DC0
+P 8225 3775
+F 0 "R-78E5.0-1.0" H 8225 4017 50  0000 C CNN
+F 1 "U2" H 8225 3926 50  0000 C CNN
+F 2 "Converter_DCDC:Converter_DCDC_RECOM_R-78E-0.5_THT" H 8275 3525 50  0001 L CIN
+F 3 "https://www.recom-power.com/pdf/Innoline/R-78Exx-0.5.pdf" H 8225 3775 50  0001 C CNN
+	1    8225 3775
+	1    0    0    -1  
+$EndComp
+$Comp
+L Isolator:ISO1540 ISO1540
+U 1 1 5E593DDE
+P 6175 2950
+F 0 "ISO1540" H 6175 3317 50  0000 C CNN
+F 1 "U3" H 6175 3226 50  0000 C CNN
+F 2 "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm" H 6175 2600 50  0001 C CNN
+F 3 "http://www.ti.com/lit/ds/symlink/iso1541.pdf" H 6175 3000 50  0001 C CNN
+	1    6175 2950
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R_SDA1
+U 1 1 5E59EF11
+P 5275 2675
+F 0 "R_SDA1" H 5325 2700 50  0000 L CNN
+F 1 "R4.7K" H 5350 2625 50  0000 L CNN
+F 2 "Resistor_THT:R_Axial_DIN0309_L9.0mm_D3.2mm_P2.54mm_Vertical" V 5205 2675 50  0001 C CNN
+F 3 "~" H 5275 2675 50  0001 C CNN
+	1    5275 2675
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:R R_SCL1
+U 1 1 5E59F4DA
+P 5375 2675
+F 0 "R_SCL1" H 5050 2700 50  0000 L CNN
+F 1 "R4.7K" H 5100 2625 50  0000 L CNN
+F 2 "Resistor_THT:R_Axial_DIN0309_L9.0mm_D3.2mm_P2.54mm_Vertical" V 5305 2675 50  0001 C CNN
+F 3 "~" H 5375 2675 50  0001 C CNN
+	1    5375 2675
+	-1   0    0    1   
+$EndComp
+$Comp
+L power:GND #PWR0102
+U 1 1 5E5C19D8
+P 6175 5000
+F 0 "#PWR0102" H 6175 4750 50  0001 C CNN
+F 1 "GND" H 6180 4827 50  0000 C CNN
+F 2 "" H 6175 5000 50  0001 C CNN
+F 3 "" H 6175 5000 50  0001 C CNN
+	1    6175 5000
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	6575 3150 6700 3150
+Wire Wire Line
+	6700 3150 6700 3350
+Wire Wire Line
+	5675 3350 5675 3150
+Wire Wire Line
+	5675 3150 5775 3150
+$Comp
+L power:+5V #PWR0103
+U 1 1 5E5C2ADB
+P 8800 3700
+F 0 "#PWR0103" H 8800 3550 50  0001 C CNN
+F 1 "+5V" H 8815 3873 50  0000 C CNN
+F 2 "" H 8800 3700 50  0001 C CNN
+F 3 "" H 8800 3700 50  0001 C CNN
+	1    8800 3700
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8525 3775 8800 3775
+Wire Wire Line
+	8800 3775 8800 3700
+$Comp
+L power:+5V #PWR0104
+U 1 1 5E5C3414
+P 6700 2400
+F 0 "#PWR0104" H 6700 2250 50  0001 C CNN
+F 1 "+5V" H 6715 2573 50  0000 C CNN
+F 2 "" H 6700 2400 50  0001 C CNN
+F 3 "" H 6700 2400 50  0001 C CNN
+	1    6700 2400
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	6575 2850 6700 2850
+$Comp
+L MCU_NodeMCU:ESP12E_DEVKIT ESP8266_NodeMCU_v2
+U 1 1 5E5CF886
+P 4450 3650
+F 0 "ESP8266_NodeMCU_v2" H 4450 4617 50  0000 C CNN
+F 1 "U1" H 4450 4526 50  0000 C CNN
+F 2 "ESP12E_DEVKIT" H 4450 3650 50  0001 L BNN
+F 3 "" H 4450 3650 50  0001 C CNN
+	1    4450 3650
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5475 3150 5475 2950
+Wire Wire Line
+	5475 2950 5775 2950
+$Comp
+L power:+5V #PWR0105
+U 1 1 5E5F16A3
+P 3425 4200
+F 0 "#PWR0105" H 3425 4050 50  0001 C CNN
+F 1 "+5V" H 3440 4373 50  0000 C CNN
+F 2 "" H 3425 4200 50  0001 C CNN
+F 3 "" H 3425 4200 50  0001 C CNN
+	1    3425 4200
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3750 4350 3425 4350
+Wire Wire Line
+	3425 4350 3425 4200
+Wire Wire Line
+	5575 3450 5575 2850
+Wire Wire Line
+	6700 3350 6175 3350
+Wire Wire Line
+	6700 2400 6700 2850
+Wire Wire Line
+	5775 3050 5375 3050
+$Comp
+L power:+3V3 #PWR0107
+U 1 1 5E626D17
+P 5675 2400
+F 0 "#PWR0107" H 5675 2250 50  0001 C CNN
+F 1 "+3V3" H 5690 2573 50  0000 C CNN
+F 2 "" H 5675 2400 50  0001 C CNN
+F 3 "" H 5675 2400 50  0001 C CNN
+	1    5675 2400
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5150 3150 5275 3150
+Wire Wire Line
+	5575 2850 5675 2850
+Wire Wire Line
+	5275 2525 5275 2475
+Wire Wire Line
+	5275 2475 5375 2475
+Wire Wire Line
+	5675 2475 5675 2400
+Wire Wire Line
+	5675 2475 5675 2850
+Connection ~ 5675 2475
+Connection ~ 5675 2850
+Wire Wire Line
+	5675 2850 5775 2850
+Wire Wire Line
+	5375 2525 5375 2475
+Connection ~ 5375 2475
+Wire Wire Line
+	5375 2475 5675 2475
+Wire Wire Line
+	5375 2825 5375 3050
+Connection ~ 5375 3050
+Wire Wire Line
+	5375 3050 5150 3050
+Wire Wire Line
+	5275 2825 5275 3150
+Connection ~ 5275 3150
+Wire Wire Line
+	5275 3150 5475 3150
+$Comp
+L power:+3V3 #PWR0101
+U 1 1 5E64AB8C
+P 3425 3800
+F 0 "#PWR0101" H 3425 3650 50  0001 C CNN
+F 1 "+3V3" H 3440 3973 50  0000 C CNN
+F 2 "" H 3425 3800 50  0001 C CNN
+F 3 "" H 3425 3800 50  0001 C CNN
+	1    3425 3800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3750 3950 3425 3950
+Wire Wire Line
+	3425 3800 3425 3950
+Wire Wire Line
+	3750 3850 3625 3850
+Wire Wire Line
+	3625 3850 3625 4800
+Text GLabel 7725 3775 3    50   Input ~ 0
++16V3
+Wire Wire Line
+	3625 4800 6175 4800
+Wire Wire Line
+	6175 5000 6175 4800
+Connection ~ 6175 4800
+Wire Wire Line
+	6175 4800 6175 4250
+Connection ~ 6175 3350
+Wire Wire Line
+	6175 3350 5675 3350
+Wire Wire Line
+	5150 3550 6175 3550
+Connection ~ 6175 3550
+Wire Wire Line
+	6175 3550 6175 3350
+Wire Wire Line
+	5150 4250 6175 4250
+Connection ~ 6175 4250
+Wire Wire Line
+	6175 4250 6175 3550
+Wire Wire Line
+	5150 3450 5575 3450
+Wire Wire Line
+	5575 3450 5575 4350
+Wire Wire Line
+	5150 4350 5575 4350
+Connection ~ 5575 3450
+$Comp
+L Connector_Generic:Conn_02x04_Odd_Even J1
+U 1 1 5E609161
+P 7275 3675
+F 0 "J1" H 7325 3992 50  0000 C CNN
+F 1 "conn" H 7325 3901 50  0000 C CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_2x04_P2.54mm_Vertical" H 7275 3675 50  0001 C CNN
+F 3 "~" H 7275 3675 50  0001 C CNN
+	1    7275 3675
+	1    0    0    1   
+$EndComp
+Wire Wire Line
+	7575 3775 7925 3775
+Wire Wire Line
+	6175 4800 8225 4800
+Wire Wire Line
+	8225 4075 8225 4800
+Wire Wire Line
+	7075 3475 6925 3475
+Wire Wire Line
+	6925 3475 6925 2950
+Wire Wire Line
+	6925 2950 6575 2950
+Wire Wire Line
+	7675 3050 7675 3475
+Wire Wire Line
+	7675 3475 7575 3475
+Wire Wire Line
+	6575 3050 7675 3050
+$EndSCHEMATC

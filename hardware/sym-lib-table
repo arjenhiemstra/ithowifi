@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name MCU_NodeMCU)(type Legacy)(uri "${KIPRJMOD}/KiCad lib/MCU_NodeMCU.lib")(options "")(descr ""))
+)
