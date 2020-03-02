@@ -49,8 +49,8 @@ It is possible to have others values for e (0, 64, 128, 192) for even more contr
 
 A sample hardware design (KiCad) is included, this module can be plugged on the Itho main PCB directly without extra components.
 
-![alt text](https://github.com/arjenhiemstra/images/ithowifi_board_topmside.png "PCB Top")
-![alt text](https://github.com/arjenhiemstra/images/ithowifi_board_bottommside.png "PCB Bottom")
+![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_topside.png "PCB Top")
+![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_bottomside.png "PCB Bottom")
 
 
 PoC is done and working, PCBs have been ordered. I will update this page when the boards arrive and are proven to be working. I will have a few spare boards left then for those
