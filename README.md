@@ -40,7 +40,7 @@ Where:
    uint8_t e = 0  
    uint8_t h = 0 - (67 + b)  
 
-It is possible to have others values for e (0, 64, 128, 192) for even more control steps, the complete formula then will be:
+It is possible to have other values for e (0, 64, 128, 192) for even more control steps, the complete formula for h will be:
 
    uint8_t h = (0-e) - (67+b)  
 
