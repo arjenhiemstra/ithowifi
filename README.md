@@ -50,6 +50,8 @@ It is possible to have other values for e (0, 64, 128, 192) for even more contro
 A sample hardware design (KiCad) is included, this module can be plugged on the Itho main PCB directly without extra components.
 *Tested with Itho Daalderop CVE from late 2013 and 2019 (PCB no. 545-5103 and 05-00492)
 
+![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/itho%20pcb.jpg "Itho main PCB")
+![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/itho%20pcb%20with%20add-on%20mockup.jpg "Itho main PCB with add-on mock-up")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_topside.png "PCB Top")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_bottomside.png "PCB Bottom")
 
@@ -71,7 +73,7 @@ Amount | Part
 
 Choice of components:
 
-ESP8266 NodeMCU DevKit (or similar): 
+ESP8266 NodeMCU DevKit (https://github.com/nodemcu/nodemcu-devkit-v1.0) (or similar): 
 readily available at low prices. Easy to integrate in projects.
 
 ISO1540/ADUM 1250 ARZ: 
