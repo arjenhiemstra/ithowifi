@@ -84,3 +84,7 @@ the regulator (7805) on the itho mainboard is not suitable to drive extra loads 
 power supply (about 16,3 volts and definitely able to handle more than the 500mA of the on board regulator). Placing a 7805 (or similar) on the add-on board is possible 
 but will probably generate lots of heat (up to 5 watts) because of big voltage drop.
 Therefore I selected the DC-DC converter from recom, very small package, high efficiency (90%).
+
+Credits:
+Basic web interface based on: https://github.com/SasaKaranovic/ESP-IoT-Dimmer
+MQTT implementation based on: https://github.com/srijansaxena11/ESP8266-MQTT-WiFi-Dimmer-PIR/
