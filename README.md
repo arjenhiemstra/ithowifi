@@ -73,7 +73,7 @@ Amount | Part
 
 Choice of components:
 
-ESP8266 NodeMCU DevKit (https://github.com/nodemcu/nodemcu-devkit-v1.0) (or similar): 
+ESP8266 NodeMCU DevKit (https://github.com/nodemcu/nodemcu-devkit-v1.0) or WeMos D1 mini (https://docs.wemos.cc/en/latest/d1/d1_mini.html): 
 readily available at low prices. Easy to integrate in projects.
 
 ISO1540/ADUM 1250 ARZ: 
