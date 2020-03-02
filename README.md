@@ -48,6 +48,7 @@ It is possible to have others values for e (0, 64, 128, 192) for even more contr
 **Hardware:**
 
 A sample hardware design (KiCad) is included, this module can be plugged on the Itho main PCB directly without extra components.
+*Tested with Itho Daalderop CVE from late 2013 and 2019 (PCB no. 545-5103 and 05-00492)
 
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_topside.png "PCB Top")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_bottomside.png "PCB Bottom")
