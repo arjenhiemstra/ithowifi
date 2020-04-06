@@ -1,7 +1,0 @@
-1 ESP8266 NodeMCU DevKit
-1 Texas Instruments ISO1540 or Analog Devices ADUM 1250 ARZ (SOIC-8_3)
-1 Recom R-78E5.0-1.0 DC-DC converter
-2 4.7K resistors
-2 female pin header 1x15 (optional)
-1 female pin header 2x4
-2 standoffs 3mm hole x (total length 21,4 mm, effective pcb spacing 11,5 mm)
