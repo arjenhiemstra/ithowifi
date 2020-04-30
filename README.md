@@ -56,20 +56,20 @@ It is possible to have other values for e (0, 64, 128, 192) for even more contro
 
 **Hardware:**
 
-A sample hardware design (KiCad) is included, this module can be plugged on the Itho main PCB directly without extra components.
+A sample hardware design (KiCad) is included, this module can be plugged on the Itho main PCB directly without extra components.  
 *Tested with Itho Daalderop CVE from late 2013 and 2019 (PCB no. 545-5103 and 05-00492)
+
+~~PoC is done and working, PCBs have been ordered. I will update this page when the boards arrive and are proven to be working.~~  
+PCB done and and tested to be working fine!  
+I have a few assembled boards left for those who want to try this as well, you can find them on my Tindie store:  
+[https://www.tindie.com/products/19680/](https://www.tindie.com/products/19680/)  
+
 
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/pcb.png "Add-on PCB")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/itho%20pcb.png "Itho main PCB")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/itho%20pcb%20w%20add-on.png "Itho main PCB with add-on")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_topside.png "PCB Top")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_bottomside.png "PCB Bottom")
-
-
-~~PoC is done and working, PCBs have been ordered. I will update this page when the boards arrive and are proven to be working.~~
-PCB done and and tested to be working fine! 
-I have a few assembled boards left for those who want to try this as well, you can find them on my Tindie store:
-[https://www.tindie.com/products/19680/](https://www.tindie.com/products/19680/)
 
 
 BOM:
