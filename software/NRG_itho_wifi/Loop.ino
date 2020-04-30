@@ -30,14 +30,26 @@ void loop() {
   }
   else {
     long now = millis();
-    if (now - lastReconnectAttempt > 5000) {
-      lastReconnectAttempt = now;
+    if (now - lastMQTTReconnectAttempt > 5000) {
+      lastMQTTReconnectAttempt = now;
       // Attempt to reconnect
       if (reconnect()) {
-        lastReconnectAttempt = 0;
+        lastMQTTReconnectAttempt = 0;
       }
     }
   } 
+
+  if ((WiFi.status() != WL_CONNECTED) && !wifiModeAP) {
+    long now = millis();
+    if (now - lastWIFIReconnectAttempt > 10000) {
+      lastWIFIReconnectAttempt = now;
+      // Attempt to reconnect
+      if (connectWiFiSTA()) {
+        lastWIFIReconnectAttempt = 0;
+      }
+    }
+  }
+
 
   if (shouldReboot) {
     //Serial.println("Rebooting...");
@@ -50,12 +62,11 @@ void loop() {
     sendScanDataWs();
     runscan = false;
   }
-  if (wifiModeAP) {
-    dnsServer.processNextRequest();
-  }
 
- 
   if(wifiModeAP) {
+    
+    dnsServer.processNextRequest();
+    
     if (loopstart - wifiLedUpdate >= 500) {
       wifiLedUpdate = loopstart;
       if(digitalRead(WIFILED) == LOW) {
@@ -66,8 +77,14 @@ void loop() {
       }
     }  
 
-  }    
+  } 
   if (loopstart - previousUpdate >= 5000 || sysStatReq) {
+    if(digitalRead(STATUSPIN) == LOW) {
+      strcpy(i2cstat, "initok");
+    }
+    else {
+      strcpy(i2cstat, "nok");
+    }
     if (loopstart - lastSysMessage >= 1000) { //rate limit messages to once a second
       lastSysMessage = loopstart;
       sysStatReq = false;

@@ -9,13 +9,14 @@ by MQTT.
 
 The code will give you full remote control over the Itho Eco Fan RFT with one simple add-on module and without further changes to the Itho box.
 
-Two versions of the firmware have been included: 
+Two versions of the firmware have been included:
 * A simple version with hardcoded SSID and password.
 * A more advanced version that starts an access point when no SSID can be connected and allows you to setup the device specifics (Wifi and MQTT settings) and save them on SPIFFS using the webinterface.
 
-**Two important notes about the firmware:**
+The firmware for the Attiny, which handles the i2c initialisation is the same for both the simple and advanced Wemos firmware.
+
+**An important note about the firmware:**
 * The add-on is able to control the itho box in standard or medium mode setting only. This means you can use the original remote but if you leave the itho box in low or high setting the itho won't accept commands from the add-on. This is itho designed behaviour.
-* The start-up time of the add-on is just fast enough for the I2C init to take place. If this init phase fails (the LED on the PCB will stay on), power cycle the itho unit. I found it helpful to wait a full 30 seconds before switching on the itho box again. Maybe there is a way to move to I2C init to somewhere before the setup() routine to improve init robustness. Build the firmware with 160Mhz CPU option! 
   
 **I2C protocol:**
 
@@ -51,7 +52,7 @@ Where:
 It is possible to have other values for e (0, 64, 128, 192) for even more control steps, the complete formula for h will be:
 
    uint8_t h = (0-e) - (67+b)  
-
+   
 
 **Hardware:**
 
@@ -59,35 +60,40 @@ A sample hardware design (KiCad) is included, this module can be plugged on the 
 *Tested with Itho Daalderop CVE from late 2013 and 2019 (PCB no. 545-5103 and 05-00492)
 
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/pcb.png "Add-on PCB")
-![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/itho%20pcb.jpg "Itho main PCB")
+![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/itho%20pcb.png "Itho main PCB")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/itho%20pcb%20w%20add-on.png "Itho main PCB with add-on")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_topside.png "PCB Top")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_bottomside.png "PCB Bottom")
 
 
 ~~PoC is done and working, PCBs have been ordered. I will update this page when the boards arrive and are proven to be working.~~
-PCB done and tested! 
-I have a few assembled boards left for those who want to try this as well.
+PCB done and and tested to be working fine! 
+I have a few assembled boards left for those who want to try this as well, you can find them on my Tindie store:
+[https://www.tindie.com/products/19680/](https://www.tindie.com/products/19680/)
+
 
 BOM:
 
 Amount | Part 
 --- | ---
 1 | Wemos D1 mini V3
+1 | Atmel Attiny 1614
 2 | BSS 138-7-F DII (SOT-23)
 1 | Recom R-78E5.0-1.0 DC-DC converter
-4 | 10K Ohm resistors (1206)
+5 | 10K Ohm resistors (1206)
 1 | 100 Ohm resistor (1206)
+1 | 0,1uF Ceramic Cap (1206)
 1 | Kingbright LED Blue KP-3216QBC-D (1206) (optional I2C status LED)
 2 | female pin header 1x8 (optional)
 1 | female pin header 2x4
-2 | standoffs 3mm hole x (total length 21,4 mm, effective pcb spacing 11,5 mm)
+1 | standoff 3mm hole x (total length 21,4 mm, effective pcb spacing 11,5 mm) (optional)
 
 
+Change of components version 1.2:
+The Wemos boots too slow too often to receive the first I2C message from the Itho box. An Attiny 1614 was added to handle the init. After power-on the Attiny starts executing user code after about 65ms instead of +/-130ms of the Wemos. 130ms is about the point where the itho Box sends its first message.
 
 Change of components version 1.1:
 The ISO1540/ADUM 1250 ARZ solution did not work as expected. That's why for version 1.1 I switched to a quite common BSS138 MOSFET based logic level converter solution and replaced the other components with SMDs too. The SMD components are all 1206 in size so quite easy to solder by hand.
-
 
 Choice of components version 1.0:
 

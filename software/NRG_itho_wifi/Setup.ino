@@ -1,11 +1,9 @@
 void setup() {
   Wire.begin(SDAPIN, SCLPIN, 0);
-  Wire.onReceive(receiveEvent);
-  
+
+  pinMode(STATUSPIN, INPUT);
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
-  pinMode(STATUSLED, OUTPUT);
-  digitalWrite(STATUSLED, LOW);
   
 //    Serial.begin(115200);
 //    Serial.flush();
