@@ -56,13 +56,10 @@ function startWebsock(websocketServerLocation){
             $('#mqtt_conn').text(button.state);
             $('#itho').val(x.itho);
             var i2cstatus = '';
-            if (x.i2cstat == 'sOk') {
+            if (x.i2cstat == 'nok') {
               i2cstatus = '<span style="color:#ca3c3c;">init failed</span><br>- please power cycle the itho unit -';
             }
-            else if (x.i2cstat == 'iOksOk') {
-              i2cstatus = '<span style="color:#ca3c3c;">init partly failed</span><br>- please power cycle the itho unit -';
-            }
-            else if (x.i2cstat == 'rOksOk') {
+            else if (x.i2cstat == 'initok') {
               i2cstatus = '<span style="color:#1cb841;">connected</span>';
             }
             else {

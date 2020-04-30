@@ -2,7 +2,7 @@
 #define SDAPIN      4
 #define SCLPIN      5
 #define WIFILED     2
-#define STATUSLED   16
+#define STATUSPIN   14
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
@@ -254,56 +254,7 @@ static void writeIthoVal(uint16_t value) {
   }
 
 }
-void receiveEvent(size_t howMany) {
 
-  (void) howMany;
-  while (3 < Wire.available()) { // loop through all but the last 3
-    char c = Wire.read(); // receive byte as a character
-    #if DEBUG_BUILD
-    Serial.print(c); // print the character
-    #endif
-  }
-  char received[3];
-  received[0] = Wire.read();
-  received[1] = Wire.read();
-  received[2] = Wire.read();
-
-  if (received[0] == 0x00 && received[1] == 0x00 && received[2] == 0xBE) {
-    strcat(strbuf, "iOK");
-    while (digitalRead(SCLPIN) == LOW) {
-      yield();
-    }
-    Wire.beginTransmission(byte(0x41));
-    //write response to itho fan
-    Wire.write(byte(0xEF));
-    Wire.write(byte(0xC0));
-    Wire.write(byte(0x00));
-    Wire.write(byte(0x01));
-    Wire.write(byte(0x06));
-    Wire.write(byte(0x00));
-    Wire.write(byte(0x00));
-    Wire.write(byte(0x09));
-    Wire.write(byte(0x00));
-    Wire.write(byte(0x09));
-    Wire.write(byte(0x00));
-    Wire.write(byte(0xB6));
-    Wire.endTransmission();
-  } else if (received[0] == 0x60 && received[1] == 0x00 && received[2] == 0x4E) {
-    //response OK, init phase done. start rest of code.
-    strcat(strbuf, "sOK");
-    
-    digitalWrite(STATUSLED, HIGH);
-    //disable slave mode by detaching interrupts
-    detachInterrupt(SDAPIN);
-    detachInterrupt(SCLPIN);
-
-  } else {
-    //unknown message
-    strcat(strbuf, "UNK");
-    strcat(strbuf, received);
-  }
-
-}
 
 void setupMQTTClient() {
   int connectResult;
@@ -432,19 +383,17 @@ void updateState(int newState) {
 
 //Setup ESP8266
 void setup() {
+  Wire.begin(SDAPIN, SCLPIN, 0);
+
+  pinMode(STATUSPIN, INPUT);
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
-  pinMode(STATUSLED, OUTPUT);
-  digitalWrite(STATUSLED, LOW);
 
   #if DEBUG_BUILD
   Serial.begin(115200);
   Serial.print("Booting...\r\n");
   Serial.println("Setting up I2C");
   #endif
-  
-  Wire.begin(SDAPIN, SCLPIN, 0);
-  Wire.onReceive(receiveEvent);
 
   WiFiMulti.addAP(ssid, password);
 

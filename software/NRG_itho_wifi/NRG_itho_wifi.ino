@@ -1,9 +1,9 @@
 #define SDAPIN      4
 #define SCLPIN      5
 #define WIFILED     2
-#define STATUSLED   16
+#define STATUSPIN   14
 
-#define FWVERSION "1.0"
+#define FWVERSION "1.2"
 #define CONFIG_VERSION "001" //Change when SystemConfig struc changes
 
 #include <ArduinoJson.h>
@@ -48,7 +48,8 @@ int FSUsed;
 
 int MQTT_conn_state = -5;
 int MQTT_conn_state_new = 0;
-long lastReconnectAttempt = 0;
+unsigned long lastMQTTReconnectAttempt = 0;
+unsigned long lastWIFIReconnectAttempt = 0;
 
 int newMem;
 int memHigh;
@@ -58,7 +59,7 @@ int memLow = 1000000;
 volatile uint16_t itho_current_val   = 0;
 volatile uint16_t itho_new_val   = 0;
 
-char i2cstat[80] = "";
+char i2cstat[20] = "";
 
 unsigned long loopstart = 0;
 unsigned long updatetimer = 0;

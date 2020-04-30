@@ -38,50 +38,6 @@ void updateState(int newState) {
   }
 }
 
-void receiveEvent(size_t howMany) {
-  (void) howMany;
-  while (3 < Wire.available()) { // loop through all but the last 3
-    char c = Wire.read(); // receive byte as a character
-  }
-  char received[3];
-  received[0] = Wire.read();
-  received[1] = Wire.read();
-  received[2] = Wire.read();
-
-  if (received[0] == 0x00 && received[1] == 0x00 && received[2] == 0xBE) {
-    strcpy(i2cstat, "");
-    strcat(i2cstat, "iOk");
-    while (digitalRead(SCLPIN) == LOW) {
-      yield();
-    }
-    Wire.beginTransmission(byte(0x41));
-    //write response to itho fan
-    Wire.write(byte(0xEF));
-    Wire.write(byte(0xC0));
-    Wire.write(byte(0x00));
-    Wire.write(byte(0x01));
-    Wire.write(byte(0x06));
-    Wire.write(byte(0x00));
-    Wire.write(byte(0x00));
-    Wire.write(byte(0x09));
-    Wire.write(byte(0x00));
-    Wire.write(byte(0x09));
-    Wire.write(byte(0x00));
-    Wire.write(byte(0xB6));
-    Wire.endTransmission();
-  } else if (received[0] == 0x60 && received[1] == 0x00 && received[2] == 0x4E) {
-    //response OK, init phase done. start rest of code.
-    strcpy(i2cstat, "");
-    strcat(i2cstat, "rOk");
-    
-    digitalWrite(STATUSLED, HIGH);
-    //disable slave mode by detaching interrupts
-    detachInterrupt(SDAPIN);
-    detachInterrupt(SCLPIN);
-
-  }
-
-}
 
 // Update itho Value
 static void writeIthoVal(uint16_t value) {
