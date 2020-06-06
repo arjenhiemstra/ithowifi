@@ -1,18 +1,18 @@
-/* 
- *  Create gzipped combined css file in terminal:
- *
- *  combine: pure-min.css + side-menu layout css + https://unpkg.com/purecss@1.0.1/build/grids-responsive-min.css + button extension + custom css >> gfile.css
- *  gzip gfile.css
- *  xxd -i -c 45 gfile.gz
- *  
- *  copy output in pure_min_css_gz[]
- *  
- *  button extension CSS:
-.button-error,.button-secondary,.button-success,.button-warning{color:#fff}.button-success{background:#1cb841}.button-error{background:#ca3c3c}.button-warning{background:#df7514}.button-secondary{background:#42b8dd}
- *  custom CSS:
-#main{margin-left:auto;margin-right:auto;padding-left:1em;padding-right:1em;max-width:768px}#svgSignalImage{position:relative;top:10px;left:5px}#svgSecImage{position:relative;top:12px;left:5px}#memory_box{position:fixed;display:none;z-index:1001;bottom:0;right:0;padding:10px}#message_box{position:fixed;top:0;z-index:1001;background:#eee;width:40%;display:none;padding:1px;text-align:center;font-weight:700;left:50%;margin-left:-20%}.messageP{background:#93d4ff;border-width:1px;border-color:#1f8dd6;border-style:solid;margin:3px;padding:3px;-webkit-animation:fadeinout 5s linear 1 forwards;animation:fadeinout 5s linear 1 forwards}@-webkit-keyframes fadeinout{0%{opacity:1}90%{opacity:1}100%{opacity:0}}@keyframes fadeinout{0%{opacity:1}90%{opacity:1}100%{opacity:0}}
- *
- */
+/*
+    Create gzipped combined css file in terminal:
+
+    combine: pure-min.css + side-menu layout css + https://unpkg.com/purecss@1.0.1/build/grids-responsive-min.css + button extension + custom css >> gfile.css
+    gzip gfile.css
+    xxd -i -c 45 gfile.gz
+
+    copy output in pure_min_css_gz[]
+
+    button extension CSS:
+  .button-error,.button-secondary,.button-success,.button-warning{color:#fff}.button-success{background:#1cb841}.button-error{background:#ca3c3c}.button-warning{background:#df7514}.button-secondary{background:#42b8dd}
+    custom CSS:
+  #main{margin-left:auto;margin-right:auto;padding-left:1em;padding-right:1em;max-width:768px}#svgSignalImage{position:relative;top:10px;left:5px}#svgSecImage{position:relative;top:12px;left:5px}#memory_box{position:fixed;display:none;z-index:1001;bottom:0;right:0;padding:10px}#message_box{position:fixed;top:0;z-index:1001;background:#eee;width:40%;display:none;padding:1px;text-align:center;font-weight:700;left:50%;margin-left:-20%}.messageP{background:#93d4ff;border-width:1px;border-color:#1f8dd6;border-style:solid;margin:3px;padding:3px;-webkit-animation:fadeinout 5s linear 1 forwards;animation:fadeinout 5s linear 1 forwards}@-webkit-keyframes fadeinout{0%{opacity:1}90%{opacity:1}100%{opacity:0}}@keyframes fadeinout{0%{opacity:1}90%{opacity:1}100%{opacity:0}}
+
+*/
 
 
 

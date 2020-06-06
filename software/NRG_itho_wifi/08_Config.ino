@@ -4,12 +4,12 @@
 bool loadWifiConfig() {
   if (!SPIFFS.exists("/wifi.json")) {
     //Serial.println("Writing initial wifi config");
-    if (!saveSystemConfig()) {
+    if (!saveWifiConfig()) {
       //Serial.println("Failed writing initial default config");
       return false;
     }
   }
-    
+
   File configFile = SPIFFS.open("/wifi.json", "r");
   if (!configFile) {
     //Serial.println("Failed to open wifi config file");
@@ -41,7 +41,7 @@ bool loadWifiConfig() {
     //initial config still there, start WifiAP
     return false;
   }
-  
+
   strlcpy(wifiConfig.ssid, root[F("ssid")], sizeof(wifiConfig.ssid));
   strlcpy(wifiConfig.passwd, root[F("passwd")], sizeof(wifiConfig.passwd));
   strlcpy(wifiConfig.dhcp, root[F("dhcp")], sizeof(wifiConfig.dhcp));
@@ -52,13 +52,6 @@ bool loadWifiConfig() {
   strlcpy(wifiConfig.dns1, root[F("dns1")], sizeof(wifiConfig.dns1));
   strlcpy(wifiConfig.dns1, root[F("dns2")], sizeof(wifiConfig.dns2));
   wifiConfig.port = root[F("port")];
-
-
-//  Serial.println("Wifi config loaded");
-//  Serial.print("Loaded SSID: ");
-//  Serial.println(wifiConfig.ssid);
-//  Serial.print("Loaded password: ");
-//  Serial.println(wifiConfig.passwd);
 
   return true;
 }
@@ -76,7 +69,7 @@ bool saveWifiConfig() {
   root[F("dns1")] = wifiConfig.dns1;
   root[F("dns2")] = wifiConfig.dns2;
   root[F("port")] = wifiConfig.port;
-  
+
   File configFile = SPIFFS.open("/wifi.json", "w");
   if (!configFile) {
     //Serial.println("Failed to open default wifi config file for writing");
@@ -89,7 +82,7 @@ bool saveWifiConfig() {
 }
 
 bool resetWifiConfig() {
-  if(!SPIFFS.remove("/wifi.json")) {
+  if (!SPIFFS.remove("/wifi.json")) {
     return false;
   }
   if (!SPIFFS.exists("/wifi.json")) {
@@ -130,7 +123,7 @@ bool loadSystemConfig() {
   DeserializationError error = deserializeJson(root, buf.get());
   if (error)
     return false;
-  
+
   strlcpy(systemConfig.mqtt_active, root[F("mqtt_active")], sizeof(systemConfig.mqtt_active));
   strlcpy(systemConfig.mqtt_serverName, root[F("mqtt_serverName")], sizeof(systemConfig.mqtt_serverName));
   strlcpy(systemConfig.mqtt_username, root[F("mqtt_username")], sizeof(systemConfig.mqtt_username));
@@ -159,20 +152,20 @@ bool saveSystemConfig() {
   root["mqtt_state_retain"] = systemConfig.mqtt_state_retain;
   root["mqtt_cmd_topic"] = systemConfig.mqtt_cmd_topic;
   root["version_of_program"] = systemConfig.version_of_program;
-  
+
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
     //Serial.println("Failed to open default config file for writing");
     return false;
   }
-  
+
   serializeJson(root, configFile);
 
   return true;
 }
 
 bool resetSystemConfig() {
-  if(!SPIFFS.remove("/config.json")) {
+  if (!SPIFFS.remove("/config.json")) {
     return false;
   }
   if (!SPIFFS.exists("/config.json")) {

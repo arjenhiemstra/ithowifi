@@ -4,30 +4,59 @@ void setup() {
   pinMode(STATUSPIN, INPUT);
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
-  
-//    Serial.begin(115200);
-//    Serial.flush();
 
+  //
+  //  Serial.begin(115200);
+  //  Serial.flush();
 
-  delay(1000);
 
   if (!initFileSystem()) {
-    // Serial.println("File system erroor :( ");
-  } else if (!loadWifiConfig()) {
+    //Serial.println("\nFile system erroor :( ");
+  }
+  else {
+    //Serial.println("\nFile system OK");
+
+    filePrint.open();
+
+    Log.begin(LOG_LEVEL_NOTICE, &filePrint);
+    Log.setPrefix(printTimestamp);
+    Log.setSuffix(printNewline);
+
+    filePrint.close();
+  }
+
+  if (!loadWifiConfig()) {
     setupWiFiAP();
-  } else if (!connectWiFiSTA()) {
+  }
+  else if (!connectWiFiSTA()) {
     setupWiFiAP();
   }
   if (!loadSystemConfig()) {
-    // Serial.println("System config error :( ");
-  }
-  if (strcmp(systemConfig.mqtt_active, "on") == 0) {
-    if (!setupMQTTClient()) {
-      // MQTT not connected
-    }
+    //Serial.println("System config error :( ");
   }
 
-  events.onConnect([](AsyncEventSourceClient *client) {
+  configTime(0, 0, "pool.ntp.org");
+
+  sprintf(logBuff, "System boot, last reset reason: %s", ESP.getResetReason().c_str());
+  logInput(logBuff);
+  strcpy(logBuff, "");
+  if (!wifiModeAP) {
+    logWifiInfo();
+  }
+
+
+  if (strcmp(systemConfig.mqtt_active, "on") == 0) {
+    if (!setupMQTTClient()) {
+      sprintf(logBuff, "MQTT: connection failed, System config: %s", systemConfig.mqtt_active);
+    }
+    else {
+      sprintf(logBuff, "MQTT: connected, System config: %s", systemConfig.mqtt_active);
+    }
+    logInput(logBuff);
+    strcpy(logBuff, "");
+  }
+
+  events.onConnect([](AsyncEventSourceClient * client) {
     client->send("hello!", NULL, millis(), 1000);
   });
   server.addHandler(&events);
@@ -63,19 +92,19 @@ void setup() {
   server.addHandler(&ws);
 
   // respond to GET requests on URL /heap
-  server.on("/heap", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/heap", HTTP_GET, [](AsyncWebServerRequest * request) {
     request->send(200, "text/plain", String(ESP.getFreeHeap()));
   });
 
   // upload a file to /upload
-  server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
+  server.on("/upload", HTTP_POST, [](AsyncWebServerRequest * request) {
     request->send(200);
   }, onUpload);
 
-#if defined(ESP8266)
-  server.addHandler(new SPIFFSEditor(http_username, http_password));
-#else
+#ifdef ESP32
   server.addHandler(new SPIFFSEditor(SPIFFS, http_username, http_password));
+#elif defined(ESP8266)
+  server.addHandler(new SPIFFSEditor(http_username, http_password));
 #endif
 
   // css_code
@@ -85,66 +114,70 @@ void setup() {
   server.on("/js/zepto.min.js", HTTP_GET, zepto_min_js_gz_code);
   server.on("/js/controls.js", HTTP_GET, controls_js_code);
   server.on("/js/general.js", HTTP_GET, handleGeneralJs)
-      .setFilter(ON_STA_FILTER);
+  .setFilter(ON_STA_FILTER);
   server.on("/js/general.js", HTTP_GET, handleGeneralJsOnAp)
-      .setFilter(ON_AP_FILTER);
+  .setFilter(ON_AP_FILTER);
 
   // HTML pages
   server.rewrite("/", "/index.htm");
   server.on("/index.htm", HTTP_ANY, handleMainpage);
   server.on("/debug", HTTP_GET, handleDebug);
 
+  //Log file download
+  server.on("/curlog", HTTP_GET, handleCurLogDownload);
+  server.on("/prevlog", HTTP_GET, handlePrevLogDownload);
+
   // HTTP basic authentication
-  server.on("/login", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/login", HTTP_GET, [](AsyncWebServerRequest * request) {
     if (!request->authenticate(http_username, http_password))
       return request->requestAuthentication();
     request->send(200, "text/plain", "Login Success!");
   });
   // Simple Firmware Update Form
-  server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/update", HTTP_GET, [](AsyncWebServerRequest * request) {
     request->send(200, "text/html", "<form method='POST' action='/update' "
-                                    "enctype='multipart/form-data'><input "
-                                    "type='file' name='update'><input "
-                                    "type='submit' value='Update'></form>");
+                  "enctype='multipart/form-data'><input "
+                  "type='file' name='update'><input "
+                  "type='submit' value='Update'></form>");
   });
 
-  server.on("/update", HTTP_POST,[](AsyncWebServerRequest *request) {
-        shouldReboot = !Update.hasError();
-        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", shouldReboot ? "OK" : "FAIL");
-        response->addHeader("Connection", "close");
-        request->send(response);
-      },
-      [](AsyncWebServerRequest *request, String filename, size_t index,
-         uint8_t *data, size_t len, bool final) {
-        if (!index) {
-          content_len = request->contentLength();
-          #if defined(ESP8266)
-          Update.runAsync(true);
-          if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)) {
-          #else
-          if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
-          #endif
-            Update.printError(Serial);
-          } else {
-            Serial.end();
-          }
-        }
-        if (!Update.hasError()) {
-          if (Update.write(data, len) != len) {
-            Update.printError(Serial);
-          }
-        }
-        if (final) {
-          if (Update.end(true)) {
-            // Serial.printf("Update Success: %uB\n", index+len);
-          } else {
-            Update.printError(Serial);
-          }
-        }
-      });
+  server.on("/update", HTTP_POST, [](AsyncWebServerRequest * request) {
+    shouldReboot = !Update.hasError();
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", shouldReboot ? "OK" : "FAIL");
+    response->addHeader("Connection", "close");
+    request->send(response);
+  },
+  [](AsyncWebServerRequest * request, String filename, size_t index,
+     uint8_t *data, size_t len, bool final) {
+    if (!index) {
+      content_len = request->contentLength();
+#if defined(ESP8266)
+      Update.runAsync(true);
+      if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)) {
+#else
+      if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+#endif
+        Update.printError(Serial);
+      } else {
+        Serial.end();
+      }
+    }
+    if (!Update.hasError()) {
+      if (Update.write(data, len) != len) {
+        Update.printError(Serial);
+      }
+    }
+    if (final) {
+      if (Update.end(true)) {
+        // Serial.printf("Update Success: %uB\n", index+len);
+      } else {
+        Update.printError(Serial);
+      }
+    }
+  });
   Update.onProgress(otaWSupdate);
 
-  server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/reset", HTTP_GET, [](AsyncWebServerRequest * request) {
     jsonMessageBox("Reset requested ",
                    "Device will reboot in a few seconds...");
     delay(200);
@@ -160,11 +193,21 @@ void setup() {
 
   server.begin();
 
+  logInput("Webserver: started");
+
+
   MDNS.addService("http", "tcp", 80);
+
+  logInput("mDNS: started");
+  sprintf(logBuff, "Hostname: %s", EspHostname());
+  logInput(logBuff);
+  strcpy(logBuff, "");
 
   WiFi.scanDelete();
   if (WiFi.scanComplete() == -2) {
     WiFi.scanNetworks(true);
   }
   strcat(i2cstat, "sOk");
+
+  logInput("Setup: done");
 }

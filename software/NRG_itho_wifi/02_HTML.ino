@@ -55,7 +55,58 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(FWVERSION);
   response->print("<br><br>Config version: ");
   response->print(CONFIG_VERSION);
-  response->print("</vid>");
+  response->print("<br><br></div>");
+  response->print("<div style='padding: 10px;background-color: black;background-image: radial-gradient(rgba(0, 150, 0, 0.55), black 140%);height: 60vh;}  color: white;  font: 0.9rem Inconsolata, monospace;border-radius: 10px;overflow:auto'>--- System Log ---<br>");
+  String link = "";
+  String linkcur = "";
+  if ( SPIFFS.exists("/logfile0.current.log") ) {
+    linkcur = "/logfile0.current.log";
+    link = "/logfile1.log";
+  }
+  else {
+    linkcur = "/logfile1.current.log";
+    link = "/logfile0.log";    
+  }
 
+  File file = SPIFFS.open(linkcur, FILE_READ);
+  while (file.available()) {
+    //count row
+    //of more than x row display fom total - 1
+    response->print(char(file.read()));
+   
+  }
+  file.close();
+
+  response->print("</div><br><br><a class='pure-button' href='/curlog'>Download current logfile</a>");
+
+
+  if ( SPIFFS.exists(link) ) {
+    response->print("&nbsp;<a class='pure-button' href='/prevlog'>Download previous logfile</a>");
+
+  }
+  response->print("<br><br>");
+  
   request->send(response);
+}
+
+void handleCurLogDownload(AsyncWebServerRequest *request) {
+  String link = "";
+  if (  SPIFFS.exists("/logfile0.current.log") ) {
+    link = "/logfile0.current.log";
+  }
+  else {
+    link = "/logfile1.current.log";
+  }  
+  request->send(SPIFFS, link, String(), true);
+}
+
+void handlePrevLogDownload(AsyncWebServerRequest *request) {
+  String link = "";
+  if (  SPIFFS.exists("/logfile0.current.log") ) {
+    link = "/logfile1.log";
+  }
+  else {
+     link = "/logfile0.log";  
+  }  
+  request->send(SPIFFS, link, String(), true);
 }
