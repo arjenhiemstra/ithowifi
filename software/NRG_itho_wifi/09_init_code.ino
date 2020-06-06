@@ -121,6 +121,36 @@ bool connectWiFiSTA()
 
   WiFi.mode(WIFI_STA);
 
+  if (strcmp(wifiConfig.dhcp, "off") == 0) {
+    bool configOK = true;
+    IPAddress staticIP;
+    IPAddress gateway;
+    IPAddress subnet;
+    IPAddress dns1;
+    IPAddress dns2;
+
+    if (!staticIP.fromString(wifiConfig.ip)) {
+      configOK = false;
+    }
+    if (!gateway.fromString(wifiConfig.subnet)) {
+      configOK = false;
+    }
+    if (!subnet.fromString(wifiConfig.gateway)) {
+      configOK = false;
+    }
+    if (!dns1.fromString(wifiConfig.dns1)) {
+      configOK = false;
+    }
+    if (!dns2.fromString(wifiConfig.dns2)) {
+      configOK = false;
+    }
+    if (configOK) {
+      WiFi.config(staticIP, gateway, subnet, dns1 , dns2);
+    }
+
+
+  }
+
 #if defined(ESP8266)
   WiFi.hostname(EspHostname());
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);

@@ -599,11 +599,7 @@ var html_wifisetup = `
             <div class="pure-control-group">
               <label for="dns1">DNS server 2</label>
                 <input id="dns2" type="text">
-            </div>              
-            <div class="pure-control-group">
-              <label for="port">Server port (1-65535)</label>
-                <input id="port" type="text">
-            </div>              
+            </div>                       
           </fieldset>
 
       </form>

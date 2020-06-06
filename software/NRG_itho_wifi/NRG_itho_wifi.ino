@@ -3,7 +3,7 @@
 #define WIFILED     2
 #define STATUSPIN   14
 
-#define FWVERSION "1.2.1"
+#define FWVERSION "1.2.2"
 #define CONFIG_VERSION "001" //Change when SystemConfig struc changes
 
 #include <ArduinoJson.h>
