@@ -50,7 +50,7 @@ bool loadWifiConfig() {
   strlcpy(wifiConfig.subnet, root[F("subnet")], sizeof(wifiConfig.subnet));
   strlcpy(wifiConfig.gateway, root[F("gateway")], sizeof(wifiConfig.gateway));
   strlcpy(wifiConfig.dns1, root[F("dns1")], sizeof(wifiConfig.dns1));
-  strlcpy(wifiConfig.dns1, root[F("dns2")], sizeof(wifiConfig.dns2));
+  strlcpy(wifiConfig.dns2, root[F("dns2")], sizeof(wifiConfig.dns2));
   wifiConfig.port = root[F("port")];
 
   return true;
