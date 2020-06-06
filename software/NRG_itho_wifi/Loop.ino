@@ -2,16 +2,17 @@
 void loop() {
   delay(1);
   yield();
-  
+
   loopstart = millis();
   ArduinoOTA.handle();
   ws.cleanupClients();
+
 
   if (mqttSetup) {
     mqttSetup = false;
     setupMQTTClient();
   }
-  
+
   // handle MQTT:
   if (strcmp(systemConfig.mqtt_active, "off") == 0) {
     MQTT_conn_state_new = -5;
@@ -24,34 +25,41 @@ void loop() {
     sysStatReq = true;
   }
 
-  
+
   if (mqttClient.connected()) {
     mqttClient.loop();
   }
   else {
     long now = millis();
     if (now - lastMQTTReconnectAttempt > 5000) {
+
       lastMQTTReconnectAttempt = now;
       // Attempt to reconnect
       if (reconnect()) {
         lastMQTTReconnectAttempt = 0;
       }
     }
-  } 
+  }
 
-  if ((WiFi.status() != WL_CONNECTED) && !wifiModeAP) {
+  if ((wifi_station_get_connect_status() != STATION_GOT_IP) && !wifiModeAP) {
     long now = millis();
     if (now - lastWIFIReconnectAttempt > 10000) {
+      logInput("Attempt to reconnect WiFi");
       lastWIFIReconnectAttempt = now;
       // Attempt to reconnect
       if (connectWiFiSTA()) {
+        logInput("Reconnect WiFi succesfull");
         lastWIFIReconnectAttempt = 0;
+      }
+      else {
+        logInput("Reconnect WiFi failed!");
       }
     }
   }
 
 
   if (shouldReboot) {
+    logInput("Reboot requested");
     //Serial.println("Rebooting...");
     delay(1000);
     ESP.restart();
@@ -63,23 +71,24 @@ void loop() {
     runscan = false;
   }
 
-  if(wifiModeAP) {
-    
+  if (wifiModeAP) {
+
     dnsServer.processNextRequest();
-    
+
+
     if (loopstart - wifiLedUpdate >= 500) {
       wifiLedUpdate = loopstart;
-      if(digitalRead(WIFILED) == LOW) {
+      if (digitalRead(WIFILED) == LOW) {
         digitalWrite(WIFILED, HIGH);
       }
       else {
         digitalWrite(WIFILED, LOW);
       }
-    }  
+    }
 
-  } 
+  }
   if (loopstart - previousUpdate >= 5000 || sysStatReq) {
-    if(digitalRead(STATUSPIN) == LOW) {
+    if (digitalRead(STATUSPIN) == LOW) {
       strcpy(i2cstat, "initok");
     }
     else {
@@ -93,9 +102,21 @@ void loop() {
       jsonSystemstat();
     }
   }
-  
-  if(updateItho) {
+
+  if (updateItho) {
     updateItho = false;
     writeIthoVal(itho_new_val);
   }
+
+  if (loopstart - lastLog > LOGGING_INTERVAL)
+  {
+    sprintf(logBuff, "Mem high: %d, Mem low: %d, MQTT: %d, ITHO: %s, ITHO val: %d", memHigh, memLow, MQTT_conn_state, i2cstat, itho_current_val);
+    logInput(logBuff);
+    strcpy(logBuff, "");
+
+    lastLog = loopstart;
+  }
+
+
+
 }

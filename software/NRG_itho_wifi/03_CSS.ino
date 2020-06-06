@@ -5,4 +5,3 @@ void css_code(AsyncWebServerRequest *request) {
   response->addHeader("Content-Encoding", "gzip");
   request->send(response);
 }
-

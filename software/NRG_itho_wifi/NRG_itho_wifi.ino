@@ -3,7 +3,7 @@
 #define WIFILED     2
 #define STATUSPIN   14
 
-#define FWVERSION "1.2"
+#define FWVERSION "1.2.1"
 #define CONFIG_VERSION "001" //Change when SystemConfig struc changes
 
 #include <ArduinoJson.h>
@@ -14,6 +14,10 @@
 #include <PubSubClient.h>
 #include <ArduinoOTA.h>
 #include <Wire.h>
+#include <time.h>
+
+#include <ArduinoLog.h>       // https://github.com/thijse/Arduino-Log
+#include <SpiffsFilePrint.h>  // https://github.com/PRosenb/SPIFFS_FilePrint
 
 
 #if defined(ESP8266)
@@ -35,11 +39,14 @@ WiFiClient client;
 DNSServer dnsServer;
 PubSubClient mqttClient(client);
 
+
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 AsyncEventSource events("/events");
 
-const char* espName = "NRG-itho-";
+SpiffsFilePrint filePrint("/logfile", 2, 10000);
+
+const char* espName = "nrg-itho-";
 const char* http_username = "admin";
 const char* http_password = "admin";
 
@@ -60,12 +67,15 @@ volatile uint16_t itho_current_val   = 0;
 volatile uint16_t itho_new_val   = 0;
 
 char i2cstat[20] = "";
+char logBuff[256] = "";
+unsigned long lastLog = 0;
+#define LOGGING_INTERVAL 21600000
 
 unsigned long loopstart = 0;
 unsigned long updatetimer = 0;
 unsigned long lastSysMessage = 0;
-unsigned long previousUpdate = 0; 
-unsigned long wifiLedUpdate = 0; 
+unsigned long previousUpdate = 0;
+unsigned long wifiLedUpdate = 0;
 
 //flags used
 bool shouldReboot = false;
@@ -115,7 +125,7 @@ struct SystemConfig {
   int mqtt_port;
   int mqtt_version;
   char mqtt_state_topic[128];
-  char mqtt_state_retain[5];  
+  char mqtt_state_retain[5];
   char mqtt_cmd_topic[128];
   char version_of_program[4];
 };
@@ -126,7 +136,7 @@ SystemConfig systemConfig = { //default config
   "", //MQTT username
   "", //MQTT password
   1883, //MQTT port
-  1, //MQTT version  
+  1, //MQTT version
   "itho/state", //MQTT state topic
   "yes", //MQTT state retain "yes"/"no"
   "itho/cmd", //MQTT command topic
