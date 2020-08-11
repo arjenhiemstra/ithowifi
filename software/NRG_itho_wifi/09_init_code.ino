@@ -188,8 +188,10 @@ bool setupMQTTClient() {
   if (strcmp(systemConfig.mqtt_active, "on") == 0) {
 
     if (systemConfig.mqtt_serverName != "") {
+      
       mqttClient.setServer(systemConfig.mqtt_serverName, systemConfig.mqtt_port);
       mqttClient.setCallback(mqttCallback);
+      mqttClient.setBufferSize(1024);
 
       if (systemConfig.mqtt_username == "") {
         connectResult = mqttClient.connect(EspHostname());
@@ -203,18 +205,18 @@ bool setupMQTTClient() {
       }
 
       if (mqttClient.connected()) {
-        if (mqttClient.subscribe(systemConfig.mqtt_state_topic)) {
-          //publish succes
-        }
-        else {
-          //publish failed
-        }
         if (mqttClient.subscribe(systemConfig.mqtt_cmd_topic)) {
           //subscribed succes
         }
         else {
           //subscribed failed
         }
+        if (mqttClient.subscribe(systemConfig.mqtt_state_topic)) {
+          //publish succes
+        }
+        else {
+          //publish failed
+        }        
         return true;
       }
     }

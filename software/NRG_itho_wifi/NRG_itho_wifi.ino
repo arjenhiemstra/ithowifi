@@ -3,8 +3,8 @@
 #define WIFILED     2
 #define STATUSPIN   14
 
-#define FWVERSION "1.2.2"
-#define CONFIG_VERSION "001" //Change when SystemConfig struc changes
+#define FWVERSION "1.3.0"
+#define CONFIG_VERSION "002" //Change when SystemConfig struc changes
 
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
@@ -127,6 +127,8 @@ struct SystemConfig {
   char mqtt_state_topic[128];
   char mqtt_state_retain[5];
   char mqtt_cmd_topic[128];
+  char mqtt_domoticz_active[4];
+  uint16_t mqtt_idx;
   char version_of_program[4];
 };
 
@@ -140,6 +142,8 @@ SystemConfig systemConfig = { //default config
   "itho/state", //MQTT state topic
   "yes", //MQTT state retain "yes"/"no"
   "itho/cmd", //MQTT command topic
+  "off",
+  0,
   CONFIG_VERSION
 };
 

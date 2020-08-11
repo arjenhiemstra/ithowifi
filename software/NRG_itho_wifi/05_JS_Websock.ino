@@ -3,6 +3,7 @@
 const char controls_js[] PROGMEM = R"=====(
 
 var count = 0;
+
 var websocketServerLocation = 'ws://' + window.location.hostname + '/ws';
 
 function startWebsock(websocketServerLocation){
@@ -35,12 +36,22 @@ function startWebsock(websocketServerLocation){
                 $radios.filter('[value=' + x.mqtt_active + ']').prop('checked', true);
             }
             radio("mqtt_active", x.mqtt_active);
-            mqtt_serverName:   $('#mqtt_serverName').val(x.mqtt_serverName);
-            mqtt_username:     $('#mqtt_username').val(x.mqtt_username);
-            mqtt_password:     $('#mqtt_password').val(x.mqtt_password);
-            mqtt_port:         $('#mqtt_port').val(x.mqtt_port);
-            mqtt_state_topic:  $('#mqtt_state_topic').val(x.mqtt_state_topic);
-            mqtt_cmd_topic:    $('#mqtt_cmd_topic').val(x.mqtt_cmd_topic);
+            $('#mqtt_serverName').val(x.mqtt_serverName);
+            $('#mqtt_username').val(x.mqtt_username);
+            $('#mqtt_password').val(x.mqtt_password);
+            $('#mqtt_port').val(x.mqtt_port);
+            $('#mqtt_state_topic').val(x.mqtt_state_topic);
+            mqtt_state_topic_tmp = x.mqtt_state_topic;
+            $('#mqtt_cmd_topic').val(x.mqtt_cmd_topic);
+            mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
+            $radios = $('input[name=\'option-mqtt_domoticz_active\']');
+            $('#mqtt_idx, #label-mqtt_idx').hide(); 
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value=' + x.mqtt_domoticz_active + ']').prop('checked', true);
+                $('#mqtt_idx, #label-mqtt_idx').show();
+            }
+            radio("mqtt_domoticz", x.mqtt_domoticz_active);
+            mqtt_idx:          $('#mqtt_idx').val(x.mqtt_idx);
           }          
           else if (f.wifiscanresult) {
             let x = f.wifiscanresult;
@@ -142,14 +153,16 @@ $(document).ready(function() {
    else if ($(this).attr('id') == 'mqttsubmit') {
       websock.send(JSON.stringify({
         mqttsettings: {
-          mqtt_active:       $('input[name=\'option-mqtt_active\']:checked').val(),
-          mqtt_serverName:   $('#mqtt_serverName').val(),
-          mqtt_username:     $('#mqtt_username').val(),
-          mqtt_password:     $('#mqtt_password').val(),
-          mqtt_port:         $('#mqtt_port').val(),
-          mqtt_version:      $('#mqtt_version').val(),
-          mqtt_state_topic:  $('#mqtt_state_topic').val(),
-          mqtt_cmd_topic:    $('#mqtt_cmd_topic').val()
+          mqtt_active:          $('input[name=\'option-mqtt_active\']:checked').val(),
+          mqtt_serverName:      $('#mqtt_serverName').val(),
+          mqtt_username:        $('#mqtt_username').val(),
+          mqtt_password:        $('#mqtt_password').val(),
+          mqtt_port:            $('#mqtt_port').val(),
+          mqtt_version:         $('#mqtt_version').val(),
+          mqtt_state_topic:     $('#mqtt_state_topic').val(),
+          mqtt_cmd_topic:       $('#mqtt_cmd_topic').val(),
+          mqtt_idx:             $('#mqtt_idx').val(),
+          mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val()
         }
       }));
       update_page('mqtt');
@@ -217,7 +230,7 @@ $(document).ready(function() {
              },
               error: function (a, b, c) {
                 console.log('failed!')
-                  startCountdown();                
+                  startCountdown();
               }
             });
 
@@ -264,6 +277,9 @@ function removeAfter5secs(count) {
     });
 }
 
+var mqtt_state_topic_tmp = "";
+var mqtt_cmd_topic_tmp = "";
+
 function radio(origin, state) {
   if (origin == "dhcp") {
     if (on_ap == true) {
@@ -283,12 +299,28 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_active") {
     if (state == 'on') {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_cmd_topic').prop('readonly', false);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_cmd_topic, #mqtt_idx').prop('readonly', false);
+      $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', false);
     }
     else {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_cmd_topic').prop('readonly', true);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_cmd_topic, #mqtt_idx').prop('readonly', true);
+      $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', true);
     }     
   }
+  else if (origin == "mqtt_domoticz") {
+    if (state == 'on') {
+      $('#mqtt_idx').prop('readonly', false);
+      $('#mqtt_idx, #label-mqtt_idx').show();
+      $('#mqtt_state_topic').val("domoticz/in");
+      $('#mqtt_cmd_topic').val("domoticz/out");
+    }
+    else {
+      $('#mqtt_idx').prop('readonly', true);
+      $('#mqtt_idx, #label-mqtt_idx').hide();
+      $('#mqtt_state_topic').val(mqtt_state_topic_tmp);
+      $('#mqtt_cmd_topic').val(mqtt_cmd_topic_tmp);
+    }     
+  }  
 }
   
 
@@ -670,7 +702,18 @@ var html_mqttsetup = `
             <div class="pure-control-group">
               <label for="mqtt_cmd_topic">Command topic</label>
                 <input id="mqtt_cmd_topic" maxlength="120" type="text">
+            </div>
+            <br>
+            <div class="pure-control-group">        
+              <label for="option-mqtt_domoticz" class="pure-radio">Domoticz MQTT</label> 
+              <input id="option-mqtt_domoticz-on" type="radio" name="option-mqtt_domoticz_active" onchange='radio("mqtt_domoticz", "on")' value="on"> on
+              <input id="option-mqtt_domoticz-off" type="radio" name="option-mqtt_domoticz_active" onchange='radio("mqtt_domoticz", "off")' value="off"> off
+            </div>
+            <div class="pure-control-group">
+              <label id="label-mqtt_idx" for="mqtt_idx">Device IDX</label>
+                <input id="mqtt_idx" maxlength="5" type="text">
             </div>            
+            <br>                           
             <div class="pure-controls">
               <button id="mqttsubmit" class="pure-button pure-button-primary">Save</button>
             </div>        
@@ -755,6 +798,6 @@ var html_update = `
 
 void controls_js_code(AsyncWebServerRequest *request) {
   AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", controls_js);
-  response->addHeader("Server","Project WiFi Web Server");
+  response->addHeader("Server","Itho WiFi Web Server");
   request->send(response);
 }

@@ -7,7 +7,7 @@ void zepto_min_js_gz_code(AsyncWebServerRequest *request) {
 
 void handleGeneralJs(AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("application/javascript");
-  response->addHeader("Server", "Project WiFi Web Server");
+  response->addHeader("Server", "Itho WiFi Web Server");
 
   response->print("var on_ap = false; var hostname = '");
   response->print(EspHostname());
@@ -18,7 +18,7 @@ void handleGeneralJs(AsyncWebServerRequest *request) {
 
 void handleGeneralJsOnAp(AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("application/javascript");
-  response->addHeader("Server", "Project WiFi Web Server");
+  response->addHeader("Server", "Itho WiFi Web Server");
 
   response->print("var on_ap = true; var hostname = '");
   response->print(EspHostname());

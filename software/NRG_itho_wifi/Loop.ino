@@ -7,7 +7,6 @@ void loop() {
   ArduinoOTA.handle();
   ws.cleanupClients();
 
-
   if (mqttSetup) {
     mqttSetup = false;
     setupMQTTClient();
@@ -24,7 +23,6 @@ void loop() {
     MQTT_conn_state = MQTT_conn_state_new;
     sysStatReq = true;
   }
-
 
   if (mqttClient.connected()) {
     mqttClient.loop();
@@ -60,7 +58,6 @@ void loop() {
 
   if (shouldReboot) {
     logInput("Reboot requested");
-    //Serial.println("Rebooting...");
     delay(1000);
     ESP.restart();
     delay(2000);
