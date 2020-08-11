@@ -1,6 +1,5 @@
 
 
-
 bool loadWifiConfig() {
   if (!SPIFFS.exists("/wifi.json")) {
     //Serial.println("Writing initial wifi config");
@@ -124,15 +123,24 @@ bool loadSystemConfig() {
   if (error)
     return false;
 
+  if (root[F("version_of_program")] != CONFIG_VERSION) {
+    logInput("Config version mismatch, resetting config...");
+    saveSystemConfig();
+    delay(1000);
+    ESP.restart();
+  }
+  
   strlcpy(systemConfig.mqtt_active, root[F("mqtt_active")], sizeof(systemConfig.mqtt_active));
   strlcpy(systemConfig.mqtt_serverName, root[F("mqtt_serverName")], sizeof(systemConfig.mqtt_serverName));
   strlcpy(systemConfig.mqtt_username, root[F("mqtt_username")], sizeof(systemConfig.mqtt_username));
   strlcpy(systemConfig.mqtt_password, root[F("mqtt_password")], sizeof(systemConfig.mqtt_password));
-  systemConfig.mqtt_port, root[F("mqtt_port")];
-  systemConfig.mqtt_version, root[F("mqtt_version")];
+  systemConfig.mqtt_port = root[F("mqtt_port")];
+  systemConfig.mqtt_version = root[F("mqtt_version")];
   strlcpy(systemConfig.mqtt_state_topic, root[F("mqtt_state_topic")], sizeof(systemConfig.mqtt_state_topic));
   strlcpy(systemConfig.mqtt_state_retain, root[F("mqtt_state_retain")], sizeof(systemConfig.mqtt_state_retain));
   strlcpy(systemConfig.mqtt_cmd_topic, root[F("mqtt_cmd_topic")], sizeof(systemConfig.mqtt_cmd_topic));
+  strlcpy(systemConfig.mqtt_domoticz_active, root[F("mqtt_domoticz_active")], sizeof(systemConfig.mqtt_domoticz_active));
+  systemConfig.mqtt_idx = root[F("mqtt_idx")];
   strlcpy(systemConfig.version_of_program, root[F("version_of_program")], sizeof(systemConfig.version_of_program));
   //Serial.println("System config loaded");
 
@@ -151,6 +159,8 @@ bool saveSystemConfig() {
   root["mqtt_state_topic"] = systemConfig.mqtt_state_topic;
   root["mqtt_state_retain"] = systemConfig.mqtt_state_retain;
   root["mqtt_cmd_topic"] = systemConfig.mqtt_cmd_topic;
+  root["mqtt_domoticz_active"] = systemConfig.mqtt_domoticz_active;
+  root["mqtt_idx"] = systemConfig.mqtt_idx;    
   root["version_of_program"] = systemConfig.version_of_program;
 
   File configFile = SPIFFS.open("/config.json", "w");

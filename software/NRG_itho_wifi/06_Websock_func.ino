@@ -45,6 +45,8 @@ void jsonWsSend(String rootName, boolean nested) {
     nested["mqtt_version"] = systemConfig.mqtt_version;
     nested["mqtt_state_topic"] = systemConfig.mqtt_state_topic;
     nested["mqtt_cmd_topic"] = systemConfig.mqtt_cmd_topic;
+    nested["mqtt_domoticz_active"] = systemConfig.mqtt_domoticz_active;
+    nested["mqtt_idx"] = systemConfig.mqtt_idx;    
     nested["version_of_program"] = systemConfig.version_of_program;
 
     size_t len = measureJson(root);
@@ -123,83 +125,91 @@ void jsonWsReceive(String msg) {
   if (!error) {
     //Serial.println("JSON receive parsed");
     // WIFI Settings parse
-    if ((const char*)root[F("wifisettings")][F("ssid")] != nullptr) {
+    if (!(const char*)root[F("wifisettings")][F("ssid")].isNull()) {
       wifisettings = true;
       strlcpy(wifiConfig.ssid, root[F("wifisettings")][F("ssid")], sizeof(wifiConfig.ssid));
     }
-    if ((const char*)root[F("wifisettings")][F("password")] != nullptr) {
+    if (!(const char*)root[F("wifisettings")][F("password")].isNull()) {
       wifisettings = true;
       strlcpy(wifiConfig.passwd, root[F("wifisettings")][F("password")], sizeof(wifiConfig.passwd));
     }
-    if ((const char*)root[F("wifisettings")][F("dhcp")] != nullptr) {
+    if (!(const char*)root[F("wifisettings")][F("dhcp")].isNull()) {
       wifisettings = true;
       strlcpy(wifiConfig.dhcp, root[F("wifisettings")][F("dhcp")], sizeof(wifiConfig.dhcp));
     }
-    if ((const char*)root[F("wifisettings")][F("renew")] != nullptr) {
+    if (!(const char*)root[F("wifisettings")][F("renew")].isNull()) {
       wifisettings = true;
       wifiConfig.renew = root[F("wifisettings")][F("renew")];
     }
-    if ((const char*)root[F("wifisettings")][F("dhcp")] != nullptr) {
+    if (!(const char*)root[F("wifisettings")][F("dhcp")].isNull()) {
       wifisettings = true;
       strlcpy(wifiConfig.dhcp, root[F("wifisettings")][F("dhcp")], sizeof(wifiConfig.dhcp));
     }
-    if ((const char*)root[F("wifisettings")][F("ip")] != nullptr) {
+    if (!(const char*)root[F("wifisettings")][F("ip")].isNull()) {
       wifisettings = true;
       strlcpy(wifiConfig.ip, root[F("wifisettings")][F("ip")], sizeof(wifiConfig.ip));
     }
-    if ((const char*)root[F("wifisettings")][F("subnet")] != nullptr) {
+    if (!(const char*)root[F("wifisettings")][F("subnet")].isNull()) {
       wifisettings = true;
       strlcpy(wifiConfig.subnet, root[F("wifisettings")][F("subnet")], sizeof(wifiConfig.subnet));
     }
-    if ((const char*)root[F("wifisettings")][F("gateway")] != nullptr) {
+    if (!(const char*)root[F("wifisettings")][F("gateway")].isNull()) {
       wifisettings = true;
       strlcpy(wifiConfig.gateway, root[F("wifisettings")][F("gateway")], sizeof(wifiConfig.gateway));
     }
-    if ((const char*)root[F("wifisettings")][F("dns1")] != nullptr) {
+    if (!(const char*)root[F("wifisettings")][F("dns1")].isNull()) {
       wifisettings = true;
       strlcpy(wifiConfig.dns1, root[F("wifisettings")][F("dns1")], sizeof(wifiConfig.dns1));
     }
-    if ((const char*)root[F("wifisettings")][F("dns2")] != nullptr) {
+    if (!(const char*)root[F("wifisettings")][F("dns2")].isNull()) {
       wifisettings = true;
       strlcpy(wifiConfig.dns2, root[F("wifisettings")][F("dns2")], sizeof(wifiConfig.dns2));
     }
     //MQTT Settings parse
-    if ((const char*)root[F("mqttsettings")][F("mqtt_active")] != nullptr) {
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_active")].isNull()) {
       systemsettings = true;
       strlcpy(systemConfig.mqtt_active, root[F("mqttsettings")][F("mqtt_active")], sizeof(systemConfig.mqtt_active));
     }
-    if ((const char*)root[F("mqttsettings")][F("mqtt_serverName")] != nullptr) {
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_serverName")].isNull()) {
       systemsettings = true;
       strlcpy(systemConfig.mqtt_serverName, root[F("mqttsettings")][F("mqtt_serverName")], sizeof(systemConfig.mqtt_serverName));
     }
-    if ((const char*)root[F("mqttsettings")][F("mqtt_username")] != nullptr) {
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_username")].isNull()) {
       systemsettings = true;
       strlcpy(systemConfig.mqtt_username, root[F("mqttsettings")][F("mqtt_username")], sizeof(systemConfig.mqtt_username));
     }
-    if ((const char*)root[F("mqttsettings")][F("mqtt_password")] != nullptr) {
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_password")].isNull()) {
       systemsettings = true;
       strlcpy(systemConfig.mqtt_password, root[F("mqttsettings")][F("mqtt_password")], sizeof(systemConfig.mqtt_password));
     }
-    if ((const char*)root[F("mqttsettings")][F("mqtt_port")] != nullptr) {
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_port")].isNull()) {
       systemsettings = true;
       systemConfig.mqtt_port = root[F("mqttsettings")][F("mqtt_port")];
     }
-    if ((const char*)root[F("mqttsettings")][F("mqtt_version")] != nullptr) {
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_version")].isNull()) {
       systemsettings = true;
       systemConfig.mqtt_version = root[F("mqttsettings")][F("mqtt_version")];
     }
-    if ((const char*)root[F("mqttsettings")][F("mqtt_state_topic")] != nullptr) {
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_state_topic")].isNull()) {
       systemsettings = true;
       strlcpy(systemConfig.mqtt_state_topic, root[F("mqttsettings")][F("mqtt_state_topic")], sizeof(systemConfig.mqtt_state_topic));
     }
-    if ((const char*)root[F("mqttsettings")][F("mqtt_state_retain")] != nullptr) {
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_state_retain")].isNull()) {
       systemsettings = true;
       strlcpy(systemConfig.mqtt_state_retain, root[F("mqttsettings")][F("mqtt_state_retain")], sizeof(systemConfig.mqtt_state_retain));
     }
-    if ((const char*)root[F("mqttsettings")][F("mqtt_cmd_topic")] != nullptr) {
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_cmd_topic")].isNull()) {
       systemsettings = true;
       strlcpy(systemConfig.mqtt_cmd_topic, root[F("mqttsettings")][F("mqtt_cmd_topic")], sizeof(systemConfig.mqtt_cmd_topic));
     }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_domoticz_active")].isNull()) {
+      systemsettings = true;
+      strlcpy(systemConfig.mqtt_domoticz_active, root[F("mqttsettings")][F("mqtt_domoticz_active")], sizeof(systemConfig.mqtt_domoticz_active));
+    }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_idx")].isNull()) {
+      systemsettings = true;
+      systemConfig.mqtt_idx = root[F("mqttsettings")][F("mqtt_idx")];
+    }        
   }
   //save to file
   if (wifisettings == true) {
@@ -294,8 +304,6 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
       else if (msg.startsWith("{\"itho")) {
         DynamicJsonDocument root(128);
         DeserializationError error = deserializeJson(root, msg);
-        serializeJson(root, Serial);
-        Serial.println();
         if (!error) {
           itho_new_val  = root["itho"];
           updateItho = true;
