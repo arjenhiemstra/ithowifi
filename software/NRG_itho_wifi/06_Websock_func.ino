@@ -1,42 +1,112 @@
 
 
 
-void jsonWsSend(const char* rootName) {
-  DynamicJsonDocument root(4000);
+void jsonWsSend(String rootName, boolean nested) {
 
-  if (strcmp(rootName, "wifisettings") == 0) {
-    JsonObject nested = root.createNestedObject(rootName);
-    nested["ssid"] = wifiConfig.ssid;
-    nested["passwd"] = wifiConfig.passwd;
-    nested["dhcp"] = wifiConfig.dhcp;
-    nested["renew"] = wifiConfig.renew;
-    if (nested["dhcp"] == "off") {
-      nested["ip"] = wifiConfig.ip;
-      nested["subnet"] = wifiConfig.subnet;
-      nested["gateway"] = wifiConfig.gateway;
-      nested["dns1"] = wifiConfig.dns1;
-      nested["dns2"] = wifiConfig.dns2;
+  if (rootName == "wifisettings") {
+    DynamicJsonDocument root(1024);
+    //JsonObject root = jsonBuffer.createObject();
+    JsonObject nested = root.createNestedObject("wifisettings");
+    nested[F("ssid")] = wifiConfig.ssid;
+    nested[F("passwd")] = wifiConfig.passwd;
+    nested[F("dhcp")] = wifiConfig.dhcp;
+    nested[F("renew")] = wifiConfig.renew;
+    if (nested[F("dhcp")] == "off") {
+      nested[F("ip")] = wifiConfig.ip;
+      nested[F("subnet")] = wifiConfig.subnet;
+      nested[F("gateway")] = wifiConfig.gateway;
+      nested[F("dns1")] = wifiConfig.dns1;
+      nested[F("dns2")] = wifiConfig.dns2;
     }
     else {
-      nested["ip"] = WiFi.localIP().toString();
-      nested["subnet"] = WiFi.subnetMask().toString();
-      nested["gateway"] = WiFi.gatewayIP().toString();
-      nested["dns1"] = WiFi.dnsIP().toString();
-      nested["dns2"] = WiFi.dnsIP(1).toString();
+      nested[F("ip")] = WiFi.localIP().toString();
+      nested[F("subnet")] = WiFi.subnetMask().toString();
+      nested[F("gateway")] = WiFi.gatewayIP().toString();
+      nested[F("dns1")] = WiFi.dnsIP().toString();
+      nested[F("dns2")] = WiFi.dnsIP(1).toString();
     }
     nested[F("port")] = wifiConfig.port;
+    size_t len = measureJson(root);
+    AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
+    if (buffer) {
+      serializeJson(root, (char *)buffer->get(), len + 1);
+      ws.textAll(buffer);
+    }
+  }
+  else if (rootName == "mqttsettings") {
+    DynamicJsonDocument root(1024);
+    JsonObject nested = root.createNestedObject("mqttsettings");
 
+    nested["mqtt_active"] = systemConfig.mqtt_active;
+    nested["mqtt_serverName"] = systemConfig.mqtt_serverName;
+    nested["mqtt_username"] = systemConfig.mqtt_username;
+    nested["mqtt_password"] = systemConfig.mqtt_password;
+    nested["mqtt_port"] = systemConfig.mqtt_port;
+    nested["mqtt_version"] = systemConfig.mqtt_version;
+    nested["mqtt_state_topic"] = systemConfig.mqtt_state_topic;
+    nested["mqtt_cmd_topic"] = systemConfig.mqtt_cmd_topic;
+    nested["mqtt_domoticz_active"] = systemConfig.mqtt_domoticz_active;
+    nested["mqtt_idx"] = systemConfig.mqtt_idx;    
+    nested["version_of_program"] = systemConfig.version_of_program;
+
+    size_t len = measureJson(root);
+    AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
+    if (buffer) {
+      serializeJson(root, (char *)buffer->get(), len + 1);
+      ws.textAll(buffer);
+    }
   }
-  else if (strcmp(rootName, "mqttsettings")  == 0) {
-    // Create an object at the root
-    JsonObject nested = root.createNestedObject(rootName);
-    systemConfig.get(nested);
+
+
+}
+
+
+// Convert & Transfer Arduino elements to JSON elements
+void jsonWifiscanresult(int id, String ssid, String sigval, int sec) {
+  DynamicJsonDocument root(128);
+  //JsonObject root = jsonBuffer.createObject();
+  JsonObject wifiscanresult = root.createNestedObject("wifiscanresult");
+  wifiscanresult[F("id")] = id;
+  wifiscanresult[F("ssid")] = ssid;
+  wifiscanresult[F("sigval")] = sigval;
+  wifiscanresult[F("sec")] = sec;
+  size_t len = measureJson(root);
+  AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
+  if (buffer) {
+    serializeJson(root, (char *)buffer->get(), len + 1);
+    ws.textAll(buffer);
   }
-  else if (strcmp(rootName, "ithosettings") == 0) {
-    // Create an object at the root
-    JsonObject obj = root.to<JsonObject>(); // Fill the object
-    remotes.get(obj);
+}
+// Convert & Transfer Arduino elements to JSON elements
+void jsonMessageBox(String message1, String message2) {
+  DynamicJsonDocument root(128);
+  //JsonObject root = jsonBuffer.createObject();
+  JsonObject messagebox = root.createNestedObject("messagebox");
+  messagebox[F("message1")] = message1;
+  messagebox[F("message2")] = message2;
+  size_t len = measureJson(root);
+  AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
+  if (buffer) {
+    serializeJson(root, (char *)buffer->get(), len + 1);
+    ws.textAll(buffer);
   }
+}
+// Convert & Transfer Arduino elements to JSON elements
+void jsonSystemstat() {
+  DynamicJsonDocument root(256);
+  //JsonObject root = jsonBuffer.createObject();
+  JsonObject systemstat = root.createNestedObject("systemstat");
+
+  systemstat[F("freemem")] = String(memHigh);
+
+  systemstat[F("memlow")] = String(memLow);
+
+  systemstat[F("mqqtstatus")] = MQTT_conn_state;
+
+  systemstat[F("itho")] = itho_current_val;
+
+  systemstat[F("i2cstat")] = i2cstat;
+
   size_t len = measureJson(root);
   AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
   if (buffer) {
@@ -45,52 +115,122 @@ void jsonWsSend(const char* rootName) {
   }
 }
 
-// Convert & Transfer Arduino elements to JSON elements
-void jsonWifiscanresult(int id, const char* ssid, int sigval, int sec) {
-  StaticJsonDocument<512> root;
-  //JsonObject root = jsonBuffer.createObject();
-  JsonObject wifiscanresult = root.createNestedObject("wifiscanresult");
-  wifiscanresult["id"] = id;
-  wifiscanresult["ssid"] = ssid;
-  wifiscanresult["sigval"] = sigval;
-  wifiscanresult["sec"] = sec;
 
-  char buffer[512];
-  size_t len = serializeJson(root, buffer);
 
-  ws.textAll(buffer, len);
+void jsonWsReceive(String msg) {
+  bool wifisettings = false;
+  bool systemsettings = false;
+  DynamicJsonDocument root(2048);
+  DeserializationError error = deserializeJson(root, msg);
+  if (!error) {
+    //Serial.println("JSON receive parsed");
+    // WIFI Settings parse
+    if (!(const char*)root[F("wifisettings")][F("ssid")].isNull()) {
+      wifisettings = true;
+      strlcpy(wifiConfig.ssid, root[F("wifisettings")][F("ssid")], sizeof(wifiConfig.ssid));
+    }
+    if (!(const char*)root[F("wifisettings")][F("password")].isNull()) {
+      wifisettings = true;
+      strlcpy(wifiConfig.passwd, root[F("wifisettings")][F("password")], sizeof(wifiConfig.passwd));
+    }
+    if (!(const char*)root[F("wifisettings")][F("dhcp")].isNull()) {
+      wifisettings = true;
+      strlcpy(wifiConfig.dhcp, root[F("wifisettings")][F("dhcp")], sizeof(wifiConfig.dhcp));
+    }
+    if (!(const char*)root[F("wifisettings")][F("renew")].isNull()) {
+      wifisettings = true;
+      wifiConfig.renew = root[F("wifisettings")][F("renew")];
+    }
+    if (!(const char*)root[F("wifisettings")][F("dhcp")].isNull()) {
+      wifisettings = true;
+      strlcpy(wifiConfig.dhcp, root[F("wifisettings")][F("dhcp")], sizeof(wifiConfig.dhcp));
+    }
+    if (!(const char*)root[F("wifisettings")][F("ip")].isNull()) {
+      wifisettings = true;
+      strlcpy(wifiConfig.ip, root[F("wifisettings")][F("ip")], sizeof(wifiConfig.ip));
+    }
+    if (!(const char*)root[F("wifisettings")][F("subnet")].isNull()) {
+      wifisettings = true;
+      strlcpy(wifiConfig.subnet, root[F("wifisettings")][F("subnet")], sizeof(wifiConfig.subnet));
+    }
+    if (!(const char*)root[F("wifisettings")][F("gateway")].isNull()) {
+      wifisettings = true;
+      strlcpy(wifiConfig.gateway, root[F("wifisettings")][F("gateway")], sizeof(wifiConfig.gateway));
+    }
+    if (!(const char*)root[F("wifisettings")][F("dns1")].isNull()) {
+      wifisettings = true;
+      strlcpy(wifiConfig.dns1, root[F("wifisettings")][F("dns1")], sizeof(wifiConfig.dns1));
+    }
+    if (!(const char*)root[F("wifisettings")][F("dns2")].isNull()) {
+      wifisettings = true;
+      strlcpy(wifiConfig.dns2, root[F("wifisettings")][F("dns2")], sizeof(wifiConfig.dns2));
+    }
+    //MQTT Settings parse
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_active")].isNull()) {
+      systemsettings = true;
+      strlcpy(systemConfig.mqtt_active, root[F("mqttsettings")][F("mqtt_active")], sizeof(systemConfig.mqtt_active));
+    }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_serverName")].isNull()) {
+      systemsettings = true;
+      strlcpy(systemConfig.mqtt_serverName, root[F("mqttsettings")][F("mqtt_serverName")], sizeof(systemConfig.mqtt_serverName));
+    }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_username")].isNull()) {
+      systemsettings = true;
+      strlcpy(systemConfig.mqtt_username, root[F("mqttsettings")][F("mqtt_username")], sizeof(systemConfig.mqtt_username));
+    }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_password")].isNull()) {
+      systemsettings = true;
+      strlcpy(systemConfig.mqtt_password, root[F("mqttsettings")][F("mqtt_password")], sizeof(systemConfig.mqtt_password));
+    }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_port")].isNull()) {
+      systemsettings = true;
+      systemConfig.mqtt_port = root[F("mqttsettings")][F("mqtt_port")];
+    }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_version")].isNull()) {
+      systemsettings = true;
+      systemConfig.mqtt_version = root[F("mqttsettings")][F("mqtt_version")];
+    }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_state_topic")].isNull()) {
+      systemsettings = true;
+      strlcpy(systemConfig.mqtt_state_topic, root[F("mqttsettings")][F("mqtt_state_topic")], sizeof(systemConfig.mqtt_state_topic));
+    }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_state_retain")].isNull()) {
+      systemsettings = true;
+      strlcpy(systemConfig.mqtt_state_retain, root[F("mqttsettings")][F("mqtt_state_retain")], sizeof(systemConfig.mqtt_state_retain));
+    }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_cmd_topic")].isNull()) {
+      systemsettings = true;
+      strlcpy(systemConfig.mqtt_cmd_topic, root[F("mqttsettings")][F("mqtt_cmd_topic")], sizeof(systemConfig.mqtt_cmd_topic));
+    }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_domoticz_active")].isNull()) {
+      systemsettings = true;
+      strlcpy(systemConfig.mqtt_domoticz_active, root[F("mqttsettings")][F("mqtt_domoticz_active")], sizeof(systemConfig.mqtt_domoticz_active));
+    }
+    if (!(const char*)root[F("mqttsettings")][F("mqtt_idx")].isNull()) {
+      systemsettings = true;
+      systemConfig.mqtt_idx = root[F("mqttsettings")][F("mqtt_idx")];
+    }        
+  }
+  //save to file
+  if (wifisettings == true) {
+    if (saveWifiConfig()) {
+      jsonMessageBox("Wifi settings saved successful,", "reboot the device");
+    }
+    else {
+      jsonMessageBox("Wifi settings save failed:", "Unable to write config file");
+    }
+  }
+  if (systemsettings == true) {
+    if (saveSystemConfig()) {
+      jsonMessageBox("System settings saved", "successful");
+    }
+    else {
+      jsonMessageBox("System settings save failed:", "Unable to write config file");
+    }
+    mqttSetup = true;
 
+  }
 }
-// Convert & Transfer Arduino elements to JSON elements
-void jsonMessageBox(char* message1, char* message2) {
-  StaticJsonDocument<128> root;
-  //JsonObject root = jsonBuffer.createObject();
-  JsonObject messagebox = root.createNestedObject("messagebox");
-  messagebox["message1"] = message1;
-  messagebox["message2"] = message2;
-
-  char buffer[128];
-  size_t len = serializeJson(root, buffer);
-
-  ws.textAll(buffer, len);
-}
-// Convert & Transfer Arduino elements to JSON elements
-void jsonSystemstat() {
-  StaticJsonDocument<256> root;
-  //JsonObject root = jsonBuffer.createObject();
-  JsonObject systemstat = root.createNestedObject("systemstat");
-  systemstat["freemem"] = sys.getMemHigh();
-  systemstat["memlow"] = sys.getMemLow();
-  systemstat["mqqtstatus"] = MQTT_conn_state;
-  systemstat["itho"] = itho_current_val;
-  systemstat["i2cstat"] = i2cstat;
-
-  char buffer[256];
-  size_t len = serializeJson(root, buffer);
-
-  ws.textAll(buffer, len);
-}
-
 
 void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) {
   if (type == WS_EVT_CONNECT) {
@@ -107,7 +247,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
     String msg = "";
     if (info->final && info->index == 0 && info->len == len) {
       //the whole message is in a single frame and we got all of it's data
-      Serial.printf("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len);
+      //Serial.printf("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len);
 
       if (info->opcode == WS_TEXT) {
         for (size_t i = 0; i < info->len; i++) {
@@ -129,58 +269,18 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
       if (msg.startsWith("{\"sysstat")) {
         sysStatReq = true;
       }
-      else if (msg.startsWith("{\"wifisettings") || msg.startsWith("{\"wifisettings")) {
-        DynamicJsonDocument root(2048);
-        DeserializationError error = deserializeJson(root, msg);
-        if (!error) {
-          JsonObject obj = root.as<JsonObject>();
-          for (JsonPair p : obj) {
-            if (strcmp(p.key().c_str(), "mqttsettings") == 0) {
-              Serial.println("mqttsettings key match");
-
-              if (p.value().is<JsonObject>()) {
-
-                JsonObject obj = p.value();
-                if (systemConfig.set(obj)) {
-                  if (saveSystemConfig()) {
-                    jsonMessageBox("System settings saved", "successful");
-                  }
-                  else {
-                    jsonMessageBox("System settings save failed:", "Unable to write config file");
-                  }
-                  mqttSetup = true;
-                }
-              }
-            }
-            if (strcmp(p.key().c_str(), "wifisettings") == 0) {
-              Serial.println("wifisettings key match");
-
-              if (p.value().is<JsonObject>()) {
-
-                JsonObject obj = p.value();
-                if (wifiConfig.set(obj)) {
-                  if (saveWifiConfig()) {
-                    jsonMessageBox("Wifi settings saved successful,", "reboot the device");
-                  }
-                  else {
-                    jsonMessageBox("Wifi settings save failed:", "Unable to write config file");
-                  }
-                }
-              }
-            }
-          }
-        }
-
+      else if (msg.startsWith("{\"wifisettings")) {
+        jsonWsReceive(msg);
+      }
+      else if (msg.startsWith("{\"mqttsettings")) {
+        jsonWsReceive(msg);
       }
       else if (msg.startsWith("{\"wifisetup")) {
-        jsonWsSend("wifisettings");
+        jsonWsSend("wifisettings", true);
       }
       else if (msg.startsWith("{\"mqttsetup")) {
-        jsonWsSend("mqttsettings");
+        jsonWsSend("mqttsettings", true);
         sysStatReq = true;
-      }
-      else if (msg.startsWith("{\"ithosettings")) {
-        jsonWsSend("ithosettings");
       }
       else if (msg.startsWith("{\"reboot")) {
         shouldReboot = true;
@@ -202,7 +302,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         }
       }
       else if (msg.startsWith("{\"itho")) {
-        StaticJsonDocument<128> root;
+        DynamicJsonDocument root(128);
         DeserializationError error = deserializeJson(root, msg);
         if (!error) {
           itho_new_val  = root["itho"];
@@ -226,8 +326,10 @@ void sendScanDataWs()
   else if (n) {
     sprintf(logBuff, "Wifi scan found %d networks", n);
     logInput(logBuff);
-    jsonMessageBox(logBuff, "");
     strcpy(logBuff, "");
+
+    jsonMessageBox("Scan found " + String(n), "WiFi Networks");
+
     //sort networks
     int indices[n];
     for (int i = 0; i < n; i++) {
@@ -293,7 +395,7 @@ void sendScanDataWs()
       logInput(logBuff);
       strcpy(logBuff, "");
 
-      jsonWifiscanresult(i, WiFi.SSID(indices[i]).c_str(), signalStrengthResult, sec);
+      jsonWifiscanresult(i, String(WiFi.SSID(indices[i])), String(signalStrengthResult), sec);
     }
     WiFi.scanDelete();
     if (WiFi.scanComplete() == -2) {
@@ -311,16 +413,17 @@ void otaWSupdate(size_t prg, size_t sz) {
   if (newPercent != LastPercentotaWSupdate) {
     LastPercentotaWSupdate = newPercent;
     if (newPercent % 2 == 0) {
-      StaticJsonDocument<256> root;
+      DynamicJsonDocument root(256);
       JsonObject ota = root.createNestedObject("ota");
-      ota["progress"] = prg;
-      ota["tsize"] = content_len;
-      ota["percent"] = newPercent;
-
-      char buffer[256];
-      size_t len = serializeJson(root, buffer);
-
-      ws.textAll(buffer, len);
+      ota[F("progress")] = String(prg);
+      ota[F("tsize")] = String(content_len);
+      ota[F("percent")] = String(newPercent);
+      size_t len = measureJson(root);
+      AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
+      if (buffer) {
+        serializeJson(root, (char *)buffer->get(), len + 1);
+        ws.textAll(buffer);
+      }
     }
   }
 

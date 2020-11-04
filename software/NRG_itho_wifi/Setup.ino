@@ -5,11 +5,9 @@ void setup() {
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
 
-
-  Serial.begin(115200);
-  Serial.flush();
-  delay(2000);
-
+  //
+  //    Serial.begin(115200);
+  //    Serial.flush();
 
 
   if (!initFileSystem()) {
@@ -26,20 +24,17 @@ void setup() {
 
     filePrint.close();
   }
-  Serial.println("File system init: done");
+
   if (!loadWifiConfig()) {
-    Serial.println("Setup WiFi AP");
     setupWiFiAP();
   }
   else if (!connectWiFiSTA()) {
-    Serial.println("Setup WiFi STA");
     setupWiFiAP();
   }
-  Serial.println("Setup WiFi: done");
   if (!loadSystemConfig()) {
     //Serial.println("System config error :( ");
   }
-  Serial.println("Setup load system config: done");
+
   configTime(0, 0, "pool.ntp.org");
 
   sprintf(logBuff, "System boot, last reset reason: %s", ESP.getResetReason().c_str());
@@ -214,15 +209,5 @@ void setup() {
   }
   strcat(i2cstat, "sOk");
 
-  rf.init();
-  pinMode(ITHO_IRQ_PIN, INPUT);
-  attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, RISING);
-  rf.initReceive();
-
-  remotes.registerNewRemote(RFTid0);
-  remotes.registerNewRemote(RFTid1);
-  remotes.registerNewRemote(RFTid2);
-  
   logInput("Setup: done");
-  Serial.println("Setup: done");
 }

@@ -56,20 +56,28 @@ bool loadWifiConfig() {
 }
 
 bool saveWifiConfig() {
-  DynamicJsonDocument doc(2048);
-  JsonObject root = doc.to<JsonObject>(); // Fill the object
-  wifiConfig.get(root);
-  
+  DynamicJsonDocument root(1024);
+  //JsonObject root = jsonWifiConf.createObject();
+  root[F("ssid")] = wifiConfig.ssid;
+  root[F("passwd")] = wifiConfig.passwd;
+  root[F("dhcp")] = wifiConfig.dhcp;
+  root[F("renew")] = wifiConfig.renew;
+  root[F("ip")] = wifiConfig.ip;
+  root[F("subnet")] = wifiConfig.subnet;
+  root[F("gateway")] = wifiConfig.gateway;
+  root[F("dns1")] = wifiConfig.dns1;
+  root[F("dns2")] = wifiConfig.dns2;
+  root[F("port")] = wifiConfig.port;
+
   File configFile = SPIFFS.open("/wifi.json", "w");
   if (!configFile) {
-    //Serial.println("Failed to open default config file for writing");
+    //Serial.println("Failed to open default wifi config file for writing");
     return false;
   }
 
   serializeJson(root, configFile);
 
   return true;
-  
 }
 
 bool resetWifiConfig() {
@@ -133,17 +141,28 @@ bool loadSystemConfig() {
   strlcpy(systemConfig.mqtt_cmd_topic, root[F("mqtt_cmd_topic")], sizeof(systemConfig.mqtt_cmd_topic));
   strlcpy(systemConfig.mqtt_domoticz_active, root[F("mqtt_domoticz_active")], sizeof(systemConfig.mqtt_domoticz_active));
   systemConfig.mqtt_idx = root[F("mqtt_idx")];
-  strlcpy(systemConfig.config_struct_version, root[F("version_of_program")], sizeof(systemConfig.config_struct_version));
+  strlcpy(systemConfig.version_of_program, root[F("version_of_program")], sizeof(systemConfig.version_of_program));
   //Serial.println("System config loaded");
 
   return true;
 }
 
 bool saveSystemConfig() {
-  DynamicJsonDocument doc(2048);
-  JsonObject root = doc.to<JsonObject>(); // Fill the object
-  systemConfig.get(root);
-  
+  DynamicJsonDocument root(2048);
+  //JsonObject root = jsonSystemConf.createObject();
+  root["mqtt_active"] = systemConfig.mqtt_active;
+  root["mqtt_serverName"] = systemConfig.mqtt_serverName;
+  root["mqtt_username"] = systemConfig.mqtt_username;
+  root["mqtt_password"] = systemConfig.mqtt_password;
+  root["mqtt_port"] = systemConfig.mqtt_port;
+  root["mqtt_version"] = systemConfig.mqtt_version;
+  root["mqtt_state_topic"] = systemConfig.mqtt_state_topic;
+  root["mqtt_state_retain"] = systemConfig.mqtt_state_retain;
+  root["mqtt_cmd_topic"] = systemConfig.mqtt_cmd_topic;
+  root["mqtt_domoticz_active"] = systemConfig.mqtt_domoticz_active;
+  root["mqtt_idx"] = systemConfig.mqtt_idx;    
+  root["version_of_program"] = systemConfig.version_of_program;
+
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
     //Serial.println("Failed to open default config file for writing");

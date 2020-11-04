@@ -52,11 +52,7 @@ function startWebsock(websocketServerLocation){
             }
             radio("mqtt_domoticz", x.mqtt_domoticz_active);
             mqtt_idx:          $('#mqtt_idx').val(x.mqtt_idx);
-          }    
-          else if (f.remotes) {
-            let x = f.remotes;
-            buildHtmlTable('#RemotesTable', x);
-          }  
+          }          
           else if (f.wifiscanresult) {
             let x = f.wifiscanresult;
             $('#wifiscanresult').append('<div class=\'ScanResults\'><input id=\'' + x.id + '\' class=\'pure-input-1-5\' name=\'optionsWifi\' value=\'' + x.ssid + '\' type=\'radio\'>' + returnSignalSVG(x.sigval) + '' + returnWifiSecSVG(x.sec) + ' ' + x.ssid + '</label></div>');
@@ -337,7 +333,7 @@ const getSettings = async (page) => {
     await timeoutPromise(200);
     if(websock.readyState === 1){
     websock.send(JSON.stringify(new function(){ this[page] = 1; }));
-    console.log(page + ' requested');
+    //console.log(page + ' requested');
     return "success";
     }
     
@@ -391,7 +387,6 @@ function update_page(page) {
 
     if (page == 'index') { $('#main').append(html_index); }
     if (page == 'wifisetup') { $('#main').append(html_wifisetup); }
-    if (page == 'itho') { $('#main').append(html_ithosettings); }
     if (page == 'mqtt') { $('#main').append(html_mqttsetup); }
     if (page == 'help') { $('#main').append(html_help); }
     if (page == 'reset') { $('#main').append(html_reset); }
@@ -541,42 +536,6 @@ function returnWifiSecSVG(secVal) {
    return returnString;
 }
 
-function buildHtmlTable(selector, jsonVar) {
-  var columns = addAllColumnHeaders(jsonVar, selector);
-  var headerTbody$ = $('<tbody>');
-  
-  for (var i = 0; i < jsonVar.length; i++) {
-    var row$ = $('<tr>');
-    for (var colIndex = 0; colIndex < columns.length; colIndex++) {
-      var cellValue = jsonVar[i][columns[colIndex]].toString();
-      if (cellValue == null) cellValue = '';
-      row$.append($('<td>').html(cellValue));
-    }
-    headerTbody$.append(row$);
-  }
-  
-  $(selector).append(headerTbody$);
-}
-
-function addAllColumnHeaders(jsonVar, selector) {
-  var columnSet = [];
-  var headerThead$ = $('<thead>');
-  var headerTr$ = $('<tr>');
-
-  for (var i = 0; i < jsonVar.length; i++) {
-    var rowHash = jsonVar[i];
-    for (var key in rowHash) {
-      if ($.inArray(key, columnSet) == -1) {
-        columnSet.push(key);
-        headerTr$.append($('<th>').html(key));
-      }
-    }
-  }
-  headerThead$.append(headerTr$);
-  $(selector).append(headerThead$);
-
-  return columnSet;
-}
 
 //
 // HTML string literals
@@ -698,52 +657,6 @@ $(document).ready(function() {
   getSettings('wifisetup');
 });
 </script>
-`;
-
-var html_ithosettings = `
-<div class="header">
-  <h1>Itho settings</h1>
-</div>
-
-<p>Configuration of the Itho box</p>
-
-<style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
-      <form class="pure-form pure-form-aligned">
-          <fieldset>  
-            <legend><br>Speed settings:</legend>
-            <div class="pure-control-group">
-              <label for="itho_lowsetpoint">Low</label>
-                <input id="itho_lowsetpoint" type="number" min="1" max="254">
-            </div>
-            <div class="pure-control-group">
-              <label for="itho_mediumsetpoint">Medium</label>
-                <input id="itho_mediumsetpoint" type="number" min="1" max="254">
-            </div>              
-            <div class="pure-control-group">
-              <label for="itho_highsetpoint">High</label>
-                <input id="itho_highsetpoint" type="number" min="1" max="254">
-            </div>
-            <br>
-            <div class="pure-control-group">        
-              <label for="option-itho_remotes" class="pure-radio">Enable Itho RF remote support</label>
-              <input id="option-itho_remotes-on" type="radio" name="option-itho_remotes_active" onchange='radio("itho_remotes", "on")' value="on"> on
-              <input id="option-itho_remotes-off" type="radio" name="option-itho_remotes_active" onchange='radio("itho_remotes", "off")' value="off"> off
-            </div>
-            <br>
-              <table id='RemotesTable' class='pure-table pure-table-bordered'></table>       
-            <div class="pure-controls">
-              <button id="ithosubmit" class="pure-button pure-button-primary">Save</button>
-            </div>        
-          </fieldset>
-
-      </form>
-
-<script>
-$(document).ready(function() {
-  getSettings('ithosettings');
-});
-</script>
-
 `;
 var html_mqttsetup = `
 <div class="header">

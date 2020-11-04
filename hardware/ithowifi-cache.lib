@@ -1,31 +1,6 @@
 EESchema-LIBRARY Version 2.4
 #encoding utf-8
 #
-# Connector_Conn_Coaxial
-#
-DEF Connector_Conn_Coaxial J 0 40 Y N 1 F N
-F0 "J" 10 120 50 H V C CNN
-F1 "Connector_Conn_Coaxial" 115 0 50 V V C CNN
-F2 "" 0 0 50 H I C CNN
-F3 "" 0 0 50 H I C CNN
-$FPLIST
- *BNC*
- *SMA*
- *SMB*
- *SMC*
- *Cinch*
-$ENDFPLIST
-DRAW
-A -2 0 71 1636 0 0 1 10 N -70 20 70 0
-A -1 0 71 0 -1638 0 1 10 N 70 0 -70 -20
-C 0 0 20 0 1 8 N
-P 2 0 1 0 -100 0 -20 0 N
-P 2 0 1 0 0 -100 0 -70 N
-X In 1 -200 0 100 R 50 50 1 1 P
-X Ext 2 0 -200 100 U 50 50 1 1 P
-ENDDRAW
-ENDDEF
-#
 # Connector_Generic_Conn_02x03_Odd_Even
 #
 DEF Connector_Generic_Conn_02x03_Odd_Even J 0 40 Y N 1 F N
@@ -102,6 +77,28 @@ X ~ 2 0 -150 110 U 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
+# Device_D
+#
+DEF Device_D D 0 40 N N 1 F N
+F0 "D" 0 100 50 H V C CNN
+F1 "Device_D" 0 -100 50 H V C CNN
+F2 "" 0 0 50 H I C CNN
+F3 "" 0 0 50 H I C CNN
+$FPLIST
+ TO-???*
+ *_Diode_*
+ *SingleDiode*
+ D_*
+$ENDFPLIST
+DRAW
+P 2 0 1 8 -50 50 -50 -50 N
+P 2 0 1 0 50 0 -50 0 N
+P 4 0 1 8 50 50 50 -50 -50 0 50 50 N
+X K 1 -150 0 100 R 50 50 1 1 P
+X A 2 150 0 100 L 50 50 1 1 P
+ENDDRAW
+ENDDEF
+#
 # Device_LED
 #
 DEF Device_LED D 0 40 N N 1 F N
@@ -139,6 +136,28 @@ DRAW
 S -40 -100 40 100 0 1 10 N
 X ~ 1 0 150 50 D 50 50 1 1 P
 X ~ 2 0 -150 50 U 50 50 1 1 P
+ENDDRAW
+ENDDEF
+#
+# Jumper_SolderJumper_2_Open
+#
+DEF Jumper_SolderJumper_2_Open JP 0 0 Y N 1 F N
+F0 "JP" 0 80 50 H V C CNN
+F1 "Jumper_SolderJumper_2_Open" 0 -100 50 H V C CNN
+F2 "" 0 0 50 H I C CNN
+F3 "" 0 0 50 H I C CNN
+$FPLIST
+ SolderJumper*Open*
+$ENDFPLIST
+DRAW
+A -10 0 40 901 -901 0 1 0 N -10 40 -10 -40
+A -10 0 40 901 -901 0 1 0 F -10 40 -10 -40
+A 10 0 40 -899 899 0 1 0 N 10 -40 10 40
+A 10 0 40 -899 899 0 1 0 F 10 -40 10 40
+P 2 0 1 0 -10 40 -10 -40 N
+P 2 0 1 0 10 40 10 -40 N
+X A 1 -150 0 100 R 50 50 1 1 P
+X B 2 150 0 100 L 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
@@ -220,33 +239,6 @@ P 4 0 1 0 130 15 115 -10 145 -10 130 15 N
 X G 1 -200 0 100 R 50 50 1 1 I
 X S 2 100 -200 100 U 50 50 1 1 P
 X D 3 100 200 100 D 50 50 1 1 P
-ENDDRAW
-ENDDEF
-#
-# nrg_watch_CC1101-868MHz-Module
-#
-DEF nrg_watch_CC1101-868MHz-Module U 0 40 Y Y 1 F N
-F0 "U" -900 650 60 H V L CNN
-F1 "nrg_watch_CC1101-868MHz-Module" 0 0 60 H V C CNN
-F2 "" 0 0 60 H I C CNN
-F3 "" 0 0 60 H I C CNN
-ALIAS CC1101-915MHz-Module
-$FPLIST
- CC1101-???MHz-Module
-$ENDFPLIST
-DRAW
-S 900 600 -900 -600 0 1 0 f
-X VCC 1 0 800 200 D 50 50 1 1 W
-X ANT 10 1100 0 200 L 50 50 1 1 B
-X GND 11 100 -800 200 U 50 50 1 1 W
-X GND 2 -100 -800 200 U 50 50 1 1 W
-X MOSI 3 -1100 300 200 R 50 50 1 1 I
-X SCLK 4 -1100 100 200 R 50 50 1 1 I
-X MISO 5 -1100 200 200 R 50 50 1 1 O
-X GDO2 6 -1100 -300 200 R 50 50 1 1 O
-X GDO0 7 -1100 -200 200 R 50 50 1 1 B
-X CSN 8 -1100 0 200 R 50 50 1 1 I
-X GND 9 0 -800 200 U 50 50 1 1 W
 ENDDRAW
 ENDDEF
 #

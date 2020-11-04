@@ -31,16 +31,7 @@ class System {
     */
     int ramSize();
 
-    bool updateFreeMem();
-
-    int getMemHigh();
-
-    int getMemLow();
-
   private:
-    
-    int memHigh;
-    int memLow { 1000000 };
     char retval[25];
 };
 

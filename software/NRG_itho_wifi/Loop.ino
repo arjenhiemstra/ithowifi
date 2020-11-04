@@ -4,16 +4,6 @@ void loop() {
   yield();
 
   loopstart = millis();
-
-  if (ITHOisr) {
-    if (loopstart - checkin10ms > 10) {
-      noInterrupts();
-      ITHOisr = false;
-      ITHOcheck();
-      interrupts();
-    }
-  }
-
   ArduinoOTA.handle();
   ws.cleanupClients();
 
@@ -95,9 +85,6 @@ void loop() {
 
   }
   if (loopstart - previousUpdate >= 5000 || sysStatReq) {
-    Serial.print("Free heap: ");
-    Serial.println(ESP.getFreeHeap());
-
     if (digitalRead(STATUSPIN) == LOW) {
       strcpy(i2cstat, "initok");
     }
@@ -108,7 +95,7 @@ void loop() {
       lastSysMessage = loopstart;
       sysStatReq = false;
       previousUpdate = loopstart;
-      sys.updateFreeMem();
+      GetFreeMem();
       jsonSystemstat();
     }
   }
@@ -120,15 +107,13 @@ void loop() {
 
   if (loopstart - lastLog > LOGGING_INTERVAL)
   {
-    sprintf(logBuff, "Mem high: %d, Mem low: %d, MQTT: %d, ITHO: %s, ITHO val: %d", sys.getMemHigh(), sys.getMemLow(), MQTT_conn_state, i2cstat, itho_current_val);
+    sprintf(logBuff, "Mem high: %d, Mem low: %d, MQTT: %d, ITHO: %s, ITHO val: %d", memHigh, memLow, MQTT_conn_state, i2cstat, itho_current_val);
     logInput(logBuff);
     strcpy(logBuff, "");
 
     lastLog = loopstart;
   }
 
-  if (ITHOhasPacket) {
-    showPacket();
-  }
+
 
 }
