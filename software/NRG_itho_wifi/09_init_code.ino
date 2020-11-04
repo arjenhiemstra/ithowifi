@@ -20,13 +20,6 @@ bool initFileSystem() {
       //Serial.println("fs_info failed");
       return false;
     }
-    else {
-      FSTotal = fs_info.totalBytes;
-      FSUsed = fs_info.usedBytes;
-      //Serial.println("File System loaded");
-      //Serial.print("Disk size: ");Serial.println(FSTotal);
-      //Serial.print("Disk used: ");Serial.println(FSUsed);
-    }
   }
 
 
@@ -97,7 +90,7 @@ void setupWiFiAP() {
   WiFi.disconnect(); //  this alone is not enough to stop the autoconnecter
   WiFi.mode(WIFI_AP);
   WiFi.persistent(true);
-
+  
   WiFi.softAPConfig(apIP, apIP, netMsk);
   WiFi.softAP(EspHostname(), WiFiAPPSK);
 

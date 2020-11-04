@@ -1,9 +1,12 @@
 #define SDAPIN      4
 #define SCLPIN      5
 #define WIFILED     2
-#define STATUSPIN   14
+#define STATUSPIN   16
+#define ITHO_IRQ_PIN 0
+#define LOGGING_INTERVAL 21600000
 
-#define FWVERSION "1.3.0"
+
+#define FWVERSION "2.0.0"
 #define CONFIG_VERSION "002" //Change when SystemConfig struc changes
 
 #include <ArduinoJson.h>
@@ -18,7 +21,12 @@
 
 #include <ArduinoLog.h>       // https://github.com/thijse/Arduino-Log
 #include <SpiffsFilePrint.h>  // https://github.com/PRosenb/SPIFFS_FilePrint
+#include "IthoCC1101.h"
+#include "IthoPacket.h"
+#include "IthoRemote.h"
 
+#include "SystemConfig.h"
+#include "WifiConfig.h"
 
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
@@ -39,43 +47,65 @@ WiFiClient client;
 DNSServer dnsServer;
 PubSubClient mqttClient(client);
 
-
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 AsyncEventSource events("/events");
 
 SpiffsFilePrint filePrint("/logfile", 2, 10000);
 
+IthoCC1101 rf;
+IthoPacket packet;
+IthoRemote remotes;
+
+SystemConfig systemConfig;
+WifiConfig wifiConfig;
+
+ int RFTid0[] = {106, 170, 106, 101, 154, 107, 154, 86};
+ int RFTid1[] = {102, 169, 86, 153, 149, 169, 154, 86}; // my ID
+ int RFTid2[] = {107, 171, 105, 102, 155, 108, 154, 86};
+
+// Div
+bool ITHOhasPacket = false;
+bool ITHOisr = false;
+long checkin10ms = 0;
+bool knownRFid = false;
+IthoCommand RFTcommand[3] = {IthoUnknown, IthoUnknown, IthoUnknown};
+byte RFTRSSI[3] = {0, 0, 0};
+byte RFTcommandpos = 0;
+IthoCommand RFTlastCommand = IthoLow;
+IthoCommand RFTstate = IthoUnknown;
+IthoCommand savedRFTstate = IthoUnknown;
+bool RFTidChk[3] = {false, false, false};
+String Laststate;
+String CurrentState;
+char lastidindex[2];
+
+
 const char* espName = "nrg-itho-";
 const char* http_username = "admin";
 const char* http_password = "admin";
-
-int FSTotal;
-int FSUsed;
+const char* WiFiAPPSK = "password"; //default AP mode password
 
 int MQTT_conn_state = -5;
 int MQTT_conn_state_new = 0;
 unsigned long lastMQTTReconnectAttempt = 0;
 unsigned long lastWIFIReconnectAttempt = 0;
 
-int newMem;
-int memHigh;
-int memLow = 1000000;
 
 // Global variables
 volatile uint16_t itho_current_val   = 0;
-volatile uint16_t itho_new_val   = 0;
+volatile uint16_t itho_new_val      = 0;
 
 char i2cstat[20] = "";
 char logBuff[256] = "";
-unsigned long lastLog = 0;
-#define LOGGING_INTERVAL 21600000
+
 
 unsigned long loopstart = 0;
 unsigned long updatetimer = 0;
 unsigned long lastSysMessage = 0;
 unsigned long previousUpdate = 0;
 unsigned long wifiLedUpdate = 0;
+unsigned long lastLog = 0;
 
 //flags used
 bool shouldReboot = false;
@@ -86,66 +116,6 @@ bool runscan = false;
 bool mqttSetup = false;
 
 size_t content_len;
-
-const char WiFiAPPSK[] = "password"; //default AP mode password
-const char* serverName;
-const char* accessToken;
-
-struct WifiConfig {
-  char ssid[33];
-  char passwd[65];
-  char dhcp[5];
-  uint8_t renew;
-  char ip[16];
-  char subnet[16];
-  char gateway[16];
-  char dns1[16];
-  char dns2[16];
-  uint8_t port;
-};
-WifiConfig wifiConfig = { //default config
-  "",
-  "",
-  "on",
-  60,
-  "192.168.4.1",
-  "255.255.255.0",
-  "127.0.0.1",
-  "8.8.8.8",
-  "8.8.4.4",
-  80
-};
-
-
-struct SystemConfig {
-  char mqtt_active[5];
-  char mqtt_serverName[65];
-  char mqtt_username[32];
-  char mqtt_password[32];
-  int mqtt_port;
-  int mqtt_version;
-  char mqtt_state_topic[128];
-  char mqtt_state_retain[5];
-  char mqtt_cmd_topic[128];
-  char mqtt_domoticz_active[4];
-  uint16_t mqtt_idx;
-  char version_of_program[4];
-};
-
-SystemConfig systemConfig = { //default config
-  "off", //MQTT active "on"/"off"
-  "192.168.1.123", //MQTT URL
-  "", //MQTT username
-  "", //MQTT password
-  1883, //MQTT port
-  1, //MQTT version
-  "itho/state", //MQTT state topic
-  "yes", //MQTT state retain "yes"/"no"
-  "itho/cmd", //MQTT command topic
-  "off",
-  0,
-  CONFIG_VERSION
-};
 
 void onRequest(AsyncWebServerRequest *request) {
   //Handle Unknown Request

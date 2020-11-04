@@ -30,21 +30,10 @@ U 1 1 5E59EF11
 P 7325 2700
 F 0 "R1" H 7375 2725 50  0000 L CNN
 F 1 "R10K" H 7400 2650 50  0000 L CNN
-F 2 "Resistor_SMD:R_1206_3216Metric" V 7255 2700 50  0001 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 7255 2700 50  0001 C CNN
 F 3 "~" H 7325 2700 50  0001 C CNN
 	1    7325 2700
 	-1   0    0    1   
-$EndComp
-$Comp
-L power:GND #PWR05
-U 1 1 5E5C19D8
-P 7225 4425
-F 0 "#PWR05" H 7225 4175 50  0001 C CNN
-F 1 "GND" H 7230 4252 50  0000 C CNN
-F 2 "" H 7225 4425 50  0001 C CNN
-F 3 "" H 7225 4425 50  0001 C CNN
-	1    7225 4425
-	1    0    0    -1  
 $EndComp
 $Comp
 L power:+5V #PWR08
@@ -119,7 +108,7 @@ U 1 1 5E6CE08C
 P 7525 3050
 F 0 "Q1" V 7774 3050 50  0000 C CNN
 F 1 "BSS138" V 7865 3050 50  0000 C CNN
-F 2 "Package_TO_SOT_SMD:SOT-23W" H 7725 2975 50  0001 L CIN
+F 2 "Package_TO_SOT_SMD:SOT-23" H 7725 2975 50  0001 L CIN
 F 3 "https://www.fairchildsemi.com/datasheets/BS/BSS138.pdf" H 7525 3050 50  0001 L CNN
 	1    7525 3050
 	0    1    1    0   
@@ -130,7 +119,7 @@ U 1 1 5E6D9A33
 P 8075 2850
 F 0 "Q2" V 8324 2850 50  0000 C CNN
 F 1 "BSS138" V 8415 2850 50  0000 C CNN
-F 2 "Package_TO_SOT_SMD:SOT-23W" H 8275 2775 50  0001 L CIN
+F 2 "Package_TO_SOT_SMD:SOT-23" H 8275 2775 50  0001 L CIN
 F 3 "https://www.fairchildsemi.com/datasheets/BS/BSS138.pdf" H 8075 2850 50  0001 L CNN
 	1    8075 2850
 	0    1    1    0   
@@ -141,7 +130,7 @@ U 1 1 5E6FB711
 P 8525 2675
 F 0 "R3" H 8575 2700 50  0000 L CNN
 F 1 "R10K" H 8600 2625 50  0000 L CNN
-F 2 "Resistor_SMD:R_1206_3216Metric" V 8455 2675 50  0001 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 8455 2675 50  0001 C CNN
 F 3 "~" H 8525 2675 50  0001 C CNN
 	1    8525 2675
 	-1   0    0    1   
@@ -152,7 +141,7 @@ U 1 1 5E6FC65E
 P 8950 2675
 F 0 "R4" H 9000 2700 50  0000 L CNN
 F 1 "R10K" H 9025 2625 50  0000 L CNN
-F 2 "Resistor_SMD:R_1206_3216Metric" V 8880 2675 50  0001 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 8880 2675 50  0001 C CNN
 F 3 "~" H 8950 2675 50  0001 C CNN
 	1    8950 2675
 	-1   0    0    1   
@@ -215,17 +204,6 @@ Wire Wire Line
 	7600 1625 7600 1550
 Wire Wire Line
 	1375 2575 1375 3550
-$Comp
-L MCU_Microchip_ATtiny:ATtiny1614-SS ATtiny1614
-U 1 1 5E91B286
-P 5025 2950
-F 0 "ATtiny1614" H 5025 3831 50  0000 C CNN
-F 1 "ATtiny1614-SS" H 5025 3740 50  0000 C CNN
-F 2 "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm" H 5025 2950 50  0001 C CIN
-F 3 "http://ww1.microchip.com/downloads/en/DeviceDoc/ATtiny1614-data-sheet-40001995A.pdf" H 5025 2950 50  0001 C CNN
-	1    5025 2950
-	1    0    0    -1  
-$EndComp
 Text GLabel 9400 3175 0    50   Input ~ 0
 SCL
 Text GLabel 8525 3300 0    50   Input ~ 0
@@ -284,42 +262,6 @@ F 3 "" H 5025 975 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Device:D D1
-U 1 1 5E9A4E60
-P 6450 1475
-F 0 "D1" V 6404 1554 50  0000 L CNN
-F 1 "D" V 6495 1554 50  0000 L CNN
-F 2 "Diode_SMD:D_SOD-123" H 6450 1475 50  0001 C CNN
-F 3 "~" H 6450 1475 50  0001 C CNN
-	1    6450 1475
-	0    1    1    0   
-$EndComp
-$Comp
-L Device:R R10k1
-U 1 1 5E9A6869
-P 6275 1475
-F 0 "R10k1" H 6325 1500 50  0000 L CNN
-F 1 "R10K" H 6350 1425 50  0000 L CNN
-F 2 "Resistor_SMD:R_1206_3216Metric" V 6205 1475 50  0001 C CNN
-F 3 "~" H 6275 1475 50  0001 C CNN
-	1    6275 1475
-	-1   0    0    1   
-$EndComp
-Wire Wire Line
-	6450 1675 6450 1625
-Wire Wire Line
-	6275 1625 6275 1675
-Connection ~ 6275 1675
-Wire Wire Line
-	6275 1675 6450 1675
-Wire Wire Line
-	6275 1325 6275 1250
-Wire Wire Line
-	6275 1250 6450 1250
-Wire Wire Line
-	6450 1250 6450 1325
-Connection ~ 6275 1250
-$Comp
 L power:+5V #PWR02
 U 1 1 5E5F16A3
 P 3375 3550
@@ -337,28 +279,6 @@ Wire Wire Line
 Wire Wire Line
 	3675 4225 5025 4225
 Connection ~ 5025 4225
-Wire Wire Line
-	5025 1250 6275 1250
-Connection ~ 5025 1250
-Wire Wire Line
-	4000 1675 6275 1675
-$Comp
-L Jumper:SolderJumper_2_Open JP1
-U 1 1 5E9EBB5B
-P 6275 2225
-F 0 "JP1" V 6229 2293 50  0000 L CNN
-F 1 "SolderJumper_2_Open" V 6320 2293 50  0000 L CNN
-F 2 "Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm" H 6275 2225 50  0001 C CNN
-F 3 "~" H 6275 2225 50  0001 C CNN
-	1    6275 2225
-	0    1    1    0   
-$EndComp
-Wire Wire Line
-	6275 1675 6275 2075
-Wire Wire Line
-	6275 2375 6275 2550
-Wire Wire Line
-	5625 2550 6275 2550
 $Comp
 L Connector_Generic:Conn_02x03_Odd_Even J1
 U 1 1 5E9F9E00
@@ -370,9 +290,6 @@ F 3 "~" H 6675 3850 50  0001 C CNN
 	1    6675 3850
 	1    0    0    -1  
 $EndComp
-Connection ~ 6275 2550
-Wire Wire Line
-	6275 3750 6475 3750
 $Comp
 L power:+3V3 #PWR04
 U 1 1 5EA0EACE
@@ -405,40 +322,25 @@ U 1 1 5E59F4DA
 P 7875 2700
 F 0 "R2" H 7550 2725 50  0000 L CNN
 F 1 "R10K" H 7600 2650 50  0000 L CNN
-F 2 "Resistor_SMD:R_1206_3216Metric" V 7805 2700 50  0001 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 7805 2700 50  0001 C CNN
 F 3 "~" H 7875 2700 50  0001 C CNN
 	1    7875 2700
 	1    0    0    -1  
 $EndComp
-$Comp
-L Device:C C0.1uF1
-U 1 1 5E9A82DB
-P 3050 4000
-F 0 "C0.1uF1" V 3302 4000 50  0000 C CNN
-F 1 "C0.1uF" V 3211 4000 50  0000 C CNN
-F 2 "Inductor_SMD:L_1206_3216Metric" H 3088 3850 50  0001 C CNN
-F 3 "~" H 3050 4000 50  0001 C CNN
-	1    3050 4000
-	0    -1   -1   0   
-$EndComp
 Connection ~ 5025 1100
 Wire Wire Line
-	5025 1100 5025 1250
-Wire Wire Line
 	5025 975  5025 1100
-Wire Wire Line
-	5025 1250 5025 1400
 Wire Wire Line
 	5125 1100 5025 1100
 Wire Wire Line
 	5425 1100 5550 1100
 $Comp
-L Device:R R100
+L Device:R R5
 U 1 1 5E6D60E1
 P 5275 1100
-F 0 "R100" H 5325 1125 50  0000 L CNN
+F 0 "R5" H 5325 1125 50  0000 L CNN
 F 1 "R100" H 5350 1050 50  0000 L CNN
-F 2 "Resistor_SMD:R_1206_3216Metric" V 5205 1100 50  0001 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 5205 1100 50  0001 C CNN
 F 3 "~" H 5275 1100 50  0001 C CNN
 	1    5275 1100
 	0    -1   -1   0   
@@ -449,18 +351,18 @@ U 1 1 5E6D3DEE
 P 5700 1100
 F 0 "STATUS1" H 5693 845 50  0000 C CNN
 F 1 "LED" H 5693 936 50  0000 C CNN
-F 2 "LED_SMD:LED_1206_3216Metric" H 5700 1100 50  0001 C CNN
+F 2 "LED_SMD:LED_0805_2012Metric" H 5700 1100 50  0001 C CNN
 F 3 "~" H 5700 1100 50  0001 C CNN
 	1    5700 1100
 	-1   0    0    1   
 $EndComp
 $Comp
-L Device:C C0.1uF2
+L Device:C C1
 U 1 1 5EA8CD1C
 P 5900 3675
-F 0 "C0.1uF2" H 5785 3721 50  0000 R CNN
-F 1 "0.1uF" H 5785 3630 50  0000 R CNN
-F 2 "Inductor_SMD:L_1206_3216Metric" H 5938 3525 50  0001 C CNN
+F 0 "C1" H 5785 3721 50  0000 R CNN
+F 1 "0,1uF" H 5785 3630 50  0000 R CNN
+F 2 "Inductor_SMD:L_0805_2012Metric" H 5938 3525 50  0001 C CNN
 F 3 "~" H 5900 3675 50  0001 C CNN
 	1    5900 3675
 	-1   0    0    -1  
@@ -522,14 +424,14 @@ Wire Wire Line
 Wire Wire Line
 	5750 3150 5625 3150
 $Comp
-L Device:R R10k2
+L Device:R R6
 U 1 1 5EB53D69
-P 2075 2925
-F 0 "R10k2" H 2125 2950 50  0000 L CNN
-F 1 "R10K" H 2150 2875 50  0000 L CNN
-F 2 "Resistor_SMD:R_1206_3216Metric" V 2005 2925 50  0001 C CNN
-F 3 "~" H 2075 2925 50  0001 C CNN
-	1    2075 2925
+P 2075 2775
+F 0 "R6" H 2125 2800 50  0000 L CNN
+F 1 "R10K" H 2150 2725 50  0000 L CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 2005 2775 50  0001 C CNN
+F 3 "~" H 2075 2775 50  0001 C CNN
+	1    2075 2775
 	-1   0    0    1   
 $EndComp
 $Comp
@@ -544,57 +446,152 @@ F 3 "http://www.wemos.cc/Products/d1_mini.html" H 2825 2569 60  0000 C CNN
 	-1   0    0    1   
 $EndComp
 Wire Wire Line
-	3200 4000 4000 4000
-Wire Wire Line
-	4000 1675 4000 4000
-Wire Wire Line
-	2175 4000 2900 4000
-Wire Wire Line
-	6275 2550 6275 3750
-Wire Wire Line
-	2175 4000 2175 3350
-Wire Wire Line
-	2175 3350 2325 3350
-$Comp
-L Device:R R10k3
-U 1 1 5EA12137
-P 1725 2925
-F 0 "R10k3" H 1775 2950 50  0000 L CNN
-F 1 "R10K" H 1800 2875 50  0000 L CNN
-F 2 "Resistor_SMD:R_1206_3216Metric" V 1655 2925 50  0001 C CNN
-F 3 "~" H 1725 2925 50  0001 C CNN
-	1    1725 2925
-	-1   0    0    1   
-$EndComp
-Wire Wire Line
-	1725 2575 1725 2775
-Wire Wire Line
-	1375 2575 1725 2575
-Connection ~ 1725 2575
-Wire Wire Line
-	1725 2575 2075 2575
-Wire Wire Line
-	1725 3250 1725 3075
-Wire Wire Line
-	1725 3250 2325 3250
-Wire Wire Line
-	2075 3075 2075 3150
-Wire Wire Line
-	2075 3150 2325 3150
-Wire Wire Line
-	2075 2775 2075 2575
-Wire Wire Line
 	5750 3800 2075 3800
 Wire Wire Line
-	2075 3800 2075 3150
-Connection ~ 2075 3150
+	1375 2575 2075 2575
 Wire Wire Line
-	1725 3250 1725 3700
+	5025 1100 5025 1400
+$Comp
+L MCU_Microchip_ATtiny:ATtiny1614-SS ATtiny1614
+U 1 1 5E91B286
+P 5025 2950
+F 0 "ATtiny1614" H 5025 3831 50  0000 C CNN
+F 1 "ATtiny1614-SS" H 5025 3740 50  0000 C CNN
+F 2 "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm" H 5025 2950 50  0001 C CIN
+F 3 "http://ww1.microchip.com/downloads/en/DeviceDoc/ATtiny1614-data-sheet-40001995A.pdf" H 5025 2950 50  0001 C CNN
+	1    5025 2950
+	1    0    0    -1  
+$EndComp
 Wire Wire Line
-	1725 3700 5650 3700
+	5625 2550 6250 2550
 Wire Wire Line
-	5650 3700 5650 3250
+	6250 2550 6250 3750
 Wire Wire Line
-	5650 3250 5625 3250
-Connection ~ 1725 3250
+	6250 3750 6475 3750
+Wire Wire Line
+	2075 2575 2075 2625
+Wire Wire Line
+	2325 3050 2075 3050
+Wire Wire Line
+	2075 3050 2075 2925
+Connection ~ 2075 3050
+Wire Wire Line
+	2075 3050 2075 3800
+Text GLabel 1875 3150 0    50   Input ~ 0
+CLK
+Text GLabel 1875 3250 0    50   Input ~ 0
+MISO
+Text GLabel 1875 3350 0    50   Input ~ 0
+MOSI
+Text GLabel 1875 3450 0    50   Input ~ 0
+CS
+Text GLabel 3525 3250 2    50   Input ~ 0
+IRQ
+Wire Wire Line
+	1875 3150 2325 3150
+Wire Wire Line
+	2325 3250 1875 3250
+Wire Wire Line
+	1875 3350 2325 3350
+Wire Wire Line
+	2325 3450 1875 3450
+Wire Wire Line
+	3525 3250 3325 3250
+Connection ~ 5125 6750
+Wire Wire Line
+	6600 6750 5125 6750
+Wire Wire Line
+	6600 6025 6600 6750
+Wire Wire Line
+	6125 5825 6400 5825
+$Comp
+L Connector:Conn_Coaxial J3
+U 1 1 5F9B6F27
+P 6600 5825
+F 0 "J3" H 6700 5800 50  0000 L CNN
+F 1 "Conn_Coaxial" H 6700 5709 50  0000 L CNN
+F 2 "Connector_Coaxial:SMA_Amphenol_132289_EdgeMount" H 6600 5825 50  0001 C CNN
+F 3 " ~" H 6600 5825 50  0001 C CNN
+	1    6600 5825
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5025 6750 5025 6625
+Connection ~ 5025 6750
+Wire Wire Line
+	5025 6750 5125 6750
+Wire Wire Line
+	5125 6750 5125 6625
+Wire Wire Line
+	5025 6750 5025 6850
+Wire Wire Line
+	4925 6750 5025 6750
+Wire Wire Line
+	4925 6625 4925 6750
+$Comp
+L power:GND #PWR0102
+U 1 1 5F9B9571
+P 5025 6850
+F 0 "#PWR0102" H 5025 6600 50  0001 C CNN
+F 1 "GND" H 5030 6677 50  0000 C CNN
+F 2 "" H 5025 6850 50  0001 C CNN
+F 3 "" H 5025 6850 50  0001 C CNN
+	1    5025 6850
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5025 4900 5025 5025
+$Comp
+L power:+3V3 #PWR0101
+U 1 1 5F9B0820
+P 5025 4900
+F 0 "#PWR0101" H 5025 4750 50  0001 C CNN
+F 1 "+3V3" H 5040 5073 50  0000 C CNN
+F 2 "" H 5025 4900 50  0001 C CNN
+F 3 "" H 5025 4900 50  0001 C CNN
+	1    5025 4900
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3600 6125 3925 6125
+Wire Wire Line
+	3925 5825 3600 5825
+Wire Wire Line
+	3600 5725 3925 5725
+Wire Wire Line
+	3925 5625 3600 5625
+Wire Wire Line
+	3600 5525 3925 5525
+Text GLabel 3600 6125 0    50   Input ~ 0
+IRQ
+Text GLabel 3600 5825 0    50   Input ~ 0
+CS
+Text GLabel 3600 5525 0    50   Input ~ 0
+MOSI
+Text GLabel 3600 5625 0    50   Input ~ 0
+MISO
+Text GLabel 3600 5725 0    50   Input ~ 0
+CLK
+$Comp
+L power:GND #PWR05
+U 1 1 5E5C19D8
+P 7225 4425
+F 0 "#PWR05" H 7225 4175 50  0001 C CNN
+F 1 "GND" H 7230 4252 50  0000 C CNN
+F 2 "" H 7225 4425 50  0001 C CNN
+F 3 "" H 7225 4425 50  0001 C CNN
+	1    7225 4425
+	1    0    0    -1  
+$EndComp
+$Comp
+L nrg_watch:CC1101-868MHz-Module U2
+U 1 1 5F961074
+P 5025 5825
+F 0 "U2" H 6169 5878 60  0000 L CNN
+F 1 "CC1101-868MHz-Module" H 6169 5772 60  0000 L CNN
+F 2 "nrg_watch:CC1101-868MHz-Module" H 5025 5825 60  0001 C CNN
+F 3 "http://wireless-tag.com/Public/upload/file/p19u6lm0jr1dl21ffgtki1oeuen3.pdf" H 5025 5825 60  0001 C CNN
+	1    5025 5825
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC
