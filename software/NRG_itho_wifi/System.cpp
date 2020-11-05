@@ -58,7 +58,7 @@ char* System::uptime()
   return retval;
 }
 
-int System::ramFree () {
+int System::ramFree() {
   int a = ESP.getFreeHeap();
   return a;
 }
@@ -74,3 +74,24 @@ int System::ramSize() {
   return info.total_free_bytes + info.total_allocated_bytes;
 }
 #endif
+
+bool System::updateFreeMem() {
+  int newMem = ramFree();
+  if (newMem > memHigh) {
+    memHigh = newMem;
+    return true;
+  }
+  if (newMem < memLow) {
+    memLow = newMem;
+    return true;
+  }
+  return false;
+}
+
+int System::getMemHigh() {
+  return memHigh;
+}
+
+int System::getMemLow() {
+  return memLow;
+}

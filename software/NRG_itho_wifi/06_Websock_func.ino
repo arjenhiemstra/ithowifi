@@ -1,9 +1,9 @@
 
 
 
-void jsonWsSend(String rootName, boolean nested) {
+void jsonWsSend(char* rootName, boolean nested) {
 
-  if (rootName == "wifisettings") {
+  if (strcmp(rootName, "wifisettings") == 0) {
     DynamicJsonDocument root(1024);
     //JsonObject root = jsonBuffer.createObject();
     JsonObject nested = root.createNestedObject("wifisettings");
@@ -33,7 +33,7 @@ void jsonWsSend(String rootName, boolean nested) {
       ws.textAll(buffer);
     }
   }
-  else if (rootName == "mqttsettings") {
+  else if (strcmp(rootName, "mqttsettings") == 0) {
     DynamicJsonDocument root(1024);
     JsonObject nested = root.createNestedObject("mqttsettings");
 
@@ -60,59 +60,50 @@ void jsonWsSend(String rootName, boolean nested) {
 
 }
 
-
 // Convert & Transfer Arduino elements to JSON elements
-void jsonWifiscanresult(int id, String ssid, String sigval, int sec) {
-  DynamicJsonDocument root(128);
+void jsonWifiscanresult(int id, const char* ssid, int sigval, int sec) {
+  StaticJsonDocument<512> root;
   //JsonObject root = jsonBuffer.createObject();
   JsonObject wifiscanresult = root.createNestedObject("wifiscanresult");
-  wifiscanresult[F("id")] = id;
-  wifiscanresult[F("ssid")] = ssid;
-  wifiscanresult[F("sigval")] = sigval;
-  wifiscanresult[F("sec")] = sec;
-  size_t len = measureJson(root);
-  AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
-  if (buffer) {
-    serializeJson(root, (char *)buffer->get(), len + 1);
-    ws.textAll(buffer);
-  }
+  wifiscanresult["id"] = id;
+  wifiscanresult["ssid"] = ssid;
+  wifiscanresult["sigval"] = sigval;
+  wifiscanresult["sec"] = sec;
+
+  char buffer[512];
+  size_t len = serializeJson(root, buffer);
+
+  ws.textAll(buffer, len);
+
 }
 // Convert & Transfer Arduino elements to JSON elements
-void jsonMessageBox(String message1, String message2) {
-  DynamicJsonDocument root(128);
+void jsonMessageBox(char* message1, char* message2) {
+  StaticJsonDocument<128> root;
   //JsonObject root = jsonBuffer.createObject();
   JsonObject messagebox = root.createNestedObject("messagebox");
-  messagebox[F("message1")] = message1;
-  messagebox[F("message2")] = message2;
-  size_t len = measureJson(root);
-  AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
-  if (buffer) {
-    serializeJson(root, (char *)buffer->get(), len + 1);
-    ws.textAll(buffer);
-  }
+  messagebox["message1"] = message1;
+  messagebox["message2"] = message2;
+
+  char buffer[128];
+  size_t len = serializeJson(root, buffer);
+
+  ws.textAll(buffer, len);
 }
 // Convert & Transfer Arduino elements to JSON elements
 void jsonSystemstat() {
-  DynamicJsonDocument root(256);
+  StaticJsonDocument<256> root;
   //JsonObject root = jsonBuffer.createObject();
   JsonObject systemstat = root.createNestedObject("systemstat");
+  systemstat["freemem"] = sys.getMemHigh();
+  systemstat["memlow"] = sys.getMemLow();
+  systemstat["mqqtstatus"] = MQTT_conn_state;
+  systemstat["itho"] = itho_current_val;
+  systemstat["i2cstat"] = i2cstat;
 
-  systemstat[F("freemem")] = String(memHigh);
+  char buffer[256];
+  size_t len = serializeJson(root, buffer);
 
-  systemstat[F("memlow")] = String(memLow);
-
-  systemstat[F("mqqtstatus")] = MQTT_conn_state;
-
-  systemstat[F("itho")] = itho_current_val;
-
-  systemstat[F("i2cstat")] = i2cstat;
-
-  size_t len = measureJson(root);
-  AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
-  if (buffer) {
-    serializeJson(root, (char *)buffer->get(), len + 1);
-    ws.textAll(buffer);
-  }
+  ws.textAll(buffer, len);
 }
 
 
@@ -316,7 +307,6 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
 
 
 
-
 void sendScanDataWs()
 {
   int n = WiFi.scanComplete();
@@ -326,10 +316,8 @@ void sendScanDataWs()
   else if (n) {
     sprintf(logBuff, "Wifi scan found %d networks", n);
     logInput(logBuff);
+    jsonMessageBox(logBuff, "");
     strcpy(logBuff, "");
-
-    jsonMessageBox("Scan found " + String(n), "WiFi Networks");
-
     //sort networks
     int indices[n];
     for (int i = 0; i < n; i++) {
@@ -395,7 +383,7 @@ void sendScanDataWs()
       logInput(logBuff);
       strcpy(logBuff, "");
 
-      jsonWifiscanresult(i, String(WiFi.SSID(indices[i])), String(signalStrengthResult), sec);
+      jsonWifiscanresult(i, WiFi.SSID(indices[i]).c_str(), signalStrengthResult, sec);
     }
     WiFi.scanDelete();
     if (WiFi.scanComplete() == -2) {
@@ -413,17 +401,16 @@ void otaWSupdate(size_t prg, size_t sz) {
   if (newPercent != LastPercentotaWSupdate) {
     LastPercentotaWSupdate = newPercent;
     if (newPercent % 2 == 0) {
-      DynamicJsonDocument root(256);
+      StaticJsonDocument<256> root;
       JsonObject ota = root.createNestedObject("ota");
-      ota[F("progress")] = String(prg);
-      ota[F("tsize")] = String(content_len);
-      ota[F("percent")] = String(newPercent);
-      size_t len = measureJson(root);
-      AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
-      if (buffer) {
-        serializeJson(root, (char *)buffer->get(), len + 1);
-        ws.textAll(buffer);
-      }
+      ota["progress"] = prg;
+      ota["tsize"] = content_len;
+      ota["percent"] = newPercent;
+
+      char buffer[256];
+      size_t len = serializeJson(root, buffer);
+
+      ws.textAll(buffer, len);
     }
   }
 

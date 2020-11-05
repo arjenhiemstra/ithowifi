@@ -5,11 +5,11 @@ void setup() {
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
 
-  //
-  //    Serial.begin(115200);
-  //    Serial.flush();
+//      Serial.begin(115200);
+//      Serial.flush();
 
-
+  setEspHostname(hostName);
+  
   if (!initFileSystem()) {
     //Serial.println("\nFile system erroor :( ");
   }
@@ -85,7 +85,7 @@ void setup() {
     else if (error == OTA_END_ERROR)
       events.send("End Failed", "ota");
   });
-  ArduinoOTA.setHostname(EspHostname());
+  ArduinoOTA.setHostname(hostName);
   ArduinoOTA.begin();
 
   ws.onEvent(onWsEvent);
@@ -199,7 +199,7 @@ void setup() {
   MDNS.addService("http", "tcp", 80);
 
   logInput("mDNS: started");
-  sprintf(logBuff, "Hostname: %s", EspHostname());
+  sprintf(logBuff, "Hostname: %s", hostName);
   logInput(logBuff);
   strcpy(logBuff, "");
 

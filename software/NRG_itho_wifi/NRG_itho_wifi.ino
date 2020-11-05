@@ -3,7 +3,7 @@
 #define WIFILED     2
 #define STATUSPIN   14
 
-#define FWVERSION "1.3.0"
+#define FWVERSION "1.3.1"
 #define CONFIG_VERSION "002" //Change when SystemConfig struc changes
 
 #include <ArduinoJson.h>
@@ -47,20 +47,14 @@ AsyncEventSource events("/events");
 SpiffsFilePrint filePrint("/logfile", 2, 10000);
 
 const char* espName = "nrg-itho-";
+char hostName[64];
 const char* http_username = "admin";
 const char* http_password = "admin";
-
-int FSTotal;
-int FSUsed;
 
 int MQTT_conn_state = -5;
 int MQTT_conn_state_new = 0;
 unsigned long lastMQTTReconnectAttempt = 0;
 unsigned long lastWIFIReconnectAttempt = 0;
-
-int newMem;
-int memHigh;
-int memLow = 1000000;
 
 // Global variables
 volatile uint16_t itho_current_val   = 0;
