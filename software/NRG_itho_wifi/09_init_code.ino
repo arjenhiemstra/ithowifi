@@ -20,13 +20,6 @@ bool initFileSystem() {
       //Serial.println("fs_info failed");
       return false;
     }
-    else {
-      FSTotal = fs_info.totalBytes;
-      FSUsed = fs_info.usedBytes;
-      //Serial.println("File System loaded");
-      //Serial.print("Disk size: ");Serial.println(FSTotal);
-      //Serial.print("Disk used: ");Serial.println(FSUsed);
-    }
   }
 
 
@@ -65,25 +58,15 @@ void handleFormat()
   }
 }
 
-char * EspHostname() {
+
+void setEspHostname(char* hostName) {
   // Do a little work to get a unique-ish name. Append the
   // last two bytes of the MAC (HEX'd):
   uint8_t mac[6];
   WiFi.softAPmacAddress(mac);
+  
+  sprintf(hostName, "%s%02x%02x", espName, mac[6 - 2], mac[6 - 1]);
 
-  String macID = String(mac[6 - 2], HEX) +
-                 String(mac[6 - 1], HEX);
-  macID.toUpperCase();
-  String AP_NameString = espName + macID;
-
-  char *AP_NameChar = (char *) malloc(sizeof(char) * (AP_NameString.length() + 1));
-  //char AP_NameChar[AP_NameString.length() + 1];
-  //memset(AP_NameChar, 0, AP_NameString.length() + 1);
-
-  for (int i = 0; i < AP_NameString.length(); i++)
-    AP_NameChar[i] = AP_NameString.charAt(i);
-
-  return AP_NameChar;
 }
 
 void setupWiFiAP() {
@@ -99,7 +82,7 @@ void setupWiFiAP() {
   WiFi.persistent(true);
 
   WiFi.softAPConfig(apIP, apIP, netMsk);
-  WiFi.softAP(EspHostname(), WiFiAPPSK);
+  WiFi.softAP(hostName, WiFiAPPSK);
 
   delay(500);
 
@@ -152,11 +135,11 @@ bool connectWiFiSTA()
   }
 
 #if defined(ESP8266)
-  WiFi.hostname(EspHostname());
+  WiFi.hostname(hostName);
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 #else
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
-  WiFi.setHostname(EspHostname());
+  WiFi.setHostname(hostName);
 #endif
 
   int i = 0;
@@ -194,10 +177,10 @@ bool setupMQTTClient() {
       mqttClient.setBufferSize(1024);
 
       if (systemConfig.mqtt_username == "") {
-        connectResult = mqttClient.connect(EspHostname());
+        connectResult = mqttClient.connect(hostName);
       }
       else {
-        connectResult = mqttClient.connect(EspHostname(), systemConfig.mqtt_username, systemConfig.mqtt_password);
+        connectResult = mqttClient.connect(hostName, systemConfig.mqtt_username, systemConfig.mqtt_password);
       }
 
       if (!connectResult) {

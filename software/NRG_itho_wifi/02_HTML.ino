@@ -57,15 +57,16 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(CONFIG_VERSION);
   response->print("<br><br></div>");
   response->print("<div style='padding: 10px;background-color: black;background-image: radial-gradient(rgba(0, 150, 0, 0.55), black 140%);height: 60vh;}  color: white;  font: 0.9rem Inconsolata, monospace;border-radius: 10px;overflow:auto'>--- System Log ---<br>");
-  String link = "";
-  String linkcur = "";
+  char link[24] = "";
+  char linkcur[24] = "";
+
   if ( SPIFFS.exists("/logfile0.current.log") ) {
-    linkcur = "/logfile0.current.log";
-    link = "/logfile1.log";
+    strlcpy(linkcur, "/logfile0.current.log", sizeof(linkcur));
+    strlcpy(link, "/logfile1.log", sizeof(link));
   }
   else {
-    linkcur = "/logfile1.current.log";
-    link = "/logfile0.log";    
+    strlcpy(linkcur, "/logfile1.current.log", sizeof(linkcur));
+    strlcpy(link, "/logfile0.log", sizeof(link));      
   }
 
   File file = SPIFFS.open(linkcur, FILE_READ);
@@ -90,23 +91,23 @@ void handleDebug(AsyncWebServerRequest *request) {
 }
 
 void handleCurLogDownload(AsyncWebServerRequest *request) {
-  String link = "";
+  char link[24] = "";
   if (  SPIFFS.exists("/logfile0.current.log") ) {
-    link = "/logfile0.current.log";
+    strlcpy(link, "/logfile0.current.log", sizeof(link));
   }
   else {
-    link = "/logfile1.current.log";
+    strlcpy(link, "/logfile1.current.log", sizeof(link));
   }  
-  request->send(SPIFFS, link, String(), true);
+  request->send(SPIFFS, link, "", true);
 }
 
 void handlePrevLogDownload(AsyncWebServerRequest *request) {
-  String link = "";
+  char link[24] = "";
   if (  SPIFFS.exists("/logfile0.current.log") ) {
-    link = "/logfile1.log";
+    strlcpy(link, "/logfile1.log", sizeof(link));
   }
   else {
-     link = "/logfile0.log";  
+     strlcpy(link, "/logfile0.log", sizeof(link)); 
   }  
-  request->send(SPIFFS, link, String(), true);
+  request->send(SPIFFS, link, "", true);
 }

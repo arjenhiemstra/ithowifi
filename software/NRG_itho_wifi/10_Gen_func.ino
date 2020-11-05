@@ -1,25 +1,13 @@
 
-void GetFreeMem() {
-  newMem = ESP.getFreeHeap();
-  if (newMem > memHigh) {
-    sysStatReq = true;
-    memHigh = newMem;
-  }
-  if (newMem < memLow) {
-    sysStatReq = true;
-    memLow = newMem;
-  }
-}
-
-
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  uint16_t val = 0;
+  char s_payload[length];
+  memcpy(s_payload, payload, length);
+  s_payload[length] = '\0';
 
-  char c_payload[length];
-  memcpy(c_payload, payload, length);
-  c_payload[length] = '\0';
+  //String s_topic = String(topic);
+  //String s_payload = String(c_payload);
 
-  String s_topic = String(topic);
-  String s_payload = String(c_payload);
 
   bool updateval = true;
   if (strcmp(systemConfig.mqtt_domoticz_active, "on") == 0) {
@@ -30,23 +18,26 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       if (!(const char*)root[F("idx")].isNull()) {
         uint16_t idx = root[F("idx")].as<uint16_t>();
         if (idx == systemConfig.mqtt_idx) {
-          if (!(const char*)root[F("svalue1")].isNull()) {       
-            int16_t invalue = root[F("svalue1")].as<int16_t>();           
+          if (!(const char*)root[F("svalue1")].isNull()) {
+            uint16_t invalue = root[F("svalue1")].as<uint16_t>();
             double value = invalue * 2.54;
-            s_payload = String(value);
+            val = (uint16_t)value;
             updateval = true;
-          }          
+          }
         }
-      }   
-    } 
+      }
+    }
+  }
+  else {
+    val = strtoul (s_payload, NULL, 10);
   }
 
 
 
-  if (updateval && s_topic == systemConfig.mqtt_cmd_topic) {
+  if (updateval && (strcmp(topic, systemConfig.mqtt_cmd_topic) == 0)) {
 
-    if (s_payload.toInt() != itho_current_val) {
-      writeIthoVal((uint16_t)s_payload.toInt());
+    if (val != itho_current_val) {
+      writeIthoVal(val);
     }
   }
   else {
@@ -54,30 +45,36 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
-void updateState(int newState) {
+void updateState(uint16_t newState) {
+
 
   if (mqttClient.connected()) {
-    String payload = String(newState);
-    
+    char buffer[512];
+
     if (strcmp(systemConfig.mqtt_domoticz_active, "on") == 0) {
       int nvalue = 1;
       double state = 1.0;
       if (newState > 0) {
         state  = newState / 2.54;
       }
+
+      newState = uint16_t(state + 0.5);
+      char buf[10];
+      sprintf(buf, "%d", newState);
       
-      newState = int(state + 0.5);
-      payload = "";
-      DynamicJsonDocument root(512);
+      StaticJsonDocument<512> root;
       root["command"] = "switchlight";
       root["idx"] = systemConfig.mqtt_idx;
       root["nvalue"] = nvalue;
       root["switchcmd"] = "Set Level";
-      root["level"] = String(newState);
-      serializeJson(root, payload);
+      root["level"] = buf;
+      serializeJson(root, buffer);
     }
-    
-    mqttClient.publish(systemConfig.mqtt_state_topic, payload.c_str(), true);
+    else {
+      sprintf(buffer, "%d", newState);
+    }
+    mqttClient.publish(systemConfig.mqtt_state_topic, buffer, true);
+
   }
 }
 

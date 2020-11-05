@@ -10,7 +10,7 @@ void handleGeneralJs(AsyncWebServerRequest *request) {
   response->addHeader("Server", "Itho WiFi Web Server");
 
   response->print("var on_ap = false; var hostname = '");
-  response->print(EspHostname());
+  response->print(hostName);
   response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });");
 
   request->send(response);
@@ -21,7 +21,7 @@ void handleGeneralJsOnAp(AsyncWebServerRequest *request) {
   response->addHeader("Server", "Itho WiFi Web Server");
 
   response->print("var on_ap = true; var hostname = '");
-  response->print(EspHostname());
+  response->print(hostName);
   response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_wifisetup); });");
 
   request->send(response);
