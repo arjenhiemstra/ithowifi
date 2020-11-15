@@ -1,63 +1,41 @@
 
-
-
-void jsonWsSend(char* rootName, boolean nested) {
+void jsonWsSend(const char* rootName) {
+  DynamicJsonDocument root(4000);
 
   if (strcmp(rootName, "wifisettings") == 0) {
-    DynamicJsonDocument root(1024);
-    //JsonObject root = jsonBuffer.createObject();
-    JsonObject nested = root.createNestedObject("wifisettings");
-    nested[F("ssid")] = wifiConfig.ssid;
-    nested[F("passwd")] = wifiConfig.passwd;
-    nested[F("dhcp")] = wifiConfig.dhcp;
-    nested[F("renew")] = wifiConfig.renew;
-    if (nested[F("dhcp")] == "off") {
-      nested[F("ip")] = wifiConfig.ip;
-      nested[F("subnet")] = wifiConfig.subnet;
-      nested[F("gateway")] = wifiConfig.gateway;
-      nested[F("dns1")] = wifiConfig.dns1;
-      nested[F("dns2")] = wifiConfig.dns2;
+    JsonObject nested = root.createNestedObject(rootName);
+    nested["ssid"] = wifiConfig.ssid;
+    nested["passwd"] = wifiConfig.passwd;
+    nested["dhcp"] = wifiConfig.dhcp;
+    nested["renew"] = wifiConfig.renew;
+    if (strcmp(wifiConfig.dhcp, "off") == 0) {
+      nested["ip"] = wifiConfig.ip;
+      nested["subnet"] = wifiConfig.subnet;
+      nested["gateway"] = wifiConfig.gateway;
+      nested["dns1"] = wifiConfig.dns1;
+      nested["dns2"] = wifiConfig.dns2;
     }
     else {
-      nested[F("ip")] = WiFi.localIP().toString();
-      nested[F("subnet")] = WiFi.subnetMask().toString();
-      nested[F("gateway")] = WiFi.gatewayIP().toString();
-      nested[F("dns1")] = WiFi.dnsIP().toString();
-      nested[F("dns2")] = WiFi.dnsIP(1).toString();
+      nested["ip"] = WiFi.localIP().toString();
+      nested["subnet"] = WiFi.subnetMask().toString();
+      nested["gateway"] = WiFi.gatewayIP().toString();
+      nested["dns1"] = WiFi.dnsIP().toString();
+      nested["dns2"] = WiFi.dnsIP(1).toString();
     }
     nested[F("port")] = wifiConfig.port;
-    size_t len = measureJson(root);
-    AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
-    if (buffer) {
-      serializeJson(root, (char *)buffer->get(), len + 1);
-      ws.textAll(buffer);
-    }
+
   }
-  else if (strcmp(rootName, "mqttsettings") == 0) {
-    DynamicJsonDocument root(1024);
-    JsonObject nested = root.createNestedObject("mqttsettings");
-
-    nested["mqtt_active"] = systemConfig.mqtt_active;
-    nested["mqtt_serverName"] = systemConfig.mqtt_serverName;
-    nested["mqtt_username"] = systemConfig.mqtt_username;
-    nested["mqtt_password"] = systemConfig.mqtt_password;
-    nested["mqtt_port"] = systemConfig.mqtt_port;
-    nested["mqtt_version"] = systemConfig.mqtt_version;
-    nested["mqtt_state_topic"] = systemConfig.mqtt_state_topic;
-    nested["mqtt_cmd_topic"] = systemConfig.mqtt_cmd_topic;
-    nested["mqtt_domoticz_active"] = systemConfig.mqtt_domoticz_active;
-    nested["mqtt_idx"] = systemConfig.mqtt_idx;    
-    nested["version_of_program"] = systemConfig.version_of_program;
-
-    size_t len = measureJson(root);
-    AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
-    if (buffer) {
-      serializeJson(root, (char *)buffer->get(), len + 1);
-      ws.textAll(buffer);
-    }
+  else if (strcmp(rootName, "systemsettings")  == 0) {
+    // Create an object at the root
+    JsonObject nested = root.createNestedObject(rootName);
+    systemConfig.get(nested);
   }
-
-
+  size_t len = measureJson(root);
+  AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
+  if (buffer) {
+    serializeJson(root, (char *)buffer->get(), len + 1);
+    ws.textAll(buffer);
+  }
 }
 
 // Convert & Transfer Arduino elements to JSON elements
@@ -91,137 +69,24 @@ void jsonMessageBox(char* message1, char* message2) {
 }
 // Convert & Transfer Arduino elements to JSON elements
 void jsonSystemstat() {
-  StaticJsonDocument<256> root;
+  StaticJsonDocument<512> root;
   //JsonObject root = jsonBuffer.createObject();
   JsonObject systemstat = root.createNestedObject("systemstat");
   systemstat["freemem"] = sys.getMemHigh();
   systemstat["memlow"] = sys.getMemLow();
   systemstat["mqqtstatus"] = MQTT_conn_state;
   systemstat["itho"] = itho_current_val;
+  systemstat["itho_low"] = systemConfig.itho_low;
+  systemstat["itho_medium"] = systemConfig.itho_medium;
+  systemstat["itho_high"] = systemConfig.itho_high;
   systemstat["i2cstat"] = i2cstat;
 
-  char buffer[256];
+  char buffer[512];
   size_t len = serializeJson(root, buffer);
 
   ws.textAll(buffer, len);
 }
 
-
-
-void jsonWsReceive(String msg) {
-  bool wifisettings = false;
-  bool systemsettings = false;
-  DynamicJsonDocument root(2048);
-  DeserializationError error = deserializeJson(root, msg);
-  if (!error) {
-    //Serial.println("JSON receive parsed");
-    // WIFI Settings parse
-    if (!(const char*)root[F("wifisettings")][F("ssid")].isNull()) {
-      wifisettings = true;
-      strlcpy(wifiConfig.ssid, root[F("wifisettings")][F("ssid")], sizeof(wifiConfig.ssid));
-    }
-    if (!(const char*)root[F("wifisettings")][F("password")].isNull()) {
-      wifisettings = true;
-      strlcpy(wifiConfig.passwd, root[F("wifisettings")][F("password")], sizeof(wifiConfig.passwd));
-    }
-    if (!(const char*)root[F("wifisettings")][F("dhcp")].isNull()) {
-      wifisettings = true;
-      strlcpy(wifiConfig.dhcp, root[F("wifisettings")][F("dhcp")], sizeof(wifiConfig.dhcp));
-    }
-    if (!(const char*)root[F("wifisettings")][F("renew")].isNull()) {
-      wifisettings = true;
-      wifiConfig.renew = root[F("wifisettings")][F("renew")];
-    }
-    if (!(const char*)root[F("wifisettings")][F("dhcp")].isNull()) {
-      wifisettings = true;
-      strlcpy(wifiConfig.dhcp, root[F("wifisettings")][F("dhcp")], sizeof(wifiConfig.dhcp));
-    }
-    if (!(const char*)root[F("wifisettings")][F("ip")].isNull()) {
-      wifisettings = true;
-      strlcpy(wifiConfig.ip, root[F("wifisettings")][F("ip")], sizeof(wifiConfig.ip));
-    }
-    if (!(const char*)root[F("wifisettings")][F("subnet")].isNull()) {
-      wifisettings = true;
-      strlcpy(wifiConfig.subnet, root[F("wifisettings")][F("subnet")], sizeof(wifiConfig.subnet));
-    }
-    if (!(const char*)root[F("wifisettings")][F("gateway")].isNull()) {
-      wifisettings = true;
-      strlcpy(wifiConfig.gateway, root[F("wifisettings")][F("gateway")], sizeof(wifiConfig.gateway));
-    }
-    if (!(const char*)root[F("wifisettings")][F("dns1")].isNull()) {
-      wifisettings = true;
-      strlcpy(wifiConfig.dns1, root[F("wifisettings")][F("dns1")], sizeof(wifiConfig.dns1));
-    }
-    if (!(const char*)root[F("wifisettings")][F("dns2")].isNull()) {
-      wifisettings = true;
-      strlcpy(wifiConfig.dns2, root[F("wifisettings")][F("dns2")], sizeof(wifiConfig.dns2));
-    }
-    //MQTT Settings parse
-    if (!(const char*)root[F("mqttsettings")][F("mqtt_active")].isNull()) {
-      systemsettings = true;
-      strlcpy(systemConfig.mqtt_active, root[F("mqttsettings")][F("mqtt_active")], sizeof(systemConfig.mqtt_active));
-    }
-    if (!(const char*)root[F("mqttsettings")][F("mqtt_serverName")].isNull()) {
-      systemsettings = true;
-      strlcpy(systemConfig.mqtt_serverName, root[F("mqttsettings")][F("mqtt_serverName")], sizeof(systemConfig.mqtt_serverName));
-    }
-    if (!(const char*)root[F("mqttsettings")][F("mqtt_username")].isNull()) {
-      systemsettings = true;
-      strlcpy(systemConfig.mqtt_username, root[F("mqttsettings")][F("mqtt_username")], sizeof(systemConfig.mqtt_username));
-    }
-    if (!(const char*)root[F("mqttsettings")][F("mqtt_password")].isNull()) {
-      systemsettings = true;
-      strlcpy(systemConfig.mqtt_password, root[F("mqttsettings")][F("mqtt_password")], sizeof(systemConfig.mqtt_password));
-    }
-    if (!(const char*)root[F("mqttsettings")][F("mqtt_port")].isNull()) {
-      systemsettings = true;
-      systemConfig.mqtt_port = root[F("mqttsettings")][F("mqtt_port")];
-    }
-    if (!(const char*)root[F("mqttsettings")][F("mqtt_version")].isNull()) {
-      systemsettings = true;
-      systemConfig.mqtt_version = root[F("mqttsettings")][F("mqtt_version")];
-    }
-    if (!(const char*)root[F("mqttsettings")][F("mqtt_state_topic")].isNull()) {
-      systemsettings = true;
-      strlcpy(systemConfig.mqtt_state_topic, root[F("mqttsettings")][F("mqtt_state_topic")], sizeof(systemConfig.mqtt_state_topic));
-    }
-    if (!(const char*)root[F("mqttsettings")][F("mqtt_state_retain")].isNull()) {
-      systemsettings = true;
-      strlcpy(systemConfig.mqtt_state_retain, root[F("mqttsettings")][F("mqtt_state_retain")], sizeof(systemConfig.mqtt_state_retain));
-    }
-    if (!(const char*)root[F("mqttsettings")][F("mqtt_cmd_topic")].isNull()) {
-      systemsettings = true;
-      strlcpy(systemConfig.mqtt_cmd_topic, root[F("mqttsettings")][F("mqtt_cmd_topic")], sizeof(systemConfig.mqtt_cmd_topic));
-    }
-    if (!(const char*)root[F("mqttsettings")][F("mqtt_domoticz_active")].isNull()) {
-      systemsettings = true;
-      strlcpy(systemConfig.mqtt_domoticz_active, root[F("mqttsettings")][F("mqtt_domoticz_active")], sizeof(systemConfig.mqtt_domoticz_active));
-    }
-    if (!(const char*)root[F("mqttsettings")][F("mqtt_idx")].isNull()) {
-      systemsettings = true;
-      systemConfig.mqtt_idx = root[F("mqttsettings")][F("mqtt_idx")];
-    }        
-  }
-  //save to file
-  if (wifisettings == true) {
-    if (saveWifiConfig()) {
-      jsonMessageBox("Wifi settings saved successful,", "reboot the device");
-    }
-    else {
-      jsonMessageBox("Wifi settings save failed:", "Unable to write config file");
-    }
-  }
-  if (systemsettings == true) {
-    if (saveSystemConfig()) {
-      jsonMessageBox("System settings saved", "successful");
-    }
-    else {
-      jsonMessageBox("System settings save failed:", "Unable to write config file");
-    }
-    mqttSetup = true;
-
-  }
-}
 
 void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) {
   if (type == WS_EVT_CONNECT) {
@@ -260,18 +125,59 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
       if (msg.startsWith("{\"sysstat")) {
         sysStatReq = true;
       }
-      else if (msg.startsWith("{\"wifisettings")) {
-        jsonWsReceive(msg);
-      }
-      else if (msg.startsWith("{\"mqttsettings")) {
-        jsonWsReceive(msg);
+      else if (msg.startsWith("{\"wifisettings") || msg.startsWith("{\"systemsettings")) {
+        DynamicJsonDocument root(2048);
+        DeserializationError error = deserializeJson(root, msg.c_str());
+        if (!error) {
+          JsonObject obj = root.as<JsonObject>();
+          for (JsonPair p : obj) {
+            if (strcmp(p.key().c_str(), "systemsettings") == 0) {
+              if (p.value().is<JsonObject>()) {
+
+                JsonObject obj = p.value();
+                if (systemConfig.set(obj)) {
+                  if (saveSystemConfig()) {
+                    jsonMessageBox("System settings saved", "successful");
+                  }
+                  else {
+                    jsonMessageBox("System settings save failed:", "Unable to write config file");
+                  }
+                }
+              }
+            }
+            if (strcmp(p.key().c_str(), "wifisettings") == 0) {
+              if (p.value().is<JsonObject>()) {
+
+                JsonObject obj = p.value();
+                if (wifiConfig.set(obj)) {
+                  if (saveWifiConfig()) {
+                    jsonMessageBox("Wifi settings saved successful,", "reboot the device");
+                  }
+                  else {
+                    jsonMessageBox("Wifi settings save failed:", "Unable to write config file");
+                  }
+                }
+              }
+            }
+          }
+        }
+
       }
       else if (msg.startsWith("{\"wifisetup")) {
-        jsonWsSend("wifisettings", true);
+        jsonWsSend("wifisettings");
       }
       else if (msg.startsWith("{\"mqttsetup")) {
-        jsonWsSend("mqttsettings", true);
+        systemConfig.get_mqtt_settings = true;
+        jsonWsSend("systemsettings");
         sysStatReq = true;
+      }
+      else if (msg.startsWith("{\"ithosetup")) {
+        systemConfig.get_itho_settings = true;
+        jsonWsSend("systemsettings");
+        sysStatReq = true;
+      }      
+      else if (msg.startsWith("{\"ithoremotes")) {
+        jsonWsSend("ithoremotes");
       }
       else if (msg.startsWith("{\"reboot")) {
         shouldReboot = true;
@@ -293,7 +199,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         }
       }
       else if (msg.startsWith("{\"itho")) {
-        DynamicJsonDocument root(128);
+        StaticJsonDocument<128> root;
         DeserializationError error = deserializeJson(root, msg);
         if (!error) {
           itho_new_val  = root["itho"];
@@ -303,7 +209,6 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
     }
   }
 }
-
 
 
 

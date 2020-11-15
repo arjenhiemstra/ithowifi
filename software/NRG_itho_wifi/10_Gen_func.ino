@@ -29,7 +29,18 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
   }
   else {
-    val = strtoul (s_payload, NULL, 10);
+    if (strcmp(s_payload, "low") == 0) {
+      val = systemConfig.itho_low;
+    }
+    else if (strcmp(s_payload, "medium") == 0) {
+      val = systemConfig.itho_medium;
+    }
+    else if (strcmp(s_payload, "high") == 0) {
+      val = systemConfig.itho_high;
+    }
+    else {
+      val = strtoul (s_payload, NULL, 10);
+    }
   }
 
 
@@ -121,7 +132,7 @@ void printTimestamp(Print* _logOutput) {
   struct tm timeinfo;
   if (getLocalTime(&timeinfo, 0)) {
     char timeStringBuff[50];  // 50 chars should be enough
-    strftime(timeStringBuff, sizeof(timeStringBuff), "%F %T ", &timeinfo);
+    strftime(timeStringBuff, sizeof(timeStringBuff), "<br>%F %T ", &timeinfo);
     _logOutput->print(timeStringBuff);
   } else
 #elif defined(ESP8266)
