@@ -7,8 +7,8 @@ void loop() {
   ArduinoOTA.handle();
   ws.cleanupClients();
 
-  if (mqttSetup) {
-    mqttSetup = false;
+  if (systemConfig.mqtt_updated) {
+    systemConfig.mqtt_updated = false;
     setupMQTTClient();
   }
 

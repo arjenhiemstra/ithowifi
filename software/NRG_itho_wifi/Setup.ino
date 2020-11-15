@@ -37,7 +37,12 @@ void setup() {
 
   configTime(0, 0, "pool.ntp.org");
 
+#ifdef ESP8266
   sprintf(logBuff, "System boot, last reset reason: %s", ESP.getResetReason().c_str());
+#endif
+#ifdef ESP32
+  sprintf(logBuff, "System boot, last reset reason: %d", esp_reset_reason());
+#endif
   logInput(logBuff);
   strcpy(logBuff, "");
   if (!wifiModeAP) {
@@ -121,6 +126,7 @@ void setup() {
   // HTML pages
   server.rewrite("/", "/index.htm");
   server.on("/index.htm", HTTP_ANY, handleMainpage);
+  server.on("/api.html", HTTP_GET, handleAPI);  
   server.on("/debug", HTTP_GET, handleDebug);
 
   //Log file download
@@ -195,7 +201,9 @@ void setup() {
 
   logInput("Webserver: started");
 
-
+#if ESP32
+  MDNS.begin(hostName);
+#endif
   MDNS.addService("http", "tcp", 80);
 
   logInput("mDNS: started");

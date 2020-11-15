@@ -77,7 +77,7 @@ int System::ramSize() {
 
 bool System::updateFreeMem() {
   int newMem = ramFree();
-  if (newMem > memHigh) {
+  if (newMem != memHigh) {
     memHigh = newMem;
     return true;
   }

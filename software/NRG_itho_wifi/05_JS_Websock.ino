@@ -3,6 +3,9 @@
 const char controls_js[] PROGMEM = R"=====(
 
 var count = 0;
+var itho_low = 0;
+var itho_medium = 127;
+var itho_high = 254;
 
 var websocketServerLocation = 'ws://' + window.location.hostname + '/ws';
 
@@ -29,8 +32,8 @@ function startWebsock(websocketServerLocation){
             $('#dns2').val(x.dns2);
             $('#port').val(x.port);
           }
-          else if (f.mqttsettings) {
-            let x = f.mqttsettings;
+          else if (f.systemsettings) {
+            let x = f.systemsettings;
             var $radios = $('input[name=\'option-mqtt_active\']');
             if($radios.is(':checked') === false) {
                 $radios.filter('[value=' + x.mqtt_active + ']').prop('checked', true);
@@ -51,8 +54,28 @@ function startWebsock(websocketServerLocation){
                 $('#mqtt_idx, #label-mqtt_idx').show();
             }
             radio("mqtt_domoticz", x.mqtt_domoticz_active);
-            mqtt_idx:          $('#mqtt_idx').val(x.mqtt_idx);
-          }          
+            $('#mqtt_idx').val(x.mqtt_idx);
+
+            $('#itho_low').val(x.itho_low);
+            $('#itho_medium').val(x.itho_medium);
+            $('#itho_high').val(x.itho_high);
+            $('#itho_timer1').val(x.itho_timer1);
+            $('#itho_timer2').val(x.itho_timer2);
+            $('#itho_timer3').val(x.itho_timer3);
+            $radios = $('input[name=\'option-itho_remotes_active\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value=' + x.itho_rf_support + ']').prop('checked', true);
+            }
+            radio("itho_rf_support", x.itho_rf_support);            
+            if (x.itho_rf_support === 'on') {
+              getSettings('ithoremotes');
+            }
+            
+          }    
+          else if (f.remotes) {
+            let x = f.remotes;
+            buildHtmlTable('#RemotesTable', x);
+          }  
           else if (f.wifiscanresult) {
             let x = f.wifiscanresult;
             $('#wifiscanresult').append('<div class=\'ScanResults\'><input id=\'' + x.id + '\' class=\'pure-input-1-5\' name=\'optionsWifi\' value=\'' + x.ssid + '\' type=\'radio\'>' + returnSignalSVG(x.sigval) + '' + returnWifiSecSVG(x.sec) + ' ' + x.ssid + '</label></div>');
@@ -66,6 +89,15 @@ function startWebsock(websocketServerLocation){
             $('#mqtt_conn').addClass("pure-button " + button.button);
             $('#mqtt_conn').text(button.state);
             $('#itho').val(x.itho);
+            if ('itho_low' in x) {
+              itho_low = x.itho_low;
+            }
+            if ('itho_medium' in x) {
+              itho_medium = x.itho_medium;
+            }
+            if ('itho_high' in x) {
+              itho_high = x.itho_high;
+            }                        
             var i2cstatus = '';
             if (x.i2cstat == 'nok') {
               i2cstatus = '<span style="color:#ca3c3c;">init failed</span><br>- please power cycle the itho unit -';
@@ -136,7 +168,7 @@ $(document).ready(function() {
       websock.send(JSON.stringify({
         wifisettings: {
           ssid:     $('#ssid').val(),
-          password: $('#passwd').val(),
+          passwd:   $('#passwd').val(),
           dhcp:     $('input[name=\'option-dhcp\']:checked').val(),
           renew:    $('#renew').val(),
           ip:       $('#ip').val(),
@@ -152,7 +184,7 @@ $(document).ready(function() {
     //mqttmsubmit
    else if ($(this).attr('id') == 'mqttsubmit') {
       websock.send(JSON.stringify({
-        mqttsettings: {
+        systemsettings: {
           mqtt_active:          $('input[name=\'option-mqtt_active\']:checked').val(),
           mqtt_serverName:      $('#mqtt_serverName').val(),
           mqtt_username:        $('#mqtt_username').val(),
@@ -167,6 +199,20 @@ $(document).ready(function() {
       }));
       update_page('mqtt');
     }
+   else if ($(this).attr('id') == 'ithosubmit') {
+      websock.send(JSON.stringify({
+        systemsettings: {
+          itho_low:         $('#itho_low').val(),
+          itho_medium:      $('#itho_medium').val(),
+          itho_high:        $('#itho_high').val(),
+          itho_timer1:      $('#itho_timer1').val(),
+          itho_timer2:      $('#itho_timer2').val(),
+          itho_timer3:      $('#itho_timer3').val(),
+          itho_rf_support:  $('input[name=\'option-itho_remotes_active\']:checked').val()
+        }
+      }));
+      update_page('itho');
+    }    
     else if ($(this).attr('id') == 'resetwificonf') {
       if (confirm("This will reset the wifi config to factory default, are you sure?")) {
         websock.send('{\"resetwificonf\":true}');
@@ -320,6 +366,14 @@ function radio(origin, state) {
       $('#mqtt_state_topic').val(mqtt_state_topic_tmp);
       $('#mqtt_cmd_topic').val(mqtt_cmd_topic_tmp);
     }     
+  }
+  else if (origin == "itho_rf_support") {
+    if (state == 'on') {
+      $('#RemotesTable').show();
+    }
+    else {
+      $('#RemotesTable').hide();
+    }     
   }  
 }
   
@@ -387,7 +441,9 @@ function update_page(page) {
 
     if (page == 'index') { $('#main').append(html_index); }
     if (page == 'wifisetup') { $('#main').append(html_wifisetup); }
+    if (page == 'itho') { $('#main').append(html_ithosettings); }
     if (page == 'mqtt') { $('#main').append(html_mqttsetup); }
+    if (page == 'api') { $('#main').append(html_api); }      
     if (page == 'help') { $('#main').append(html_help); }
     if (page == 'reset') { $('#main').append(html_reset); }
     if (page == 'update') { $('#main').append(html_update); }
@@ -536,6 +592,42 @@ function returnWifiSecSVG(secVal) {
    return returnString;
 }
 
+function buildHtmlTable(selector, jsonVar) {
+  var columns = addAllColumnHeaders(jsonVar, selector);
+  var headerTbody$ = $('<tbody>');
+  
+  for (var i = 0; i < jsonVar.length; i++) {
+    var row$ = $('<tr>');
+    for (var colIndex = 0; colIndex < columns.length; colIndex++) {
+      var cellValue = jsonVar[i][columns[colIndex]].toString();
+      if (cellValue == null) cellValue = '';
+      row$.append($('<td>').html(cellValue));
+    }
+    headerTbody$.append(row$);
+  }
+  
+  $(selector).append(headerTbody$);
+}
+
+function addAllColumnHeaders(jsonVar, selector) {
+  var columnSet = [];
+  var headerThead$ = $('<thead>');
+  var headerTr$ = $('<tr>');
+
+  for (var i = 0; i < jsonVar.length; i++) {
+    var rowHash = jsonVar[i];
+    for (var key in rowHash) {
+      if ($.inArray(key, columnSet) == -1) {
+        columnSet.push(key);
+        headerTr$.append($('<th>').html(key));
+      }
+    }
+  }
+  headerThead$.append(headerTr$);
+  $(selector).append(headerThead$);
+
+  return columnSet;
+}
 
 //
 // HTML string literals
@@ -564,7 +656,7 @@ var html_index = `
       <input id="itho" type="range" min="0" max="254" value="0" class="slider" onchange="updateSlider(this.value)" style="width: 100%; margin: 0 0 2em 0;">
 
       <div style="text-align: center">
-        <a href="#" class="pure-button" onclick="updateSlider(0)" style="float: left;">Low</a> <a href="#" onclick="updateSlider(127)" class="pure-button">Set to 50%</a> <a href="#" class="pure-button" onclick="updateSlider(254)" style="float: right;">High</a>
+        <a href="#" class="pure-button" onclick="updateSlider(itho_low)" style="float: left;">Low</a> <a href="#" onclick="updateSlider(itho_medium)" class="pure-button">Medium</a> <a href="#" class="pure-button" onclick="updateSlider(itho_high)" style="float: right;">High</a>
       </div>
 
     </div>
@@ -641,9 +733,9 @@ var html_wifisetup = `
     <div class="pure-u-1 pure-u-md-2-5">
 
       <div>
-        <fieldset style="border-color: white;">
+
         <div><button id="wifiscan" class="pure-button pure-button-active">Scan</button></div>
-        </fieldset>
+
       </div>      
       <div class="hidden">
         <div><p>Scan results:</p></div>
@@ -657,6 +749,45 @@ $(document).ready(function() {
   getSettings('wifisetup');
 });
 </script>
+`;
+
+var html_ithosettings = `
+<div class="header">
+  <h1>Itho settings</h1>
+</div>
+
+<p>Configuration of the Itho box</p>
+
+<style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
+      <form class="pure-form pure-form-aligned">
+          <fieldset>  
+            <legend><br>Speed settings (0-254):</legend>
+            <div class="pure-control-group">
+              <label for="itho_low">Low</label>
+                <input id="itho_low" type="number" min="0" max="254" size="6">
+            </div>
+            <div class="pure-control-group">
+              <label for="itho_medium">Medium</label>
+                <input id="itho_medium" type="number" min="0" max="254" size="6">
+            </div>              
+            <div class="pure-control-group">
+              <label for="itho_high">High</label>
+                <input id="itho_high" type="number" min="0" max="254" size="6">
+            </div>
+            <br>
+            <div class="pure-controls">
+              <button id="ithosubmit" class="pure-button pure-button-primary">Save</button>
+            </div>          
+          </fieldset>
+
+      </form>
+
+<script>
+$(document).ready(function() {
+  getSettings('ithosetup');
+});
+</script>
+
 `;
 var html_mqttsetup = `
 <div class="header">
@@ -728,6 +859,51 @@ $(document).ready(function() {
 </script>
 
 `;
+
+
+var html_api = `
+
+<div class="header">
+  <h1>IthoWifi - API</h1>
+</div>
+
+<br><br><p>A simple API is available at the following URL:</p>
+<p>
+<a href='api.html' target='_blank'>api.html</a> - HTML get request with params to get / set itho speed / commands<br>
+</p>
+
+<h3>API Description</h3>
+<p>
+<strong>General information</strong><br>
+<br>
+The request should be formatted as follows: <br>http://[DNS or IP]/api.html?[param]=[value]<br><br>
+ie. http://192.168.4.1/api.html?command=medium
+<br><br>
+
+<strong>Get status:</strong><br>
+<br>
+<strong>param:</strong>get<br>
+<strong>value:</strong>currentspeed<br><br>
+<i>returns the current speed of the itho as an integer value between 0-254</i><br>
+<br><br>
+
+<strong>Set commands:</strong><br>
+<br>
+A successful command will return 'OK', an unsuccessful command will return 'NOK'<br><br>
+<strong>param:</strong>command<br>
+<strong>possible values:</strong>low, medium, high<br>
+<i>Values other than these will be ignored</i>
+<br><br>
+<strong>param:</strong>speed<br>
+<strong>possible values:</strong>0-254<br>
+<i>Values outside this range will be ignored</i>
+<br>
+
+</p>
+
+  
+`;
+
 var html_help = `
   <div class="header">
     <h1>Need some help?</h1>

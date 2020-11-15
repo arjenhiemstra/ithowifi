@@ -24,7 +24,9 @@ const char html_mainpage[] PROGMEM = R"=====(
             <a class="pure-menu-heading" id="headingindex" href="index">Itho WiFi controller</a>
             <ul class="pure-menu-list">
                 <li class="pure-menu-item"><a href="wifisetup" class="pure-menu-link">Wifi setup</a></li>
+                <li class="pure-menu-item"><a href="itho" class="pure-menu-link">Itho settings</a></li>
                 <li class="pure-menu-item"><a href="mqtt" class="pure-menu-link">MQTT</a></li>
+                <li class="pure-menu-item"><a href="api" class="pure-menu-link">API</a></li>                
                 <li class="pure-menu-item"><a href="help" class="pure-menu-link">Help</a></li>
                 <li class="pure-menu-item"><a href="update" class="pure-menu-link">Update</a></li>
                 <li class="pure-menu-item"><a href="reset" class="pure-menu-link">Reset</a></li>
@@ -45,6 +47,57 @@ const char html_mainpage[] PROGMEM = R"=====(
 
 void handleMainpage(AsyncWebServerRequest *request) {
   request->send_P(200, "text/html", html_mainpage);
+}
+
+void handleAPI(AsyncWebServerRequest *request) {
+  bool parseOK = false;
+  if(request->hasParam("get")) {
+    AsyncWebParameter* p = request->getParam("get");
+    if (strcmp(p->value().c_str(), "currentspeed") == 0 ) {
+      char ithoval[5];
+      sprintf(ithoval, "%d", itho_current_val);
+      request->send(200, "text/html", ithoval);
+      return;
+    }
+
+  }  
+  else if(request->hasParam("command")) {
+    AsyncWebParameter* p = request->getParam("command");
+    if (strcmp(p->value().c_str(), "low") == 0 ) {
+      parseOK = true;
+      writeIthoVal(systemConfig.itho_low);
+    }
+    else if (strcmp(p->value().c_str(), "medium") == 0 ) {
+      parseOK = true;
+      writeIthoVal(systemConfig.itho_medium);
+    }
+    else if (strcmp(p->value().c_str(), "high") == 0 ) {
+      parseOK = true;
+      writeIthoVal(systemConfig.itho_high);
+    }
+  }
+  else if(request->hasParam("speed")) {
+    AsyncWebParameter* p = request->getParam("speed");
+    uint16_t val = strtoul (p->value().c_str(), NULL, 10);
+    if (val > 0 && val < 255) {
+      parseOK = true;
+      writeIthoVal(val);
+    }    
+    else if (strcmp(p->value().c_str(), "0") == 0 ) {
+      parseOK = true;
+      writeIthoVal(0);
+    }
+
+  }
+
+
+  if(parseOK) {
+    request->send(200, "text/html", "OK");
+  }
+  else {
+    request->send(200, "text/html", "NOK");
+  }
+  
 }
 
 void handleDebug(AsyncWebServerRequest *request) {
