@@ -59,14 +59,16 @@ void handleFormat()
 }
 
 
-void setEspHostname(char* hostName) {
+char* hostName() {
+  static char hostName[32];
   // Do a little work to get a unique-ish name. Append the
   // last two bytes of the MAC (HEX'd):
   uint8_t mac[6];
   WiFi.softAPmacAddress(mac);
   
   sprintf(hostName, "%s%02x%02x", espName, mac[6 - 2], mac[6 - 1]);
-
+  
+  return hostName;
 }
 
 void setupWiFiAP() {
@@ -82,7 +84,7 @@ void setupWiFiAP() {
   WiFi.persistent(true);
 
   WiFi.softAPConfig(apIP, apIP, netMsk);
-  WiFi.softAP(hostName, WiFiAPPSK);
+  WiFi.softAP(hostName(), WiFiAPPSK);
 
   delay(500);
 
@@ -135,11 +137,11 @@ bool connectWiFiSTA()
   }
 
 #if defined(ESP8266)
-  WiFi.hostname(hostName);
+  WiFi.hostname(hostName());
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 #else
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
-  WiFi.setHostname(hostName);
+  WiFi.setHostname(hostName());
 #endif
 
   int i = 0;
@@ -177,10 +179,10 @@ bool setupMQTTClient() {
       mqttClient.setBufferSize(1024);
 
       if (systemConfig.mqtt_username == "") {
-        connectResult = mqttClient.connect(hostName);
+        connectResult = mqttClient.connect(hostName());
       }
       else {
-        connectResult = mqttClient.connect(hostName, systemConfig.mqtt_username, systemConfig.mqtt_password);
+        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_username, systemConfig.mqtt_password);
       }
 
       if (!connectResult) {

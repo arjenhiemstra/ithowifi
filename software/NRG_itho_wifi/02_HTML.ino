@@ -26,67 +26,106 @@ const char html_mainpage[] PROGMEM = R"=====(
                 <li class="pure-menu-item"><a href="wifisetup" class="pure-menu-link">Wifi setup</a></li>
                 <li class="pure-menu-item"><a href="itho" class="pure-menu-link">Itho settings</a></li>
                 <li class="pure-menu-item"><a href="mqtt" class="pure-menu-link">MQTT</a></li>
-                <li class="pure-menu-item"><a href="api" class="pure-menu-link">API</a></li>                
+                <li class="pure-menu-item"><a href="api" class="pure-menu-link">API</a></li>
                 <li class="pure-menu-item"><a href="help" class="pure-menu-link">Help</a></li>
                 <li class="pure-menu-item"><a href="update" class="pure-menu-link">Update</a></li>
                 <li class="pure-menu-item"><a href="reset" class="pure-menu-link">Reset</a></li>
                 <li class="pure-menu-item"><a href="debug" class="pure-menu-link">Debug</a></li>
             </ul>
-        <div id="memory_box"></div>        
+        <div id="memory_box"></div>
         </div>
     </div>
     <div id="main">
     </div>
 </div>
-
+<div id="loader">
+<div style="width: 100px;position: absolute;top: calc(50% - 7px);left: calc(50% - 50px);text-align: center;">Connecting...</div>
+<div id="spinner"></div>
+</div>
 </body>
 <script src="/js/general.js"></script>
 </html>
 )=====";
 
 
-void handleMainpage(AsyncWebServerRequest *request) {
-  request->send_P(200, "text/html", html_mainpage);
-}
-
 void handleAPI(AsyncWebServerRequest *request) {
   bool parseOK = false;
-  if(request->hasParam("get")) {
-    AsyncWebParameter* p = request->getParam("get");
-    if (strcmp(p->value().c_str(), "currentspeed") == 0 ) {
-      char ithoval[5];
-      sprintf(ithoval, "%d", itho_current_val);
-      request->send(200, "text/html", ithoval);
-      return;
+  nextIthoTimer = 0;
+  
+  int params = request->params();
+  for(int i=0;i<params;i++){
+    AsyncWebParameter* p = request->getParam(i);
+    
+    if(strcmp(p->name().c_str(), "get") == 0) {
+      AsyncWebParameter* p = request->getParam("get");
+      if (strcmp(p->value().c_str(), "currentspeed") == 0 ) {
+        char ithoval[5];
+        sprintf(ithoval, "%d", ithoCurrentVal);
+        request->send(200, "text/html", ithoval);
+        return;
+      }
     }
-
-  }  
-  else if(request->hasParam("command")) {
-    AsyncWebParameter* p = request->getParam("command");
-    if (strcmp(p->value().c_str(), "low") == 0 ) {
-      parseOK = true;
-      writeIthoVal(systemConfig.itho_low);
+    else if(strcmp(p->name().c_str(), "command") == 0) {
+      if (strcmp(p->value().c_str(), "low") == 0 ) {
+        parseOK = true;
+        nextIthoVal = systemConfig.itho_low;
+        updateItho = true;
+      }
+      else if (strcmp(p->value().c_str(), "medium") == 0 ) {
+        parseOK = true;
+        nextIthoVal = systemConfig.itho_medium;
+        updateItho = true;
+      }
+      else if (strcmp(p->value().c_str(), "high") == 0 ) {
+        parseOK = true;
+        nextIthoVal = systemConfig.itho_high;
+        updateItho = true;      
+      }
+      else if (strcmp(p->value().c_str(), "timer1") == 0 ) {
+        parseOK = true;
+        nextIthoVal = systemConfig.itho_high;
+        nextIthoTimer = systemConfig.itho_timer1;
+        updateItho = true;  
+      }
+      else if (strcmp(p->value().c_str(), "timer2") == 0 ) {
+        parseOK = true;
+        nextIthoVal = systemConfig.itho_high;
+        nextIthoTimer = systemConfig.itho_timer2;
+        updateItho = true;  
+      }
+      else if (strcmp(p->value().c_str(), "timer3") == 0 ) {
+        parseOK = true;
+        nextIthoVal = systemConfig.itho_high;
+        nextIthoTimer = systemConfig.itho_timer3;
+        updateItho = true;  
+      }
+      else if (strcmp(p->value().c_str(), "clearqueue") == 0 ) {
+        parseOK = true;
+        clearQueue = true;
+      }
     }
-    else if (strcmp(p->value().c_str(), "medium") == 0 ) {
-      parseOK = true;
-      writeIthoVal(systemConfig.itho_medium);
+    else if(strcmp(p->name().c_str(), "speed") == 0) {
+      uint16_t val = strtoul (p->value().c_str(), NULL, 10);
+      if (val > 0 && val < 255) {
+        parseOK = true;
+        nextIthoVal = val;
+        updateItho = true;        
+      }    
+      else if (strcmp(p->value().c_str(), "0") == 0 ) {
+        parseOK = true;
+        nextIthoVal = 0;
+        updateItho = true;
+      }
+  
     }
-    else if (strcmp(p->value().c_str(), "high") == 0 ) {
-      parseOK = true;
-      writeIthoVal(systemConfig.itho_high);
-    }
-  }
-  else if(request->hasParam("speed")) {
-    AsyncWebParameter* p = request->getParam("speed");
-    uint16_t val = strtoul (p->value().c_str(), NULL, 10);
-    if (val > 0 && val < 255) {
-      parseOK = true;
-      writeIthoVal(val);
-    }    
-    else if (strcmp(p->value().c_str(), "0") == 0 ) {
-      parseOK = true;
-      writeIthoVal(0);
-    }
+    else if(strcmp(p->name().c_str(), "timer") == 0) {
+      uint16_t timer = strtoul (p->value().c_str(), NULL, 10);
+      if (timer > 0 && timer < 65535) {
+        parseOK = true;
+        nextIthoTimer = timer;
+        updateItho = true;        
+      }    
+    }  
 
   }
 
@@ -108,7 +147,7 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(FWVERSION);
   response->print("<br><br>Config version: ");
   response->print(CONFIG_VERSION);
-  response->print("<br><br></div>");
+  response->print("<br><br><span>Itho I2C connection status: </span><span id=\'i2cstat\'>unknown</span><br><br></div>");
   response->print("<div style='padding: 10px;background-color: black;background-image: radial-gradient(rgba(0, 150, 0, 0.55), black 140%);height: 60vh;}  color: white;  font: 0.9rem Inconsolata, monospace;border-radius: 10px;overflow:auto'>--- System Log ---<br>");
   char link[24] = "";
   char linkcur[24] = "";
@@ -133,14 +172,18 @@ void handleDebug(AsyncWebServerRequest *request) {
 
   response->print("</div><br><br><a class='pure-button' href='/curlog'>Download current logfile</a>");
 
-
   if ( SPIFFS.exists(link) ) {
     response->print("&nbsp;<a class='pure-button' href='/prevlog'>Download previous logfile</a>");
 
   }
   response->print("<br><br>");
   
+  
   request->send(response);
+  
+  
+  DelayedReq.once(1, []() { sysStatReq = true; });
+
 }
 
 void handleCurLogDownload(AsyncWebServerRequest *request) {

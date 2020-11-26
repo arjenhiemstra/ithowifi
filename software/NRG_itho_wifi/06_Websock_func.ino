@@ -75,7 +75,7 @@ void jsonSystemstat() {
   systemstat["freemem"] = sys.getMemHigh();
   systemstat["memlow"] = sys.getMemLow();
   systemstat["mqqtstatus"] = MQTT_conn_state;
-  systemstat["itho"] = itho_current_val;
+  systemstat["itho"] = ithoCurrentVal;
   systemstat["itho_low"] = systemConfig.itho_low;
   systemstat["itho_medium"] = systemConfig.itho_medium;
   systemstat["itho_high"] = systemConfig.itho_high;
@@ -202,7 +202,8 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         StaticJsonDocument<128> root;
         DeserializationError error = deserializeJson(root, msg);
         if (!error) {
-          itho_new_val  = root["itho"];
+          nextIthoVal  = root["itho"];
+          nextIthoTimer = 0;
           updateItho = true;
         }
       }
