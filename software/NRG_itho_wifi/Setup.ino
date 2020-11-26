@@ -5,11 +5,9 @@ void setup() {
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
 
-//      Serial.begin(115200);
-//      Serial.flush();
+//  Serial.begin(115200);
+//  Serial.flush();
 
-  setEspHostname(hostName);
-  
   if (!initFileSystem()) {
     //Serial.println("\nFile system erroor :( ");
   }
@@ -90,7 +88,7 @@ void setup() {
     else if (error == OTA_END_ERROR)
       events.send("End Failed", "ota");
   });
-  ArduinoOTA.setHostname(hostName);
+  ArduinoOTA.setHostname(hostName());
   ArduinoOTA.begin();
 
   ws.onEvent(onWsEvent);
@@ -104,7 +102,9 @@ void setup() {
   // upload a file to /upload
   server.on("/upload", HTTP_POST, [](AsyncWebServerRequest * request) {
     request->send(200);
-  }, onUpload);
+  }, [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+    //Handle upload
+  });
 
 #ifdef ESP32
   server.addHandler(new SPIFFSEditor(SPIFFS, http_username, http_password));
@@ -113,20 +113,53 @@ void setup() {
 #endif
 
   // css_code
-  server.on("/pure-min.css", HTTP_GET, css_code);
+  server.on("/pure-min.css", HTTP_GET, [](AsyncWebServerRequest * request) {
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", pure_min_css_gz, pure_min_css_gz_len);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
+  });
 
   // javascript files
-  server.on("/js/zepto.min.js", HTTP_GET, zepto_min_js_gz_code);
-  server.on("/js/controls.js", HTTP_GET, controls_js_code);
-  server.on("/js/general.js", HTTP_GET, handleGeneralJs)
-  .setFilter(ON_STA_FILTER);
-  server.on("/js/general.js", HTTP_GET, handleGeneralJsOnAp)
-  .setFilter(ON_AP_FILTER);
+  server.on("/js/zepto.min.js", HTTP_GET, [](AsyncWebServerRequest * request) {
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", zepto_min_js_gz, zepto_min_js_gz_len);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
+  });
+
+  server.on("/js/controls.js", HTTP_GET, [](AsyncWebServerRequest * request) {
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", controls_js);
+    response->addHeader("Server", "Itho WiFi Web Server");
+    request->send(response);
+  });
+
+  server.on("/js/general.js", HTTP_GET, [](AsyncWebServerRequest * request) {
+    AsyncResponseStream *response = request->beginResponseStream("application/javascript");
+    response->addHeader("Server", "Itho WiFi Web Server");
+
+    response->print("var on_ap = false; var hostname = '");
+    response->print(hostName());
+    response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });");
+
+    request->send(response);
+  }).setFilter(ON_STA_FILTER);
+
+  server.on("/js/general.js", HTTP_GET, [](AsyncWebServerRequest * request) {
+    AsyncResponseStream *response = request->beginResponseStream("application/javascript");
+    response->addHeader("Server", "Itho WiFi Web Server");
+
+    response->print("var on_ap = true; var hostname = '");
+    response->print(hostName());
+    response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_wifisetup); });");
+
+    request->send(response);
+  }).setFilter(ON_AP_FILTER);
 
   // HTML pages
   server.rewrite("/", "/index.htm");
-  server.on("/index.htm", HTTP_ANY, handleMainpage);
-  server.on("/api.html", HTTP_GET, handleAPI);  
+  server.on("/index.htm", HTTP_ANY, [](AsyncWebServerRequest * request) {
+    request->send_P(200, "text/html", html_mainpage);
+  });
+  server.on("/api.html", HTTP_GET, handleAPI);
   server.on("/debug", HTTP_GET, handleDebug);
 
   //Log file download
@@ -193,21 +226,23 @@ void setup() {
   // Catch-All Handlers
   // Any request that can not find a Handler that canHandle it
   // ends in the callbacks below.
-  server.onNotFound(onRequest);
-  server.onFileUpload(onUpload);
-  server.onRequestBody(onBody);
+  server.onNotFound([](AsyncWebServerRequest * request) {
+    //Handle Unknown Request
+    request->send(404);
+  });
+
 
   server.begin();
 
   logInput("Webserver: started");
 
 #if ESP32
-  MDNS.begin(hostName);
+  MDNS.begin(hostName());
 #endif
   MDNS.addService("http", "tcp", 80);
 
   logInput("mDNS: started");
-  sprintf(logBuff, "Hostname: %s", hostName);
+  sprintf(logBuff, "Hostname: %s", hostName());
   logInput(logBuff);
   strcpy(logBuff, "");
 

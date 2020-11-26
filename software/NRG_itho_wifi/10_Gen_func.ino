@@ -1,54 +1,138 @@
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  uint16_t val = 0;
+  if (topic == NULL) return;
+  if (payload == NULL) return;
+  
+  int16_t val = -1;
+  unsigned long timer = 0;
+  bool dtype = true;
+  if (strcmp(systemConfig.mqtt_domoticz_active, "on") == 0) {
+    dtype = false;
+  }
+
   char s_payload[length];
   memcpy(s_payload, payload, length);
   s_payload[length] = '\0';
 
-  //String s_topic = String(topic);
-  //String s_payload = String(c_payload);
-
-
-  bool updateval = true;
-  if (strcmp(systemConfig.mqtt_domoticz_active, "on") == 0) {
-    updateval = false;
+  if (strcmp(topic, systemConfig.mqtt_cmd_topic) == 0) {
     DynamicJsonDocument root(512);
     DeserializationError error = deserializeJson(root, s_payload);
     if (!error) {
-      if (!(const char*)root[F("idx")].isNull()) {
-        uint16_t idx = root[F("idx")].as<uint16_t>();
+      bool jsonCmd = false;
+      if (!(const char*)root["idx"].isNull()) {
+        jsonCmd = true;
+        //printf("JSON parse -- idx match\n");
+        uint16_t idx = root["idx"].as<uint16_t>();
         if (idx == systemConfig.mqtt_idx) {
-          if (!(const char*)root[F("svalue1")].isNull()) {
-            uint16_t invalue = root[F("svalue1")].as<uint16_t>();
+          if (!(const char*)root["svalue1"].isNull()) {
+            uint16_t invalue = root["svalue1"].as<uint16_t>();
             double value = invalue * 2.54;
             val = (uint16_t)value;
-            updateval = true;
+            timer = 0;
           }
         }
       }
-    }
-  }
-  else {
-    if (strcmp(s_payload, "low") == 0) {
-      val = systemConfig.itho_low;
-    }
-    else if (strcmp(s_payload, "medium") == 0) {
-      val = systemConfig.itho_medium;
-    }
-    else if (strcmp(s_payload, "high") == 0) {
-      val = systemConfig.itho_high;
+      if (!(const char*)root["dtype"].isNull()) {
+        const char* value = root["dtype"] | "";
+        if (strcmp(value, "ithofan") == 0) {
+          dtype = true;
+        }
+      }
+      if (dtype) {
+      /*
+       * standard true, unless mqtt_domoticz_active == "on"
+       * if mqtt_domoticz_active == "on"
+       *    this should be set to true first by a JSON containing key:value pair "dtype":"ithofan", 
+       *    otherwise different commands might get processed due to domoticz general domoticz/out topic structure
+       */
+        if (!(const char*)root["command"].isNull()) {
+          jsonCmd = true;
+          const char* value = root["command"] | "";
+          if (strcmp(value, "low") == 0) {
+            val = systemConfig.itho_low;
+            timer = 0;
+          }
+          else if (strcmp(value, "medium") == 0) {
+            val = systemConfig.itho_medium;
+            timer = 0;
+          }
+          else if (strcmp(value, "high") == 0) {
+            val = systemConfig.itho_high;
+            timer = 0;
+          }
+          else if (strcmp(value, "timer1") == 0) {
+            val = systemConfig.itho_high;
+            timer = systemConfig.itho_timer1;
+          }
+          else if (strcmp(value, "timer2") == 0) {
+            val = systemConfig.itho_high;
+            timer = systemConfig.itho_timer2;
+          }
+          else if (strcmp(value, "timer3") == 0) {
+            val = systemConfig.itho_high;
+            timer = systemConfig.itho_timer3;
+          }
+          if (strcmp(value, "clearqueue") == 0) {
+            clearQueue = true;
+          }
+        }
+        if (!(const char*)root["speed"].isNull()) {
+          jsonCmd = true;
+          val = root["speed"].as<uint16_t>();
+        }
+        if (!(const char*)root["timer"].isNull()) {
+          jsonCmd = true;
+          timer = root["timer"].as<uint16_t>();
+        }
+        if (!(const char*)root["clearqueue"].isNull()) {
+          jsonCmd = true;
+          const char* value = root["clearqueue"] | "";
+          if (strcmp(value, "true") == 0) {
+            clearQueue = true;
+          }
+        }
+        if (!jsonCmd) {
+          val = strtoul (s_payload, NULL, 10);
+          timer = 0;
+        }
+      }
+
     }
     else {
-      val = strtoul (s_payload, NULL, 10);
+      if (strcmp(s_payload, "low") == 0) {
+        val = systemConfig.itho_low;
+        timer = 0;
+      }
+      else if (strcmp(s_payload, "medium") == 0) {
+        val = systemConfig.itho_medium;
+        timer = 0;
+      }
+      else if (strcmp(s_payload, "high") == 0) {
+        val = systemConfig.itho_high;
+        timer = 0;
+      }
+      else if (strcmp(s_payload, "timer1") == 0) {
+        val = systemConfig.itho_high;
+        timer = systemConfig.itho_timer1;
+      }
+      else if (strcmp(s_payload, "timer2") == 0) {
+        val = systemConfig.itho_high;
+        timer = systemConfig.itho_timer2;
+      }
+      else if (strcmp(s_payload, "timer3") == 0) {
+        val = systemConfig.itho_high;
+        timer = systemConfig.itho_timer3;
+      }
+      else if (strcmp(s_payload, "clearqueue") == 0) {
+        ithoQueue.clear_queue();
+      }
     }
-  }
 
-
-
-  if (updateval && (strcmp(topic, systemConfig.mqtt_cmd_topic) == 0)) {
-
-    if (val != itho_current_val) {
-      writeIthoVal(val);
+    if (val != -1) {
+      nextIthoVal = val;
+      nextIthoTimer = timer;
+      //printf("Update -- nextIthoVal:%d, nextIthoTimer:%d\n", nextIthoVal, nextIthoTimer);
+      updateItho = true;
     }
   }
   else {
@@ -72,7 +156,7 @@ void updateState(uint16_t newState) {
       newState = uint16_t(state + 0.5);
       char buf[10];
       sprintf(buf, "%d", newState);
-      
+
       StaticJsonDocument<512> root;
       root["command"] = "switchlight";
       root["idx"] = systemConfig.mqtt_idx;
@@ -89,6 +173,9 @@ void updateState(uint16_t newState) {
   }
 }
 
+void add2queue() {
+  ithoQueue.add2queue(nextIthoVal, nextIthoTimer, systemConfig.nonQ_cmd_clearsQ);
+}
 
 // Update itho Value
 static void writeIthoVal(uint16_t value) {
@@ -97,8 +184,8 @@ static void writeIthoVal(uint16_t value) {
     value = 254;
   }
 
-  if (itho_current_val != value) {
-    itho_current_val = value;
+  if (ithoCurrentVal != value) {
+    ithoCurrentVal = value;
     sysStatReq = true;
 
     while (digitalRead(SCLPIN) == LOW) { //'check' if other master is active

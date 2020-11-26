@@ -71,21 +71,29 @@ int System::ramSize() {
 int System::ramSize() {
   multi_heap_info_t info;
   heap_caps_get_info(&info, MALLOC_CAP_INTERNAL);
-  return info.total_free_bytes + info.total_allocated_bytes;
+  return info.total_free_bytes;
 }
 #endif
 
 bool System::updateFreeMem() {
+  bool result = false;
+#if defined(ESP8266)  
   int newMem = ramFree();
+#else
+  int newMem = ramSize();
+#endif
   if (newMem != memHigh) {
     memHigh = newMem;
-    return true;
+    result = true;
   }
+#if defined(ESP32)  
+  newMem = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
+#endif  
   if (newMem < memLow) {
     memLow = newMem;
-    return true;
+    result = true;
   }
-  return false;
+  return result;
 }
 
 int System::getMemHigh() {

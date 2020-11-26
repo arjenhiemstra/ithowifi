@@ -11,6 +11,23 @@ void loop() {
     systemConfig.mqtt_updated = false;
     setupMQTTClient();
   }
+  if (clearQueue) {
+    clearQueue = false;
+    ithoQueue.clear_queue();
+  }
+  if (updateItho) {
+    updateItho = false;
+    if (strcmp(systemConfig.itho_rf_support, "on") == 0) {
+      IthoCMD.once_ms(150, add2queue);
+    }
+    else {
+      ithoQueue.add2queue(nextIthoVal, nextIthoTimer, systemConfig.nonQ_cmd_clearsQ);
+    }
+  }
+  if (ithoQueue.ithoSpeedUpdated) {
+    ithoQueue.ithoSpeedUpdated = false;
+    writeIthoVal(ithoQueue.get_itho_speed());
+  }
 
   // handle MQTT:
   if (strcmp(systemConfig.mqtt_active, "off") == 0) {
@@ -85,6 +102,7 @@ void loop() {
 
   }
   if (loopstart - previousUpdate >= 5000 || sysStatReq) {
+
     if (digitalRead(STATUSPIN) == LOW) {
       strcpy(i2cstat, "initok");
     }
@@ -100,14 +118,9 @@ void loop() {
     }
   }
 
-  if (updateItho) {
-    updateItho = false;
-    writeIthoVal(itho_new_val);
-  }
-
   if (loopstart - lastLog > LOGGING_INTERVAL)
   {
-    sprintf(logBuff, "Mem high: %d, Mem low: %d, MQTT: %d, ITHO: %s, ITHO val: %d", sys.getMemHigh(), sys.getMemLow(), MQTT_conn_state, i2cstat, itho_current_val);
+    sprintf(logBuff, "Mem high: %d, Mem low: %d, MQTT: %d, ITHO: %s, ITHO val: %d", sys.getMemHigh(), sys.getMemLow(), MQTT_conn_state, i2cstat, ithoCurrentVal);
     logInput(logBuff);
     strcpy(logBuff, "");
 
