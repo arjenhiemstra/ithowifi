@@ -134,3 +134,75 @@ bool resetSystemConfig() {
     return true;
   }
 }
+#if ESP32
+
+uint16_t serializeRemotes(const IthoRemote &remotes, Print& dst) {
+  DynamicJsonDocument doc(1000+(MAX_NUMBER_OF_REMOTES*300));
+  // Create an object at the root
+  JsonObject root = doc.to<JsonObject>(); // Fill the object
+  remotes.get(root);
+  // Serialize JSON to file
+  return serializeJson(doc, dst) > 0;
+}
+
+
+bool saveRemotesConfig() {
+  
+  return saveFileRemotes("/remotes.json", remotes);
+
+}
+
+bool saveFileRemotes(const char *filename, const IthoRemote &remotes) { // Open file for writing
+  File file = SPIFFS.open(filename, "w");
+  if (!file) {
+    //Serial.println(F("Failed to create remotes file"));
+    return false;
+  }
+  // Serialize JSON to file
+  bool success = serializeRemotes(remotes, file);
+  if (!success) {
+    //Serial.println(F("Failed to serialize remotes"));
+    return false;
+  }
+  //Serial.println(F("File saved"));
+  return true;
+}
+
+bool deserializeRemotes(Stream &src, IthoRemote &remotes) {
+
+  DynamicJsonDocument doc(1000+(MAX_NUMBER_OF_REMOTES*300));
+
+  // Parse the JSON object in the file
+  DeserializationError err = deserializeJson(doc, src);
+  if (err) {
+    //Serial.println(F("Failed to deserialize json"));
+    return false;
+  }
+  
+  doc.shrinkToFit();
+  remotes.set(doc.as<JsonObject>());
+  return true;
+}
+
+bool loadRemotesConfig() {
+  
+  return loadFileRemotes("/remotes.json", remotes);
+
+}
+
+bool loadFileRemotes(const char *filename, IthoRemote &remotes) { // Open file for reading
+  File file = SPIFFS.open(filename, "r");
+  // This may fail if the file is missing
+  if (!file) {
+    //Serial.println(F("Failed to open config file")); return false;
+  }
+  // Parse the JSON object in the file
+  bool success = deserializeRemotes(file, remotes);
+  // This may fail if the JSON is invalid
+  if (!success) {
+    //Serial.println(F("Failed to deserialize configuration"));
+    return false;
+  }
+  return true;
+}
+#endif

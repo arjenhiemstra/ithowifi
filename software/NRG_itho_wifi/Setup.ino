@@ -238,6 +238,7 @@ void setup() {
 
 #if ESP32
   MDNS.begin(hostName());
+  mdns_instance_name_set("NRG IthoWifi controller");
 #endif
   MDNS.addService("http", "tcp", 80);
 
@@ -250,7 +251,15 @@ void setup() {
   if (WiFi.scanComplete() == -2) {
     WiFi.scanNetworks(true);
   }
+#if ESP32  
+  rf.init();
+  pinMode(ITHO_IRQ_PIN, INPUT);
+  attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, FALLING);
+  rf.initReceive();
+  loadRemotesConfig();
+#endif  
+  ithoQueue.set_itho_fallback_speed(systemConfig.itho_medium);
+  
   strcat(i2cstat, "sOk");
-
   logInput("Setup: done");
 }

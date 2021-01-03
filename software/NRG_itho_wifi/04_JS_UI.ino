@@ -49,7 +49,6 @@ function startWebsock(websocketServerLocation){
             $('#mqtt_idx, #label-mqtt_idx').hide(); 
             if($radios.is(':checked') === false) {
                 $radios.filter('[value=' + x.mqtt_domoticz_active + ']').prop('checked', true);
-                $('#mqtt_idx, #label-mqtt_idx').show();
             }
             radio("mqtt_domoticz", x.mqtt_domoticz_active);
             $('#mqtt_idx').val(x.mqtt_idx);
@@ -70,6 +69,7 @@ function startWebsock(websocketServerLocation){
           }
           else if (f.remotes) {
             let x = f.remotes;
+            $('#RemotesTable').empty();
             buildHtmlTable('#RemotesTable', x);
           }
           else if (f.wifiscanresult) {
@@ -105,6 +105,16 @@ function startWebsock(websocketServerLocation){
               i2cstatus = 'unknown status';
             }
             $('#i2cstat').html(i2cstatus);
+            if(x.itho_llm > 0) {
+              $('#itho_llm').removeClass();
+              $('#itho_llm').addClass("pure-button button-success");
+              $('#itho_llm').text("On " + x.itho_llm + "s");
+            }
+            else {
+              $('#itho_llm').removeClass();
+              $('#itho_llm').addClass("pure-button button-secondary");
+              $('#itho_llm').text("Off");   
+            }
           }  
           else if (f.messagebox) {
             let x = f.messagebox;
@@ -124,6 +134,9 @@ function startWebsock(websocketServerLocation){
       console.log('websock open');
       document.getElementById("layout").style.opacity = 1;
       document.getElementById("loader").style.display = "none";
+      if (lastPageReq !== "") {
+        update_page(lastPageReq);
+      }      
   };
   websock.onclose = function(a) {
       console.log('websock close');
@@ -212,7 +225,28 @@ $(document).ready(function() {
         }
       }));
       update_page('itho');
-    }    
+    }
+    else if ($(this).attr('id') == 'itho_llm') {
+      websock.send('{\"itho_llm\":true}');
+    }
+    else if ($(this).attr('id') == 'itho_remove_remote') {
+      var selected = $('input[name=\'optionsRemotes\']:checked').val();
+      if (selected == null) {
+        alert("Please select a remote.")
+      }
+      else {
+        websock.send('{\"itho_remove_remote\":' + selected + '}');
+      }
+    }
+    else if ($(this).attr('id') == 'itho_update_remote') {
+      var selected = $('input[name=\'optionsRemotes\']:checked').val();
+      if (selected == null) {
+        alert("Please select a remote.");
+      }
+      else {
+        websock.send('{\"itho_update_remote\":' + selected + ', \"value\":\"' + $('#name_remote-' + selected).val() + '\"}');
+      }
+    }
     else if ($(this).attr('id') == 'resetwificonf') {
       if (confirm("This will reset the wifi config to factory default, are you sure?")) {
         websock.send('{\"resetwificonf\":true}');
@@ -325,11 +359,7 @@ var mqtt_cmd_topic_tmp = "";
 
 function radio(origin, state) {
   if (origin == "dhcp") {
-    if (on_ap == true) {
-      $('#renew, #ip, #subnet, #gateway, #dns1, #dns2, #port').prop('readonly', true);
-      $('#option-dhcp-on, #option-dhcp-off').prop('disabled', true);
-    }
-    else if (state == 'on') {
+    if (state == 'on') {
       $('#ip, #subnet, #gateway, #dns1, #dns2').prop('readonly', true);
       $('#renew, #port').prop('readonly', false);
       $('#option-dhcp-on, #option-dhcp-off').prop('disabled', false);
@@ -370,7 +400,15 @@ function radio(origin, state) {
     }
     else {
       $('#RemotesTable').hide();
-    }
+    }     
+  }
+  else if (origin == "remote") {
+    $('[id^=name_remote-]').each(function(index, item){
+        $(item).prop('readonly', true);
+      if (index == state) {
+        $(item).prop('readonly', false);
+      }
+    });
   }
 }
 
@@ -431,7 +469,9 @@ function updateSlider(value) {
 }
 
 //function to load html main content
+var lastPageReq = "";
 function update_page(page) {
+    lastPageReq = page;  
     $('#main').empty();
 
     if (page == 'index') { $('#main').append(html_index); }
@@ -475,7 +515,6 @@ window.onload = function(){
       toggleClass(menuLink, active);
     }
     menuLink.onclick = function(e) {
-      console.log(e + " menu link clicked, link: " + $(this).attr('href'));
       toggleAll(e);
     };
     content.onclick = function(e) {
@@ -573,15 +612,25 @@ function returnWifiSecSVG(secVal) {
    return returnString;
 }
 
+var remotesCount;
+
 function buildHtmlTable(selector, jsonVar) {
   var columns = addAllColumnHeaders(jsonVar, selector);
   var headerTbody$ = $('<tbody>');
-  for (var i = 0; i < jsonVar.length; i++) {
+  remotesCount = jsonVar.length;
+  for (var i = 0; i < remotesCount; i++) {
     var row$ = $('<tr>');
+    row$.append($('<td>').html('<input type=\'radio\' id=\'option-select_remote-' + i + '\' name=\'optionsRemotes\' onchange=\"radio(\'remote\', '+i+')\" value=\'' + i + '\'/>'));
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
       var cellValue = jsonVar[i][columns[colIndex]].toString();
       if (cellValue == null) cellValue = '';
-      row$.append($('<td>').html(cellValue));
+      if (cellValue == "0,0,0,0,0,0,0,0") cellValue = "empty slot";
+      if (colIndex == 2) {
+        row$.append($('<td>').html('<input type=\'text\' id=\'name_remote-' + i + '\' value=\'' + cellValue + '\' readonly=\'\' />'));
+      }
+      else {
+        row$.append($('<td>').html(cellValue));
+      }
     }
     headerTbody$.append(row$);
   }
@@ -592,6 +641,8 @@ function addAllColumnHeaders(jsonVar, selector) {
   var columnSet = [];
   var headerThead$ = $('<thead>');
   var headerTr$ = $('<tr>');
+  headerTr$.append($('<th>').html('select'));
+  
   for (var i = 0; i < jsonVar.length; i++) {
     var rowHash = jsonVar[i];
     for (var key in rowHash) {
@@ -603,6 +654,7 @@ function addAllColumnHeaders(jsonVar, selector) {
   }
   headerThead$.append(headerTr$);
   $(selector).append(headerThead$);
+
   return columnSet;
 }
 
@@ -788,8 +840,8 @@ var html_mqttsetup = `
               <input id="option-mqtt_domoticz-off" type="radio" name="option-mqtt_domoticz_active" onchange='radio("mqtt_domoticz", "off")' value="off"> off
             </div>
             <div class="pure-control-group">
-              <label id="label-mqtt_idx" for="mqtt_idx">Device IDX</label>
-                <input id="mqtt_idx" maxlength="5" type="text">
+              <label id="label-mqtt_idx" for="mqtt_idx" style="display: none;">Device IDX</label>
+                <input id="mqtt_idx" maxlength="5" type="text" style="display: none;">
             </div>
             <br>
             <div class="pure-controls">

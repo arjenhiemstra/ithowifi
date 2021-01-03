@@ -254,3 +254,143 @@ void logInput(char * inputString) {
   filePrint.close();
 
 }
+
+#if ESP32
+ICACHE_RAM_ATTR void ITHOinterrupt() {
+  if (digitalRead(WIFILED) == 0) {
+    digitalWrite(WIFILED, 1);
+  }
+  else {
+    digitalWrite(WIFILED, 0);
+  }
+
+  ITHOcheck();
+
+}
+
+ICACHE_RAM_ATTR void ITHOcheck() {
+
+  if (rf.checkForNewPacket()) {
+    int *lastID = rf.getLastID();
+    int id[8];
+    for (uint8_t i = 0; i < 8; i++) {
+      id[i] = lastID[i];
+    }
+
+    IthoCommand cmd = rf.getLastCommand();
+    if (++RFTcommandpos > 2) RFTcommandpos = 0;  // store information in next entry of ringbuffers
+    RFTcommand[RFTcommandpos] = cmd;
+    RFTRSSI[RFTcommandpos]    = rf.ReadRSSI();
+    //int *lastID = rf.getLastID();
+    bool chk = remotes.checkID(id);
+    //bool chk = rf.checkID(RFTid);
+    RFTidChk[RFTcommandpos]   = chk;
+    if (cmd != IthoUnknown) {  // only act on good cmd
+      if (cmd == IthoLeave && remotes.remoteLearnLeaveStatus()) {
+        //Serial.print("Leave command received. Trying to remove remote... ");
+        int result = remotes.removeRemote(id);
+        switch (result) {
+          case -1: // failed! - remote not registered
+            break;
+          case -2: // failed! - no remotes registered
+            break;
+          case 1: // success!
+            saveRemotes = true;
+            sendRemotes = true;
+            break;
+        }
+      }
+      if (cmd == IthoJoin && remotes.remoteLearnLeaveStatus()) {
+        int result = remotes.registerNewRemote(id);
+        switch (result) {
+          case -1: // failed! - remote already registered
+            break;
+          case -2: //failed! - max number of remotes reached"
+            break;
+          case 1:
+            saveRemotes = true;
+            sendRemotes = true;
+            break;
+        }
+      }
+      if (chk) {
+        if (cmd == IthoLow) {
+          nextIthoVal = systemConfig.itho_low;
+          nextIthoTimer = 0;
+          updateItho = true;
+        }
+        if (cmd == IthoMedium) {
+          nextIthoVal = systemConfig.itho_medium;
+          nextIthoTimer = 0;
+          updateItho = true;
+        }
+        if (cmd == IthoHigh || cmd == IthoFull) {
+          nextIthoVal = systemConfig.itho_high;
+          nextIthoTimer = 0;
+          updateItho = true;
+        }
+        if (cmd == IthoTimer1) {
+          nextIthoVal = systemConfig.itho_high;
+          nextIthoTimer = systemConfig.itho_timer1;
+          updateItho = true;
+        }
+        if (cmd == IthoTimer2) {
+          nextIthoVal = systemConfig.itho_high;
+          nextIthoTimer = systemConfig.itho_timer2;
+          updateItho = true;
+        }
+        if (cmd == IthoTimer3) {
+          nextIthoVal = systemConfig.itho_high;
+          nextIthoTimer = systemConfig.itho_timer3;
+          updateItho = true;
+        }
+        if (cmd == IthoJoin && !remotes.remoteLearnLeaveStatus()) {
+        }
+        if (cmd == IthoLeave && !remotes.remoteLearnLeaveStatus()) {
+          ithoQueue.clear_queue();
+        }
+
+      }
+      else {
+        //Unknown remote
+      }
+      //Serial.print("Number of know remotes: ");
+      //Serial.println(remotes.getRemoteCount());
+    }
+    else {
+      //("--- RF CMD reveiced but of unknown type ---");
+    }
+  }
+}
+
+uint8_t findRFTlastCommand() {
+  if (RFTcommand[RFTcommandpos] != IthoUnknown)               return RFTcommandpos;
+  if ((RFTcommandpos == 0) && (RFTcommand[2] != IthoUnknown)) return 2;
+  if ((RFTcommandpos == 0) && (RFTcommand[1] != IthoUnknown)) return 1;
+  if ((RFTcommandpos == 1) && (RFTcommand[0] != IthoUnknown)) return 0;
+  if ((RFTcommandpos == 1) && (RFTcommand[2] != IthoUnknown)) return 2;
+  if ((RFTcommandpos == 2) && (RFTcommand[1] != IthoUnknown)) return 1;
+  if ((RFTcommandpos == 2) && (RFTcommand[0] != IthoUnknown)) return 0;
+  return -1;
+}
+
+void toggleRemoteLLmode() {
+  if (remotes.toggleLearnLeaveMode()) {
+    timerLearnLeaveMode.attach(1, setllModeTimer);
+  }
+  else {
+    timerLearnLeaveMode.detach();
+    remotes.setllModeTime(0);
+    sysStatReq = true;
+  }
+}
+
+void setllModeTimer() {
+  remotes.updatellModeTimer();
+  sysStatReq = true;
+  if (remotes.getllModeTime() == 0) {
+    timerLearnLeaveMode.detach();
+  }
+
+}
+#endif

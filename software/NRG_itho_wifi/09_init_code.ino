@@ -64,7 +64,12 @@ char* hostName() {
   // Do a little work to get a unique-ish name. Append the
   // last two bytes of the MAC (HEX'd):
   uint8_t mac[6];
+#if ESP8266
   WiFi.softAPmacAddress(mac);
+#endif
+#if ESP32
+  esp_read_mac(mac, ESP_MAC_WIFI_STA);
+#endif  
   
   sprintf(hostName, "%s%02x%02x", espName, mac[6 - 2], mac[6 - 1]);
   
@@ -145,12 +150,20 @@ bool connectWiFiSTA()
 #endif
 
   int i = 0;
+#if defined(ESP8266)
   while (wifi_station_get_connect_status() != STATION_GOT_IP && i < 31) {
-    delay(1000);
+#else
+  while ((WiFi.status() != WL_CONNECTED) && i < 31) {
+#endif
+   delay(1000);
     //Serial.print(".");
     ++i;
   }
+#if defined(ESP8266)
   if (wifi_station_get_connect_status() != STATION_GOT_IP && i >= 30) {
+#else
+  if ((WiFi.status() != WL_CONNECTED) && i >= 30) {
+#endif
     //delay(1000);
     //Serial.println("");
     //Serial.println("Couldn't connect to network :( ");
@@ -229,12 +242,13 @@ void logWifiInfo() {
   logInput("WiFi info:");
 
   const char* const modes[] = { "NULL", "STA", "AP", "STA+AP" };
+  const char* const phymodes[] = { "", "B", "G", "N" };
+
+#if defined(ESP8266)
   sprintf(wifiBuff, "Mode:%s", modes[wifi_get_opmode()]);
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
 
-
-  const char* const phymodes[] = { "", "B", "G", "N" };
   sprintf(wifiBuff, "PHY mode:%s", phymodes[(int) wifi_get_phy_mode()]);
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
@@ -265,6 +279,16 @@ void logWifiInfo() {
   sprintf(wifiBuff, "SSID (%d):%s", strlen(ssid), ssid);
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
+#else
+
+  sprintf(wifiBuff, "Mode:%s", modes[WiFi.getMode()]);
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
+
+  sprintf(wifiBuff, "Status:%d", WiFi.status());
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
+#endif
 
   IPAddress ip = WiFi.localIP();
   sprintf(wifiBuff, "IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);

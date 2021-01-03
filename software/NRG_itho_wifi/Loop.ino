@@ -15,6 +15,20 @@ void loop() {
     clearQueue = false;
     ithoQueue.clear_queue();
   }
+#if ESP32
+  if (ithoCheck) {
+    ithoCheck = false;
+    ITHOcheck();
+  }
+  if (saveRemotes) {
+    saveRemotes = false;
+    saveRemotesConfig();
+  }
+  if (sendRemotes) {
+    sendRemotes = false;
+    jsonWsSend("ithoremotes");
+  }
+#endif  
   if (updateItho) {
     updateItho = false;
     if (strcmp(systemConfig.itho_rf_support, "on") == 0) {
@@ -55,8 +69,12 @@ void loop() {
       }
     }
   }
-
+#if ESP8266
   if ((wifi_station_get_connect_status() != STATION_GOT_IP) && !wifiModeAP) {
+#endif
+#if ESP32
+  if ((WiFi.status() != WL_CONNECTED) && !wifiModeAP) {    
+#endif
     long now = millis();
     if (now - lastWIFIReconnectAttempt > 10000) {
       logInput("Attempt to reconnect WiFi");
