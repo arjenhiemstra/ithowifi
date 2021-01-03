@@ -30,6 +30,13 @@ void jsonWsSend(const char* rootName) {
     JsonObject nested = root.createNestedObject(rootName);
     systemConfig.get(nested);
   }
+#if ESP32  
+  else if (strcmp(rootName, "ithoremotes") == 0) {
+    // Create an object at the root
+    JsonObject obj = root.to<JsonObject>(); // Fill the object
+    remotes.get(obj);
+  }
+#endif  
   size_t len = measureJson(root);
   AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
   if (buffer) {
@@ -79,6 +86,9 @@ void jsonSystemstat() {
   systemstat["itho_low"] = systemConfig.itho_low;
   systemstat["itho_medium"] = systemConfig.itho_medium;
   systemstat["itho_high"] = systemConfig.itho_high;
+#if ESP32
+  systemstat["itho_llm"] = remotes.getllModeTime();
+#endif  
   systemstat["i2cstat"] = i2cstat;
 
   char buffer[512];
@@ -175,10 +185,44 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         systemConfig.get_itho_settings = true;
         jsonWsSend("systemsettings");
         sysStatReq = true;
-      }      
+      }
+#if ESP32      
       else if (msg.startsWith("{\"ithoremotes")) {
         jsonWsSend("ithoremotes");
       }
+      else if (msg.startsWith("{\"itho_llm")) {
+        toggleRemoteLLmode();
+      }
+      else if (msg.startsWith("{\"itho_remove_remote")) {
+        bool parseOK = false;
+        int number = (msg.substring(22)).toInt();
+        if (number == 0) {
+          if (strcmp(msg.substring(22, 23).c_str(), "0") == 0) {
+            parseOK = true;
+          }
+        }
+        else if (number > 0 && number < MAX_NUMBER_OF_REMOTES) {
+          parseOK = true;
+        }
+        if (parseOK) {
+          remotes.removeRemote(remotes.getRemoteIDbyIndex(number));
+          saveRemotes = true;
+          sendRemotes = true;         
+        }
+      }
+      else if (msg.startsWith("{\"itho_update_remote")) {
+        StaticJsonDocument<512> root;
+        DeserializationError error = deserializeJson(root, msg.c_str());
+        if (!error) {
+          uint8_t index = root["itho_update_remote"].as<unsigned int>();
+          char remoteName[32];
+          strlcpy(remoteName, root["value"] | "", sizeof(remoteName));
+          remotes.updateRemoteName(index, remoteName);
+          saveRemotes = true;
+          sendRemotes = true;
+        }
+      }      
+#endif      
       else if (msg.startsWith("{\"reboot")) {
         shouldReboot = true;
       }
