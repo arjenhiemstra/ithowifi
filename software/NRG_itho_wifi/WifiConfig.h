@@ -3,6 +3,7 @@
 
 #define WIFI_CONFIG_VERSION "001"
 
+#include "hardware.h"
 #include <stdio.h>
 #include <string.h>
 #include <Arduino.h>

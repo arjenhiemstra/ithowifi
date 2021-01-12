@@ -26,6 +26,7 @@ SystemConfig::SystemConfig() {
   itho_timer2 = 20;
   itho_timer3 = 30;
   strlcpy(itho_rf_support, "off", sizeof(itho_rf_support));
+  rfInitOK = false;
   strlcpy(nonQ_cmd_clearsQ, "on", sizeof(nonQ_cmd_clearsQ));
   
   itho_updated = false;
@@ -123,6 +124,10 @@ bool SystemConfig::set(JsonObjectConst obj) {
     updated = true;
     strlcpy(itho_rf_support, obj["itho_rf_support"], sizeof(itho_rf_support));
   }
+  if (!(const char*)obj["rfInitOK"].isNull()) {
+    updated = true;
+    rfInitOK = obj["rfInitOK"];
+  }
   if (!(const char*)obj["nonQ_cmd_clearsQ"].isNull()) {
     updated = true;
     strlcpy(nonQ_cmd_clearsQ, obj["nonQ_cmd_clearsQ"], sizeof(nonQ_cmd_clearsQ));
@@ -160,6 +165,7 @@ void SystemConfig::get(JsonObject obj) const {
     obj["itho_timer2"] = itho_timer2;
     obj["itho_timer3"] = itho_timer3;
     obj["itho_rf_support"] = itho_rf_support;
+    obj["rfInitOK"] = rfInitOK;
     obj["nonQ_cmd_clearsQ"] = nonQ_cmd_clearsQ;
   }
   obj["version_of_program"] = config_struct_version;
