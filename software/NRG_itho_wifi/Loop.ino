@@ -15,7 +15,17 @@ void loop() {
     clearQueue = false;
     ithoQueue.clear_queue();
   }
-#if ESP32
+#if defined (__HW_VERSION_TWO__)
+  if (debugLogInput) {
+
+    debugLogInput = false;
+    LogMessage.once_ms(150, []() {
+
+      jsonMessageBox(debugLog, "");
+      //logInput(debugLog);
+    } );
+
+  }
   if (ithoCheck) {
     ithoCheck = false;
     ITHOcheck();
@@ -28,7 +38,7 @@ void loop() {
     sendRemotes = false;
     jsonWsSend("ithoremotes");
   }
-#endif  
+#endif
   if (updateItho) {
     updateItho = false;
     if (strcmp(systemConfig.itho_rf_support, "on") == 0) {
@@ -69,11 +79,10 @@ void loop() {
       }
     }
   }
-#if ESP8266
+#if defined (__HW_VERSION_ONE__)
   if ((wifi_station_get_connect_status() != STATION_GOT_IP) && !wifiModeAP) {
-#endif
-#if ESP32
-  if ((WiFi.status() != WL_CONNECTED) && !wifiModeAP) {    
+#elif defined (__HW_VERSION_TWO__)
+  if ((WiFi.status() != WL_CONNECTED) && !wifiModeAP) {
 #endif
     long now = millis();
     if (now - lastWIFIReconnectAttempt > 10000) {
@@ -129,6 +138,7 @@ void loop() {
     }
     if (loopstart - lastSysMessage >= 1000) { //rate limit messages to once a second
       lastSysMessage = loopstart;
+      //remotes.llModeTimerUpdated = false;
       sysStatReq = false;
       previousUpdate = loopstart;
       sys.updateFreeMem();
@@ -136,8 +146,7 @@ void loop() {
     }
   }
 
-  if (loopstart - lastLog > LOGGING_INTERVAL)
-  {
+  if (loopstart - lastLog > LOGGING_INTERVAL) {
     sprintf(logBuff, "Mem high: %d, Mem low: %d, MQTT: %d, ITHO: %s, ITHO val: %d", sys.getMemHigh(), sys.getMemLow(), MQTT_conn_state, i2cstat, ithoCurrentVal);
     logInput(logBuff);
     strcpy(logBuff, "");

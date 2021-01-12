@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP CC1101-868MHz-Module
+D Bluetooth Low Energy module
+K BLE, Bluetooth, Bluetooth Smart, Bluetooth Low Energy
+F http://wireless-tag.com/Public/upload/file/p19u6lm0jr1dl21ffgtki1oeuen3.pdf
+$ENDCMP
+#
+#End Doc Library

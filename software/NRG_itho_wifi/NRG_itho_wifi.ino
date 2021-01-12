@@ -1,7 +1,9 @@
-#define FWVERSION "1.4.3"
+#define FWVERSION "2.0.3"
 
 #define LOGGING_INTERVAL 21600000
+#define ENABLE_FAILSAVE_BOOT
 
+#include "hardware.h"
 #include <ArduinoJson.h>
 #include <ArduinoSort.h>
 #include <AsyncEventSource.h>
@@ -30,22 +32,13 @@
 #include <ArduinoOTA.h>
 #include <FS.h>
 
-#if defined(ESP8266)
-#define SDAPIN      4
-#define SCLPIN      5
-#define WIFILED     2
-#define STATUSPIN   14
+#if defined (ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ESPAsyncTCP.h>
 #include <Hash.h>
 
-#else
-#define SDAPIN      21
-#define SCLPIN      22
-#define WIFILED     2  // 17
-#define STATUSPIN   16
-#define ITHO_IRQ_PIN 4
+#elif defined (ESP32)
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <ESPmDNS.h>
@@ -54,9 +47,15 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_task_wdt.h"
-#include "IthoCC1101.h"
-#include "IthoPacket.h"
+#include "IthoCC1101.h"   // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
+#include "IthoPacket.h"   // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "IthoRemote.h"
+char debugLog[80];
+bool debugLogInput = false;
+uint8_t debugLevel = 0;
+Ticker LogMessage;
+#else
+#error "Unsupported hardware"
 #endif
 
 
@@ -72,7 +71,7 @@ SpiffsFilePrint filePrint("/logfile", 2, 10000);
 
 Ticker IthoCMD;
 Ticker DelayedReq;
-#if ESP32
+#if defined (__HW_VERSION_TWO__)
 Ticker timerLearnLeaveMode;
 IthoCC1101 rf;
 IthoPacket packet;
@@ -119,10 +118,11 @@ volatile bool updateItho = false;
 volatile bool ithoCheck = false;
 volatile bool sendRemotes = false;
 volatile bool saveRemotes = false;
+bool rfInitOK = false;
 
 size_t content_len;
 
-#if ESP32
+#if defined (__HW_VERSION_TWO__)
 IthoCommand RFTcommand[3] = {IthoUnknown, IthoUnknown, IthoUnknown};
 byte RFTRSSI[3] = {0, 0, 0};
 byte RFTcommandpos = 0;

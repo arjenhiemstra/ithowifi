@@ -134,7 +134,7 @@ bool resetSystemConfig() {
     return true;
   }
 }
-#if ESP32
+#if defined (__HW_VERSION_TWO__)
 
 uint16_t serializeRemotes(const IthoRemote &remotes, Print& dst) {
   DynamicJsonDocument doc(1000+(MAX_NUMBER_OF_REMOTES*300));

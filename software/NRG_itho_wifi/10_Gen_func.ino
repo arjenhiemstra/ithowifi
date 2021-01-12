@@ -2,7 +2,7 @@
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if (topic == NULL) return;
   if (payload == NULL) return;
-  
+
   int16_t val = -1;
   unsigned long timer = 0;
   bool dtype = true;
@@ -39,12 +39,12 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         }
       }
       if (dtype) {
-      /*
-       * standard true, unless mqtt_domoticz_active == "on"
-       * if mqtt_domoticz_active == "on"
-       *    this should be set to true first by a JSON containing key:value pair "dtype":"ithofan", 
-       *    otherwise different commands might get processed due to domoticz general domoticz/out topic structure
-       */
+        /*
+           standard true, unless mqtt_domoticz_active == "on"
+           if mqtt_domoticz_active == "on"
+              this should be set to true first by a JSON containing key:value pair "dtype":"ithofan",
+              otherwise different commands might get processed due to domoticz general domoticz/out topic structure
+        */
         if (!(const char*)root["command"].isNull()) {
           jsonCmd = true;
           const char* value = root["command"] | "";
@@ -215,14 +215,7 @@ static void writeIthoVal(uint16_t value) {
 }
 
 void printTimestamp(Print* _logOutput) {
-#if defined(ESP32)
-  struct tm timeinfo;
-  if (getLocalTime(&timeinfo, 0)) {
-    char timeStringBuff[50];  // 50 chars should be enough
-    strftime(timeStringBuff, sizeof(timeStringBuff), "<br>%F %T ", &timeinfo);
-    _logOutput->print(timeStringBuff);
-  } else
-#elif defined(ESP8266)
+#if defined (__HW_VERSION_ONE__)
   if (time(nullptr)) {
     time_t now;
     struct tm * timeinfo;
@@ -233,6 +226,13 @@ void printTimestamp(Print* _logOutput) {
     strftime(timeStringBuff, sizeof(timeStringBuff), "<br>%F %T ", timeinfo);
     _logOutput->print(timeStringBuff);
   } else
+#elif defined (__HW_VERSION_TWO__)
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo, 0)) {
+    char timeStringBuff[50];  // 50 chars should be enough
+    strftime(timeStringBuff, sizeof(timeStringBuff), "<br>%F %T ", &timeinfo);
+    _logOutput->print(timeStringBuff);
+  } else  
 #endif
   {
     char c[12];
@@ -255,14 +255,8 @@ void logInput(char * inputString) {
 
 }
 
-#if ESP32
+#if defined (__HW_VERSION_TWO__)
 ICACHE_RAM_ATTR void ITHOinterrupt() {
-  if (digitalRead(WIFILED) == 0) {
-    digitalWrite(WIFILED, 1);
-  }
-  else {
-    digitalWrite(WIFILED, 0);
-  }
 
   ITHOcheck();
 
@@ -271,13 +265,54 @@ ICACHE_RAM_ATTR void ITHOinterrupt() {
 ICACHE_RAM_ATTR void ITHOcheck() {
 
   if (rf.checkForNewPacket()) {
+
     int *lastID = rf.getLastID();
     int id[8];
     for (uint8_t i = 0; i < 8; i++) {
       id[i] = lastID[i];
     }
-
     IthoCommand cmd = rf.getLastCommand();
+
+    if (debugLevel == 2) {
+      strcpy(debugLog, "");
+      sprintf(debugLog, "Remote = %d,%d,%d,%d,%d,%d,%d,%d / Command = ", id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7]);
+      //log command
+      switch (cmd) {
+        case IthoUnknown:
+          strcat(debugLog, "unknown");
+          break;
+        case IthoLow:
+          strcat(debugLog, "low");
+          break;
+        case IthoMedium:
+          strcat(debugLog, "medium");
+          break;
+        case IthoHigh:
+          strcat(debugLog, "high");
+          break;
+        case IthoFull:
+          strcat(debugLog, "full");
+          break;
+        case IthoTimer1:
+          strcat(debugLog, "timer1");
+          break;
+        case IthoTimer2:
+          strcat(debugLog, "timer2");
+          break;
+        case IthoTimer3:
+          strcat(debugLog, "timer3");
+          break;
+        case IthoJoin:
+          strcat(debugLog, "join");
+          break;
+        case IthoLeave:
+          strcat(debugLog, "leave");
+          break;
+      }
+      debugLogInput = true;
+    }
+
+
     if (++RFTcommandpos > 2) RFTcommandpos = 0;  // store information in next entry of ringbuffers
     RFTcommand[RFTcommandpos] = cmd;
     RFTRSSI[RFTcommandpos]    = rf.ReadRSSI();
@@ -286,6 +321,44 @@ ICACHE_RAM_ATTR void ITHOcheck() {
     //bool chk = rf.checkID(RFTid);
     RFTidChk[RFTcommandpos]   = chk;
     if (cmd != IthoUnknown) {  // only act on good cmd
+      if (debugLevel == 1) {
+        strcpy(debugLog, "");
+        sprintf(debugLog, "Remote = %d,%d,%d,%d,%d,%d,%d,%d / Command = ", id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7]);
+        //log command
+        switch (cmd) {
+          case IthoUnknown:
+            strcat(debugLog, "unknown");
+            break;
+          case IthoLow:
+            strcat(debugLog, "low");
+            break;
+          case IthoMedium:
+            strcat(debugLog, "medium");
+            break;
+          case IthoHigh:
+            strcat(debugLog, "high");
+            break;
+          case IthoFull:
+            strcat(debugLog, "full");
+            break;
+          case IthoTimer1:
+            strcat(debugLog, "timer1");
+            break;
+          case IthoTimer2:
+            strcat(debugLog, "timer2");
+            break;
+          case IthoTimer3:
+            strcat(debugLog, "timer3");
+            break;
+          case IthoJoin:
+            strcat(debugLog, "join");
+            break;
+          case IthoLeave:
+            strcat(debugLog, "leave");
+            break;
+        }
+        debugLogInput = true;
+      }
       if (cmd == IthoLeave && remotes.remoteLearnLeaveStatus()) {
         //Serial.print("Leave command received. Trying to remove remote... ");
         int result = remotes.removeRemote(id);
@@ -362,6 +435,7 @@ ICACHE_RAM_ATTR void ITHOcheck() {
     }
   }
 }
+
 
 uint8_t findRFTlastCommand() {
   if (RFTcommand[RFTcommandpos] != IthoUnknown)               return RFTcommandpos;

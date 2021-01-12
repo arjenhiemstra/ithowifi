@@ -4,6 +4,7 @@
 #define MAX_QUEUE 10
 #define QUEUE_UPDATE_MS 100
 
+
 #include <algorithm>
 #include <stdio.h>
 #include <string.h>
@@ -19,13 +20,14 @@ class IthoQueue {
       unsigned long valid { 0 };
       void get(JsonObject, int index) const;
     };
-    uint16_t ithoSpeed { 0 };
-    uint16_t ithoOldSpeed { 0 };
-    uint16_t fallBackSpeed { 127 };
+
     mutable bool firstQueueItem { true };
     struct Queue items[MAX_QUEUE];
     Ticker queueUpdater;
   public:
+    uint16_t ithoSpeed { 0 };
+    uint16_t ithoOldSpeed { 0 };
+    uint16_t fallBackSpeed { 127 };  
     void update_queue();
     bool add2queue(int speedVal, unsigned long validVal, char* nonQ_cmd_clearsQ);
     void clear_queue();

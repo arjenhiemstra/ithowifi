@@ -64,7 +64,69 @@ void handleAPI(AsyncWebServerRequest *request) {
         request->send(200, "text/html", ithoval);
         return;
       }
+      else if (strcmp(p->value().c_str(), "queue") == 0 ) {
+        AsyncResponseStream *response = request->beginResponseStream("text/html");        
+        DynamicJsonDocument root(1000);
+        JsonObject obj = root.to<JsonObject>(); // Fill the object
+        ithoQueue.get(obj);
+        obj["ithoSpeed"] = ithoQueue.ithoSpeed;
+        obj["ithoOldSpeed"] = ithoQueue.ithoOldSpeed;
+        obj["fallBackSpeed"] = ithoQueue.fallBackSpeed;
+        serializeJson(root, *response);
+        request->send(response);
+        
+        return;
+      }      
     }
+    else if(strcmp(p->name().c_str(), "debug") == 0) {
+      if (strcmp(p->value().c_str(), "format") == 0 ) {
+        if (SPIFFS.format()) {
+          strcpy(logBuff, "Filesystem format = success");
+        }
+        else {
+          strcpy(logBuff, "Filesystem format = failed");
+        }
+        jsonMessageBox(logBuff, "");
+        strcpy(logBuff, "");
+        parseOK = true;
+      }
+      if (strcmp(p->value().c_str(), "reboot") == 0 ) {
+        
+        shouldReboot = true;
+        jsonMessageBox("Reboot requested", "");
+
+        parseOK = true;
+      }
+#if defined (__HW_VERSION_TWO__)     
+      if (strcmp(p->value().c_str(), "level0") == 0 ) {
+        
+        debugLevel = 0;
+        
+        sprintf(logBuff, "Debug level = %d", debugLevel);
+        jsonMessageBox(logBuff, "");
+        strcpy(logBuff, "");
+        parseOK = true;
+      }
+      if (strcmp(p->value().c_str(), "level1") == 0 ) {
+        
+        debugLevel = 1;
+        
+        sprintf(logBuff, "Debug level = %d", debugLevel);
+        jsonMessageBox(logBuff, "");
+        strcpy(logBuff, "");
+        parseOK = true;
+      }        
+      if (strcmp(p->value().c_str(), "level2") == 0 ) {
+        
+        debugLevel = 2;
+        
+        sprintf(logBuff, "Debug level = %d", debugLevel);
+        jsonMessageBox(logBuff, "");
+        strcpy(logBuff, "");
+        parseOK = true;
+      }
+#endif  
+    }      
     else if(strcmp(p->name().c_str(), "command") == 0) {
       if (strcmp(p->value().c_str(), "low") == 0 ) {
         parseOK = true;

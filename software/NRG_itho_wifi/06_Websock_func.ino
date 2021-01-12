@@ -30,7 +30,7 @@ void jsonWsSend(const char* rootName) {
     JsonObject nested = root.createNestedObject(rootName);
     systemConfig.get(nested);
   }
-#if ESP32  
+#if defined (__HW_VERSION_TWO__)
   else if (strcmp(rootName, "ithoremotes") == 0) {
     // Create an object at the root
     JsonObject obj = root.to<JsonObject>(); // Fill the object
@@ -86,7 +86,7 @@ void jsonSystemstat() {
   systemstat["itho_low"] = systemConfig.itho_low;
   systemstat["itho_medium"] = systemConfig.itho_medium;
   systemstat["itho_high"] = systemConfig.itho_high;
-#if ESP32
+#if defined (__HW_VERSION_TWO__)
   systemstat["itho_llm"] = remotes.getllModeTime();
 #endif  
   systemstat["i2cstat"] = i2cstat;
@@ -186,7 +186,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         jsonWsSend("systemsettings");
         sysStatReq = true;
       }
-#if ESP32      
+#if defined (__HW_VERSION_TWO__)
       else if (msg.startsWith("{\"ithoremotes")) {
         jsonWsSend("ithoremotes");
       }
@@ -207,7 +207,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         if (parseOK) {
           remotes.removeRemote(remotes.getRemoteIDbyIndex(number));
           saveRemotes = true;
-          sendRemotes = true;         
+          sendRemotes = true;
         }
       }
       else if (msg.startsWith("{\"itho_update_remote")) {

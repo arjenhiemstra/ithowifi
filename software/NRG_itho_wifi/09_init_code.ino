@@ -1,12 +1,102 @@
+#if defined (__HW_VERSION_TWO__) && defined (ENABLE_FAILSAVE_BOOT)
+void failSafeBoot() {
+
+  long defaultWaitStart = millis();
+  long ledblink = 0;
+
+  while (millis() - defaultWaitStart < 2000) {
+    yield();
+
+    if (digitalRead(FAILSAVE_PIN) == HIGH) {
+
+      initFileSystem();
+      resetWifiConfig();
+      resetSystemConfig();
+
+      IPAddress apIP(192, 168, 4, 1);
+      IPAddress netMsk(255, 255, 255, 0);
+
+      WiFi.persistent(false);
+      WiFi.disconnect(); //  this alone is not enough to stop the autoconnecter
+      WiFi.mode(WIFI_AP);
+      delay(2000);
+
+      WiFi.softAP(hostName(), WiFiAPPSK);
+      WiFi.softAPConfig(apIP, apIP, netMsk);
 
 
+      delay(500);
 
+      /* Setup the DNS server redirecting all the domains to the apIP */
+      dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+      dnsServer.start(53, "*", apIP);
+
+      // Simple Firmware Update Form
+      server.on("/update", HTTP_GET, [](AsyncWebServerRequest * request) {
+        request->send(200, "text/html", "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>");
+      });
+
+
+      server.on("/update", HTTP_POST, [](AsyncWebServerRequest * request) {
+        shouldReboot = !Update.hasError();
+        AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", shouldReboot ? "OK" : "FAIL");
+        response->addHeader("Connection", "close");
+        request->send(response);
+      }, [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+        if (!index) {
+          content_len = request->contentLength();
+          //Serial.printf("Update Start: %s\n", filename.c_str());
+          if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+            Update.printError(Serial);
+          }
+
+        }
+        if (!Update.hasError()) {
+          if (Update.write(data, len) != len) {
+
+            Update.printError(Serial);
+          }
+        }
+        if (final) {
+          if (Update.end(true)) {
+            delay(1000);
+            esp_task_wdt_init(1, true);
+            esp_task_wdt_add(NULL);
+            while (true);
+
+          } else {
+            Update.printError(Serial);
+          }
+        }
+      });
+      server.begin();
+
+      for (;;) {
+        yield();
+      }
+
+    }
+
+    if (millis() - ledblink > 50) {
+      ledblink = millis();
+      if (digitalRead(WIFILED) == LOW) {
+        digitalWrite(WIFILED, HIGH);
+      }
+      else {
+        digitalWrite(WIFILED, LOW);
+      }
+    }
+
+  }
+}
+
+#endif
 
 bool initFileSystem() {
 
   //Serial.println("Mounting FS...");
 
-#if ESP8266
+#if defined (__HW_VERSION_ONE__)
 
   if (!SPIFFS.begin()) {
     //Serial.println("SPIFFS failed, needs formatting");
@@ -22,13 +112,9 @@ bool initFileSystem() {
     }
   }
 
-
-#endif
-#if ESP32
+#elif defined (__HW_VERSION_TWO__)
   SPIFFS.begin(true);
 #endif
-
-
 
   return true;
 }
@@ -64,15 +150,14 @@ char* hostName() {
   // Do a little work to get a unique-ish name. Append the
   // last two bytes of the MAC (HEX'd):
   uint8_t mac[6];
-#if ESP8266
+#if defined (__HW_VERSION_ONE__)
   WiFi.softAPmacAddress(mac);
-#endif
-#if ESP32
+#elif defined (__HW_VERSION_TWO__)
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
-#endif  
-  
+#endif
+
   sprintf(hostName, "%s%02x%02x", espName, mac[6 - 2], mac[6 - 1]);
-  
+
   return hostName;
 }
 
@@ -141,27 +226,27 @@ bool connectWiFiSTA()
 
   }
 
-#if defined(ESP8266)
+#if defined (__HW_VERSION_ONE__)
   WiFi.hostname(hostName());
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
-#else
+#elif defined (__HW_VERSION_TWO__)
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
   WiFi.setHostname(hostName());
 #endif
 
   int i = 0;
-#if defined(ESP8266)
+#if defined (__HW_VERSION_ONE__)
   while (wifi_station_get_connect_status() != STATION_GOT_IP && i < 31) {
-#else
+#elif defined (__HW_VERSION_TWO__)
   while ((WiFi.status() != WL_CONNECTED) && i < 31) {
 #endif
-   delay(1000);
+    delay(1000);
     //Serial.print(".");
     ++i;
   }
-#if defined(ESP8266)
+#if defined (__HW_VERSION_ONE__)
   if (wifi_station_get_connect_status() != STATION_GOT_IP && i >= 30) {
-#else
+#elif defined (__HW_VERSION_TWO__)
   if ((WiFi.status() != WL_CONNECTED) && i >= 30) {
 #endif
     //delay(1000);
@@ -186,7 +271,7 @@ bool setupMQTTClient() {
   if (strcmp(systemConfig.mqtt_active, "on") == 0) {
 
     if (systemConfig.mqtt_serverName != "") {
-      
+
       mqttClient.setServer(systemConfig.mqtt_serverName, systemConfig.mqtt_port);
       mqttClient.setCallback(mqttCallback);
       mqttClient.setBufferSize(1024);
@@ -214,7 +299,7 @@ bool setupMQTTClient() {
         }
         else {
           //publish failed
-        }        
+        }
         return true;
       }
     }
@@ -244,7 +329,7 @@ void logWifiInfo() {
   const char* const modes[] = { "NULL", "STA", "AP", "STA+AP" };
   const char* const phymodes[] = { "", "B", "G", "N" };
 
-#if defined(ESP8266)
+#if defined (__HW_VERSION_ONE__)
   sprintf(wifiBuff, "Mode:%s", modes[wifi_get_opmode()]);
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
@@ -279,7 +364,8 @@ void logWifiInfo() {
   sprintf(wifiBuff, "SSID (%d):%s", strlen(ssid), ssid);
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
-#else
+
+#elif defined (__HW_VERSION_TWO__)
 
   sprintf(wifiBuff, "Mode:%s", modes[WiFi.getMode()]);
   logInput(wifiBuff);
@@ -297,3 +383,38 @@ void logWifiInfo() {
 
 
 }
+#if defined (__HW_VERSION_TWO__)
+void initRFmodule() {
+  Ticker reboot;
+  
+  //switch off rf_support
+  strlcpy(systemConfig.itho_rf_support, "off", sizeof(systemConfig.itho_rf_support));
+  systemConfig.rfInitOK = false;
+
+  //attacht saveConfig and reboot script to fire after 2 sec
+  reboot.attach(2, []() {
+    saveSystemConfig();
+    esp_task_wdt_init(1, true);
+    esp_task_wdt_add(NULL);
+    while (true);
+  });
+
+  //init the RF module
+  rf.init();
+  pinMode(ITHO_IRQ_PIN, INPUT);
+  attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, FALLING);
+  rf.initReceive();
+  
+  //this portion of code will not be reached when no RF module is present: detach reboot script, switch on rf_supprt and load remotes config
+  reboot.detach();
+  strlcpy(systemConfig.itho_rf_support, "on", sizeof(systemConfig.itho_rf_support));
+  loadRemotesConfig();
+  systemConfig.rfInitOK = true;
+  
+}
+
+void disableRFsupport() {
+  detachInterrupt(ITHO_IRQ_PIN);
+}
+
+#endif

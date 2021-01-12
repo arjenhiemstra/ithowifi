@@ -31,6 +31,7 @@ class SystemConfig {
     uint16_t itho_timer2;
     uint16_t itho_timer3;
     char itho_rf_support[5];
+    mutable bool rfInitOK;
     char nonQ_cmd_clearsQ[5];
     mutable bool itho_updated;  
     mutable bool get_itho_settings;

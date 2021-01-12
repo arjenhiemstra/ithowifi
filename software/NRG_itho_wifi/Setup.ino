@@ -1,10 +1,15 @@
 void setup() {
   Wire.begin(SDAPIN, SCLPIN, 0);
-
+    
   pinMode(STATUSPIN, INPUT);
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
 
+#if defined (__HW_VERSION_TWO__) && defined (ENABLE_FAILSAVE_BOOT)
+  pinMode(FAILSAVE_PIN, INPUT);
+  failSafeBoot();
+#endif
+  
 //  Serial.begin(115200);
 //  Serial.flush();
 
@@ -35,10 +40,9 @@ void setup() {
 
   configTime(0, 0, "pool.ntp.org");
 
-#ifdef ESP8266
+#if defined (__HW_VERSION_ONE__)
   sprintf(logBuff, "System boot, last reset reason: %s", ESP.getResetReason().c_str());
-#endif
-#ifdef ESP32
+#elif defined (__HW_VERSION_TWO__)
   sprintf(logBuff, "System boot, last reset reason: %d", esp_reset_reason());
 #endif
   logInput(logBuff);
@@ -106,10 +110,11 @@ void setup() {
     //Handle upload
   });
 
-#ifdef ESP32
-  server.addHandler(new SPIFFSEditor(SPIFFS, http_username, http_password));
-#elif defined(ESP8266)
+
+#if defined (__HW_VERSION_ONE__)
   server.addHandler(new SPIFFSEditor(http_username, http_password));
+#elif defined (__HW_VERSION_TWO__)
+  server.addHandler(new SPIFFSEditor(SPIFFS, http_username, http_password));
 #endif
 
   // css_code
@@ -190,14 +195,18 @@ void setup() {
      uint8_t *data, size_t len, bool final) {
     if (!index) {
       content_len = request->contentLength();
-#if defined(ESP8266)
+#if defined (__HW_VERSION_ONE__)
       Update.runAsync(true);
       if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)) {
-#else
+#elif defined (__HW_VERSION_TWO__)
       if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
 #endif
         Update.printError(Serial);
       } else {
+        
+#if defined (__HW_VERSION_TWO__)
+        detachInterrupt(ITHO_IRQ_PIN);
+#endif        
         Serial.end();
       }
     }
@@ -236,7 +245,7 @@ void setup() {
 
   logInput("Webserver: started");
 
-#if ESP32
+#if defined (__HW_VERSION_TWO__)
   MDNS.begin(hostName());
   mdns_instance_name_set("NRG IthoWifi controller");
 #endif
@@ -251,13 +260,12 @@ void setup() {
   if (WiFi.scanComplete() == -2) {
     WiFi.scanNetworks(true);
   }
-#if ESP32  
-  rf.init();
-  pinMode(ITHO_IRQ_PIN, INPUT);
-  attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, FALLING);
-  rf.initReceive();
-  loadRemotesConfig();
-#endif  
+  
+#if defined (__HW_VERSION_TWO__)
+  if(strcmp(systemConfig.itho_rf_support, "on") == 0) {
+    initRFmodule();
+  }
+#endif
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_medium);
   
   strcat(i2cstat, "sOk");
