@@ -1,8 +1,11 @@
 **Remotes known to be working**
 
-![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/remotes/remote1.png "RFT Remote")
+RFT Remote W (536-0124):
+![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/remotes/remote1.png "RFT Remote W (536-0124)")
 
 **Remotes known to be partly working**
+
+RFT AUTO C02 (536-0150):
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/remotes/remote2.png "RFT AUTO C02 (536-0150)")
 
 Most commands from this remote are recognized but most notably not the join command. One button press on the button marked with "A" sends the command "medium", a double press on this button results in an unknown command.
