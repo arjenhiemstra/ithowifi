@@ -392,6 +392,7 @@ void IthoCC1101::parseMessageCommand()
   bool isTimer2Command = true;
   bool isTimer3Command = true;
   bool isJoinCommand = true;
+  bool isJoin2Command = true;
   bool isLeaveCommand = true;
 
   //device id
@@ -413,6 +414,7 @@ void IthoCC1101::parseMessageCommand()
     if (inMessage2.data[i + 18] != ithoMessage2Timer2CommandBytes[i])  isTimer2Command = false;
     if (inMessage2.data[i + 18] != ithoMessage2Timer3CommandBytes[i])  isTimer3Command = false;
     if (inMessage2.data[i + 18] != ithoMessage2JoinCommandBytes[i])    isJoinCommand = false;
+    if (inMessage2.data[i + 18] != ithoMessage2Join2CommandBytes[i])   isJoin2Command = false;
     if (inMessage2.data[i + 18] != ithoMessage2LeaveCommandBytes[i])   isLeaveCommand = false;
   }
 
@@ -427,6 +429,7 @@ void IthoCC1101::parseMessageCommand()
   if (isTimer2Command)  inIthoPacket.command = IthoTimer2;
   if (isTimer3Command)  inIthoPacket.command = IthoTimer3;
   if (isJoinCommand)    inIthoPacket.command = IthoJoin;
+  if (isJoin2Command)    inIthoPacket.command = IthoJoin;
   if (isLeaveCommand)   inIthoPacket.command = IthoLeave;
 }
 
@@ -1006,6 +1009,20 @@ String IthoCC1101::getLastMessage2str(bool ashex) {
     if (ashex) str += String(inMessage2.data[i], HEX);
     else str += String(inMessage2.data[i]);
     if (i < inMessage2.length - 1) str += ":";
+  }
+  return str;
+}
+
+String IthoCC1101::getLastMessage2CMDstr() {
+  int startPos = 18;
+  int endPos = startPos + 15;
+  String str = "<br>msg2cmd: len=" + String(inMessage2.length) + " / ";
+  for (uint8_t i = 0; i < inMessage2.length; i++) {
+    if (i == startPos) str += String(inMessage2.data[i] & B00001111) + ",";
+    if (i > (startPos + 1) && i < endPos) {
+      str += String(inMessage2.data[i]);
+      if (i < endPos - 1) str += ",";
+    }
   }
   return str;
 }

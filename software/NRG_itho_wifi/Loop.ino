@@ -21,7 +21,7 @@ void loop() {
     debugLogInput = false;
     LogMessage.once_ms(150, []() {
 
-      jsonMessageBox(debugLog, "");
+      jsonMessageBox(debugLog, debugLogMsg2);
       //logInput(debugLog);
     } );
 

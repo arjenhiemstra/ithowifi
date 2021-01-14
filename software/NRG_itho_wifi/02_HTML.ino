@@ -125,6 +125,15 @@ void handleAPI(AsyncWebServerRequest *request) {
         strcpy(logBuff, "");
         parseOK = true;
       }
+      if (strcmp(p->value().c_str(), "level3") == 0 ) {
+        
+        debugLevel = 3;
+        
+        sprintf(logBuff, "Debug level = %d", debugLevel);
+        jsonMessageBox(logBuff, "");
+        strcpy(logBuff, "");
+        parseOK = true;
+      }      
 #endif  
     }      
     else if(strcmp(p->name().c_str(), "command") == 0) {

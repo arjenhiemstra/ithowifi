@@ -232,7 +232,7 @@ void printTimestamp(Print* _logOutput) {
     char timeStringBuff[50];  // 50 chars should be enough
     strftime(timeStringBuff, sizeof(timeStringBuff), "<br>%F %T ", &timeinfo);
     _logOutput->print(timeStringBuff);
-  } else  
+  } else
 #endif
   {
     char c[12];
@@ -272,47 +272,6 @@ ICACHE_RAM_ATTR void ITHOcheck() {
       id[i] = lastID[i];
     }
     IthoCommand cmd = rf.getLastCommand();
-
-    if (debugLevel == 2) {
-      strcpy(debugLog, "");
-      sprintf(debugLog, "Remote = %d,%d,%d,%d,%d,%d,%d,%d / Command = ", id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7]);
-      //log command
-      switch (cmd) {
-        case IthoUnknown:
-          strcat(debugLog, "unknown");
-          break;
-        case IthoLow:
-          strcat(debugLog, "low");
-          break;
-        case IthoMedium:
-          strcat(debugLog, "medium");
-          break;
-        case IthoHigh:
-          strcat(debugLog, "high");
-          break;
-        case IthoFull:
-          strcat(debugLog, "full");
-          break;
-        case IthoTimer1:
-          strcat(debugLog, "timer1");
-          break;
-        case IthoTimer2:
-          strcat(debugLog, "timer2");
-          break;
-        case IthoTimer3:
-          strcat(debugLog, "timer3");
-          break;
-        case IthoJoin:
-          strcat(debugLog, "join");
-          break;
-        case IthoLeave:
-          strcat(debugLog, "leave");
-          break;
-      }
-      debugLogInput = true;
-    }
-
-
     if (++RFTcommandpos > 2) RFTcommandpos = 0;  // store information in next entry of ringbuffers
     RFTcommand[RFTcommandpos] = cmd;
     RFTRSSI[RFTcommandpos]    = rf.ReadRSSI();
@@ -320,45 +279,16 @@ ICACHE_RAM_ATTR void ITHOcheck() {
     bool chk = remotes.checkID(id);
     //bool chk = rf.checkID(RFTid);
     RFTidChk[RFTcommandpos]   = chk;
+
+    if (debugLevel >= 2) {
+      if (chk || debugLevel == 3) {
+        RFDebug(true, id, cmd);
+      }
+    }
     if (cmd != IthoUnknown) {  // only act on good cmd
       if (debugLevel == 1) {
-        strcpy(debugLog, "");
-        sprintf(debugLog, "Remote = %d,%d,%d,%d,%d,%d,%d,%d / Command = ", id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7]);
-        //log command
-        switch (cmd) {
-          case IthoUnknown:
-            strcat(debugLog, "unknown");
-            break;
-          case IthoLow:
-            strcat(debugLog, "low");
-            break;
-          case IthoMedium:
-            strcat(debugLog, "medium");
-            break;
-          case IthoHigh:
-            strcat(debugLog, "high");
-            break;
-          case IthoFull:
-            strcat(debugLog, "full");
-            break;
-          case IthoTimer1:
-            strcat(debugLog, "timer1");
-            break;
-          case IthoTimer2:
-            strcat(debugLog, "timer2");
-            break;
-          case IthoTimer3:
-            strcat(debugLog, "timer3");
-            break;
-          case IthoJoin:
-            strcat(debugLog, "join");
-            break;
-          case IthoLeave:
-            strcat(debugLog, "leave");
-            break;
-        }
-        debugLogInput = true;
-      }
+        RFDebug(false, id, cmd);
+      }      
       if (cmd == IthoLeave && remotes.remoteLearnLeaveStatus()) {
         //Serial.print("Leave command received. Trying to remove remote... ");
         int result = remotes.removeRemote(id);
@@ -446,6 +376,51 @@ uint8_t findRFTlastCommand() {
   if ((RFTcommandpos == 2) && (RFTcommand[1] != IthoUnknown)) return 1;
   if ((RFTcommandpos == 2) && (RFTcommand[0] != IthoUnknown)) return 0;
   return -1;
+}
+
+void RFDebug(bool chk, int * id, IthoCommand cmd) {
+
+  strcpy(debugLog, "");
+  sprintf(debugLog, "RemoteID=%d,%d,%d,%d,%d,%d,%d,%d / Command=", id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7]);
+  if (chk) {
+    strcpy(debugLogMsg2, "");
+    strlcpy(debugLogMsg2, rf.getLastMessage2CMDstr().c_str(), sizeof(debugLogMsg2));
+  }
+  //log command
+  switch (cmd) {
+    case IthoUnknown:
+      strcat(debugLog, "unknown");
+      break;
+    case IthoLow:
+      strcat(debugLog, "low");
+      break;
+    case IthoMedium:
+      strcat(debugLog, "medium");
+      break;
+    case IthoHigh:
+      strcat(debugLog, "high");
+      break;
+    case IthoFull:
+      strcat(debugLog, "full");
+      break;
+    case IthoTimer1:
+      strcat(debugLog, "timer1");
+      break;
+    case IthoTimer2:
+      strcat(debugLog, "timer2");
+      break;
+    case IthoTimer3:
+      strcat(debugLog, "timer3");
+      break;
+    case IthoJoin:
+      strcat(debugLog, "join");
+      break;
+    case IthoLeave:
+      strcat(debugLog, "leave");
+      break;
+  }
+  debugLogInput = true;
+
 }
 
 void toggleRemoteLLmode() {

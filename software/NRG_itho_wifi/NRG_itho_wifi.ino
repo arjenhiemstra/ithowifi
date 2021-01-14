@@ -1,4 +1,4 @@
-#define FWVERSION "2.0.3"
+#define FWVERSION "2.0.4"
 
 #define LOGGING_INTERVAL 21600000
 #define ENABLE_FAILSAVE_BOOT
@@ -51,6 +51,7 @@
 #include "IthoPacket.h"   // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "IthoRemote.h"
 char debugLog[80];
+char debugLogMsg2[100];
 bool debugLogInput = false;
 uint8_t debugLevel = 0;
 Ticker LogMessage;

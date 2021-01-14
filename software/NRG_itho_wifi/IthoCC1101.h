@@ -42,6 +42,7 @@ const uint8_t ithoMessage2Timer1CommandBytes[] = {6,89,150,170,169,101,90,150,85
 const uint8_t ithoMessage2Timer2CommandBytes[] = {6,89,150,170,169,101,90,150,85,149,101,89,86,149,150};	//20 minutes full speed
 const uint8_t ithoMessage2Timer3CommandBytes[] = {6,89,150,170,169,101,90,150,85,149,101,89,86,149,154};	//30 minutes full speed
 const uint8_t ithoMessage2JoinCommandBytes[] = {9,90,170,90,165,165,89,106,85,149,102,89,150,170,165};
+const uint8_t ithoMessage2Join2CommandBytes[] = {9,90,170,90,165,165,89,106,105,169,102,89,150,170,149};  //join command of RFT AUTO Co2 remote
 const uint8_t ithoMessage2LeaveCommandBytes[] = {9,90,170,90,165,165,89,166,85,149,105,90,170,90,165};
 
 //message 2, counter
@@ -106,6 +107,7 @@ class IthoCC1101 : protected CC1101 {
 		String getLastIDstr(bool ashex=true);
     int * getLastID();
 		String getLastMessage2str(bool ashex=true);
+    String getLastMessage2CMDstr();
 
 				
 		//send
