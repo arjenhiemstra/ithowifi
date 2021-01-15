@@ -32,11 +32,10 @@ void loop() {
   }
   if (saveRemotes) {
     saveRemotes = false;
-    saveRemotesConfig();
-  }
-  if (sendRemotes) {
-    sendRemotes = false;
-    jsonWsSend("ithoremotes");
+    DelayedSave.once_ms(150, []() {
+      saveRemotesConfig();
+      jsonWsSend("ithoremotes");
+    } );
   }
 #endif
   if (updateItho) {

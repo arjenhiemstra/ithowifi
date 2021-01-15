@@ -30,6 +30,11 @@ void jsonWsSend(const char* rootName) {
     JsonObject nested = root.createNestedObject(rootName);
     systemConfig.get(nested);
   }
+  else if (strcmp(rootName, "firmware") == 0) {
+    JsonObject nested = root.createNestedObject(rootName);
+    nested["firmware_ver"] = FWVERSION;
+    nested["hardware_rev"] = HWREVISION;
+  }
 #if defined (__HW_VERSION_TWO__)
   else if (strcmp(rootName, "ithoremotes") == 0) {
     // Create an object at the root
@@ -186,6 +191,9 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         jsonWsSend("systemsettings");
         sysStatReq = true;
       }
+      else if (msg.startsWith("{\"firmware")) {
+        jsonWsSend("firmware");
+      }
 #if defined (__HW_VERSION_TWO__)
       else if (msg.startsWith("{\"ithoremotes")) {
         jsonWsSend("ithoremotes");
@@ -207,7 +215,6 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         if (parseOK) {
           remotes.removeRemote(remotes.getRemoteIDbyIndex(number));
           saveRemotes = true;
-          sendRemotes = true;
         }
       }
       else if (msg.startsWith("{\"itho_update_remote")) {
@@ -219,7 +226,6 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
           strlcpy(remoteName, root["value"] | "", sizeof(remoteName));
           remotes.updateRemoteName(index, remoteName);
           saveRemotes = true;
-          sendRemotes = true;
         }
       }      
 #endif      

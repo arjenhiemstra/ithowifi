@@ -1,4 +1,4 @@
-#define FWVERSION "2.0.4"
+#define FWVERSION "2.0.5"
 
 #define LOGGING_INTERVAL 21600000
 #define ENABLE_FAILSAVE_BOOT
@@ -72,6 +72,7 @@ SpiffsFilePrint filePrint("/logfile", 2, 10000);
 
 Ticker IthoCMD;
 Ticker DelayedReq;
+Ticker DelayedSave;
 #if defined (__HW_VERSION_TWO__)
 Ticker timerLearnLeaveMode;
 IthoCC1101 rf;
@@ -117,7 +118,6 @@ bool sysStatReq = false;
 bool runscan = false;
 volatile bool updateItho = false;
 volatile bool ithoCheck = false;
-volatile bool sendRemotes = false;
 volatile bool saveRemotes = false;
 bool rfInitOK = false;
 

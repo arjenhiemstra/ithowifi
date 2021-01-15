@@ -77,6 +77,11 @@ function startWebsock(websocketServerLocation){
               $('#IthoRemotes').removeClass('hidden');
             }
           }
+          else if (f.firmware) {
+            let x = f.firmware;
+            $('#firmware_ver').text(x.firmware_ver);
+            $('#hardware_rev').text(x.hardware_rev);
+          }
           else if (f.remotes) {
             let x = f.remotes;
             $('#RemotesTable').empty();
@@ -829,7 +834,7 @@ var html_mqttsetup = `
       <form class="pure-form pure-form-aligned">
           <fieldset>
             <div class="pure-control-group">
-              <label for="mqtt_conn">MQTT Status</label>
+              <label>MQTT Status</label>
                 <button id="mqtt_conn" class="pure-button" style="pointer-events:none;">Unknown</button>
             </div>
             <br>
@@ -952,7 +957,18 @@ var html_reset = `
 `;
 
 var html_update = `
-<div class="header"><h1>Update firmware</h1></div>  
+<div class="header"><h1>Update firmware</h1></div>
+<br>
+<div class="pure-control-group">
+    <label>Current firmware version:</label>
+    <label id="firmware_ver">unknown</label>
+</div>
+<br>
+<div class="pure-control-group">
+    <label for="hardware_rev">Hardware revision:</label>
+    <label id="hardware_rev">unknown</label>
+</div>
+<br>
 <form class="pure-form pure-form-stacked" method='POST' action='#' enctype='multipart/form-data' id='updateform'>
   <fieldset>
     <p>Update the firmware of your device</p>
@@ -971,6 +987,11 @@ var html_update = `
   <div id="updatedone" style="display: none;"></div>
   <p id="time" style="display: none;">This page will reload to the start page in... </p>
 </form>
+<script>
+$(document).ready(function() {
+  getSettings('firmware');
+});
+</script>
 `;
 
 
