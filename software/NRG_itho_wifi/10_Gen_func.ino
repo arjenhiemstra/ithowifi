@@ -299,7 +299,6 @@ ICACHE_RAM_ATTR void ITHOcheck() {
             break;
           case 1: // success!
             saveRemotes = true;
-            sendRemotes = true;
             break;
         }
       }
@@ -312,7 +311,6 @@ ICACHE_RAM_ATTR void ITHOcheck() {
             break;
           case 1:
             saveRemotes = true;
-            sendRemotes = true;
             break;
         }
       }

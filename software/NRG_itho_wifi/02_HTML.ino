@@ -214,9 +214,7 @@ void handleDebug(AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("text/html");
 
   response->print("<div class=\"header\"><h1>Debug page</h1></div><br><br>");
-  response->print("<div>Firmware version: ");
-  response->print(FWVERSION);
-  response->print("<br><br>Config version: ");
+  response->print("<div>Config version: ");
   response->print(CONFIG_VERSION);
   response->print("<br><br><span>Itho I2C connection status: </span><span id=\'i2cstat\'>unknown</span><br><br></div>");
   response->print("<div style='padding: 10px;background-color: black;background-image: radial-gradient(rgba(0, 150, 0, 0.55), black 140%);height: 60vh;}  color: white;  font: 0.9rem Inconsolata, monospace;border-radius: 10px;overflow:auto'>--- System Log ---<br>");

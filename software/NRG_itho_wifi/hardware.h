@@ -13,12 +13,14 @@
 #endif
 
 #if defined (__HW_VERSION_ONE__)
+#define HWREVISION "1"
 #define SDAPIN      4
 #define SCLPIN      5
 #define WIFILED     2
 #define STATUSPIN   14
 
 #elif defined (__HW_VERSION_TWO__)
+#define HWREVISION "2"
 #define SDAPIN      21
 #define SCLPIN      22
 #define WIFILED     17  // 17 / 2
