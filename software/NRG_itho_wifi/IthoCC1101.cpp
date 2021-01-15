@@ -250,19 +250,19 @@ void IthoCC1101::initReceive()
   /*
     Configuration reverse engineered from RFT print.
 
-    Base frequency    868.299866MHz
-    Channel       0
-    Channel spacing   199.951172kHz
-    Carrier frequency 868.299866MHz
-    Xtal frequency    26.000000MHz
-    Data rate     38.3835kBaud
-    RX filter BW    325.000000kHz
-    Manchester      disabled
-    Modulation      2-FSK
-    Deviation     50.781250kHz
-    TX power      0x6F,0x26,0x2E,0x7F,0x8A,0x84,0xCA,0xC4
-    PA ramping      enabled
-    Whitening     disabled
+    Base frequency		868.299866MHz
+    Channel				0
+    Channel spacing		199.951172kHz
+    Carrier frequency	868.299866MHz
+    Xtal frequency		26.000000MHz
+    Data rate			8.00896kBaud
+    RX filter BW		67.708333kHz
+    Manchester			disabled
+    Modulation			2-FSK
+    Deviation			25.390625kHz
+    TX power			0x6F,0x26,0x2E,0x7F,0x8A,0x84,0xCA,0xC4
+    PA ramping			enabled
+    Whitening			disabled
   */
   writeCommand(CC1101_SRES);
 
@@ -314,7 +314,6 @@ void IthoCC1101::initReceive()
   writeRegister(CC1101_ADDR , 0x00);
   writeRegister(CC1101_PKTLEN , 0xFF);
   writeRegister(CC1101_TEST0 , 0x09);
-  writeRegister(CC1101_FSCAL2 ,0x00);
   
   writeCommand(CC1101_SCAL);
 
