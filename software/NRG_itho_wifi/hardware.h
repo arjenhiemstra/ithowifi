@@ -27,6 +27,7 @@
 #define STATUSPIN   16
 #define ITHO_IRQ_PIN 4
 #define FAILSAVE_PIN 14
+#define CONFIG_ARDUINO_LOOP_STACK_SIZE 16384
 #else
 #error "Unsupported hardware"
 #endif

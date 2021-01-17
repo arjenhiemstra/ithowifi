@@ -30,11 +30,6 @@ void jsonWsSend(const char* rootName) {
     JsonObject nested = root.createNestedObject(rootName);
     systemConfig.get(nested);
   }
-  else if (strcmp(rootName, "firmware") == 0) {
-    JsonObject nested = root.createNestedObject(rootName);
-    nested["firmware_ver"] = FWVERSION;
-    nested["hardware_rev"] = HWREVISION;
-  }
 #if defined (__HW_VERSION_TWO__)
   else if (strcmp(rootName, "ithoremotes") == 0) {
     // Create an object at the root
@@ -190,9 +185,6 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         systemConfig.get_itho_settings = true;
         jsonWsSend("systemsettings");
         sysStatReq = true;
-      }
-      else if (msg.startsWith("{\"firmware")) {
-        jsonWsSend("firmware");
       }
 #if defined (__HW_VERSION_TWO__)
       else if (msg.startsWith("{\"ithoremotes")) {

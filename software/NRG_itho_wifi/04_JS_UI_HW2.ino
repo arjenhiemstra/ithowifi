@@ -77,11 +77,6 @@ function startWebsock(websocketServerLocation){
               $('#IthoRemotes').removeClass('hidden');
             }
           }
-          else if (f.firmware) {
-            let x = f.firmware;
-            $('#firmware_ver').text(x.firmware_ver);
-            $('#hardware_rev').text(x.hardware_rev);
-          }
           else if (f.remotes) {
             let x = f.remotes;
             $('#RemotesTable').empty();
@@ -969,6 +964,11 @@ var html_update = `
     <label id="hardware_rev">unknown</label>
 </div>
 <br>
+<div class="pure-control-group">
+    <label for="latest_fw">Latest firmware version:</label>
+    <label id="latest_fw">unknown</label><br>
+    <a href="" id="latest_fw_button" class="pure-button pure-button-primary hidden">Download firmware file</a>
+</div>
 <form class="pure-form pure-form-stacked" method='POST' action='#' enctype='multipart/form-data' id='updateform'>
   <fieldset>
     <p>Update the firmware of your device</p>
@@ -988,9 +988,51 @@ var html_update = `
   <p id="time" style="display: none;">This page will reload to the start page in... </p>
 </form>
 <script>
-$(document).ready(function() {
-  getSettings('firmware');
-});
+$('#firmware_ver').text(fw_version);
+$('#hardware_rev').text(hw_revision);
+function process(key,value) {
+    if (key == hw_revision) {    
+      let latest_fw = value.latest_fw; 
+      let download_link = value.link;       
+      if (latest_fw == fw_version) {
+        $('#latest_fw').text(' firmware is up-to-date');
+      }
+      else {
+        $('#latest_fw').text(latest_fw);
+        $('#latest_fw_button').removeClass('hidden');
+        $('#latest_fw_button').attr("href", download_link);
+      }
+    }   
+}
+
+function traverse(o,func) {
+    for (var i in o) {
+        func.apply(this,[i,o[i]]);  
+        if (o[i] !== null && typeof(o[i])=='object') {
+            traverse(o[i],func);
+        }
+    }
+}
+
+$.ajax({
+  type: 'GET',
+  url: 'https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json',
+  dataType: 'json',
+  timeout: 300,
+  success: function(data){
+    traverse(data,process);
+  },
+  error: function(xhr, type){
+    if (on_ap) {
+      $('#latest_fw').text(' firmware check not possible on Access Point mode');
+    }
+    else {
+      $('#latest_fw').text(' firmware check failed, no internet connection?');
+    }
+    
+  }
+})
+
 </script>
 `;
 
