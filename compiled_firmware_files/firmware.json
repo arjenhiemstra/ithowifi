@@ -1,0 +1,12 @@
+{
+  "hw_rev": {
+    "1": {
+      "latest_fw":"2.0.6",
+      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_1/NRG_itho_wifi_HW1x_FW2.0.6.bin"
+    },
+    "2": {
+      "latest_fw":"2.0.6b",
+      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_2/NRG_itho_wifi_HW2x_FW2.0.6b.bin"
+    }
+  }
+}
