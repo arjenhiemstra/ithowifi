@@ -143,6 +143,10 @@ void setup() {
 
     response->print("var on_ap = false; var hostname = '");
     response->print(hostName());
+    response->print("'; var fw_version = '");
+    response->print(FWVERSION);
+    response->print("'; var hw_revision = '");
+    response->print(HWREVISION);      
     response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });");
 
     request->send(response);
@@ -154,6 +158,10 @@ void setup() {
 
     response->print("var on_ap = true; var hostname = '");
     response->print(hostName());
+    response->print("'; var fw_version = '");
+    response->print(FWVERSION);
+    response->print("'; var hw_revision = '");
+    response->print(HWREVISION);       
     response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_wifisetup); });");
 
     request->send(response);
