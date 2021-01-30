@@ -1,11 +1,9 @@
 # ithowifi
-Wemos D1 Mini / ESP8266 based WiFi controller for itho central ventilation boxes
+ESP based WiFi controller for itho central ventilation boxes
 
 *(note: I'm in no way a professional hardware/software engineer and have no background in these subjects. I like this for a hobby, to learn and to share my projects)*
 
-Control the Itho Daalderop Eco Fan RFT using basically only an ESP8266 directly communicating with the Itho by i2c protocol. 
-This is an example implementation to be able to control the speed setting of the fan from 0 - 254 through either a simple web-interface or 
-by MQTT.
+Control the Itho Daalderop Eco Fan RFT using basically only an ESP32 directly communicating with the Itho by i2c protocol. 
 
 The code will give you full remote control over the Itho Eco Fan RFT with one simple add-on module and without further changes to the Itho box.
 
@@ -68,26 +66,31 @@ I have a few assembled boards left for those who want to try this as well, you c
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/pcb.png "Add-on PCB")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/itho%20pcb.png "Itho main PCB")
 ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/itho%20pcb%20w%20add-on.png "Itho main PCB with add-on")
-![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_topside.png "PCB Top")
-![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/ithowifi_board_bottomside.png "PCB Bottom")
 
 
 BOM:
 
 Amount | Part 
 --- | ---
-1 | Wemos D1 mini V3
+1 | ESP32-WROOM-32D (or E)
 1 | Atmel Attiny 1614
+1 | AMS1117-3.3
 2 | BSS 138-7-F DII (SOT-23)
-1 | Recom R-78E5.0-1.0 DC-DC converter
-5 | 10K Ohm resistors (1206)
-1 | 100 Ohm resistor (1206)
-1 | 0,1uF Ceramic Cap (1206)
-1 | Kingbright LED Blue KP-3216QBC-D (1206) (optional I2C status LED)
-2 | female pin header 1x8 (optional)
+1 | Recom R-78E5.0-(0.5/1.0) DC-DC converter
+5 | 10K Ohm resistors (0805)
+2 | 100 Ohm resistor (0805)
+1 | 0,1uF Ceramic Cap (0805)
+1 | 1uF Ceramic Cap (0805)
+2 | 10uF tantalum (Case A)
+1 | B5819W zener diode (SOD-123)
+2 | Kingbright LED Blue (0805) (Itho and Wifi status LED)
+1 | female pin header 1x7 (optional)
 1 | female pin header 2x4
-1 | standoff 3mm hole x (total length 21,4 mm, effective pcb spacing 11,5 mm) (optional)
+1 | standoff 3mm / 3.2mm hole x (effective pcb spacing 11,1 mm) (optional)
 
+Change of components version 2.x:
+Changed the wemos to the much faster ESP32 with more memory etc. Also easier to produce mechanically. Other change of components are to accomodate this change.
+This version also added the option to solder a CC1101 RF module to be able to receive itho RF signals
 
 Change of components version 1.2:
 The Wemos boots too slow too often to receive the first I2C message from the Itho box. An Attiny 1614 was added to handle the init. After power-on the Attiny starts executing user code after about 65ms instead of +/-130ms of the Wemos. 130ms is about the point where the itho Box sends its first message.
@@ -104,7 +107,7 @@ ISO1540/ADUM 1250 ARZ:
 not the cheapest logic level convertor option but special designed for i2c and a one chip solution, SMD but still quite easy to solder by hand.
 
 Recom R-78E5.0-1.0: 
-the regulator (7805) on the itho mainboard is not suitable to drive extra loads like a esp8266. Luckily there is a pin on the mainboard that holds the output from the main
+the regulator (7805) on the itho mainboard is not suitable to drive extra loads like a esp8266/esp32. Luckily there is a pin on the mainboard that holds the output from the main
 power supply (about 16,3 volts and definitely able to handle more than the 500mA of the on board regulator). Placing a 7805 (or similar) on the add-on board is possible 
 but will probably generate lots of heat (up to 5 watts) because of big voltage drop.
 That's why I selected the DC-DC converter from recom, very small package, high efficiency (90%).
