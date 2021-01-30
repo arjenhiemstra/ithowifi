@@ -235,8 +235,8 @@ void printTimestamp(Print* _logOutput) {
   } else
 #endif
   {
-    char c[12];
-    sprintf(c, "%10lu ", millis());
+    char c[32];
+    sprintf(c, "<br>%10lu ", millis());
     _logOutput->print(c);
   }
 }
