@@ -185,31 +185,42 @@ static void writeIthoVal(uint16_t value) {
   }
 
   if (ithoCurrentVal != value) {
+    uint16_t valTemp = ithoCurrentVal;
     ithoCurrentVal = value;
     sysStatReq = true;
 
-    while (digitalRead(SCLPIN) == LOW) { //'check' if other master is active
+    int timeout = 0;
+    while (digitalRead(SCLPIN) == LOW && timeout < 1000) { //'check' if other master is active
       yield();
+      delay(1);
+      timeout++;
+    }
+    if (timeout != 1000) {
+      Wire.beginTransmission(byte(0x00));
+      delay(10);
+      //write start of message
+      Wire.write(byte(0x60));
+      Wire.write(byte(0xC0));
+      Wire.write(byte(0x20));
+      Wire.write(byte(0x01));
+      Wire.write(byte(0x02));
+
+      uint8_t b = (uint8_t) value;
+      uint8_t h = 0 - (67 + b);
+
+      Wire.write(b);
+      Wire.write(byte(0x00));
+      Wire.write(h);
+
+      Wire.endTransmission(true);
+      updateState(value);
+    }
+    else {
+      logInput("Warning: I2C timeout");
+      ithoCurrentVal = valTemp;
+      ithoQueue.add2queue(valTemp, 0, systemConfig.nonQ_cmd_clearsQ);
     }
 
-    Wire.beginTransmission(byte(0x00));
-    delay(10);
-    //write start of message
-    Wire.write(byte(0x60));
-    Wire.write(byte(0xC0));
-    Wire.write(byte(0x20));
-    Wire.write(byte(0x01));
-    Wire.write(byte(0x02));
-
-    uint8_t b = (uint8_t) value;
-    uint8_t h = 0 - (67 + b);
-
-    Wire.write(b);
-    Wire.write(byte(0x00));
-    Wire.write(h);
-
-    Wire.endTransmission(true);
-    updateState(value);
   }
 
 }
@@ -288,7 +299,7 @@ ICACHE_RAM_ATTR void ITHOcheck() {
     if (cmd != IthoUnknown) {  // only act on good cmd
       if (debugLevel == 1) {
         RFDebug(false, id, cmd);
-      }      
+      }
       if (cmd == IthoLeave && remotes.remoteLearnLeaveStatus()) {
         //Serial.print("Leave command received. Trying to remove remote... ");
         int result = remotes.removeRemote(id);

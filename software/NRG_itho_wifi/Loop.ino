@@ -112,7 +112,10 @@ void loop() {
   }
 
   if (wifiModeAP) {
-
+    long now = millis();
+    if (now - APmodeTimeout > 900000) { //reboot after 15 min in AP mode
+      shouldReboot = true;
+    }
     dnsServer.processNextRequest();
 
 
