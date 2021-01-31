@@ -5,7 +5,7 @@ Flashing a firmware file for the wrong hardware revision will brick the device. 
 
 Hardware revision 1:
 
-![alt text](https://github.com/arjenhiemstra/ithowifi/raw/master/images/pcb.png "Hardware revision 1")
+![alt text](https://github.com/arjenhiemstra/ithowifi/raw/master/images/hw_rev_1.png "Hardware revision 1")
 
 Hardware revision 2:
 
