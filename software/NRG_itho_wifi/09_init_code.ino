@@ -183,6 +183,8 @@ void setupWiFiAP() {
   dnsServer.start(53, "*", apIP);
 
   wifiModeAP = true;
+  APmodeTimeout = millis();
+  
   digitalWrite(WIFILED, LOW);
 }
 

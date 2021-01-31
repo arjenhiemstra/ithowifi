@@ -1,4 +1,4 @@
-#define FWVERSION "2.0.8"
+#define FWVERSION "2.0.9"
 
 #define LOGGING_INTERVAL 21600000
 #define ENABLE_FAILSAVE_BOOT
@@ -105,6 +105,7 @@ char logBuff[256] = "";
 
 unsigned long loopstart = 0;
 unsigned long updatetimer = 0;
+unsigned long APmodeTimeout = 0;
 unsigned long lastSysMessage = 0;
 unsigned long previousUpdate = 0;
 unsigned long wifiLedUpdate = 0;
