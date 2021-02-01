@@ -1,8 +1,8 @@
 {
   "hw_rev": {
     "1": {
-      "latest_fw":"2.0.9",
-      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_1/NRG_itho_wifi_HW1x_FW2.0.9.bin"
+      "latest_fw":"2.0.10",
+      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_1/NRG_itho_wifi_HW1x_FW2.0.10.bin"
     },
     "2": {
       "latest_fw":"2.0.10",
