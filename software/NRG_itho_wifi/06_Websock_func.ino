@@ -62,7 +62,7 @@ void jsonWifiscanresult(int id, const char* ssid, int sigval, int sec) {
 
 }
 // Convert & Transfer Arduino elements to JSON elements
-void jsonMessageBox(char* message1, char* message2) {
+void jsonMessageBox(const char* message1, const char* message2) {
   StaticJsonDocument<512> root;
   //JsonObject root = jsonBuffer.createObject();
   JsonObject messagebox = root.createNestedObject("messagebox");
