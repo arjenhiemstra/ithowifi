@@ -26,10 +26,6 @@ void loop() {
     } );
 
   }
-  if (ithoCheck) {
-    ithoCheck = false;
-    ITHOcheck();
-  }
   if (saveRemotes) {
     saveRemotes = false;
     DelayedSave.once_ms(150, []() {

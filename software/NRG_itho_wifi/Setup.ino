@@ -270,10 +270,15 @@ void setup() {
   }
   
 #if defined (__HW_VERSION_TWO__)
-  if(strcmp(systemConfig.itho_rf_support, "on") == 0) {
-    initRFmodule();
-  }
+  xTaskCreate(
+    CC1101Task,          /* Task function. */
+    "CC1101Task",        /* String with name of task. */
+    4096,            /* Stack size in bytes. */
+    NULL,             /* Parameter passed as input of the task */
+    5,                /* Priority of the task. */
+    &CC1101TaskHandle);            /* Task handle. */
 #endif
+
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_medium);
   
   strcat(i2cstat, "sOk");

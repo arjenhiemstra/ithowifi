@@ -1,4 +1,4 @@
-#define FWVERSION "2.0.9"
+#define FWVERSION "2.0.10"
 
 #define LOGGING_INTERVAL 21600000
 #define ENABLE_FAILSAVE_BOOT
@@ -78,6 +78,7 @@ Ticker timerLearnLeaveMode;
 IthoCC1101 rf;
 IthoPacket packet;
 IthoRemote remotes;
+TaskHandle_t CC1101TaskHandle;
 #endif
 IthoQueue ithoQueue;
 System sys;
