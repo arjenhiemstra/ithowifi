@@ -1,4 +1,4 @@
-#define FWVERSION "2.0.10"
+#define FWVERSION "2.1"
 
 #define LOGGING_INTERVAL 21600000
 #define ENABLE_FAILSAVE_BOOT
@@ -41,6 +41,7 @@
 #elif defined (ESP32)
 #include <WiFi.h>
 #include <WiFiClient.h>
+#include "esp_wifi.h"
 #include <ESPmDNS.h>
 #include <AsyncTCP.h>
 #include "SPIFFS.h"
@@ -50,8 +51,7 @@
 #include "IthoCC1101.h"   // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "IthoPacket.h"   // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "IthoRemote.h"
-char debugLog[80];
-char debugLogMsg2[100];
+char debugLog[200];
 bool debugLogInput = false;
 uint8_t debugLevel = 0;
 Ticker LogMessage;
@@ -73,7 +73,9 @@ SpiffsFilePrint filePrint("/logfile", 2, 10000);
 Ticker IthoCMD;
 Ticker DelayedReq;
 Ticker DelayedSave;
-#if defined (__HW_VERSION_TWO__)
+#if defined (__HW_VERSION_ONE__)
+FSInfo fs_info;
+#elif defined (__HW_VERSION_TWO__)
 Ticker timerLearnLeaveMode;
 IthoCC1101 rf;
 IthoPacket packet;
@@ -114,6 +116,7 @@ unsigned long lastLog = 0;
 
 //flags used
 bool shouldReboot = false;
+bool dontSaveConfig = false;
 bool clearQueue = false;
 bool wifiModeAP = false;
 bool sysStatReq = false;
@@ -124,6 +127,8 @@ volatile bool saveRemotes = false;
 bool rfInitOK = false;
 
 size_t content_len;
+
+typedef enum { WEBINTERFACE, RFLOG } logtype;
 
 #if defined (__HW_VERSION_TWO__)
 IthoCommand RFTcommand[3] = {IthoUnknown, IthoUnknown, IthoUnknown};

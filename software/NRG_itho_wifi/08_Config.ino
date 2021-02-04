@@ -67,6 +67,7 @@ bool resetWifiConfig() {
     return false;
   }
   if (!SPIFFS.exists("/wifi.json")) {
+    dontSaveConfig = true;
     return true;
   }
 }
@@ -131,6 +132,7 @@ bool resetSystemConfig() {
     return false;
   }
   if (!SPIFFS.exists("/config.json")) {
+    dontSaveConfig = true;
     return true;
   }
 }

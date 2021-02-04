@@ -20,9 +20,7 @@ void loop() {
 
     debugLogInput = false;
     LogMessage.once_ms(150, []() {
-
-      jsonMessageBox(debugLog, debugLogMsg2);
-      //logInput(debugLog);
+      jsonLogMessage(debugLog, RFLOG);
     } );
 
   }
@@ -97,6 +95,9 @@ void loop() {
 
   if (shouldReboot) {
     logInput("Reboot requested");
+    if (!dontSaveConfig) {
+      saveSystemConfig();
+    }
     delay(1000);
     ESP.restart();
     delay(2000);
@@ -108,12 +109,10 @@ void loop() {
   }
 
   if (wifiModeAP) {
-    long now = millis();
-    if (now - APmodeTimeout > 900000) { //reboot after 15 min in AP mode
+    if (loopstart - APmodeTimeout > 900000) { //reboot after 15 min in AP mode
       shouldReboot = true;
     }
     dnsServer.processNextRequest();
-
 
     if (loopstart - wifiLedUpdate >= 500) {
       wifiLedUpdate = loopstart;

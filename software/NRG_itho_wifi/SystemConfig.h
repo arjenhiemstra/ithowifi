@@ -24,6 +24,7 @@ class SystemConfig {
     uint16_t mqtt_idx;
     mutable bool mqtt_updated;
     mutable bool get_mqtt_settings;
+    uint8_t itho_fallback;
     uint8_t itho_low;
     uint8_t itho_medium;
     uint8_t itho_high;

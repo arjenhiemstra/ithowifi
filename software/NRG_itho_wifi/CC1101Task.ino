@@ -26,10 +26,6 @@ void RFDebug(bool chk, int * id, IthoCommand cmd) {
 
   strcpy(debugLog, "");
   sprintf(debugLog, "RemoteID=%d,%d,%d,%d,%d,%d,%d,%d / Command=", id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7]);
-  if (chk) {
-    strcpy(debugLogMsg2, "");
-    strlcpy(debugLogMsg2, rf.getLastMessage2CMDstr().c_str(), sizeof(debugLogMsg2));
-  }
   //log command
   switch (cmd) {
     case IthoUnknown:
@@ -63,6 +59,10 @@ void RFDebug(bool chk, int * id, IthoCommand cmd) {
       strcat(debugLog, "leave");
       break;
   }
+  if (chk) {
+    strcat(debugLog, "<br>");
+    strncat(debugLog, rf.getLastMessage2CMDstr().c_str(), sizeof(debugLog)-strlen(debugLog)-1);
+  }  
   debugLogInput = true;
 
 }
@@ -89,7 +89,7 @@ void setllModeTimer() {
 
 void CC1101Task( void * parameter ) {
   Ticker TaskTimeout;
-  
+
   if (strcmp(systemConfig.itho_rf_support, "on") == 0) {
     Ticker reboot;
 
@@ -118,116 +118,117 @@ void CC1101Task( void * parameter ) {
     strlcpy(systemConfig.itho_rf_support, "on", sizeof(systemConfig.itho_rf_support));
     loadRemotesConfig();
     systemConfig.rfInitOK = true;
-  }
 
-  for (;;) {
-    delay(1);
-    yield();
-    TaskTimeout.attach_ms(100, []() {
-      logInput("Error: CC1101 Task timed out!");
-    });    
-    if (ithoCheck) {
-      ithoCheck = false;
-      if (rf.checkForNewPacket()) {
+    for (;;) {
+      delay(1);
+      yield();
+      TaskTimeout.attach_ms(100, []() {
+        logInput("Error: CC1101 Task timed out!");
+      });
+      if (ithoCheck) {
+        ithoCheck = false;
+        if (rf.checkForNewPacket()) {
 
-        int *lastID = rf.getLastID();
-        int id[8];
-        for (uint8_t i = 0; i < 8; i++) {
-          id[i] = lastID[i];
-        }
-        IthoCommand cmd = rf.getLastCommand();
-        if (++RFTcommandpos > 2) RFTcommandpos = 0;  // store information in next entry of ringbuffers
-        RFTcommand[RFTcommandpos] = cmd;
-        RFTRSSI[RFTcommandpos]    = rf.ReadRSSI();
-        //int *lastID = rf.getLastID();
-        bool chk = remotes.checkID(id);
-        //bool chk = rf.checkID(RFTid);
-        RFTidChk[RFTcommandpos]   = chk;
-
-        if (debugLevel >= 2) {
-          if (chk || debugLevel == 3) {
-            RFDebug(true, id, cmd);
+          int *lastID = rf.getLastID();
+          int id[8];
+          for (uint8_t i = 0; i < 8; i++) {
+            id[i] = lastID[i];
           }
-        }
-        if (cmd != IthoUnknown) {  // only act on good cmd
-          if (debugLevel == 1) {
-            RFDebug(false, id, cmd);
-          }
-          if (cmd == IthoLeave && remotes.remoteLearnLeaveStatus()) {
-            //Serial.print("Leave command received. Trying to remove remote... ");
-            int result = remotes.removeRemote(id);
-            switch (result) {
-              case -1: // failed! - remote not registered
-                break;
-              case -2: // failed! - no remotes registered
-                break;
-              case 1: // success!
-                saveRemotes = true;
-                break;
+          IthoCommand cmd = rf.getLastCommand();
+          if (++RFTcommandpos > 2) RFTcommandpos = 0;  // store information in next entry of ringbuffers
+          RFTcommand[RFTcommandpos] = cmd;
+          RFTRSSI[RFTcommandpos]    = rf.ReadRSSI();
+          //int *lastID = rf.getLastID();
+          bool chk = remotes.checkID(id);
+          //bool chk = rf.checkID(RFTid);
+          RFTidChk[RFTcommandpos]   = chk;
+
+          if (debugLevel >= 2) {
+            if (chk || debugLevel == 3) {
+              RFDebug(true, id, cmd);
             }
           }
-          if (cmd == IthoJoin && remotes.remoteLearnLeaveStatus()) {
-            int result = remotes.registerNewRemote(id);
-            switch (result) {
-              case -1: // failed! - remote already registered
-                break;
-              case -2: //failed! - max number of remotes reached"
-                break;
-              case 1:
-                saveRemotes = true;
-                break;
+          if (cmd != IthoUnknown) {  // only act on good cmd
+            if (debugLevel == 1) {
+              RFDebug(false, id, cmd);
             }
-          }
-          if (chk) {
-            if (cmd == IthoLow) {
-              nextIthoVal = systemConfig.itho_low;
-              nextIthoTimer = 0;
-              updateItho = true;
+            if (cmd == IthoLeave && remotes.remoteLearnLeaveStatus()) {
+              //Serial.print("Leave command received. Trying to remove remote... ");
+              int result = remotes.removeRemote(id);
+              switch (result) {
+                case -1: // failed! - remote not registered
+                  break;
+                case -2: // failed! - no remotes registered
+                  break;
+                case 1: // success!
+                  saveRemotes = true;
+                  break;
+              }
             }
-            if (cmd == IthoMedium) {
-              nextIthoVal = systemConfig.itho_medium;
-              nextIthoTimer = 0;
-              updateItho = true;
+            if (cmd == IthoJoin && remotes.remoteLearnLeaveStatus()) {
+              int result = remotes.registerNewRemote(id);
+              switch (result) {
+                case -1: // failed! - remote already registered
+                  break;
+                case -2: //failed! - max number of remotes reached"
+                  break;
+                case 1:
+                  saveRemotes = true;
+                  break;
+              }
             }
-            if (cmd == IthoHigh || cmd == IthoFull) {
-              nextIthoVal = systemConfig.itho_high;
-              nextIthoTimer = 0;
-              updateItho = true;
-            }
-            if (cmd == IthoTimer1) {
-              nextIthoVal = systemConfig.itho_high;
-              nextIthoTimer = systemConfig.itho_timer1;
-              updateItho = true;
-            }
-            if (cmd == IthoTimer2) {
-              nextIthoVal = systemConfig.itho_high;
-              nextIthoTimer = systemConfig.itho_timer2;
-              updateItho = true;
-            }
-            if (cmd == IthoTimer3) {
-              nextIthoVal = systemConfig.itho_high;
-              nextIthoTimer = systemConfig.itho_timer3;
-              updateItho = true;
-            }
-            if (cmd == IthoJoin && !remotes.remoteLearnLeaveStatus()) {
-            }
-            if (cmd == IthoLeave && !remotes.remoteLearnLeaveStatus()) {
-              ithoQueue.clear_queue();
-            }
+            if (chk) {
+              if (cmd == IthoLow) {
+                nextIthoVal = systemConfig.itho_low;
+                nextIthoTimer = 0;
+                updateItho = true;
+              }
+              if (cmd == IthoMedium) {
+                nextIthoVal = systemConfig.itho_medium;
+                nextIthoTimer = 0;
+                updateItho = true;
+              }
+              if (cmd == IthoHigh || cmd == IthoFull) {
+                nextIthoVal = systemConfig.itho_high;
+                nextIthoTimer = 0;
+                updateItho = true;
+              }
+              if (cmd == IthoTimer1) {
+                nextIthoVal = systemConfig.itho_high;
+                nextIthoTimer = systemConfig.itho_timer1;
+                updateItho = true;
+              }
+              if (cmd == IthoTimer2) {
+                nextIthoVal = systemConfig.itho_high;
+                nextIthoTimer = systemConfig.itho_timer2;
+                updateItho = true;
+              }
+              if (cmd == IthoTimer3) {
+                nextIthoVal = systemConfig.itho_high;
+                nextIthoTimer = systemConfig.itho_timer3;
+                updateItho = true;
+              }
+              if (cmd == IthoJoin && !remotes.remoteLearnLeaveStatus()) {
+              }
+              if (cmd == IthoLeave && !remotes.remoteLearnLeaveStatus()) {
+                ithoQueue.clear_queue();
+              }
 
+            }
+            else {
+              //Unknown remote
+            }
+            //Serial.print("Number of know remotes: ");
+            //Serial.println(remotes.getRemoteCount());
           }
           else {
-            //Unknown remote
+            //("--- RF CMD reveiced but of unknown type ---");
           }
-          //Serial.print("Number of know remotes: ");
-          //Serial.println(remotes.getRemoteCount());
-        }
-        else {
-          //("--- RF CMD reveiced but of unknown type ---");
         }
       }
     }
-  }
+  } //if (strcmp(systemConfig.itho_rf_support, "on") == 0)
+  //else delete task
   vTaskDelete( NULL );
 }
 

@@ -37,7 +37,8 @@ void setup() {
   if (!loadSystemConfig()) {
     //Serial.println("System config error :( ");
   }
-
+  ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
+  
   configTime(0, 0, "pool.ntp.org");
 
 #if defined (__HW_VERSION_ONE__)
@@ -49,6 +50,9 @@ void setup() {
   strcpy(logBuff, "");
   if (!wifiModeAP) {
     logWifiInfo();
+  }
+  else {
+    logInput("Setup: AP mode active");
   }
 
 
@@ -234,8 +238,7 @@ void setup() {
   Update.onProgress(otaWSupdate);
 
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest * request) {
-    jsonMessageBox("Reset requested ",
-                   "Device will reboot in a few seconds...");
+    jsonLogMessage(F("Reset requested Device will reboot in a few seconds..."), WEBINTERFACE);
     delay(200);
     shouldReboot = true;
   });
@@ -279,7 +282,7 @@ void setup() {
     &CC1101TaskHandle);            /* Task handle. */
 #endif
 
-  ithoQueue.set_itho_fallback_speed(systemConfig.itho_medium);
+  
   
   strcat(i2cstat, "sOk");
   logInput("Setup: done");
