@@ -82,18 +82,19 @@ void handleAPI(AsyncWebServerRequest *request) {
       if (strcmp(p->value().c_str(), "format") == 0 ) {
         if (SPIFFS.format()) {
           strcpy(logBuff, "Filesystem format = success");
+          dontSaveConfig = true;
         }
         else {
           strcpy(logBuff, "Filesystem format = failed");
         }
-        jsonMessageBox(logBuff, "");
+        jsonLogMessage(logBuff, WEBINTERFACE);
         strcpy(logBuff, "");
         parseOK = true;
       }
       if (strcmp(p->value().c_str(), "reboot") == 0 ) {
         
         shouldReboot = true;
-        jsonMessageBox("Reboot requested", "");
+        jsonLogMessage(F("Reboot requested"), WEBINTERFACE);
 
         parseOK = true;
       }
@@ -103,7 +104,7 @@ void handleAPI(AsyncWebServerRequest *request) {
         debugLevel = 0;
         
         sprintf(logBuff, "Debug level = %d", debugLevel);
-        jsonMessageBox(logBuff, "");
+        jsonLogMessage(logBuff, WEBINTERFACE);
         strcpy(logBuff, "");
         parseOK = true;
       }
@@ -112,7 +113,7 @@ void handleAPI(AsyncWebServerRequest *request) {
         debugLevel = 1;
         
         sprintf(logBuff, "Debug level = %d", debugLevel);
-        jsonMessageBox(logBuff, "");
+        jsonLogMessage(logBuff, WEBINTERFACE);
         strcpy(logBuff, "");
         parseOK = true;
       }        
@@ -121,7 +122,7 @@ void handleAPI(AsyncWebServerRequest *request) {
         debugLevel = 2;
         
         sprintf(logBuff, "Debug level = %d", debugLevel);
-        jsonMessageBox(logBuff, "");
+        jsonLogMessage(logBuff, WEBINTERFACE);
         strcpy(logBuff, "");
         parseOK = true;
       }
@@ -130,7 +131,7 @@ void handleAPI(AsyncWebServerRequest *request) {
         debugLevel = 3;
         
         sprintf(logBuff, "Debug level = %d", debugLevel);
-        jsonMessageBox(logBuff, "");
+        jsonLogMessage(logBuff, WEBINTERFACE);
         strcpy(logBuff, "");
         parseOK = true;
       }      
@@ -213,11 +214,29 @@ void handleAPI(AsyncWebServerRequest *request) {
 void handleDebug(AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("text/html");
 
-  response->print("<div class=\"header\"><h1>Debug page</h1></div><br><br>");
-  response->print("<div>Config version: ");
+  response->print(F("<div class=\"header\"><h1>Debug page</h1></div><br><br>"));
+  response->print(F("<div>Config version: "));
   response->print(CONFIG_VERSION);
-  response->print("<br><br><span>Itho I2C connection status: </span><span id=\'i2cstat\'>unknown</span><br><br></div>");
-  response->print("<div style='padding: 10px;background-color: black;background-image: radial-gradient(rgba(0, 150, 0, 0.55), black 140%);height: 60vh;}  color: white;  font: 0.9rem Inconsolata, monospace;border-radius: 10px;overflow:auto'>--- System Log ---<br>");
+  response->print(F("<br><br><span>Itho I2C connection status: </span><span id=\'i2cstat\'>unknown</span></div>"));
+  response->print(F("<span>File system: </span><span>"));
+#if defined (__HW_VERSION_ONE__)
+  SPIFFS.info(fs_info);
+  response->print(fs_info.usedBytes);
+#elif defined (__HW_VERSION_TWO__)
+  response->print(SPIFFS.usedBytes());
+#endif
+  response->print(F(" bytes used / "));
+#if defined (__HW_VERSION_ONE__)
+  response->print(fs_info.totalBytes);
+#elif defined (__HW_VERSION_TWO__)
+  response->print(SPIFFS.totalBytes());
+#endif
+  response->print(F(" bytes total</span></div>"));
+  response->print(F("<br><br><div id='syslog_outer'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>System Log:</div>"));
+  
+  
+  
+  response->print(F("<div style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto'>"));
   char link[24] = "";
   char linkcur[24] = "";
 
@@ -232,21 +251,23 @@ void handleDebug(AsyncWebServerRequest *request) {
 
   File file = SPIFFS.open(linkcur, FILE_READ);
   while (file.available()) {
-    //count row
-    //of more than x row display fom total - 1
+    if(char(file.peek()) == '\n') response->print("<br>");
     response->print(char(file.read()));
-   
   }
   file.close();
 
-  response->print("</div><br><br><a class='pure-button' href='/curlog'>Download current logfile</a>");
+  response->print(F("</div><div style='padding-top:5px;'><a class='pure-button' href='/curlog'>Download current logfile</a>"));
 
   if ( SPIFFS.exists(link) ) {
-    response->print("&nbsp;<a class='pure-button' href='/prevlog'>Download previous logfile</a>");
+    response->print(F("&nbsp;<a class='pure-button' href='/prevlog'>Download previous logfile</a>"));
 
   }
-  response->print("<br><br>");
-  
+
+#if defined (__HW_VERSION_TWO__)  
+  response->print(F("</div></div><br><br><div id='rflog_outer' class='hidden'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>RF Log:</div>"));
+  response->print(F("<div id='rflog' style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto'>"));
+  response->print(F("</div><div style='padding-top:5px;'><a href='#' class='pure-button' onclick=\"$('#rflog').empty()\">Clear</a></div></div></div><br><br>"));
+#endif
   
   request->send(response);
   

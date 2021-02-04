@@ -1016,7 +1016,7 @@ String IthoCC1101::getLastMessage2str(bool ashex) {
 String IthoCC1101::getLastMessage2CMDstr() {
   int startPos = 18;
   int endPos = startPos + 15;
-  String str = "<br>msg2cmd: len=" + String(inMessage2.length) + " / ";
+  String str = "msg2cmd: len=" + String(inMessage2.length) + " / ";
   for (uint8_t i = 0; i < inMessage2.length; i++) {
     if (i == startPos) str += String(inMessage2.data[i] & B00001111) + ",";
     if (i > (startPos + 1) && i < endPos) {

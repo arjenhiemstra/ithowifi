@@ -19,6 +19,7 @@ SystemConfig::SystemConfig() {
   strlcpy(mqtt_domoticz_active, "off", sizeof(mqtt_domoticz_active));
   mqtt_updated = false;
   get_mqtt_settings = false;
+  itho_fallback = 20;
   itho_low = 20;
   itho_medium = 120;
   itho_high = 220;
@@ -95,6 +96,11 @@ bool SystemConfig::set(JsonObjectConst obj) {
     updated = true;
     mqtt_idx = obj["mqtt_idx"];
   }
+  if (!(const char*)obj["itho_fallback"].isNull()) {
+    //itho_updated = true;
+    updated = true;
+    itho_fallback = obj["itho_fallback"];
+  }  
   if (!(const char*)obj["itho_low"].isNull()) {
     //itho_updated = true;
     updated = true;
@@ -158,6 +164,7 @@ void SystemConfig::get(JsonObject obj) const {
   }
   if (complete || get_itho_settings) {
     get_itho_settings = false;
+    obj["itho_fallback"] = itho_fallback;
     obj["itho_low"] = itho_low;
     obj["itho_medium"] = itho_medium;
     obj["itho_high"] = itho_high;

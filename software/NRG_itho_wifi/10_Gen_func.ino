@@ -142,7 +142,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 void updateState(uint16_t newState) {
 
-
+  systemConfig.itho_fallback = newState;
+  
   if (mqttClient.connected()) {
     char buffer[512];
 
@@ -234,20 +235,20 @@ void printTimestamp(Print* _logOutput) {
     timeinfo = localtime(&now);
 
     char timeStringBuff[50];  // 50 chars should be enough
-    strftime(timeStringBuff, sizeof(timeStringBuff), "<br>%F %T ", timeinfo);
+    strftime(timeStringBuff, sizeof(timeStringBuff), "%F %T ", timeinfo);
     _logOutput->print(timeStringBuff);
   } else
 #elif defined (__HW_VERSION_TWO__)
   struct tm timeinfo;
   if (getLocalTime(&timeinfo, 0)) {
     char timeStringBuff[50];  // 50 chars should be enough
-    strftime(timeStringBuff, sizeof(timeStringBuff), "<br>%F %T ", &timeinfo);
+    strftime(timeStringBuff, sizeof(timeStringBuff), "%F %T ", &timeinfo);
     _logOutput->print(timeStringBuff);
   } else
 #endif
   {
     char c[32];
-    sprintf(c, "<br>%10lu ", millis());
+    sprintf(c, "%10lu ", millis());
     _logOutput->print(c);
   }
 }
@@ -255,7 +256,6 @@ void printTimestamp(Print* _logOutput) {
 void printNewline(Print* _logOutput) {
   _logOutput->print("\n");
 }
-
 
 void logInput(const char * inputString) {
   filePrint.open();

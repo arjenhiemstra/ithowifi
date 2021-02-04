@@ -131,8 +131,14 @@ function startWebsock(websocketServerLocation){
             count += 1;
             resetTimer();
             $('#message_box').show();
-            $('#message_box').append('<p class=\'messageP\' id=\'mbox_p' + count + '\'>Message: ' + x.message1 + ' ' + x.message2 + '</p>');
+            $('#message_box').append('<p class=\'messageP\' id=\'mbox_p' + count + '\'>Message: ' + x.message + '</p>');
             removeAfter5secs(count);
+          }
+          else if (f.rflog) {
+            let x = f.rflog;
+            $('#rflog_outer').removeClass('hidden');
+            $('#rflog').append(x.message + '<br>');
+            $('#rflog').scrollTop($('#rflog').height());
           }
           else if (f.ota) {
             let x = f.ota;

@@ -88,6 +88,7 @@ void failSafeBoot() {
     }
 
   }
+  digitalWrite(WIFILED, HIGH);
 }
 
 #endif
@@ -105,7 +106,6 @@ bool initFileSystem() {
     ESP.restart();
   }
   else {
-    FSInfo fs_info;
     if (!SPIFFS.info(fs_info)) {
       //Serial.println("fs_info failed");
       return false;
@@ -167,11 +167,20 @@ void setupWiFiAP() {
   IPAddress apIP(192, 168, 4, 1);
   IPAddress netMsk(255, 255, 255, 0);
 
-  WiFi.persistent(false);
-  // disconnect sta, start ap
-  WiFi.disconnect(); //  this alone is not enough to stop the autoconnecter
+  WiFi.disconnect(true);
+  delay(30);
+  WiFi.mode(WIFI_OFF);
+  WiFi.persistent(false);  
+  WiFi.setAutoReconnect(false);
+  
+#if defined (__HW_VERSION_ONE__)
+  WiFi.forceSleepWake();
+#elif defined (__HW_VERSION_TWO__)
+  esp_wifi_set_ps(WIFI_PS_NONE);
+#endif
+  
+  delay(100);
   WiFi.mode(WIFI_AP);
-  WiFi.persistent(true);
 
   WiFi.softAPConfig(apIP, apIP, netMsk);
   WiFi.softAP(hostName(), WiFiAPPSK);
@@ -183,17 +192,28 @@ void setupWiFiAP() {
   dnsServer.start(53, "*", apIP);
 
   wifiModeAP = true;
+
   APmodeTimeout = millis();
-  
-  digitalWrite(WIFILED, LOW);
+
 }
 
 
 bool connectWiFiSTA()
 {
   wifiModeAP = false;
-  //Serial.println("Connecting wifi network");
+
   WiFi.disconnect(true);
+  delay(30);
+  WiFi.mode(WIFI_OFF);
+  WiFi.persistent(false);  
+  WiFi.setAutoReconnect(false);
+  
+#if defined (__HW_VERSION_ONE__)
+  WiFi.forceSleepWake();
+#elif defined (__HW_VERSION_TWO__)
+  esp_wifi_set_ps(WIFI_PS_NONE);
+#endif
+  
   delay(100);
 
   WiFi.mode(WIFI_STA);
@@ -238,29 +258,31 @@ bool connectWiFiSTA()
 
   int i = 0;
 #if defined (__HW_VERSION_ONE__)
-  while (wifi_station_get_connect_status() != STATION_GOT_IP && i < 31) {
+  while (wifi_station_get_connect_status() != STATION_GOT_IP && i < 16) {
 #elif defined (__HW_VERSION_TWO__)
-  while ((WiFi.status() != WL_CONNECTED) && i < 31) {
+  while ((WiFi.status() != WL_CONNECTED) && i < 16) {
 #endif
-    delay(1000);
-    //Serial.print(".");
+    delay(2000);
+    if (digitalRead(WIFILED) == LOW) {
+      digitalWrite(WIFILED, HIGH);
+    }
+    else {
+      digitalWrite(WIFILED, LOW);
+    }
     ++i;
   }
 #if defined (__HW_VERSION_ONE__)
-  if (wifi_station_get_connect_status() != STATION_GOT_IP && i >= 30) {
+  if (wifi_station_get_connect_status() != STATION_GOT_IP && i >= 15) {
 #elif defined (__HW_VERSION_TWO__)
-  if ((WiFi.status() != WL_CONNECTED) && i >= 30) {
+  if ((WiFi.status() != WL_CONNECTED) && i >= 15) {
 #endif
     //delay(1000);
     //Serial.println("");
     //Serial.println("Couldn't connect to network :( ");
-
+    digitalWrite(WIFILED, HIGH);
     return false;
 
   }
-
-
-
 
   digitalWrite(WIFILED, LOW);
   return true;
