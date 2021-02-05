@@ -143,7 +143,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 void updateState(uint16_t newState) {
 
   systemConfig.itho_fallback = newState;
-  
+
   if (mqttClient.connected()) {
     char buffer[512];
 
@@ -172,6 +172,38 @@ void updateState(uint16_t newState) {
     mqttClient.publish(systemConfig.mqtt_state_topic, buffer, true);
 
   }
+}
+
+void updateSensor() {
+
+  if (SHT3x_original || SHT3x_alternative) {
+    bool updated = false;
+
+    if (SHT3x_original) {
+      if (sht_org.readSample()) {
+        updated = true;
+        ithoHum = sht_org.getHumidity();
+        ithoTemp = sht_org.getTemperature();
+      }
+    }
+    if (SHT3x_alternative) {
+      if (sht_alt.readSample()) {
+        updated = true;
+        ithoHum = sht_alt.getHumidity();
+        ithoTemp = sht_alt.getTemperature();
+      }
+    }
+
+    if (mqttClient.connected() && updated) {
+      char buffer[512];
+      sprintf(buffer, "{\"temp\":\"%1.1f\";\"hum\":\"%1.1f\"}", ithoTemp, ithoHum);
+      char topicBuf[128 + 16] = "";
+      strcpy(topicBuf, systemConfig.mqtt_state_topic);
+      strcat(topicBuf, "/sensor");
+      mqttClient.publish(topicBuf, buffer, true);
+    }
+  }
+
 }
 
 void add2queue() {

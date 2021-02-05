@@ -62,10 +62,9 @@ void loop() {
     mqttClient.loop();
   }
   else {
-    long now = millis();
-    if (now - lastMQTTReconnectAttempt > 5000) {
+    if (loopstart - lastMQTTReconnectAttempt > 5000) {
 
-      lastMQTTReconnectAttempt = now;
+      lastMQTTReconnectAttempt = loopstart;
       // Attempt to reconnect
       if (reconnect()) {
         lastMQTTReconnectAttempt = 0;
@@ -77,10 +76,9 @@ void loop() {
 #elif defined (__HW_VERSION_TWO__)
   if ((WiFi.status() != WL_CONNECTED) && !wifiModeAP) {
 #endif
-    long now = millis();
-    if (now - lastWIFIReconnectAttempt > 10000) {
+    if (loopstart - lastWIFIReconnectAttempt > 10000) {
       logInput("Attempt to reconnect WiFi");
-      lastWIFIReconnectAttempt = now;
+      lastWIFIReconnectAttempt = loopstart;
       // Attempt to reconnect
       if (connectWiFiSTA()) {
         logInput("Reconnect WiFi succesfull");
@@ -125,6 +123,10 @@ void loop() {
     }
 
   }
+  if (loopstart - SHT3x_readout >= 5000 && (SHT3x_original || SHT3x_alternative)) {
+    SHT3x_readout = loopstart;
+    updateSensor();
+  }
   if (loopstart - previousUpdate >= 5000 || sysStatReq) {
 
     if (digitalRead(STATUSPIN) == LOW) {
@@ -144,7 +146,7 @@ void loop() {
   }
 
   if (loopstart - lastLog > LOGGING_INTERVAL) {
-    sprintf(logBuff, "Mem high: %d, Mem low: %d, MQTT: %d, ITHO: %s, ITHO val: %d", sys.getMemHigh(), sys.getMemLow(), MQTT_conn_state, i2cstat, ithoCurrentVal);
+    sprintf(logBuff, "Mem free: %d, Mem low: %d, MQTT: %d, ITHO: %s", sys.getMemHigh(), sys.getMemLow(), MQTT_conn_state, i2cstat);
     logInput(logBuff);
     strcpy(logBuff, "");
 
