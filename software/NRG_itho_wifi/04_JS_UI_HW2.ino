@@ -125,7 +125,7 @@ function startWebsock(websocketServerLocation){
               $('#itho_llm').addClass("pure-button button-secondary");
               $('#itho_llm').text("Off");   
             }
-          }  
+          }
           else if (f.messagebox) {
             let x = f.messagebox;
             count += 1;

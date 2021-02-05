@@ -1,4 +1,4 @@
-#define FWVERSION "2.1"
+#define FWVERSION "2.2a"
 
 #define LOGGING_INTERVAL 21600000
 #define ENABLE_FAILSAVE_BOOT
@@ -31,6 +31,7 @@
 
 #include <ArduinoOTA.h>
 #include <FS.h>
+#include "SHTSensor.h"        // https://github.com/Sensirion/arduino-sht
 
 #if defined (ESP8266)
 #include <ESP8266WiFi.h>
@@ -87,6 +88,8 @@ System sys;
 SystemConfig systemConfig;
 WifiConfig wifiConfig;
 
+SHTSensor sht_org(SHTSensor::SHT3X);
+SHTSensor sht_alt(SHTSensor::SHT3X);
 
 const char* espName = "nrg-itho-";
 const char* http_username = "admin";
@@ -103,6 +106,9 @@ volatile uint16_t ithoCurrentVal   = 0;
 volatile uint16_t nextIthoVal = 0;
 volatile unsigned long nextIthoTimer = 0;
 
+float ithoHum = 0;
+float ithoTemp = 0;
+
 char i2cstat[20] = "";
 char logBuff[256] = "";
 
@@ -112,6 +118,7 @@ unsigned long APmodeTimeout = 0;
 unsigned long lastSysMessage = 0;
 unsigned long previousUpdate = 0;
 unsigned long wifiLedUpdate = 0;
+unsigned long SHT3x_readout = 0;
 unsigned long lastLog = 0;
 
 //flags used
@@ -124,6 +131,8 @@ bool runscan = false;
 volatile bool updateItho = false;
 volatile bool ithoCheck = false;
 volatile bool saveRemotes = false;
+bool SHT3x_original = false;
+bool SHT3x_alternative = false;
 bool rfInitOK = false;
 
 size_t content_len;

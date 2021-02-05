@@ -39,6 +39,14 @@ void setup() {
   }
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
   
+  //init SHT3x temp/hum sensor if present in the itho box
+  if (sht_org.init()) {
+    SHT3x_original = true;
+  }
+  else if (sht_alt.init()) {
+    SHT3x_alternative = true;
+  }  
+    
   configTime(0, 0, "pool.ntp.org");
 
 #if defined (__HW_VERSION_ONE__)
@@ -282,7 +290,6 @@ void setup() {
     &CC1101TaskHandle);            /* Task handle. */
 #endif
 
-  
   
   strcat(i2cstat, "sOk");
   logInput("Setup: done");
