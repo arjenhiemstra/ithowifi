@@ -1,4 +1,4 @@
-#define FWVERSION "2.2a"
+#define FWVERSION "2.2b"
 
 #define LOGGING_INTERVAL 21600000
 #define ENABLE_FAILSAVE_BOOT
@@ -89,7 +89,7 @@ SystemConfig systemConfig;
 WifiConfig wifiConfig;
 
 SHTSensor sht_org(SHTSensor::SHT3X);
-SHTSensor sht_alt(SHTSensor::SHT3X);
+SHTSensor sht_alt(SHTSensor::SHT3X_ALT);
 
 const char* espName = "nrg-itho-";
 const char* http_username = "admin";

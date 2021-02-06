@@ -93,6 +93,33 @@ void failSafeBoot() {
 
 #endif
 
+void initSensor() {
+
+  if (sht_org.init() && sht_org.readSample()) {
+    Wire.endTransmission(true);
+    SHT3x_original = true;
+  }
+  else if (sht_alt.init() && sht_alt.readSample()) {
+    Wire.endTransmission(true);
+    SHT3x_alternative = true;
+  }
+
+}
+
+void logSensor() {
+
+  if (SHT3x_original) {
+    logInput("Setup: Original SHT30 sensor found");
+  }
+  else if (SHT3x_alternative) {
+    logInput("Setup: Alternative SHT30 sensor found");
+  }
+  else {
+    logInput("Setup: SHT30 sensor not present");
+  }
+
+}
+
 bool initFileSystem() {
 
   //Serial.println("Mounting FS...");

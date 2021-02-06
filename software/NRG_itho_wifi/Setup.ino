@@ -1,6 +1,6 @@
 void setup() {
   Wire.begin(SDAPIN, SCLPIN, 0);
-    
+
   pinMode(STATUSPIN, INPUT);
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
@@ -9,10 +9,13 @@ void setup() {
   pinMode(FAILSAVE_PIN, INPUT);
   failSafeBoot();
 #endif
-  
-//  Serial.begin(115200);
-//  Serial.flush();
 
+  //  Serial.begin(115200);
+  //  Serial.flush();
+
+  //init SHT3x temp/hum sensor if present in the itho box
+  initSensor();
+  
   if (!initFileSystem()) {
     //Serial.println("\nFile system erroor :( ");
   }
@@ -27,7 +30,7 @@ void setup() {
 
     filePrint.close();
   }
-
+  
   if (!loadWifiConfig()) {
     setupWiFiAP();
   }
@@ -39,14 +42,6 @@ void setup() {
   }
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
   
-  //init SHT3x temp/hum sensor if present in the itho box
-  if (sht_org.init()) {
-    SHT3x_original = true;
-  }
-  else if (sht_alt.init()) {
-    SHT3x_alternative = true;
-  }  
-    
   configTime(0, 0, "pool.ntp.org");
 
 #if defined (__HW_VERSION_ONE__)
@@ -62,6 +57,9 @@ void setup() {
   else {
     logInput("Setup: AP mode active");
   }
+  
+  //log result init SHT3x temp/hum sensor
+  logSensor();
 
 
   if (strcmp(systemConfig.mqtt_active, "on") == 0) {
@@ -158,7 +156,7 @@ void setup() {
     response->print("'; var fw_version = '");
     response->print(FWVERSION);
     response->print("'; var hw_revision = '");
-    response->print(HWREVISION);      
+    response->print(HWREVISION);
     response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });");
 
     request->send(response);
@@ -173,7 +171,7 @@ void setup() {
     response->print("'; var fw_version = '");
     response->print(FWVERSION);
     response->print("'; var hw_revision = '");
-    response->print(HWREVISION);       
+    response->print(HWREVISION);
     response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_wifisetup); });");
 
     request->send(response);
@@ -223,10 +221,10 @@ void setup() {
 #endif
         Update.printError(Serial);
       } else {
-        
+
 #if defined (__HW_VERSION_TWO__)
         detachInterrupt(ITHO_IRQ_PIN);
-#endif        
+#endif
         Serial.end();
       }
     }
@@ -279,7 +277,7 @@ void setup() {
   if (WiFi.scanComplete() == -2) {
     WiFi.scanNetworks(true);
   }
-  
+
 #if defined (__HW_VERSION_TWO__)
   xTaskCreate(
     CC1101Task,          /* Task function. */
@@ -290,7 +288,7 @@ void setup() {
     &CC1101TaskHandle);            /* Task handle. */
 #endif
 
-  
+
   strcat(i2cstat, "sOk");
   logInput("Setup: done");
 }

@@ -181,6 +181,7 @@ void updateSensor() {
 
     if (SHT3x_original) {
       if (sht_org.readSample()) {
+        Wire.endTransmission(true);
         updated = true;
         ithoHum = sht_org.getHumidity();
         ithoTemp = sht_org.getTemperature();
@@ -188,12 +189,14 @@ void updateSensor() {
     }
     if (SHT3x_alternative) {
       if (sht_alt.readSample()) {
+        Wire.endTransmission(true);
         updated = true;
         ithoHum = sht_alt.getHumidity();
         ithoTemp = sht_alt.getTemperature();
       }
     }
-
+    
+    
     if (mqttClient.connected() && updated) {
       char buffer[512];
       sprintf(buffer, "{\"temp\":\"%1.1f\";\"hum\":\"%1.1f\"}", ithoTemp, ithoHum);
