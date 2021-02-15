@@ -199,7 +199,7 @@ void updateSensor() {
     
     if (mqttClient.connected() && updated) {
       char buffer[512];
-      sprintf(buffer, "{\"temp\":\"%1.1f\";\"hum\":\"%1.1f\"}", ithoTemp, ithoHum);
+      sprintf(buffer, "{\"temp\":%1.1f,\"hum\":%1.1f}", ithoTemp, ithoHum);
       char topicBuf[128 + 16] = "";
       strcpy(topicBuf, systemConfig.mqtt_state_topic);
       strcat(topicBuf, "/sensor");
