@@ -1,4 +1,3 @@
-
 #define SDAPIN      6 // (PB1)
 #define SCLPIN      7 // (PB0)
 #define STATUSLED   8 // (PA1)
@@ -7,8 +6,9 @@
 #include <Wire.h>
 
 // Global variables
-bool firstResponse = false;
-bool secondResponse = false;
+bool mainboardQueryReceived = false;
+bool mainboardResponseReceived = false;
+bool responseSent = false;
 
 // Static function definitions
 void receiveEvent(int howMany);
@@ -26,11 +26,12 @@ void receiveEvent(int howMany) {
   received[2] = Wire.read();
 
   if (received[0] == 0x00 && received[1] == 0x00 && received[2] == 0xBE) {
-    firstResponse = true;
+    mainboardQueryReceived = true;
   } 
-  else if (received[0] == 0x60 && received[1] == 0x00 && received[2] == 0x4E) {
-    secondResponse = true;
-  } 
+  else if ((received[0] == 0x60 && received[1] == 0x00 && received[2] == 0x4E) ||
+           (received[0] == 0x62 && received[1] == 0x00 && received[2] == 0x4C)) {
+    mainboardResponseReceived = true;
+  }
   else {
     //unknown message
   }
@@ -46,17 +47,13 @@ void setup() {
   digitalWrite(STATUSPIN, HIGH);
      
   Wire.begin(77, true);
-  Wire.onReceive(receiveEvent);
-  
+  Wire.onReceive(receiveEvent);  
 }
 
 // Main()
 void loop() {
-  
-  //unsigned long currentMillis = millis();
-
-  if (firstResponse) {
-    firstResponse = false;
+  if (!responseSent && (mainboardQueryReceived || millis() > 250)) {
+    mainboardQueryReceived = false;
     
     while (digitalRead(SCLPIN) == LOW) {
     }
@@ -84,14 +81,15 @@ void loop() {
     Wire.endTransmission(true);
 
     Wire.end();
+    responseSent = true;
 
     //Switch to i2c slave again and wait for the reply
     Wire.begin(77, 1);
     Wire.onReceive(receiveEvent);
       
   }
-  if (secondResponse) {
-    secondResponse = false;
+  if (mainboardResponseReceived) {
+    mainboardResponseReceived = false;
     
     //disable i2c
     Wire.end();
