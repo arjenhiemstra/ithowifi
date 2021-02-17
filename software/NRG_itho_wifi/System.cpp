@@ -103,3 +103,13 @@ int System::getMemHigh() {
 int System::getMemLow() {
   return memLow;
 }
+
+uint32_t System::getMaxFreeBlockSize() {
+
+#if defined (ESP8266)
+  memMaxBlock = ESP.getMaxFreeBlockSize();
+#elif defined (ESP32)
+  memMaxBlock = ESP.getMaxAllocHeap();
+#endif  
+  return memMaxBlock;
+}

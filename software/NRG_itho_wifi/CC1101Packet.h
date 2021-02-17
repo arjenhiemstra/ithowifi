@@ -19,9 +19,9 @@
 
 class CC1101Packet
 {
-	public:
-		uint8_t length;
-		uint8_t data[72];
+  public:
+    uint8_t length;
+    uint8_t data[128];
 };
 
 

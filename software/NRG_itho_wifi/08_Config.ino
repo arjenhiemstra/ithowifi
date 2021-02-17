@@ -28,7 +28,7 @@ bool loadWifiConfig() {
     //Serial.println("wifi config load: DeserializationError");
     return false;
   }
-    
+
 
 
   if (root["ssid"] == "") {
@@ -49,7 +49,7 @@ bool saveWifiConfig() {
   DynamicJsonDocument doc(2048);
   JsonObject root = doc.to<JsonObject>(); // Fill the object
   wifiConfig.get(root);
-  
+
   File configFile = SPIFFS.open("/wifi.json", "w");
   if (!configFile) {
     //Serial.println("Failed to open default config file for writing");
@@ -59,7 +59,7 @@ bool saveWifiConfig() {
   serializeJson(root, configFile);
 
   return true;
-  
+
 }
 
 bool resetWifiConfig() {
@@ -100,14 +100,16 @@ bool loadSystemConfig() {
 
   systemConfig.configLoaded = systemConfig.set(root.as<JsonObject>());
   //Serial.print("config :"); Serial.println(result);
-  
+
   if (!systemConfig.configLoaded) {
     logInput("Config version mismatch, resetting config...");
     saveSystemConfig();
     delay(1000);
     ESP.restart();
   }
-  
+
+  ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
+
   return true;
 }
 
@@ -115,7 +117,7 @@ bool saveSystemConfig() {
   DynamicJsonDocument doc(2048);
   JsonObject root = doc.to<JsonObject>(); // Fill the object
   systemConfig.get(root);
-  
+
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
     //Serial.println("Failed to open default config file for writing");
@@ -139,7 +141,7 @@ bool resetSystemConfig() {
 #if defined (__HW_VERSION_TWO__)
 
 uint16_t serializeRemotes(const IthoRemote &remotes, Print& dst) {
-  DynamicJsonDocument doc(1000+(MAX_NUMBER_OF_REMOTES*300));
+  DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 300));
   // Create an object at the root
   JsonObject root = doc.to<JsonObject>(); // Fill the object
   remotes.get(root);
@@ -149,7 +151,7 @@ uint16_t serializeRemotes(const IthoRemote &remotes, Print& dst) {
 
 
 bool saveRemotesConfig() {
-  
+
   return saveFileRemotes("/remotes.json", remotes);
 
 }
@@ -172,22 +174,44 @@ bool saveFileRemotes(const char *filename, const IthoRemote &remotes) { // Open 
 
 bool deserializeRemotes(Stream &src, IthoRemote &remotes) {
 
-  DynamicJsonDocument doc(1000+(MAX_NUMBER_OF_REMOTES*300));
+  DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 300));
 
   // Parse the JSON object in the file
   DeserializationError err = deserializeJson(doc, src);
   if (err) {
-    //Serial.println(F("Failed to deserialize json"));
+    logInput("Failed to deserialize remotes config json");
+    saveRemotesConfig();
+    delay(0);
+    if (!loadRemotesConfig()) {
+      logInput("Remote config load failed, reboot...");
+      delay(1000);
+      ESP.restart();
+    }
     return false;
   }
-  
+
   doc.shrinkToFit();
-  remotes.set(doc.as<JsonObject>());
+  remotes.configLoaded = remotes.set(doc.as<JsonObject>());
+  //Serial.print("config :"); Serial.println(result);
+
+  if (!remotes.configLoaded) {
+    logInput("Remote config version mismatch, resetting config...");
+    saveRemotesConfig();
+    delay(0);
+    if (!loadRemotesConfig()) {
+      logInput("Remote config load failed, reboot...");
+      delay(1000);
+      ESP.restart();
+    }
+
+  }
+
+
   return true;
 }
 
 bool loadRemotesConfig() {
-  
+
   return loadFileRemotes("/remotes.json", remotes);
 
 }

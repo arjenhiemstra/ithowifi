@@ -1,10 +1,15 @@
 #if defined (__HW_VERSION_TWO__)
 
+
+IthoCommand RFTcommand[3] = {IthoUnknown, IthoUnknown, IthoUnknown};
+byte RFTRSSI[3] = {0, 0, 0};
+byte RFTcommandpos = 0;
+bool RFTidChk[3] = {false, false, false};
+
+
 ICACHE_RAM_ATTR void ITHOinterrupt() {
   ithoCheck = true;
 }
-
-
 
 void disableRFsupport() {
   detachInterrupt(ITHO_IRQ_PIN);
@@ -25,7 +30,7 @@ uint8_t findRFTlastCommand() {
 void RFDebug(bool chk, int * id, IthoCommand cmd) {
 
   strcpy(debugLog, "");
-  sprintf(debugLog, "RemoteID=%d,%d,%d,%d,%d,%d,%d,%d / Command=", id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7]);
+  sprintf(debugLog, "RemoteID=%d,%d,%d / Command=", id[0], id[1], id[2]);
   //log command
   switch (cmd) {
     case IthoUnknown:
@@ -61,8 +66,8 @@ void RFDebug(bool chk, int * id, IthoCommand cmd) {
   }
   if (chk) {
     strcat(debugLog, "<br>");
-    strncat(debugLog, rf.getLastMessage2CMDstr().c_str(), sizeof(debugLog)-strlen(debugLog)-1);
-  }  
+    strncat(debugLog, rf.LastMessageDecoded().c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
+  }
   debugLogInput = true;
 
 }
@@ -87,8 +92,11 @@ void setllModeTimer() {
 
 }
 
-void CC1101Task( void * parameter ) {
-  Ticker TaskTimeout;
+void TaskCC1101( void * pvParameters ) {
+  configASSERT( ( uint32_t ) pvParameters == 1UL );
+  
+
+  startTaskMQTT();
 
   if (strcmp(systemConfig.itho_rf_support, "on") == 0) {
     Ticker reboot;
@@ -110,9 +118,10 @@ void CC1101Task( void * parameter ) {
     rf.init();
     pinMode(ITHO_IRQ_PIN, INPUT);
     attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, FALLING);
-    rf.initReceive();
 
     //this portion of code will not be reached when no RF module is present: detach reboot script, switch on rf_supprt and load remotes config
+    esp_task_wdt_init(5, true);
+    esp_task_wdt_add(NULL);
     reboot.detach();
     logInput("Setup: init of CC1101 RF module successful");
     strlcpy(systemConfig.itho_rf_support, "on", sizeof(systemConfig.itho_rf_support));
@@ -120,9 +129,11 @@ void CC1101Task( void * parameter ) {
     systemConfig.rfInitOK = true;
 
     for (;;) {
-      delay(1);
+      delay(0);
       yield();
-      TaskTimeout.attach_ms(100, []() {
+      esp_task_wdt_reset();
+
+      TaskCC1101Timeout.once_ms(1000, []() {
         logInput("Error: CC1101 Task timed out!");
       });
       if (ithoCheck) {
@@ -130,8 +141,8 @@ void CC1101Task( void * parameter ) {
         if (rf.checkForNewPacket()) {
 
           int *lastID = rf.getLastID();
-          int id[8];
-          for (uint8_t i = 0; i < 8; i++) {
+          int id[3];
+          for (uint8_t i = 0; i < 3; i++) {
             id[i] = lastID[i];
           }
           IthoCommand cmd = rf.getLastCommand();
@@ -161,7 +172,7 @@ void CC1101Task( void * parameter ) {
                 case -2: // failed! - no remotes registered
                   break;
                 case 1: // success!
-                  saveRemotes = true;
+                  saveRemotesflag = true;
                   break;
               }
             }
@@ -173,7 +184,7 @@ void CC1101Task( void * parameter ) {
                 case -2: //failed! - max number of remotes reached"
                   break;
                 case 1:
-                  saveRemotes = true;
+                  saveRemotesflag = true;
                   break;
               }
             }
@@ -226,6 +237,8 @@ void CC1101Task( void * parameter ) {
           }
         }
       }
+      TaskCC1101HWmark = uxTaskGetStackHighWaterMark( NULL );
+      vTaskDelay(10 / portTICK_PERIOD_MS);
     }
   } //if (strcmp(systemConfig.itho_rf_support, "on") == 0)
   //else delete task
