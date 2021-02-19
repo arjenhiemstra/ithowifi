@@ -37,10 +37,13 @@ class System {
 
     int getMemLow();
 
+    uint32_t getMaxFreeBlockSize();
+
   private:
     
     int memHigh;
     int memLow { 1000000 };
+    uint32_t memMaxBlock;
     char retval[25];
 };
 

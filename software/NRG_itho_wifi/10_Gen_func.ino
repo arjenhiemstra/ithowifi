@@ -1,5 +1,7 @@
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
+
+
   if (topic == NULL) return;
   if (payload == NULL) return;
 
@@ -10,12 +12,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     dtype = false;
   }
 
+  if (length > 1023) length = 1023;
+
   char s_payload[length];
   memcpy(s_payload, payload, length);
   s_payload[length] = '\0';
 
   if (strcmp(topic, systemConfig.mqtt_cmd_topic) == 0) {
-    DynamicJsonDocument root(512);
+    StaticJsonDocument<1024> root;
     DeserializationError error = deserializeJson(root, s_payload);
     if (!error) {
       bool jsonCmd = false;
@@ -174,6 +178,7 @@ void updateState(uint16_t newState) {
   }
 }
 
+#if defined(ENABLE_SHT30_SENSOR_SUPPORT)
 void updateSensor() {
 
   if (SHT3x_original || SHT3x_alternative) {
@@ -195,8 +200,8 @@ void updateSensor() {
         ithoTemp = sht_alt.getTemperature();
       }
     }
-    
-    
+
+
     if (mqttClient.connected() && updated) {
       char buffer[512];
       sprintf(buffer, "{\"temp\":%1.1f,\"hum\":%1.1f}", ithoTemp, ithoHum);
@@ -208,6 +213,7 @@ void updateSensor() {
   }
 
 }
+#endif
 
 void add2queue() {
   ithoQueue.add2queue(nextIthoVal, nextIthoTimer, systemConfig.nonQ_cmd_clearsQ);
@@ -293,10 +299,21 @@ void printNewline(Print* _logOutput) {
 }
 
 void logInput(const char * inputString) {
-  filePrint.open();
+#if defined (__HW_VERSION_TWO__)
+  yield();
+  if (xSemaphoreTake(mutexLogTask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
+#endif
 
-  Log.notice(inputString);
+    filePrint.open();
 
-  filePrint.close();
+    Log.notice(inputString);
+
+    filePrint.close();
+
+#if defined (__HW_VERSION_TWO__)
+    xSemaphoreGive(mutexLogTask);
+  }
+#endif
+
 
 }

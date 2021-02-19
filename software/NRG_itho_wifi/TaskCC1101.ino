@@ -1,10 +1,15 @@
 #if defined (__HW_VERSION_TWO__)
 
+
+IthoCommand RFTcommand[3] = {IthoUnknown, IthoUnknown, IthoUnknown};
+byte RFTRSSI[3] = {0, 0, 0};
+byte RFTcommandpos = 0;
+bool RFTidChk[3] = {false, false, false};
+
+
 ICACHE_RAM_ATTR void ITHOinterrupt() {
   ithoCheck = true;
 }
-
-
 
 void disableRFsupport() {
   detachInterrupt(ITHO_IRQ_PIN);
@@ -61,8 +66,8 @@ void RFDebug(bool chk, int * id, IthoCommand cmd) {
   }
   if (chk) {
     strcat(debugLog, "<br>");
-    strncat(debugLog, rf.getLastMessage2CMDstr().c_str(), sizeof(debugLog)-strlen(debugLog)-1);
-  }  
+    strncat(debugLog, rf.getLastMessage2CMDstr().c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
+  }
   debugLogInput = true;
 
 }
@@ -87,8 +92,10 @@ void setllModeTimer() {
 
 }
 
-void CC1101Task( void * parameter ) {
-  Ticker TaskTimeout;
+void TaskCC1101( void * pvParameters ) {
+  configASSERT( ( uint32_t ) pvParameters == 1UL );
+
+  startTaskMQTT();
 
   if (strcmp(systemConfig.itho_rf_support, "on") == 0) {
     Ticker reboot;
@@ -108,11 +115,13 @@ void CC1101Task( void * parameter ) {
 
     //init the RF module
     rf.init();
+    rf.initReceive();
     pinMode(ITHO_IRQ_PIN, INPUT);
     attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, FALLING);
-    rf.initReceive();
 
     //this portion of code will not be reached when no RF module is present: detach reboot script, switch on rf_supprt and load remotes config
+    esp_task_wdt_init(5, true);
+    esp_task_wdt_add(NULL);
     reboot.detach();
     logInput("Setup: init of CC1101 RF module successful");
     strlcpy(systemConfig.itho_rf_support, "on", sizeof(systemConfig.itho_rf_support));
@@ -120,9 +129,10 @@ void CC1101Task( void * parameter ) {
     systemConfig.rfInitOK = true;
 
     for (;;) {
-      delay(1);
       yield();
-      TaskTimeout.attach_ms(100, []() {
+      esp_task_wdt_reset();
+
+      TaskCC1101Timeout.once_ms(1000, []() {
         logInput("Error: CC1101 Task timed out!");
       });
       if (ithoCheck) {
@@ -161,7 +171,7 @@ void CC1101Task( void * parameter ) {
                 case -2: // failed! - no remotes registered
                   break;
                 case 1: // success!
-                  saveRemotes = true;
+                  saveRemotesflag = true;
                   break;
               }
             }
@@ -173,7 +183,7 @@ void CC1101Task( void * parameter ) {
                 case -2: //failed! - max number of remotes reached"
                   break;
                 case 1:
-                  saveRemotes = true;
+                  saveRemotesflag = true;
                   break;
               }
             }
@@ -226,9 +236,11 @@ void CC1101Task( void * parameter ) {
           }
         }
       }
+      TaskCC1101HWmark = uxTaskGetStackHighWaterMark( NULL );
+      vTaskDelay(10 / portTICK_PERIOD_MS);
     }
-  } //if (strcmp(systemConfig.itho_rf_support, "on") == 0)
-  //else delete task
+    //if (strcmp(systemConfig.itho_rf_support, "on") == 0)
+  }//else delete task
   vTaskDelete( NULL );
 }
 
