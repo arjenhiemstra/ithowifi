@@ -1,4 +1,28 @@
 
+
+
+void notifyClients(AsyncWebSocketMessageBuffer* message) {
+#if defined (__HW_VERSION_TWO__)
+  yield();
+  if (xSemaphoreTake(mutexWSsend, (TickType_t) 100 / portTICK_PERIOD_MS) == pdTRUE) {
+#endif
+
+    ws.textAll(message);
+
+#if defined (__HW_VERSION_TWO__)
+    xSemaphoreGive(mutexWSsend);
+  }
+#endif
+
+}
+
+void notifyClients(const char * message, size_t len) {
+
+  AsyncWebSocketMessageBuffer * WSBuffer = ws.makeBuffer((uint8_t *)message, len);
+  notifyClients(WSBuffer);
+
+}
+
 void jsonWsSend(const char* rootName) {
   DynamicJsonDocument root(4000);
 
@@ -41,34 +65,18 @@ void jsonWsSend(const char* rootName) {
   AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
   if (buffer) {
     serializeJson(root, (char *)buffer->get(), len + 1);
-    ws.textAll(buffer);
+    notifyClients(buffer);
   }
 }
 
-
-void jsonWifiscanresult(int id, const char* ssid, int sigval, int sec) {
-  StaticJsonDocument<512> root;
-  //JsonObject root = jsonBuffer.createObject();
-  JsonObject wifiscanresult = root.createNestedObject("wifiscanresult");
-  wifiscanresult["id"] = id;
-  wifiscanresult["ssid"] = ssid;
-  wifiscanresult["sigval"] = sigval;
-  wifiscanresult["sec"] = sec;
-
-  char buffer[512];
-  size_t len = serializeJson(root, buffer);
-
-  ws.textAll(buffer, len);
-
-}
 
 void jsonLogMessage(const __FlashStringHelper * str, logtype type) {
   if (!str) return;
   int length = strlen_P((PGM_P)str);
   if (length == 0) return;
-#if defined (__HW_VERSION_ONE__)  
+#if defined (__HW_VERSION_ONE__)
   if (length < 400) length = 400;
-  char message[400+1] = "";
+  char message[400 + 1] = "";
   strncat_P(message, (PGM_P)str, length);
   jsonLogMessage(message, type);
 #else
@@ -77,26 +85,38 @@ void jsonLogMessage(const __FlashStringHelper * str, logtype type) {
 }
 
 void jsonLogMessage(const char* message, logtype type) {
-  StaticJsonDocument<512> root;
-  JsonObject messagebox;
+#if defined (__HW_VERSION_TWO__)
+  yield();
+  if (xSemaphoreTake(mutexJSONLog, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
+#endif
 
-  switch (type) {
-    case RFLOG:
-      messagebox = root.createNestedObject("rflog");
-      break;
-    default:
-      messagebox = root.createNestedObject("messagebox");
+    StaticJsonDocument<512> root;
+    JsonObject messagebox;
+
+    switch (type) {
+      case RFLOG:
+        messagebox = root.createNestedObject("rflog");
+        break;
+      default:
+        messagebox = root.createNestedObject("messagebox");
+    }
+
+    messagebox["message"] = message;
+
+    char buffer[512];
+    size_t len = serializeJson(root, buffer);
+
+
+    notifyClients(buffer, len);
+
+#if defined (__HW_VERSION_TWO__)
+    xSemaphoreGive(mutexJSONLog);
   }
+#endif
 
-  messagebox["message"] = message;
 
-  char buffer[512];
-  size_t len = serializeJson(root, buffer);
 
-  
-  ws.textAll(buffer, len);
 
-  
 }
 
 void jsonSystemstat() {
@@ -118,7 +138,7 @@ void jsonSystemstat() {
   char buffer[512];
   size_t len = serializeJson(root, buffer);
 
-  ws.textAll(buffer, len);
+  notifyClients(buffer, len);
 }
 
 
@@ -170,12 +190,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
 
                 JsonObject obj = p.value();
                 if (systemConfig.set(obj)) {
-                  if (saveSystemConfig()) {
-                    jsonLogMessage(F("System settings saved successful"), WEBINTERFACE);
-                  }
-                  else {
-                    jsonLogMessage(F("System settings save failed: Unable to write config file"), WEBINTERFACE);
-                  }
+                  saveSystemConfigflag = true;
                 }
               }
             }
@@ -184,12 +199,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
 
                 JsonObject obj = p.value();
                 if (wifiConfig.set(obj)) {
-                  if (saveWifiConfig()) {
-                    jsonLogMessage(F("Wifi settings saved successful, reboot the device"), WEBINTERFACE);
-                  }
-                  else {
-                    jsonLogMessage(F("Wifi settings save failed: Unable to write config file"), WEBINTERFACE);
-                  }
+                  saveWifiConfigflag = true;
                 }
               }
             }
@@ -230,7 +240,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         }
         if (parseOK) {
           remotes.removeRemote(remotes.getRemoteIDbyIndex(number));
-          saveRemotes = true;
+          saveRemotesflag = true;
         }
       }
       else if (msg.startsWith("{\"itho_update_remote")) {
@@ -241,7 +251,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
           char remoteName[32];
           strlcpy(remoteName, root["value"] | "", sizeof(remoteName));
           remotes.updateRemoteName(index, remoteName);
-          saveRemotes = true;
+          saveRemotesflag = true;
         }
       }
 #endif
@@ -249,20 +259,10 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         shouldReboot = true;
       }
       else if (msg.startsWith("{\"resetwificonf")) {
-        if (resetWifiConfig()) {
-          jsonLogMessage(F("Wifi settings restored, reboot the device"), WEBINTERFACE);
-        }
-        else {
-          jsonLogMessage(F("Wifi settings restore failed, please try again"), WEBINTERFACE);
-        }
+        resetWifiConfigflag = true;
       }
       else if (msg.startsWith("{\"resetsysconf")) {
-        if (resetSystemConfig()) {
-          jsonLogMessage(F("System settings restored, reboot the device"), WEBINTERFACE);
-        }
-        else {
-          jsonLogMessage(F("System settings restore failed, please try again"), WEBINTERFACE);
-        }
+        resetSystemConfigflag = true;
       }
       else if (msg.startsWith("{\"itho")) {
         StaticJsonDocument<128> root;
@@ -279,17 +279,17 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
 
 
 
-void sendScanDataWs()
-{
+void wifiScan() {
+  
   int n = WiFi.scanComplete();
   if (n == -2) {
     WiFi.scanNetworks(true);
   }
   else if (n) {
+    char logBuff[LOG_BUF_SIZE] = "";
     sprintf(logBuff, "Wifi scan found %d networks", n);
-    logInput(logBuff);
     jsonLogMessage(logBuff, WEBINTERFACE);
-    strcpy(logBuff, "");
+
     //sort networks
     int indices[n];
     for (int i = 0; i < n; i++) {
@@ -351,11 +351,19 @@ void sendScanDataWs()
       String ssidStr = WiFi.SSID(indices[i]);
       ssidStr.toCharArray(ssid, sizeof(ssid));
 
-      sprintf(logBuff, "%d - SSID:%s, Signal:%d, Security: %d", i, ssid, signalStrengthResult, sec);
-      logInput(logBuff);
-      strcpy(logBuff, "");
+      StaticJsonDocument<512> root;
+      JsonObject wifiscanresult = root.createNestedObject("wifiscanresult");
+      wifiscanresult["id"] = i;
+      wifiscanresult["ssid"] = ssid;
+      wifiscanresult["sigval"] = signalStrengthResult;
+      wifiscanresult["sec"] = sec;
 
-      jsonWifiscanresult(i, WiFi.SSID(indices[i]).c_str(), signalStrengthResult, sec);
+      char buffer[512];
+      size_t len = serializeJson(root, buffer);
+
+      notifyClients(buffer, len);
+      
+      delay(50);
     }
     WiFi.scanDelete();
     if (WiFi.scanComplete() == -2) {
@@ -382,7 +390,8 @@ void otaWSupdate(size_t prg, size_t sz) {
       char buffer[256];
       size_t len = serializeJson(root, buffer);
 
-      ws.textAll(buffer, len);
+      notifyClients(buffer, len);
+      delay(50);
     }
   }
 

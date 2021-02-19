@@ -54,6 +54,7 @@ void handleAPI(AsyncWebServerRequest *request) {
   
   int params = request->params();
   for(int i=0;i<params;i++){
+    char logBuff[LOG_BUF_SIZE] = "";
     AsyncWebParameter* p = request->getParam(i);
     
     if(strcmp(p->name().c_str(), "get") == 0) {
@@ -218,7 +219,7 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(F("<div>Config version: "));
   response->print(CONFIG_VERSION);
   response->print(F("<br><br><span>Itho I2C connection status: </span><span id=\'i2cstat\'>unknown</span></div>"));
-  response->print(F("<span>File system: </span><span>"));
+  response->print(F("<br><span>File system: </span><span>"));
 #if defined (__HW_VERSION_ONE__)
   SPIFFS.info(fs_info);
   response->print(fs_info.usedBytes);
@@ -230,8 +231,24 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(fs_info.totalBytes);
 #elif defined (__HW_VERSION_TWO__)
   response->print(SPIFFS.totalBytes());
-#endif
-  response->print(F(" bytes total</span></div>"));
+  response->print(F(" bytes total</span>"));
+  
+  response->print(F("<br><br><span>CC1101 task memory: </span><span>"));
+  response->print(TaskCC1101HWmark);
+  response->print(F(" bytes free</span>"));
+  response->print(F("<br><span>MQTT task memory: </span><span>"));
+  response->print(TaskMQTTHWmark);
+  response->print(F(" bytes free</span>"));    
+  response->print(F("<br><span>Web task memory: </span><span>"));
+  response->print(TaskWebHWmark);
+  response->print(F(" bytes free</span>"));
+  response->print(F("<br><span>Config and Log task memory: </span><span>"));
+  response->print(TaskConfigAndLogHWmark);
+  response->print(F(" bytes free</span>"));  
+  response->print(F("<br><span>SysControl task memory: </span><span>"));
+  response->print(TaskSysControlHWmark);
+  response->print(F(" bytes free</span></div>"));
+#endif    
   response->print(F("<br><br><div id='syslog_outer'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>System Log:</div>"));
   
   
