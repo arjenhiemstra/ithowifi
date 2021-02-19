@@ -3,7 +3,6 @@
 #if defined (__HW_VERSION_ONE__)
 void loop() {
 
-  delay(0);
   yield();
 
   execWebTasks();
@@ -47,9 +46,10 @@ void execMQTTTasks() {
     sysStatReq = true;
   }
   if (mqttClient.connected()) {
-    mqttClient.loop();
+      mqttClient.loop();
   }
   else {
+    if(dontReconnectMQTT) return;
     if (millis() - lastMQTTReconnectAttempt > 5000) {
 
       lastMQTTReconnectAttempt = millis();
@@ -100,7 +100,7 @@ void execSystemControlTasks() {
       }
     }
   }
-#if defined (__HW_VERSION_ONE__)  
+#if defined (__HW_VERSION_ONE__)
   if (shouldReboot) {
     logInput("Reboot requested");
     if (!dontSaveConfig) {
@@ -208,7 +208,6 @@ void execLogAndConfigTasks() {
 
 #if defined (__HW_VERSION_TWO__)
 void loop() {
-  delay(0);
   yield();
   esp_task_wdt_reset();
 }

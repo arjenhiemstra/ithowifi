@@ -1,5 +1,7 @@
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
+
+
   if (topic == NULL) return;
   if (payload == NULL) return;
 
@@ -10,14 +12,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     dtype = false;
   }
 
-  if (length > 512) length = 512;
+  if (length > 1023) length = 1023;
 
   char s_payload[length];
   memcpy(s_payload, payload, length);
   s_payload[length] = '\0';
 
   if (strcmp(topic, systemConfig.mqtt_cmd_topic) == 0) {
-    StaticJsonDocument<512> root;
+    StaticJsonDocument<1024> root;
     DeserializationError error = deserializeJson(root, s_payload);
     if (!error) {
       bool jsonCmd = false;
@@ -202,7 +204,7 @@ void updateSensor() {
 
     if (mqttClient.connected() && updated) {
       char buffer[512];
-      sprintf(buffer, "{\"temp\":\"%1.1f\";\"hum\":\"%1.1f\"}", ithoTemp, ithoHum);
+      sprintf(buffer, "{\"temp\":%1.1f,\"hum\":%1.1f}", ithoTemp, ithoHum);
       char topicBuf[128 + 16] = "";
       strcpy(topicBuf, systemConfig.mqtt_state_topic);
       strcat(topicBuf, "/sensor");
@@ -299,7 +301,6 @@ void printNewline(Print* _logOutput) {
 void logInput(const char * inputString) {
 #if defined (__HW_VERSION_TWO__)
   yield();
-  delay(0);
   if (xSemaphoreTake(mutexLogTask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
 #endif
 

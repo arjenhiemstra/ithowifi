@@ -76,7 +76,7 @@ void startTaskMQTT() {
   xTaskMQTTHandle = xTaskCreateStaticPinnedToCore(
                       TaskMQTT,
                       "TaskMQTT",
-                      STACK_SIZE,
+                      STACK_SIZE_LARGE,
                       ( void * ) 1,
                       TASK_MQTT_PRIO,
                       xTaskMQTTStack,

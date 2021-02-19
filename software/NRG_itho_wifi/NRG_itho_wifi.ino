@@ -1,4 +1,4 @@
-#define FWVERSION "2.2-test"
+#define FWVERSION "2.2-rftest"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -29,18 +29,10 @@
  
 #include "hardware.h"
 #include <ArduinoJson.h>  // https://github.com/bblanchon/ArduinoJson [6.17.3]
-//#include <ArduinoSort.h>
-//#include <AsyncEventSource.h>
-//#include <AsyncJson.h>
-//#include <AsyncWebSocket.h>
 #include <ESPAsyncWebServer.h>  // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
 #include <SPIFFSEditor.h>       // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
-//#include <StringArray.h>
-//#include <WebAuthentication.h>
-//#include <WebHandlerImpl.h>
-//#include <WebResponseImpl.h>
 #include <DNSServer.h>
-#include <PubSubClient.h>     // https://github.com/knolleary/pubsubclient/releases/tag/v2.8 [2.8.0]
+#include <PubSubClient.h>     // https://github.com/arjenhiemstra/PubSubClientStatic/tree/hestia [latest hestia branch], forked from https://github.com/knolleary/pubsubclient and https://github.com/mhmtsui/pubsubclient
 #include <Wire.h>
 #include <time.h>
 #include <Ticker.h>
@@ -143,7 +135,7 @@ StaticTask_t xTaskConfigAndLogBuffer;
 StaticTask_t xTaskSysControlBuffer;
 StackType_t xTaskInitStack[ STACK_SIZE ];
 StackType_t xTaskCC1101Stack[ STACK_SIZE ];
-StackType_t xTaskMQTTStack[ STACK_SIZE ];
+StackType_t xTaskMQTTStack[ STACK_SIZE_LARGE ];
 StackType_t xTaskWebStack[ STACK_SIZE_LARGE ];
 StackType_t xTaskConfigAndLog[ STACK_SIZE_LARGE ];
 StackType_t xTaskSysControlStack[ STACK_SIZE_LARGE ];
@@ -198,6 +190,7 @@ bool saveSystemConfigflag = false;
 bool saveWifiConfigflag = false;
 bool resetWifiConfigflag = false;
 bool resetSystemConfigflag = false;
+bool dontReconnectMQTT = false;
 bool clearQueue = false;
 bool wifiModeAP = false;
 bool sysStatReq = false;

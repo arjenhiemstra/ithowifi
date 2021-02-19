@@ -4,7 +4,6 @@
 void notifyClients(AsyncWebSocketMessageBuffer* message) {
 #if defined (__HW_VERSION_TWO__)
   yield();
-  delay(0);
   if (xSemaphoreTake(mutexWSsend, (TickType_t) 100 / portTICK_PERIOD_MS) == pdTRUE) {
 #endif
 
@@ -88,7 +87,6 @@ void jsonLogMessage(const __FlashStringHelper * str, logtype type) {
 void jsonLogMessage(const char* message, logtype type) {
 #if defined (__HW_VERSION_TWO__)
   yield();
-  delay(0);
   if (xSemaphoreTake(mutexJSONLog, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
 #endif
 

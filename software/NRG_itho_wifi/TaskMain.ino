@@ -6,13 +6,12 @@ void TaskInit( void * pvParameters ) {
   mutexLogTask = xSemaphoreCreateMutex();
   mutexJSONLog = xSemaphoreCreateMutex();
   mutexWSsend = xSemaphoreCreateMutex();
-  
+
   hardwareInit();
   
   startTaskConfigAndLog();
 
   while (!TaskInitReady) {
-    delay(0);
     yield();
   }
 

@@ -69,7 +69,6 @@ void failSafeBoot() {
 
       for (;;) {
         yield();
-        delay(0);
         if (shouldReboot) {
           delay(1000);
           esp_task_wdt_init(1, true);
@@ -283,21 +282,23 @@ void setupWiFiAP() {
   IPAddress apIP(192, 168, 4, 1);
   IPAddress netMsk(255, 255, 255, 0);
 
+
+  WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
+#if defined (__HW_VERSION_TWO__)
+  esp_wifi_set_storage(WIFI_STORAGE_RAM);
+#endif  
   WiFi.disconnect(true);
-  delay(30);
-  WiFi.mode(WIFI_OFF);
-  WiFi.persistent(false);
-  WiFi.setAutoReconnect(false);
+  WiFi.setAutoReconnect(false);  
+  delay(200);
+  WiFi.mode(WIFI_AP);
 
 #if defined (__HW_VERSION_ONE__)
   WiFi.forceSleepWake();
 #elif defined (__HW_VERSION_TWO__)
   esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
-
   delay(100);
-  WiFi.mode(WIFI_AP);
-
+  
   WiFi.softAPConfig(apIP, apIP, netMsk);
   WiFi.softAP(hostName(), WiFiAPPSK);
 
@@ -318,21 +319,21 @@ bool connectWiFiSTA()
 {
   wifiModeAP = false;
 
+  WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
+#if defined (__HW_VERSION_TWO__)
+  esp_wifi_set_storage(WIFI_STORAGE_RAM);
+#endif  
   WiFi.disconnect(true);
-  delay(30);
-  WiFi.mode(WIFI_OFF);
-  WiFi.persistent(false);
-  WiFi.setAutoReconnect(false);
+  WiFi.setAutoReconnect(false);  
+  delay(200);
+  WiFi.mode(WIFI_STA);
 
 #if defined (__HW_VERSION_ONE__)
   WiFi.forceSleepWake();
 #elif defined (__HW_VERSION_TWO__)
   esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
-
   delay(100);
-
-  WiFi.mode(WIFI_STA);
 
   if (strcmp(wifiConfig.dhcp, "off") == 0) {
     bool configOK = true;
@@ -368,8 +369,8 @@ bool connectWiFiSTA()
   WiFi.hostname(hostName());
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 #elif defined (__HW_VERSION_TWO__)
-  WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
   WiFi.setHostname(hostName());
+  WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 #endif
 
   int i = 0;
@@ -684,12 +685,16 @@ void webServerInit() {
   },
   [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     if (!index) {
+      dontSaveConfig = true;
+      dontReconnectMQTT = true;
+      mqttClient.disconnect();
+
       content_len = request->contentLength();
       static char buf[128] = "";
-      strcat(buf, "Firware update: ");
+      strcat(buf, "Firmware update: ");
       strncat(buf, filename.c_str(), sizeof(buf) - strlen(buf) - 1);
       logInput(buf);
-      delay(50);
+
 #if defined (__HW_VERSION_TWO__)
 
       detachInterrupt(ITHO_IRQ_PIN);

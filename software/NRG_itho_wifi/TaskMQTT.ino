@@ -14,7 +14,6 @@ void TaskMQTT( void * pvParameters ) {
   esp_task_wdt_add(NULL);
 
   for (;;) {
-    delay(0);
     yield();
     esp_task_wdt_reset();
 
