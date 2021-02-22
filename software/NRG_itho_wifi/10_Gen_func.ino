@@ -177,38 +177,26 @@ void updateState(uint16_t newState) {
 
   }
 }
-
+ 
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
 void updateSensor() {
 
-  if (SHT3x_original || SHT3x_alternative) {
-    bool updated = false;
-
+  if (SHT3x_original || SHT3x_alternative) {  
     if (SHT3x_original) {
       if (sht_org.readSample()) {
         Wire.endTransmission(true);
-        updated = true;
         ithoHum = sht_org.getHumidity();
         ithoTemp = sht_org.getTemperature();
+        SHT3xupdated = true;        
       }
     }
     if (SHT3x_alternative) {
       if (sht_alt.readSample()) {
         Wire.endTransmission(true);
-        updated = true;
         ithoHum = sht_alt.getHumidity();
         ithoTemp = sht_alt.getTemperature();
+        SHT3xupdated = true;        
       }
-    }
-
-
-    if (mqttClient.connected() && updated) {
-      char buffer[512];
-      sprintf(buffer, "{\"temp\":%1.1f,\"hum\":%1.1f}", ithoTemp, ithoHum);
-      char topicBuf[128 + 16] = "";
-      strcpy(topicBuf, systemConfig.mqtt_state_topic);
-      strcat(topicBuf, "/sensor");
-      mqttClient.publish(topicBuf, buffer, true);
     }
   }
 
@@ -238,6 +226,8 @@ static void writeIthoVal(uint16_t value) {
       timeout++;
     }
     if (timeout != 1000) {
+      updateIthoMQTT = true;
+      
       Wire.beginTransmission(byte(0x00));
       delay(10);
       //write start of message
@@ -254,8 +244,7 @@ static void writeIthoVal(uint16_t value) {
       Wire.write(byte(0x00));
       Wire.write(h);
 
-      Wire.endTransmission(true);
-      updateState(value);
+      Wire.endTransmission(true);      
     }
     else {
       logInput("Warning: I2C timeout");

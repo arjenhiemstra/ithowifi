@@ -1,12 +1,12 @@
 {
   "hw_rev": {
     "1": {
-      "latest_fw":"2.2-beta",
-      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_1/NRG_itho_wifi_HW1x_FW2.2-beta.bin"
+      "latest_fw":"2.2-beta1",
+      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_1/NRG_itho_wifi_HW1x_FW2.2-beta1.bin"
     },
     "2": {
-      "latest_fw":"2.2-beta",
-      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_2/NRG_itho_wifi_HW2x_FW2.2-beta.bin"
+      "latest_fw":"2.2-beta1",
+      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_2/NRG_itho_wifi_HW2x_FW2.2-beta1.bin"
     }
   }
 }

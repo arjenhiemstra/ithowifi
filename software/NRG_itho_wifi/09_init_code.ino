@@ -108,15 +108,16 @@ void hardwareInit() {
   failSafeBoot();
 #endif
 
-  delay(500); //give itho time to init
+  IthoInitCheck.once(7, ithoInitCheck);
+}
 
+void ithoInitCheck() {
   if (digitalRead(STATUSPIN) == LOW) {
     strcpy(i2cstat, "initok");
   }
   else {
     strcpy(i2cstat, "nok");
   }
-
 }
 
 void logInit() {
@@ -286,9 +287,9 @@ void setupWiFiAP() {
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
 #if defined (__HW_VERSION_TWO__)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-#endif  
+#endif
   WiFi.disconnect(true);
-  WiFi.setAutoReconnect(false);  
+  WiFi.setAutoReconnect(false);
   delay(200);
   WiFi.mode(WIFI_AP);
 
@@ -298,7 +299,7 @@ void setupWiFiAP() {
   esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
   delay(100);
-  
+
   WiFi.softAPConfig(apIP, apIP, netMsk);
   WiFi.softAP(hostName(), WiFiAPPSK);
 
@@ -322,9 +323,9 @@ bool connectWiFiSTA()
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
 #if defined (__HW_VERSION_TWO__)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-#endif  
+#endif
   WiFi.disconnect(true);
-  WiFi.setAutoReconnect(false);  
+  WiFi.setAutoReconnect(false);
   delay(200);
   WiFi.mode(WIFI_STA);
 

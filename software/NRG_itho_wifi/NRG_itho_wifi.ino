@@ -1,4 +1,4 @@
-#define FWVERSION "2.2-beta"
+#define FWVERSION "2.2-beta1"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -23,6 +23,9 @@
  * Because of FreetRTOS function xTaskCreateStaticPinnedToCore a standard arduino esp-32 SDK lib needs to be replaced otherwise the code doesn't compile.
  * A compiled version is included in the folder static files and should be copied to your SDK location ie.:
  * /Arduino15/packages/esp32/hardware/esp32/1.0.5-rc7/tools/sdk/lib
+ * and in:
+ * /Arduino15/packages/esp32/hardware/esp32/1.0.5-rc7/tools/sdk/include/freertos/freertos/FreeRTOSConfig.h
+ * change "#define configSUPPORT_STATIC_ALLOCATION CONFIG_SUPPORT_STATIC_ALLOCATION" to "#define configSUPPORT_STATIC_ALLOCATION 1"
  * 
  * 
  */
@@ -88,6 +91,7 @@ AsyncEventSource events("/events");
 SpiffsFilePrint filePrint("/logfile", 2, 10000);
 
 Ticker IthoCMD;
+Ticker IthoInitCheck;
 Ticker DelayedReq;
 Ticker DelayedSave;
 Ticker scan;
@@ -195,6 +199,8 @@ bool clearQueue = false;
 bool wifiModeAP = false;
 bool sysStatReq = false;
 bool runscan = false;
+bool updateIthoMQTT = false;
+bool SHT3xupdated = false;
 volatile bool updateItho = false;
 volatile bool ithoCheck = false;
 volatile bool saveRemotesflag = false;
