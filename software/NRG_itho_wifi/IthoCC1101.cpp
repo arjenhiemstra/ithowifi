@@ -88,7 +88,7 @@ void IthoCC1101::initSendMessage1()
   writeRegister(CC1101_CHANNR , 0x00);		//00000000
   writeRegister(CC1101_DEVIATN , 0x40);	//01000000
   writeRegister(CC1101_FREND0 , 0x17);		//00010111	use index 7 in PA table
-  writeRegister(CC1101_MCSM0 , 0x18);		//00011000	PO timeout Approx. 146�s - 171�s, Auto calibrate When going from IDLE to RX or TX (or FSTXON)
+  writeRegister(CC1101_MCSM0 , 0x18);		//00011000	PO timeout Approx. 146microseconds - 171microseconds, Auto calibrate When going from IDLE to RX or TX (or FSTXON)
   writeRegister(CC1101_FSCAL3 , 0xA9);		//10101001
   writeRegister(CC1101_FSCAL2 , 0x2A);		//00101010
   writeRegister(CC1101_FSCAL1 , 0x00);		//00000000
@@ -176,7 +176,7 @@ void IthoCC1101::initSendMessage2(IthoCommand command)
   writeRegister(CC1101_CHANNR , 0x00);		//00000000
   writeRegister(CC1101_DEVIATN , 0x50);	//difference compared to message1
   writeRegister(CC1101_FREND0 , 0x17);		//00010111	use index 7 in PA table
-  writeRegister(CC1101_MCSM0 , 0x18);		//00011000	PO timeout Approx. 146�s - 171�s, Auto calibrate When going from IDLE to RX or TX (or FSTXON)
+  writeRegister(CC1101_MCSM0 , 0x18);		//00011000	PO timeout Approx. 146microseconds - 171microseconds, Auto calibrate When going from IDLE to RX or TX (or FSTXON)
   writeRegister(CC1101_FSCAL3 , 0xA9);		//10101001
   writeRegister(CC1101_FSCAL2 , 0x2A);		//00101010
   writeRegister(CC1101_FSCAL1 , 0x00);		//00000000
