@@ -312,6 +312,7 @@ void setupWiFiAP() {
   wifiModeAP = true;
 
   APmodeTimeout = millis();
+  logInput("wifi AP mode started");
 
 }
 
@@ -319,7 +320,9 @@ void setupWiFiAP() {
 bool connectWiFiSTA()
 {
   wifiModeAP = false;
-
+  #if defined (INFORMATIVE_LOGGING)
+  logInput("Connecting to wireless network...");
+  #endif
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
 #if defined (__HW_VERSION_TWO__)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
@@ -360,10 +363,11 @@ bool connectWiFiSTA()
       configOK = false;
     }
     if (configOK) {
+      #if defined (INFORMATIVE_LOGGING)
+      logInput("Statuc IP config OK");
+      #endif
       WiFi.config(staticIP, gateway, subnet, dns1 , dns2);
     }
-
-
   }
 
 #if defined (__HW_VERSION_ONE__)
@@ -373,7 +377,7 @@ bool connectWiFiSTA()
   WiFi.setHostname(hostName());
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 #endif
-
+  
   int i = 0;
 #if defined (__HW_VERSION_ONE__)
   while (wifi_station_get_connect_status() != STATION_GOT_IP && i < 16) {
@@ -381,6 +385,9 @@ bool connectWiFiSTA()
   while ((WiFi.status() != WL_CONNECTED) && i < 16) {
 #endif
     delay(2000);
+    #if defined (INFORMATIVE_LOGGING)
+    logInput("Waiting for wifi connection");
+    #endif
     if (digitalRead(WIFILED) == LOW) {
       digitalWrite(WIFILED, HIGH);
     }
@@ -396,6 +403,9 @@ bool connectWiFiSTA()
 #endif
     //delay(1000);
     //Serial.println("");
+    #if defined (INFORMATIVE_LOGGING)
+    logInput("Couldn't connect to network :(");
+    #endif
     //Serial.println("Couldn't connect to network :( ");
     digitalWrite(WIFILED, HIGH);
     return false;
