@@ -108,7 +108,7 @@ void execSystemControlTasks() {
       lastWIFIReconnectAttempt = millis();
       // Attempt to reconnect
       if (connectWiFiSTA()) {
-        logInput("Reconnect WiFi succesfull");
+        logInput("Reconnect WiFi successful");
         lastWIFIReconnectAttempt = 0;
       }
       else {
