@@ -320,9 +320,9 @@ void setupWiFiAP() {
 bool connectWiFiSTA()
 {
   wifiModeAP = false;
-  #if defined (INFORMATIVE_LOGGING)
+#if defined (INFORMATIVE_LOGGING)
   logInput("Connecting to wireless network...");
-  #endif
+#endif
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
 #if defined (__HW_VERSION_TWO__)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
@@ -363,9 +363,9 @@ bool connectWiFiSTA()
       configOK = false;
     }
     if (configOK) {
-      #if defined (INFORMATIVE_LOGGING)
+#if defined (INFORMATIVE_LOGGING)
       logInput("Statuc IP config OK");
-      #endif
+#endif
       WiFi.config(staticIP, gateway, subnet, dns1 , dns2);
     }
   }
@@ -377,43 +377,31 @@ bool connectWiFiSTA()
   WiFi.setHostname(hostName());
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 #endif
-  
-  int i = 0;
-#if defined (__HW_VERSION_ONE__)
-  while (wifi_station_get_connect_status() != STATION_GOT_IP && i < 16) {
-#elif defined (__HW_VERSION_TWO__)
-  while ((WiFi.status() != WL_CONNECTED) && i < 16) {
+
+  unsigned long timeoutmillis = millis() + 30000;
+  uint8_t status = WiFi.status();
+
+  while (millis() < timeoutmillis) {
+#if defined (__HW_VERSION_TWO__)    
+    esp_task_wdt_reset();
 #endif
-    delay(2000);
-    #if defined (INFORMATIVE_LOGGING)
-    logInput("Waiting for wifi connection");
-    #endif
+    status = WiFi.status();
+    if (status == WL_CONNECTED) {
+      digitalWrite(WIFILED, LOW);
+      return true;
+    }
     if (digitalRead(WIFILED) == LOW) {
       digitalWrite(WIFILED, HIGH);
     }
     else {
       digitalWrite(WIFILED, LOW);
     }
-    ++i;
-  }
-#if defined (__HW_VERSION_ONE__)
-  if (wifi_station_get_connect_status() != STATION_GOT_IP && i >= 15) {
-#elif defined (__HW_VERSION_TWO__)
-  if ((WiFi.status() != WL_CONNECTED) && i >= 15) {
-#endif
-    //delay(1000);
-    //Serial.println("");
-    #if defined (INFORMATIVE_LOGGING)
-    logInput("Couldn't connect to network :(");
-    #endif
-    //Serial.println("Couldn't connect to network :( ");
-    digitalWrite(WIFILED, HIGH);
-    return false;
 
+    delay(100);
   }
+  digitalWrite(WIFILED, HIGH);
+  return false;
 
-  digitalWrite(WIFILED, LOW);
-  return true;
 
 }
 

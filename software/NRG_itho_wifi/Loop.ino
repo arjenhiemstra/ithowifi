@@ -98,12 +98,8 @@ void execSystemControlTasks() {
     writeIthoVal(ithoQueue.get_itho_speed());
   }
   //System control tasks
-#if defined (__HW_VERSION_ONE__)
-  if ((wifi_station_get_connect_status() != STATION_GOT_IP) && !wifiModeAP) {
-#elif defined (__HW_VERSION_TWO__)
   if ((WiFi.status() != WL_CONNECTED) && !wifiModeAP) {
-#endif
-    if (millis() - lastWIFIReconnectAttempt > 10000) {
+    if (millis() - lastWIFIReconnectAttempt > 60000) {
       logInput("Attempt to reconnect WiFi");
       lastWIFIReconnectAttempt = millis();
       // Attempt to reconnect
