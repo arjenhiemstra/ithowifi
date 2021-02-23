@@ -363,7 +363,7 @@ void wifiScan() {
 
       notifyClients(buffer, len);
       
-      delay(50);
+      delay(25);
     }
     WiFi.scanDelete();
     if (WiFi.scanComplete() == -2) {
@@ -391,7 +391,7 @@ void otaWSupdate(size_t prg, size_t sz) {
       size_t len = serializeJson(root, buffer);
 
       notifyClients(buffer, len);
-      delay(50);
+      delay(25);
     }
   }
 
