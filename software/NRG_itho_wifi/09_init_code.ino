@@ -9,9 +9,7 @@ void failSafeBoot() {
 
     if (digitalRead(FAILSAVE_PIN) == HIGH) {
 
-      initFileSystem();
-      resetWifiConfig();
-      resetSystemConfig();
+      SPIFFS.format();
 
       IPAddress apIP(192, 168, 4, 1);
       IPAddress netMsk(255, 255, 255, 0);
@@ -74,6 +72,15 @@ void failSafeBoot() {
           esp_task_wdt_init(1, true);
           esp_task_wdt_add(NULL);
           while (true);
+        }
+        if (millis() - ledblink > 200) {
+          ledblink = millis();
+          if (digitalRead(WIFILED) == LOW) {
+            digitalWrite(WIFILED, HIGH);
+          }
+          else {
+            digitalWrite(WIFILED, LOW);
+          }
         }
       }
 
@@ -364,7 +371,7 @@ bool connectWiFiSTA()
     }
     if (configOK) {
 #if defined (INFORMATIVE_LOGGING)
-      logInput("Statuc IP config OK");
+      logInput("Static IP config OK");
 #endif
       WiFi.config(staticIP, gateway, subnet, dns1 , dns2);
     }
@@ -382,7 +389,7 @@ bool connectWiFiSTA()
   uint8_t status = WiFi.status();
 
   while (millis() < timeoutmillis) {
-#if defined (__HW_VERSION_TWO__)    
+#if defined (__HW_VERSION_TWO__)
     esp_task_wdt_reset();
 #endif
     status = WiFi.status();
