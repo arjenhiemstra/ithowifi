@@ -48,6 +48,11 @@ void setup() {
 #endif
   logInput(logBuff);
   strcpy(logBuff, "");
+
+  sprintf(logBuff, "HW rev: %s, FW ver.: %s", HWREVISION, FWVERSION);
+  logInput(logBuff);
+  strcpy(logBuff, "");
+  
   if (!wifiModeAP) {
     logWifiInfo();
   }

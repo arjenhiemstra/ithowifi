@@ -10,12 +10,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     dtype = false;
   }
 
+  if (length > 512) length = 512;
+  
   char s_payload[length];
   memcpy(s_payload, payload, length);
   s_payload[length] = '\0';
 
   if (strcmp(topic, systemConfig.mqtt_cmd_topic) == 0) {
-    DynamicJsonDocument root(512);
+    StaticJsonDocument<512> root;
     DeserializationError error = deserializeJson(root, s_payload);
     if (!error) {
       bool jsonCmd = false;
