@@ -16,6 +16,7 @@ SystemConfig::SystemConfig() {
   strlcpy(mqtt_state_topic, "itho/state", sizeof(mqtt_state_topic));
   strlcpy(mqtt_state_retain, "yes", sizeof(mqtt_state_retain));
   strlcpy(mqtt_cmd_topic, "itho/cmd", sizeof(mqtt_cmd_topic));
+  strlcpy(mqtt_lwt_topic, "itho/lwt", sizeof(mqtt_lwt_topic));
   strlcpy(mqtt_domoticz_active, "off", sizeof(mqtt_domoticz_active));
   mqtt_updated = false;
   get_mqtt_settings = false;
@@ -88,6 +89,10 @@ bool SystemConfig::set(JsonObjectConst obj) {
     updated = true;
     strlcpy(mqtt_cmd_topic, obj["mqtt_cmd_topic"], sizeof(mqtt_cmd_topic));
   }
+  if (!(const char*)obj["mqtt_lwt_topic"].isNull()) {
+    updated = true;
+    strlcpy(mqtt_lwt_topic, obj["mqtt_lwt_topic"], sizeof(mqtt_lwt_topic));
+  }
   if (!(const char*)obj["mqtt_domoticz_active"].isNull()) {
     updated = true;
     strlcpy(mqtt_domoticz_active, obj["mqtt_domoticz_active"], sizeof(mqtt_domoticz_active));
@@ -159,6 +164,7 @@ void SystemConfig::get(JsonObject obj) const {
     obj["mqtt_state_topic"] = mqtt_state_topic;
     obj["mqtt_state_retain"] = mqtt_state_retain;
     obj["mqtt_cmd_topic"] = mqtt_cmd_topic;
+    obj["mqtt_lwt_topic"] = mqtt_lwt_topic;
     obj["mqtt_domoticz_active"] = mqtt_domoticz_active;
     obj["mqtt_idx"] = mqtt_idx;
   }

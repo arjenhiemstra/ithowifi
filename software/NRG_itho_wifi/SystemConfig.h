@@ -20,6 +20,7 @@ class SystemConfig {
     char mqtt_state_topic[128];
     char mqtt_state_retain[5];
     char mqtt_cmd_topic[128];
+    char mqtt_lwt_topic[128];
     char mqtt_domoticz_active[4];
     uint16_t mqtt_idx;
     mutable bool mqtt_updated;

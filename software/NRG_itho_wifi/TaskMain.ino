@@ -19,6 +19,7 @@ void TaskInit( void * pvParameters ) {
   Serial.println("Setup: done");
 #endif
 
+  esp_task_wdt_init(40, true);
   logInput("Setup: done");
 
   vTaskDelete( NULL );

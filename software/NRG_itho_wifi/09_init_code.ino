@@ -170,6 +170,10 @@ void logInit() {
 
   logInput(logBuff);
 
+  strcpy(logBuff, "");
+  sprintf(logBuff, "HW rev: %s, FW ver.: %s", HWREVISION, FWVERSION);
+  logInput(logBuff);
+
 }
 
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
@@ -438,10 +442,10 @@ bool setupMQTTClient() {
       mqttClient.setBufferSize(1024);
 
       if (systemConfig.mqtt_username == "") {
-        connectResult = mqttClient.connect(hostName());
+        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_lwt_topic, 0, true, "offline");
       }
       else {
-        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_username, systemConfig.mqtt_password);
+        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_username, systemConfig.mqtt_password, systemConfig.mqtt_lwt_topic, 0, true, "offline");
       }
 
       if (!connectResult) {
@@ -449,24 +453,17 @@ bool setupMQTTClient() {
       }
 
       if (mqttClient.connected()) {
-        if (mqttClient.subscribe(systemConfig.mqtt_cmd_topic)) {
-          //subscribed succes
-        }
-        else {
-          //subscribed failed
-        }
-        if (mqttClient.subscribe(systemConfig.mqtt_state_topic)) {
-          //publish succes
-        }
-        else {
-          //publish failed
-        }
+        mqttClient.subscribe(systemConfig.mqtt_cmd_topic);
+        mqttClient.subscribe(systemConfig.mqtt_state_topic);
+        mqttClient.subscribe(systemConfig.mqtt_lwt_topic);
+        mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", false);
         return true;
       }
     }
 
   }
   else {
+    mqttClient.publish(systemConfig.mqtt_lwt_topic, "offline", true);
     mqttClient.disconnect();
     return false;
   }

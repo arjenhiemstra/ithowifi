@@ -12,7 +12,6 @@ void TaskSysControl( void * pvParameters ) {
 
   startTaskCC1101();
 
-  esp_task_wdt_init(5, true);
   esp_task_wdt_add(NULL);
   
   for (;;) {

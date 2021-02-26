@@ -10,7 +10,6 @@ void TaskConfigAndLog( void * pvParameters ) {
 
   startTaskSysControl();
 
-  esp_task_wdt_init(5, true);
   esp_task_wdt_add(NULL);
 
   for (;;) {

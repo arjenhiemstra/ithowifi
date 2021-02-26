@@ -10,14 +10,13 @@ void TaskMQTT( void * pvParameters ) {
 
   startTaskWeb();
 
-  esp_task_wdt_init(5, true);
   esp_task_wdt_add(NULL);
 
   for (;;) {
     yield();
     esp_task_wdt_reset();
 
-    TaskMQTTTimeout.once_ms(1000, []() {
+    TaskMQTTTimeout.once_ms(35000UL, []() {
       logInput("Error: Task MQTT timed out!");
     });
 
