@@ -9,9 +9,7 @@ void failSafeBoot() {
 
     if (digitalRead(FAILSAVE_PIN) == HIGH) {
 
-      initFileSystem();
-      resetWifiConfig();
-      resetSystemConfig();
+      SPIFFS.format();
 
       IPAddress apIP(192, 168, 4, 1);
       IPAddress netMsk(255, 255, 255, 0);
@@ -75,6 +73,15 @@ void failSafeBoot() {
           esp_task_wdt_add(NULL);
           while (true);
         }
+        if (millis() - ledblink > 200) {
+          ledblink = millis();
+          if (digitalRead(WIFILED) == LOW) {
+            digitalWrite(WIFILED, HIGH);
+          }
+          else {
+            digitalWrite(WIFILED, LOW);
+          }
+        }
       }
 
     }
@@ -108,15 +115,16 @@ void hardwareInit() {
   failSafeBoot();
 #endif
 
-  delay(500); //give itho time to init
+  IthoInitCheck.once(7, ithoInitCheck);
+}
 
+void ithoInitCheck() {
   if (digitalRead(STATUSPIN) == LOW) {
     strcpy(i2cstat, "initok");
   }
   else {
     strcpy(i2cstat, "nok");
   }
-
 }
 
 void logInit() {
@@ -160,6 +168,10 @@ void logInit() {
   sprintf(logBuff, "System boot, last reset reason: %s", buf);
 #endif
 
+  logInput(logBuff);
+
+  strcpy(logBuff, "");
+  sprintf(logBuff, "HW rev: %s, FW ver.: %s", HWREVISION, FWVERSION);
   logInput(logBuff);
 
 }
@@ -286,9 +298,9 @@ void setupWiFiAP() {
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
 #if defined (__HW_VERSION_TWO__)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-#endif  
+#endif
   WiFi.disconnect(true);
-  WiFi.setAutoReconnect(false);  
+  WiFi.setAutoReconnect(false);
   delay(200);
   WiFi.mode(WIFI_AP);
 
@@ -298,7 +310,7 @@ void setupWiFiAP() {
   esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
   delay(100);
-  
+
   WiFi.softAPConfig(apIP, apIP, netMsk);
   WiFi.softAP(hostName(), WiFiAPPSK);
 
@@ -311,6 +323,7 @@ void setupWiFiAP() {
   wifiModeAP = true;
 
   APmodeTimeout = millis();
+  logInput("wifi AP mode started");
 
 }
 
@@ -318,13 +331,15 @@ void setupWiFiAP() {
 bool connectWiFiSTA()
 {
   wifiModeAP = false;
-
+#if defined (INFORMATIVE_LOGGING)
+  logInput("Connecting to wireless network...");
+#endif
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
 #if defined (__HW_VERSION_TWO__)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-#endif  
+#endif
   WiFi.disconnect(true);
-  WiFi.setAutoReconnect(false);  
+  WiFi.setAutoReconnect(false);
   delay(200);
   WiFi.mode(WIFI_STA);
 
@@ -359,10 +374,11 @@ bool connectWiFiSTA()
       configOK = false;
     }
     if (configOK) {
+#if defined (INFORMATIVE_LOGGING)
+      logInput("Static IP config OK");
+#endif
       WiFi.config(staticIP, gateway, subnet, dns1 , dns2);
     }
-
-
   }
 
 #if defined (__HW_VERSION_ONE__)
@@ -373,36 +389,30 @@ bool connectWiFiSTA()
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 #endif
 
-  int i = 0;
-#if defined (__HW_VERSION_ONE__)
-  while (wifi_station_get_connect_status() != STATION_GOT_IP && i < 16) {
-#elif defined (__HW_VERSION_TWO__)
-  while ((WiFi.status() != WL_CONNECTED) && i < 16) {
+  unsigned long timeoutmillis = millis() + 30000;
+  uint8_t status = WiFi.status();
+
+  while (millis() < timeoutmillis) {
+#if defined (__HW_VERSION_TWO__)
+    esp_task_wdt_reset();
 #endif
-    delay(2000);
+    status = WiFi.status();
+    if (status == WL_CONNECTED) {
+      digitalWrite(WIFILED, LOW);
+      return true;
+    }
     if (digitalRead(WIFILED) == LOW) {
       digitalWrite(WIFILED, HIGH);
     }
     else {
       digitalWrite(WIFILED, LOW);
     }
-    ++i;
-  }
-#if defined (__HW_VERSION_ONE__)
-  if (wifi_station_get_connect_status() != STATION_GOT_IP && i >= 15) {
-#elif defined (__HW_VERSION_TWO__)
-  if ((WiFi.status() != WL_CONNECTED) && i >= 15) {
-#endif
-    //delay(1000);
-    //Serial.println("");
-    //Serial.println("Couldn't connect to network :( ");
-    digitalWrite(WIFILED, HIGH);
-    return false;
 
+    delay(100);
   }
+  digitalWrite(WIFILED, HIGH);
+  return false;
 
-  digitalWrite(WIFILED, LOW);
-  return true;
 
 }
 
@@ -432,10 +442,10 @@ bool setupMQTTClient() {
       mqttClient.setBufferSize(1024);
 
       if (systemConfig.mqtt_username == "") {
-        connectResult = mqttClient.connect(hostName());
+        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_lwt_topic, 0, true, "offline");
       }
       else {
-        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_username, systemConfig.mqtt_password);
+        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_username, systemConfig.mqtt_password, systemConfig.mqtt_lwt_topic, 0, true, "offline");
       }
 
       if (!connectResult) {
@@ -443,24 +453,17 @@ bool setupMQTTClient() {
       }
 
       if (mqttClient.connected()) {
-        if (mqttClient.subscribe(systemConfig.mqtt_cmd_topic)) {
-          //subscribed succes
-        }
-        else {
-          //subscribed failed
-        }
-        if (mqttClient.subscribe(systemConfig.mqtt_state_topic)) {
-          //publish succes
-        }
-        else {
-          //publish failed
-        }
+        mqttClient.subscribe(systemConfig.mqtt_cmd_topic);
+        mqttClient.subscribe(systemConfig.mqtt_state_topic);
+        mqttClient.subscribe(systemConfig.mqtt_lwt_topic);
+        mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", false);
         return true;
       }
     }
 
   }
   else {
+    mqttClient.publish(systemConfig.mqtt_lwt_topic, "offline", true);
     mqttClient.disconnect();
     return false;
   }

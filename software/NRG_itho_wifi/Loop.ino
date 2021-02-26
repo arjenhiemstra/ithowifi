@@ -46,10 +46,26 @@ void execMQTTTasks() {
     sysStatReq = true;
   }
   if (mqttClient.connected()) {
-      mqttClient.loop();
+
+    if (updateIthoMQTT) {
+      updateIthoMQTT = false;
+      updateState(ithoCurrentVal);
+    }
+#if defined(ENABLE_SHT30_SENSOR_SUPPORT)
+    if (SHT3xupdated) {
+      SHT3xupdated = false;
+      char buffer[512];
+      sprintf(buffer, "{\"temp\":%1.1f,\"hum\":%1.1f}", ithoTemp, ithoHum);
+      char topicBuf[128 + 16] = "";
+      strcpy(topicBuf, systemConfig.mqtt_state_topic);
+      strcat(topicBuf, "/sensor");
+      mqttClient.publish(topicBuf, buffer, true);
+    }
+#endif
+    mqttClient.loop();
   }
   else {
-    if(dontReconnectMQTT) return;
+    if (dontReconnectMQTT) return;
     if (millis() - lastMQTTReconnectAttempt > 5000) {
 
       lastMQTTReconnectAttempt = millis();
@@ -82,17 +98,13 @@ void execSystemControlTasks() {
     writeIthoVal(ithoQueue.get_itho_speed());
   }
   //System control tasks
-#if defined (__HW_VERSION_ONE__)
-  if ((wifi_station_get_connect_status() != STATION_GOT_IP) && !wifiModeAP) {
-#elif defined (__HW_VERSION_TWO__)
   if ((WiFi.status() != WL_CONNECTED) && !wifiModeAP) {
-#endif
-    if (millis() - lastWIFIReconnectAttempt > 10000) {
+    if (millis() - lastWIFIReconnectAttempt > 60000) {
       logInput("Attempt to reconnect WiFi");
       lastWIFIReconnectAttempt = millis();
       // Attempt to reconnect
       if (connectWiFiSTA()) {
-        logInput("Reconnect WiFi succesfull");
+        logInput("Reconnect WiFi successful");
         lastWIFIReconnectAttempt = 0;
       }
       else {
@@ -149,8 +161,8 @@ void execLogAndConfigTasks() {
     LogMessage.once_ms(150, []() {
       jsonLogMessage(debugLog, RFLOG);
     } );
-
   }
+#endif  
   if (saveSystemConfigflag) {
     saveSystemConfigflag = false;
     if (saveSystemConfig()) {
@@ -169,6 +181,7 @@ void execLogAndConfigTasks() {
       jsonLogMessage(F("Wifi settings save failed: Unable to write config file"), WEBINTERFACE);
     }
   }
+#if defined (__HW_VERSION_TWO__)  
   if (saveRemotesflag) {
     saveRemotesflag = false;
     DelayedSave.once_ms(150, []() {
@@ -176,6 +189,7 @@ void execLogAndConfigTasks() {
       jsonWsSend("ithoremotes");
     } );
   }
+#endif  
   if (resetWifiConfigflag) {
     resetWifiConfigflag = false;
     if (resetWifiConfig()) {
@@ -194,7 +208,7 @@ void execLogAndConfigTasks() {
       jsonLogMessage(F("System settings restore failed, please try again"), WEBINTERFACE);
     }
   }
-#endif
+
   if (millis() - lastLog > LOGGING_INTERVAL) {
     char logBuff[LOG_BUF_SIZE] = "";
     sprintf(logBuff, "Mem free: %d, Mem low: %d, Mem block: %d", sys.getMemHigh(), sys.getMemLow(), sys.getMaxFreeBlockSize());

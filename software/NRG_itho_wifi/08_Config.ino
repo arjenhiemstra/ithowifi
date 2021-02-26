@@ -2,8 +2,14 @@
 
 bool loadWifiConfig() {
   if (!SPIFFS.exists("/wifi.json")) {
+    #if defined (INFORMATIVE_LOGGING)
+    logInput("Setup: writing initial wifi config");
+    #endif
     //Serial.println("Writing initial wifi config");
     if (!saveWifiConfig()) {
+      #if defined (INFORMATIVE_LOGGING)
+      logInput("Setup: failed writing initial wifi config");
+      #endif
       //Serial.println("Failed writing initial default config");
       return false;
     }
@@ -11,6 +17,9 @@ bool loadWifiConfig() {
 
   File configFile = SPIFFS.open("/wifi.json", "r");
   if (!configFile) {
+    #if defined (INFORMATIVE_LOGGING)
+    logInput("Setup: failed to open wifi config file");
+    #endif
     //Serial.println("Failed to open wifi config file");
     return false;
   }
@@ -18,6 +27,9 @@ bool loadWifiConfig() {
 
   size_t size = configFile.size();
   if (size > 1024) {
+    #if defined (INFORMATIVE_LOGGING)
+    logInput("Setup: wifi config file size is too large");
+    #endif
     //Serial.println("Wifi config file size is too large");
     return false;
   }
@@ -25,6 +37,9 @@ bool loadWifiConfig() {
   DynamicJsonDocument root(1024);
   DeserializationError error = deserializeJson(root, configFile);
   if (error) {
+    #if defined (INFORMATIVE_LOGGING)
+    logInput("Setup: wifi config load DeserializationError");
+    #endif
     //Serial.println("wifi config load: DeserializationError");
     return false;
   }
@@ -32,6 +47,9 @@ bool loadWifiConfig() {
 
 
   if (root["ssid"] == "") {
+    #if defined (INFORMATIVE_LOGGING)
+    logInput("Setup: initial wifi config still there, start WifiAP");
+    #endif
     //Serial.println("initial config still there, start WifiAP");
     return false;
   }
@@ -41,7 +59,9 @@ bool loadWifiConfig() {
     //Serial.println("wifiConfig.set ok");
 
   }
-
+  #if defined (INFORMATIVE_LOGGING)
+  logInput("Setup: wifi config loaded successful");
+  #endif
   return true;
 }
 
@@ -58,6 +78,7 @@ bool saveWifiConfig() {
 
   serializeJson(root, configFile);
 
+  logInput("wifi config saved");
   return true;
 
 }

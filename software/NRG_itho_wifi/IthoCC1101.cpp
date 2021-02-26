@@ -26,7 +26,88 @@ IthoCC1101::~IthoCC1101()
 {
 } //~IthoCC1101
 
+<<<<<<< .merge_file_6ihRCo
 void IthoCC1101::initSendMessage(uint8_t len)
+=======
+void IthoCC1101::initSendMessage1()
+{
+  /*
+    Configuration reverse engineered from remote print. The commands below are used by IthoDaalderop.
+
+    Base frequency		868.299866MHz
+    Channel				0
+    Channel spacing		199.951172kHz
+    Carrier frequency	868.299866MHz
+    Xtal frequency		26.000000MHz
+    Data rate			8.00896kBaud
+    Manchester			disabled
+    Modulation			2-FSK
+    Deviation			25.390625kHz
+    TX power			?
+    PA ramping			enabled
+    Whitening			disabled
+  */
+  writeCommand(CC1101_SRES);
+  delayMicroseconds(1);
+  writeRegister(CC1101_IOCFG0 , 0x2E);		//High impedance (3-state)
+  writeRegister(CC1101_FREQ2 , 0x21);		//00100001	878MHz-927.8MHz
+  writeRegister(CC1101_FREQ1 , 0x65);		//01100101
+  writeRegister(CC1101_FREQ0 , 0x6A);		//01101010
+  writeRegister(CC1101_MDMCFG4 , 0x07);	//00000111
+  writeRegister(CC1101_MDMCFG3 , 0x43);	//01000011
+  writeRegister(CC1101_MDMCFG2 , 0x00);	//00000000	2-FSK, no manchester encoding/decoding, no preamble/sync
+  writeRegister(CC1101_MDMCFG1 , 0x22);	//00100010
+  writeRegister(CC1101_MDMCFG0 , 0xF8);	//11111000
+  writeRegister(CC1101_CHANNR , 0x00);		//00000000
+  writeRegister(CC1101_DEVIATN , 0x40);	//01000000
+  writeRegister(CC1101_FREND0 , 0x17);		//00010111	use index 7 in PA table
+  writeRegister(CC1101_MCSM0 , 0x18);		//00011000	PO timeout Approx. 146microseconds - 171microseconds, Auto calibrate When going from IDLE to RX or TX (or FSTXON)
+  writeRegister(CC1101_FSCAL3 , 0xA9);		//10101001
+  writeRegister(CC1101_FSCAL2 , 0x2A);		//00101010
+  writeRegister(CC1101_FSCAL1 , 0x00);		//00000000
+  writeRegister(CC1101_FSCAL0 , 0x11);		//00010001
+  writeRegister(CC1101_FSTEST , 0x59);		//01011001	For test only. Do not write to this register.
+  writeRegister(CC1101_TEST2 , 0x81);		//10000001	For test only. Do not write to this register.
+  writeRegister(CC1101_TEST1 , 0x35);		//00110101	For test only. Do not write to this register.
+  writeRegister(CC1101_TEST0 , 0x0B);		//00001011	For test only. Do not write to this register.
+  writeRegister(CC1101_PKTCTRL0 , 0x12);	//00010010	Enable infinite length packets, CRC disabled, Turn data whitening off, Serial Synchronous mode
+  writeRegister(CC1101_ADDR , 0x00);		//00000000
+  writeRegister(CC1101_PKTLEN , 0xFF);		//11111111	//Not used, no hardware packet handling
+
+  //0x6F,0x26,0x2E,0x8C,0x87,0xCD,0xC7,0xC0
+  writeBurstRegister(CC1101_PATABLE | CC1101_WRITE_BURST, (uint8_t*)ithoPaTableSend, 8);
+
+  writeCommand(CC1101_SIDLE);
+  writeCommand(CC1101_SIDLE);
+  writeCommand(CC1101_SIDLE);
+
+  writeRegister(CC1101_MDMCFG4 , 0x08);	//00001000
+  writeRegister(CC1101_MDMCFG3 , 0x43);	//01000011
+  writeRegister(CC1101_DEVIATN , 0x40);	//01000000
+  writeRegister(CC1101_IOCFG0 , 0x2D);		//GDO0_Z_EN_N. When this output is 0, GDO0 is configured as input (for serial TX data).
+  writeRegister(CC1101_IOCFG1 , 0x0B);		//Serial Clock. Synchronous to the data in synchronous serial mode.
+
+  writeCommand(CC1101_STX);
+  writeCommand(CC1101_SIDLE);
+  delayMicroseconds(1);
+  writeCommand(CC1101_SIDLE);
+
+  writeRegister(CC1101_MDMCFG4 , 0x08);	//00001000
+  writeRegister(CC1101_MDMCFG3 , 0x43);	//01000011
+  writeRegister(CC1101_DEVIATN , 0x40);	//01000000
+  //writeRegister(CC1101_IOCFG0 ,0x2D);		//GDO0_Z_EN_N. When this output is 0, GDO0 is configured as input (for serial TX data).
+  //writeRegister(CC1101_IOCFG1 ,0x0B);		//Serial Clock. Synchronous to the data in synchronous serial mode.
+
+  //Itho is using serial mode for transmit. We want to use the TX FIFO with fixed packet length for simplicity.
+  writeRegister(CC1101_IOCFG0 , 0x2E);
+  writeRegister(CC1101_IOCFG1 , 0x2E);
+  writeRegister(CC1101_PKTLEN , 19);
+  writeRegister(CC1101_PKTCTRL0 , 0x00);
+  writeRegister(CC1101_PKTCTRL1 , 0x00);
+}
+
+void IthoCC1101::initSendMessage2(IthoCommand command)
+>>>>>>> .merge_file_WzVEwq
 {
   //finishTransfer();
   writeCommand(CC1101_SIDLE);
@@ -57,6 +138,7 @@ void IthoCC1101::initSendMessage(uint8_t len)
   */
   writeCommand(CC1101_SRES);
   delayMicroseconds(1);
+<<<<<<< .merge_file_6ihRCo
   writeRegister(CC1101_IOCFG0 , 0x2E);    //High impedance (3-state)
   writeRegister(CC1101_FREQ2 , 0x21);   //00100001  878MHz-927.8MHz
   writeRegister(CC1101_FREQ1 , 0x65);   //01100101
@@ -81,6 +163,32 @@ void IthoCC1101::initSendMessage(uint8_t len)
   writeRegister(CC1101_PKTCTRL0 , 0x12);  //00010010  Enable infinite length packets, CRC disabled, Turn data whitening off, Serial Synchronous mode
   writeRegister(CC1101_ADDR , 0x00);    //00000000
   writeRegister(CC1101_PKTLEN , 0xFF);    //11111111  //Not used, no hardware packet handling
+=======
+  writeRegister(CC1101_IOCFG0 , 0x2E);		//High impedance (3-state)
+  writeRegister(CC1101_FREQ2 , 0x21);		//00100001	878MHz-927.8MHz
+  writeRegister(CC1101_FREQ1 , 0x65);		//01100101
+  writeRegister(CC1101_FREQ0 , 0x6A);		//01101010
+  writeRegister(CC1101_MDMCFG4 , 0x5A);	//difference compared to message1
+  writeRegister(CC1101_MDMCFG3 , 0x83);	//difference compared to message1
+  writeRegister(CC1101_MDMCFG2 , 0x00);	//00000000	2-FSK, no manchester encoding/decoding, no preamble/sync
+  writeRegister(CC1101_MDMCFG1 , 0x22);	//00100010
+  writeRegister(CC1101_MDMCFG0 , 0xF8);	//11111000
+  writeRegister(CC1101_CHANNR , 0x00);		//00000000
+  writeRegister(CC1101_DEVIATN , 0x50);	//difference compared to message1
+  writeRegister(CC1101_FREND0 , 0x17);		//00010111	use index 7 in PA table
+  writeRegister(CC1101_MCSM0 , 0x18);		//00011000	PO timeout Approx. 146microseconds - 171microseconds, Auto calibrate When going from IDLE to RX or TX (or FSTXON)
+  writeRegister(CC1101_FSCAL3 , 0xA9);		//10101001
+  writeRegister(CC1101_FSCAL2 , 0x2A);		//00101010
+  writeRegister(CC1101_FSCAL1 , 0x00);		//00000000
+  writeRegister(CC1101_FSCAL0 , 0x11);		//00010001
+  writeRegister(CC1101_FSTEST , 0x59);		//01011001	For test only. Do not write to this register.
+  writeRegister(CC1101_TEST2 , 0x81);		//10000001	For test only. Do not write to this register.
+  writeRegister(CC1101_TEST1 , 0x35);		//00110101	For test only. Do not write to this register.
+  writeRegister(CC1101_TEST0 , 0x0B);		//00001011	For test only. Do not write to this register.
+  writeRegister(CC1101_PKTCTRL0 , 0x12);	//00010010	Enable infinite length packets, CRC disabled, Turn data whitening off, Serial Synchronous mode
+  writeRegister(CC1101_ADDR , 0x00);		//00000000
+  writeRegister(CC1101_PKTLEN , 0xFF);		//11111111	//Not used, no hardware packet handling
+>>>>>>> .merge_file_WzVEwq
 
   //0x6F,0x26,0x2E,0x8C,0x87,0xCD,0xC7,0xC0
   writeBurstRegister(CC1101_PATABLE | CC1101_WRITE_BURST, (uint8_t*)ithoPaTableSend, 8);
