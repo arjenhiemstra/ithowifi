@@ -46,6 +46,7 @@ function startWebsock(websocketServerLocation){
             mqtt_state_topic_tmp = x.mqtt_state_topic;
             $('#mqtt_cmd_topic').val(x.mqtt_cmd_topic);
             mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
+            $('#mqtt_lwt_topic').val(x.mqtt_lwt_topic);
             $radios = $('input[name=\'option-mqtt_domoticz_active\']');
             $('#mqtt_idx, #label-mqtt_idx').hide(); 
             if($radios.is(':checked') === false) {
@@ -222,6 +223,7 @@ $(document).ready(function() {
           mqtt_version:         $('#mqtt_version').val(),
           mqtt_state_topic:     $('#mqtt_state_topic').val(),
           mqtt_cmd_topic:       $('#mqtt_cmd_topic').val(),
+          mqtt_lwt_topic:       $('#mqtt_lwt_topic').val(),
           mqtt_idx:             $('#mqtt_idx').val(),
           mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val()
         }
@@ -388,11 +390,11 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_active") {
     if (state == 'on') {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_cmd_topic, #mqtt_idx').prop('readonly', false);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', false);
     }
     else {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_cmd_topic, #mqtt_idx').prop('readonly', true);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', true);
     }
   }
@@ -868,6 +870,10 @@ var html_mqttsetup = `
             <div class="pure-control-group">
               <label for="mqtt_cmd_topic">Command topic</label>
                 <input id="mqtt_cmd_topic" maxlength="120" type="text">
+            </div>
+            <div class="pure-control-group">
+              <label for="mqtt_lwt_topic">Last will topic</label>
+                <input id="mqtt_lwt_topic" maxlength="120" type="text">
             </div>
             <br>
             <div class="pure-control-group">

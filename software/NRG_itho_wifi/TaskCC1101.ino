@@ -120,7 +120,6 @@ void TaskCC1101( void * pvParameters ) {
     attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, FALLING);
 
     //this portion of code will not be reached when no RF module is present: detach reboot script, switch on rf_supprt and load remotes config
-    esp_task_wdt_init(5, true);
     esp_task_wdt_add(NULL);
     reboot.detach();
     logInput("Setup: init of CC1101 RF module successful");
