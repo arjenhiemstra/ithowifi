@@ -156,13 +156,13 @@ function startWebsock(websocketServerLocation){
           else if (f.rflog) {
             let x = f.rflog;
             $('#rflog_outer').removeClass('hidden');
-            $('#rflog').append(x.message + '<br>');
-            $('#rflog').scrollTop($('#rflog').height());            
+            var d = new Date();
+            $('#rflog').prepend(d.toISOString() + ': ' + x.message + '<br>');
           }
           else if (f.ota) {
             let x = f.ota;
             $('#updateprg').html('Firmware update progress: ' + x.percent + '%');
-            moveBar(x.percent, "updateBar");    
+            moveBar(x.percent, "updateBar");
           }
   };
   websock.onopen = function(a) {
