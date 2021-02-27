@@ -24,6 +24,7 @@ const char html_mainpage[] PROGMEM = R"=====(
             <a class="pure-menu-heading" id="headingindex" href="index">Itho WiFi controller</a>
             <ul class="pure-menu-list">
                 <li class="pure-menu-item"><a href="wifisetup" class="pure-menu-link">Wifi setup</a></li>
+                <li class="pure-menu-item"><a href="system" class="pure-menu-link">System settings</a></li>
                 <li class="pure-menu-item"><a href="itho" class="pure-menu-link">Itho settings</a></li>
                 <li class="pure-menu-item"><a href="mqtt" class="pure-menu-link">MQTT</a></li>
                 <li class="pure-menu-item"><a href="api" class="pure-menu-link">API</a></li>
@@ -53,6 +54,30 @@ void handleAPI(AsyncWebServerRequest *request) {
   nextIthoTimer = 0;
   
   int params = request->params();
+  
+  if (strcmp(systemConfig.syssec_api, "on") == 0) {
+    bool username = false;
+    bool password = false;
+    
+    for(int i=0;i<params;i++){
+      AsyncWebParameter* p = request->getParam(i);
+      if(strcmp(p->name().c_str(), "username") == 0) {
+        if (strcmp(p->value().c_str(), systemConfig.sys_username) == 0 ) {
+          username = true;
+        }
+      }
+      else if(strcmp(p->name().c_str(), "password") == 0) {
+        if (strcmp(p->value().c_str(), systemConfig.sys_password) == 0 ) {
+          password = true;
+        }
+      }
+    }
+    if (!username || !password) {
+      request->send(200, "text/html", "AUTHENTICATION FAILED");
+      return;
+    }  
+  }
+  
   for(int i=0;i<params;i++){
     char logBuff[LOG_BUF_SIZE] = "";
     AsyncWebParameter* p = request->getParam(i);
@@ -213,6 +238,10 @@ void handleAPI(AsyncWebServerRequest *request) {
 }
 
 void handleDebug(AsyncWebServerRequest *request) {
+  if (strcmp(systemConfig.syssec_web, "on") == 0) {
+    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+      return request->requestAuthentication();          
+  }  
   AsyncResponseStream *response = request->beginResponseStream("text/html");
 
   response->print(F("<div class=\"header\"><h1>Debug page</h1></div><br><br>"));
@@ -231,8 +260,9 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(fs_info.totalBytes);
 #elif defined (__HW_VERSION_TWO__)
   response->print(SPIFFS.totalBytes());
-  response->print(F(" bytes total</span>"));
-  
+#endif   
+  response->print(F(" bytes total</span><br><a href='#' class='pure-button' onclick=\"$('#main').empty();$('#main').append( html_edit );\">Edit filesystem</a>"));
+#if defined (__HW_VERSION_TWO__)
   response->print(F("<br><br><span>CC1101 task memory: </span><span>"));
   response->print(TaskCC1101HWmark);
   response->print(F(" bytes free</span>"));
@@ -248,10 +278,8 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(F("<br><span>SysControl task memory: </span><span>"));
   response->print(TaskSysControlHWmark);
   response->print(F(" bytes free</span></div>"));
-#endif    
+#endif 
   response->print(F("<br><br><div id='syslog_outer'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>System Log:</div>"));
-  
-  
   
   response->print(F("<div style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto'>"));
   char link[24] = "";
@@ -294,6 +322,10 @@ void handleDebug(AsyncWebServerRequest *request) {
 }
 
 void handleCurLogDownload(AsyncWebServerRequest *request) {
+  if (strcmp(systemConfig.syssec_web, "on") == 0) {
+    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+      return request->requestAuthentication();          
+  }  
   char link[24] = "";
   if (  SPIFFS.exists("/logfile0.current.log") ) {
     strlcpy(link, "/logfile0.current.log", sizeof(link));
@@ -305,6 +337,10 @@ void handleCurLogDownload(AsyncWebServerRequest *request) {
 }
 
 void handlePrevLogDownload(AsyncWebServerRequest *request) {
+  if (strcmp(systemConfig.syssec_web, "on") == 0) {
+    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+      return request->requestAuthentication();          
+  }  
   char link[24] = "";
   if (  SPIFFS.exists("/logfile0.current.log") ) {
     strlcpy(link, "/logfile1.log", sizeof(link));

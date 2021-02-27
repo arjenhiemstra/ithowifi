@@ -146,9 +146,11 @@ void execSystemControlTasks() {
 
   }
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
-  if (millis() - SHT3x_readout >= 5000 && (SHT3x_original || SHT3x_alternative)) {
-    SHT3x_readout = millis();
-    updateSensor();
+  if (strcmp(systemConfig.syssht30, "on") == 0) {
+    if (millis() - SHT3x_readout >= 5000 && (SHT3x_original || SHT3x_alternative)) {
+      SHT3x_readout = millis();
+      updateSensor();
+    }  
   }
 #endif
 }

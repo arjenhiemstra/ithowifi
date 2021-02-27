@@ -7,6 +7,12 @@
 SystemConfig::SystemConfig() {
   //default config
   strlcpy(config_struct_version, CONFIG_VERSION, sizeof(config_struct_version));
+  strlcpy(sys_username, "admin", sizeof(sys_username));
+  strlcpy(sys_password, "admin", sizeof(sys_password));    
+  strlcpy(syssec_web, "off", sizeof(syssec_web));
+  strlcpy(syssec_api, "off", sizeof(syssec_api));
+  strlcpy(syssec_edit, "on", sizeof(syssec_edit));
+  strlcpy(syssht30, "off", sizeof(syssht30));
   strlcpy(mqtt_active, "off", sizeof(mqtt_active));
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
   strlcpy(mqtt_username, "", sizeof(mqtt_username));
@@ -20,6 +26,7 @@ SystemConfig::SystemConfig() {
   strlcpy(mqtt_domoticz_active, "off", sizeof(mqtt_domoticz_active));
   mqtt_updated = false;
   get_mqtt_settings = false;
+  get_sys_settings = false;
   itho_fallback = 20;
   itho_low = 20;
   itho_medium = 120;
@@ -50,7 +57,30 @@ bool SystemConfig::set(JsonObjectConst obj) {
       return false;
     }
   }
-
+  if (!(const char*)obj["sys_username"].isNull()) {
+    updated = true;
+    strlcpy(sys_username, obj["sys_username"], sizeof(sys_username));
+  }
+  if (!(const char*)obj["sys_password"].isNull()) {
+    updated = true;
+    strlcpy(sys_password, obj["sys_password"], sizeof(sys_password));
+  }
+  if (!(const char*)obj["syssec_web"].isNull()) {
+    updated = true;
+    strlcpy(syssec_web, obj["syssec_web"], sizeof(syssec_web));
+  }  
+  if (!(const char*)obj["syssec_api"].isNull()) {
+    updated = true;
+    strlcpy(syssec_api, obj["syssec_api"], sizeof(syssec_api));
+  }
+  if (!(const char*)obj["syssec_edit"].isNull()) {
+    updated = true;
+    strlcpy(syssec_edit, obj["syssec_edit"], sizeof(syssec_edit));
+  }
+  if (!(const char*)obj["syssht30"].isNull()) {
+    updated = true;
+    strlcpy(syssht30, obj["syssht30"], sizeof(syssht30));
+  }
   //MQTT Settings parse
   if (!(const char*)obj["mqtt_active"].isNull()) {
     mqtt_updated = true;
@@ -149,10 +179,18 @@ bool SystemConfig::set(JsonObjectConst obj) {
 void SystemConfig::get(JsonObject obj) const {
 
   bool complete = true;
-  if (get_mqtt_settings || get_itho_settings) {
+  if (get_mqtt_settings || get_sys_settings || get_itho_settings) {
     complete = false;
   }
-
+  if (complete || get_sys_settings) {
+    get_sys_settings = false;
+    obj["sys_username"] = sys_username;
+    obj["sys_password"] = sys_password;
+    obj["syssec_web"] = syssec_web;
+    obj["syssec_api"] = syssec_api;
+    obj["syssec_edit"] = syssec_edit;
+    obj["syssht30"] = syssht30;
+  }
   if (complete || get_mqtt_settings) {
     get_mqtt_settings = false;
     obj["mqtt_active"] = mqtt_active;
