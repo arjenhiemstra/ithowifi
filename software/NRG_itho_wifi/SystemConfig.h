@@ -16,6 +16,7 @@ class SystemConfig {
     char syssec_web[5];
     char syssec_api[5];
     char syssec_edit[5];
+    char syssht30[5];
     char mqtt_active[5];
     char mqtt_serverName[65];
     char mqtt_username[32];

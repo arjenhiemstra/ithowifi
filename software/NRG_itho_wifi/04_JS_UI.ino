@@ -1,4 +1,3 @@
-#if defined (__HW_VERSION_TWO__)
 
 const char controls_js[] PROGMEM = R"=====(
 
@@ -47,6 +46,10 @@ function startWebsock(websocketServerLocation){
             if($radios.is(':checked') === false) {
                 $radios.filter('[value=' + x.syssec_edit + ']').prop('checked', true);
             }
+            var $radios = $('input[name=\'option-syssht30\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value=' + x.syssht30 + ']').prop('checked', true);
+            }
             var $radios = $('input[name=\'option-mqtt_active\']');
             if($radios.is(':checked') === false) {
                 $radios.filter('[value=' + x.mqtt_active + ']').prop('checked', true);
@@ -68,6 +71,7 @@ function startWebsock(websocketServerLocation){
             }
             radio("mqtt_domoticz", x.mqtt_domoticz_active);
             $('#mqtt_idx').val(x.mqtt_idx);
+            $('#itho_fallback').val(x.itho_fallback);
             $('#itho_low').val(x.itho_low);
             $('#itho_medium').val(x.itho_medium);
             $('#itho_high').val(x.itho_high);
@@ -152,8 +156,8 @@ function startWebsock(websocketServerLocation){
           else if (f.rflog) {
             let x = f.rflog;
             $('#rflog_outer').removeClass('hidden');
-            $('#rflog').append(x.message + '<br>');
-            $('#rflog').scrollTop($('#rflog').height());            
+            var d = new Date();
+            $('#rflog').prepend(d.toISOString() + ': ' + x.message + '<br>');    
           }
           else if (f.ota) {
             let x = f.ota;
@@ -233,7 +237,8 @@ $(document).ready(function() {
           sys_password: $('#sys_password').val(),
           syssec_web:   $('input[name=\'option-syssec_web\']:checked').val(),          
           syssec_api:   $('input[name=\'option-syssec_api\']:checked').val(),          
-          syssec_edit:  $('input[name=\'option-syssec_edit\']:checked').val()
+          syssec_edit:  $('input[name=\'option-syssec_edit\']:checked').val(),
+          syssht30:     $('input[name=\'option-syssht30\']:checked').val()
         }
       }));
       update_page('system');
@@ -260,6 +265,7 @@ $(document).ready(function() {
     else if ($(this).attr('id') == 'ithosubmit') {
       websock.send(JSON.stringify({
         systemsettings: {
+          itho_fallback:    $('#itho_fallback').val(),
           itho_low:         $('#itho_low').val(),
           itho_medium:      $('#itho_medium').val(),
           itho_high:        $('#itho_high').val(),
@@ -522,7 +528,12 @@ function update_page(page) {
     if (page == 'index') { $('#main').append(html_index); }
     if (page == 'wifisetup') { $('#main').append(html_wifisetup); }
     if (page == 'system') { $('#main').append(html_systemsettings); }
-    if (page == 'itho') { $('#main').append(html_ithosettings); }
+    if (page == 'itho') { 
+      $('#main').append(html_ithosettings_start);
+      if(hw_revision == "1") { $('#itho_fieldset').append(html_ithosettings_hw1); }
+      if(hw_revision == "2") { $('#itho_fieldset').append(html_ithosettings_hw2); }      
+      $('#main').append(html_ithosettings_end); 
+    }
     if (page == 'mqtt') { $('#main').append(html_mqttsetup); }
     if (page == 'api') { $('#main').append(html_api); }      
     if (page == 'help') { $('#main').append(html_help); }
@@ -822,21 +833,28 @@ var html_systemsettings = `
                 <input id="sys_password" maxlength="20" type="text">
             </div>
             <div class="pure-control-group">
-              <label for="option-syssec_web" class="pure-radio">Protect web interface</label> 
+              <label for="option-syssec_web" class="pure-radio">Web interface authentication</label> 
               <input id="option-syssec_web-on" type="radio" name="option-syssec_web" onchange='radio("syssec_web", "on")' value="on"> on
               <input id="option-syssec_web-off" type="radio" name="option-syssec_web" onchange='radio("syssec_web", "off")' value="off"> off
             </div>
             <div class="pure-control-group">
-              <label for="option-syssec_api" class="pure-radio">Protect API</label> 
+              <label for="option-syssec_api" class="pure-radio">API authentication</label> 
               <input id="option-syssec_api-on" type="radio" name="option-syssec_api" onchange='radio("syssec_api", "on")' value="on"> on
               <input id="option-syssec_api-off" type="radio" name="option-syssec_api" onchange='radio("syssec_api", "off")' value="off"> off
             </div>
             <div class="pure-control-group">
-              <label for="option-syssec_edit" class="pure-radio">Protect file editor</label> 
+              <label for="option-syssec_edit" class="pure-radio">File editor authentication</label> 
               <input id="option-syssec_edit-on" type="radio" name="option-syssec_edit" onchange='radio("syssec_edit", "on")' value="on"> on
               <input id="option-syssec_edit-off" type="radio" name="option-syssec_edit" onchange='radio("syssec_edit", "off")' value="off"> off
             </div>
+            <legend><br>Autodetect built-in itho humidity/temp sensor:</legend>
+            <p>The itho humidity/temp sensor is only present in the latest itho CVE series: CVE-S ECO.</p><p>Sensor support is limited, might be buggy and for testing only.</p><p>Values will be posted on the MQTT state topic with the addition of "/sensor" to the topic.</p>
             <br>
+            <div class="pure-control-group">
+              <label for="option-syssht30" class="pure-radio">Hum/Temp sensor support</label> 
+              <input id="option-syssht30-on" type="radio" name="option-syssht30" onchange='radio("syssec_web", "on")' value="on"> on
+              <input id="option-syssht30-off" type="radio" name="option-syssht30" onchange='radio("syssec_web", "off")' value="off"> off
+            </div>
             <div class="pure-controls">
               <button id="syssumbit" class="pure-button pure-button-primary">Save</button>
             </div>
@@ -849,13 +867,17 @@ $(document).ready(function() {
 </script>
 `;
 
-var html_ithosettings = `
+var html_ithosettings_start = `
 <div class="header"><h1>Itho settings</h1></div>
 <p>Configuration of the Itho box</p>
 <style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
       <form class="pure-form pure-form-aligned">
-          <fieldset>
+          <fieldset id="itho_fieldset">
             <legend><br>Speed settings (0-254):</legend>
+            <div class="pure-control-group">
+              <label for="itho_fallback">Start/fallback speed</label>
+                <input id="itho_fallback" type="number" min="0" max="254" size="6">
+            </div>
             <div class="pure-control-group">
               <label for="itho_low">Low</label>
                 <input id="itho_low" type="number" min="0" max="254" size="6">
@@ -869,6 +891,17 @@ var html_ithosettings = `
                 <input id="itho_high" type="number" min="0" max="254" size="6">
             </div>
             <br>
+          </fieldset>
+      </form>            
+`;
+
+var html_ithosettings_hw1 = `
+            <div class="pure-controls">
+              <button id="ithosubmit" class="pure-button pure-button-primary">Save</button>
+            </div>
+`;
+
+var html_ithosettings_hw2 = `
             <div class="pure-control-group">
               <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
               <input id="option-itho_remotes-on" type="radio" name="option-itho_remotes_active" onchange='radio("itho_remotes", "on")' value="on"> on
@@ -892,14 +925,16 @@ var html_ithosettings = `
                 <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote" class="pure-button">Remove</button>
               </div>
             </div>
-          </fieldset>
-      </form>
+`;
+
+var html_ithosettings_end = `
 <script>
 $(document).ready(function() {
   getSettings('ithosetup');
 });
 </script>
 `;
+
 
 var html_mqttsetup = `
 <div class="header"><h1>MQTT setup</h1></div>
@@ -1132,5 +1167,3 @@ $.ajax({
 
 
 )=====";
-
-#endif

@@ -179,6 +179,7 @@ void logInit() {
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
 void initSensor() {
 
+if (strcmp(systemConfig.syssht30, "on") == 0) {
   if (sht_org.init() && sht_org.readSample()) {
     Wire.endTransmission(true);
     SHT3x_original = true;
@@ -194,8 +195,11 @@ void initSensor() {
     logInput("Setup: Alternative SHT30 sensor found");
   }
   else {
+    strlcpy(systemConfig.syssht30, "off", sizeof(systemConfig.syssht30));
     logInput("Setup: SHT30 sensor not present");
-  }
+  }  
+}
+
 }
 #endif
 

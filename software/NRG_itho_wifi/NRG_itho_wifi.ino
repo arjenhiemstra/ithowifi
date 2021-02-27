@@ -4,7 +4,7 @@
 #define ENABLE_FAILSAVE_BOOT
 //#define INFORMATIVE_LOGGING
 //#define ENABLE_SERIAL
-//#define ENABLE_SHT30_SENSOR_SUPPORT
+#define ENABLE_SHT30_SENSOR_SUPPORT
 
 /*
  * 
@@ -13,7 +13,7 @@
  * 
  * Used libs and versions are mentioned below.
  * 
- * uncomment #define ENABLE_SHT30_SENSOR_SUPPORT to include readout support of the build-in hum and temp sensor of some itho boxes. This is experimental and might not work properly!
+ * uncomment #define ENABLE_SHT30_SENSOR_SUPPORT to include readout support of the built-in hum and temp sensor of some itho boxes. This is experimental and might not work properly!
  * 
  * For HW rev 1:
  * Select 'LOLIN(WEMOS)D1 R2 & mini' as board
@@ -160,8 +160,6 @@ SHTSensor sht_org(SHTSensor::SHT3X);
 SHTSensor sht_alt(SHTSensor::SHT3X_ALT);
 
 const char* espName = "nrg-itho-";
-const char* http_username = "admin";
-const char* http_password = "admin";
 const char* WiFiAPPSK = "password"; //default AP mode password
 
 // Global variables

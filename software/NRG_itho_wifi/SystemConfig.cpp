@@ -12,6 +12,7 @@ SystemConfig::SystemConfig() {
   strlcpy(syssec_web, "off", sizeof(syssec_web));
   strlcpy(syssec_api, "off", sizeof(syssec_api));
   strlcpy(syssec_edit, "on", sizeof(syssec_edit));
+  strlcpy(syssht30, "off", sizeof(syssht30));
   strlcpy(mqtt_active, "off", sizeof(mqtt_active));
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
   strlcpy(mqtt_username, "", sizeof(mqtt_username));
@@ -75,6 +76,10 @@ bool SystemConfig::set(JsonObjectConst obj) {
   if (!(const char*)obj["syssec_edit"].isNull()) {
     updated = true;
     strlcpy(syssec_edit, obj["syssec_edit"], sizeof(syssec_edit));
+  }
+  if (!(const char*)obj["syssht30"].isNull()) {
+    updated = true;
+    strlcpy(syssht30, obj["syssht30"], sizeof(syssht30));
   }
   //MQTT Settings parse
   if (!(const char*)obj["mqtt_active"].isNull()) {
@@ -184,6 +189,7 @@ void SystemConfig::get(JsonObject obj) const {
     obj["syssec_web"] = syssec_web;
     obj["syssec_api"] = syssec_api;
     obj["syssec_edit"] = syssec_edit;
+    obj["syssht30"] = syssht30;
   }
   if (complete || get_mqtt_settings) {
     get_mqtt_settings = false;

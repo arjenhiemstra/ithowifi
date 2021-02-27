@@ -260,8 +260,9 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(fs_info.totalBytes);
 #elif defined (__HW_VERSION_TWO__)
   response->print(SPIFFS.totalBytes());
+#endif   
   response->print(F(" bytes total</span><br><a href='#' class='pure-button' onclick=\"$('#main').empty();$('#main').append( html_edit );\">Edit filesystem</a>"));
-  
+#if defined (__HW_VERSION_TWO__)
   response->print(F("<br><br><span>CC1101 task memory: </span><span>"));
   response->print(TaskCC1101HWmark);
   response->print(F(" bytes free</span>"));
@@ -277,10 +278,8 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(F("<br><span>SysControl task memory: </span><span>"));
   response->print(TaskSysControlHWmark);
   response->print(F(" bytes free</span></div>"));
-#endif    
+#endif 
   response->print(F("<br><br><div id='syslog_outer'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>System Log:</div>"));
-  
-  
   
   response->print(F("<div style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto'>"));
   char link[24] = "";
