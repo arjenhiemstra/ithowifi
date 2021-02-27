@@ -179,6 +179,7 @@ void logInit() {
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
 void initSensor() {
 
+if (strcmp(systemConfig.syssht30, "on") == 0) {
   if (sht_org.init() && sht_org.readSample()) {
     Wire.endTransmission(true);
     SHT3x_original = true;
@@ -194,8 +195,11 @@ void initSensor() {
     logInput("Setup: Alternative SHT30 sensor found");
   }
   else {
+    strlcpy(systemConfig.syssht30, "off", sizeof(systemConfig.syssht30));
     logInput("Setup: SHT30 sensor not present");
-  }
+  }  
+}
+
 }
 #endif
 
@@ -456,7 +460,7 @@ bool setupMQTTClient() {
         mqttClient.subscribe(systemConfig.mqtt_cmd_topic);
         mqttClient.subscribe(systemConfig.mqtt_state_topic);
         mqttClient.subscribe(systemConfig.mqtt_lwt_topic);
-        mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", false);
+        mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", true);
         return true;
       }
     }
@@ -585,23 +589,31 @@ void websocketInit() {
 
 void webServerInit() {
 
-  // respond to GET requests on URL /heap
-  server.on("/heap", HTTP_GET, [](AsyncWebServerRequest * request) {
-    request->send(200, "text/plain", String(ESP.getFreeHeap()));
-  });
-
   // upload a file to /upload
   server.on("/upload", HTTP_POST, [](AsyncWebServerRequest * request) {
+    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+      if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+        return request->requestAuthentication();          
+    }    
     request->send(200);
   }, [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     //Handle upload
   });
 
-
 #if defined (__HW_VERSION_ONE__)
-  server.addHandler(new SPIFFSEditor(http_username, http_password));
+  if (strcmp(systemConfig.syssec_edit, "on") == 0) {
+    server.addHandler(new SPIFFSEditor(systemConfig.sys_username, systemConfig.sys_password));
+  }
+  else {
+    server.addHandler(new SPIFFSEditor("", ""));
+  }
 #elif defined (__HW_VERSION_TWO__)
-  server.addHandler(new SPIFFSEditor(SPIFFS, http_username, http_password));
+  if (strcmp(systemConfig.syssec_edit, "on") == 0) {
+    server.addHandler(new SPIFFSEditor(SPIFFS, systemConfig.sys_username, systemConfig.sys_password));
+  }
+  else {
+    server.addHandler(new SPIFFSEditor(SPIFFS, "", ""));
+  }  
 #endif
 
   // css_code
@@ -657,6 +669,10 @@ void webServerInit() {
   // HTML pages
   server.rewrite("/", "/index.htm");
   server.on("/index.htm", HTTP_ANY, [](AsyncWebServerRequest * request) {
+    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+      if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+        return request->requestAuthentication();          
+    }
     request->send_P(200, "text/html", html_mainpage);
   });
   server.on("/api.html", HTTP_GET, handleAPI);
@@ -668,12 +684,18 @@ void webServerInit() {
 
   // HTTP basic authentication
   server.on("/login", HTTP_GET, [](AsyncWebServerRequest * request) {
-    if (!request->authenticate(http_username, http_password))
-      return request->requestAuthentication();
+    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+      if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+        return request->requestAuthentication();          
+    }
     request->send(200, "text/plain", "Login Success!");
   });
   // Simple Firmware Update Form
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest * request) {
+    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+      if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+        return request->requestAuthentication();          
+    }
     request->send(200, "text/html", "<form method='POST' action='/update' "
                   "enctype='multipart/form-data'><input "
                   "type='file' name='update'><input "
@@ -681,6 +703,10 @@ void webServerInit() {
   });
 
   server.on("/update", HTTP_POST, [](AsyncWebServerRequest * request) {
+    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+      if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+        return request->requestAuthentication();          
+    }
     shouldReboot = !Update.hasError();
     AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", shouldReboot ? "OK" : "FAIL");
     response->addHeader("Connection", "close");
@@ -743,6 +769,10 @@ void webServerInit() {
   Update.onProgress(otaWSupdate);
 
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest * request) {
+    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+      if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+        return request->requestAuthentication();          
+    }
     jsonLogMessage(F("Reset requested Device will reboot in a few seconds..."), WEBINTERFACE);
     delay(200);
     shouldReboot = true;

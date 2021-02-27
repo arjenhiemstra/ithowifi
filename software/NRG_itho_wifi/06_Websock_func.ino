@@ -210,11 +210,15 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
       else if (msg.startsWith("{\"wifisetup")) {
         jsonWsSend("wifisettings");
       }
+      else if (msg.startsWith("{\"syssetup")) {
+        systemConfig.get_sys_settings = true;
+        jsonWsSend("systemsettings");
+      }
       else if (msg.startsWith("{\"mqttsetup")) {
         systemConfig.get_mqtt_settings = true;
         jsonWsSend("systemsettings");
         sysStatReq = true;
-      }
+      }      
       else if (msg.startsWith("{\"ithosetup")) {
         systemConfig.get_itho_settings = true;
         jsonWsSend("systemsettings");

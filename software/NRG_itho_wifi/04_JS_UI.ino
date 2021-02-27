@@ -1,4 +1,3 @@
-#if defined (__HW_VERSION_ONE__)
 
 const char controls_js[] PROGMEM = R"=====(
 
@@ -33,6 +32,24 @@ function startWebsock(websocketServerLocation){
           }
           else if (f.systemsettings) {
             let x = f.systemsettings;
+            $('#sys_username').val(x.sys_username);
+            $('#sys_password').val(x.sys_password);
+            var $radios = $('input[name=\'option-syssec_web\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value=' + x.syssec_web + ']').prop('checked', true);
+            }
+            var $radios = $('input[name=\'option-syssec_api\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value=' + x.syssec_api + ']').prop('checked', true);
+            }        
+            var $radios = $('input[name=\'option-syssec_edit\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value=' + x.syssec_edit + ']').prop('checked', true);
+            }
+            var $radios = $('input[name=\'option-syssht30\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value=' + x.syssht30 + ']').prop('checked', true);
+            }
             var $radios = $('input[name=\'option-mqtt_active\']');
             if($radios.is(':checked') === false) {
                 $radios.filter('[value=' + x.mqtt_active + ']').prop('checked', true);
@@ -54,6 +71,7 @@ function startWebsock(websocketServerLocation){
             }
             radio("mqtt_domoticz", x.mqtt_domoticz_active);
             $('#mqtt_idx').val(x.mqtt_idx);
+            $('#itho_fallback').val(x.itho_fallback);
             $('#itho_low').val(x.itho_low);
             $('#itho_medium').val(x.itho_medium);
             $('#itho_high').val(x.itho_high);
@@ -211,8 +229,22 @@ $(document).ready(function() {
       }));
       update_page('wifisetup');
     }
-    //mqttmsubmit
-   else if ($(this).attr('id') == 'mqttsubmit') {
+    //syssubmit
+    else if ($(this).attr('id') == 'syssumbit') {
+      websock.send(JSON.stringify({
+        systemsettings: {
+          sys_username: $('#sys_username').val(),
+          sys_password: $('#sys_password').val(),
+          syssec_web:   $('input[name=\'option-syssec_web\']:checked').val(),          
+          syssec_api:   $('input[name=\'option-syssec_api\']:checked').val(),          
+          syssec_edit:  $('input[name=\'option-syssec_edit\']:checked').val(),
+          syssht30:     $('input[name=\'option-syssht30\']:checked').val()
+        }
+      }));
+      update_page('system');
+    }    
+    //mqttsubmit
+    else if ($(this).attr('id') == 'mqttsubmit') {
       websock.send(JSON.stringify({
         systemsettings: {
           mqtt_active:          $('input[name=\'option-mqtt_active\']:checked').val(),
@@ -230,9 +262,10 @@ $(document).ready(function() {
       }));
       update_page('mqtt');
     }
-   else if ($(this).attr('id') == 'ithosubmit') {
+    else if ($(this).attr('id') == 'ithosubmit') {
       websock.send(JSON.stringify({
         systemsettings: {
+          itho_fallback:    $('#itho_fallback').val(),
           itho_low:         $('#itho_low').val(),
           itho_medium:      $('#itho_medium').val(),
           itho_high:        $('#itho_high').val(),
@@ -491,10 +524,16 @@ var lastPageReq = "";
 function update_page(page) {
     lastPageReq = page;  
     $('#main').empty();
-
+    $('#main').css('max-width', '768px')
     if (page == 'index') { $('#main').append(html_index); }
     if (page == 'wifisetup') { $('#main').append(html_wifisetup); }
-    if (page == 'itho') { $('#main').append(html_ithosettings); }
+    if (page == 'system') { $('#main').append(html_systemsettings); }
+    if (page == 'itho') { 
+      $('#main').append(html_ithosettings_start);
+      if(hw_revision == "1") { $('#itho_fieldset').append(html_ithosettings_hw1); }
+      if(hw_revision == "2") { $('#itho_fieldset').append(html_ithosettings_hw2); }      
+      $('#main').append(html_ithosettings_end); 
+    }
     if (page == 'mqtt') { $('#main').append(html_mqttsetup); }
     if (page == 'api') { $('#main').append(html_api); }      
     if (page == 'help') { $('#main').append(html_help); }
@@ -778,13 +817,67 @@ $(document).ready(function() {
 </script>
 `;
 
-var html_ithosettings = `
+var html_systemsettings = `
+<div class="header"><h1>System settings</h1></div>
+<p>Configuration of generic system (security) settings</p>
+<style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
+      <form class="pure-form pure-form-aligned">
+          <fieldset>
+            <legend><br>System security:</legend>
+            <div class="pure-control-group">
+              <label for="sys_username">Username</label>
+                <input id="sys_username" maxlength="20" type="text">
+            </div>
+            <div class="pure-control-group">
+              <label for="sys_password">Password</label>
+                <input id="sys_password" maxlength="20" type="text">
+            </div>
+            <div class="pure-control-group">
+              <label for="option-syssec_web" class="pure-radio">Web interface authentication</label> 
+              <input id="option-syssec_web-on" type="radio" name="option-syssec_web" onchange='radio("syssec_web", "on")' value="on"> on
+              <input id="option-syssec_web-off" type="radio" name="option-syssec_web" onchange='radio("syssec_web", "off")' value="off"> off
+            </div>
+            <div class="pure-control-group">
+              <label for="option-syssec_api" class="pure-radio">API authentication</label> 
+              <input id="option-syssec_api-on" type="radio" name="option-syssec_api" onchange='radio("syssec_api", "on")' value="on"> on
+              <input id="option-syssec_api-off" type="radio" name="option-syssec_api" onchange='radio("syssec_api", "off")' value="off"> off
+            </div>
+            <div class="pure-control-group">
+              <label for="option-syssec_edit" class="pure-radio">File editor authentication</label> 
+              <input id="option-syssec_edit-on" type="radio" name="option-syssec_edit" onchange='radio("syssec_edit", "on")' value="on"> on
+              <input id="option-syssec_edit-off" type="radio" name="option-syssec_edit" onchange='radio("syssec_edit", "off")' value="off"> off
+            </div>
+            <legend><br>Autodetect built-in itho humidity/temp sensor:</legend>
+            <p>The itho humidity/temp sensor is only present in the latest itho CVE series: CVE-S ECO.</p><p>Sensor support is limited, might be buggy and for testing only.</p><p>Values will be posted on the MQTT state topic with the addition of "/sensor" to the topic.</p>
+            <br>
+            <div class="pure-control-group">
+              <label for="option-syssht30" class="pure-radio">Hum/Temp sensor support</label> 
+              <input id="option-syssht30-on" type="radio" name="option-syssht30" onchange='radio("syssec_web", "on")' value="on"> on
+              <input id="option-syssht30-off" type="radio" name="option-syssht30" onchange='radio("syssec_web", "off")' value="off"> off
+            </div>
+            <div class="pure-controls">
+              <button id="syssumbit" class="pure-button pure-button-primary">Save</button>
+            </div>
+          </fieldset>
+      </form>
+<script>
+$(document).ready(function() {
+  getSettings('syssetup');
+});
+</script>
+`;
+
+var html_ithosettings_start = `
 <div class="header"><h1>Itho settings</h1></div>
 <p>Configuration of the Itho box</p>
 <style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
       <form class="pure-form pure-form-aligned">
-          <fieldset>
+          <fieldset id="itho_fieldset">
             <legend><br>Speed settings (0-254):</legend>
+            <div class="pure-control-group">
+              <label for="itho_fallback">Start/fallback speed</label>
+                <input id="itho_fallback" type="number" min="0" max="254" size="6">
+            </div>
             <div class="pure-control-group">
               <label for="itho_low">Low</label>
                 <input id="itho_low" type="number" min="0" max="254" size="6">
@@ -798,17 +891,50 @@ var html_ithosettings = `
                 <input id="itho_high" type="number" min="0" max="254" size="6">
             </div>
             <br>
+          </fieldset>
+      </form>            
+`;
+
+var html_ithosettings_hw1 = `
             <div class="pure-controls">
               <button id="ithosubmit" class="pure-button pure-button-primary">Save</button>
             </div>
-          </fieldset>
-      </form>
+`;
+
+var html_ithosettings_hw2 = `
+            <div class="pure-control-group">
+              <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
+              <input id="option-itho_remotes-on" type="radio" name="option-itho_remotes_active" onchange='radio("itho_remotes", "on")' value="on"> on
+              <input id="option-itho_remotes-off" type="radio" name="option-itho_remotes_active" onchange='radio("itho_remotes", "off")' value="off"> off
+            </div>
+            <br>
+            <div class="pure-controls">
+              <button id="ithosubmit" class="pure-button pure-button-primary">Save</button>
+            </div>
+            <div id="IthoRemotes" class="hidden">
+              <br>
+                <legend><br>RF remotes:</legend>
+              <br>
+              <div class="pure-control-group">
+                <label for="mqtt_conn">Learn/Leave mode</label>
+                  <button id="itho_llm" class="pure-button">Unknown</button>
+              </div>
+              <br>
+              <table id="RemotesTable" class="pure-table pure-table-bordered"></table>
+              <div class="pure-control-group">
+                <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote" class="pure-button">Remove</button>
+              </div>
+            </div>
+`;
+
+var html_ithosettings_end = `
 <script>
 $(document).ready(function() {
   getSettings('ithosetup');
 });
 </script>
 `;
+
 
 var html_mqttsetup = `
 <div class="header"><h1>MQTT setup</h1></div>
@@ -903,12 +1029,12 @@ Unless specified otherwise:<br><ul>
 </ul>
 <br>
 <strong>API table:</strong>
-<table class="pure-table pure-table-bordered" style="font-size:.85em"><thead><tr><th>key or param</th><th>datatype</th><th style="width:160px">value</th><th>datatype</th><th style="text-align:center">MQTT<br>(JSON)</th><th style="text-align:center">HTML<br>
-(URL params)</th></tr></thead><tbody><tr><td>dtype</td><td>string</td><td>ithofan</td><td>string</td><td style="text-align:center">●</td><td style="text-align:center">◌</td></tr><tr><td colspan="6">Comments:<br>
-<em>If Domoticz MQTT support is on and commands originate from other than configured IDX, this key/value pair needs to be present for commands to get processed.</em></td></tr><tr><td>command</td><td>string</td><td>low, medium, high, timer1, timer2, timer3, clearqueue</td>
-<td>string</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br>
-<em>Resulting speed/timer settings are configurable. Value without timer sets the base/fallback speed of the fan. Timers will be queued on highest speed setting first for the duration of the timer.<br>For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em>
-</td></tr><tr><td>speed</td><td>string</td><td>0-254</td><td>uint8_t</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>Speed without a timer will reset the queue (different behaviour configurable) and set a new base/fallback speed.<br>
+<table class="pure-table pure-table-bordered" style="font-size:.85em"><thead><tr><th>key or param</th><th>datatype</th><th style="width:160px">value</th><th>datatype</th><th style="text-align:center">MQTT<br>(JSON)</th><th style="text-align:center">HTML<br>(URL params)</th></tr></thead>
+<tbody><tr><td>dtype</td><td>string</td><td>ithofan</td><td>string</td><td style="text-align:center">●</td><td style="text-align:center">◌</td></tr><tr><td colspan="6">Comments:<br><em>If Domoticz MQTT support is on and commands originate from other than configured IDX, this key/value pair needs to be present for commands to get processed.</em></td></tr>
+<tr><td>username</td><td>string</td><td>max 20 chars long</td><td>string</td><td style="text-align:center">◌</td><td style="text-align:center">●</td></tr><tr><td>password</td><td>string</td><td>max 20 chars long</td><td>string</td><td style="text-align:center">◌</td><td style="text-align:center">●</td></tr>
+<tr><td>command</td><td>string</td><td>low, medium, high, timer1, timer2, timer3, clearqueue</td><td>string</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br>
+<em>Resulting speed/timer settings are configurable. Value without timer sets the base/fallback speed of the fan. Timers will be queued on highest speed setting first for the duration of the timer.<br>For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em></td></tr>
+<tr><td>speed</td><td>string</td><td>0-254</td><td>uint8_t</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>Speed without a timer will reset the queue (different behaviour configurable) and set a new base/fallback speed.<br>
 For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em></td></tr><tr><td>timer</td><td>string</td><td>0-65535</td><td>uint16_t</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br>
 <em>only effective with "command" or "speed" key/param present, could overrule timer value of timer1, timer2, timer3. Highest speed setting on the queue will be active for the duration of the timer.</em></td></tr><tr><td>clearqueue</td><td>string</td><td>true</td><td>string</td>
 <td style="text-align:center">●</td><td style="text-align:center">◌</td></tr><tr><td colspan="6">Comments:<br><em>Clear all timers on the queue, scheduled to run after all other commands have been processed. Speed will fallback to last value before items got enqueued</em></td></tr><tr><td>get</td>
@@ -926,6 +1052,17 @@ var html_reboot_script = `
 <script>
 $(document).ready(function() {
   startCountdown();
+});
+</script>
+`;
+
+var html_edit = `
+<div class="header"><h1>File editor</h1></div>
+<p>Be very carefull, use only if absolutely necessary!</p><br>
+<iframe id="editor" src="/edit" width="100%" height="100%" style="border:none;padding:5px"></iframe>
+<script>
+$(document).ready(function() {
+  $('#main').css('max-width', '1200px')
 });
 </script>
 `;
@@ -1030,5 +1167,3 @@ $.ajax({
 
 
 )=====";
-
-#endif
