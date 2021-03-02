@@ -28,7 +28,7 @@ const uint8_t ithoMessageTimer1CommandBytes[] =   {34,243,3,0,0,10};     //10 mi
 const uint8_t ithoMessageTimer2CommandBytes[] =   {34,243,3,0,0,20};     //20 minutes full speed
 const uint8_t ithoMessageTimer3CommandBytes[] =   {34,243,3,0,0,30};     //30 minutes full speed
 const uint8_t ithoMessageJoinCommandBytes[] =     {31,201,12,0,34,241};
-const uint8_t ithoMessageJoin2CommandBytes[] =    {0,0,0,0,0,0};         //join command of RFT AUTO Co2 remote, tbd
+const uint8_t ithoMessageJoin2CommandBytes[] =    {31,201,12,99,34,248};  //join command of RFT AUTO Co2 remote, tbd
 const uint8_t ithoMessageRVJoinCommandBytes[] =   {31,201,24,0,49,224};  //join command of RFT-RV?
 const uint8_t ithoMessageLeaveCommandBytes[] =    {31,201,6,0,31,201};
 //itho rft-rv
@@ -97,6 +97,7 @@ class IthoCC1101 : protected CC1101
       
     //parse received message
     bool parseMessageCommand();
+    bool checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]);
     
     //send
     void createMessageStart(IthoPacket *itho, CC1101Packet *packet);

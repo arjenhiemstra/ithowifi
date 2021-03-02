@@ -7,6 +7,26 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+//#define CRC_FILTER
+
+////original sync byte pattern
+//#define STARTBYTE 6 //relevant data starts 6 bytes after the sync pattern bytes 170/171
+//#define SYNC1 170
+//#define SYNC0 171
+//#define MDMCFG2 0x02 //16bit sync word / 16bit specific
+
+////alternative sync byte pattern (filter much more non-itho messages out. Maybe too strict? Testing needed.
+//#define STARTBYTE 0 //relevant data starts 0 bytes after the sync pattern bytes 179/42/171/42
+//#define SYNC1 187 //byte11 = 179, byte13 = 171 with SYNC1 = 163, 179 and 171 differ only by 1 bit
+//#define SYNC0 42
+//#define MDMCFG2 0x03 //32bit sync word / 30bit specific
+
+//alternative sync byte pattern
+#define STARTBYTE 2 //relevant data starts 2 bytes after the sync pattern bytes 179/42
+#define SYNC1 179
+#define SYNC0 42
+#define MDMCFG2 0x02 //16bit sync word / 16bit specific
+
 // default constructor
 IthoCC1101::IthoCC1101(uint8_t counter, uint8_t sendTries) : CC1101()
 {
@@ -231,9 +251,9 @@ void  IthoCC1101::initReceiveMessage()
 
   //set fifo mode with fixed packet length and sync bytes
   writeRegister(CC1101_PKTCTRL0 , 0x00);
-  writeRegister(CC1101_SYNC1 , 163);      //message2 byte11 = 179, byte13 = 171 with SYNC1 = 163, 179 and 171 differ only by 1 bit
-  writeRegister(CC1101_SYNC0 , 42);       //message2 byte12,14
-  writeRegister(CC1101_MDMCFG2 , 0x03);   //32bit sync word / 30bit specific
+  writeRegister(CC1101_SYNC1 , SYNC1);
+  writeRegister(CC1101_SYNC0 , SYNC0);
+  writeRegister(CC1101_MDMCFG2 , MDMCFG2);
   writeRegister(CC1101_PKTCTRL1 , 0x00);
 
   writeCommand(CC1101_SRX); //switch to RX state
@@ -254,54 +274,30 @@ bool IthoCC1101::checkForNewPacket() {
   return false;
 }
 
-bool IthoCC1101::parseMessageCommand()
-{
-  bool isPowerCommand = true;
-  bool isHighCommand = true;
-  bool isRVHighCommand = true;
-  bool isMediumCommand = true;
-  bool isRVMediumCommand = true;
-  bool isLowCommand = true;
-  bool isRVLowCommand = true;
-  bool isRVAutoCommand = true;
-  bool isStandByCommand = true;
-  bool isTimer1Command = true;
-  bool isTimer2Command = true;
-  bool isTimer3Command = true;
-  bool isJoinCommand = true;
-  bool isJoin2Command = true;
-  bool isRVJoinCommand = true;
-  bool isLeaveCommand = true;
+bool IthoCC1101::parseMessageCommand() {
 
   messageDecode(&inMessage, &inIthoPacket);
 
   //counter1
   inIthoPacket.counter = inIthoPacket.dataDecoded[4];
 
-  //match received commandBytes from dataDecoded [offset is +5] with known command bytes
-  //the first 2 and last 2 bytes seem to be unique and universal
-  uint8_t offset = 0;
-  if (inIthoPacket.deviceType == 28 || inIthoPacket.deviceType == 24) offset = 2;
-  for (int i = 0; i < 6; i++)
-  {
-    if (i == 2) continue; //skip byte3, rft-rv device seem to sometimes have a different number there for Timer command
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessagePowerCommandBytes[i])    isPowerCommand    = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageHighCommandBytes[i])     isHighCommand     = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageRVHighCommandBytes[i])   isRVHighCommand   = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageMediumCommandBytes[i])   isMediumCommand   = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageRVMediumCommandBytes[i]) isRVMediumCommand = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageLowCommandBytes[i])      isLowCommand      = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageRVLowCommandBytes[i])    isRVLowCommand    = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageRVAutoCommandBytes[i])   isRVAutoCommand   = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageStandByCommandBytes[i])  isStandByCommand  = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageTimer1CommandBytes[i])   isTimer1Command   = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageTimer2CommandBytes[i])   isTimer2Command   = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageTimer3CommandBytes[i])   isTimer3Command   = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageJoinCommandBytes[i])     isJoinCommand     = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageJoin2CommandBytes[i])    isJoin2Command    = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageRVJoinCommandBytes[i])   isRVJoinCommand   = false;
-    if (inIthoPacket.dataDecoded[i + 5 + offset] != ithoMessageLeaveCommandBytes[i])    isLeaveCommand    = false;
-  }
+  bool isPowerCommand     = checkIthoCommand(&inIthoPacket, ithoMessagePowerCommandBytes);
+  bool isHighCommand      = checkIthoCommand(&inIthoPacket, ithoMessageHighCommandBytes);
+  bool isRVHighCommand    = checkIthoCommand(&inIthoPacket, ithoMessageRVHighCommandBytes);
+  bool isMediumCommand    = checkIthoCommand(&inIthoPacket, ithoMessageMediumCommandBytes);
+  bool isRVMediumCommand  = checkIthoCommand(&inIthoPacket, ithoMessageRVMediumCommandBytes);
+  bool isLowCommand       = checkIthoCommand(&inIthoPacket, ithoMessageLowCommandBytes);
+  bool isRVLowCommand     = checkIthoCommand(&inIthoPacket, ithoMessageRVLowCommandBytes);
+  bool isRVAutoCommand    = checkIthoCommand(&inIthoPacket, ithoMessageRVAutoCommandBytes);
+  bool isStandByCommand   = checkIthoCommand(&inIthoPacket, ithoMessageStandByCommandBytes);
+  bool isTimer1Command    = checkIthoCommand(&inIthoPacket, ithoMessageTimer1CommandBytes);
+  bool isTimer2Command    = checkIthoCommand(&inIthoPacket, ithoMessageTimer2CommandBytes);
+  bool isTimer3Command    = checkIthoCommand(&inIthoPacket, ithoMessageTimer3CommandBytes);
+  bool isJoinCommand      = checkIthoCommand(&inIthoPacket, ithoMessageJoinCommandBytes);
+  bool isJoin2Command     = checkIthoCommand(&inIthoPacket, ithoMessageJoin2CommandBytes);
+  bool isRVJoinCommand    = checkIthoCommand(&inIthoPacket, ithoMessageRVJoinCommandBytes);
+  bool isLeaveCommand     = checkIthoCommand(&inIthoPacket, ithoMessageLeaveCommandBytes);
+
   //determine command
   inIthoPacket.command = IthoUnknown;
   if (isPowerCommand)    inIthoPacket.command = IthoFull;
@@ -321,6 +317,7 @@ bool IthoCC1101::parseMessageCommand()
   if (isRVJoinCommand)   inIthoPacket.command = IthoJoin;
   if (isLeaveCommand)    inIthoPacket.command = IthoLeave;
 
+#if defined (CRC_FILTER)
   uint8_t mLen = 0;
   if (isPowerCommand || isHighCommand || isMediumCommand || isLowCommand || isStandByCommand || isTimer1Command || isTimer2Command || isTimer3Command) {
     mLen = 11;
@@ -338,7 +335,21 @@ bool IthoCC1101::parseMessageCommand()
     inIthoPacket.command = IthoUnknown;
     return false;
   }
+#endif
   
+  return true;
+}
+
+bool IthoCC1101::checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]) {
+  uint8_t offset = 0;
+  if (itho->deviceType == 28 || itho->deviceType == 24) offset = 2;
+  for (int i = 0; i < 6; i++)
+  {
+    if (i == 2) continue; //skip byte3, rft-rv device seem to sometimes have a different number there for Timer command
+    if ( (itho->dataDecoded[i + 5 + offset] != commandBytes[i]) && (itho->dataDecodedChk[i + 5 + offset] != commandBytes[i]) ) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -684,9 +695,12 @@ uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet) {
 
 
 void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *itho) {
-
+  
   itho->length = 0;
   int lenInbuf = packet->length;
+
+  lenInbuf -= STARTBYTE; 
+  
   while (lenInbuf >= 5) {
     lenInbuf -= 5;
     itho->length += 2;
@@ -698,12 +712,17 @@ void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *itho) {
   for (int i = 0; i < sizeof(itho->dataDecoded) / sizeof(itho->dataDecoded[0]); i++) {
     itho->dataDecoded[i] = 0;
   }
-
+  for (int i = 0; i < sizeof(itho->dataDecodedChk) / sizeof(itho->dataDecodedChk[0]); i++) {
+    itho->dataDecodedChk[i] = 0;
+  }
+  
   uint8_t out_i = 0;                                  //byte index
   uint8_t out_j = 4;                                  //bit index
+  uint8_t out_i_chk = 0;                              //byte index
+  uint8_t out_j_chk = 4;                              //bit index
   uint8_t in_bitcounter = 0;                          //process per 10 input bits
 
-  for (int i = 0; i < packet->length; i++) {
+  for (int i = STARTBYTE; i < packet->length; i++) {
 
     for (int j = 7; j > -1; j--) {
       if (in_bitcounter == 0 || in_bitcounter == 2 || in_bitcounter == 4 || in_bitcounter == 6) { //select input bits for output
@@ -716,6 +735,19 @@ void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *itho) {
         if (out_j > 7) out_j = 0;
         if (out_j == 4) out_i += 1;
       }
+      if (in_bitcounter == 1 || in_bitcounter == 3 || in_bitcounter == 5 || in_bitcounter == 7) { //select input bits for check output
+        uint8_t x = packet->data[i];   //select input byte
+        x = x >> j;             //select input bit
+        x = x & 0b00000001;
+        x = x << out_j_chk;         //set value for output bit
+        itho->dataDecodedChk[out_i_chk] = itho->dataDecodedChk[out_i_chk] | x;
+        out_j_chk += 1;             //next output bit
+        if (out_j_chk > 7) out_j_chk = 0;
+        if (out_j_chk == 4) {
+          itho->dataDecodedChk[out_i_chk] = ~itho->dataDecodedChk[out_i_chk]; //inverse bits
+          out_i_chk += 1;
+        }
+      }      
       in_bitcounter += 1;     //continue cyling in groups of 10 bits
       if (in_bitcounter > 9) in_bitcounter = 0;
     }

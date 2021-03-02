@@ -123,6 +123,11 @@ void TaskCC1101( void * pvParameters ) {
     esp_task_wdt_add(NULL);
     reboot.detach();
     logInput("Setup: init of CC1101 RF module successful");
+    rf.setDeviceID(getMac(6-3),getMac(6-2),getMac(6-1));
+    char logBuff[LOG_BUF_SIZE] = "";
+    sprintf(logBuff, "Setup: RF Remote ID: %d,%d,%d", getMac(6-3),getMac(6-2),getMac(6-1));
+    logInput(logBuff); 
+    
     strlcpy(systemConfig.itho_rf_support, "on", sizeof(systemConfig.itho_rf_support));
     loadRemotesConfig();
     systemConfig.rfInitOK = true;

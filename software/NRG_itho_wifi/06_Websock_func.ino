@@ -218,7 +218,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         systemConfig.get_mqtt_settings = true;
         jsonWsSend("systemsettings");
         sysStatReq = true;
-      }      
+      }
       else if (msg.startsWith("{\"ithosetup")) {
         systemConfig.get_itho_settings = true;
         jsonWsSend("systemsettings");
@@ -284,7 +284,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
 
 
 void wifiScan() {
-  
+
   int n = WiFi.scanComplete();
   if (n == -2) {
     WiFi.scanNetworks(true);
@@ -366,7 +366,7 @@ void wifiScan() {
       size_t len = serializeJson(root, buffer);
 
       notifyClients(buffer, len);
-      
+
       delay(25);
     }
     WiFi.scanDelete();
@@ -378,25 +378,26 @@ void wifiScan() {
 }
 
 
-int LastPercentotaWSupdate = 0;
+unsigned long LastotaWsUpdate = 0;
 
 void otaWSupdate(size_t prg, size_t sz) {
-  int newPercent = int((prg * 100) / content_len);
-  if (newPercent != LastPercentotaWSupdate) {
-    LastPercentotaWSupdate = newPercent;
-    if (newPercent % 2 == 0) {
-      StaticJsonDocument<256> root;
-      JsonObject ota = root.createNestedObject("ota");
-      ota["progress"] = prg;
-      ota["tsize"] = content_len;
-      ota["percent"] = newPercent;
+  
+  if (millis() - LastotaWsUpdate >= 500) { //rate limit messages to once a second
+    LastotaWsUpdate = millis();
+    int newPercent = int((prg * 100) / content_len);
 
-      char buffer[256];
-      size_t len = serializeJson(root, buffer);
+    StaticJsonDocument<256> root;
+    JsonObject ota = root.createNestedObject("ota");
+    ota["progress"] = prg;
+    ota["tsize"] = content_len;
+    ota["percent"] = newPercent;
 
-      notifyClients(buffer, len);
-      delay(25);
-    }
+    char buffer[256];
+    size_t len = serializeJson(root, buffer);
+
+    notifyClients(buffer, len);
+
   }
+
 
 }

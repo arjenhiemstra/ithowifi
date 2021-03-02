@@ -36,6 +36,7 @@ class IthoPacket
     IthoCommand command;
 
     uint8_t dataDecoded[32];
+    uint8_t dataDecodedChk[32];
     uint8_t length;
     
     uint8_t deviceType;

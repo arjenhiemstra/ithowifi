@@ -257,18 +257,22 @@ void handleFormat()
 
 char* hostName() {
   static char hostName[32];
-  // Do a little work to get a unique-ish name. Append the
-  // last two bytes of the MAC (HEX'd):
-  uint8_t mac[6];
+
+  sprintf(hostName, "%s%02x%02x", espName, getMac(6 - 2), getMac(6 - 1));
+
+  return hostName;
+}
+
+uint8_t getMac(uint8_t i) {
+  static uint8_t mac[6];
+
 #if defined (__HW_VERSION_ONE__)
   WiFi.softAPmacAddress(mac);
 #elif defined (__HW_VERSION_TWO__)
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
 #endif
 
-  sprintf(hostName, "%s%02x%02x", espName, mac[6 - 2], mac[6 - 1]);
-
-  return hostName;
+  return mac[i];
 }
 
 void wifiInit() {
