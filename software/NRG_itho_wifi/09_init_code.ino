@@ -220,7 +220,6 @@ bool connectWiFiSTA() {
 #elif defined (__HW_VERSION_TWO__)
   esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
-  delay(100);
 
   if (strcmp(wifiConfig.dhcp, "off") == 0) {
     bool configOK = true;
@@ -233,10 +232,10 @@ bool connectWiFiSTA() {
     if (!staticIP.fromString(wifiConfig.ip)) {
       configOK = false;
     }
-    if (!gateway.fromString(wifiConfig.subnet)) {
+    if (!gateway.fromString(wifiConfig.gateway)) {
       configOK = false;
     }
-    if (!subnet.fromString(wifiConfig.gateway)) {
+    if (!subnet.fromString(wifiConfig.subnet)) {
       configOK = false;
     }
     if (!dns1.fromString(wifiConfig.dns1)) {
@@ -246,12 +245,16 @@ bool connectWiFiSTA() {
       configOK = false;
     }
     if (configOK) {
-#if defined (INFORMATIVE_LOGGING)
-      logInput("Statuc IP config OK");
-#endif
-      WiFi.config(staticIP, gateway, subnet, dns1 , dns2);
+      if(WiFi.config(staticIP, gateway, subnet, dns1 , dns2)) {
+        logInput("Static IP config OK");
+      }
+    }
+    else {
+      logInput("Static IP config NOK");
     }
   }
+
+  delay(200);
 
 #if defined (__HW_VERSION_ONE__)
   WiFi.hostname(hostName());
