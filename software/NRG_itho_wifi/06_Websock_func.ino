@@ -157,8 +157,9 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
     String msg = "";
     if (info->final && info->index == 0 && info->len == len) {
       //the whole message is in a single frame and we got all of it's data
-      //Serial.printf("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len);
-
+#if defined (ENABLE_SERIAL)
+    Serial.printf("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len);
+#endif          
       if (info->opcode == WS_TEXT) {
         for (size_t i = 0; i < info->len; i++) {
           msg += (char) data[i];
@@ -170,8 +171,9 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
           msg += buff ;
         }
       }
-      //Serial.printf("%s\n",msg.c_str());
-
+#if defined (ENABLE_SERIAL)
+    Serial.printf("%s\n",msg.c_str());
+#endif
       if (msg.startsWith("{\"wifiscan")) {
         //Serial.println("Start wifi scan");
         runscan = true;
@@ -207,6 +209,31 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         }
 
       }
+      else if (msg.startsWith("{\"ithobutton")) {
+        StaticJsonDocument<128> root;
+        DeserializationError error = deserializeJson(root, msg);
+        if (!error) {
+            uint8_t val  = root["ithobutton"];
+            if (val < 4) {
+              sendButton(val);
+            }
+            else if (val == 11) {
+              sendJoinI2C();
+            }
+            else if (val == 20) {
+              sendQueryDevicetype();
+            }
+            else if (val == 30) {
+              sendQueryStatus();
+            }
+            else if (val == 31) {
+              sendQueryStatusFormat();
+            }            
+            else if (val == 99) {
+              sendLeaveI2C();
+            }            
+        }
+      }         
       else if (msg.startsWith("{\"wifisetup")) {
         jsonWsSend("wifisettings");
       }
@@ -276,7 +303,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
           nextIthoTimer = 0;
           updateItho = true;
         }
-      }
+      }   
     }
   }
 }

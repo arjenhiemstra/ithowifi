@@ -210,6 +210,18 @@ void execLogAndConfigTasks() {
       jsonLogMessage(F("System settings restore failed, please try again"), WEBINTERFACE);
     }
   }
+//  if (ithocheckDone) {
+//    ithocheckDone = false;
+//    i2c_slave_init(&i2c_slave_callback);
+//    logInput("ic2 slave started");
+//  }
+  if (callback_called) {
+    logInput("ic2 callback_called");
+    callback_called = false;
+    jsonLogMessage(i2cresult, RFLOG);
+    strcpy(i2cresult, "");
+  }
+  
 
   if (millis() - lastLog > LOGGING_INTERVAL) {
     char logBuff[LOG_BUF_SIZE] = "";

@@ -177,17 +177,17 @@ void updateState(uint16_t newState) {
 
   }
 }
- 
+
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
 void updateSensor() {
 
-  if (SHT3x_original || SHT3x_alternative) {  
+  if (SHT3x_original || SHT3x_alternative) {
     if (SHT3x_original) {
       if (sht_org.readSample()) {
         Wire.endTransmission(true);
         ithoHum = sht_org.getHumidity();
         ithoTemp = sht_org.getTemperature();
-        SHT3xupdated = true;        
+        SHT3xupdated = true;
       }
     }
     if (SHT3x_alternative) {
@@ -195,7 +195,7 @@ void updateSensor() {
         Wire.endTransmission(true);
         ithoHum = sht_alt.getHumidity();
         ithoTemp = sht_alt.getTemperature();
-        SHT3xupdated = true;        
+        SHT3xupdated = true;
       }
     }
   }
@@ -227,7 +227,7 @@ static void writeIthoVal(uint16_t value) {
     }
     if (timeout != 1000) {
       updateIthoMQTT = true;
-      
+
       Wire.beginTransmission(byte(0x00));
       delay(10);
       //write start of message
@@ -244,7 +244,7 @@ static void writeIthoVal(uint16_t value) {
       Wire.write(byte(0x00));
       Wire.write(h);
 
-      Wire.endTransmission(true);      
+      Wire.endTransmission(true);
     }
     else {
       logInput("Warning: I2C timeout");
@@ -293,6 +293,11 @@ void logInput(const char * inputString) {
   if (xSemaphoreTake(mutexLogTask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
 #endif
 
+#if defined (ENABLE_SERIAL)
+    Serial.println(inputString);
+    Serial.flush();
+#endif
+
     filePrint.open();
 
     Log.notice(inputString);
@@ -304,5 +309,183 @@ void logInput(const char * inputString) {
   }
 #endif
 
+}
+uint8_t cmdCounter = 0;
+
+
+void sendButton(uint8_t number) {
+
+  //82 60 C1 01 01 11 00 00 00 00 (4b: commander ID) (1b: command seq nr) 22 F1 03 00 02 04 (2b: seq) (1b: checksum)
+  uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x11, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x00, 0x22, 0xF1, 0x03, 0x00, 0x01, 0x04, 0x00, 0x00, 0x00 };
+  
+  uint8_t ID0 = getMac(3);
+  uint8_t ID1 = getMac(4);
+  uint8_t ID2 = getMac(5);
+
+  command[11] = ID0;
+  command[12] = ID1;
+  command[13] = ID2;
+
+  command[14] = cmdCounter;
+  cmdCounter++;
+
+  command[19] += number;
+
+  command[sizeof(command)-1] = checksum(command, sizeof(command)-1);
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+}
+
+void sendJoinI2C() {
+
+  uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x0C, 0x00, 0x22, 0xF1, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+  uint8_t ID0 = getMac(3);
+  uint8_t ID1 = getMac(4);
+  uint8_t ID2 = getMac(5);
+  
+  command[11] = ID0;
+  command[12] = ID1;
+  command[13] = ID2;
+
+  command[14] = cmdCounter;
+  cmdCounter++;
+
+  command[21] = ID0;
+  command[22] = ID1;
+  command[23] = ID2;
+
+  command[27] = ID0;
+  command[28] = ID1;
+  command[29] = ID2;
+
+  command[sizeof(command)-1] = checksum(command, sizeof(command)-1);
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+
+
+}
+
+void sendLeaveI2C() {
+
+  uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x14, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x06, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+  uint8_t ID0 = getMac(3);
+  uint8_t ID1 = getMac(4);
+  uint8_t ID2 = getMac(5);
+//
+//  ID0 = 51;
+//  ID1 = 102;
+//  ID2 = 153;   
+  
+  command[11] = ID0;
+  command[12] = ID1;
+  command[13] = ID2;
+
+  command[14] = cmdCounter;
+  cmdCounter++;
+
+  command[21] = ID0;
+  command[22] = ID1;
+  command[23] = ID2;
+
+  command[sizeof(command)-1] = checksum(command, sizeof(command)-1);
+
+//  for (uint8_t i = 0; i < sizeof(command); i++) {
+//    Serial.print(command[i], HEX);
+//    if (i < sizeof(command)-1) Serial.print(",");
+//  }
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+  
+}
+
+void sendQueryDevicetype() {
+
+  uint8_t command[] = { 0x82,0x80,0x90,0xE0,0x04,0x00,0x8A };
+
+    while (digitalRead(SCLPIN) == LOW ) {
+      yield();
+      delay(1);
+    }
+  
+    Wire.beginTransmission(byte(0x41));
+    for (uint8_t i = 1; i < sizeof(command); i++) {
+      Wire.write(command[i]);
+    }
+    uint8_t err = Wire.endTransmission(true);
+  
+    char c[32] = {};
+    uint8_t i = 0;
+  
+    Wire.requestFrom(byte(0x41), 25);
+    while (Wire.available()) {
+      c[i] = Wire.read();
+      i++;
+      if (i > sizeof(c)) break;
+    }
+  
+    jsonLogMessage(c, RFLOG);  
+  
+}
+
+void sendQueryStatusFormat() {
+
+  uint8_t command[] = { 0x82,0x80,0xA4,0x00,0x04,0x00,0x56 };
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+
+}
+
+void sendQueryStatus() {
+
+  uint8_t command[] = { 0x82,0x80,0xA4,0x01,0x04,0x00,0x55 };
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
 
 }

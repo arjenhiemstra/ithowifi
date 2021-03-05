@@ -319,6 +319,30 @@ $(document).ready(function() {
       $('.hidden').removeClass('hidden');
       websock.send('{\"wifiscan\":true}');
     }
+    else if ($(this).attr('id') == 'button1') {
+      websock.send('{\"ithobutton\":1}');
+    }
+    else if ($(this).attr('id') == 'button2') {
+      websock.send('{\"ithobutton\":2}');
+    }
+    else if ($(this).attr('id') == 'button3') {
+      websock.send('{\"ithobutton\":3}');
+    }
+    else if ($(this).attr('id') == 'buttonjoin') {
+      websock.send('{\"ithobutton\":11}');
+    }
+    else if ($(this).attr('id') == 'buttonleave') {
+      websock.send('{\"ithobutton\":99}');
+    }
+    else if ($(this).attr('id') == 'buttontype') {
+      websock.send('{\"ithobutton\":20}');
+    }
+    else if ($(this).attr('id') == 'buttonstatus') {
+      websock.send('{\"ithobutton\":30}');
+    }
+    else if ($(this).attr('id') == 'buttonstatusformat') {
+      websock.send('{\"ithobutton\":31}');
+    }            
     else if ($(this).attr('id') == 'updatesubmit') {
       e.preventDefault();
       $('#uploadProgress').show();
@@ -540,6 +564,7 @@ function update_page(page) {
     if (page == 'reset') { $('#main').append(html_reset); }
     if (page == 'update') { $('#main').append(html_update); }
     if (page == 'debug') { $('#main').load( 'debug' ); }
+    if (page == 'test') { $('#main').load( 'test' ); }
 }
 
 //handle menu collapse on smaller screens

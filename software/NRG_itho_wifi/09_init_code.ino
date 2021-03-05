@@ -105,6 +105,7 @@ void failSafeBoot() {
 void hardwareInit() {
 
   Wire.begin(SDAPIN, SCLPIN, 0);
+  
 
   pinMode(STATUSPIN, INPUT);
   pinMode(WIFILED, OUTPUT);
@@ -119,6 +120,7 @@ void hardwareInit() {
 }
 
 void ithoInitCheck() {
+  ithocheckDone = true;
   if (digitalRead(STATUSPIN) == LOW) {
     strcpy(i2cstat, "initok");
   }
@@ -681,6 +683,9 @@ void webServerInit() {
   });
   server.on("/api.html", HTTP_GET, handleAPI);
   server.on("/debug", HTTP_GET, handleDebug);
+
+  server.on("/test", HTTP_GET, handleTest);
+  
 
   //Log file download
   server.on("/curlog", HTTP_GET, handleCurLogDownload);

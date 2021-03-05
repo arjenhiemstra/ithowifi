@@ -200,6 +200,7 @@ bool sysStatReq = false;
 bool runscan = false;
 bool updateIthoMQTT = false;
 bool SHT3xupdated = false;
+bool ithocheckDone = false;
 volatile bool updateItho = false;
 volatile bool ithoCheck = false;
 volatile bool saveRemotesflag = false;
@@ -211,6 +212,12 @@ size_t content_len;
 
 typedef enum { WEBINTERFACE, RFLOG } logtype;
 
+static char i2cresult[128];
+static bool callback_called = false;
+
+typedef void (*i2c_slave_callback_t)(const uint8_t* data, size_t len);
+
+void i2c_slave_init(i2c_slave_callback_t cb);
 
 void dummyFunct() {
   //some weird stuff with the arduino IDE
