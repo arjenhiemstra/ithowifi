@@ -242,7 +242,7 @@ void TaskCC1101( void * pvParameters ) {
         }
       }
       TaskCC1101HWmark = uxTaskGetStackHighWaterMark( NULL );
-      vTaskDelay(10 / portTICK_PERIOD_MS);
+      vTaskDelay(25 / portTICK_PERIOD_MS);
     }
   } //if (strcmp(systemConfig.itho_rf_support, "on") == 0)
   //else delete task

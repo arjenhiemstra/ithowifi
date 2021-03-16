@@ -36,7 +36,7 @@ void TaskSysControl( void * pvParameters ) {
     }
 
     TaskSysControlHWmark = uxTaskGetStackHighWaterMark( NULL );
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(25 / portTICK_PERIOD_MS);
   }
 
   //else delete task

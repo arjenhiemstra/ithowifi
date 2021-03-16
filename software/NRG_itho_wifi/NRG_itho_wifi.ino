@@ -4,7 +4,7 @@
 #define ENABLE_FAILSAVE_BOOT
 //#define INFORMATIVE_LOGGING
 //#define ENABLE_SERIAL
-#define ENABLE_SHT30_SENSOR_SUPPORT
+//#define ENABLE_SHT30_SENSOR_SUPPORT
 
 /*
  * 
@@ -37,7 +37,7 @@
 #include <SPIFFSEditor.h>       // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
 #include <DNSServer.h>
 #include <PubSubClient.h>     // https://github.com/arjenhiemstra/PubSubClientStatic/tree/hestia [latest hestia branch], forked from https://github.com/knolleary/pubsubclient and https://github.com/mhmtsui/pubsubclient
-#include <Wire.h>
+//#include <Wire.h>
 #include <time.h>
 #include <Ticker.h>
 

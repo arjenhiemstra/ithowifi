@@ -104,8 +104,11 @@ void failSafeBoot() {
 
 void hardwareInit() {
 
+#if defined (__HW_VERSION_ONE__)
   Wire.begin(SDAPIN, SCLPIN, 0);
-  
+//#elif defined (__HW_VERSION_TWO__)
+//  i2c_master_init();
+#endif
 
   pinMode(STATUSPIN, INPUT);
   pinMode(WIFILED, OUTPUT);
@@ -181,26 +184,26 @@ void logInit() {
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
 void initSensor() {
 
-if (strcmp(systemConfig.syssht30, "on") == 0) {
-  if (sht_org.init() && sht_org.readSample()) {
-    Wire.endTransmission(true);
-    SHT3x_original = true;
+  if (strcmp(systemConfig.syssht30, "on") == 0) {
+    if (sht_org.init() && sht_org.readSample()) {
+      Wire.endTransmission(true);
+      SHT3x_original = true;
+    }
+    else if (sht_alt.init() && sht_alt.readSample()) {
+      Wire.endTransmission(true);
+      SHT3x_alternative = true;
+    }
+    if (SHT3x_original) {
+      logInput("Setup: Original SHT30 sensor found");
+    }
+    else if (SHT3x_alternative) {
+      logInput("Setup: Alternative SHT30 sensor found");
+    }
+    else {
+      strlcpy(systemConfig.syssht30, "off", sizeof(systemConfig.syssht30));
+      logInput("Setup: SHT30 sensor not present");
+    }
   }
-  else if (sht_alt.init() && sht_alt.readSample()) {
-    Wire.endTransmission(true);
-    SHT3x_alternative = true;
-  }
-  if (SHT3x_original) {
-    logInput("Setup: Original SHT30 sensor found");
-  }
-  else if (SHT3x_alternative) {
-    logInput("Setup: Alternative SHT30 sensor found");
-  }
-  else {
-    strlcpy(systemConfig.syssht30, "off", sizeof(systemConfig.syssht30));
-    logInput("Setup: SHT30 sensor not present");
-  }  
-}
 
 }
 #endif
@@ -358,7 +361,6 @@ bool connectWiFiSTA()
 #elif defined (__HW_VERSION_TWO__)
   esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
-  delay(100);
 
   if (strcmp(wifiConfig.dhcp, "off") == 0) {
     bool configOK = true;
@@ -371,10 +373,10 @@ bool connectWiFiSTA()
     if (!staticIP.fromString(wifiConfig.ip)) {
       configOK = false;
     }
-    if (!gateway.fromString(wifiConfig.subnet)) {
+    if (!gateway.fromString(wifiConfig.gateway)) {
       configOK = false;
     }
-    if (!subnet.fromString(wifiConfig.gateway)) {
+    if (!subnet.fromString(wifiConfig.subnet)) {
       configOK = false;
     }
     if (!dns1.fromString(wifiConfig.dns1)) {
@@ -390,6 +392,8 @@ bool connectWiFiSTA()
       WiFi.config(staticIP, gateway, subnet, dns1 , dns2);
     }
   }
+
+  delay(200);
 
 #if defined (__HW_VERSION_ONE__)
   WiFi.hostname(hostName());
@@ -599,8 +603,8 @@ void webServerInit() {
   server.on("/upload", HTTP_POST, [](AsyncWebServerRequest * request) {
     if (strcmp(systemConfig.syssec_web, "on") == 0) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
-    }    
+        return request->requestAuthentication();
+    }
     request->send(200);
   }, [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     //Handle upload
@@ -619,7 +623,7 @@ void webServerInit() {
   }
   else {
     server.addHandler(new SPIFFSEditor(SPIFFS, "", ""));
-  }  
+  }
 #endif
 
   // css_code
@@ -677,7 +681,7 @@ void webServerInit() {
   server.on("/index.htm", HTTP_ANY, [](AsyncWebServerRequest * request) {
     if (strcmp(systemConfig.syssec_web, "on") == 0) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
+        return request->requestAuthentication();
     }
     request->send_P(200, "text/html", html_mainpage);
   });
@@ -685,7 +689,7 @@ void webServerInit() {
   server.on("/debug", HTTP_GET, handleDebug);
 
   server.on("/test", HTTP_GET, handleTest);
-  
+
 
   //Log file download
   server.on("/curlog", HTTP_GET, handleCurLogDownload);
@@ -695,7 +699,7 @@ void webServerInit() {
   server.on("/login", HTTP_GET, [](AsyncWebServerRequest * request) {
     if (strcmp(systemConfig.syssec_web, "on") == 0) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
+        return request->requestAuthentication();
     }
     request->send(200, "text/plain", "Login Success!");
   });
@@ -703,7 +707,7 @@ void webServerInit() {
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest * request) {
     if (strcmp(systemConfig.syssec_web, "on") == 0) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
+        return request->requestAuthentication();
     }
     request->send(200, "text/html", "<form method='POST' action='/update' "
                   "enctype='multipart/form-data'><input "
@@ -714,7 +718,7 @@ void webServerInit() {
   server.on("/update", HTTP_POST, [](AsyncWebServerRequest * request) {
     if (strcmp(systemConfig.syssec_web, "on") == 0) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
+        return request->requestAuthentication();
     }
     shouldReboot = !Update.hasError();
     AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", shouldReboot ? "OK" : "FAIL");
@@ -753,10 +757,11 @@ void webServerInit() {
 
 #if defined (__HW_VERSION_ONE__)
       Update.runAsync(true);
-      if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)) {
+      if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000))
 #elif defined (__HW_VERSION_TWO__)
-      if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+      if (!Update.begin(UPDATE_SIZE_UNKNOWN))
 #endif
+      {
         Update.printError(Serial);
       } else {
         Serial.end();
@@ -780,7 +785,7 @@ void webServerInit() {
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest * request) {
     if (strcmp(systemConfig.syssec_web, "on") == 0) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
+        return request->requestAuthentication();
     }
     jsonLogMessage(F("Reset requested Device will reboot in a few seconds..."), WEBINTERFACE);
     delay(200);
