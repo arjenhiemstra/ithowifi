@@ -8,7 +8,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   int16_t val = -1;
   unsigned long timer = 0;
   bool dtype = true;
-  if (strcmp(systemConfig.mqtt_domoticz_active, "on") == 0) {
+  if (systemConfig.mqtt_domoticz_active) {
     dtype = false;
   }
 
@@ -151,7 +151,7 @@ void updateState(uint16_t newState) {
   if (mqttClient.connected()) {
     char buffer[512];
 
-    if (strcmp(systemConfig.mqtt_domoticz_active, "on") == 0) {
+    if (systemConfig.mqtt_domoticz_active) {
       int nvalue = 1;
       double state = 1.0;
       if (newState > 0) {
@@ -207,6 +207,14 @@ void add2queue() {
   ithoQueue.add2queue(nextIthoVal, nextIthoTimer, systemConfig.nonQ_cmd_clearsQ);
 }
 
+inline uint8_t checksum(const uint8_t* buf, size_t buflen) {
+  uint8_t sum = 0;
+  while (buflen--) {
+    sum += *buf++;
+  }
+  return -sum;
+}
+
 // Update itho Value
 static void writeIthoVal(uint16_t value) {
 
@@ -226,25 +234,27 @@ static void writeIthoVal(uint16_t value) {
       timeout++;
     }
     if (timeout != 1000) {
+
+      if (systemConfig.itho_forcemedium) {
+        sendButton(2);
+        delay(25);
+      }
       updateIthoMQTT = true;
-      
-      Wire.beginTransmission(byte(0x00));
-      delay(10);
-      //write start of message
-      Wire.write(byte(0x60));
-      Wire.write(byte(0xC0));
-      Wire.write(byte(0x20));
-      Wire.write(byte(0x01));
-      Wire.write(byte(0x02));
+
+      uint8_t command[] = {0x00, 0x60, 0xC0, 0x20, 0x01, 0x02, 0xFF, 0x00, 0xFF};
 
       uint8_t b = (uint8_t) value;
-      uint8_t h = 0 - (67 + b);
-
-      Wire.write(b);
-      Wire.write(byte(0x00));
-      Wire.write(h);
-
-      Wire.endTransmission(true);      
+      
+      command[6] = b;
+      //command[8] = 0 - (67 + b);
+      command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+            
+      Wire.beginTransmission(byte(0x00));
+      for (uint8_t i = 1; i < sizeof(command); i++) {
+        Wire.write(command[i]);
+      }
+      Wire.endTransmission(true);
+      
     }
     else {
       logInput("Warning: I2C timeout");
@@ -253,6 +263,241 @@ static void writeIthoVal(uint16_t value) {
     }
 
   }
+
+}
+
+uint8_t cmdCounter = 0;
+
+void sendButton(uint8_t number) {
+
+  uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x11, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x22, 0xF1, 0x03, 0x00, 0x01, 0x04, 0x00, 0x00, 0xFF };
+
+  uint8_t id0 = getMac(3);
+  uint8_t id1 = getMac(4);
+  uint8_t id2 = getMac(5);
+
+  command[11] = id0;
+  command[12] = id1;
+  command[13] = id2;
+
+  command[14] = cmdCounter;
+  cmdCounter++;
+
+  if (systemConfig.itho_vremswap) {
+    if(number == 1) { number = 3; }
+    else if(number == 3) { number = 1; }
+  }
+  
+  command[19] += number;
+
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+}
+
+void sendJoinI2C() {
+
+  uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x1F, 0xC9, 0x0C, 0x00, 0x22, 0xF1, 0xFF, 0xFF, 0xFF, 0x01, 0x10, 0xE0, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF };
+
+  uint8_t id0 = getMac(3);
+  uint8_t id1 = getMac(4);
+  uint8_t id2 = getMac(5);
+
+  command[11] = id0;
+  command[12] = id1;
+  command[13] = id2;
+
+  command[14] = cmdCounter;
+  cmdCounter++;
+
+  command[21] = id0;
+  command[22] = id1;
+  command[23] = id2;
+
+  command[27] = id0;
+  command[28] = id1;
+  command[29] = id2;
+
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+
+
+}
+
+void sendLeaveI2C() {
+
+  uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x14, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x1F, 0xC9, 0x06, 0x00, 0x1F, 0xC9, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF };
+
+  uint8_t id0 = getMac(3);
+  uint8_t id1 = getMac(4);
+  uint8_t id2 = getMac(5);
+  //
+  //  ID0 = 51;
+  //  ID1 = 102;
+  //  ID2 = 153;
+
+  command[11] = id0;
+  command[12] = id1;
+  command[13] = id2;
+
+  command[14] = cmdCounter;
+  cmdCounter++;
+
+  command[21] = id0;
+  command[22] = id1;
+  command[23] = id2;
+
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+
+}
+
+void sendQueryDevicetype() {
+//
+//  /* Optimized code with error checking, since you have your byte sequence defined in
+//    an array, use the block handling Wire methods
+//  */
+//
+//  char logbuffer[128] = {};
+//  uint8_t command[] = { 0x80, 0x90, 0xE0, 0x04, 0x00, 0x8A };
+//
+//  i2c_err_t err = Wire.writeTransmission(0x41, command, sizeof(command), true);
+//
+//  /* i2c_err_t will return:  0 .. 8
+//    const char ERRORTEXT[] =
+//      "OK\0"     // successful
+//      "DEVICE\0"  // hardware failure in ESP32, usually to IRQ available (unusual)
+//      "ACK\0"   // Slave Device did not acknowledge I2C address
+//      "TIMEOUT\0" // SCL held low longer than 12ms by slave
+//      "BUS\0"   // I2C bus was not valid ( usually returned because SCL or SDA are held low ,bus shored to ground
+//      "BUSY\0"  // I2C bus in use by other master device(external to esp32) or SLAVE is holding SCL
+//      "MEMORY\0"  // unable to allocate internal buffer
+//      "CONTINUE\0"  // Wire buffers commands until SEND_STOP is set to TRUE, the ESP32 cannot execute a ReSTART operation until a Wire.endTransmission(true), or Wire.requestFrom(id,true);
+//      "NO_BEGIN\0"  // Wire.write() issued without a Wire.begin()
+//      "\0";
+//  */
+//
+//  if (err != 0) { // error has occurred, report it.
+//    sprintf(logbuffer, "I2C Write Failed = %d (%s)\n", err, Wire.getErrorText(err));
+//    jsonLogMessage(logbuffer, RFLOG);
+//    strcpy(logbuffer, "");
+//  }
+//  else { // Successful command to device, now readback data
+//
+//    uint8_t c[32];
+//    uint32_t count = 0;
+//    err = Wire.readTransmission(0x41, c, 10, true, &count); // only request 25 bytes
+//    if (err != 0) {
+//      sprintf(logbuffer, "I2C Read Failed = %d (%s)\n", err, Wire.getErrorText(err));
+//      jsonLogMessage(logbuffer, RFLOG);
+//      strcpy(logbuffer, "");
+//    }
+//    else {
+//      // data is in 'c' already, up to the requested number of bytes, actual number of bytes received is in 'count'
+//      sprintf(logbuffer, " I2C received %d bytes of data\n", count);
+//      jsonLogMessage(logbuffer, RFLOG);
+//      strcpy(logbuffer, "");
+//      uint32_t i = 0;
+//      while (i < count) {
+//        //sprintf(logbuffer, " c[%02d]=%02x (%c)", i, c[i], ((c[i] >= 32) && (c[i] <= 127) ? c[i]) );
+//        sprintf(logbuffer, " c[%02d]=%02x", i, c[i]);
+//        jsonLogMessage(logbuffer, RFLOG);
+//        strcpy(logbuffer, "");
+//        i++;
+//      }
+//
+//      //response will be formatted like:
+//      //0x80,0x82,0x90,0xE0,0x01,0x12,0x00,0x01,0x00,0x14,0x12,0x0B,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0x00,0x62
+//    }
+//    //
+//    //    uint8_t command[] = { 0x82, 0x80, 0x90, 0xE0, 0x04, 0x00, 0x8A };
+//    //
+//    //    while (digitalRead(SCLPIN) == LOW ) {
+//    //      yield();
+//    //      delay(1);
+//    //    }
+//    //
+//    //    Wire.beginTransmission(byte(0x41));
+//    //    for (uint8_t i = 1; i < sizeof(command); i++) {
+//    //      Wire.write(command[i]);
+//    //    }
+//    //    uint8_t err = Wire.endTransmission(true);
+//    //
+//    //    char c[32] = {};
+//    //    uint8_t i = 0;
+//    //
+//    //    Wire.requestFrom(byte(0x41), 25);
+//    //    while (Wire.available()) {
+//    //      c[i] = Wire.read();
+//    //      i++;
+//    //      if (i > sizeof(c)) break;
+//    //    }
+//    //
+//    //    jsonLogMessage(c, RFLOG);
+//
+//  }
+}
+
+void sendQueryStatusFormat() {
+
+//  uint8_t command[] = { 0x82, 0x80, 0xA4, 0x00, 0x04, 0x00, 0x56 };
+//
+//  while (digitalRead(SCLPIN) == LOW ) {
+//    yield();
+//    delay(1);
+//  }
+//
+//  Wire.beginTransmission(byte(0x41));
+//  for (uint8_t i = 1; i < sizeof(command); i++) {
+//    Wire.write(command[i]);
+//  }
+//  Wire.endTransmission(true);
+
+}
+
+void sendQueryStatus() {
+
+//  uint8_t command[] = { 0x82, 0x80, 0xA4, 0x01, 0x04, 0x00, 0x55 };
+//
+//  while (digitalRead(SCLPIN) == LOW ) {
+//    yield();
+//    delay(1);
+//  }
+//
+//  Wire.beginTransmission(byte(0x41));
+//  for (uint8_t i = 1; i < sizeof(command); i++) {
+//    Wire.write(command[i]);
+//  }
+//  Wire.endTransmission(true);
 
 }
 

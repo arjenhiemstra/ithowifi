@@ -17,10 +17,10 @@ IthoQueue::~IthoQueue() {
   queueUpdater.detach();
 } //~IthoQueue
 
-bool IthoQueue::add2queue(int speedVal, unsigned long validVal, char* nonQ_cmd_clearsQ) {
+bool IthoQueue::add2queue(int speedVal, unsigned long validVal, uint8_t nonQ_cmd_clearsQ) {
   if (validVal == 0) {
     fallBackSpeed = speedVal;
-    if (strcmp(nonQ_cmd_clearsQ, "on") == 0) {
+    if (nonQ_cmd_clearsQ) {
       clear_queue();
     }
     return true;

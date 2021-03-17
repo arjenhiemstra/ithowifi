@@ -9,21 +9,24 @@ SystemConfig::SystemConfig() {
   strlcpy(config_struct_version, CONFIG_VERSION, sizeof(config_struct_version));
   strlcpy(sys_username, "admin", sizeof(sys_username));
   strlcpy(sys_password, "admin", sizeof(sys_password));    
-  strlcpy(syssec_web, "off", sizeof(syssec_web));
-  strlcpy(syssec_api, "off", sizeof(syssec_api));
-  strlcpy(syssec_edit, "on", sizeof(syssec_edit));
-  strlcpy(syssht30, "off", sizeof(syssht30));
-  strlcpy(mqtt_active, "off", sizeof(mqtt_active));
+  syssec_web = 0;
+  syssec_api = 0;
+  syssec_edit = 0;
+  syssht30 = 0;
+  mqtt_active = 0;
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
   strlcpy(mqtt_username, "", sizeof(mqtt_username));
   strlcpy(mqtt_password, "", sizeof(mqtt_password));
   mqtt_port = 1883;
   mqtt_version = 1;
   strlcpy(mqtt_state_topic, "itho/state", sizeof(mqtt_state_topic));
+  strlcpy(mqtt_sensor_topic, "itho/sensor", sizeof(mqtt_sensor_topic));
   strlcpy(mqtt_state_retain, "yes", sizeof(mqtt_state_retain));
   strlcpy(mqtt_cmd_topic, "itho/cmd", sizeof(mqtt_cmd_topic));
   strlcpy(mqtt_lwt_topic, "itho/lwt", sizeof(mqtt_lwt_topic));
-  strlcpy(mqtt_domoticz_active, "off", sizeof(mqtt_domoticz_active));
+  mqtt_domoticz_active = 0;
+  mqtt_idx = 1;
+  sensor_idx = 1;
   mqtt_updated = false;
   get_mqtt_settings = false;
   get_sys_settings = false;
@@ -34,9 +37,13 @@ SystemConfig::SystemConfig() {
   itho_timer1 = 10;
   itho_timer2 = 20;
   itho_timer3 = 30;
-  strlcpy(itho_rf_support, "off", sizeof(itho_rf_support));
+  itho_sendjoin = 0;
+  itho_forcemedium = 0;
+  itho_vremapi = 0;
+  itho_vremswap = 0;
+  itho_rf_support = 0;
   rfInitOK = false;
-  strlcpy(nonQ_cmd_clearsQ, "on", sizeof(nonQ_cmd_clearsQ));
+  nonQ_cmd_clearsQ = 1;
   
   itho_updated = false;
   get_itho_settings = false;
@@ -67,25 +74,25 @@ bool SystemConfig::set(JsonObjectConst obj) {
   }
   if (!(const char*)obj["syssec_web"].isNull()) {
     updated = true;
-    strlcpy(syssec_web, obj["syssec_web"], sizeof(syssec_web));
+    syssec_web = obj["syssec_web"];
   }  
   if (!(const char*)obj["syssec_api"].isNull()) {
     updated = true;
-    strlcpy(syssec_api, obj["syssec_api"], sizeof(syssec_api));
+    syssec_api = obj["syssec_api"];
   }
   if (!(const char*)obj["syssec_edit"].isNull()) {
     updated = true;
-    strlcpy(syssec_edit, obj["syssec_edit"], sizeof(syssec_edit));
+    syssec_edit = obj["syssec_edit"];
   }
   if (!(const char*)obj["syssht30"].isNull()) {
     updated = true;
-    strlcpy(syssht30, obj["syssht30"], sizeof(syssht30));
+    syssht30 = obj["syssht30"];
   }
   //MQTT Settings parse
   if (!(const char*)obj["mqtt_active"].isNull()) {
     mqtt_updated = true;
     updated = true;
-    strlcpy(mqtt_active, obj["mqtt_active"], sizeof(mqtt_active));
+    mqtt_active = obj["mqtt_active"];
   }
   if (!(const char*)obj["mqtt_serverName"].isNull()) {
     updated = true;
@@ -111,6 +118,10 @@ bool SystemConfig::set(JsonObjectConst obj) {
     updated = true;
     strlcpy(mqtt_state_topic, obj["mqtt_state_topic"], sizeof(mqtt_state_topic));
   }
+  if (!(const char*)obj["mqtt_sensor_topic"].isNull()) {
+    updated = true;
+    strlcpy(mqtt_sensor_topic, obj["mqtt_sensor_topic"], sizeof(mqtt_sensor_topic));
+  }
   if (!(const char*)obj["mqtt_state_retain"].isNull()) {
     updated = true;
     strlcpy(mqtt_state_retain, obj["mqtt_state_retain"], sizeof(mqtt_state_retain));
@@ -125,11 +136,15 @@ bool SystemConfig::set(JsonObjectConst obj) {
   }
   if (!(const char*)obj["mqtt_domoticz_active"].isNull()) {
     updated = true;
-    strlcpy(mqtt_domoticz_active, obj["mqtt_domoticz_active"], sizeof(mqtt_domoticz_active));
+    mqtt_domoticz_active = obj["mqtt_domoticz_active"];
   }
   if (!(const char*)obj["mqtt_idx"].isNull()) {
     updated = true;
     mqtt_idx = obj["mqtt_idx"];
+  }
+  if (!(const char*)obj["sensor_idx"].isNull()) {
+    updated = true;
+    sensor_idx = obj["sensor_idx"];
   }
   if (!(const char*)obj["itho_fallback"].isNull()) {
     //itho_updated = true;
@@ -161,9 +176,25 @@ bool SystemConfig::set(JsonObjectConst obj) {
     updated = true;
     itho_timer3 = obj["itho_timer3"];
   }
+  if (!(const char*)obj["itho_sendjoin"].isNull()) {
+    updated = true;
+    itho_sendjoin = obj["itho_sendjoin"];
+  }
+  if (!(const char*)obj["itho_forcemedium"].isNull()) {
+    updated = true;
+    itho_forcemedium = obj["itho_forcemedium"];
+  }
+  if (!(const char*)obj["itho_vremapi"].isNull()) {
+    updated = true;
+    itho_vremapi = obj["itho_vremapi"];
+  }
+  if (!(const char*)obj["itho_vremswap"].isNull()) {
+    updated = true;
+    itho_vremswap = obj["itho_vremswap"];
+  }
   if (!(const char*)obj["itho_rf_support"].isNull()) {
     updated = true;
-    strlcpy(itho_rf_support, obj["itho_rf_support"], sizeof(itho_rf_support));
+    itho_rf_support = obj["itho_rf_support"];
   }
   if (!(const char*)obj["rfInitOK"].isNull()) {
     updated = true;
@@ -171,7 +202,7 @@ bool SystemConfig::set(JsonObjectConst obj) {
   }
   if (!(const char*)obj["nonQ_cmd_clearsQ"].isNull()) {
     updated = true;
-    strlcpy(nonQ_cmd_clearsQ, obj["nonQ_cmd_clearsQ"], sizeof(nonQ_cmd_clearsQ));
+    nonQ_cmd_clearsQ = obj["nonQ_cmd_clearsQ"];
   }    
   return updated;
 }
@@ -190,6 +221,8 @@ void SystemConfig::get(JsonObject obj) const {
     obj["syssec_api"] = syssec_api;
     obj["syssec_edit"] = syssec_edit;
     obj["syssht30"] = syssht30;
+    obj["itho_rf_support"] = itho_rf_support;
+    obj["rfInitOK"] = rfInitOK;    
   }
   if (complete || get_mqtt_settings) {
     get_mqtt_settings = false;
@@ -200,11 +233,13 @@ void SystemConfig::get(JsonObject obj) const {
     obj["mqtt_port"] = mqtt_port;
     obj["mqtt_version"] = mqtt_version;
     obj["mqtt_state_topic"] = mqtt_state_topic;
+    obj["mqtt_sensor_topic"] = mqtt_sensor_topic;
     obj["mqtt_state_retain"] = mqtt_state_retain;
     obj["mqtt_cmd_topic"] = mqtt_cmd_topic;
     obj["mqtt_lwt_topic"] = mqtt_lwt_topic;
     obj["mqtt_domoticz_active"] = mqtt_domoticz_active;
     obj["mqtt_idx"] = mqtt_idx;
+    obj["sensor_idx"] = sensor_idx;
   }
   if (complete || get_itho_settings) {
     get_itho_settings = false;
@@ -215,8 +250,10 @@ void SystemConfig::get(JsonObject obj) const {
     obj["itho_timer1"] = itho_timer1;
     obj["itho_timer2"] = itho_timer2;
     obj["itho_timer3"] = itho_timer3;
-    obj["itho_rf_support"] = itho_rf_support;
-    obj["rfInitOK"] = rfInitOK;
+    obj["itho_sendjoin"] = itho_sendjoin;
+    obj["itho_forcemedium"] = itho_forcemedium;
+    obj["itho_vremapi"] = itho_vremapi;
+    obj["itho_vremswap"] = itho_vremswap;  
     obj["nonQ_cmd_clearsQ"] = nonQ_cmd_clearsQ;
   }
   obj["version_of_program"] = config_struct_version;

@@ -26,6 +26,7 @@ const char html_mainpage[] PROGMEM = R"=====(
                 <li class="pure-menu-item"><a href="wifisetup" class="pure-menu-link">Wifi setup</a></li>
                 <li class="pure-menu-item"><a href="system" class="pure-menu-link">System settings</a></li>
                 <li class="pure-menu-item"><a href="itho" class="pure-menu-link">Itho settings</a></li>
+                <li id="remotemenu" class="pure-menu-item hidden"><a href="remotes" class="pure-menu-link">RF Remotes</a></li>
                 <li class="pure-menu-item"><a href="mqtt" class="pure-menu-link">MQTT</a></li>
                 <li class="pure-menu-item"><a href="api" class="pure-menu-link">API</a></li>
                 <li class="pure-menu-item"><a href="help" class="pure-menu-link">Help</a></li>
@@ -55,7 +56,7 @@ void handleAPI(AsyncWebServerRequest *request) {
   
   int params = request->params();
   
-  if (strcmp(systemConfig.syssec_api, "on") == 0) {
+  if (systemConfig.syssec_api) {
     bool username = false;
     bool password = false;
     
@@ -238,7 +239,7 @@ void handleAPI(AsyncWebServerRequest *request) {
 }
 
 void handleDebug(AsyncWebServerRequest *request) {
-  if (strcmp(systemConfig.syssec_web, "on") == 0) {
+  if (systemConfig.syssec_web) {
     if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
       return request->requestAuthentication();          
   }  
@@ -247,7 +248,10 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(F("<div class=\"header\"><h1>Debug page</h1></div><br><br>"));
   response->print(F("<div>Config version: "));
   response->print(CONFIG_VERSION);
-  response->print(F("<br><br><span>Itho I2C connection status: </span><span id=\'i2cstat\'>unknown</span></div>"));
+  response->print(F("<br><br><span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span></div>"));
+  response->print("<br><span>I2C virtual remote commands:</span><br><button id=\"button1\" class=\"pure-button pure-button-primary\">Low</button>&nbsp;<button id=\"button2\" class=\"pure-button pure-button-primary\">Medium</button>&nbsp;<button id=\"button3\" class=\"pure-button pure-button-primary\">High</button><br><br>");
+  response->print("<button id=\"buttonjoin\" class=\"pure-button pure-button-primary\">Join</button>&nbsp;<button id=\"buttonleave\" class=\"pure-button pure-button-primary\">Leave</button><br>");
+  
   response->print(F("<br><span>File system: </span><span>"));
 #if defined (__HW_VERSION_ONE__)
   SPIFFS.info(fs_info);
@@ -322,7 +326,7 @@ void handleDebug(AsyncWebServerRequest *request) {
 }
 
 void handleCurLogDownload(AsyncWebServerRequest *request) {
-  if (strcmp(systemConfig.syssec_web, "on") == 0) {
+  if (systemConfig.syssec_web) {
     if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
       return request->requestAuthentication();          
   }  
@@ -337,7 +341,7 @@ void handleCurLogDownload(AsyncWebServerRequest *request) {
 }
 
 void handlePrevLogDownload(AsyncWebServerRequest *request) {
-  if (strcmp(systemConfig.syssec_web, "on") == 0) {
+  if (systemConfig.syssec_web) {
     if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
       return request->requestAuthentication();          
   }  

@@ -24,18 +24,6 @@ void TaskInit( void * pvParameters ) {
 
   vTaskDelete( NULL );
   
-//  while (1) {
-//
-//    delay(0);
-//    yield();
-//
-//    TaskTimeout.once_ms(100, []() {
-//      logInput("Error: MainTask timed out!");
-//    });
-//
-//    TaskInitHWmark = uxTaskGetStackHighWaterMark( NULL );
-//    vTaskDelay(10 / portTICK_PERIOD_MS);
-//  }
 }
 
 #endif
