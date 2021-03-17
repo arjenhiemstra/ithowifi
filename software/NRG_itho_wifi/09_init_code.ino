@@ -120,10 +120,10 @@ void hardwareInit() {
 
 void ithoInitCheck() {
   if (digitalRead(STATUSPIN) == LOW) {
-    strcpy(i2cstat, "initok");
+    ithoInit = 1;
   }
   else {
-    strcpy(i2cstat, "nok");
+    ithoInit = -1;
   }
 }
 
@@ -142,18 +142,21 @@ void logInit() {
 
 #if defined (__HW_VERSION_ONE__)
   sprintf(logBuff, "System boot, last reset reason: %s", ESP.getResetReason().c_str());
+  if(strcmp(ESP.getResetReason().c_str(), "Power On") == 0 || strcmp(ESP.getResetReason().c_str(), "External System") == 0) {
+    coldBoot = true;
+  }
 #elif defined (__HW_VERSION_TWO__)
   uint8_t reason = esp_reset_reason();
   char buf[32] = "";
 
   switch ( reason)
   {
-    case 1 : strcpy(buf, "POWERON_RESET"); break;         /**<1,  Vbat power on reset*/
+    case 1 : strcpy(buf, "POWERON_RESET"); coldBoot = true; break;         /**<1,  Vbat power on reset*/
     case 3 : strcpy(buf, "SW_RESET"); break;              /**<3,  Software reset digital core*/
     case 4 : strcpy(buf, "OWDT_RESET"); break;            /**<4,  Legacy watch dog reset digital core*/
     case 5 : strcpy(buf, "DEEPSLEEP_RESET"); break;       /**<5,  Deep Sleep reset digital core*/
     case 6 : strcpy(buf, "SDIO_RESET"); break;            /**<6,  Reset by SLC module, reset digital core*/
-    case 7 : strcpy(buf, "TG0WDT_SYS_RESET"); break;      /**<7,  Timer Group0 Watch dog reset digital core*/
+    case 7 : strcpy(buf, "TG0WDT_SYS_RESET"); coldBoot = true; break;      /**<7,  Timer Group0 Watch dog reset digital core*/
     case 8 : strcpy(buf, "TG1WDT_SYS_RESET"); break;      /**<8,  Timer Group1 Watch dog reset digital core*/
     case 9 : strcpy(buf, "RTCWDT_SYS_RESET"); break;      /**<9,  RTC Watch dog Reset digital core*/
     case 10 : strcpy(buf, "INTRUSION_RESET"); break;      /**<10, Instrusion tested to reset CPU*/
@@ -174,12 +177,15 @@ void logInit() {
   sprintf(logBuff, "HW rev: %s, FW ver.: %s", HWREVISION, FWVERSION);
   logInput(logBuff);
 
+  strcpy(logBuff, "");
+  sprintf(logBuff, "Setup: Virtual remote ID: %d,%d,%d", getMac(6-3),getMac(6-2),getMac(6-1));
+  logInput(logBuff); 
 }
 
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
 void initSensor() {
 
-if (strcmp(systemConfig.syssht30, "on") == 0) {
+if (systemConfig.syssht30) {
   if (sht_org.init() && sht_org.readSample()) {
     Wire.endTransmission(true);
     SHT3x_original = true;
@@ -195,7 +201,7 @@ if (strcmp(systemConfig.syssht30, "on") == 0) {
     logInput("Setup: Alternative SHT30 sensor found");
   }
   else {
-    strlcpy(systemConfig.syssht30, "off", sizeof(systemConfig.syssht30));
+    systemConfig.syssht30 = 0;
     logInput("Setup: SHT30 sensor not present");
   }  
 }
@@ -257,18 +263,22 @@ void handleFormat()
 
 char* hostName() {
   static char hostName[32];
-  // Do a little work to get a unique-ish name. Append the
-  // last two bytes of the MAC (HEX'd):
-  uint8_t mac[6];
+
+  sprintf(hostName, "%s%02x%02x", espName, getMac(6 - 2), getMac(6 - 1));
+
+  return hostName;
+}
+
+uint8_t getMac(uint8_t i) {
+  static uint8_t mac[6];
+
 #if defined (__HW_VERSION_ONE__)
   WiFi.softAPmacAddress(mac);
 #elif defined (__HW_VERSION_TWO__)
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
 #endif
 
-  sprintf(hostName, "%s%02x%02x", espName, mac[6 - 2], mac[6 - 1]);
-
-  return hostName;
+  return mac[i];
 }
 
 void wifiInit() {
@@ -428,12 +438,12 @@ bool connectWiFiSTA()
 void mqttInit() {
   char logBuff[LOG_BUF_SIZE] = "";
 
-  if (strcmp(systemConfig.mqtt_active, "on") == 0) {
+  if (systemConfig.mqtt_active) {
     if (!setupMQTTClient()) {
-      sprintf(logBuff, "MQTT: connection failed, System config: %s", systemConfig.mqtt_active);
+      sprintf(logBuff, "MQTT: connection failed, System config: %d", systemConfig.mqtt_active);
     }
     else {
-      sprintf(logBuff, "MQTT: connected, System config: %s", systemConfig.mqtt_active);
+      sprintf(logBuff, "MQTT: connected, System config: %d", systemConfig.mqtt_active);
     }
     logInput(logBuff);
   }
@@ -442,7 +452,7 @@ void mqttInit() {
 bool setupMQTTClient() {
   int connectResult;
 
-  if (strcmp(systemConfig.mqtt_active, "on") == 0) {
+  if (systemConfig.mqtt_active) {
 
     if (systemConfig.mqtt_serverName != "") {
 
@@ -464,6 +474,9 @@ bool setupMQTTClient() {
       if (mqttClient.connected()) {
         mqttClient.subscribe(systemConfig.mqtt_cmd_topic);
         mqttClient.subscribe(systemConfig.mqtt_state_topic);
+        if (systemConfig.syssht30) {
+          mqttClient.subscribe(systemConfig.mqtt_sensor_topic);
+        }
         mqttClient.subscribe(systemConfig.mqtt_lwt_topic);
         mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", true);
         return true;
@@ -596,7 +609,7 @@ void webServerInit() {
 
   // upload a file to /upload
   server.on("/upload", HTTP_POST, [](AsyncWebServerRequest * request) {
-    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+    if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
         return request->requestAuthentication();          
     }    
@@ -606,14 +619,14 @@ void webServerInit() {
   });
 
 #if defined (__HW_VERSION_ONE__)
-  if (strcmp(systemConfig.syssec_edit, "on") == 0) {
+  if (systemConfig.syssec_edit) {
     server.addHandler(new SPIFFSEditor(systemConfig.sys_username, systemConfig.sys_password));
   }
   else {
     server.addHandler(new SPIFFSEditor("", ""));
   }
 #elif defined (__HW_VERSION_TWO__)
-  if (strcmp(systemConfig.syssec_edit, "on") == 0) {
+  if (systemConfig.syssec_edit) {
     server.addHandler(new SPIFFSEditor(SPIFFS, systemConfig.sys_username, systemConfig.sys_password));
   }
   else {
@@ -674,7 +687,7 @@ void webServerInit() {
   // HTML pages
   server.rewrite("/", "/index.htm");
   server.on("/index.htm", HTTP_ANY, [](AsyncWebServerRequest * request) {
-    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+    if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
         return request->requestAuthentication();          
     }
@@ -689,7 +702,7 @@ void webServerInit() {
 
   // HTTP basic authentication
   server.on("/login", HTTP_GET, [](AsyncWebServerRequest * request) {
-    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+    if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
         return request->requestAuthentication();          
     }
@@ -697,7 +710,7 @@ void webServerInit() {
   });
   // Simple Firmware Update Form
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest * request) {
-    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+    if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
         return request->requestAuthentication();          
     }
@@ -708,7 +721,7 @@ void webServerInit() {
   });
 
   server.on("/update", HTTP_POST, [](AsyncWebServerRequest * request) {
-    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+    if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
         return request->requestAuthentication();          
     }
@@ -774,7 +787,7 @@ void webServerInit() {
   Update.onProgress(otaWSupdate);
 
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest * request) {
-    if (strcmp(systemConfig.syssec_web, "on") == 0) {
+    if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
         return request->requestAuthentication();          
     }

@@ -35,7 +35,7 @@ void execMQTTTasks() {
     setupMQTTClient();
   }
   // handle MQTT:
-  if (strcmp(systemConfig.mqtt_active, "off") == 0) {
+  if (systemConfig.mqtt_active == 0) {
     MQTT_conn_state_new = -5;
   }
   else {
@@ -54,12 +54,38 @@ void execMQTTTasks() {
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
     if (SHT3xupdated) {
       SHT3xupdated = false;
-      char buffer[512];
-      sprintf(buffer, "{\"temp\":%1.1f,\"hum\":%1.1f}", ithoTemp, ithoHum);
-      char topicBuf[128 + 16] = "";
-      strcpy(topicBuf, systemConfig.mqtt_state_topic);
-      strcat(topicBuf, "/sensor");
-      mqttClient.publish(topicBuf, buffer, true);
+      if (mqttClient.connected()) {
+        char buffer[512];
+
+        if (systemConfig.mqtt_domoticz_active) {
+          int humstat = 0;          
+          // Humidity Status
+          if (ithoHum < 31) {
+              humstat = 2;
+          } 
+          else if (ithoHum > 69) {
+              humstat = 3;
+          } 
+          else if (ithoHum > 34 && ithoHum < 66 && ithoTemp > 21 && ithoTemp < 27) {
+              humstat = 1;
+          }
+          
+          char svalue[32];
+          sprintf(svalue, "%1.1f;%1.1f;%d", ithoTemp, ithoHum, humstat);
+
+          StaticJsonDocument<512> root;
+          root["svalue"] = svalue;
+          root["nvalue"] = 0;
+          root["idx"] = systemConfig.sensor_idx;
+          serializeJson(root, buffer);
+          mqttClient.publish(systemConfig.mqtt_state_topic, buffer, true);
+        }
+        else {
+          sprintf(buffer, "{\"temp\":%1.1f,\"hum\":%1.1f}", ithoTemp, ithoHum);
+          mqttClient.publish(systemConfig.mqtt_sensor_topic, buffer, true);
+        }
+        
+      }
     }
 #endif
     mqttClient.loop();
@@ -78,7 +104,15 @@ void execMQTTTasks() {
 }
 
 void execSystemControlTasks() {
-
+  if (systemConfig.itho_sendjoin > 0 && coldBoot && ithoInit == 1 && !joinSend) {
+    joinSend = true;
+    sendJoinI2C();
+    logInput("Virtual remote join command send");
+    if (systemConfig.itho_sendjoin == 1) {
+      systemConfig.itho_sendjoin = 0;
+      saveSystemConfig();
+    }
+  }
   //Itho queue
   if (clearQueue) {
     clearQueue = false;
@@ -86,7 +120,7 @@ void execSystemControlTasks() {
   }
   if (updateItho) {
     updateItho = false;
-    if (strcmp(systemConfig.itho_rf_support, "on") == 0) {
+    if (systemConfig.itho_rf_support) {
       IthoCMD.once_ms(150, add2queue);
     }
     else {
@@ -146,11 +180,11 @@ void execSystemControlTasks() {
 
   }
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
-  if (strcmp(systemConfig.syssht30, "on") == 0) {
+  if (systemConfig.syssht30) {
     if (millis() - SHT3x_readout >= 5000 && (SHT3x_original || SHT3x_alternative)) {
       SHT3x_readout = millis();
       updateSensor();
-    }  
+    }
   }
 #endif
 }
@@ -164,7 +198,7 @@ void execLogAndConfigTasks() {
       jsonLogMessage(debugLog, RFLOG);
     } );
   }
-#endif  
+#endif
   if (saveSystemConfigflag) {
     saveSystemConfigflag = false;
     if (saveSystemConfig()) {
@@ -183,7 +217,7 @@ void execLogAndConfigTasks() {
       jsonLogMessage(F("Wifi settings save failed: Unable to write config file"), WEBINTERFACE);
     }
   }
-#if defined (__HW_VERSION_TWO__)  
+#if defined (__HW_VERSION_TWO__)
   if (saveRemotesflag) {
     saveRemotesflag = false;
     DelayedSave.once_ms(150, []() {
@@ -191,7 +225,7 @@ void execLogAndConfigTasks() {
       jsonWsSend("ithoremotes");
     } );
   }
-#endif  
+#endif
   if (resetWifiConfigflag) {
     resetWifiConfigflag = false;
     if (resetWifiConfig()) {

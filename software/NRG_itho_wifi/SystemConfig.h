@@ -1,7 +1,7 @@
 #ifndef SystemConfig_h
 #define SystemConfig_h
 
-#define CONFIG_VERSION "003" //Change when SystemConfig struc changes
+#define CONFIG_VERSION "004" //Change when SystemConfig struc changes
 
 #include <stdio.h>
 #include <string.h>
@@ -13,22 +13,24 @@ class SystemConfig {
   public:
     char sys_username[22];
     char sys_password[22];
-    char syssec_web[5];
-    char syssec_api[5];
-    char syssec_edit[5];
-    char syssht30[5];
-    char mqtt_active[5];
+    uint8_t syssec_web;
+    uint8_t syssec_api;
+    uint8_t syssec_edit;
+    uint8_t syssht30;
+    uint8_t mqtt_active;
     char mqtt_serverName[65];
     char mqtt_username[32];
     char mqtt_password[32];
     int mqtt_port;
     int mqtt_version;
     char mqtt_state_topic[128];
+    char mqtt_sensor_topic[128];
     char mqtt_state_retain[5];
     char mqtt_cmd_topic[128];
     char mqtt_lwt_topic[128];
-    char mqtt_domoticz_active[4];
+    uint8_t mqtt_domoticz_active;
     uint16_t mqtt_idx;
+    uint16_t sensor_idx;
     mutable bool mqtt_updated;
     mutable bool get_mqtt_settings;
     mutable bool get_sys_settings;
@@ -39,9 +41,13 @@ class SystemConfig {
     uint16_t itho_timer1;
     uint16_t itho_timer2;
     uint16_t itho_timer3;
-    char itho_rf_support[5];
+    uint8_t itho_sendjoin;
+    uint8_t itho_forcemedium;
+    uint8_t itho_vremapi;
+    uint8_t itho_vremswap;
+    uint8_t itho_rf_support;
     mutable bool rfInitOK;
-    char nonQ_cmd_clearsQ[5];
+    uint8_t nonQ_cmd_clearsQ;
     mutable bool itho_updated;  
     mutable bool get_itho_settings;
     char config_struct_version[4];

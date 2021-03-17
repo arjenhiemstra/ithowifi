@@ -214,18 +214,18 @@ bool deserializeRemotes(Stream &src, IthoRemote &remotes) {
 
   remotes.set(doc.as<JsonObject>());
 
-//remotes.configLoaded = remotes.set(doc.as<JsonObject>());
-//  if (!remotes.configLoaded) {
-//    logInput("Remote config version mismatch, resetting config...");
-//    saveRemotesConfig();
-//    delay(0);
-//    if (!loadRemotesConfig()) {
-//      logInput("Remote config load failed, reboot...");
-//      delay(1000);
-//      ESP.restart();
-//    }
-//
-//  }
+remotes.configLoaded = remotes.set(doc.as<JsonObject>());
+  if (!remotes.configLoaded) {
+    logInput("Remote config version mismatch, resetting config...");
+    saveRemotesConfig();
+    delay(0);
+    if (!loadRemotesConfig()) {
+      logInput("Remote config load failed, reboot...");
+      delay(1000);
+      ESP.restart();
+    }
+
+  }
 
 
   return true;

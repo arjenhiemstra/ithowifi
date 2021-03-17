@@ -2,18 +2,19 @@
 #define IthoRemote_h
 
 #define MAX_NUMBER_OF_REMOTES 10
+#define REMOTE_CONFIG_VERSION "001"
 
 #include <stdio.h>
 #include <string.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <Ticker.h>
-
+#include "IthoPacket.h"
 
 class IthoRemote {
   private:
     struct Remote {
-      uint8_t ID[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
+      uint8_t ID[3] { 0, 0, 0 };
       char name[32];
       uint8_t button1{ IthoLow };
       uint8_t button2{ IthoMedium };
@@ -22,32 +23,9 @@ class IthoRemote {
       uint8_t button5{ IthoTimer2 };
       uint8_t button6{ IthoTimer3 };
       uint8_t button7{ IthoJoin };
-      uint8_t button8{ IthoLeave };
+      uint8_t button8{ IthoLeave };      
       void set(JsonObjectConst);
       void get(JsonObject, int index) const;
-    };
-    enum IthoCommand
-    {
-      IthoUnknown = 0,
-
-      IthoJoin = 4,
-      IthoLeave = 8,
-
-      IthoStandby = 34,
-      IthoLow = 35,
-      IthoMedium = 36,
-      IthoHigh = 37,
-      IthoFull = 38,
-
-      IthoTimer1 = 41,
-      IthoTimer2 = 51,
-      IthoTimer3 = 61,
-
-      //duco c system remote
-      DucoStandby = 251,
-      DucoLow = 252,
-      DucoMedium = 253,
-      DucoHigh = 254
     };
     Remote remotes[MAX_NUMBER_OF_REMOTES];
     int remoteCount { 0 };
@@ -78,7 +56,9 @@ class IthoRemote {
     int * getRemoteIDbyIndex(int index);
     char * getRemoteNamebyIndex(int index);
     bool checkID(int* id);
-    void set(JsonObjectConst);
+    bool configLoaded;
+    char config_struct_version[4];
+    bool set(JsonObjectConst);
     void get(JsonObject) const;
   protected:
 

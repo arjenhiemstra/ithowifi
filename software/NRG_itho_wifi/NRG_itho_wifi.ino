@@ -1,4 +1,4 @@
-#define FWVERSION "2.2-beta7"
+#define FWVERSION "2.2-beta8"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -36,7 +36,7 @@
 #include <ESPAsyncWebServer.h>  // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
 #include <SPIFFSEditor.h>       // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
 #include <DNSServer.h>
-#include <PubSubClient.h>     // https://github.com/arjenhiemstra/PubSubClientStatic/tree/hestia [latest hestia branch], forked from https://github.com/knolleary/pubsubclient and https://github.com/mhmtsui/pubsubclient
+#include <PubSubClient.h>     // https://github.com/arjenhiemstra/PubSubClientStatic [latest], forked from https://github.com/knolleary/pubsubclient and https://github.com/mhmtsui/pubsubclient
 #include <Wire.h>
 #include <time.h>
 #include <Ticker.h>
@@ -51,7 +51,7 @@
 
 #include <ArduinoOTA.h>
 #include <FS.h>
-#include "SHTSensor.h"        // https://github.com/Sensirion/arduino-sht
+#include "SHTSensor.h"        // https://github.com/Sensirion/arduino-sht [latest]
 
 #if defined (ESP8266)
 #include <ESP8266WiFi.h>
@@ -175,7 +175,6 @@ volatile unsigned long nextIthoTimer = 0;
 float ithoHum = 0;
 float ithoTemp = 0;
 
-char i2cstat[20] = "";
 #define LOG_BUF_SIZE 128
 
 unsigned long updatetimer = 0;
@@ -187,6 +186,9 @@ unsigned long SHT3x_readout = 0;
 unsigned long lastLog = 0;
 
 //flags used
+bool coldBoot = false;
+bool joinSend = false;
+int8_t ithoInit = 0;
 bool shouldReboot = false;
 bool dontSaveConfig = false;
 bool saveSystemConfigflag = false;

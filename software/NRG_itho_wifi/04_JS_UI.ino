@@ -5,6 +5,7 @@ var count = 0;
 var itho_low = 0;
 var itho_medium = 127;
 var itho_high = 254;
+var sht3x = -1;
 var websocketServerLocation = 'ws://' + window.location.hostname + '/ws';
 
 function startWebsock(websocketServerLocation){
@@ -36,23 +37,23 @@ function startWebsock(websocketServerLocation){
             $('#sys_password').val(x.sys_password);
             var $radios = $('input[name=\'option-syssec_web\']');
             if($radios.is(':checked') === false) {
-                $radios.filter('[value=' + x.syssec_web + ']').prop('checked', true);
+                $radios.filter('[value="' + x.syssec_web + '"]').prop('checked', true);
             }
             var $radios = $('input[name=\'option-syssec_api\']');
             if($radios.is(':checked') === false) {
-                $radios.filter('[value=' + x.syssec_api + ']').prop('checked', true);
+                $radios.filter('[value="' + x.syssec_api + '"]').prop('checked', true);
             }        
             var $radios = $('input[name=\'option-syssec_edit\']');
             if($radios.is(':checked') === false) {
-                $radios.filter('[value=' + x.syssec_edit + ']').prop('checked', true);
+                $radios.filter('[value="' + x.syssec_edit + '"]').prop('checked', true);
             }
             var $radios = $('input[name=\'option-syssht30\']');
             if($radios.is(':checked') === false) {
-                $radios.filter('[value=' + x.syssht30 + ']').prop('checked', true);
+                $radios.filter('[value="' + x.syssht30 + '"]').prop('checked', true);
             }
             var $radios = $('input[name=\'option-mqtt_active\']');
             if($radios.is(':checked') === false) {
-                $radios.filter('[value=' + x.mqtt_active + ']').prop('checked', true);
+                $radios.filter('[value="' + x.mqtt_active + '"]').prop('checked', true);
             }
             radio("mqtt_active", x.mqtt_active);
             $('#mqtt_serverName').val(x.mqtt_serverName);
@@ -61,16 +62,19 @@ function startWebsock(websocketServerLocation){
             $('#mqtt_port').val(x.mqtt_port);
             $('#mqtt_state_topic').val(x.mqtt_state_topic);
             mqtt_state_topic_tmp = x.mqtt_state_topic;
+            $('#mqtt_sensor_topic').val(x.mqtt_sensor_topic);
             $('#mqtt_cmd_topic').val(x.mqtt_cmd_topic);
             mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
             $('#mqtt_lwt_topic').val(x.mqtt_lwt_topic);
             $radios = $('input[name=\'option-mqtt_domoticz_active\']');
-            $('#mqtt_idx, #label-mqtt_idx').hide(); 
+            $('#mqtt_idx, #label-mqtt_idx').hide();
+            $('#sensor_idx, #label-sensor_idx').hide();
             if($radios.is(':checked') === false) {
-                $radios.filter('[value=' + x.mqtt_domoticz_active + ']').prop('checked', true);
+                $radios.filter('[value="' + x.mqtt_domoticz_active + '"]').prop('checked', true);
             }
             radio("mqtt_domoticz", x.mqtt_domoticz_active);
             $('#mqtt_idx').val(x.mqtt_idx);
+            $('#sensor_idx').val(x.sensor_idx);
             $('#itho_fallback').val(x.itho_fallback);
             $('#itho_low').val(x.itho_low);
             $('#itho_medium').val(x.itho_medium);
@@ -78,12 +82,28 @@ function startWebsock(websocketServerLocation){
             $('#itho_timer1').val(x.itho_timer1);
             $('#itho_timer2').val(x.itho_timer2);
             $('#itho_timer3').val(x.itho_timer3);
+            $radios = $('input[name=\'option-vremotejoin_active\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value="' + x.itho_sendjoin + '"]').prop('checked', true);
+            }
+            $radios = $('input[name=\'option-vremotemedium_active\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value="' + x.itho_forcemedium + '"]').prop('checked', true);
+            }
+            $radios = $('input[name=\'option-vremoteapi_active\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value="' + x.itho_vremapi + '"]').prop('checked', true);
+            }
+            $radios = $('input[name=\'option-vremoteswap_active\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value="' + x.itho_vremswap + '"]').prop('checked', true);
+            }
             $radios = $('input[name=\'option-itho_remotes_active\']');
             if($radios.is(':checked') === false) {
-                $radios.filter('[value=' + x.itho_rf_support + ']').prop('checked', true);
+                $radios.filter('[value="' + x.itho_rf_support + '"]').prop('checked', true);
             }
             radio("itho_rf_support", x.itho_rf_support);
-            if (x.itho_rf_support === 'on' && x.rfInitOK == false) {
+            if (x.itho_rf_support == 1 && x.rfInitOK == false) {
               if (confirm("For changes to take effect click 'Ok' to reboot")) {
                 $('#main').empty();
                 $('#main').append("<br><br><br><br>");
@@ -91,9 +111,8 @@ function startWebsock(websocketServerLocation){
                 websock.send('{\"reboot\":true}');
               }
             }
-            if (x.itho_rf_support === 'on' && x.rfInitOK == true) {
-              getSettings('ithoremotes');
-              $('#IthoRemotes').removeClass('hidden');
+            if (x.itho_rf_support == 1 && x.rfInitOK == true) {              
+              $('#remotemenu').removeClass('hidden');
             }
           }     
           else if (f.remotes) {
@@ -123,17 +142,20 @@ function startWebsock(websocketServerLocation){
             if ('itho_high' in x) {
               itho_high = x.itho_high;
             }                        
-            var i2cstatus = '';
-            if (x.i2cstat == 'nok') {
-              i2cstatus = '<span style="color:#ca3c3c;">init failed - please power cycle the itho unit -</span>';
+            var initstatus = '';
+            if (x.ithoinit == -1) {
+              initstatus = '<span style="color:#ca3c3c;">init failed - please power cycle the itho unit -</span>';
             }
-            else if (x.i2cstat == 'initok') {
-              i2cstatus = '<span style="color:#1cb841;">connected</span>';
+            else if (x.ithoinit == 1) {
+              initstatus = '<span style="color:#1cb841;">connected</span>';
             }
             else {
-              i2cstatus = 'unknown status';
+              initstatus = 'unknown status';
             }
-            $('#i2cstat').html(i2cstatus);
+            $('#ithoinit').html(initstatus);
+            if ('sht3x' in x) {
+              sht3x = x.sht3x;
+            }
             if(x.itho_llm > 0) {
               $('#itho_llm').removeClass();
               $('#itho_llm').addClass("pure-button button-success");
@@ -171,7 +193,8 @@ function startWebsock(websocketServerLocation){
       document.getElementById("loader").style.display = "none";
       if (lastPageReq !== "") {
         update_page(lastPageReq);
-      }      
+      }
+      getSettings('syssetup');
   };
   websock.onclose = function(a) {
       console.log('websock close');
@@ -233,12 +256,13 @@ $(document).ready(function() {
     else if ($(this).attr('id') == 'syssumbit') {
       websock.send(JSON.stringify({
         systemsettings: {
-          sys_username: $('#sys_username').val(),
-          sys_password: $('#sys_password').val(),
-          syssec_web:   $('input[name=\'option-syssec_web\']:checked').val(),          
-          syssec_api:   $('input[name=\'option-syssec_api\']:checked').val(),          
-          syssec_edit:  $('input[name=\'option-syssec_edit\']:checked').val(),
-          syssht30:     $('input[name=\'option-syssht30\']:checked').val()
+          sys_username:     $('#sys_username').val(),
+          sys_password:     $('#sys_password').val(),
+          syssec_web:       $('input[name=\'option-syssec_web\']:checked').val(),          
+          syssec_api:       $('input[name=\'option-syssec_api\']:checked').val(),          
+          syssec_edit:      $('input[name=\'option-syssec_edit\']:checked').val(),
+          syssht30:         $('input[name=\'option-syssht30\']:checked').val(),
+          itho_rf_support:  $('input[name=\'option-itho_remotes_active\']:checked').val()
         }
       }));
       update_page('system');
@@ -254,9 +278,11 @@ $(document).ready(function() {
           mqtt_port:            $('#mqtt_port').val(),
           mqtt_version:         $('#mqtt_version').val(),
           mqtt_state_topic:     $('#mqtt_state_topic').val(),
+          mqtt_sensor_topic:    $('#mqtt_sensor_topic').val(),
           mqtt_cmd_topic:       $('#mqtt_cmd_topic').val(),
           mqtt_lwt_topic:       $('#mqtt_lwt_topic').val(),
           mqtt_idx:             $('#mqtt_idx').val(),
+          sensor_idx:           $('#sensor_idx').val(),
           mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val()
         }
       }));
@@ -272,7 +298,10 @@ $(document).ready(function() {
           itho_timer1:      $('#itho_timer1').val(),
           itho_timer2:      $('#itho_timer2').val(),
           itho_timer3:      $('#itho_timer3').val(),
-          itho_rf_support:  $('input[name=\'option-itho_remotes_active\']:checked').val()
+          itho_sendjoin:    $('input[name=\'option-vremotejoin_active\']:checked').val(),
+          itho_forcemedium: $('input[name=\'option-vremotemedium_active\']:checked').val(),
+          itho_vremapi:     $('input[name=\'option-vremoteapi_active\']:checked').val(),
+          itho_vremswap:    $('input[name=\'option-vremoteswap_active\']:checked').val()
         }
       }));
       update_page('itho');
@@ -319,6 +348,30 @@ $(document).ready(function() {
       $('.hidden').removeClass('hidden');
       websock.send('{\"wifiscan\":true}');
     }
+    else if ($(this).attr('id') == 'button1') {
+      websock.send('{\"ithobutton\":1}');
+    }
+    else if ($(this).attr('id') == 'button2') {
+      websock.send('{\"ithobutton\":2}');
+    }
+    else if ($(this).attr('id') == 'button3') {
+      websock.send('{\"ithobutton\":3}');
+    }
+    else if ($(this).attr('id') == 'buttonjoin') {
+      websock.send('{\"ithobutton\":11}');
+    }
+    else if ($(this).attr('id') == 'buttonleave') {
+      websock.send('{\"ithobutton\":99}');
+    }
+    else if ($(this).attr('id') == 'buttontype') {
+      websock.send('{\"ithobutton\":20}');
+    }
+    else if ($(this).attr('id') == 'buttonstatus') {
+      websock.send('{\"ithobutton\":30}');
+    }
+    else if ($(this).attr('id') == 'buttonstatusformat') {
+      websock.send('{\"ithobutton\":31}');
+    }    
     else if ($(this).attr('id') == 'updatesubmit') {
       e.preventDefault();
       $('#uploadProgress').show();
@@ -422,36 +475,36 @@ function radio(origin, state) {
     }
   }
   else if (origin == "mqtt_active") {
-    if (state == 'on') {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
+    if (state == 1) {
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', false);
     }
     else {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', true);
     }
   }
   else if (origin == "mqtt_domoticz") {
-    if (state == 'on') {
+    if (state == 1) {
       $('#mqtt_idx').prop('readonly', false);
       $('#mqtt_idx, #label-mqtt_idx').show();
+      if(sht3x > 0) { $('#sensor_idx, #label-sensor_idx').show(); }
+      else { $('#sensor_idx, #label-sensor_idx').hide(); }
       $('#mqtt_state_topic').val("domoticz/in");
       $('#mqtt_cmd_topic').val("domoticz/out");
+      $('#mqtt_sensor_topic, #label-mqtt_sensor').hide();
+      $('#mqtt_lwt_topic, #label-lwt_topic').hide();
     }
     else {
       $('#mqtt_idx').prop('readonly', true);
       $('#mqtt_idx, #label-mqtt_idx').hide();
+      $('#sensor_idx, #label-sensor_idx').hide();
       $('#mqtt_state_topic').val(mqtt_state_topic_tmp);
       $('#mqtt_cmd_topic').val(mqtt_cmd_topic_tmp);
+      if(sht3x > 0) { $('#mqtt_sensor_topic, #label-mqtt_sensor').show(); }
+      else { $('#mqtt_sensor_topic, #label-mqtt_sensor').hide(); }
+      $('#mqtt_lwt_topic, #label-lwt_topic').show();
     }
-  }
-  else if (origin == "itho_rf_support") {
-    if (state == 'on') {
-      $('#IthoRemotes').show();
-    }
-    else {
-      $('#IthoRemotes').hide();
-    }     
   }
   else if (origin == "remote") {
     $('[id^=name_remote-]').each(function(index, item){
@@ -527,13 +580,12 @@ function update_page(page) {
     $('#main').css('max-width', '768px')
     if (page == 'index') { $('#main').append(html_index); }
     if (page == 'wifisetup') { $('#main').append(html_wifisetup); }
-    if (page == 'system') { $('#main').append(html_systemsettings); }
-    if (page == 'itho') { 
-      $('#main').append(html_ithosettings_start);
-      if(hw_revision == "1") { $('#itho_fieldset').append(html_ithosettings_hw1); }
-      if(hw_revision == "2") { $('#itho_fieldset').append(html_ithosettings_hw2); }      
-      $('#main').append(html_ithosettings_end); 
+    if (page == 'system') { $('#main').append(html_systemsettings_start); 
+      if(hw_revision == "2") { $('#sys_fieldset').append(html_systemsettings_cc1101); }      
+      $('#sys_fieldset').append(html_systemsettings_end);
     }
+    if (page == 'itho') { $('#main').append(html_ithosettings); }
+    if (page == 'remotes') { $('#main').append(html_remotessetup); }    
     if (page == 'mqtt') { $('#main').append(html_mqttsetup); }
     if (page == 'api') { $('#main').append(html_api); }      
     if (page == 'help') { $('#main').append(html_help); }
@@ -681,7 +733,7 @@ function buildHtmlTable(selector, jsonVar) {
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
       var cellValue = jsonVar[i][columns[colIndex]].toString();
       if (cellValue == null) cellValue = '';
-      if (cellValue == "0,0,0,0,0,0,0,0") cellValue = "empty slot";
+      if (cellValue == "0,0,0") cellValue = "empty slot";
       if (colIndex == 2) {
         row$.append($('<td>').html('<input type=\'text\' id=\'name_remote-' + i + '\' value=\'' + cellValue + '\' readonly=\'\' />'));
       }
@@ -817,12 +869,12 @@ $(document).ready(function() {
 </script>
 `;
 
-var html_systemsettings = `
+var html_systemsettings_start = `
 <div class="header"><h1>System settings</h1></div>
 <p>Configuration of generic system (security) settings</p>
 <style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
       <form class="pure-form pure-form-aligned">
-          <fieldset>
+          <fieldset id="sys_fieldset">
             <legend><br>System security:</legend>
             <div class="pure-control-group">
               <label for="sys_username">Username</label>
@@ -834,29 +886,26 @@ var html_systemsettings = `
             </div>
             <div class="pure-control-group">
               <label for="option-syssec_web" class="pure-radio">Web interface authentication</label> 
-              <input id="option-syssec_web-on" type="radio" name="option-syssec_web" onchange='radio("syssec_web", "on")' value="on"> on
-              <input id="option-syssec_web-off" type="radio" name="option-syssec_web" onchange='radio("syssec_web", "off")' value="off"> off
+              <input id="option-syssec_web-1" type="radio" name="option-syssec_web" value="1"> on
+              <input id="option-syssec_web-0" type="radio" name="option-syssec_web" value="0"> off
             </div>
             <div class="pure-control-group">
               <label for="option-syssec_api" class="pure-radio">API authentication</label> 
-              <input id="option-syssec_api-on" type="radio" name="option-syssec_api" onchange='radio("syssec_api", "on")' value="on"> on
-              <input id="option-syssec_api-off" type="radio" name="option-syssec_api" onchange='radio("syssec_api", "off")' value="off"> off
+              <input id="option-syssec_api-1" type="radio" name="option-syssec_api" value="1"> on
+              <input id="option-syssec_api-0" type="radio" name="option-syssec_api" value="0"> off
             </div>
             <div class="pure-control-group">
               <label for="option-syssec_edit" class="pure-radio">File editor authentication</label> 
-              <input id="option-syssec_edit-on" type="radio" name="option-syssec_edit" onchange='radio("syssec_edit", "on")' value="on"> on
-              <input id="option-syssec_edit-off" type="radio" name="option-syssec_edit" onchange='radio("syssec_edit", "off")' value="off"> off
+              <input id="option-syssec_edit-1" type="radio" name="option-syssec_edit" value="1"> on
+              <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
             </div>
-            <legend><br>Autodetect built-in itho humidity/temp sensor:</legend>
-            <p>The itho humidity/temp sensor is only present in the latest itho CVE series: CVE-S ECO.</p><p>Sensor support is limited, might be buggy and for testing only.</p><p>Values will be posted on the MQTT state topic with the addition of "/sensor" to the topic.</p>
+            <legend><br>Autodetect built-in itho humidity/temp sensor (reboot needed):</legend>
+            <p>The itho humidity/temp sensor is only present in the latest itho CVE series: CVE-S ECO.</p><p>Values will be posted on the MQTT sensor topic formatted as JSON.</p><p>Sensor support is limited, might be buggy and for testing only.</p>
             <br>
             <div class="pure-control-group">
               <label for="option-syssht30" class="pure-radio">Hum/Temp sensor support</label> 
-              <input id="option-syssht30-on" type="radio" name="option-syssht30" onchange='radio("syssec_web", "on")' value="on"> on
-              <input id="option-syssht30-off" type="radio" name="option-syssht30" onchange='radio("syssec_web", "off")' value="off"> off
-            </div>
-            <div class="pure-controls">
-              <button id="syssumbit" class="pure-button pure-button-primary">Save</button>
+              <input id="option-syssht30-1" type="radio" name="option-syssht30" value="1"> on
+              <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
             </div>
           </fieldset>
       </form>
@@ -867,12 +916,30 @@ $(document).ready(function() {
 </script>
 `;
 
-var html_ithosettings_start = `
+var html_systemsettings_cc1101 = `
+            <legend><br>Autodetect CC1101 RF module (reboot needed):</legend>
+            <p>Activate the CC1101 RF module. If autodetect fails this setting will be automatically switched off again.</p>
+            <div class="pure-control-group">
+              <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
+              <input id="option-itho_remotes-1" type="radio" name="option-itho_remotes_active" onchange='radio("itho_remotes", 1)' value="1"> on
+              <input id="option-itho_remotes-0" type="radio" name="option-itho_remotes_active" onchange='radio("itho_remotes", 0)' value="0"> off
+            </div>
+            <br>
+`;
+
+var html_systemsettings_end = `
+            <div class="pure-controls">
+              <button id="syssumbit" class="pure-button pure-button-primary">Save</button>
+            </div>
+`;
+
+
+var html_ithosettings = `
 <div class="header"><h1>Itho settings</h1></div>
-<p>Configuration of the Itho box</p>
+<p>Configuration of Itho unit speed and timer values</p>
 <style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
       <form class="pure-form pure-form-aligned">
-          <fieldset id="itho_fieldset">
+          <fieldset>
             <legend><br>Speed settings (0-254):</legend>
             <div class="pure-control-group">
               <label for="itho_fallback">Start/fallback speed</label>
@@ -890,44 +957,50 @@ var html_ithosettings_start = `
               <label for="itho_high">High</label>
                 <input id="itho_high" type="number" min="0" max="254" size="6">
             </div>
-            <br>
-          </fieldset>
-      </form>            
-`;
-
-var html_ithosettings_hw1 = `
-            <div class="pure-controls">
-              <button id="ithosubmit" class="pure-button pure-button-primary">Save</button>
-            </div>
-`;
-
-var html_ithosettings_hw2 = `
+            <legend><br>Timer settings (0-65535 minutes):</legend>
             <div class="pure-control-group">
-              <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
-              <input id="option-itho_remotes-on" type="radio" name="option-itho_remotes_active" onchange='radio("itho_remotes", "on")' value="on"> on
-              <input id="option-itho_remotes-off" type="radio" name="option-itho_remotes_active" onchange='radio("itho_remotes", "off")' value="off"> off
+              <label for="itho_timer1">Timer1</label>
+                <input id="itho_timer1" type="number" min="0" max="65535" size="6">
+            </div>
+            <div class="pure-control-group">
+              <label for="itho_timer2">Timer2</label>
+                <input id="itho_timer2" type="number" min="0" max="65535" size="6">
+            </div>
+            <div class="pure-control-group">
+              <label for="itho_timer3">Timer3</label>
+                <input id="itho_timer3" type="number" min="0" max="65535" size="6">
+            </div>
+            <legend><br>Virtual remote settings:</legend>
+            <p>The add-on can present itself as a virtual remote that can be joined to the itho unit.</p>
+            <p>This virtual remote can be used to force the itho unit in medium mode before sending a command from the add-on. This way the add-on can overrule the current speed settings of the itho (ie. due to active input from a built in humidity sensor or another remote)</p>
+            <p>A join command will only be accepted by the itho unit after a power cycle.</p>
+            <div class="pure-control-group">
+              <label for="option-vremotejoin" class="pure-radio">Send join command</label>
+              <input id="option-vremotejoin-2" type="radio" name="option-vremotejoin_active" value="2"> every power on
+              <input id="option-vremotejoin-1" type="radio" name="option-vremotejoin_active" value="1"> next power on
+              <input id="option-vremotejoin-0" type="radio" name="option-vremotejoin_active" value="0"> off
+            </div>
+            <div class="pure-control-group">
+              <label for="option-vremotemedium" class="pure-radio">Force medium mode</label>
+              <input id="option-vremotemedium-1" type="radio" name="option-vremotemedium_active" value="1"> on
+              <input id="option-vremotemedium-0" type="radio" name="option-vremotemedium_active" value="0"> off
+            </div>
+            <div class="pure-control-group hidden">
+              <label for="option-vremoteapi" class="pure-radio">API uses virtual remote</label>
+              <input id="option-vremoteapi-1" type="radio" name="option-vremoteapi_active" value="1"> on
+              <input id="option-vremoteapi-0" type="radio" name="option-vremoteapi_active" value="0"> off
+            </div>
+            <div class="pure-control-group">
+              <label for="option-vremoteswap" class="pure-radio">Swap high/low</label>
+              <input id="option-vremoteswap-1" type="radio" name="option-vremoteswap_active" value="1"> on
+              <input id="option-vremoteswap-0" type="radio" name="option-vremoteswap_active" value="0"> off
             </div>
             <br>
             <div class="pure-controls">
               <button id="ithosubmit" class="pure-button pure-button-primary">Save</button>
-            </div>
-            <div id="IthoRemotes" class="hidden">
-              <br>
-                <legend><br>RF remotes:</legend>
-              <br>
-              <div class="pure-control-group">
-                <label for="mqtt_conn">Learn/Leave mode</label>
-                  <button id="itho_llm" class="pure-button">Unknown</button>
-              </div>
-              <br>
-              <table id="RemotesTable" class="pure-table pure-table-bordered"></table>
-              <div class="pure-control-group">
-                <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote" class="pure-button">Remove</button>
-              </div>
-            </div>
-`;
-
-var html_ithosettings_end = `
+            </div>            
+          </fieldset>
+      </form>
 <script>
 $(document).ready(function() {
   getSettings('ithosetup');
@@ -935,6 +1008,33 @@ $(document).ready(function() {
 </script>
 `;
 
+var html_remotessetup = `
+<div class="header"><h1>RF Remotes setup</h1></div>
+<style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
+      <form class="pure-form pure-form-aligned">
+          <fieldset>
+              <br><br>
+              <div class="pure-control-group">
+                <label for="mqtt_conn">Learn/Leave mode</label>
+                  <button id="itho_llm" class="pure-button">Unknown</button>
+              </div>
+          </fieldset>
+          <fieldset>
+              <br>
+                <legend><br>RF remotes:</legend>
+              <br>
+              <table id="RemotesTable" class="pure-table pure-table-bordered"></table>
+              <div class="pure-control-group">
+                <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote" class="pure-button">Remove</button>
+              </div>
+          </fieldset>
+      </form>
+<script>
+$(document).ready(function() {
+  getSettings('ithoremotes');
+});
+</script>
+`;
 
 var html_mqttsetup = `
 <div class="header"><h1>MQTT setup</h1></div>
@@ -949,8 +1049,8 @@ var html_mqttsetup = `
             <br>
             <div class="pure-control-group">
               <label for="option-mqtt_active" class="pure-radio">MQTT Active</label> 
-              <input id="option-mqtt_active-on" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", "on")' value="on"> on
-              <input id="option-mqtt_active-off" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", "off")' value="off"> off
+              <input id="option-mqtt_active-1" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 1)' value="1"> on
+              <input id="option-mqtt_active-0" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 0)' value="0"> off
             </div>
             <br>
             <div class="pure-control-group">
@@ -974,23 +1074,31 @@ var html_mqttsetup = `
                 <input id="mqtt_state_topic" maxlength="120" type="text">
             </div>
             <div class="pure-control-group">
+              <label id="label-mqtt_sensor" for="mqtt_sensor_topic">Sensor topic</label>
+                <input id="mqtt_sensor_topic" maxlength="120" type="text">
+            </div>
+            <div class="pure-control-group">
               <label for="mqtt_cmd_topic">Command topic</label>
                 <input id="mqtt_cmd_topic" maxlength="120" type="text">
             </div>
             <div class="pure-control-group">
-              <label for="mqtt_lwt_topic">Last will topic</label>
+              <label id="label-lwt_topic" for="mqtt_lwt_topic">Last will topic</label>
                 <input id="mqtt_lwt_topic" maxlength="120" type="text">
             </div>
             <br>
             <div class="pure-control-group">
               <label for="option-mqtt_domoticz" class="pure-radio">Domoticz MQTT</label> 
-              <input id="option-mqtt_domoticz-on" type="radio" name="option-mqtt_domoticz_active" onchange='radio("mqtt_domoticz", "on")' value="on"> on
-              <input id="option-mqtt_domoticz-off" type="radio" name="option-mqtt_domoticz_active" onchange='radio("mqtt_domoticz", "off")' value="off"> off
+              <input id="option-mqtt_domoticz-1" type="radio" name="option-mqtt_domoticz_active" onchange='radio("mqtt_domoticz", 1)' value="1"> on
+              <input id="option-mqtt_domoticz-0" type="radio" name="option-mqtt_domoticz_active" onchange='radio("mqtt_domoticz", 0)' value="0"> off
             </div>
             <div class="pure-control-group">
               <label id="label-mqtt_idx" for="mqtt_idx" style="display: none;">Device IDX</label>
                 <input id="mqtt_idx" maxlength="5" type="text" style="display: none;">
             </div>
+            <div class="pure-control-group">
+              <label id="label-sensor_idx" for="sensor_idx" style="display: none;">Sensor IDX</label>
+                <input id="sensor_idx" maxlength="5" type="text" style="display: none;">
+            </div>            
             <br>
             <div class="pure-controls">
               <button id="mqttsubmit" class="pure-button pure-button-primary">Save</button>
@@ -1147,7 +1255,7 @@ $.ajax({
   type: 'GET',
   url: 'https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json',
   dataType: 'json',
-  timeout: 300,
+  timeout: 3000,
   success: function(data){
     traverse(data,process);
   },

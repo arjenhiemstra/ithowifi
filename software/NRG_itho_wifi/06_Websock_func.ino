@@ -133,7 +133,8 @@ void jsonSystemstat() {
 #if defined (__HW_VERSION_TWO__)
   systemstat["itho_llm"] = remotes.getllModeTime();
 #endif
-  systemstat["i2cstat"] = i2cstat;
+  systemstat["ithoinit"] = ithoInit;
+  systemstat["sht3x"] = systemConfig.syssht30;
 
   char buffer[512];
   size_t len = serializeJson(root, buffer);
@@ -207,6 +208,31 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         }
 
       }
+      else if (msg.startsWith("{\"ithobutton")) {
+        StaticJsonDocument<128> root;
+        DeserializationError error = deserializeJson(root, msg);
+        if (!error) {
+            uint8_t val  = root["ithobutton"];
+            if (val < 4) {
+              sendButton(val);
+            }
+            else if (val == 11) {
+              sendJoinI2C();
+            }
+            else if (val == 20) {
+              //sendQueryDevicetype();
+            }
+            else if (val == 30) {
+              //sendQueryStatus();
+            }
+            else if (val == 31) {
+              //sendQueryStatusFormat();
+            }            
+            else if (val == 99) {
+              sendLeaveI2C();
+            }            
+        }
+      }      
       else if (msg.startsWith("{\"wifisetup")) {
         jsonWsSend("wifisettings");
       }
@@ -227,6 +253,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
 #if defined (__HW_VERSION_TWO__)
       else if (msg.startsWith("{\"ithoremotes")) {
         jsonWsSend("ithoremotes");
+        sysStatReq = true;
       }
       else if (msg.startsWith("{\"itho_llm")) {
         toggleRemoteLLmode();
@@ -378,25 +405,26 @@ void wifiScan() {
 }
 
 
-int LastPercentotaWSupdate = 0;
+unsigned long LastotaWsUpdate = 0;
 
 void otaWSupdate(size_t prg, size_t sz) {
-  int newPercent = int((prg * 100) / content_len);
-  if (newPercent != LastPercentotaWSupdate) {
-    LastPercentotaWSupdate = newPercent;
-    if (newPercent % 2 == 0) {
-      StaticJsonDocument<256> root;
-      JsonObject ota = root.createNestedObject("ota");
-      ota["progress"] = prg;
-      ota["tsize"] = content_len;
-      ota["percent"] = newPercent;
+  
+  if (millis() - LastotaWsUpdate >= 500) { //rate limit messages to twice a second
+    LastotaWsUpdate = millis();
+    int newPercent = int((prg * 100) / content_len);
 
-      char buffer[256];
-      size_t len = serializeJson(root, buffer);
+    StaticJsonDocument<256> root;
+    JsonObject ota = root.createNestedObject("ota");
+    ota["progress"] = prg;
+    ota["tsize"] = content_len;
+    ota["percent"] = newPercent;
 
-      notifyClients(buffer, len);
-      delay(25);
-    }
+    char buffer[256];
+    size_t len = serializeJson(root, buffer);
+
+    notifyClients(buffer, len);
+
   }
+
 
 }

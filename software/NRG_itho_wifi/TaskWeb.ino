@@ -27,7 +27,7 @@ void TaskWeb( void * pvParameters ) {
     execWebTasks();
 
     TaskWebHWmark = uxTaskGetStackHighWaterMark( NULL );
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(25 / portTICK_PERIOD_MS);
   }
 
   //else delete task

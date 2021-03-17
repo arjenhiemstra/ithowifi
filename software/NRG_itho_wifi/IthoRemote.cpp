@@ -5,10 +5,13 @@
 
 // default constructor
 IthoRemote::IthoRemote() {
+  strlcpy(config_struct_version, REMOTE_CONFIG_VERSION, sizeof(config_struct_version));
 
   for (uint8_t i = 0; i < MAX_NUMBER_OF_REMOTES; i++) {
     strlcpy(remotes[i].name, "remote", sizeof(remotes[i].name));
   }
+
+  configLoaded = false;
 
 } //IthoRemote
 
@@ -66,12 +69,12 @@ int IthoRemote::registerNewRemote(int* id) {
   if (this->remoteCount >= MAX_NUMBER_OF_REMOTES - 1) {
     return -2;
   }
-  int zeroID[] = {0, 0, 0, 0, 0, 0, 0, 0};
+  int zeroID[] = {0, 0, 0};
   int index = this->remoteIndex(zeroID); //find first index with no remote ID set
   if (index < 0) {
     return index;
   }
-  for (uint8_t i = 0; i < 8; i++) {
+  for (uint8_t i = 0; i < 3; i++) {
     remotes[index].ID[i] = id[i];
   }
 
@@ -91,7 +94,7 @@ int IthoRemote::removeRemote(int* id) {
   int index = this->remoteIndex(id);
 
   if (index != -1) {
-    for (uint8_t i = 0; i < 8; i++) {
+    for (uint8_t i = 0; i < 3; i++) {
       remotes[index].ID[i] = 0;
     }
     strlcpy(remotes[index].name, "remote", sizeof(remotes[index].name));
@@ -109,12 +112,12 @@ void IthoRemote::updateRemoteName(uint8_t index, char* remoteName) {
 int IthoRemote::remoteIndex(int* id) {
   int noKnown = 0;
   for (uint8_t i = 0; i < MAX_NUMBER_OF_REMOTES; i++) {
-    for (uint8_t y = 0; y < 8; y++) {
+    for (uint8_t y = 0; y < 3; y++) {
       if (id[y] == remotes[i].ID[y]) {
         noKnown++;
       }
     }
-    if (noKnown == 8) {
+    if (noKnown == 3) {
       return i;
     }
     noKnown = 0;
@@ -124,8 +127,8 @@ int IthoRemote::remoteIndex(int* id) {
 }
 
 int * IthoRemote::getRemoteIDbyIndex(int index) {
-  static int id[8];
-  for (uint8_t i = 0; i < 8; i++) {
+  static int id[3];
+  for (uint8_t i = 0; i < 3; i++) {
     id[i] = remotes[index].ID[i];
   }
   return id;
@@ -140,12 +143,12 @@ bool IthoRemote::checkID(int* id)
 {
   int noKnown = 0;
   for (uint8_t i = 0; i < MAX_NUMBER_OF_REMOTES; i++) {
-    for (uint8_t y = 0; y < 8; y++) {
+    for (uint8_t y = 0; y < 3; y++) {
       if (id[y] == remotes[i].ID[y]) {
         noKnown++;
       }
     }
-    if (noKnown == 8) {
+    if (noKnown == 3) {
       return true;
     }
     noKnown = 0;
@@ -168,13 +171,22 @@ void IthoRemote::Remote::set(JsonObjectConst obj) {
 void IthoRemote::Remote::get(JsonObject obj, int index) const {
   obj["index"] = index;
   JsonArray id = obj.createNestedArray("id");
-  for (uint8_t y = 0; y < 8; y++) {
+  for (uint8_t y = 0; y < 3; y++) {
     id.add(ID[y]);
   }
   obj["name"] = name;
 }
 
-void IthoRemote::set(JsonObjectConst obj) {
+bool IthoRemote::set(JsonObjectConst obj) {
+  if (!configLoaded) {
+    if ((const char*)obj["version_of_program"].isNull()) {
+      return false;
+    }
+    if (obj["version_of_program"] != REMOTE_CONFIG_VERSION) {
+      return false;
+    }
+  }
+
   if (!(const char*)obj["remotes"].isNull()) {
     JsonArrayConst remotesArray = obj["remotes"];
     remoteCount = 0;
@@ -183,14 +195,14 @@ void IthoRemote::set(JsonObjectConst obj) {
         uint8_t index = remote["index"].as<uint8_t>();
         if (index < MAX_NUMBER_OF_REMOTES) {
           remotes[index].set(remote);
-          
+
           uint8_t noZero = 0;
-          for (uint8_t y = 0; y < 8; y++) {
+          for (uint8_t y = 0; y < 3; y++) {
             if (remotes[index].ID[y] == 0) {
               noZero++;
             }
           }
-          if (noZero != 8) {
+          if (noZero != 3) {
             remoteCount++;
           }
         }
@@ -198,6 +210,10 @@ void IthoRemote::set(JsonObjectConst obj) {
       if (remoteCount >= MAX_NUMBER_OF_REMOTES) break;
     }
   }
+  else {
+    return false;
+  }
+  return true;
 }
 
 void IthoRemote::get(JsonObject obj) const {
@@ -207,5 +223,6 @@ void IthoRemote::get(JsonObject obj) const {
   for (int i = 0; i < MAX_NUMBER_OF_REMOTES; i++) {
     remotes[i].get(rem.createNestedObject(), i);
   }
+  obj["version_of_program"] = config_struct_version;
 
 }

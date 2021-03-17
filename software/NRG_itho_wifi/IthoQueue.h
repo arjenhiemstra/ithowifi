@@ -29,7 +29,7 @@ class IthoQueue {
     uint16_t ithoOldSpeed { 0 };
     uint16_t fallBackSpeed { 42 };  
     void update_queue();
-    bool add2queue(int speedVal, unsigned long validVal, char* nonQ_cmd_clearsQ);
+    bool add2queue(int speedVal, unsigned long validVal, uint8_t nonQ_cmd_clearsQ);
     void clear_queue();
     uint16_t get_itho_speed() {
       return ithoSpeed;

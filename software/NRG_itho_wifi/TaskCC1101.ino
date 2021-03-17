@@ -30,7 +30,7 @@ uint8_t findRFTlastCommand() {
 void RFDebug(bool chk, int * id, IthoCommand cmd) {
 
   strcpy(debugLog, "");
-  sprintf(debugLog, "RemoteID=%d,%d,%d,%d,%d,%d,%d,%d / Command=", id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7]);
+  sprintf(debugLog, "RemoteID=%d,%d,%d / Command=", id[0], id[1], id[2]);
   //log command
   switch (cmd) {
     case IthoUnknown:
@@ -66,7 +66,7 @@ void RFDebug(bool chk, int * id, IthoCommand cmd) {
   }
   if (chk) {
     strcat(debugLog, "<br>");
-    strncat(debugLog, rf.getLastMessage2CMDstr().c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
+    strncat(debugLog, rf.LastMessageDecoded().c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
   }
   debugLogInput = true;
 
@@ -94,14 +94,15 @@ void setllModeTimer() {
 
 void TaskCC1101( void * pvParameters ) {
   configASSERT( ( uint32_t ) pvParameters == 1UL );
+  
 
   startTaskMQTT();
 
-  if (strcmp(systemConfig.itho_rf_support, "on") == 0) {
+  if (systemConfig.itho_rf_support) {
     Ticker reboot;
 
     //switch off rf_support
-    strlcpy(systemConfig.itho_rf_support, "off", sizeof(systemConfig.itho_rf_support));
+    systemConfig.itho_rf_support = 0;
     systemConfig.rfInitOK = false;
 
     //attach saveConfig and reboot script to fire after 2 sec
@@ -115,7 +116,6 @@ void TaskCC1101( void * pvParameters ) {
 
     //init the RF module
     rf.init();
-    rf.initReceive();
     pinMode(ITHO_IRQ_PIN, INPUT);
     attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, FALLING);
 
@@ -123,7 +123,9 @@ void TaskCC1101( void * pvParameters ) {
     esp_task_wdt_add(NULL);
     reboot.detach();
     logInput("Setup: init of CC1101 RF module successful");
-    strlcpy(systemConfig.itho_rf_support, "on", sizeof(systemConfig.itho_rf_support));
+    rf.setDeviceID(getMac(6-3),getMac(6-2),getMac(6-1));
+    
+    systemConfig.itho_rf_support = 1;
     loadRemotesConfig();
     systemConfig.rfInitOK = true;
 
@@ -139,8 +141,8 @@ void TaskCC1101( void * pvParameters ) {
         if (rf.checkForNewPacket()) {
 
           int *lastID = rf.getLastID();
-          int id[8];
-          for (uint8_t i = 0; i < 8; i++) {
+          int id[3];
+          for (uint8_t i = 0; i < 3; i++) {
             id[i] = lastID[i];
           }
           IthoCommand cmd = rf.getLastCommand();
@@ -236,10 +238,10 @@ void TaskCC1101( void * pvParameters ) {
         }
       }
       TaskCC1101HWmark = uxTaskGetStackHighWaterMark( NULL );
-      vTaskDelay(10 / portTICK_PERIOD_MS);
+      vTaskDelay(25 / portTICK_PERIOD_MS);
     }
-    //if (strcmp(systemConfig.itho_rf_support, "on") == 0)
-  }//else delete task
+  } //if (systemConfig.itho_rf_support)
+  //else delete task
   vTaskDelete( NULL );
 }
 
