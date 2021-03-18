@@ -449,22 +449,12 @@ void mqttInit() {
   }
 }
 
-void mqttHADiscovery()
+void mqttHomeAssistantDiscovery()
 {
-  jsonLogMessage(F("mqtt discovery"), RFLOG);
-  logInput("HA DISCOVERY: inside");
-  // if(counterDebug < 10) // every 50s
-  // {
-  //   counterDebug++;
-  //   return;
-  // }
-
-  counterDebug = 0;
   if (!systemConfig.mqtt_active) return;
-  logInput("HA DISCOVERY: MQTT ACTIVE");
-
   if (!mqttClient.connected()) return;
-  logInput("HA DISCOVERY: MQTT CONNECTED");
+  if (!systemConfig.mqtt_ha_active) return;
+  logInput("MQTT: Publishing Home Assistant Discovery");
 
   //  String sHADiscoveryFan = "{\"avty_t\":\"%mqtt_availability_topic%\",\"dev\":{\"identifiers\":\"%node_id%\",\"manufacturer\":\"Arjen Hiemstra\",\"model\":\"ITHO Wifi Add-on\",\"name\":\"ITHO-WIFI(%node_id%)\",\"sw_version\":\"%version%\"},\"uniq_id\":\"%node_id%_fan\",\"name\":\"%node_id%_fan\",\"stat_t\":\"%mqtt_availability_topic%\",\"stat_val_tpl\":\"{% if value == 'online' %}ON{% else %}OFF{% endif %}\",\"json_attr_t\":\"%mqtt_fan_speed_topic%/sensor\",\"cmd_t\":\"%mqtt_command_topic%/not_used/needed_for_HA\",\"spd_cmd_t\":\"%mqtt_command_topic%\",\"spd_stat_t\":\"%mqtt_fan_speed_topic%\",\"payload_high_speed\":\"%value_high%\",\"payload_medium_speed\":\"%value_medium%\",\"payload_low_speed\":\"%value_low%\"}";
   //
@@ -535,13 +525,7 @@ void sendHADiscovery(JsonObject obj, const char* topic)
   size_t size = measureJson(obj);
   if (mqttClient.getBufferSize() < (size + 144)) //max topic length + content + TODO: needs a check
   {
-    logInput("HA DISCOVERY: Buffer size too small, resizing");
     mqttClient.setBufferSize(size + 144); //resize buffer when needed
-  }
-  else
-  {
-    logInput("HA DISCOVERY: Buffer size ok");
-    /* code */
   }
 
   if (mqttClient.beginPublish(topic, size, true))
