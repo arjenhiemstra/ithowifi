@@ -455,11 +455,11 @@ void mqttHADiscovery()
 {
   jsonLogMessage(F("mqtt discovery"), RFLOG);
   logInput("HA DISCOVERY: inside");
-  if(counterDebug < 10) // every 50s
-  {
-    counterDebug++;
-    return;
-  }
+  // if(counterDebug < 10) // every 50s
+  // {
+  //   counterDebug++;
+  //   return;
+  // }
 
   counterDebug = 0;
   if (!systemConfig.mqtt_active) return;
