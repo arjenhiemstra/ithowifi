@@ -1,4 +1,6 @@
 #if defined (__HW_VERSION_TWO__) && defined (ENABLE_FAILSAVE_BOOT)
+#define MQTT_BUFFER_SIZE 1024
+
 void failSafeBoot() {
 
   long defaultWaitStart = millis();
@@ -583,7 +585,7 @@ void sendHADiscovery(String topic, String payload)
   }
 
   // reset buffer
-  mqttClient.setBufferSize(256);
+  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }
 
 bool setupMQTTClient() {
@@ -595,7 +597,7 @@ bool setupMQTTClient() {
 
       mqttClient.setServer(systemConfig.mqtt_serverName, systemConfig.mqtt_port);
       mqttClient.setCallback(mqttCallback);
-      mqttClient.setBufferSize(1024);
+      mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 
       if (systemConfig.mqtt_username == "") {
         connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_lwt_topic, 0, true, "offline");
