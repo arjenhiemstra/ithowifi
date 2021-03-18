@@ -21,8 +21,9 @@ void TaskInit( void * pvParameters ) {
 
   esp_task_wdt_init(40, true);
 
-  mqttHADiscovery();
-  logInput("ha: done 1");
+  // FOR DEBUGGING, REMOVE FOR RELEASE
+  // mqttHomeAssistantDiscovery();
+  // logInput("ha: done hw v2");
 
   logInput("Setup: done");
 

@@ -451,7 +451,7 @@ void mqttInit() {
   }
 }
 
-void mqttHADiscovery()
+void mqttHomeAssistantDiscovery()
 {
   jsonLogMessage(F("mqtt discovery"), RFLOG);
   logInput("HA DISCOVERY: inside");
@@ -460,8 +460,11 @@ void mqttHADiscovery()
   //   counterDebug++;
   //   return;
   // }
+  // counterDebug = 0;
 
-  counterDebug = 0;
+  if (!systemConfig.mqtt_ha_active) return;
+  logInput("HA DISCOVERY: MQTT HOME ASSISTANT DISCOVERY ACTIVE");
+
   if (!systemConfig.mqtt_active) return;
   logInput("HA DISCOVERY: MQTT ACTIVE");
 
@@ -469,21 +472,15 @@ void mqttHADiscovery()
   logInput("HA DISCOVERY: MQTT CONNECTED");
 
   String sHADiscoveryFan = "{\"avty_t\":\"%mqtt_availability_topic%\",\"dev\":{\"identifiers\":\"%node_id%\",\"manufacturer\":\"Arjen Hiemstra\",\"model\":\"ITHO Wifi Add-on\",\"name\":\"ITHO-WIFI(%node_id%)\",\"sw_version\":\"%version%\"},\"uniq_id\":\"%node_id%_fan\",\"name\":\"%node_id%_fan\",\"stat_t\":\"%mqtt_availability_topic%\",\"stat_val_tpl\":\"{% if value == 'online' %}ON{% else %}OFF{% endif %}\",\"json_attr_t\":\"%mqtt_fan_speed_topic%/sensor\",\"cmd_t\":\"%mqtt_command_topic%/not_used/needed_for_HA\",\"spd_cmd_t\":\"%mqtt_command_topic%\",\"spd_stat_t\":\"%mqtt_fan_speed_topic%\",\"payload_high_speed\":\"%value_high%\",\"payload_medium_speed\":\"%value_medium%\",\"payload_low_speed\":\"%value_low%\"}";
-
   String sHADiscoveryFanTopic = "%mqtt_ha_prefix%/fan/%node_id%/config";
-
   sendHADiscovery(sHADiscoveryFanTopic, sHADiscoveryFan);
 
   String sHADiscoveryTemp = "{\"avty_t\":\"%mqtt_availability_topic%\",\"dev\":{\"identifiers\":\"%node_id%\",\"manufacturer\":\"Arjen Hiemstra\",\"model\":\"ITHO Wifi Add-on\",\"name\":\"ITHO-WIFI(%node_id%)\",\"sw_version\":\"%version%\"},\"dev_cla\":\"temperature\",\"uniq_id\":\"%node_id%_temp\",\"name\":\"%node_id%_temperature\",\"stat_t\":\"%mqtt_sensor_topic%\",\"val_tpl\":\"{{ value_json.temp }}\"}";
-
   String sHADiscoveryTempTopic = "%mqtt_ha_prefix%/sensor/%node_id%/temp/config";
-
   sendHADiscovery(sHADiscoveryTempTopic, sHADiscoveryTemp);
 
   String sHADiscoveryHum = "{\"avty_t\":\"%mqtt_availability_topic%\",\"dev\":{\"identifiers\":\"%node_id%\",\"manufacturer\":\"Arjen Hiemstra\",\"model\":\"ITHO Wifi Add-on\",\"name\":\"ITHO-WIFI(%node_id%)\",\"sw_version\":\"%version%\"},\"dev_cla\":\"humidity\",\"uniq_id\":\"%node_id%_hum\",\"name\":\"%node_id%_humidity\",\"stat_t\":\"%mqtt_sensor_topic%\",\"val_tpl\":\"{{ value_json.hum }}\"}";
-
   String sHADiscoveryHumTopic = "%mqtt_ha_prefix%/sensor/%node_id%/hum/config";
-
   sendHADiscovery(sHADiscoveryHumTopic, sHADiscoveryHum);
 }
 
@@ -573,6 +570,8 @@ bool setupMQTTClient() {
         }
         mqttClient.subscribe(systemConfig.mqtt_lwt_topic);
         mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", true);
+
+        mqttHomeAssistantDiscovery();
         return true;
       }
     }
