@@ -63,6 +63,7 @@ function startWebsock(websocketServerLocation){
             $('#mqtt_state_topic').val(x.mqtt_state_topic);
             mqtt_state_topic_tmp = x.mqtt_state_topic;
             $('#mqtt_sensor_topic').val(x.mqtt_sensor_topic);
+            $('#mqtt_ha_topic').val(x.mqtt_ha_topic);
             $('#mqtt_cmd_topic').val(x.mqtt_cmd_topic);
             mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
             $('#mqtt_lwt_topic').val(x.mqtt_lwt_topic);
@@ -279,6 +280,7 @@ $(document).ready(function() {
           mqtt_version:         $('#mqtt_version').val(),
           mqtt_state_topic:     $('#mqtt_state_topic').val(),
           mqtt_sensor_topic:    $('#mqtt_sensor_topic').val(),
+          mqtt_ha_topic:        $('#mqtt_ha_topic').val(),
           mqtt_cmd_topic:       $('#mqtt_cmd_topic').val(),
           mqtt_lwt_topic:       $('#mqtt_lwt_topic').val(),
           mqtt_idx:             $('#mqtt_idx').val(),
@@ -476,11 +478,11 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_active") {
     if (state == 1) {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', false);
     }
     else {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', true);
     }
   }
@@ -493,6 +495,7 @@ function radio(origin, state) {
       $('#mqtt_state_topic').val("domoticz/in");
       $('#mqtt_cmd_topic').val("domoticz/out");
       $('#mqtt_sensor_topic, #label-mqtt_sensor').hide();
+      $('#mqtt_ha_topic, #label-mqtt_ha').hide();
       $('#mqtt_lwt_topic, #label-lwt_topic').hide();
     }
     else {
@@ -503,6 +506,7 @@ function radio(origin, state) {
       $('#mqtt_cmd_topic').val(mqtt_cmd_topic_tmp);
       if(sht3x > 0) { $('#mqtt_sensor_topic, #label-mqtt_sensor').show(); }
       else { $('#mqtt_sensor_topic, #label-mqtt_sensor').hide(); }
+      $('#mqtt_ha_topic, #label-mqtt_ha').show();
       $('#mqtt_lwt_topic, #label-lwt_topic').show();
     }
   }
@@ -592,6 +596,7 @@ function update_page(page) {
     if (page == 'reset') { $('#main').append(html_reset); }
     if (page == 'update') { $('#main').append(html_update); }
     if (page == 'debug') { $('#main').load( 'debug' ); }
+    if (page == 'test') { $('#main').load( 'test' ); }
 }
 
 //handle menu collapse on smaller screens
@@ -1076,6 +1081,10 @@ var html_mqttsetup = `
             <div class="pure-control-group">
               <label id="label-mqtt_sensor" for="mqtt_sensor_topic">Sensor topic</label>
                 <input id="mqtt_sensor_topic" maxlength="120" type="text">
+            </div>
+            <div class="pure-control-group">
+              <label id="label-mqtt_ha" for="mqtt_ha_topic">Home Assistant Discovery topic prefix</label>
+                <input id="mqtt_ha_topic" maxlength="120" type="text">
             </div>
             <div class="pure-control-group">
               <label for="mqtt_cmd_topic">Command topic</label>

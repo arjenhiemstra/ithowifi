@@ -25,6 +25,7 @@ class SystemConfig {
     int mqtt_version;
     char mqtt_state_topic[128];
     char mqtt_sensor_topic[128];
+    char mqtt_ha_topic[128];
     char mqtt_state_retain[5];
     char mqtt_cmd_topic[128];
     char mqtt_lwt_topic[128];
