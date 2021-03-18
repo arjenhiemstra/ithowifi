@@ -480,7 +480,6 @@ bool setupMQTTClient() {
 
   }
   else {
-    mqttClient.publish(systemConfig.mqtt_lwt_topic, "offline", true);
     mqttClient.disconnect();
     return false;
   }
