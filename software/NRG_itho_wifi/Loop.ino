@@ -85,7 +85,7 @@ void execMQTTTasks() {
           mqttClient.publish(systemConfig.mqtt_sensor_topic, buffer, true);
         }
         jsonLogMessage(buffer, RFLOG);
-        mqttHADiscovery();
+        // mqttHADiscovery();
       }
     }
 #endif
