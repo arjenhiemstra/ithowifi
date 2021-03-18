@@ -32,8 +32,9 @@ void setup() {
 
   MDNSinit();
 
-  mqttHADiscovery();
-  logInput("ha: done 2");
+  // FOR DEBUGGING, REMOVE FOR RELEASE
+  // mqttHomeAssistantDiscovery();
+  // logInput("ha: done hw v1");
 
 #if defined (__HW_VERSION_TWO__)
   Ticker TaskTimeout;
