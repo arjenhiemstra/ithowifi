@@ -19,3 +19,6 @@
 [submodule "software/lib/SPIFFS_FilePrint"]
 	path = software/lib/SPIFFS_FilePrint
 	url = https://github.com/PRosenb/SPIFFS_FilePrint
+[submodule "software/lib/ESPAsyncTCP"]
+	path = software/lib/ESPAsyncTCP
+	url = https://github.com/me-no-dev/ESPAsyncTCP
