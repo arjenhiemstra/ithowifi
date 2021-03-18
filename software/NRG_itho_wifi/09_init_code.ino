@@ -473,11 +473,6 @@ bool setupMQTTClient() {
 
       if (mqttClient.connected()) {
         mqttClient.subscribe(systemConfig.mqtt_cmd_topic);
-        mqttClient.subscribe(systemConfig.mqtt_state_topic);
-        if (systemConfig.syssht30) {
-          mqttClient.subscribe(systemConfig.mqtt_sensor_topic);
-        }
-        mqttClient.subscribe(systemConfig.mqtt_lwt_topic);
         mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", true);
         return true;
       }
@@ -485,7 +480,6 @@ bool setupMQTTClient() {
 
   }
   else {
-    mqttClient.publish(systemConfig.mqtt_lwt_topic, "offline", true);
     mqttClient.disconnect();
     return false;
   }
