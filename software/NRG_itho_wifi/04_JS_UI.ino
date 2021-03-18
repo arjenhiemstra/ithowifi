@@ -1083,16 +1083,16 @@ var html_mqttsetup = `
                 <input id="mqtt_sensor_topic" maxlength="120" type="text">
             </div>
             <div class="pure-control-group">
-              <label id="label-mqtt_ha" for="mqtt_ha_topic">Home Assistant Discovery topic prefix</label>
-                <input id="mqtt_ha_topic" maxlength="120" type="text">
-            </div>
-            <div class="pure-control-group">
               <label for="mqtt_cmd_topic">Command topic</label>
                 <input id="mqtt_cmd_topic" maxlength="120" type="text">
             </div>
             <div class="pure-control-group">
               <label id="label-lwt_topic" for="mqtt_lwt_topic">Last will topic</label>
                 <input id="mqtt_lwt_topic" maxlength="120" type="text">
+            </div>
+            <div class="pure-control-group">
+              <label id="label-mqtt_ha" for="mqtt_ha_topic">Home Assistant Discovery topic prefix</label>
+                <input id="mqtt_ha_topic" maxlength="120" type="text">
             </div>
             <br>
             <div class="pure-control-group">
