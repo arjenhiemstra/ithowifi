@@ -12,7 +12,7 @@
 	url = https://github.com/Sensirion/arduino-sht
 [submodule "software/lib/pubsubclient"]
 	path = software/lib/pubsubclient
-	url = https://github.com/mhmtsui/pubsubclient
+	url = https://github.com/arjenhiemstra/pubsubclient
 [submodule "software/lib/Arduino-Log"]
 	path = software/lib/Arduino-Log
 	url = https://github.com/thijse/Arduino-Log
