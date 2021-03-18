@@ -16,3 +16,6 @@
 [submodule "software/lib/Arduino-Log"]
 	path = software/lib/Arduino-Log
 	url = https://github.com/thijse/Arduino-Log
+[submodule "software/lib/SPIFFS_FilePrint"]
+	path = software/lib/SPIFFS_FilePrint
+	url = https://github.com/PRosenb/SPIFFS_FilePrint
