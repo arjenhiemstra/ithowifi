@@ -32,6 +32,9 @@ void setup() {
 
   MDNSinit();
 
+  mqttHADiscovery();
+  logInput("ha: done 2");
+
 #if defined (__HW_VERSION_TWO__)
   Ticker TaskTimeout;
   CC1101TaskStart = true;

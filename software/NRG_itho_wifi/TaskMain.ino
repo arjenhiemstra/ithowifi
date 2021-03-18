@@ -20,6 +20,10 @@ void TaskInit( void * pvParameters ) {
 #endif
 
   esp_task_wdt_init(40, true);
+
+  mqttHADiscovery();
+  logInput("ha: done 1");
+
   logInput("Setup: done");
 
   vTaskDelete( NULL );
