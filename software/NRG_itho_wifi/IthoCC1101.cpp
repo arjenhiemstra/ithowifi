@@ -281,7 +281,6 @@ bool IthoCC1101::parseMessageCommand() {
   //counter1
   inIthoPacket.counter = inIthoPacket.dataDecoded[4];
 
-  bool isPowerCommand     = checkIthoCommand(&inIthoPacket, ithoMessagePowerCommandBytes);
   bool isHighCommand      = checkIthoCommand(&inIthoPacket, ithoMessageHighCommandBytes);
   bool isRVHighCommand    = checkIthoCommand(&inIthoPacket, ithoMessageRVHighCommandBytes);
   bool isMediumCommand    = checkIthoCommand(&inIthoPacket, ithoMessageMediumCommandBytes);
@@ -300,7 +299,6 @@ bool IthoCC1101::parseMessageCommand() {
 
   //determine command
   inIthoPacket.command = IthoUnknown;
-  if (isPowerCommand)    inIthoPacket.command = IthoFull;
   if (isHighCommand)     inIthoPacket.command = IthoHigh;
   if (isRVHighCommand)   inIthoPacket.command = IthoHigh;
   if (isMediumCommand)   inIthoPacket.command = IthoMedium;
@@ -345,7 +343,7 @@ bool IthoCC1101::checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]
   if (itho->deviceType == 28 || itho->deviceType == 24) offset = 2;
   for (int i = 0; i < 6; i++)
   {
-    if (i == 2) continue; //skip byte3, rft-rv device seem to sometimes have a different number there for Timer command
+    if (i == 2 || i == 3) continue; //skip byte3 and byte4, rft-rv and co2-auto remote device seem to sometimes have a different number there
     if ( (itho->dataDecoded[i + 5 + offset] != commandBytes[i]) && (itho->dataDecodedChk[i + 5 + offset] != commandBytes[i]) ) {
       return false;
     }
@@ -568,8 +566,6 @@ uint8_t* IthoCC1101::getMessageCommandBytes(IthoCommand command)
 {
   switch (command)
   {
-    case IthoFull:
-      return (uint8_t*)&ithoMessagePowerCommandBytes[0];
     case IthoStandby:
       return (uint8_t*)&ithoMessageStandByCommandBytes[0];
     case IthoHigh:
