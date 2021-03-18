@@ -10,3 +10,6 @@
 [submodule "software/lib/arduino-sht"]
 	path = software/lib/arduino-sht
 	url = https://github.com/Sensirion/arduino-sht
+[submodule "software/lib/pubsubclient"]
+	path = software/lib/pubsubclient
+	url = https://github.com/mhmtsui/pubsubclient
