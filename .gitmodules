@@ -1,3 +1,6 @@
 [submodule "software/lib/ArduinoJson"]
 	path = software/lib/ArduinoJson
 	url = https://github.com/bblanchon/ArduinoJson
+[submodule "software/lib/ESPAsyncWebServer"]
+	path = software/lib/ESPAsyncWebServer
+	url = https://github.com/me-no-dev/ESPAsyncWebServer
