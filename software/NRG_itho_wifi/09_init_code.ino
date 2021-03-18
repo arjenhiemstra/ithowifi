@@ -1,5 +1,3 @@
-uint8_t counterDebug = 0;
-
 #if defined (__HW_VERSION_TWO__) && defined (ENABLE_FAILSAVE_BOOT)
 void failSafeBoot() {
 
@@ -453,23 +451,12 @@ void mqttInit() {
 
 void mqttHomeAssistantDiscovery()
 {
-  jsonLogMessage(F("mqtt discovery"), RFLOG);
-  logInput("HA DISCOVERY: inside");
-  // if(counterDebug < 10) // every 50s
-  // {
-  //   counterDebug++;
-  //   return;
-  // }
-  // counterDebug = 0;
-
-  if (!systemConfig.mqtt_ha_active) return;
-  logInput("HA DISCOVERY: MQTT HOME ASSISTANT DISCOVERY ACTIVE");
-
   if (!systemConfig.mqtt_active) return;
-  logInput("HA DISCOVERY: MQTT ACTIVE");
 
   if (!mqttClient.connected()) return;
-  logInput("HA DISCOVERY: MQTT CONNECTED");
+
+  if (!systemConfig.mqtt_ha_active) return;
+  logInput("MQTT: Publishing Home Assistant Discovery");
 
   String sHADiscoveryFan = "{\"avty_t\":\"%mqtt_availability_topic%\",\"dev\":{\"identifiers\":\"%node_id%\",\"manufacturer\":\"Arjen Hiemstra\",\"model\":\"ITHO Wifi Add-on\",\"name\":\"ITHO-WIFI(%node_id%)\",\"sw_version\":\"%version%\"},\"uniq_id\":\"%node_id%_fan\",\"name\":\"%node_id%_fan\",\"stat_t\":\"%mqtt_availability_topic%\",\"stat_val_tpl\":\"{% if value == 'online' %}ON{% else %}OFF{% endif %}\",\"json_attr_t\":\"%mqtt_fan_speed_topic%/sensor\",\"cmd_t\":\"%mqtt_command_topic%/not_used/needed_for_HA\",\"spd_cmd_t\":\"%mqtt_command_topic%\",\"spd_stat_t\":\"%mqtt_fan_speed_topic%\",\"payload_high_speed\":\"%value_high%\",\"payload_medium_speed\":\"%value_medium%\",\"payload_low_speed\":\"%value_low%\"}";
   String sHADiscoveryFanTopic = "%mqtt_ha_prefix%/fan/%node_id%/config";
@@ -487,7 +474,6 @@ void mqttHomeAssistantDiscovery()
 void sendHADiscovery(String topic, String payload)
 {
   char logBuff[64] = "";
-  //TODO: need config var for prefix
   payload.replace("%mqtt_ha_prefix%", systemConfig.mqtt_ha_topic); // should never be used but just in case
   topic.replace("%mqtt_ha_prefix%", systemConfig.mqtt_ha_topic);
 
@@ -515,18 +501,11 @@ void sendHADiscovery(String topic, String payload)
   payload.replace("%value_low%", logBuff);
   sprintf(logBuff, "");
 
-  // payload.replace("a","b");
 
 
   if (mqttClient.getBufferSize() < payload.length()) 
   {
-    logInput("HA DISCOVERY: Buffer size too small, resizing");
     mqttClient.setBufferSize(payload.length()); //resize buffer when needed
-  }
-  else
-  {
-    logInput("HA DISCOVERY: Buffer size ok");
-    /* code */
   }
 
   if (mqttClient.beginPublish(topic.c_str(), payload.length(), true))
@@ -788,7 +767,6 @@ void webServerInit() {
   });
   server.on("/api.html", HTTP_GET, handleAPI);
   server.on("/debug", HTTP_GET, handleDebug);
-  server.on("/test", HTTP_GET, handleTest);
 
   //Log file download
   server.on("/curlog", HTTP_GET, handleCurLogDownload);

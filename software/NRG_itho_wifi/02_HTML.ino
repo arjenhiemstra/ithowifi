@@ -33,7 +33,6 @@ const char html_mainpage[] PROGMEM = R"=====(
                 <li class="pure-menu-item"><a href="update" class="pure-menu-link">Update</a></li>
                 <li class="pure-menu-item"><a href="reset" class="pure-menu-link">Reset</a></li>
                 <li class="pure-menu-item"><a href="debug" class="pure-menu-link">Debug</a></li>
-                <li class="pure-menu-item"><a href="test" class="pure-menu-link">Test</a></li>
             </ul>
         <div id="memory_box"></div>
         </div>
@@ -355,34 +354,3 @@ void handlePrevLogDownload(AsyncWebServerRequest *request) {
   }  
   request->send(SPIFFS, link, "", true);
 }
-
-
-void handleTest(AsyncWebServerRequest *request) {
-
-  AsyncResponseStream *response = request->beginResponseStream("text/html");
-
-  response->print(F("<div class=\"header\"><h1>Test page</h1></div><br><br>"));
-
-  // response->print(F("<button id=\"button1\" class=\"pure-button pure-button-primary\">Low</button><br>"));
-  // response->print(F("<button id=\"button2\" class=\"pure-button pure-button-primary\">Medium</button><br>"));
-  // response->print(F("<button id=\"button3\" class=\"pure-button pure-button-primary\">High</button><br><br>"));
-
-  // response->print(F("<button id=\"buttonjoin\" class=\"pure-button pure-button-primary\">Join</button><br>"));
-  // response->print(F("<button id=\"buttonleave\" class=\"pure-button pure-button-primary\">Leave</button><br><br>"));
-
-  // response->print(F("<button id=\"buttontype\" class=\"pure-button pure-button-primary\">Query Device type</button><br>"));
-  // response->print(F("<button id=\"buttonstatus\" class=\"pure-button pure-button-primary\">Query Status</button><br>"));
-  // response->print(F("<button id=\"buttonstatusformat\" class=\"pure-button pure-button-primary\">Query Status Format</button><br>"));
-
-  response->print(F("<br><br><div id='rflog_outer' class='hidden'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>Log:</div>"));
-  response->print(F("<div id='rflog' style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto'>"));
-  response->print(F("</div><div style='padding-top:5px;'><a href='#' class='pure-button' onclick=\"$('#rflog').empty()\">Clear</a></div></div><br><br>"));
-    
-  request->send(response);
-
-
-
-
-}
-
-//<button id="wifisubmit" class="pure-button pure-button-primary">Save</button>

@@ -84,9 +84,7 @@ void execMQTTTasks() {
           sprintf(buffer, "{\"temp\":%1.1f,\"hum\":%1.1f}", ithoTemp, ithoHum);
           mqttClient.publish(systemConfig.mqtt_sensor_topic, buffer, true);
         }
-        // FOR DEBUGGING, REMOVE FOR RELEASE
-        // jsonLogMessage(buffer, RFLOG);
-        // mqttHomeAssistantDiscovery();
+        
       }
     }
 #endif

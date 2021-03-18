@@ -619,7 +619,6 @@ function update_page(page) {
     if (page == 'reset') { $('#main').append(html_reset); }
     if (page == 'update') { $('#main').append(html_update); }
     if (page == 'debug') { $('#main').load( 'debug' ); }
-    if (page == 'test') { $('#main').load( 'test' ); }
 }
 
 //handle menu collapse on smaller screens
