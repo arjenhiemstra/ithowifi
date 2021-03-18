@@ -1,0 +1,24 @@
+[submodule "software/lib/ArduinoJson"]
+	path = software/lib/ArduinoJson
+	url = https://github.com/bblanchon/ArduinoJson
+[submodule "software/lib/ESPAsyncWebServer"]
+	path = software/lib/ESPAsyncWebServer
+	url = https://github.com/me-no-dev/ESPAsyncWebServer
+[submodule "software/lib/AsyncTCP"]
+	path = software/lib/AsyncTCP
+	url = https://github.com/me-no-dev/AsyncTCP
+[submodule "software/lib/arduino-sht"]
+	path = software/lib/arduino-sht
+	url = https://github.com/Sensirion/arduino-sht
+[submodule "software/lib/pubsubclient"]
+	path = software/lib/pubsubclient
+	url = https://github.com/arjenhiemstra/pubsubclient
+[submodule "software/lib/Arduino-Log"]
+	path = software/lib/Arduino-Log
+	url = https://github.com/thijse/Arduino-Log
+[submodule "software/lib/SPIFFS_FilePrint"]
+	path = software/lib/SPIFFS_FilePrint
+	url = https://github.com/PRosenb/SPIFFS_FilePrint
+[submodule "software/lib/ESPAsyncTCP"]
+	path = software/lib/ESPAsyncTCP
+	url = https://github.com/me-no-dev/ESPAsyncTCP
