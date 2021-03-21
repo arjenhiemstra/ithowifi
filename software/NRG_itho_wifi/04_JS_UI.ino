@@ -374,49 +374,57 @@ $(document).ready(function() {
     }    
     else if ($(this).attr('id') == 'updatesubmit') {
       e.preventDefault();
+      var form = $('#updateform')[0];
+      var data = new FormData(form);
+      let filename = data.get('update').name;
+      if(!filename.endsWith(".bin")) {
+        count += 1;
+        resetTimer();
+        $('#message_box').show();
+        $('#message_box').append('<p class=\'messageP\' id=\'mbox_p' + count + '\'>Updater: file name error, please select a *.bin firmware file</p>');
+        removeAfter5secs(count);
+        return;
+      }
       $('#uploadProgress').show();
       $('#updateProgress').show();
       $('#uploadprg').show();
       $('#updateprg').show();
-        var form = $('#updateform')[0];
-        var data = new FormData(form);
-         $.ajax({
-              url: '/update',
-              type: 'POST',
-              data: data,
-              contentType: false,
-              processData: false,
-              xhr: function() {
-                  var xhr = new window.XMLHttpRequest();
-                  xhr.upload.addEventListener('progress', function(evt) {
-                      if (evt.lengthComputable) {
-                          console.log("evt: ");
-                          console.log(evt);
-                          var per = Math.round(10 + (((evt.loaded / evt.total)*100)*0.9));
-                          $('#uploadprg').html('File upload progress: ' + per + '%');
-                          moveBar(per, "uploadBar");
-                          if (per == 100) {
-                            $('#uploaddone').show();
-                            $('#uploaddone').html('Done!');
-                          }
+      
+      $.ajax({
+          url: '/update',
+          type: 'POST',
+          data: data,
+          contentType: false,
+          processData: false,
+          xhr: function() {
+              var xhr = new window.XMLHttpRequest();
+              xhr.upload.addEventListener('progress', function(evt) {
+                  if (evt.lengthComputable) {
+                      var per = Math.round(10 + (((evt.loaded / evt.total)*100)*0.9));
+                      $('#uploadprg').html('File upload progress: ' + per + '%');
+                      moveBar(per, "uploadBar");
+                      if (per == 100) {
+                        $('#uploaddone').show();
+                        $('#uploaddone').html('Done!');
                       }
-                 }, false);
-                 return xhr;
-              },
-              success:function(d, s) {
-                  moveBar(100, "updateBar");
-                  $('#updateprg').html('Firmware update progress: 100%');
-                  $('#updatedone').show();
-                  $('#updatedone').html('Done!');  
-                  console.log('success!')
-                  $('#time').show();
-                  startCountdown();
-             },
-              error: function () {
-                console.log('failed!');
-                startCountdown();
-              }
-            });
+                  }
+             }, false);
+             return xhr;
+          },
+          success:function(d, s) {
+              moveBar(100, "updateBar");
+              $('#updateprg').html('Firmware update progress: 100%');
+              $('#updatedone').show();
+              $('#updatedone').html('Done!');  
+              console.log('success!')
+              $('#time').show();
+              startCountdown();
+         },
+          error: function () {
+            console.log('failed!');
+            startCountdown();
+          }
+        });
     }
     e.preventDefault();
     return false;
