@@ -1,6 +1,18 @@
 /*
    Author: Klusjesman, supersjimmie, modified and reworked by arjenhiemstra
 */
+#define DEBUG 0
+
+#define BYTE_TO_BINARY_PATTERN "%c,%c,%c,%c,%c,%c,%c,%c,"
+#define BYTE_TO_BINARY(byte)  \
+  (byte & 0x80 ? '1' : '0'), \
+  (byte & 0x40 ? '1' : '0'), \
+  (byte & 0x20 ? '1' : '0'), \
+  (byte & 0x10 ? '1' : '0'), \
+  (byte & 0x08 ? '1' : '0'), \
+  (byte & 0x04 ? '1' : '0'), \
+  (byte & 0x02 ? '1' : '0'), \
+  (byte & 0x01 ? '1' : '0')
 
 #include "IthoCC1101.h"
 #include <string.h>
@@ -278,6 +290,14 @@ bool IthoCC1101::parseMessageCommand() {
 
   messageDecode(&inMessage, &inIthoPacket);
 
+  //deviceType of message type?
+  inIthoPacket.deviceType  = inIthoPacket.dataDecoded[0];
+
+  //deviceID
+  inIthoPacket.deviceId[0] = inIthoPacket.dataDecoded[1];
+  inIthoPacket.deviceId[1] = inIthoPacket.dataDecoded[2];
+  inIthoPacket.deviceId[2] = inIthoPacket.dataDecoded[3];
+  
   //counter1
   inIthoPacket.counter = inIthoPacket.dataDecoded[4];
 
@@ -341,9 +361,9 @@ bool IthoCC1101::parseMessageCommand() {
 bool IthoCC1101::checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]) {
   uint8_t offset = 0;
   if (itho->deviceType == 28 || itho->deviceType == 24) offset = 2;
-  for (int i = 0; i < 6; i++)
+  for (int i = 4; i < 6; i++)
   {
-    if (i == 2 || i == 3) continue; //skip byte3 and byte4, rft-rv and co2-auto remote device seem to sometimes have a different number there
+    //if (i == 2 || i == 3) continue; //skip byte3 and byte4, rft-rv and co2-auto remote device seem to sometimes have a different number there
     if ( (itho->dataDecoded[i + 5 + offset] != commandBytes[i]) && (itho->dataDecodedChk[i + 5 + offset] != commandBytes[i]) ) {
       return false;
     }
@@ -682,10 +702,6 @@ uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet) {
     }
   }
 
-  for (int i = 0; i < sizeof(itho->dataDecoded) / sizeof(itho->dataDecoded[0]); i++) {        //zero out data in dataDecoded buffer. FIXME: probably could use a better solution.
-    itho->dataDecoded[i] = 0;
-  }
-
   return out_bytecounter;
 }
 
@@ -695,7 +711,7 @@ void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *itho) {
   itho->length = 0;
   int lenInbuf = packet->length;
 
-  lenInbuf -= STARTBYTE; 
+  lenInbuf -= STARTBYTE; //correct for sync byte pos
   
   while (lenInbuf >= 5) {
     lenInbuf -= 5;
@@ -748,10 +764,6 @@ void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *itho) {
       if (in_bitcounter > 9) in_bitcounter = 0;
     }
   }
-  itho->deviceType  = itho->dataDecoded[0];
-  itho->deviceId[0] = itho->dataDecoded[1];
-  itho->deviceId[1] = itho->dataDecoded[2];
-  itho->deviceId[2] = itho->dataDecoded[3];
 }
 
 uint8_t IthoCC1101::ReadRSSI()
@@ -816,7 +828,6 @@ String IthoCC1101::LastMessageDecoded() {
   String str;
   if (inIthoPacket.length > 11) {
     str += "Device type?: " + String(inIthoPacket.deviceType);
-    str += " - Device ID: " + String(inIthoPacket.deviceId[0]) + "," + String(inIthoPacket.deviceId[1]) + "," + String(inIthoPacket.deviceId[2]);
     str += " - CMD: ";
     for (int i = 4; i < inIthoPacket.length; i++) {
       str += String(inIthoPacket.dataDecoded[i]);
