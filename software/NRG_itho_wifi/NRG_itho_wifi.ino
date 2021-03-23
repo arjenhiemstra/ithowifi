@@ -1,4 +1,4 @@
-#define FWVERSION "2.2-beta8-43-ge17d3fe-dirty"
+#define FWVERSION "2.2-beta9"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -190,6 +190,7 @@ bool coldBoot = false;
 bool joinSend = false;
 int8_t ithoInit = 0;
 bool shouldReboot = false;
+bool onOTA = false;
 bool dontSaveConfig = false;
 bool saveSystemConfigflag = false;
 bool saveWifiConfigflag = false;

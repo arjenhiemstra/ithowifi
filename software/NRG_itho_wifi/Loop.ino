@@ -17,7 +17,7 @@ void execWebTasks() {
   ArduinoOTA.handle();
   ws.cleanupClients();
   if (millis() - previousUpdate >= 5000 || sysStatReq) {
-    if (millis() - lastSysMessage >= 1000) { //rate limit messages to once a second
+    if (millis() - lastSysMessage >= 1000 && !onOTA) { //rate limit messages to once a second
       sysStatReq = false;
       lastSysMessage = millis();
       //remotes.llModeTimerUpdated = false;
