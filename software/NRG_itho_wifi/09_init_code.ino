@@ -144,7 +144,7 @@ void logInit() {
 
 #if defined (__HW_VERSION_ONE__)
   sprintf(logBuff, "System boot, last reset reason: %s", ESP.getResetReason().c_str());
-  if(strcmp(ESP.getResetReason().c_str(), "Power On") == 0 || strcmp(ESP.getResetReason().c_str(), "External System") == 0) {
+  if (strcmp(ESP.getResetReason().c_str(), "Power On") == 0 || strcmp(ESP.getResetReason().c_str(), "External System") == 0) {
     coldBoot = true;
   }
 #elif defined (__HW_VERSION_TWO__)
@@ -179,34 +179,31 @@ void logInit() {
   sprintf(logBuff, "HW rev: %s, FW ver.: %s", HWREVISION, FWVERSION);
   logInput(logBuff);
 
-  strcpy(logBuff, "");
-  sprintf(logBuff, "Setup: Virtual remote ID: %d,%d,%d", getMac(6-3),getMac(6-2),getMac(6-1));
-  logInput(logBuff); 
 }
 
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
 void initSensor() {
 
-if (systemConfig.syssht30) {
-  if (sht_org.init() && sht_org.readSample()) {
-    Wire.endTransmission(true);
-    SHT3x_original = true;
+  if (systemConfig.syssht30) {
+    if (sht_org.init() && sht_org.readSample()) {
+      Wire.endTransmission(true);
+      SHT3x_original = true;
+    }
+    else if (sht_alt.init() && sht_alt.readSample()) {
+      Wire.endTransmission(true);
+      SHT3x_alternative = true;
+    }
+    if (SHT3x_original) {
+      logInput("Setup: Original SHT30 sensor found");
+    }
+    else if (SHT3x_alternative) {
+      logInput("Setup: Alternative SHT30 sensor found");
+    }
+    else {
+      systemConfig.syssht30 = 0;
+      logInput("Setup: SHT30 sensor not present");
+    }
   }
-  else if (sht_alt.init() && sht_alt.readSample()) {
-    Wire.endTransmission(true);
-    SHT3x_alternative = true;
-  }
-  if (SHT3x_original) {
-    logInput("Setup: Original SHT30 sensor found");
-  }
-  else if (SHT3x_alternative) {
-    logInput("Setup: Alternative SHT30 sensor found");
-  }
-  else {
-    systemConfig.syssht30 = 0;
-    logInput("Setup: SHT30 sensor not present");
-  }  
-}
 
 }
 #endif
@@ -285,9 +282,11 @@ uint8_t getMac(uint8_t i) {
 
 void wifiInit() {
   if (!loadWifiConfig()) {
+    logInput("Setup: Wifi config load failed");
     setupWiFiAP();
   }
   else if (!connectWiFiSTA()) {
+    logInput("Setup: Wifi connect STA failed");
     setupWiFiAP();
   }
   configTime(0, 0, "pool.ntp.org");
@@ -389,7 +388,7 @@ bool connectWiFiSTA()
       configOK = false;
     }
     if (configOK) {
-      if(!WiFi.config(staticIP, gateway, subnet, dns1 , dns2)) {
+      if (!WiFi.config(staticIP, gateway, subnet, dns1 , dns2)) {
         logInput("Static IP config NOK");
       }
       else {
@@ -399,8 +398,8 @@ bool connectWiFiSTA()
   }
 
   delay(200);
-  
-  
+
+
 
 #if defined (__HW_VERSION_ONE__)
   WiFi.hostname(hostName());
@@ -612,11 +611,6 @@ bool setupMQTTClient() {
 
       if (mqttClient.connected()) {
         mqttClient.subscribe(systemConfig.mqtt_cmd_topic);
-        mqttClient.subscribe(systemConfig.mqtt_state_topic);
-        if (systemConfig.syssht30) {
-          mqttClient.subscribe(systemConfig.mqtt_sensor_topic);
-        }
-        mqttClient.subscribe(systemConfig.mqtt_lwt_topic);
         mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", true);
 
         mqttHomeAssistantDiscovery();
@@ -626,7 +620,7 @@ bool setupMQTTClient() {
 
   }
   else {
-    mqttClient.publish(systemConfig.mqtt_lwt_topic, "offline", true);
+    mqttClient.publish(systemConfig.mqtt_lwt_topic, "offline", true);  //set to offline in case of graceful shutdown
     mqttClient.disconnect();
     return false;
   }
@@ -702,6 +696,8 @@ void logWifiInfo() {
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
 
+  sprintf(wifiBuff, "Setup: Virtual remote ID: %d,%d,%d", getMac(6 - 3), getMac(6 - 2), getMac(6 - 1));
+  logInput(wifiBuff);
 
 }
 
@@ -752,8 +748,8 @@ void webServerInit() {
   server.on("/upload", HTTP_POST, [](AsyncWebServerRequest * request) {
     if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
-    }    
+        return request->requestAuthentication();
+    }
     request->send(200);
   }, [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     //Handle upload
@@ -772,7 +768,7 @@ void webServerInit() {
   }
   else {
     server.addHandler(new SPIFFSEditor(SPIFFS, "", ""));
-  }  
+  }
 #endif
 
   // css_code
@@ -830,7 +826,7 @@ void webServerInit() {
   server.on("/index.htm", HTTP_ANY, [](AsyncWebServerRequest * request) {
     if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
+        return request->requestAuthentication();
     }
     request->send_P(200, "text/html", html_mainpage);
   });
@@ -845,7 +841,7 @@ void webServerInit() {
   server.on("/login", HTTP_GET, [](AsyncWebServerRequest * request) {
     if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
+        return request->requestAuthentication();
     }
     request->send(200, "text/plain", "Login Success!");
   });
@@ -853,7 +849,7 @@ void webServerInit() {
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest * request) {
     if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
+        return request->requestAuthentication();
     }
     request->send(200, "text/html", "<form method='POST' action='/update' "
                   "enctype='multipart/form-data'><input "
@@ -864,7 +860,7 @@ void webServerInit() {
   server.on("/update", HTTP_POST, [](AsyncWebServerRequest * request) {
     if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
+        return request->requestAuthentication();
     }
     shouldReboot = !Update.hasError();
     AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", shouldReboot ? "OK" : "FAIL");
@@ -873,6 +869,10 @@ void webServerInit() {
   },
   [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     if (!index) {
+#if defined (ENABLE_SERIAL)
+      Serial.println("Begin OTA update");
+#endif
+      onOTA = true;
       dontSaveConfig = true;
       dontReconnectMQTT = true;
       mqttClient.disconnect();
@@ -882,6 +882,9 @@ void webServerInit() {
       strcat(buf, "Firmware update: ");
       strncat(buf, filename.c_str(), sizeof(buf) - strlen(buf) - 1);
       logInput(buf);
+#if defined (ENABLE_SERIAL)
+      Serial.println(buf);
+#endif
 
 #if defined (__HW_VERSION_TWO__)
 
@@ -899,6 +902,10 @@ void webServerInit() {
       esp_task_wdt_delete( xTaskMQTTHandle );
       esp_task_wdt_delete( xTaskConfigAndLogHandle );
 
+#if defined (ENABLE_SERIAL)
+      Serial.println("Tasks detached");
+#endif
+
 #endif
 
 #if defined (__HW_VERSION_ONE__)
@@ -907,22 +914,29 @@ void webServerInit() {
 #elif defined (__HW_VERSION_TWO__)
       if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
 #endif
+#if defined (ENABLE_SERIAL)
         Update.printError(Serial);
-      } else {
-        Serial.end();
+#endif
       }
     }
     if (!Update.hasError()) {
       if (Update.write(data, len) != len) {
+#if defined (ENABLE_SERIAL)
         Update.printError(Serial);
+#endif
       }
     }
     if (final) {
       if (Update.end(true)) {
-        // Serial.printf("Update Success: %uB\n", index+len);
+#if defined (ENABLE_SERIAL)
+        printf("Update Success: %uB\n", index + len);
+#endif
       } else {
+#if defined (ENABLE_SERIAL)
         Update.printError(Serial);
+#endif
       }
+      onOTA = false;
     }
   });
   Update.onProgress(otaWSupdate);
@@ -930,7 +944,7 @@ void webServerInit() {
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest * request) {
     if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-        return request->requestAuthentication();          
+        return request->requestAuthentication();
     }
     jsonLogMessage(F("Reset requested Device will reboot in a few seconds..."), WEBINTERFACE);
     delay(200);

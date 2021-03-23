@@ -424,6 +424,9 @@ void otaWSupdate(size_t prg, size_t sz) {
 
     notifyClients(buffer, len);
 
+#if defined (ENABLE_SERIAL)
+    printf("OTA Progress: %d%%\n", newPercent);
+#endif
   }
 
 

@@ -45,9 +45,6 @@ void RFDebug(bool chk, int * id, IthoCommand cmd) {
     case IthoHigh:
       strcat(debugLog, "high");
       break;
-    case IthoFull:
-      strcat(debugLog, "full");
-      break;
     case IthoTimer1:
       strcat(debugLog, "timer1");
       break;
@@ -199,7 +196,7 @@ void TaskCC1101( void * pvParameters ) {
                 nextIthoTimer = 0;
                 updateItho = true;
               }
-              if (cmd == IthoHigh || cmd == IthoFull) {
+              if (cmd == IthoHigh) {
                 nextIthoVal = systemConfig.itho_high;
                 nextIthoTimer = 0;
                 updateItho = true;
