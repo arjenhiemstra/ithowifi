@@ -1,4 +1,4 @@
-#define FWVERSION "2.2-beta9"
+#define FWVERSION "2.2-beta9-15-g6eb8ce7-dirty"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
