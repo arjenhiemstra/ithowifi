@@ -456,13 +456,9 @@ void mqttHomeAssistantDiscovery()
   logInput("HA DISCOVERY: inside");
 
   if (!systemConfig.mqtt_active) return;
-  logInput("HA DISCOVERY: MQTT ACTIVE");
-
   if (!mqttClient.connected()) return;
-  logInput("HA DISCOVERY: MQTT CONNECTED");
-
   if (!systemConfig.mqtt_ha_active) return;
-  logInput("HA DISCOVERY: MQTT HOME ASSISTANT DISCOVERY ACTIVE");
+  logInput("HA DISCOVERY: Start publishing MQTT Home Assistant Discovery...");
 
   HADiscoveryFan();
 
