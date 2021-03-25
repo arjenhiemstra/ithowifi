@@ -552,23 +552,26 @@ void addHADevInfo(JsonObject obj) {
 
 void sendHADiscovery(JsonObject obj, const char* topic)
 {
-  size_t psize = measureJson(obj);
-  if (mqttClient.getBufferSize() < (MQTT_MAX_HEADER_SIZE + 2 + strlen(topic) + psize))//max header + topic length + content
+  size_t payloadSize = measureJson(obj);
+  //max header + topic + content. Copied logic from PubSubClien::publish(), PubSubClient.cpp:482
+  size_t packetSize = MQTT_MAX_HEADER_SIZE + 2 + strlen(topic) + payloadSize;
+
+  if (mqttClient.getBufferSize() < packetSize)
   {
-    logInput("HA DISCOVERY: Buffer size too small, resizing");
-    mqttClient.setBufferSize(MQTT_MAX_HEADER_SIZE + 2 + strlen(topic) + psize); //resize buffer when needed
-  }
-  else
-  {
-    logInput("HA DISCOVERY: Buffer size ok");
+    logInput("MQTT: buffer too small, resizing... (HA discovery)");
+    mqttClient.setBufferSize(packetSize);
   }
 
-  if (mqttClient.beginPublish(topic, psize, true))
+  if (mqttClient.beginPublish(topic, payloadSize, true))
   {
     serializeJson(obj, mqttClient);
-    mqttClient.endPublish();
+    if (!mqttClient.endPublish()) logInput("MQTT: Failed to send payload (HA discovery)");
+  } 
+  else 
+  {
+    logInput("MQTT: Failed to start building message (HA discovery)");
   }
-
+  
   // reset buffer
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }
