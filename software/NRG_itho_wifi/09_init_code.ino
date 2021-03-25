@@ -465,6 +465,8 @@ void mqttHomeAssistantDiscovery()
   logInput("HA DISCOVERY: MQTT HOME ASSISTANT DISCOVERY ACTIVE");
 
   HADiscoveryFan();
+
+  if (!SHT3x_original || !SHT3x_alternative) return;
   HADiscoveryHumidity();
   HADiscoveryTemperature();
 }
