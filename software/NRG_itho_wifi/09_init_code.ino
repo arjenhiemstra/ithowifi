@@ -552,18 +552,18 @@ void addHADevInfo(JsonObject obj) {
 
 void sendHADiscovery(JsonObject obj, const char* topic)
 {
-  size_t size = measureJson(obj);
-  if (mqttClient.getBufferSize() < (size + strlen(topic))) //max topic length + content + TODO: needs a check
+  size_t psize = measureJson(obj);
+  if (mqttClient.getBufferSize() < (MQTT_MAX_HEADER_SIZE + 2 + strlen(topic) + psize))//max header + topic length + content
   {
     logInput("HA DISCOVERY: Buffer size too small, resizing");
-    mqttClient.setBufferSize(size + strlen(topic)); //resize buffer when needed
+    mqttClient.setBufferSize(MQTT_MAX_HEADER_SIZE + 2 + strlen(topic) + psize); //resize buffer when needed
   }
   else
   {
     logInput("HA DISCOVERY: Buffer size ok");
   }
 
-  if (mqttClient.beginPublish(topic, size, true))
+  if (mqttClient.beginPublish(topic, psize, true))
   {
     serializeJson(obj, mqttClient);
     mqttClient.endPublish();
