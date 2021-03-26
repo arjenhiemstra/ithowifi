@@ -46,9 +46,15 @@ SystemConfig::SystemConfig() {
   itho_rf_support = 0;
   rfInitOK = false;
   nonQ_cmd_clearsQ = 1;
-  
+
+  autopilot_active = 0;
+  autopilot_updated = false;
+  autopilot_hum_upper = 55;
+  autopilot_hum_lower = 40;
+
   itho_updated = false;
   get_itho_settings = false;
+  get_autopilot_settings = false;
   configLoaded = false;
 
 } //SystemConfig
@@ -158,6 +164,23 @@ bool SystemConfig::set(JsonObjectConst obj) {
     updated = true;
     sensor_idx = obj["sensor_idx"];
   }
+  if (!(const char*)obj["autopilot_active"].isNull()) {
+    autopilot_updated = true;
+    updated = true;
+    autopilot_active = obj["autopilot_active"];
+  }
+  if (!(const char *)obj["autopilot_hum_upper"].isNull())
+  {
+    //itho_updated = true;
+    updated = true;
+    autopilot_hum_upper = obj["autopilot_hum_upper"];
+  }
+  if (!(const char *)obj["autopilot_hum_lower"].isNull())
+  {
+    //itho_updated = true;
+    updated = true;
+    autopilot_hum_lower = obj["autopilot_hum_lower"];
+  }
   if (!(const char*)obj["itho_fallback"].isNull()) {
     //itho_updated = true;
     updated = true;
@@ -222,7 +245,7 @@ bool SystemConfig::set(JsonObjectConst obj) {
 void SystemConfig::get(JsonObject obj) const {
 
   bool complete = true;
-  if (get_mqtt_settings || get_sys_settings || get_itho_settings) {
+  if (get_mqtt_settings || get_sys_settings || get_itho_settings || get_autopilot_settings) {
     complete = false;
   }
   if (complete || get_sys_settings) {
@@ -269,6 +292,12 @@ void SystemConfig::get(JsonObject obj) const {
     obj["itho_vremapi"] = itho_vremapi;
     obj["itho_vremswap"] = itho_vremswap;  
     obj["nonQ_cmd_clearsQ"] = nonQ_cmd_clearsQ;
+  }
+  if (complete || get_autopilot_settings) {
+    get_autopilot_settings = false;
+    obj["autopilot_active"] = autopilot_active;
+    obj["autopilot_hum_upper"] = autopilot_hum_upper;
+    obj["autopilot_hum_lower"] = autopilot_hum_lower;
   }
   obj["version_of_program"] = config_struct_version;
 }

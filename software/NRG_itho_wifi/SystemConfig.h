@@ -36,6 +36,11 @@ class SystemConfig {
     mutable bool mqtt_updated;
     mutable bool get_mqtt_settings;
     mutable bool get_sys_settings;
+    mutable bool get_autopilot_settings;
+    mutable bool autopilot_updated;
+    uint8_t autopilot_active;
+    uint8_t autopilot_hum_upper;
+    uint8_t autopilot_hum_lower;
     uint8_t itho_fallback;
     uint8_t itho_low;
     uint8_t itho_medium;

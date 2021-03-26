@@ -82,6 +82,13 @@ function startWebsock(websocketServerLocation){
             radio("mqtt_ha", x.mqtt_ha_active);
             $('#mqtt_idx').val(x.mqtt_idx);
             $('#sensor_idx').val(x.sensor_idx);
+            var $radios = $('input[name=\'option-autopilot_active\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value="' + x.autopilot_active + '"]').prop('checked', true);
+            }
+            radio("autopilot_active", x.autopilot_active);
+            $('#autopilot_hum_upper').val(x.autopilot_hum_upper);
+            $('#autopilot_hum_lower').val(x.autopilot_hum_lower);
             $('#itho_fallback').val(x.itho_fallback);
             $('#itho_low').val(x.itho_low);
             $('#itho_medium').val(x.itho_medium);
@@ -322,6 +329,16 @@ $(document).ready(function() {
       }));
       update_page('itho');
     }
+    else if ($(this).attr('id') == 'autopilotsubmit') {
+      websock.send(JSON.stringify({
+        systemsettings: {
+          autopilot_active:       $('input[name=\'option-autopilot_active\']:checked').val(),
+          autopilot_hum_upper:    $('#autopilot_hum_upper').val(),
+          autopilot_hum_lower:    $('#autopilot_hum_lower').val(),
+        }
+      }));
+      update_page('autopilot');
+    }
     else if ($(this).attr('id') == 'itho_llm') {
       websock.send('{\"itho_llm\":true}');
     }
@@ -515,6 +532,16 @@ function radio(origin, state) {
       $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', true);
     }
   }
+  else if (origin == "autopilot_active") {
+    if (state == 1) {
+      $('#autopilot_hum_upper, #autopilot_hum_lower').prop('readonly', false);
+      $('#autopilot_hum_upper, #autopilot_hum_lower').prop('disabled', false);
+    }
+    else {
+      $('#autopilot_hum_upper, #autopilot_hum_lower').prop('readonly', true);
+      $('#autopilot_hum_upper, #autopilot_hum_lower').prop('disabled', true);
+    }
+  }
   else if (origin == "mqtt_domoticz") {
     if (state == 1) {
       $('#mqtt_idx').prop('readonly', false);
@@ -633,6 +660,7 @@ function update_page(page) {
       $('#sys_fieldset').append(html_systemsettings_end);
     }
     if (page == 'itho') { $('#main').append(html_ithosettings); }
+    if (page == 'autopilot') { $('#main').append(html_autopilotsettings); }
     if (page == 'remotes') { $('#main').append(html_remotessetup); }    
     if (page == 'mqtt') { $('#main').append(html_mqttsetup); }
     if (page == 'api') { $('#main').append(html_api); }      
@@ -1061,6 +1089,38 @@ var html_ithosettings = `
 <script>
 $(document).ready(function() {
   getSettings('ithosetup');
+});
+</script>
+`;
+
+var html_autopilotsettings = `
+<div class="header"><h1>Auto-Pilot settings</h1></div>
+<p>Configuration of auto-pilot threshold values</p>
+<style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
+      <form class="pure-form pure-form-aligned">
+          <fieldset>
+            <div class="pure-control-group">
+              <label for="option-autopilot_active" class="pure-radio">Auto-Pilot</label> 
+              <input id="option-autopilot_active-1" type="radio" name="option-autopilot_active" onchange='radio("autopilot_active", 1)' value="1"> on
+              <input id="option-autopilot_active-0" type="radio" name="option-autopilot_active" onchange='radio("autopilot_active", 0)' value="0"> off
+            </div>
+            <legend><br>Thresholds:</legend>
+            <div class="pure-control-group">
+              <label for="autopilot_hum_upper">Humidity Upper Limit (switch on)</label>
+                <input id="autopilot_hum_upper" type="number" min="0" max="99" size="6">
+            </div>
+            <div class="pure-control-group">
+              <label for="autopilot_hum_lower">Humidity Lower Limit (switch off)</label>
+                <input id="autopilot_hum_lower" type="number" min="0" max="99" size="6">
+            </div>
+            <div class="pure-controls">
+              <button id="autopilotsubmit" class="pure-button pure-button-primary">Save</button>
+            </div>            
+          </fieldset>
+      </form>
+<script>
+$(document).ready(function() {
+  getSettings('autopilotsetup');
 });
 </script>
 `;
