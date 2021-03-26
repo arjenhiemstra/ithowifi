@@ -126,6 +126,12 @@ function startWebsock(websocketServerLocation){
           }
           else if (f.systemstat) {
             let x = f.systemstat;
+            if('temp' in x) {
+              $('#sensor_temp').html(x.temp);
+            }
+            if('hum' in x) {
+              $('#sensor_hum').html(x.hum);
+            }
             $('#memory_box').show();
             $('#memory_box').html('<p><b>Memory:</b><p><p>free: <b>' + x.freemem + '</b></p><p>low: <b>' + x.memlow + '</b></p>');
             $('#mqtt_conn').removeClass();
