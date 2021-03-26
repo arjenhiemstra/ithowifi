@@ -798,6 +798,10 @@ var html_index = `
       <div style="text-align: center">
         <a href="#" class="pure-button" onclick="updateSlider(itho_low)" style="float: left;">Low</a> <a href="#" onclick="updateSlider(itho_medium)" class="pure-button">Medium</a> <a href="#" class="pure-button" onclick="updateSlider(itho_high)" style="float: right;">High</a>
       </div>
+      <div style="text-align: center;margin: 2em 0 0 0;">
+        <div id="sensor_temp"></div>
+        <div id="sensor_hum"></div>
+      </div>
     </div>
     </div>
     <div class="pure-u-1 pure-u-md-1-5"></div>
