@@ -21,10 +21,12 @@ SystemConfig::SystemConfig() {
   mqtt_version = 1;
   strlcpy(mqtt_state_topic, "itho/state", sizeof(mqtt_state_topic));
   strlcpy(mqtt_sensor_topic, "itho/sensor", sizeof(mqtt_sensor_topic));
+  strlcpy(mqtt_ha_topic, "homeassistant", sizeof(mqtt_ha_topic));
   strlcpy(mqtt_state_retain, "yes", sizeof(mqtt_state_retain));
   strlcpy(mqtt_cmd_topic, "itho/cmd", sizeof(mqtt_cmd_topic));
   strlcpy(mqtt_lwt_topic, "itho/lwt", sizeof(mqtt_lwt_topic));
   mqtt_domoticz_active = 0;
+  mqtt_ha_active = 0;
   mqtt_idx = 1;
   sensor_idx = 1;
   mqtt_updated = false;
@@ -122,6 +124,11 @@ bool SystemConfig::set(JsonObjectConst obj) {
     updated = true;
     strlcpy(mqtt_sensor_topic, obj["mqtt_sensor_topic"], sizeof(mqtt_sensor_topic));
   }
+  if (!(const char *)obj["mqtt_ha_topic"].isNull()) {
+    updated = true;
+    mqtt_updated = true;
+    strlcpy(mqtt_ha_topic, obj["mqtt_ha_topic"], sizeof(mqtt_ha_topic));
+  }
   if (!(const char*)obj["mqtt_state_retain"].isNull()) {
     updated = true;
     strlcpy(mqtt_state_retain, obj["mqtt_state_retain"], sizeof(mqtt_state_retain));
@@ -137,6 +144,11 @@ bool SystemConfig::set(JsonObjectConst obj) {
   if (!(const char*)obj["mqtt_domoticz_active"].isNull()) {
     updated = true;
     mqtt_domoticz_active = obj["mqtt_domoticz_active"];
+  }
+  if (!(const char*)obj["mqtt_ha_active"].isNull()) {
+    updated = true;
+    mqtt_updated = true;
+    mqtt_ha_active = obj["mqtt_ha_active"];
   }
   if (!(const char*)obj["mqtt_idx"].isNull()) {
     updated = true;
@@ -238,6 +250,8 @@ void SystemConfig::get(JsonObject obj) const {
     obj["mqtt_cmd_topic"] = mqtt_cmd_topic;
     obj["mqtt_lwt_topic"] = mqtt_lwt_topic;
     obj["mqtt_domoticz_active"] = mqtt_domoticz_active;
+    obj["mqtt_ha_active"] = mqtt_ha_active;
+    obj["mqtt_ha_topic"] = mqtt_ha_topic;
     obj["mqtt_idx"] = mqtt_idx;
     obj["sensor_idx"] = sensor_idx;
   }

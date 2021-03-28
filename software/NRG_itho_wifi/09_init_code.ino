@@ -1,4 +1,6 @@
+#define MQTT_BUFFER_SIZE 1024
 #if defined (__HW_VERSION_TWO__) && defined (ENABLE_FAILSAVE_BOOT)
+
 void failSafeBoot() {
 
   long defaultWaitStart = millis();
@@ -448,6 +450,123 @@ void mqttInit() {
   }
 }
 
+void mqttHomeAssistantDiscovery()
+{
+  if (!systemConfig.mqtt_active || !mqttClient.connected() || !systemConfig.mqtt_ha_active) return;
+  logInput("HA DISCOVERY: Start publishing MQTT Home Assistant Discovery...");
+
+  HADiscoveryFan();
+
+  if (!SHT3x_original || !SHT3x_alternative) return;
+  HADiscoveryHumidity();
+  HADiscoveryTemperature();
+}
+
+
+void HADiscoveryFan() {
+  DynamicJsonDocument doc(2048);
+  JsonObject root = doc.to<JsonObject>(); // Fill the object
+  char s[160];
+
+  addHADevInfo(root);
+  root["avty_t"] = (const char*)systemConfig.mqtt_lwt_topic;
+  sprintf(s, "%s_fan", hostName());
+  root["uniq_id"] = s;
+  root["name"] = s;
+  root["stat_t"] = (const char*)systemConfig.mqtt_lwt_topic;
+  root["stat_val_tpl"] = "{% if value == 'online' %}ON{% else %}OFF{% endif %}";
+  root["json_attr_t"] = (const char*)systemConfig.mqtt_sensor_topic;
+  sprintf(s, "%s/not_used/but_needed_for_HA", systemConfig.mqtt_cmd_topic);
+  root["cmd_t"] = s;
+  root["spd_cmd_t"] = (const char*)systemConfig.mqtt_cmd_topic;
+  root["spd_stat_t"] = (const char*)systemConfig.mqtt_state_topic;
+  root["payload_high_speed"] = systemConfig.itho_high;
+  root["payload_medium_speed"] = systemConfig.itho_medium;
+  root["payload_low_speed"] = systemConfig.itho_low;
+
+  sprintf(s, "%s/fan/%s/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
+
+  sendHADiscovery(root, s);
+
+}
+
+void HADiscoveryTemperature() {
+  DynamicJsonDocument doc(2048);
+  JsonObject root = doc.to<JsonObject>(); // Fill the object
+  char s[160];
+
+  addHADevInfo(root);
+  root["avty_t"] = (const char*)systemConfig.mqtt_lwt_topic;
+  root["dev_cla"] = "temperature";
+  sprintf(s, "%s_temperature", hostName());
+  root["uniq_id"] = s;
+  root["name"] = s;
+  root["stat_t"] = (const char*)systemConfig.mqtt_sensor_topic;
+  root["val_tpl"] = "{{ value_json.temp }}";
+
+  sprintf(s, "%s/sensor/%s/temp/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
+
+  sendHADiscovery(root, s);
+}
+
+void HADiscoveryHumidity() {
+  DynamicJsonDocument doc(2048);
+  JsonObject root = doc.to<JsonObject>(); // Fill the object
+  char s[160];
+
+  addHADevInfo(root);
+  root["avty_t"] = (const char*)systemConfig.mqtt_lwt_topic;
+  root["dev_cla"] = "humidity";
+  sprintf(s, "%s_humidity", hostName());
+  root["uniq_id"] = s;
+  root["name"] = s;
+  root["stat_t"] = (const char*)systemConfig.mqtt_sensor_topic;
+  root["val_tpl"] = "{{ value_json.hum }}";
+
+  sprintf(s, "%s/sensor/%s/hum/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
+
+  sendHADiscovery(root, s);
+}
+
+void addHADevInfo(JsonObject obj) {
+  char s[64];
+  JsonObject dev = obj.createNestedObject("dev");
+  dev["identifiers"] = hostName();
+  dev["manufacturer"] = "Arjen Hiemstra";
+  dev["model"] = "ITHO Wifi Add-on";
+  sprintf(s, "ITHO-WIFI(%s)", hostName());
+  dev["name"] = s;
+  sprintf(s, "HW: v%s, FW: %s", HWREVISION, FWVERSION);
+  dev["sw_version"] = s;
+
+}
+
+void sendHADiscovery(JsonObject obj, const char* topic)
+{
+  size_t payloadSize = measureJson(obj);
+  //max header + topic + content. Copied logic from PubSubClien::publish(), PubSubClient.cpp:482
+  size_t packetSize = MQTT_MAX_HEADER_SIZE + 2 + strlen(topic) + payloadSize;
+
+  if (mqttClient.getBufferSize() < packetSize)
+  {
+    logInput("MQTT: buffer too small, resizing... (HA discovery)");
+    mqttClient.setBufferSize(packetSize);
+  }
+
+  if (mqttClient.beginPublish(topic, payloadSize, true))
+  {
+    serializeJson(obj, mqttClient);
+    if (!mqttClient.endPublish()) logInput("MQTT: Failed to send payload (HA discovery)");
+  } 
+  else 
+  {
+    logInput("MQTT: Failed to start building message (HA discovery)");
+  }
+  
+  // reset buffer
+  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+}
+
 bool setupMQTTClient() {
   int connectResult;
 
@@ -457,7 +576,7 @@ bool setupMQTTClient() {
 
       mqttClient.setServer(systemConfig.mqtt_serverName, systemConfig.mqtt_port);
       mqttClient.setCallback(mqttCallback);
-      mqttClient.setBufferSize(1024);
+      mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 
       if (systemConfig.mqtt_username == "") {
         connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_lwt_topic, 0, true, "offline");
@@ -473,6 +592,8 @@ bool setupMQTTClient() {
       if (mqttClient.connected()) {
         mqttClient.subscribe(systemConfig.mqtt_cmd_topic);
         mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", true);
+
+        mqttHomeAssistantDiscovery();
         return true;
       }
     }

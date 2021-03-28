@@ -1,3 +1,5 @@
 hardware/gerbers 2.1/ithowifi-bom-xlsx.xlsx
 hardware/gerbers 2.1/ithowifi-pos-xlsx.xlsx
 hardware/gerbers 2.1/ithowifi-top-pos.csv
+*/.vscode/*
+vscode-build/*

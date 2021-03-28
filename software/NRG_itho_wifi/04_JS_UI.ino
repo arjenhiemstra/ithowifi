@@ -63,6 +63,7 @@ function startWebsock(websocketServerLocation){
             $('#mqtt_state_topic').val(x.mqtt_state_topic);
             mqtt_state_topic_tmp = x.mqtt_state_topic;
             $('#mqtt_sensor_topic').val(x.mqtt_sensor_topic);
+            $('#mqtt_ha_topic').val(x.mqtt_ha_topic);
             $('#mqtt_cmd_topic').val(x.mqtt_cmd_topic);
             mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
             $('#mqtt_lwt_topic').val(x.mqtt_lwt_topic);
@@ -73,6 +74,12 @@ function startWebsock(websocketServerLocation){
                 $radios.filter('[value="' + x.mqtt_domoticz_active + '"]').prop('checked', true);
             }
             radio("mqtt_domoticz", x.mqtt_domoticz_active);
+            radio("mqtt_ha", x.mqtt_ha_active);
+            $radios = $('input[name=\'option-mqtt_ha_active\']');
+            if($radios.is(':checked') === false) {
+                $radios.filter('[value="' + x.mqtt_ha_active + '"]').prop('checked', true);
+            }
+            radio("mqtt_ha", x.mqtt_ha_active);
             $('#mqtt_idx').val(x.mqtt_idx);
             $('#sensor_idx').val(x.sensor_idx);
             $('#itho_fallback').val(x.itho_fallback);
@@ -280,11 +287,13 @@ $(document).ready(function() {
           mqtt_version:         $('#mqtt_version').val(),
           mqtt_state_topic:     $('#mqtt_state_topic').val(),
           mqtt_sensor_topic:    $('#mqtt_sensor_topic').val(),
+          mqtt_ha_topic:        $('#mqtt_ha_topic').val(),
           mqtt_cmd_topic:       $('#mqtt_cmd_topic').val(),
           mqtt_lwt_topic:       $('#mqtt_lwt_topic').val(),
           mqtt_idx:             $('#mqtt_idx').val(),
           sensor_idx:           $('#sensor_idx').val(),
-          mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val()
+          mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val(),
+          mqtt_ha_active:       $('input[name=\'option-mqtt_ha_active\']:checked').val()
         }
       }));
       update_page('mqtt');
@@ -485,12 +494,14 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_active") {
     if (state == 1) {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', false);
+      $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', false);
     }
     else {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', true);
+      $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', true);
     }
   }
   else if (origin == "mqtt_domoticz") {
@@ -502,6 +513,7 @@ function radio(origin, state) {
       $('#mqtt_state_topic').val("domoticz/in");
       $('#mqtt_cmd_topic').val("domoticz/out");
       $('#mqtt_sensor_topic, #label-mqtt_sensor').hide();
+      $('#mqtt_ha_topic, #label-mqtt_ha').hide();
       $('#mqtt_lwt_topic, #label-lwt_topic').hide();
     }
     else {
@@ -512,7 +524,22 @@ function radio(origin, state) {
       $('#mqtt_cmd_topic').val(mqtt_cmd_topic_tmp);
       if(sht3x > 0) { $('#mqtt_sensor_topic, #label-mqtt_sensor').show(); }
       else { $('#mqtt_sensor_topic, #label-mqtt_sensor').hide(); }
+      $('#mqtt_ha_topic, #label-mqtt_ha').show();
       $('#mqtt_lwt_topic, #label-lwt_topic').show();
+    }
+  }
+  else if (origin == "mqtt_ha") {
+    if (state == 1) {
+      $('#mqtt_ha_topic, #label-mqtt_ha').show();
+      $('#mqtt_idx').prop('readonly', true);
+      $('#mqtt_idx, #label-mqtt_idx').hide();
+      $('#sensor_idx, #label-sensor_idx').hide();
+      if(sht3x > 0) { $('#mqtt_sensor_topic, #label-mqtt_sensor').show(); }
+      else { $('#mqtt_sensor_topic, #label-mqtt_sensor').hide(); }
+      $('#mqtt_lwt_topic, #label-lwt_topic').show();
+    }
+    else {
+      $('#mqtt_ha_topic, #label-mqtt_ha').hide();
     }
   }
   else if (origin == "remote") {
@@ -1099,6 +1126,15 @@ var html_mqttsetup = `
             <div class="pure-control-group">
               <label id="label-lwt_topic" for="mqtt_lwt_topic">Last will topic</label>
                 <input id="mqtt_lwt_topic" maxlength="120" type="text">
+            </div>
+            <div class="pure-control-group">
+              <label for="option-mqtt_ha" class="pure-radio">Home Assistant MQTT Discovery</label> 
+              <input id="option-mqtt_ha-1" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha", 1)' value="1"> on
+              <input id="option-mqtt_ha-0" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha", 0)' value="0"> off
+            </div>
+            <div class="pure-control-group">
+              <label id="label-mqtt_ha" for="mqtt_ha_topic">Home Assistant Discovery topic prefix</label>
+                <input id="mqtt_ha_topic" maxlength="120" type="text">
             </div>
             <br>
             <div class="pure-control-group">
