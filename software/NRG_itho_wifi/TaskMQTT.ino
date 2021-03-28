@@ -26,6 +26,8 @@ void TaskMQTT( void * pvParameters ) {
     vTaskDelay(25 / portTICK_PERIOD_MS);
   }
 
+  execAutoPilot();
+
   //else delete task
   vTaskDelete( NULL );
 }

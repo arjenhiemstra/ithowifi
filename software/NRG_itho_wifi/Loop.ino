@@ -9,6 +9,7 @@ void loop() {
   execMQTTTasks();
   execSystemControlTasks();
   execLogAndConfigTasks();
+  execAutoPilot();
 
 }
 #endif
