@@ -551,3 +551,111 @@ void logInput(const char * inputString) {
 
 
 }
+
+void execAutoPilot()
+{
+  if (!systemConfig.autopilot_active)
+    return;
+
+  //
+  if (SHT3xupdated)
+  {
+    if (ithoHum > systemConfig.autopilot_hum_upper)
+    {
+      //
+      // set itho high
+      ithoExecCommand("high");
+    }
+    else if (ithoHum < systemConfig.autopilot_hum_lower)
+    {
+      //
+      // set itho low
+      ithoExecCommand("low");
+    }
+  }
+}
+
+
+//  itho control functions
+
+bool ithoExecCommand(const char* command)
+{
+  if (strcmp(command, "low") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_low);
+  }
+  else if (strcmp(command, "medium") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_medium);
+  }
+  else if (strcmp(command, "high") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_high);
+  }
+  else if (strcmp(command, "timer1") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_high);
+    ithoSetTimer((uint16_t)systemConfig.itho_timer1);
+  }
+  else if (strcmp(command, "timer2") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_high);
+    ithoSetTimer((uint16_t)systemConfig.itho_timer2);
+  }
+  else if (strcmp(command, "timer3") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_high);
+    ithoSetTimer((uint16_t)systemConfig.itho_timer3);
+  }
+  else if (strcmp(command, "clearqueue") == 0)
+  {
+    
+    clearQueue = true;
+  }
+  else
+  {
+    return false;
+  }
+  return true;
+  
+}
+
+bool ithoSetSpeed(const char* speed)
+{
+  uint16_t val = strtoul(speed, NULL, 10);
+  return ithoSetSpeed(val);
+}
+bool ithoSetSpeed(uint16_t speed)
+{
+  if (speed >= 0 && speed < 255)
+  {
+    nextIthoVal = speed;
+    updateItho = true;
+  }
+  else
+  {
+    return false;
+  }
+  return true;
+}
+
+bool ithoSetTimer(const char* timer)
+{
+  uint16_t t = strtoul(timer, NULL, 10);
+  return ithoSetTimer(t);
+}
+
+bool ithoSetTimer(uint16_t timer)
+{
+  if (timer > 0 && timer < 65535)
+  {
+    nextIthoTimer = timer;
+    updateItho = true;
+  }
+  else
+  {
+    return false;
+  }
+  return true;
+  
+}
