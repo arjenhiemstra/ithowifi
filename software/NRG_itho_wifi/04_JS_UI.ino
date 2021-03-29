@@ -134,7 +134,7 @@ function startWebsock(websocketServerLocation){
           else if (f.systemstat) {
             let x = f.systemstat;
             if('sensor_temp' in x) {
-              $('#sensor_temp').html('Temperature: '+ round(x.sensor_temp, 1) + 'C');
+              $('#sensor_temp').html('Temperature: '+ round(x.sensor_temp, 1) + '&#8451;');
             }
             if('sensor_hum' in x) {
               $('#sensor_hum').html('Humidity: ' + round(x.sensor_hum, 1) + '%');

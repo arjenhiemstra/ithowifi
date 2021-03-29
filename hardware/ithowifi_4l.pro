@@ -1,6 +1,6 @@
-update=2021 January 28, Thursday 15:28:42
+update=2021 January 28, Thursday 16:04:15
 version=1
-last_client=kicad
+last_client=pcbnew
 [general]
 version=1
 RootSch=
@@ -12,16 +12,6 @@ NetIExt=net
 version=1
 LibDir=
 [eeschema/libraries]
-[schematic_editor]
-version=1
-PageLayoutDescrFile=
-PlotDirectoryName=
-SubpartIdSeparator=0
-SubpartFirstId=65
-NetFmtName=Pcbnew
-SpiceAjustPassiveValues=0
-LabSize=50
-ERC_TestSimilarLabels=1
 [pcbnew]
 version=1
 PageLayoutDescrFile=
@@ -79,11 +69,11 @@ Name=F.Cu
 Type=0
 Enabled=1
 [pcbnew/Layer.In1.Cu]
-Name=GND
+Name=3V3
 Type=1
 Enabled=1
 [pcbnew/Layer.In2.Cu]
-Name=3V3
+Name=GND
 Type=1
 Enabled=1
 [pcbnew/Layer.In3.Cu]

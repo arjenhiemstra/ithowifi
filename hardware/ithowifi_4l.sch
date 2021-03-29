@@ -630,7 +630,7 @@ Wire Wire Line
 	7625 3250 8950 3250
 Connection ~ 8875 5225
 Wire Wire Line
-	11475 5225 13625 5225
+	11475 5225 12925 5225
 Wire Wire Line
 	7725 4250 7725 5225
 Connection ~ 7725 4250
@@ -967,4 +967,47 @@ Wire Wire Line
 Wire Wire Line
 	5775 3900 5750 3900
 Connection ~ 5775 3900
+Wire Wire Line
+	11975 4150 11975 4975
+Connection ~ 11975 4150
+Wire Wire Line
+	12125 3950 12125 4875
+Wire Wire Line
+	12125 4875 12200 4875
+Connection ~ 12125 3950
+$Comp
+L power:+3V3 #PWR0106
+U 1 1 605DB0AB
+P 12925 4650
+F 0 "#PWR0106" H 12925 4500 50  0001 C CNN
+F 1 "+3V3" H 12940 4823 50  0000 C CNN
+F 2 "" H 12925 4650 50  0001 C CNN
+F 3 "" H 12925 4650 50  0001 C CNN
+	1    12925 4650
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	12700 4875 12925 4875
+Wire Wire Line
+	12925 4650 12925 4875
+Wire Wire Line
+	12700 4975 12925 4975
+Wire Wire Line
+	12925 4975 12925 5225
+Connection ~ 12925 5225
+Wire Wire Line
+	12925 5225 13625 5225
+$Comp
+L Connector_Generic:Conn_02x02_Odd_Even J5
+U 1 1 605C151F
+P 12400 4875
+F 0 "J5" H 12450 5092 50  0000 C CNN
+F 1 "Conn_02x02_Odd_Even" H 12450 5001 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_2x02_P2.54mm_Vertical" H 12400 4875 50  0001 C CNN
+F 3 "~" H 12400 4875 50  0001 C CNN
+	1    12400 4875
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	11975 4975 12200 4975
 $EndSCHEMATC

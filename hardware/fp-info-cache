@@ -1,148 +1,274 @@
-33069871233627
-Jumper
-SolderJumper-2_P1.3mm_Bridged2Bar_Pad1.0x1.5mm
-SMD Solder Jumper, 1x1.5mm Pads, 0.3mm gap, bridged with 2 copper strips
-solder jumper open
+62742372498861
+RF_Module
+Ai-Thinker-Ra-01-LoRa
+Ai Thinker Ra-01 LoRa
+LoRa Ra-01
 0
-2
-2
-Jumper
-SolderJumper-2_P1.3mm_Bridged2Bar_RoundedPad1.0x1.5mm
-SMD Solder Jumper, 1x1.5mm, rounded Pads, 0.3mm gap, bridged with 2 copper strips
-solder jumper open
+16
+16
+RF_Module
+Atmel_ATSAMR21G18-MR210UA_NoRFPads
+http://ww1.microchip.com/downloads/en/devicedoc/atmel-42475-atsamr21g18-mr210ua_datasheet.pdf
+module wireless zigbee 802.15.4 flash crypto ATSAMR21G18 AT45DB041E  TECC508A U.Fi
 0
-2
-2
-Jumper
-SolderJumper-2_P1.3mm_Bridged_Pad1.0x1.5mm
-SMD Solder Jumper, 1x1.5mm Pads, 0.3mm gap, bridged with 1 copper strip
-solder jumper open
+42
+42
+RF_Module
+BLE112-A
+Class 4 Bluetooth Module with on-board antenna
+Bluetooth Module
 0
-2
-2
-Jumper
-SolderJumper-2_P1.3mm_Bridged_RoundedPad1.0x1.5mm
-SMD Solder Jumper, 1x1.5mm, rounded Pads, 0.3mm gap, bridged with 1 copper strip
-solder jumper open
+30
+30
+RF_Module
+CMWX1ZZABZ
+https://wireless.murata.com/RFM/data/type_abz.pdf
+iot lora sigfox
 0
-2
-2
-Jumper
-SolderJumper-2_P1.3mm_Open_Pad1.0x1.5mm
-SMD Solder Jumper, 1x1.5mm Pads, 0.3mm gap, open
-solder jumper open
+57
+57
+RF_Module
+CYBLE-21Pin-10x10mm
+Cypress EZ-BLE PRoC Module (Bluetooth Smart) 21 Pin Module
+Cypress BT Bluetooth
 0
-2
-2
-Jumper
-SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm
-SMD Solder Jumper, 1x1.5mm, rounded Pads, 0.3mm gap, open
-solder jumper open
+21
+21
+RF_Module
+DWM1000
+IEEE802.15.4-2011 UWB
+UWB Module
 0
-2
-2
-Jumper
-SolderJumper-2_P1.3mm_Open_TrianglePad1.0x1.5mm
-SMD Solder Jumper, 1x1.5mm Triangular Pads, 0.3mm gap, open
-solder jumper open
+24
+24
+RF_Module
+DecaWave_DWM1001
+https://www.decawave.com/sites/default/files/dwm1001_datasheet.pdf
+UWB module
 0
-2
-2
-Jumper
-SolderJumper-3_P1.3mm_Bridged2Bar12_Pad1.0x1.5mm
-SMD Solder 3-pad Jumper, 1x1.5mm Pads, 0.3mm gap, pads 1-2 Bridged2Bar with 2 copper strip
-solder jumper open
+34
+34
+RF_Module
+Digi_XBee_SMT
+http://www.digi.com/resources/documentation/digidocs/pdfs/90002126.pdf http://ftp1.digi.com/support/documentation/90001020_F.pdf
+Digi XBee SMT RF
 0
-3
-3
-Jumper
-SolderJumper-3_P1.3mm_Bridged2Bar12_Pad1.0x1.5mm_NumberLabels
-SMD Solder Jumper, 1x1.5mm Pads, 0.3mm gap, pads 1-2 Bridged2Bar with 2 copper strip, labeled with numbers
-solder jumper open
+37
+37
+RF_Module
+E18-MS1-PCB
+http://www.cdebyte.com/en/downpdf.aspx?id=122
+Zigbee
 0
-3
-3
-Jumper
-SolderJumper-3_P1.3mm_Bridged2Bar12_RoundedPad1.0x1.5mm
-SMD Solder 3-pad Jumper, 1x1.5mm rounded Pads, 0.3mm gap, pads 1-2 Bridged2Bar with 2 copper strip
-solder jumper open
+24
+24
+RF_Module
+E73-2G4M04S
+http://www.cdebyte.com/en/downpdf.aspx?id=243
+BLE BLE5 nRF52832
 0
-3
-3
-Jumper
-SolderJumper-3_P1.3mm_Bridged2Bar12_RoundedPad1.0x1.5mm_NumberLabels
-SMD Solder 3-pad Jumper, 1x1.5mm rounded Pads, 0.3mm gap, pads 1-2 Bridged2Bar with 2 copper strip, labeled with numbers
-solder jumper open
+44
+44
+RF_Module
+ESP-07
+Wi-Fi Module, http://wiki.ai-thinker.com/_media/esp8266/docs/a007ps01a2_esp-07_product_specification_v1.2.pdf
+Wi-Fi Module
 0
-3
-3
-Jumper
-SolderJumper-3_P1.3mm_Bridged12_Pad1.0x1.5mm
-SMD Solder 3-pad Jumper, 1x1.5mm Pads, 0.3mm gap, pads 1-2 bridged with 1 copper strip
-solder jumper open
+16
+16
+RF_Module
+ESP-12E
+Wi-Fi Module, http://wiki.ai-thinker.com/_media/esp8266/docs/aithinker_esp_12f_datasheet_en.pdf
+Wi-Fi Module
 0
-3
-3
-Jumper
-SolderJumper-3_P1.3mm_Bridged12_Pad1.0x1.5mm_NumberLabels
-SMD Solder Jumper, 1x1.5mm Pads, 0.3mm gap, pads 1-2 bridged with 1 copper strip, labeled with numbers
-solder jumper open
+22
+22
+RF_Module
+ESP-WROOM-02
+http://espressif.com/sites/default/files/documentation/0c-esp-wroom-02_datasheet_en.pdf
+ESP WROOM-02 espressif esp8266ex
 0
-3
-3
-Jumper
-SolderJumper-3_P1.3mm_Bridged12_RoundedPad1.0x1.5mm
-SMD Solder 3-pad Jumper, 1x1.5mm rounded Pads, 0.3mm gap, pads 1-2 bridged with 1 copper strip
-solder jumper open
+19
+19
+RF_Module
+ESP32-S2-WROVER
+ESP32-S2-WROVER(-I) 2.4 GHz Wi-Fi https://www.espressif.com/sites/default/files/documentation/esp32-s2-wroom_esp32-s2-wroom-i_datasheet_en.pdf
+ESP32-S2  ESP32  WIFI
 0
-3
-3
-Jumper
-SolderJumper-3_P1.3mm_Bridged12_RoundedPad1.0x1.5mm_NumberLabels
-SMD Solder 3-pad Jumper, 1x1.5mm rounded Pads, 0.3mm gap, pads 1-2 bridged with 1 copper strip, labeled with numbers
-solder jumper open
+43
+43
+RF_Module
+ESP32-WROOM-32
+Single 2.4 GHz Wi-Fi and Bluetooth combo chip https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_datasheet_en.pdf
+Single 2.4 GHz Wi-Fi and Bluetooth combo  chip
 0
-3
-3
-Jumper
-SolderJumper-3_P1.3mm_Open_Pad1.0x1.5mm
-SMD Solder 3-pad Jumper, 1x1.5mm Pads, 0.3mm gap, open
-solder jumper open
+39
+39
+RF_Module
+ESP32-WROOM-32U
+Single 2.4 GHz Wi-Fi and Bluetooth combo chip with U.FL connector, https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32d_esp32-wroom-32u_datasheet_en.pdf
+Single 2.4 GHz Wi-Fi and Bluetooth combo  chip
 0
-3
-3
-Jumper
-SolderJumper-3_P1.3mm_Open_Pad1.0x1.5mm_NumberLabels
-SMD Solder Jumper, 1x1.5mm Pads, 0.3mm gap, open, labeled with numbers
-solder jumper open
+39
+39
+RF_Module
+Garmin_M8-35_9.8x14.0mm_Layout6x6_P1.5mm
+D52M ANT SoC Module https://www.thisisant.com/assets/resources/D00001687_D52_Module_Datasheet.v.2.3_(Garmin).pdf
+RF SoC Radio ANT Bluetooth BLE D52 nRF52 Garmin Canada Dynastream Nordic
 0
-3
-3
-Jumper
-SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm
-SMD Solder 3-pad Jumper, 1x1.5mm rounded Pads, 0.3mm gap, open
-solder jumper open
+35
+35
+RF_Module
+HOPERF_RFM9XW_SMD
+Low Power Long Range Transceiver Module SMD-16 (https://www.hoperf.com/data/upload/portal/20181127/5bfcbea20e9ef.pdf)
+LoRa Low Power Long Range Transceiver Module
 0
-3
-3
-Jumper
-SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm_NumberLabels
-SMD Solder 3-pad Jumper, 1x1.5mm rounded Pads, 0.3mm gap, open, labeled with numbers
-solder jumper open
+16
+16
+RF_Module
+HOPERF_RFM9XW_THT
+Low Power Long Range Transceiver Module THT-16 (https://www.hoperf.com/data/upload/portal/20181127/5bfcbea20e9ef.pdf)
+Low Power Long Range Transceiver Module LoRa
 0
-3
-3
-Jumper
-SolderJumper-3_P2.0mm_Open_TrianglePad1.0x1.5mm
-SMD Solder Jumper, 1x1.5mm Triangular Pads, 0.3mm gap, open
-solder jumper open
+16
+16
+RF_Module
+HOPERF_RFM69HW
+Radio, RF, Module, http://www.hoperf.com/upload/rf/RFM69HW-V1.3.pdf
+Radio RF Module
 0
-5
-3
-Jumper
-SolderJumper-3_P2.0mm_Open_TrianglePad1.0x1.5mm_NumberLabels
-SMD Solder Jumper, 1x1.5mm Triangular Pads, 0.3mm gap, open, labeled with numbers
-solder jumper open
+16
+16
+RF_Module
+IQRF_TRx2DA_KON-SIM-01
+8 pin SIM connector for IQRF TR-x2DA(T) modules, http://iqrf.org/weben/downloads.php?id=104
+IQRF_KON-SIM-01 IQRF_TRx2DA
 0
-5
-3
+10
+8
+RF_Module
+IQRF_TRx2D_KON-SIM-01
+8 pin SIM connector for IQRF TR-x2D(C)(T) modules, http://iqrf.org/weben/downloads.php?id=104
+IQRF_KON-SIM-01 IQRF_TRx2D IQRF_TRx2DC
+0
+10
+8
+RF_Module
+Laird_BL652
+Bluetooth v4.2 + NFC module
+Bluetooth BLE NFC
+0
+39
+39
+RF_Module
+MOD-nRF8001
+BLE module, https://www.olimex.com/Products/Modules/RF/MOD-nRF8001/
+BLE module
+0
+11
+11
+RF_Module
+Microchip_RN4871
+Microchip RN4871 footprint
+RN4871 BLE
+0
+16
+16
+RF_Module
+Modtronix_inAir9
+Modtronix Wireless SX1276 LoRa Module (http://modtronix.com/img/prod/imod/inair9/inair_dimensions.gif)
+Modtronix LoRa inAir inAir9 SX1276 RF 915MHz 868MHz Wireless
+0
+14
+14
+RF_Module
+MonoWireless_TWE-L-WX
+https://www.mono-wireless.com/jp/products/TWE-LITE/MW-PDS-TWELITE-JP.pdf
+TWE-L-WX
+0
+32
+32
+RF_Module
+Particle_P1
+https://docs.particle.io/datasheets/p1-datasheet/
+Particle P1
+0
+75
+75
+RF_Module
+RFDigital_RFD77101
+RFDigital RFD77101 Simblee
+RFDigital RFD77101 Simblee
+0
+48
+45
+RF_Module
+RN42
+Class 2 Bluetooth Module with on-board antenna
+Bluetooth Module
+0
+36
+33
+RF_Module
+RN42N
+Class 2 Bluetooth Module without antenna
+Bluetooth Module
+0
+39
+36
+RF_Module
+RN2483
+Low-Power Long Range LoRa Transceiver Module
+rf module lora lorawan
+0
+47
+47
+RF_Module
+ST_SPBTLE
+Bluetooth Low Energy Module
+ble module st bluetooth
+0
+11
+11
+RF_Module
+TD1205
+https://github.com/Telecom-Design/Documentation_TD_RF_Module/blob/master/TD1205%20Datasheet.pdf
+SIGFOX Module
+0
+9
+9
+RF_Module
+TD1208
+https://github.com/Telecom-Design/Documentation_TD_RF_Module/blob/master/TD1208%20Datasheet.pdf
+SIGFOX Module
+0
+25
+25
+RF_Module
+Taiyo-Yuden_EYSGJNZWY
+Taiyo Yuden NRF51822 Module Bluetooth https://www.yuden.co.jp/wireless_module/document/datareport2/en/TY_BLE_EYSGJNZ_DataReport_V1_9_20180530E.pdf
+Taiyo Yuden NRF51822 Module Bluetooth 
+0
+30
+28
+RF_Module
+ZETA-433-SO_SMD
+RF transceiver SMD style https://www.rfsolutions.co.uk/downloads/1456219226DS-ZETA.pdf
+RF transceiver SMD style
+0
+12
+12
+RF_Module
+ZETA-433-SO_THT
+RF transceiver THT style https://www.rfsolutions.co.uk/downloads/1456219226DS-ZETA.pdf
+RF transceiver SMD style
+0
+12
+12
+RF_Module
+nRF24L01_Breakout
+nRF24L01 breakout board
+nRF24L01 adapter breakout
+0
+8
+8
