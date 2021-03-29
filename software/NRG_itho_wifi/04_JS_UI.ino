@@ -133,6 +133,12 @@ function startWebsock(websocketServerLocation){
           }
           else if (f.systemstat) {
             let x = f.systemstat;
+            if('sensor_temp' in x) {
+              $('#sensor_temp').html('Temperature: '+ round(x.sensor_temp, 1) + 'C');
+            }
+            if('sensor_hum' in x) {
+              $('#sensor_hum').html('Humidity: ' + round(x.sensor_hum, 1) + '%');
+            }
             $('#memory_box').show();
             $('#memory_box').html('<p><b>Memory:</b><p><p>free: <b>' + x.freemem + '</b></p><p>low: <b>' + x.memlow + '</b></p>');
             $('#mqtt_conn').removeClass();
@@ -474,6 +480,11 @@ function removeAfter5secs(count) {
             removeID('mbox_p' + count);
         }, 5000);
     });
+}
+
+function round(value, precision) {
+    var multiplier = Math.pow(10, precision || 0);
+    return Math.round(value * multiplier) / multiplier;
 }
 
 var mqtt_state_topic_tmp = "";
@@ -831,6 +842,10 @@ var html_index = `
       <input id="itho" type="range" min="0" max="254" value="0" class="slider" onchange="updateSlider(this.value)" style="width: 100%; margin: 0 0 2em 0;">
       <div style="text-align: center">
         <a href="#" class="pure-button" onclick="updateSlider(itho_low)" style="float: left;">Low</a> <a href="#" onclick="updateSlider(itho_medium)" class="pure-button">Medium</a> <a href="#" class="pure-button" onclick="updateSlider(itho_high)" style="float: right;">High</a>
+      </div>
+      <div style="text-align: center;margin: 2em 0 0 0;">
+        <div id="sensor_temp"></div>
+        <div id="sensor_hum"></div>
       </div>
     </div>
     </div>

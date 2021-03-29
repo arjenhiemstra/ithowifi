@@ -130,6 +130,12 @@ void jsonSystemstat() {
   systemstat["itho_low"] = systemConfig.itho_low;
   systemstat["itho_medium"] = systemConfig.itho_medium;
   systemstat["itho_high"] = systemConfig.itho_high;
+
+  if(SHT3x_original || SHT3x_alternative)
+  {
+    systemstat["sensor_temp"] = ithoTemp;
+    systemstat["sensor_hum"] = ithoHum;
+  }
 #if defined (__HW_VERSION_TWO__)
   systemstat["itho_llm"] = remotes.getllModeTime();
 #endif
