@@ -1,4 +1,4 @@
-#define FWVERSION "2.2-beta9-19-gc64ee05"
+#define FWVERSION "2.2-beta10"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT

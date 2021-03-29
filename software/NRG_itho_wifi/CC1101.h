@@ -6,7 +6,6 @@
 #define __CC1101_H__
 
 #include <stdio.h>
-#include "hardware.h"
 #include "CC1101Packet.h"
 
 #include <SPI.h>
