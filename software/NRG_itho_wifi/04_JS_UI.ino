@@ -127,10 +127,10 @@ function startWebsock(websocketServerLocation){
           else if (f.systemstat) {
             let x = f.systemstat;
             if('sensor_temp' in x) {
-              $('#sensor_temp').html('Temperature: '+ x.sensor_temp + 'C');
+              $('#sensor_temp').html('Temperature: '+ round(x.sensor_temp, 1) + 'C');
             }
             if('sensor_hum' in x) {
-              $('#sensor_hum').html('Humidity: ' + x.sensor_hum + '%');
+              $('#sensor_hum').html('Humidity: ' + round(x.sensor_hum, 1) + '%');
             }
             $('#memory_box').show();
             $('#memory_box').html('<p><b>Memory:</b><p><p>free: <b>' + x.freemem + '</b></p><p>low: <b>' + x.memlow + '</b></p>');
@@ -470,6 +470,11 @@ function removeAfter5secs(count) {
             removeID('mbox_p' + count);
         }, 5000);
     });
+}
+
+function round(value, precision) {
+    var multiplier = Math.pow(10, precision || 0);
+    return Math.round(value * multiplier) / multiplier;
 }
 
 var mqtt_state_topic_tmp = "";
