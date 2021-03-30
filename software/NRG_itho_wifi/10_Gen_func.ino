@@ -6,7 +6,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if (payload == NULL) return;
 
   int16_t val = -1;
-  unsigned long timer = 0;
+  uint16_t timer = 0;
   bool dtype = true;
   if (systemConfig.mqtt_domoticz_active) {
     dtype = false;
@@ -133,10 +133,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
 
     if (val != -1) {
-      nextIthoVal = val;
-      nextIthoTimer = timer;
+      ithoSetSpeed(val);
+      ithoSetTimer(timer);
       //printf("Update -- nextIthoVal:%d, nextIthoTimer:%d\n", nextIthoVal, nextIthoTimer);
-      updateItho = true;
     }
   }
   else {

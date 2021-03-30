@@ -52,7 +52,6 @@ const char html_mainpage[] PROGMEM = R"=====(
 
 void handleAPI(AsyncWebServerRequest *request) {
   bool parseOK = false;
-  nextIthoTimer = 0;
   
   int params = request->params();
   
@@ -165,65 +164,13 @@ void handleAPI(AsyncWebServerRequest *request) {
 #endif  
     }      
     else if(strcmp(p->name().c_str(), "command") == 0) {
-      if (strcmp(p->value().c_str(), "low") == 0 ) {
-        parseOK = true;
-        nextIthoVal = systemConfig.itho_low;
-        updateItho = true;
-      }
-      else if (strcmp(p->value().c_str(), "medium") == 0 ) {
-        parseOK = true;
-        nextIthoVal = systemConfig.itho_medium;
-        updateItho = true;
-      }
-      else if (strcmp(p->value().c_str(), "high") == 0 ) {
-        parseOK = true;
-        nextIthoVal = systemConfig.itho_high;
-        updateItho = true;      
-      }
-      else if (strcmp(p->value().c_str(), "timer1") == 0 ) {
-        parseOK = true;
-        nextIthoVal = systemConfig.itho_high;
-        nextIthoTimer = systemConfig.itho_timer1;
-        updateItho = true;  
-      }
-      else if (strcmp(p->value().c_str(), "timer2") == 0 ) {
-        parseOK = true;
-        nextIthoVal = systemConfig.itho_high;
-        nextIthoTimer = systemConfig.itho_timer2;
-        updateItho = true;  
-      }
-      else if (strcmp(p->value().c_str(), "timer3") == 0 ) {
-        parseOK = true;
-        nextIthoVal = systemConfig.itho_high;
-        nextIthoTimer = systemConfig.itho_timer3;
-        updateItho = true;  
-      }
-      else if (strcmp(p->value().c_str(), "clearqueue") == 0 ) {
-        parseOK = true;
-        clearQueue = true;
-      }
+      parseOK = ithoExecCommand(p->value().c_str());
     }
     else if(strcmp(p->name().c_str(), "speed") == 0) {
-      uint16_t val = strtoul (p->value().c_str(), NULL, 10);
-      if (val > 0 && val < 255) {
-        parseOK = true;
-        nextIthoVal = val;
-        updateItho = true;        
-      }    
-      else if (strcmp(p->value().c_str(), "0") == 0 ) {
-        parseOK = true;
-        nextIthoVal = 0;
-        updateItho = true;
-      }
-  
+      parseOK = ithoSetSpeed(p->value().c_str());
     }
     else if(strcmp(p->name().c_str(), "timer") == 0) {
-      uint16_t timer = strtoul (p->value().c_str(), NULL, 10);
-      if (timer > 0 && timer < 65535) {
-        parseOK = true;
-        nextIthoTimer = timer;
-        updateItho = true;        
-      }    
+      parseOK = ithoSetTimer(p->value().c_str());
     }  
 
   }

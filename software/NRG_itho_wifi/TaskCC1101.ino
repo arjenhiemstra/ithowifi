@@ -187,34 +187,28 @@ void TaskCC1101( void * pvParameters ) {
             }
             if (chk) {
               if (cmd == IthoLow) {
-                nextIthoVal = systemConfig.itho_low;
-                nextIthoTimer = 0;
-                updateItho = true;
+                ithoSetSpeed(systemConfig.itho_low);
+                ithoSetTimer((uint16_t)0);
               }
               if (cmd == IthoMedium) {
-                nextIthoVal = systemConfig.itho_medium;
-                nextIthoTimer = 0;
-                updateItho = true;
+                ithoSetSpeed(systemConfig.itho_medium);
+                ithoSetTimer((uint16_t)0);
               }
               if (cmd == IthoHigh) {
-                nextIthoVal = systemConfig.itho_high;
-                nextIthoTimer = 0;
-                updateItho = true;
+                ithoSetSpeed(systemConfig.itho_high);
+                ithoSetTimer((uint16_t)0);
               }
               if (cmd == IthoTimer1) {
-                nextIthoVal = systemConfig.itho_high;
-                nextIthoTimer = systemConfig.itho_timer1;
-                updateItho = true;
+                ithoSetSpeed(systemConfig.itho_high);
+                ithoSetTimer((uint16_t)systemConfig.itho_timer1);
               }
               if (cmd == IthoTimer2) {
-                nextIthoVal = systemConfig.itho_high;
-                nextIthoTimer = systemConfig.itho_timer2;
-                updateItho = true;
+                ithoSetSpeed(systemConfig.itho_high);
+                ithoSetTimer((uint16_t)systemConfig.itho_timer2);
               }
               if (cmd == IthoTimer3) {
-                nextIthoVal = systemConfig.itho_high;
-                nextIthoTimer = systemConfig.itho_timer3;
-                updateItho = true;
+                ithoSetSpeed(systemConfig.itho_high);
+                ithoSetTimer((uint16_t)systemConfig.itho_timer3);
               }
               if (cmd == IthoJoin && !remotes.remoteLearnLeaveStatus()) {
               }

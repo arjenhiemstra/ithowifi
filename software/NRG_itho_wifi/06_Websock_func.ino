@@ -310,9 +310,8 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         StaticJsonDocument<128> root;
         DeserializationError error = deserializeJson(root, msg);
         if (!error) {
-          nextIthoVal  = root["itho"];
-          nextIthoTimer = 0;
-          updateItho = true;
+          ithoSetSpeed((const char*) root["itho"]);
+          ithoSetTimer((uint16_t) 0);
         }
       }
     }
