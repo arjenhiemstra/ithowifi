@@ -553,15 +553,18 @@ void logInput(const char * inputString) {
 
 void execAutoPilot()
 {
+  logInput("AUTOPILOT: inside");
   if (!systemConfig.autopilot_active)
     return;
-
+  logInput("AUTOPILOT: autopilot active");
   //
   if (SHT3xupdated)
   {
+  logInput("AUTOPILOT: SHT3X UPDATED");
     if (ithoHum > systemConfig.autopilot_hum_upper)
     {
       //
+      logInput("AUTOPILOT: SETTING HIGH");
       // set itho high
       ithoExecCommand("high");
     }
@@ -569,6 +572,7 @@ void execAutoPilot()
     {
       //
       // set itho low
+      logInput("AUTOPILOT: SETTING LOW");
       ithoExecCommand("low");
     }
   }
@@ -579,6 +583,7 @@ void execAutoPilot()
 
 bool ithoExecCommand(const char* command)
 {
+  logInput("EXEC COMMAND");
   if (strcmp(command, "low") == 0)
   {
     ithoSetSpeed(systemConfig.itho_low);
@@ -626,6 +631,7 @@ bool ithoSetSpeed(const char* speed)
 }
 bool ithoSetSpeed(uint16_t speed)
 {
+  logInput("SET SPEED");
   if (speed >= 0 && speed < 255)
   {
     nextIthoVal = speed;
@@ -646,6 +652,7 @@ bool ithoSetTimer(const char* timer)
 
 bool ithoSetTimer(uint16_t timer)
 {
+  logInput("SET TIMER");
   if (timer > 0 && timer < 65535)
   {
     nextIthoTimer = timer;
