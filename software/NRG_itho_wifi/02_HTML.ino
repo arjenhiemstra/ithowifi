@@ -33,6 +33,7 @@ const char html_mainpage[] PROGMEM = R"=====(
                 <li class="pure-menu-item"><a href="update" class="pure-menu-link">Update</a></li>
                 <li class="pure-menu-item"><a href="reset" class="pure-menu-link">Reset</a></li>
                 <li class="pure-menu-item"><a href="debug" class="pure-menu-link">Debug</a></li>
+                <li class="pure-menu-item"><a href="autopilot" class="pure-menu-link">AutoPilot</a></li>
             </ul>
         <div id="memory_box"></div>
         </div>
