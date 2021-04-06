@@ -139,7 +139,7 @@ void jsonSystemstat() {
 #if defined (__HW_VERSION_TWO__)
   systemstat["itho_llm"] = remotes.getllModeTime();
 #endif
-  systemstat["ithoinit"] = ithoInit;
+  systemstat["ithoinit"] = ithoInitResult;
   systemstat["sht3x"] = systemConfig.syssht30;
 
   char buffer[512];
@@ -300,6 +300,9 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
       }
       else if (msg.startsWith("{\"resetsysconf")) {
         resetSystemConfigflag = true;
+      }
+      else if (msg.startsWith("{\"format")) {
+        formatFileSystem = true;
       }
       else if (msg.startsWith("{\"itho")) {
         StaticJsonDocument<128> root;
