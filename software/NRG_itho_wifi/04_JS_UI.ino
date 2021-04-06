@@ -180,6 +180,15 @@ function startWebsock(websocketServerLocation){
               $('#itho_llm').addClass("pure-button button-secondary");
               $('#itho_llm').text("Off");   
             }
+            if('format' in x) {
+              if(x.format) {
+                $('#format').text('Format filesystem'); 
+              }
+              else {
+                $('#format').text('Format failed');
+              }
+              
+            }
           }  
           else if (f.messagebox) {
             let x = f.messagebox;
@@ -359,6 +368,12 @@ $(document).ready(function() {
         websock.send('{\"reboot\":true}');
       }
     }
+    else if ($(this).attr('id') == 'format') {
+      if (confirm("This will erase all settings, are you sure?")) {
+        websock.send('{\"format\":true}');
+        $('#format').text('Formatting...');
+      }
+    }    
     else if ($(this).attr('id') == 'wifiscan') {
       $('.ScanResults').remove();
       $('.hidden').removeClass('hidden');
@@ -387,7 +402,7 @@ $(document).ready(function() {
     }
     else if ($(this).attr('id') == 'buttonstatusformat') {
       websock.send('{\"ithobutton\":31}');
-    }    
+    }
     else if ($(this).attr('id') == 'updatesubmit') {
       e.preventDefault();
       var form = $('#updateform')[0];
@@ -616,6 +631,7 @@ function moveBar(nPer, element) {
 //
 function updateSlider(value) {
   var val = parseInt(value);
+  if (isNaN(val)) val = 0;
   $('#ithotextval').html(val);
   websock.send(JSON.stringify({'itho':val}));
 }
@@ -1142,6 +1158,7 @@ var html_mqttsetup = `
               <label id="label-lwt_topic" for="mqtt_lwt_topic">Last will topic</label>
                 <input id="mqtt_lwt_topic" maxlength="120" type="text">
             </div>
+            <br>
             <div class="pure-control-group">
               <label for="option-mqtt_ha" class="pure-radio">Home Assistant MQTT Discovery</label> 
               <input id="option-mqtt_ha-1" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha", 1)' value="1"> on

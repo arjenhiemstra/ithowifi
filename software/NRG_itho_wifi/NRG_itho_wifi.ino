@@ -23,9 +23,9 @@
  * Choose partition scheme: Minimal SPIFFS (1.9 APP with OTA)
  * Because of FreetRTOS function xTaskCreateStaticPinnedToCore a standard arduino esp-32 SDK lib needs to be replaced otherwise the code doesn't compile.
  * A compiled version is included in the folder static files and should be copied to your SDK location ie.:
- * /Arduino15/packages/esp32/hardware/esp32/1.0.5-rc7/tools/sdk/lib
+ * /Arduino15/packages/esp32/hardware/esp32/1.0.5/tools/sdk/lib
  * and in:
- * /Arduino15/packages/esp32/hardware/esp32/1.0.5-rc7/tools/sdk/include/freertos/freertos/FreeRTOSConfig.h
+ * /Arduino15/packages/esp32/hardware/esp32/1.0.5/tools/sdk/include/freertos/freertos/FreeRTOSConfig.h
  * change "#define configSUPPORT_STATIC_ALLOCATION CONFIG_SUPPORT_STATIC_ALLOCATION" to "#define configSUPPORT_STATIC_ALLOCATION 1"
  * 
  * 
@@ -92,7 +92,6 @@ AsyncEventSource events("/events");
 SpiffsFilePrint filePrint("/logfile", 2, 10000);
 
 Ticker IthoCMD;
-Ticker IthoInitCheck;
 Ticker DelayedReq;
 Ticker DelayedSave;
 Ticker scan;
@@ -188,7 +187,8 @@ unsigned long lastLog = 0;
 //flags used
 bool coldBoot = false;
 bool joinSend = false;
-int8_t ithoInit = 0;
+int8_t ithoInitResult = 0;
+bool IthoInit = false;
 bool shouldReboot = false;
 bool onOTA = false;
 bool dontSaveConfig = false;
@@ -200,6 +200,7 @@ bool dontReconnectMQTT = false;
 bool clearQueue = false;
 bool wifiModeAP = false;
 bool sysStatReq = false;
+bool formatFileSystem = false;
 bool runscan = false;
 bool updateIthoMQTT = false;
 bool SHT3xupdated = false;
