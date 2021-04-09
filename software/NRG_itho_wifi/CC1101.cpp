@@ -8,9 +8,7 @@
 CC1101::CC1101()
 {
   SPI.begin();
-#if defined (__HW_VERSION_ONE__) || defined (__HW_VERSION_TWO__)
   pinMode(SS, OUTPUT);
-#endif
 } //CC1101
 
 // default destructor
