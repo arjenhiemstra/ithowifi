@@ -1,12 +1,12 @@
 {
   "hw_rev": {
     "1": {
-      "latest_fw":"2.2-rc2",
-      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_1/nrgitho-hw1-v2.2-rc2.bin"
+      "latest_fw":"2.2",
+      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_1/nrgitho-hw1-v2.2.bin"
     },
     "2": {
-      "latest_fw":"2.2-rc2",
-      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_2/nrgitho-hw2-v2.2-rc2.bin"
+      "latest_fw":"2.2",
+      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_2/nrgitho-hw2-v2.2.bin"
     }
   }
 }
