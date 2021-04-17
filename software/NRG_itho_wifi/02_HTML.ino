@@ -242,7 +242,11 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(CONFIG_VERSION);
   response->print(F("<br><br><span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span></div>"));
   response->print("<br><span>I2C virtual remote commands:</span><br><button id=\"button1\" class=\"pure-button pure-button-primary\">Low</button>&nbsp;<button id=\"button2\" class=\"pure-button pure-button-primary\">Medium</button>&nbsp;<button id=\"button3\" class=\"pure-button pure-button-primary\">High</button><br><br>");
-  response->print("<button id=\"buttonjoin\" class=\"pure-button pure-button-primary\">Join</button>&nbsp;<button id=\"buttonleave\" class=\"pure-button pure-button-primary\">Leave</button><br>");
+  response->print("<button id=\"buttonjoin\" class=\"pure-button pure-button-primary\">Join</button>&nbsp;<button id=\"buttonleave\" class=\"pure-button pure-button-primary\">Leave</button><br><br>");
+  response->print("<button id=\"buttontype\" class=\"pure-button pure-button-primary\">Query Devicetype</button><br><span>Result:&nbsp;</span><span id=\'ithotype\'></span><br><br>");
+  response->print("<button id=\"buttonstatusformat\" class=\"pure-button pure-button-primary\">Query Status Format</button><br><span>Result:&nbsp;</span><span id=\'ithostatusformat\'></span><br><br>");
+  response->print("<button id=\"buttonstatus\" class=\"pure-button pure-button-primary\">Query Status</button><br><span>Result:&nbsp;</span><span id=\'ithostatus\'></span><br>");
+
   
   response->print(F("<br><span>File system: </span><span>"));
 #if defined (__HW_VERSION_ONE__)

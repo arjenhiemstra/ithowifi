@@ -27,6 +27,10 @@
 #define STATUSPIN   16
 #define ITHO_IRQ_PIN 4
 #define FAILSAVE_PIN 14
+
+
+
+
 #else
 #error "Unsupported hardware"
 #endif

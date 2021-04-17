@@ -106,7 +106,7 @@ void failSafeBoot() {
 
 void hardwareInit() {
 
-  Wire.begin(SDAPIN, SCLPIN, 0);
+  
 
   pinMode(STATUSPIN, INPUT);
   pinMode(WIFILED, OUTPUT);
@@ -116,8 +116,19 @@ void hardwareInit() {
   pinMode(FAILSAVE_PIN, INPUT);
   failSafeBoot();
 #endif
+  
+  i2cInit();
 
   IthoInit = true;
+}
+
+void i2cInit() {
+#if defined (__HW_VERSION_ONE__)
+  Wire.begin(SDAPIN, SCLPIN, 0);
+  Wire.onReceive(receiveEvent);
+#elif defined (__HW_VERSION_TWO__)
+  i2c_master_init();
+#endif
 }
 
 bool ithoInitCheck() {

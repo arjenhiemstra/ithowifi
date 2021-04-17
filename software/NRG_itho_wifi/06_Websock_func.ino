@@ -23,6 +23,20 @@ void notifyClients(const char * message, size_t len) {
 
 }
 
+void jsonSysmessage(const char * id, const char * message) {
+    char logBuff[LOG_BUF_SIZE] = "";
+    StaticJsonDocument<500> root;
+    
+    JsonObject systemstat = root.createNestedObject("sysmessage");
+    systemstat["id"] = id;
+    systemstat["message"] = message;
+    
+    strcpy(logBuff, "");
+    char buffer[500];
+    size_t len = serializeJson(root, buffer);
+    notifyClients(buffer, len);
+}
+
 void jsonWsSend(const char* rootName) {
   DynamicJsonDocument root(4000);
 
@@ -226,13 +240,13 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
               sendJoinI2C();
             }
             else if (val == 20) {
-              //sendQueryDevicetype();
+              sendQueryDevicetype();
             }
             else if (val == 30) {
-              //sendQueryStatus();
+              sendQueryStatus();
             }
             else if (val == 31) {
-              //sendQueryStatusFormat();
+              sendQueryStatusFormat();
             }            
             else if (val == 99) {
               sendLeaveI2C();
