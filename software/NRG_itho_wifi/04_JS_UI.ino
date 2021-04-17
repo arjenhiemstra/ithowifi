@@ -209,6 +209,10 @@ function startWebsock(websocketServerLocation){
             $('#updateprg').html('Firmware update progress: ' + x.percent + '%');
             moveBar(x.percent, "updateBar");
           }
+          else if(f.sysmessage) {
+            let x = f.sysmessage;
+            $('#' + x.id).text(x.message);
+          }
   };
   websock.onopen = function(a) {
       console.log('websock open');

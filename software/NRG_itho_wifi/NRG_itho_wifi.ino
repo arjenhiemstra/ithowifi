@@ -1,4 +1,4 @@
-#define FWVERSION "2.2"
+#define FWVERSION "2.3-alpha1"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -26,6 +26,7 @@
  */
  
 #include "hardware.h"
+#include "i2c_esp32.h"
 #include <ArduinoJson.h>  // https://github.com/bblanchon/ArduinoJson [6.17.3]
 #include <ESPAsyncWebServer.h>  // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
 #include <SPIFFSEditor.h>       // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
@@ -45,7 +46,7 @@
 
 #include <ArduinoOTA.h>
 #include <FS.h>
-#include "SHTSensor.h"        // https://github.com/Sensirion/arduino-sht [latest]
+#include "SHTSensor.h"
 
 #if defined (ESP8266)
 #include <ESP8266WiFi.h>
