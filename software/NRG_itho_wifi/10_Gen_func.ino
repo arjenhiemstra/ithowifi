@@ -6,7 +6,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if (payload == NULL) return;
 
   int16_t val = -1;
-  unsigned long timer = 0;
+  uint16_t timer = 0;
   bool dtype = true;
   if (systemConfig.mqtt_domoticz_active) {
     dtype = false;
@@ -133,10 +133,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
 
     if (val != -1) {
-      nextIthoVal = val;
-      nextIthoTimer = timer;
+      ithoSetSpeed(val);
+      ithoSetTimer(timer);
       //printf("Update -- nextIthoVal:%d, nextIthoTimer:%d\n", nextIthoVal, nextIthoTimer);
-      updateItho = true;
     }
   }
   else {
@@ -633,4 +632,119 @@ void logInput(const char * inputString) {
 #endif
 
 
+}
+
+void execAutoPilot()
+{
+  logInput("AUTOPILOT: inside");
+  if (!systemConfig.autopilot_active)
+    return;
+  logInput("AUTOPILOT: autopilot active");
+  //
+  if (SHT3xupdated)
+  {
+  logInput("AUTOPILOT: SHT3X UPDATED");
+    if (ithoHum > systemConfig.autopilot_hum_upper)
+    {
+      //
+      logInput("AUTOPILOT: SETTING HIGH");
+      // set itho high
+      ithoExecCommand("high");
+    }
+    else if (ithoHum < systemConfig.autopilot_hum_lower)
+    {
+      //
+      // set itho low
+      logInput("AUTOPILOT: SETTING LOW");
+      ithoExecCommand("low");
+    }
+  }
+}
+
+
+//  itho control functions
+
+bool ithoExecCommand(const char* command)
+{
+  logInput("EXEC COMMAND");
+  if (strcmp(command, "low") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_low);
+  }
+  else if (strcmp(command, "medium") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_medium);
+  }
+  else if (strcmp(command, "high") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_high);
+  }
+  else if (strcmp(command, "timer1") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_high);
+    ithoSetTimer((uint16_t)systemConfig.itho_timer1);
+  }
+  else if (strcmp(command, "timer2") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_high);
+    ithoSetTimer((uint16_t)systemConfig.itho_timer2);
+  }
+  else if (strcmp(command, "timer3") == 0)
+  {
+    ithoSetSpeed(systemConfig.itho_high);
+    ithoSetTimer((uint16_t)systemConfig.itho_timer3);
+  }
+  else if (strcmp(command, "clearqueue") == 0)
+  {
+    
+    clearQueue = true;
+  }
+  else
+  {
+    return false;
+  }
+  return true;
+  
+}
+
+bool ithoSetSpeed(const char* speed)
+{
+  uint16_t val = strtoul(speed, NULL, 10);
+  return ithoSetSpeed(val);
+}
+bool ithoSetSpeed(uint16_t speed)
+{
+  logInput("SET SPEED");
+  if (speed >= 0 && speed < 255)
+  {
+    nextIthoVal = speed;
+    updateItho = true;
+  }
+  else
+  {
+    return false;
+  }
+  return true;
+}
+
+bool ithoSetTimer(const char* timer)
+{
+  uint16_t t = strtoul(timer, NULL, 10);
+  return ithoSetTimer(t);
+}
+
+bool ithoSetTimer(uint16_t timer)
+{
+  logInput("SET TIMER");
+  if (timer > 0 && timer < 65535)
+  {
+    nextIthoTimer = timer;
+    updateItho = true;
+  }
+  else
+  {
+    return false;
+  }
+  return true;
+  
 }

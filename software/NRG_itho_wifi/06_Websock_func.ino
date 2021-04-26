@@ -270,6 +270,11 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         jsonWsSend("systemsettings");
         sysStatReq = true;
       }
+      else if (msg.startsWith("{\"autopilotsetup")) {
+        systemConfig.get_autopilot_settings = true;
+        jsonWsSend("systemsettings");
+        sysStatReq = true;
+      }
 #if defined (__HW_VERSION_TWO__)
       else if (msg.startsWith("{\"ithoremotes")) {
         jsonWsSend("ithoremotes");
@@ -322,9 +327,8 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         StaticJsonDocument<128> root;
         DeserializationError error = deserializeJson(root, msg);
         if (!error) {
-          nextIthoVal  = root["itho"];
-          nextIthoTimer = 0;
-          updateItho = true;
+          ithoSetSpeed((uint16_t) root["itho"]);
+          ithoSetTimer((uint16_t) 0);
         }
       }
     }
