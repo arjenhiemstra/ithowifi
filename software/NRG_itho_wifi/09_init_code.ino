@@ -117,16 +117,16 @@ void hardwareInit() {
   failSafeBoot();
 #endif
 
-  IthoInitCheck.once(7, ithoInitCheck);
+  IthoInit = true;
 }
 
-void ithoInitCheck() {
+bool ithoInitCheck() {
   if (digitalRead(STATUSPIN) == LOW) {
-    ithoInit = 1;
+    ithoInitResult = 1;
+    return false;
   }
-  else {
-    ithoInit = -1;
-  }
+  ithoInitResult = -1;  
+  return true;
 }
 
 void logInit() {
@@ -557,12 +557,12 @@ void sendHADiscovery(JsonObject obj, const char* topic)
   {
     serializeJson(obj, mqttClient);
     if (!mqttClient.endPublish()) logInput("MQTT: Failed to send payload (HA discovery)");
-  } 
-  else 
+  }
+  else
   {
     logInput("MQTT: Failed to start building message (HA discovery)");
   }
-  
+
   // reset buffer
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }

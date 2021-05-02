@@ -59,18 +59,18 @@ void execMQTTTasks() {
         char buffer[512];
 
         if (systemConfig.mqtt_domoticz_active) {
-          int humstat = 0;          
+          int humstat = 0;
           // Humidity Status
           if (ithoHum < 31) {
-              humstat = 2;
-          } 
-          else if (ithoHum > 69) {
-              humstat = 3;
-          } 
-          else if (ithoHum > 34 && ithoHum < 66 && ithoTemp > 21 && ithoTemp < 27) {
-              humstat = 1;
+            humstat = 2;
           }
-          
+          else if (ithoHum > 69) {
+            humstat = 3;
+          }
+          else if (ithoHum > 34 && ithoHum < 66 && ithoTemp > 21 && ithoTemp < 27) {
+            humstat = 1;
+          }
+
           char svalue[32];
           sprintf(svalue, "%1.1f;%1.1f;%d", ithoTemp, ithoHum, humstat);
 
@@ -85,7 +85,7 @@ void execMQTTTasks() {
           sprintf(buffer, "{\"temp\":%1.1f,\"hum\":%1.1f}", ithoTemp, ithoHum);
           mqttClient.publish(systemConfig.mqtt_sensor_topic, buffer, true);
         }
-        
+
       }
     }
 #endif
@@ -105,7 +105,11 @@ void execMQTTTasks() {
 }
 
 void execSystemControlTasks() {
-  if (systemConfig.itho_sendjoin > 0 && coldBoot && ithoInit == 1 && !joinSend) {
+
+  if (IthoInit) {
+    IthoInit = ithoInitCheck();
+  }
+  if (systemConfig.itho_sendjoin > 0 && coldBoot && ithoInitResult == 1 && !joinSend) {
     joinSend = true;
     sendJoinI2C();
     logInput("Virtual remote join command send");
@@ -254,6 +258,27 @@ void execLogAndConfigTasks() {
     lastLog = millis();
   }
 
+  if (formatFileSystem) {
+    formatFileSystem = false;
+    char logBuff[LOG_BUF_SIZE] = "";
+    StaticJsonDocument<128> root;
+    JsonObject systemstat = root.createNestedObject("systemstat");
+    
+    if (SPIFFS.format()) {
+      systemstat["format"] = 1;
+      strcpy(logBuff, "Filesystem format = success");
+      dontSaveConfig = true;
+    }
+    else {
+      systemstat["format"] = 0;
+      strcpy(logBuff, "Filesystem format = failed");
+    }
+    jsonLogMessage(logBuff, WEBINTERFACE);
+    strcpy(logBuff, "");
+    char buffer[128];
+    size_t len = serializeJson(root, buffer);
+    notifyClients(buffer, len);
+  }
 
 }
 
@@ -264,3 +289,4 @@ void loop() {
 }
 
 #endif
+

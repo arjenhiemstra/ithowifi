@@ -107,15 +107,7 @@ void handleAPI(AsyncWebServerRequest *request) {
     }
     else if(strcmp(p->name().c_str(), "debug") == 0) {
       if (strcmp(p->value().c_str(), "format") == 0 ) {
-        if (SPIFFS.format()) {
-          strcpy(logBuff, "Filesystem format = success");
-          dontSaveConfig = true;
-        }
-        else {
-          strcpy(logBuff, "Filesystem format = failed");
-        }
-        jsonLogMessage(logBuff, WEBINTERFACE);
-        strcpy(logBuff, "");
+        formatFileSystem = true;
         parseOK = true;
       }
       if (strcmp(p->value().c_str(), "reboot") == 0 ) {
@@ -213,7 +205,7 @@ void handleDebug(AsyncWebServerRequest *request) {
 #elif defined (__HW_VERSION_TWO__)
   response->print(SPIFFS.totalBytes());
 #endif   
-  response->print(F(" bytes total</span><br><a href='#' class='pure-button' onclick=\"$('#main').empty();$('#main').append( html_edit );\">Edit filesystem</a>"));
+  response->print(F(" bytes total</span><br><a href='#' class='pure-button' onclick=\"$('#main').empty();$('#main').append( html_edit );\">Edit filesystem</a>&nbsp;<button id=\"format\" class=\"pure-button\">Format filesystem</button>"));
 #if defined (__HW_VERSION_TWO__)
   response->print(F("<br><br><span>CC1101 task memory: </span><span>"));
   response->print(TaskCC1101HWmark);
