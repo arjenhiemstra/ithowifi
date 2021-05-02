@@ -55,6 +55,7 @@ void execMQTTTasks() {
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
     if (SHT3xupdated) {
       SHT3xupdated = false;
+      runAutoPilot= true;
       if (mqttClient.connected()) {
         char buffer[512];
 

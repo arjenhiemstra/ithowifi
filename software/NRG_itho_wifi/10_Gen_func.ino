@@ -553,27 +553,35 @@ void logInput(const char * inputString) {
 
 void execAutoPilot()
 {
-  logInput("AUTOPILOT: inside");
+  // logInput("AUTOPILOT: inside");
   if (!systemConfig.autopilot_active)
     return;
-  logInput("AUTOPILOT: autopilot active");
+  // logInput("AUTOPILOT: autopilot active");
   //
-  if (SHT3xupdated)
+  if (runAutoPilot)
   {
-  logInput("AUTOPILOT: SHT3X UPDATED");
+    // logInput("AUTOPILOT: SHT3X UPDATED");
+    runAutoPilot = false;
+
     if (ithoHum > systemConfig.autopilot_hum_upper)
     {
       //
-      logInput("AUTOPILOT: SETTING HIGH");
-      // set itho high
-      ithoExecCommand("high");
+      if(autoPilotLastState != 1){
+        logInput("AUTOPILOT: SETTING HIGH");
+        autoPilotLastState = 1;
+        // set itho high
+        ithoExecCommand("high");
+      }
     }
     else if (ithoHum < systemConfig.autopilot_hum_lower)
     {
       //
       // set itho low
-      logInput("AUTOPILOT: SETTING LOW");
-      ithoExecCommand("low");
+      if (autoPilotLastState != 2){
+        logInput("AUTOPILOT: SETTING LOW");
+        autoPilotLastState = 2;
+        ithoExecCommand("low");
+      }
     }
   }
 }

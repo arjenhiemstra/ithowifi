@@ -24,9 +24,10 @@ void TaskMQTT( void * pvParameters ) {
 
     TaskMQTTHWmark = uxTaskGetStackHighWaterMark( NULL );
     vTaskDelay(25 / portTICK_PERIOD_MS);
+
+    execAutoPilot();
   }
 
-  execAutoPilot();
 
   //else delete task
   vTaskDelete( NULL );
