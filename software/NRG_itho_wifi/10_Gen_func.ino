@@ -556,6 +556,13 @@ void execAutoPilot()
   // logInput("AUTOPILOT: inside");
   if (!systemConfig.autopilot_active)
     return;
+
+  if (systemConfig.autopilot_updated)
+  {
+    systemConfig.autopilot_updated = false;
+    autoPilotLastState = 0;
+  }
+
   // logInput("AUTOPILOT: autopilot active");
   //
   if (runAutoPilot)

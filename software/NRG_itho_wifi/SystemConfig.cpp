@@ -171,13 +171,13 @@ bool SystemConfig::set(JsonObjectConst obj) {
   }
   if (!(const char *)obj["autopilot_hum_upper"].isNull())
   {
-    //itho_updated = true;
+    autopilot_updated = true;
     updated = true;
     autopilot_hum_upper = obj["autopilot_hum_upper"];
   }
   if (!(const char *)obj["autopilot_hum_lower"].isNull())
   {
-    //itho_updated = true;
+    autopilot_updated = true;
     updated = true;
     autopilot_hum_lower = obj["autopilot_hum_lower"];
   }
