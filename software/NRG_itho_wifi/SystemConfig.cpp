@@ -49,7 +49,7 @@ SystemConfig::SystemConfig() {
 
   autopilot_active = 0;
   autopilot_updated = false;
-  autopilot_hum_upper = 55;
+  autopilot_hum_upper = 70; // default MUST be > than autopilot_hum_lower otherwise will cause config loading bootloop!
   autopilot_hum_lower = 40;
 
   itho_updated = false;
