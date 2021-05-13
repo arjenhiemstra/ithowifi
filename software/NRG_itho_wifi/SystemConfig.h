@@ -63,7 +63,7 @@ class SystemConfig {
     SystemConfig();
     ~SystemConfig();
     
-    bool set(JsonObjectConst);
+    uint8_t set(JsonObjectConst);
     void get(JsonObject) const;
   protected:
 

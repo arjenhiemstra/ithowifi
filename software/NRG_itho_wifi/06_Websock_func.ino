@@ -196,7 +196,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
               if (p.value().is<JsonObject>()) {
 
                 JsonObject obj = p.value();
-                if (systemConfig.set(obj)) {
+                if (systemConfig.set(obj) == 0) {
                   saveSystemConfigflag = true;
                 }
               }

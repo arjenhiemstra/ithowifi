@@ -119,15 +119,24 @@ bool loadSystemConfig() {
   if (error)
     return false;
 
-  systemConfig.configLoaded = systemConfig.set(root.as<JsonObject>());
-  //Serial.print("config :"); Serial.println(result);
+  systemConfig.configLoaded = false;
+  uint8_t configLoadErr = 0;
+  configLoadErr = systemConfig.set(root.as<JsonObject>());
 
-  if (!systemConfig.configLoaded) {
-    logInput("Config version mismatch, resetting config...");
+  if (configLoadErr > 0)
+  {
+    if (configLoadErr == 2) { logInput("Config version mismatch!"); }
+    logInput("Resetting config...");
     saveSystemConfig();
     delay(1000);
     ESP.restart();
   }
+  else
+  {
+    systemConfig.configLoaded = true; 
+  }
+  //Serial.print("config :"); Serial.println(result);
+
 
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
 
