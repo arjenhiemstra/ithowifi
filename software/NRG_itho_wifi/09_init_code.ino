@@ -926,7 +926,7 @@ void webServerInit() {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
         return request->requestAuthentication();
     }
-    jsonLogMessage(F("Reset requested Device will reboot in a few seconds..."), WEBINTERFACE);
+    jsonLogMessage(F("Reset requested. Device will reboot in a few seconds..."), WEBINTERFACE);
     delay(200);
     shouldReboot = true;
   });

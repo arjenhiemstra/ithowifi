@@ -208,19 +208,19 @@ void execLogAndConfigTasks() {
   if (saveSystemConfigflag) {
     saveSystemConfigflag = false;
     if (saveSystemConfig()) {
-      jsonLogMessage(F("System settings saved successful"), WEBINTERFACE);
+      jsonLogMessage(F("System settings saved"), WEBINTERFACE);
     }
     else {
-      jsonLogMessage(F("System settings save failed: Unable to write config file"), WEBINTERFACE);
+      jsonLogMessage(F("Failed saving System settings: Unable to write config file"), WEBINTERFACE);
     }
   }
   if (saveWifiConfigflag) {
     saveWifiConfigflag = false;
     if (saveWifiConfig()) {
-      jsonLogMessage(F("Wifi settings saved successful, reboot the device"), WEBINTERFACE);
+      jsonLogMessage(F("Wifi settings saved, reboot the device"), WEBINTERFACE);
     }
     else {
-      jsonLogMessage(F("Wifi settings save failed: Unable to write config file"), WEBINTERFACE);
+      jsonLogMessage(F("Failed saving Wifi settings: Unable to write config file"), WEBINTERFACE);
     }
   }
 #if defined (__HW_VERSION_TWO__)
@@ -238,7 +238,7 @@ void execLogAndConfigTasks() {
       jsonLogMessage(F("Wifi settings restored, reboot the device"), WEBINTERFACE);
     }
     else {
-      jsonLogMessage(F("Wifi settings restore failed, please try again"), WEBINTERFACE);
+      jsonLogMessage(F("Failed restoring Wifi settings, please try again"), WEBINTERFACE);
     }
   }
   if (resetSystemConfigflag) {
@@ -247,7 +247,7 @@ void execLogAndConfigTasks() {
       jsonLogMessage(F("System settings restored, reboot the device"), WEBINTERFACE);
     }
     else {
-      jsonLogMessage(F("System settings restore failed, please try again"), WEBINTERFACE);
+      jsonLogMessage(F("Failed restoring System settings, please try again"), WEBINTERFACE);
     }
   }
 

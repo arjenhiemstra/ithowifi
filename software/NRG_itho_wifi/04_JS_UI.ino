@@ -204,7 +204,7 @@ function startWebsock(websocketServerLocation){
             count += 1;
             resetTimer();
             $('#message_box').show();
-            $('#message_box').append('<p class=\'messageP\' id=\'mbox_p' + count + '\'>Message: ' + x.message + '</p>');
+            $('#message_box').append('<p class=\'messageP\' id=\'mbox_p' + count + '\'>' + x.message + '</p>');
             removeAfter5secs(count);
           }
           else if (f.rflog) {
