@@ -41,6 +41,8 @@ class SystemConfig {
     uint8_t autopilot_active;
     uint8_t autopilot_hum_upper;
     uint8_t autopilot_hum_lower;
+    uint16_t autopilot_delay_upper;
+    uint16_t autopilot_delay_lower;
     uint8_t itho_fallback;
     uint8_t itho_low;
     uint8_t itho_medium;

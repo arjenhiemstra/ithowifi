@@ -89,6 +89,8 @@ function startWebsock(websocketServerLocation){
             radio("autopilot_active", x.autopilot_active);
             $('#autopilot_hum_upper').val(x.autopilot_hum_upper);
             $('#autopilot_hum_lower').val(x.autopilot_hum_lower);
+            $('#autopilot_delay_upper').val(x.autopilot_delay_upper);
+            $('#autopilot_delay_lower').val(x.autopilot_delay_lower);
             $('#itho_fallback').val(x.itho_fallback);
             $('#itho_low').val(x.itho_low);
             $('#itho_medium').val(x.itho_medium);
@@ -344,6 +346,8 @@ $(document).ready(function() {
           autopilot_active:       $('input[name=\'option-autopilot_active\']:checked').val(),
           autopilot_hum_upper:    $('#autopilot_hum_upper').val(),
           autopilot_hum_lower:    $('#autopilot_hum_lower').val(),
+          autopilot_delay_upper:        $('#autopilot_delay_upper').val(),
+          autopilot_delay_lower:        $('#autopilot_delay_lower').val(),
         }
       }));
       update_page('autopilot');
@@ -549,12 +553,12 @@ function radio(origin, state) {
   }
   else if (origin == "autopilot_active") {
     if (state == 1) {
-      $('#autopilot_hum_upper, #autopilot_hum_lower').prop('readonly', false);
-      $('#autopilot_hum_upper, #autopilot_hum_lower').prop('disabled', false);
+      $('#autopilot_hum_upper, #autopilot_hum_lower, #autopilot_delay_upper, #autopilot_delay_lower').prop('readonly', false);
+      $('#autopilot_hum_upper, #autopilot_hum_lower, #autopilot_delay_upper, #autopilot_delay_lower').prop('disabled', false);
     }
     else {
-      $('#autopilot_hum_upper, #autopilot_hum_lower').prop('readonly', true);
-      $('#autopilot_hum_upper, #autopilot_hum_lower').prop('disabled', true);
+      $('#autopilot_hum_upper, #autopilot_hum_lower, #autopilot_delay_upper, #autopilot_delay_lower').prop('readonly', true);
+      $('#autopilot_hum_upper, #autopilot_hum_lower, #autopilot_delay_upper, #autopilot_delay_lower').prop('disabled', true);
     }
   }
   else if (origin == "mqtt_domoticz") {
@@ -1115,19 +1119,25 @@ var html_autopilotsettings = `
 <style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
       <form class="pure-form pure-form-aligned">
           <fieldset>
+            <legend><br>State:</legend>
             <div class="pure-control-group">
               <label for="option-autopilot_active" class="pure-radio">Auto-Pilot</label> 
               <input id="option-autopilot_active-1" type="radio" name="option-autopilot_active" onchange='radio("autopilot_active", 1)' value="1"> on
               <input id="option-autopilot_active-0" type="radio" name="option-autopilot_active" onchange='radio("autopilot_active", 0)' value="0"> off
             </div>
-            <legend><br>Thresholds:</legend>
+            <legend><br>Upper limits:</legend>
             <div class="pure-control-group">
               <label for="autopilot_hum_upper">Humidity Upper Limit (switch on)</label>
                 <input id="autopilot_hum_upper" type="number" min="0" max="99" size="6">
+              <label for="autopilot_delay_upper">Execution delay (s)</label>
+                <input id="autopilot_delay_upper" type="number" min="0" max="18000" size="6">
             </div>
+            <legend><br>Lower limits:</legend>
             <div class="pure-control-group">
               <label for="autopilot_hum_lower">Humidity Lower Limit (switch off)</label>
                 <input id="autopilot_hum_lower" type="number" min="0" max="99" size="6">
+              <label for="autopilot_delay_lower">Execution delay (s)</label>
+                <input id="autopilot_delay_lower" type="number" min="0" max="18000" size="6">
             </div>
             <div class="pure-controls">
               <button id="autopilotsubmit" class="pure-button pure-button-primary">Save</button>

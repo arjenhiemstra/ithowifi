@@ -550,6 +550,20 @@ void logInput(const char * inputString) {
 
 
 }
+void autoPilotSetHigh()
+{
+  logInput("AUTOPILOT: SETTING HIGH");
+  autoPilotLastState = 1;
+  // set itho high
+  ithoExecCommand("high");
+}
+
+void autoPilotSetLow()
+{
+  logInput("AUTOPILOT: SETTING LOW");
+  autoPilotLastState = 2;
+  ithoExecCommand("low");
+}
 
 void execAutoPilot()
 {
@@ -574,10 +588,13 @@ void execAutoPilot()
     {
       //
       if(autoPilotLastState != 1){
-        logInput("AUTOPILOT: SETTING HIGH");
-        autoPilotLastState = 1;
-        // set itho high
-        ithoExecCommand("high");
+        if (systemConfig.autopilot_delay_upper > 0) {
+          logInput("AUTOPILOT: Scheduled HIGH with delay");
+          autoPilotLastState = 1;
+          autoPilotJob.once(systemConfig.autopilot_delay_upper, autoPilotSetHigh);
+        } else {
+          autoPilotSetHigh();
+        }
       }
     }
     else if (ithoHum < systemConfig.autopilot_hum_lower)
@@ -585,9 +602,13 @@ void execAutoPilot()
       //
       // set itho low
       if (autoPilotLastState != 2){
-        logInput("AUTOPILOT: SETTING LOW");
-        autoPilotLastState = 2;
-        ithoExecCommand("low");
+        if (systemConfig.autopilot_delay_lower > 0) {
+          logInput("AUTOPILOT: Scheduled LOW with delay");
+          autoPilotLastState = 2;
+          autoPilotJob.once(systemConfig.autopilot_delay_lower, autoPilotSetLow);
+        } else {
+          autoPilotSetLow();
+        }
       }
     }
   }

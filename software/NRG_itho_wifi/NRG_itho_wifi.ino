@@ -200,6 +200,7 @@ bool updateIthoMQTT = false;
 bool SHT3xupdated = false;
 bool runAutoPilot = false;
 int8_t autoPilotLastState = 0;
+Ticker autoPilotJob;
 volatile bool updateItho = false;
 volatile bool ithoCheck = false;
 volatile bool saveRemotesflag = false;

@@ -51,6 +51,8 @@ SystemConfig::SystemConfig() {
   autopilot_updated = false;
   autopilot_hum_upper = 70; // default MUST be > than autopilot_hum_lower otherwise will cause config loading bootloop!
   autopilot_hum_lower = 40;
+  autopilot_delay_upper = 0; // in seconds
+  autopilot_delay_lower = 0; // in seconds
 
   itho_updated = false;
   get_itho_settings = false;
@@ -201,6 +203,16 @@ uint8_t SystemConfig::set(JsonObjectConst obj) {
     }
     
   }
+  if (!(const char *)obj["autopilot_delay_upper"].isNull()) {
+    autopilot_updated = true;
+    error = 0;
+    autopilot_delay_upper = obj["autopilot_delay_upper"];
+  }
+  if (!(const char *)obj["autopilot_delay_lower"].isNull()) {
+    autopilot_updated = true;
+    error = 0;
+    autopilot_delay_lower = obj["autopilot_delay_lower"];    
+  }
   if (!(const char*)obj["itho_fallback"].isNull()) {
     //itho_updated = true;
     error = 0;
@@ -318,6 +330,8 @@ void SystemConfig::get(JsonObject obj) const {
     obj["autopilot_active"] = autopilot_active;
     obj["autopilot_hum_upper"] = autopilot_hum_upper;
     obj["autopilot_hum_lower"] = autopilot_hum_lower;
+    obj["autopilot_delay_upper"] = autopilot_delay_upper;
+    obj["autopilot_delay_lower"] = autopilot_delay_lower;
   }
   obj["version_of_program"] = config_struct_version;
 }

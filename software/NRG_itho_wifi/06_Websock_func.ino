@@ -196,8 +196,14 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
               if (p.value().is<JsonObject>()) {
 
                 JsonObject obj = p.value();
-                if (systemConfig.set(obj) == 0) {
+                uint8_t ErrCode = 0;
+                ErrCode = systemConfig.set(obj);
+                if (ErrCode == 0) {
                   saveSystemConfigflag = true;
+                }
+                else if (ErrCode == 20)
+                {
+                  jsonLogMessage(F("Humidity Upper threshold is not > Lower threshold!"), WEBINTERFACE);
                 }
               }
             }
