@@ -171,15 +171,35 @@ bool SystemConfig::set(JsonObjectConst obj) {
   }
   if (!(const char *)obj["autopilot_hum_upper"].isNull())
   {
-    autopilot_updated = true;
-    updated = true;
-    autopilot_hum_upper = obj["autopilot_hum_upper"];
+    if (obj["autopilot_hum_upper"] > obj["autopilot_hum_lower"])
+    {
+      autopilot_updated = true;
+      updated = true;
+      autopilot_hum_upper = obj["autopilot_hum_upper"];
+    }
+    else
+    {
+      //TODO
+      /* need to throw something like an user error msg*/
+      return false;
+    }
+    
   }
   if (!(const char *)obj["autopilot_hum_lower"].isNull())
   {
-    autopilot_updated = true;
-    updated = true;
-    autopilot_hum_lower = obj["autopilot_hum_lower"];
+    if (obj["autopilot_hum_upper"] > obj["autopilot_hum_lower"])
+    {
+      autopilot_updated = true;
+      updated = true;
+      autopilot_hum_lower = obj["autopilot_hum_lower"];
+    }
+    else
+    {
+      //TODO
+      /* need to throw something like an user error msg */
+      return false;
+    }
+    
   }
   if (!(const char*)obj["itho_fallback"].isNull()) {
     //itho_updated = true;
