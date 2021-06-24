@@ -3,20 +3,38 @@ ESP based WiFi controller for itho central ventilation boxes
 
 *(note: I'm in no way a professional hardware/software engineer and have no background in these subjects. I like this for a hobby, to learn and to share my projects)*
 
-Control the Itho Daalderop Eco Fan RFT using basically only an ESP32 directly communicating with the Itho by i2c protocol. 
+Finished boards can be ordered in my webshop:  
+[https://www.nrgwatch.nl](http://www.nrgwatch.nl)  
+or in my Tindie store:  
+[https://www.tindie.com/products/19680/](https://www.tindie.com/products/19680/)  
 
-The code will give you full remote control over the Itho Eco Fan RFT with one simple add-on module and without further changes to the Itho box.
 
-Two versions of the firmware have been included:
+## WiFi add-on to control itho central ventilation boxes
+
+-   Control your* Itho Daalderop CVE with one simple add-on module
+-   No hardware changes needed to the itho box, no warranty void
+-   Control the speed setting of the fan from 0 - 254 through either a simple web-interface, MQTT or HTML API
+-   Easily integrate this wifi controller in any home domotica system
+-   Installation can be done in minutes
+-   Detailed installation manual
+
+Two versions of the firmware are available:
 * A simple version with hardcoded SSID and password.
 * A more advanced version that starts an access point when no SSID can be connected and allows you to setup the device specifics (Wifi and MQTT settings) and save them on SPIFFS using the webinterface.
 
 The firmware for the Attiny, which handles the i2c initialisation is the same for both the simple and advanced Wemos firmware.
 
-**An important note about the firmware:**
-* The add-on is able to control the itho box in standard or medium mode setting only. This means you can use the original remote but if you leave the itho box in low or high setting the itho won't accept commands from the add-on. This is itho designed behaviour.
+###  Models confirmed to work:
+-   CVE ECO 2 (this unit is also sold by the brand 'Heatrae Sadia' in the uk) *
+-   CVE ECO RFT SE/SP *
+-   CVE-S eco fan RFT
+-   CVE-S S CO2 (CO2 sensor not usable with this add-on)
+-   HRU 200 ECO (also sold as 'Elektrodesign EHR 140 Akor BP' and 'Heatrae Sadia Advance Plus')
+
+###   An important note about the firmware:
+The add-on is able to control the itho box in standard or medium mode setting only. This means you can use the original remote but if you leave the itho box in low or high setting the itho won't accept commands from the add-on. This is itho designed behaviour. Adding a CC1101 RF module and/or letting the add-on present itself as virtual remote can circumvent this issue.
   
-**I2C protocol:**
+## I2C protocol
 
 The Itho fan and add on modules both communicate as I2C master.
 
@@ -52,7 +70,7 @@ It is possible to have other values for e (0, 64, 128, 192) for even more contro
    uint8_t h = (0-e) - (67+b)  
    
 
-**Hardware:**
+## Hardware:
 
 A sample hardware design (KiCad) is included, this module can be plugged on the Itho main PCB directly without extra components.  
 *Tested with Itho Daalderop CVE from late 2013 and 2019 (PCB no. 545-5103 and 05-00492)
