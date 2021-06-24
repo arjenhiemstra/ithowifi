@@ -3,7 +3,7 @@ ESP based WiFi controller for itho central ventilation boxes
 
 *(note: I'm in no way a professional hardware/software engineer and have no background in these subjects. I like this for a hobby, to learn and to share my projects)*
 
-Finished boards can be ordered in my webshop:
+Finished boards can be ordered in my webshop:  
 [https://www.nrgwatch.nl](http://www.nrgwatch.nl)  
 or in my Tindie store:  
 [https://www.tindie.com/products/19680/](https://www.tindie.com/products/19680/)  
