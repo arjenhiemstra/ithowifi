@@ -232,7 +232,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         StaticJsonDocument<128> root;
         DeserializationError error = deserializeJson(root, msg);
         if (!error) {
-            uint8_t val  = root["ithobutton"];
+            uint16_t val  = root["ithobutton"];
             if (val < 4) {
               sendButton(val);
             }
@@ -247,12 +247,33 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
             }
             else if (val == 31) {
               sendQueryStatusFormat();
-            }            
+            }
+            else if (val == 2400) {
+              sendQuery2400();
+            }
+            else if (val == 2401) {
+              sendQuery2401();
+            }
+            else if (val == 2410) {
+              uint8_t index  = root["index"];
+              sendQuery2410(index);
+            }
+            else if (val == 24109) {
+              uint8_t index  = root["index"];
+              uint32_t value  = root["value"];
+              setSetting2410(index, value);
+            }
+            else if (val == 12762) {
+              sendQuery31DA();
+            }
+            else if (val == 12761) {
+              sendQuery31D9();
+            }
             else if (val == 99) {
               sendLeaveI2C();
-            }            
+            }
         }
-      }      
+      }
       else if (msg.startsWith("{\"wifisetup")) {
         jsonWsSend("wifisettings");
       }
@@ -264,7 +285,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         systemConfig.get_mqtt_settings = true;
         jsonWsSend("systemsettings");
         sysStatReq = true;
-      }      
+      }
       else if (msg.startsWith("{\"ithosetup")) {
         systemConfig.get_itho_settings = true;
         jsonWsSend("systemsettings");
@@ -278,6 +299,16 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
       else if (msg.startsWith("{\"itho_llm")) {
         toggleRemoteLLmode();
       }
+      else if (msg.startsWith("{\"itho_ccc_toggle")) {
+        toggleCCcal();
+      }
+      if (msg.startsWith("{\"itho_ccc_reset")) {
+        resetCCcal();
+        ithoCCstatReq = true;
+      }      
+      if (msg.startsWith("{\"ithoccc")) {
+        ithoCCstatReq = true;
+      }      
       else if (msg.startsWith("{\"itho_remove_remote")) {
         bool parseOK = false;
         int number = (msg.substring(22)).toInt();

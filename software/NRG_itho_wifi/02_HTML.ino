@@ -245,7 +245,16 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print("<button id=\"buttonjoin\" class=\"pure-button pure-button-primary\">Join</button>&nbsp;<button id=\"buttonleave\" class=\"pure-button pure-button-primary\">Leave</button><br><br>");
   response->print("<button id=\"buttontype\" class=\"pure-button pure-button-primary\">Query Devicetype</button><br><span>Result:&nbsp;</span><span id=\'ithotype\'></span><br><br>");
   response->print("<button id=\"buttonstatusformat\" class=\"pure-button pure-button-primary\">Query Status Format</button><br><span>Result:&nbsp;</span><span id=\'ithostatusformat\'></span><br><br>");
-  response->print("<button id=\"buttonstatus\" class=\"pure-button pure-button-primary\">Query Status</button><br><span>Result:&nbsp;</span><span id=\'ithostatus\'></span><br>");
+  response->print("<button id=\"buttonstatus\" class=\"pure-button pure-button-primary\">Query Status</button><br><span>Result:&nbsp;</span><span id=\'ithostatus\'></span><br><br>");
+  response->print("<button id=\"button2400\" class=\"pure-button pure-button-primary\">Query 2400</button><br><span>Result:&nbsp;</span><span id=\'itho2400\'></span><br><br>");
+  response->print("<button id=\"button2401\" class=\"pure-button pure-button-primary\">Query 2401</button><br><span>Result:&nbsp;</span><span id=\'itho2401\'></span><br><br>");
+  response->print("<button id=\"button2410\" class=\"pure-button pure-button-primary\">Query 2410</button>setting index: <input id=\"itho_setting_id\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"><br><span>Result:&nbsp;</span><span id=\'itho2410\'></span><br><br>");
+  response->print("<span style=\"color:red\">Warning!!<br> \"Set 2410\" changes settings on you itho unit<br>Use with care and use only if you know what you are doing!</span><br>");
+  response->print("<button id=\"button2410set\" class=\"pure-button pure-button-primary\">Set 2410</button>setting index: <input id=\"itho_setting_id_set\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"> setting value: <input id=\"itho_setting_value_set\" type=\"number\" min=\"0\" max=\"4294967295\" size=\"10\" value=\"0\"><br><span>Sent command:&nbsp;</span><span id=\'itho2410set\'></span><br><span>Result:&nbsp;</span><span id=\'itho2410setres\'></span><br>");
+  response->print("<span style=\"color:red\">Warning!!</span><br><br>");
+  response->print("<button id=\"button31DA\" class=\"pure-button pure-button-primary\">Query 31DA</button><br><span>Result:&nbsp;</span><span id=\'itho31DA\'></span><br><br>");
+  response->print("<button id=\"button31D9\" class=\"pure-button pure-button-primary\">Query 31D9</button><br><span>Result:&nbsp;</span><span id=\'itho31D9\'></span><br>");
+  
 
   
   response->print(F("<br><span>File system: </span><span>"));

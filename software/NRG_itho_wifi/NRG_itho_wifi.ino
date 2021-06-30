@@ -1,4 +1,4 @@
-#define FWVERSION "2.3-alpha1"
+#define FWVERSION "2.3-alpha2"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -94,6 +94,7 @@ Ticker scan;
 FSInfo fs_info;
 #elif defined (__HW_VERSION_TWO__)
 Ticker timerLearnLeaveMode;
+Ticker timerCCcal;
 IthoCC1101 rf;
 IthoPacket packet;
 IthoRemote remotes;
@@ -195,6 +196,7 @@ bool dontReconnectMQTT = false;
 bool clearQueue = false;
 bool wifiModeAP = false;
 bool sysStatReq = false;
+bool ithoCCstatReq = false;
 bool formatFileSystem = false;
 bool runscan = false;
 bool updateIthoMQTT = false;

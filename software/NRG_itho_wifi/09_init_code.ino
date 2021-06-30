@@ -125,7 +125,7 @@ void hardwareInit() {
 void i2cInit() {
 #if defined (__HW_VERSION_ONE__)
   Wire.begin(SDAPIN, SCLPIN, 0);
-  Wire.onReceive(receiveEvent);
+  //Wire.onReceive(receiveEvent);
 #elif defined (__HW_VERSION_TWO__)
   i2c_master_init();
 #endif

@@ -213,6 +213,25 @@ function startWebsock(websocketServerLocation){
             let x = f.sysmessage;
             $('#' + x.id).text(x.message);
           }
+          else if(f.ccstatus) {
+            let x = f.ccstatus;
+            if(x.calEnabled == 1) {
+              $('#itho_ccc_toggle').text("Abort");
+            }
+            else {
+              $('#itho_ccc_toggle').text("Start");
+            }
+            $('#currentF').val(x.currentF);
+            var f = round(((x.currentF * 26) / 65536), 3);
+            $('#curfreq').html(f.toFixed(3) + " MHz");
+            $('#nextFstep').html("Next frequency step in: " + round(x.stepT/1000, 0) + " seconds" );
+            if(x.calFin == 1) {
+              $('#calfin').html("Calibration status: Finished");
+            }
+            else if (x.calEnabled == 1) {
+              $('#calfin').html("Calibration status: Running...");
+            }
+          }
   };
   websock.onopen = function(a) {
       console.log('websock open');
@@ -356,6 +375,12 @@ $(document).ready(function() {
         websock.send('{\"itho_update_remote\":' + selected + ', \"value\":\"' + $('#name_remote-' + selected).val() + '\"}');
       }
     }
+    else if ($(this).attr('id') == 'itho_ccc_toggle') {
+      websock.send('{\"itho_ccc_toggle\":true}');
+    }
+    else if ($(this).attr('id') == 'itho_ccc_reset') {
+      websock.send('{\"itho_ccc_reset\":true}');
+    }
     else if ($(this).attr('id') == 'resetwificonf') {
       if (confirm("This will reset the wifi config to factory default, are you sure?")) {
         websock.send('{\"resetwificonf\":true}');
@@ -407,6 +432,36 @@ $(document).ready(function() {
     else if ($(this).attr('id') == 'buttonstatusformat') {
       websock.send('{\"ithobutton\":31}');
     }
+    else if ($(this).attr('id') == 'button2400') {
+      websock.send('{\"ithobutton\":2400}');
+    }
+    else if ($(this).attr('id') == 'button2401') {
+      websock.send('{\"ithobutton\":2401}');
+    }
+    else if ($(this).attr('id') == 'button2410') {
+      websock.send(JSON.stringify({
+        ithobutton: 2410,
+        index: $('#itho_setting_id').val()
+      }));
+    }
+    else if ($(this).attr('id') == 'button2410set') {
+      websock.send(JSON.stringify({
+        ithobutton: 24109,
+        index: $('#itho_setting_id_set').val(),
+        value: $('#itho_setting_value_set').val()
+      }));
+      console.log(JSON.stringify({
+        ithobutton: 24109,
+        index: $('#itho_setting_id_set').val(),
+        value: $('#itho_setting_value_set').val()
+      }));      
+    }
+    else if ($(this).attr('id') == 'button31DA') {
+      websock.send('{\"ithobutton\":12762}');
+    }
+    else if ($(this).attr('id') == 'button31D9') {
+      websock.send('{\"ithobutton\":12761}');
+    }    
     else if ($(this).attr('id') == 'updatesubmit') {
       e.preventDefault();
       var form = $('#updateform')[0];
@@ -1092,7 +1147,7 @@ var html_remotessetup = `
           <fieldset>
               <br><br>
               <div class="pure-control-group">
-                <label for="mqtt_conn">Learn/Leave mode</label>
+                <label for="itho_llm">Learn/Leave mode</label>
                   <button id="itho_llm" class="pure-button">Unknown</button>
               </div>
           </fieldset>
@@ -1105,10 +1160,36 @@ var html_remotessetup = `
                 <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote" class="pure-button">Remove</button>
               </div>
           </fieldset>
+          <fieldset>
+              <br>
+                <legend><br>RF calibration:</legend>
+              <br>
+              <div class="pure-u-1 pure-u-md-1-5"></div>
+              <div class="pure-u-1 pure-u-md-3-5">
+              <div>
+                <div style="text-align: center">
+                  <div style="float: left;">868.0 MHz</div>
+                  <div style="float: right;">868.6 MHz</div>
+                  <div id="curfreq"></div>
+                </div>
+                <input id="currentF" type="range" min="2187894" max="2189406" value="0" class="slider" style="width: 100%; margin: 0 0 1em 0;">
+                <div style="text-align: center;">
+                  <div id="nextFstep"></div>
+                  <div id="calfin"></div>
+                </div>
+              </div>              
+              <div class="pure-control-group" style="margin: 1em 0 0 0;">
+                <label for="itho_ccc_toggle">RF Calibration</label>
+                  <button id="itho_ccc_toggle" class="pure-button">Unknown</button>&nbsp;<button id="itho_ccc_reset" class="pure-button">Reset</button>
+              </div>
+              </div>
+              <br><br>
+          </fieldset>
       </form>
 <script>
 $(document).ready(function() {
   getSettings('ithoremotes');
+  getSettings('ithoccc');
 });
 </script>
 `;

@@ -486,7 +486,7 @@ void sendQueryStatusFormat() {
     }
   }
 #endif
-  
+
 #if defined (__HW_VERSION_TWO__)
   i2c_slaveInit();
 
@@ -556,6 +556,345 @@ void sendQueryStatus() {
 
 #endif
 
+
+}
+
+void sendQuery2400() {
+
+  uint8_t command[] = { 0x82, 0x80, 0x24, 0x00, 0x04, 0x00, 0xD6 };
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+#if defined (__HW_VERSION_ONE__)
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+#elif defined (__HW_VERSION_TWO__)
+  i2c_sendBytes(command, sizeof(command));
+#endif
+#if defined (__HW_VERSION_ONE__)
+  unsigned long timeoutmillis = millis() + 1000;
+
+  while (!callback_called && millis() < timeoutmillis) {
+    if (callback_called) {
+      callback_called = false;
+      jsonSysmessage("itho2400", i2c_slave_buf);
+
+    }
+    else {
+      jsonSysmessage("itho2400", "failed");
+    }
+  }
+
+#endif
+#if defined (__HW_VERSION_TWO__)
+  i2c_slaveInit();
+
+  if (callback_called) {
+    callback_called = false;
+    jsonSysmessage("itho2400", i2c_slave_buf);
+
+  }
+  else {
+    jsonSysmessage("itho2400", "failed");
+  }
+  i2c_slave_deinit();
+
+#endif
+
+}
+
+void sendQuery2401() {
+
+  uint8_t command[] = { 0x82, 0x80, 0x24, 0x01, 0x04, 0x00, 0xD5 };
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+#if defined (__HW_VERSION_ONE__)
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+#elif defined (__HW_VERSION_TWO__)
+  i2c_sendBytes(command, sizeof(command));
+#endif
+#if defined (__HW_VERSION_ONE__)
+  unsigned long timeoutmillis = millis() + 1000;
+
+  while (!callback_called && millis() < timeoutmillis) {
+    if (callback_called) {
+      callback_called = false;
+      jsonSysmessage("itho2401", i2c_slave_buf);
+
+    }
+    else {
+      jsonSysmessage("itho2401", "failed");
+    }
+  }
+
+#endif
+#if defined (__HW_VERSION_TWO__)
+  i2c_slaveInit();
+
+  if (callback_called) {
+    callback_called = false;
+    jsonSysmessage("itho2401", i2c_slave_buf);
+
+  }
+  else {
+    jsonSysmessage("itho2401", "failed");
+  }
+  i2c_slave_deinit();
+
+#endif
+
+}
+
+void sendQuery31DA() {
+
+  uint8_t command[] = { 0x82, 0x80, 0x31, 0xDA, 0x04, 0x00, 0xEF };
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+#if defined (__HW_VERSION_ONE__)
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+#elif defined (__HW_VERSION_TWO__)
+  i2c_sendBytes(command, sizeof(command));
+#endif
+#if defined (__HW_VERSION_ONE__)
+  unsigned long timeoutmillis = millis() + 1000;
+
+  while (!callback_called && millis() < timeoutmillis) {
+    if (callback_called) {
+      callback_called = false;
+      jsonSysmessage("itho31DA", i2c_slave_buf);
+
+    }
+    else {
+      jsonSysmessage("itho31DA", "failed");
+    }
+  }
+
+#endif
+#if defined (__HW_VERSION_TWO__)
+  i2c_slaveInit();
+
+  if (callback_called) {
+    callback_called = false;
+    jsonSysmessage("itho31DA", i2c_slave_buf);
+
+  }
+  else {
+    jsonSysmessage("itho31DA", "failed");
+  }
+  i2c_slave_deinit();
+
+#endif
+
+}
+
+void sendQuery31D9() {
+
+  uint8_t command[] = { 0x82, 0x80, 0x31, 0xD9, 0x04, 0x00, 0xF0 };
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+#if defined (__HW_VERSION_ONE__)
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+#elif defined (__HW_VERSION_TWO__)
+  i2c_sendBytes(command, sizeof(command));
+#endif
+#if defined (__HW_VERSION_ONE__)
+  unsigned long timeoutmillis = millis() + 1000;
+
+  while (!callback_called && millis() < timeoutmillis) {
+    if (callback_called) {
+      callback_called = false;
+      jsonSysmessage("itho31D9", i2c_slave_buf);
+
+    }
+    else {
+      jsonSysmessage("itho31D9", "failed");
+    }
+  }
+
+#endif
+#if defined (__HW_VERSION_TWO__)
+  i2c_slaveInit();
+
+  if (callback_called) {
+    callback_called = false;
+    jsonSysmessage("itho31D9", i2c_slave_buf);
+
+  }
+  else {
+    jsonSysmessage("itho31D9", "failed");
+  }
+  i2c_slave_deinit();
+
+#endif
+
+}
+
+void sendQuery2410(uint8_t settingID) {
+
+  uint8_t command[] = { 0x82, 0x80, 0x24, 0x10, 0x04, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF };
+
+  command[23] = settingID;
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+#if defined (__HW_VERSION_ONE__)
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+#elif defined (__HW_VERSION_TWO__)
+  i2c_sendBytes(command, sizeof(command));
+#endif
+#if defined (__HW_VERSION_ONE__)
+  unsigned long timeoutmillis = millis() + 1000;
+
+  while (!callback_called && millis() < timeoutmillis) {
+    if (callback_called) {
+      callback_called = false;
+      jsonSysmessage("itho2410", i2c_slave_buf);
+
+    }
+    else {
+      jsonSysmessage("itho2410", "failed");
+    }
+  }
+
+#endif
+#if defined (__HW_VERSION_TWO__)
+  i2c_slaveInit();
+
+  if (callback_called) {
+    callback_called = false;
+    jsonSysmessage("itho2410", i2c_slave_buf);
+
+  }
+  else {
+    jsonSysmessage("itho2410", "failed");
+  }
+  i2c_slave_deinit();
+
+#endif
+
+}
+
+
+void setSetting2410(uint8_t settingID, uint32_t value) {
+
+  if (settingID == 7 && value == 1) {
+    jsonSysmessage("itho2410set", "Warning: command ignored!");
+    jsonSysmessage("itho2410setres", "Setting index 7 to 1 will switch off I2C!");
+    return;
+  }
+  
+  uint8_t command[] = { 0x82, 0x80, 0x24, 0x10, 0x06, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF };
+
+  command[23] = settingID;
+
+  command[9] = value & 0xFF;
+  if (value > 255) {
+    command[8] = (value >> 8) & 0xFF;
+  }
+  if (value > 65535) {
+    command[6] = (value >> 24) & 0xFF;
+    command[7] = (value >> 16) & 0xFF;
+  }
+
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+  std::string s;
+  s.reserve(sizeof(command) * 3 + 2);
+  for (size_t i = 0; i < sizeof(command); ++i) {
+    if (i)
+      s += ' ';
+    s += toHex(command[i] >> 4);
+    s += toHex(command[i] & 0xF);
+  }
+  char tempbuffer[256];
+  strlcpy(tempbuffer, s.c_str(), sizeof(tempbuffer));
+
+  jsonSysmessage("itho2410set", tempbuffer);
+
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+#if defined (__HW_VERSION_ONE__)
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+#elif defined (__HW_VERSION_TWO__)
+  i2c_sendBytes(command, sizeof(command));
+#endif
+
+
+#if defined (__HW_VERSION_ONE__)
+  unsigned long timeoutmillis = millis() + 1000;
+
+  while (!callback_called && millis() < timeoutmillis) {
+    if (callback_called) {
+      callback_called = false;
+      jsonSysmessage("itho2410setres", i2c_slave_buf);
+
+    }
+    else {
+      jsonSysmessage("itho2410setres", "failed");
+    }
+  }
+
+#endif
+#if defined (__HW_VERSION_TWO__)
+  i2c_slaveInit();
+
+  if (callback_called) {
+    callback_called = false;
+    jsonSysmessage("itho2410setres", i2c_slave_buf);
+
+  }
+  else {
+    jsonSysmessage("itho2410setres", "failed");
+  }
+  i2c_slave_deinit();
+
+#endif
 
 }
 
