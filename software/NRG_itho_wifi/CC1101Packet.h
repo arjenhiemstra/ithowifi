@@ -5,19 +5,18 @@
 #ifndef CC1101PACKET_H_
 #define CC1101PACKET_H_
 
-
 #include <stdio.h>
 #include <Arduino.h>
 
 #define CC1101_BUFFER_LEN        64
 #define CC1101_DATA_LEN          CC1101_BUFFER_LEN - 3
-
+#define MAX_RAW                  162
 
 class CC1101Packet
 {
-  public:
-    uint8_t length;
-    uint8_t data[128];
+	public:
+		uint8_t length;
+		uint8_t data[MAX_RAW];
 };
 
 

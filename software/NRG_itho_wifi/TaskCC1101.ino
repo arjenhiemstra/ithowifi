@@ -6,8 +6,8 @@ byte RFTRSSI[3] = {0, 0, 0};
 byte RFTcommandpos = 0;
 bool RFTidChk[3] = {false, false, false};
 
-
 ICACHE_RAM_ATTR void ITHOinterrupt() {
+  rf.receivePacket();
   ithoCheck = true;
 }
 
@@ -89,9 +89,62 @@ void setllModeTimer() {
 
 }
 
+void toggleCCcal() {
+  if (rf.getCCcalEnabled()) {
+    abortCCcal();
+    timerCCcal.detach();
+    ithoCCstatReq = true;
+  }
+  else {
+    rf.setCCcalEnable(1);
+    timerCCcal.attach(1, setCCcalTimer);
+  }
+}
+
+void setCCcalTimer() {
+  updateCCcalData();
+  if (!rf.getCCcalEnabled()) {
+    timerCCcal.detach();
+  }
+
+}
+
+void updateCCcalData() {
+  uint32_t currentF = rf.getCCcal();
+  uint16_t curTimeoutSetting = rf.getCCcalTimeout();
+  uint32_t stepTimeout = rf.getCCcalTimer();
+  uint8_t calEnabled = rf.getCCcalEnabled();
+  uint8_t calFinished = rf.getCCcalFinised();
+  
+  StaticJsonDocument<500> root;
+
+  JsonObject systemstat = root.createNestedObject("ccstatus");
+  systemstat["currentF"] = currentF;
+  systemstat["curTSet"] = curTimeoutSetting;
+  systemstat["stepT"] = stepTimeout;
+  systemstat["calEnabled"] = calEnabled;
+  systemstat["calFin"] = calFinished;
+
+  char buffer[500];
+  size_t len = serializeJson(root, buffer);
+  notifyClients(buffer, len);
+}
+
+
+
+void abortCCcal() {
+  rf.abortCCcal();
+}
+
+void resetCCcal() {
+  rf.resetCCcal();
+}
+
+
+
 void TaskCC1101( void * pvParameters ) {
   configASSERT( ( uint32_t ) pvParameters == 1UL );
-  
+
 
   startTaskMQTT();
 
@@ -114,14 +167,14 @@ void TaskCC1101( void * pvParameters ) {
     //init the RF module
     rf.init();
     pinMode(ITHO_IRQ_PIN, INPUT);
-    attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, FALLING);
+    attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, RISING);
 
     //this portion of code will not be reached when no RF module is present: detach reboot script, switch on rf_supprt and load remotes config
     esp_task_wdt_add(NULL);
     reboot.detach();
     logInput("Setup: init of CC1101 RF module successful");
-    rf.setDeviceID(getMac(6-3),getMac(6-2),getMac(6-1));
-    
+    rf.setDeviceID(getMac(6 - 3), getMac(6 - 2), getMac(6 - 1));
+
     systemConfig.itho_rf_support = 1;
     loadRemotesConfig();
     systemConfig.rfInitOK = true;
@@ -233,6 +286,10 @@ void TaskCC1101( void * pvParameters ) {
             //("--- RF CMD reveiced but of unknown type ---");
           }
         }
+      }
+      if(ithoCCstatReq) {
+        ithoCCstatReq = false;
+        updateCCcalData();
       }
       TaskCC1101HWmark = uxTaskGetStackHighWaterMark( NULL );
       vTaskDelay(25 / portTICK_PERIOD_MS);

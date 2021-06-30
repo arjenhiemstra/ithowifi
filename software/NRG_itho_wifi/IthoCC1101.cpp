@@ -27,17 +27,17 @@
 //#define SYNC0 171
 //#define MDMCFG2 0x02 //16bit sync word / 16bit specific
 
-////alternative sync byte pattern (filter much more non-itho messages out. Maybe too strict? Testing needed.
-//#define STARTBYTE 0 //relevant data starts 0 bytes after the sync pattern bytes 179/42/171/42
-//#define SYNC1 187 //byte11 = 179, byte13 = 171 with SYNC1 = 163, 179 and 171 differ only by 1 bit
-//#define SYNC0 42
-//#define MDMCFG2 0x03 //32bit sync word / 30bit specific
+//alternative sync byte pattern (filter much more non-itho messages out. Maybe too strict? Testing needed.
+#define STARTBYTE 0 //relevant data starts 0 bytes after the sync pattern bytes 179/42/171/42
+#define SYNC1 187 //byte11 = 179, byte13 = 171 with SYNC1 = 163, 179 and 171 differ only by 1 bit
+#define SYNC0 42
+#define MDMCFG2 0x03 //32bit sync word / 30bit specific
 
 //alternative sync byte pattern
-#define STARTBYTE 2 //relevant data starts 2 bytes after the sync pattern bytes 179/42
-#define SYNC1 179
-#define SYNC0 42
-#define MDMCFG2 0x02 //16bit sync word / 16bit specific
+//#define STARTBYTE 2 //relevant data starts 2 bytes after the sync pattern bytes 179/42
+//#define SYNC1 179
+//#define SYNC0 42
+//#define MDMCFG2 0x02 //16bit sync word / 16bit specific
 
 // default constructor
 IthoCC1101::IthoCC1101(uint8_t counter, uint8_t sendTries) : CC1101()
@@ -50,6 +50,16 @@ IthoCC1101::IthoCC1101(uint8_t counter, uint8_t sendTries) : CC1101()
   this->outIthoPacket.deviceId[2] = 99;
 
   this->outIthoPacket.deviceType = 22;
+
+  calEnabled = 0;
+  calFinised = 0;
+  timeoutCCcal = CAL_TIMEOUT;
+  cc_freq[0] = 0x6A;
+  cc_freq[1] = 0x65;
+  cc_freq[2] = 0x21;
+  f0 = 0;
+  lastValid = 0;
+  lastF = 0;  
 
 } //IthoCC1101
 
@@ -89,9 +99,9 @@ void IthoCC1101::initSendMessage(uint8_t len)
   writeCommand(CC1101_SRES);
   delayMicroseconds(1);
   writeRegister(CC1101_IOCFG0 , 0x2E);    //High impedance (3-state)
-  writeRegister(CC1101_FREQ2 , 0x21);   //00100001  878MHz-927.8MHz
-  writeRegister(CC1101_FREQ1 , 0x65);   //01100101
-  writeRegister(CC1101_FREQ0 , 0x6A);   //01101010
+  writeRegister(CC1101_FREQ2 , cc_freq[2]);   //00100001  878MHz-927.8MHz
+  writeRegister(CC1101_FREQ1 , cc_freq[1]);   //01100101
+  writeRegister(CC1101_FREQ0 , cc_freq[0]);   //01101010
   writeRegister(CC1101_MDMCFG4 , 0x5A); //difference compared to message1
   writeRegister(CC1101_MDMCFG3 , 0x83); //difference compared to message1
   writeRegister(CC1101_MDMCFG2 , 0x00); //00000000  2-FSK, no manchester encoding/decoding, no preamble/sync
@@ -191,22 +201,22 @@ void IthoCC1101::initReceive()
 
   writeRegister(CC1101_FSCAL2 , 0x00);
   writeRegister(CC1101_MCSM0 , 0x18);     //no auto calibrate
-  writeRegister(CC1101_FREQ2 , 0x21);
-  writeRegister(CC1101_FREQ1 , 0x65);
-  writeRegister(CC1101_FREQ0 , 0x6A);
+  writeRegister(CC1101_FREQ2 , cc_freq[2]);
+  writeRegister(CC1101_FREQ1 , cc_freq[1]);
+  writeRegister(CC1101_FREQ0 , cc_freq[0]);
   writeRegister(CC1101_IOCFG0 , 0x2E);      //High impedance (3-state)
   writeRegister(CC1101_IOCFG2 , 0x06);      //0x06 Assert when sync word has been sent / received, and de-asserts at the end of the packet.
-  writeRegister(CC1101_FSCTRL1 , 0x06);
+  writeRegister(CC1101_FSCTRL1 , 0x0F); //change 06
   writeRegister(CC1101_FSCTRL0 , 0x00);
-  writeRegister(CC1101_MDMCFG4 , 0x5A);
+  writeRegister(CC1101_MDMCFG4 , 0x6A);
   writeRegister(CC1101_MDMCFG3 , 0x83);
-  writeRegister(CC1101_MDMCFG2 , 0x00);   //Enable digital DC blocking filter before demodulator, 2-FSK, Disable Manchester encoding/decoding, No preamble/sync
+  writeRegister(CC1101_MDMCFG2 , 0x10);   //Enable digital DC blocking filter before demodulator, 2-FSK, Disable Manchester encoding/decoding, No preamble/sync
   writeRegister(CC1101_MDMCFG1 , 0x22);   //Disable FEC
   writeRegister(CC1101_MDMCFG0 , 0xF8);
   writeRegister(CC1101_CHANNR , 0x00);
   writeRegister(CC1101_DEVIATN , 0x50);
   writeRegister(CC1101_FREND1 , 0x56);
-  writeRegister(CC1101_FREND0 , 0x17);
+  writeRegister(CC1101_FREND0 , 0x10);
   writeRegister(CC1101_MCSM0 , 0x18);     //no auto calibrate
   writeRegister(CC1101_FOCCFG , 0x16);
   writeRegister(CC1101_BSCFG , 0x6C);
@@ -214,18 +224,18 @@ void IthoCC1101::initReceive()
   writeRegister(CC1101_AGCCTRL1 , 0x40);
   writeRegister(CC1101_AGCCTRL0 , 0x91);
   writeRegister(CC1101_FSCAL3 , 0xE9);
-  writeRegister(CC1101_FSCAL2 , 0x2A);
+  writeRegister(CC1101_FSCAL2 , 0x21);
   writeRegister(CC1101_FSCAL1 , 0x00);
-  writeRegister(CC1101_FSCAL0 , 0x11);
+  writeRegister(CC1101_FSCAL0 , 0x1F);
   writeRegister(CC1101_FSTEST , 0x59);
   writeRegister(CC1101_TEST2 , 0x81);
   writeRegister(CC1101_TEST1 , 0x35);
-  writeRegister(CC1101_TEST0 , 0x0B);
+  writeRegister(CC1101_TEST0 , 0x09);
   writeRegister(CC1101_PKTCTRL1 , 0x04);    //No address check, Append two bytes with status RSSI/LQI/CRC OK,
   writeRegister(CC1101_PKTCTRL0 , 0x32);    //Infinite packet length mode, CRC disabled for TX and RX, No data whitening, Asynchronous serial mode, Data in on GDO0 and data out on either of the GDOx pins
   writeRegister(CC1101_ADDR , 0x00);
   writeRegister(CC1101_PKTLEN , 0xFF);
-  writeRegister(CC1101_TEST0 , 0x09);
+
 
   writeCommand(CC1101_SCAL);
 
@@ -254,15 +264,15 @@ void  IthoCC1101::initReceiveMessage()
   writeCommand(CC1101_SIDLE); //idle
 
   //set datarate
-  writeRegister(CC1101_MDMCFG4 , 0x5A); // set kBaud
+  writeRegister(CC1101_MDMCFG4 , 0x6A); // set kBaud
   writeRegister(CC1101_MDMCFG3 , 0x83); // set kBaud
   writeRegister(CC1101_DEVIATN , 0x50);
 
   //set fifo mode with fixed packet length and sync bytes
-  writeRegister(CC1101_PKTLEN , 63);      //63 bytes message (sync at beginning of message is removed by CC1101)
+  //writeRegister(CC1101_PKTLEN , 63);      //63 bytes message (sync at beginning of message is removed by CC1101)
 
   //set fifo mode with fixed packet length and sync bytes
-  writeRegister(CC1101_PKTCTRL0 , 0x00);
+  writeRegister(CC1101_PKTCTRL0 , 0x02);
   writeRegister(CC1101_SYNC1 , SYNC1);
   writeRegister(CC1101_SYNC0 , SYNC0);
   writeRegister(CC1101_MDMCFG2 , MDMCFG2);
@@ -278,17 +288,137 @@ void  IthoCC1101::initReceiveMessage()
   }
 }
 
+uint8_t IthoCC1101::receivePacket() {
+  return readData(&inMessage, MAX_RAW);
+}
+
 bool IthoCC1101::checkForNewPacket() {
-  if (receiveData(&inMessage, 63) && parseMessageCommand()) {
+  bool result = false;
+  if (parseMessageCommand()) {
+    if (calEnabled && inIthoPacket.error == 0) {
+      cc_cal_update( inIthoPacket.error, false );
+    }
     initReceiveMessage();
-    return true;
+    result = true;
   }
-  return false;
+  if (calEnabled && inIthoPacket.error > 1) {
+    //printf("packet error: %d\n", inIthoPacket.error);
+  }
+
+  return result;
 }
 
 bool IthoCC1101::parseMessageCommand() {
 
   messageDecode(&inMessage, &inIthoPacket);
+
+  uint8_t dataPos = 0;
+  inIthoPacket.error = 0;
+  inIthoPacket.command = IthoUnknown;
+
+  //first byte is the header of the message, this determines the structure of the rest of the message
+  //The bits are used as follows <00TTAAPP>
+  // 00 - Unused
+  // TT - Message type
+  // AA - Present DeviceID fields
+  // PP - Present Params
+  inIthoPacket.header  = inIthoPacket.dataDecoded[0];
+  dataPos++;
+
+  //packet type: RQ-Request, W-Write, I-Inform, RP-Response
+  if ((inIthoPacket.dataDecoded[0] >> 4) > 3) {
+    inIthoPacket.error = 1;
+    return false;
+  }
+  inIthoPacket.type = inIthoPacket.dataDecoded[0] >> 4;
+
+  inIthoPacket.deviceId0[0] = 0;
+  inIthoPacket.deviceId0[1] = 0;
+  inIthoPacket.deviceId0[2] = 0;
+  inIthoPacket.deviceId1[0] = 0;
+  inIthoPacket.deviceId1[1] = 0;
+  inIthoPacket.deviceId1[2] = 0;
+  inIthoPacket.deviceId2[0] = 0;
+  inIthoPacket.deviceId2[1] = 0;
+  inIthoPacket.deviceId2[2] = 0;
+
+  //get DeviceID fields
+  uint8_t idfield = (inIthoPacket.dataDecoded[0] >> 2) & 0x03;
+
+  if (idfield == 0x00 || idfield == 0x02 || idfield == 0x03) {
+    inIthoPacket.deviceId0[0] = inIthoPacket.dataDecoded[dataPos];
+    inIthoPacket.deviceId0[1] = inIthoPacket.dataDecoded[dataPos + 1];
+    inIthoPacket.deviceId0[2] = inIthoPacket.dataDecoded[dataPos + 2];
+    dataPos += 3;
+    if (idfield == 0x00 || idfield == 0x03) {
+      inIthoPacket.deviceId1[0] = inIthoPacket.dataDecoded[dataPos];
+      inIthoPacket.deviceId1[1] = inIthoPacket.dataDecoded[dataPos + 1];
+      inIthoPacket.deviceId1[2] = inIthoPacket.dataDecoded[dataPos + 2];
+      dataPos += 3;
+    }
+    if (idfield == 0x00 || idfield == 0x02) {
+      inIthoPacket.deviceId2[0] = inIthoPacket.dataDecoded[dataPos];
+      inIthoPacket.deviceId2[1] = inIthoPacket.dataDecoded[dataPos + 1];
+      inIthoPacket.deviceId2[2] = inIthoPacket.dataDecoded[dataPos + 2];
+      dataPos += 3;
+    }
+  }
+  else {
+    inIthoPacket.deviceId2[0] = inIthoPacket.dataDecoded[dataPos];
+    inIthoPacket.deviceId2[1] = inIthoPacket.dataDecoded[dataPos + 1];
+    inIthoPacket.deviceId2[2] = inIthoPacket.dataDecoded[dataPos + 2];
+    dataPos += 3;
+  }
+
+  //determine param0 present
+  if (inIthoPacket.dataDecoded[0] & 0x02) {
+    inIthoPacket.param0 = inIthoPacket.dataDecoded[dataPos];
+
+    dataPos++;
+  }
+  else {
+    inIthoPacket.param0 = 0;
+  }
+  //determine param1 present
+  if (inIthoPacket.dataDecoded[0] & 0x01) {
+    inIthoPacket.param1 = inIthoPacket.dataDecoded[dataPos];
+    dataPos++;
+  }
+  else {
+    inIthoPacket.param1 = 0;
+  }
+
+  //Get the two bytes of the opcode
+  inIthoPacket.opcode[0] = inIthoPacket.dataDecoded[dataPos];
+  inIthoPacket.opcode[1] = inIthoPacket.dataDecoded[dataPos + 1];
+  dataPos += 2;
+
+  //Payload length
+  inIthoPacket.len = inIthoPacket.dataDecoded[dataPos];
+  if (inIthoPacket.len > MAX_PAYLOAD) {
+    inIthoPacket.error = 1;
+    return false;
+  }
+
+  dataPos++;
+  inIthoPacket.payloadPos = dataPos;
+
+
+  //Now we have parsed all the variable fields and know the total lenth of the message
+  //with that we can determine if the message CRC is correct
+  uint8_t mLen = inIthoPacket.payloadPos + inIthoPacket.len;
+
+  if (getCounter2(&inIthoPacket, mLen) != inIthoPacket.dataDecoded[mLen]) {
+    inIthoPacket.error = 2;
+#if defined (CRC_FILTER)
+    inIthoPacket.command = IthoUnknown;
+    return false;
+#endif
+  }
+
+  //
+  // old message parse code below
+  //
 
   //deviceType of message type?
   inIthoPacket.deviceType  = inIthoPacket.dataDecoded[0];
@@ -297,7 +427,7 @@ bool IthoCC1101::parseMessageCommand() {
   inIthoPacket.deviceId[0] = inIthoPacket.dataDecoded[1];
   inIthoPacket.deviceId[1] = inIthoPacket.dataDecoded[2];
   inIthoPacket.deviceId[2] = inIthoPacket.dataDecoded[3];
-  
+
   //counter1
   inIthoPacket.counter = inIthoPacket.dataDecoded[4];
 
@@ -318,7 +448,7 @@ bool IthoCC1101::parseMessageCommand() {
   bool isLeaveCommand     = checkIthoCommand(&inIthoPacket, ithoMessageLeaveCommandBytes);
 
   //determine command
-  inIthoPacket.command = IthoUnknown;
+
   if (isHighCommand)     inIthoPacket.command = IthoHigh;
   if (isRVHighCommand)   inIthoPacket.command = IthoHigh;
   if (isMediumCommand)   inIthoPacket.command = IthoMedium;
@@ -335,26 +465,6 @@ bool IthoCC1101::parseMessageCommand() {
   if (isRVJoinCommand)   inIthoPacket.command = IthoJoin;
   if (isLeaveCommand)    inIthoPacket.command = IthoLeave;
 
-#if defined (CRC_FILTER)
-  uint8_t mLen = 0;
-  if (isPowerCommand || isHighCommand || isMediumCommand || isLowCommand || isStandByCommand || isTimer1Command || isTimer2Command || isTimer3Command) {
-    mLen = 11;
-  }
-  else if (isJoinCommand || isJoin2Command) {
-    mLen = 20;
-  }
-  else if (isLeaveCommand) {
-    mLen = 14;
-  }
-  else {
-    return true;
-  }
-  if (getCounter2(&inIthoPacket, mLen) != inIthoPacket.dataDecoded[mLen]) {
-    inIthoPacket.command = IthoUnknown;
-    return false;
-  }
-#endif
-  
   return true;
 }
 
@@ -590,6 +700,8 @@ uint8_t* IthoCC1101::getMessageCommandBytes(IthoCommand command)
       return (uint8_t*)&ithoMessageStandByCommandBytes[0];
     case IthoHigh:
       return (uint8_t*)&ithoMessageHighCommandBytes[0];
+    case IthoFull:
+      return (uint8_t*)&ithoMessageFullCommandBytes[0];
     case IthoMedium:
       return (uint8_t*)&ithoMessageMediumCommandBytes[0];
     case IthoLow:
@@ -707,12 +819,12 @@ uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet) {
 
 
 void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *itho) {
-  
+
   itho->length = 0;
   int lenInbuf = packet->length;
 
   lenInbuf -= STARTBYTE; //correct for sync byte pos
-  
+
   while (lenInbuf >= 5) {
     lenInbuf -= 5;
     itho->length += 2;
@@ -727,7 +839,7 @@ void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *itho) {
   for (int i = 0; i < sizeof(itho->dataDecodedChk) / sizeof(itho->dataDecodedChk[0]); i++) {
     itho->dataDecodedChk[i] = 0;
   }
-  
+
   uint8_t out_i = 0;                                  //byte index
   uint8_t out_j = 4;                                  //bit index
   uint8_t out_i_chk = 0;                              //byte index
@@ -759,7 +871,7 @@ void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *itho) {
           itho->dataDecodedChk[out_i_chk] = ~itho->dataDecodedChk[out_i_chk]; //inverse bits
           out_i_chk += 1;
         }
-      }      
+      }
       in_bitcounter += 1;     //continue cyling in groups of 10 bits
       if (in_bitcounter > 9) in_bitcounter = 0;
     }
@@ -826,18 +938,89 @@ String IthoCC1101::getLastMessagestr(bool ashex) {
 String IthoCC1101::LastMessageDecoded() {
 
   String str;
+  char buf[4];
+
   if (inIthoPacket.length > 11) {
-    str += "Device type?: " + String(inIthoPacket.deviceType);
-    str += " - CMD: ";
-    for (int i = 4; i < inIthoPacket.length; i++) {
-      str += String(inIthoPacket.dataDecoded[i]);
-      if (i < inIthoPacket.length - 1) str += ",";
+    str += String(MsgType[inIthoPacket.type]);
+
+    if (inIthoPacket.param0 == 0)  {
+      str += " ---";
     }
+    else {
+      str += " ";
+      str += String(inIthoPacket.param0);
+    }
+
+    if (inIthoPacket.deviceId0[0] == 0)  {
+      str += " --,--,--";
+    }
+    else {
+      str += " ";
+      for (uint8_t i = 0; i < 3; i++) {
+        sprintf(buf, "%02X", inIthoPacket.deviceId0[i]);
+        str += String(buf);
+        if (i < 2) {
+          str += ",";
+        }
+      }
+    }
+    if (inIthoPacket.deviceId1[0] == 0)  {
+      str += " --,--,--";
+    }
+    else {
+      str += " ";
+      for (uint8_t i = 0; i < 3; i++) {
+        sprintf(buf, "%02X", inIthoPacket.deviceId1[i]);
+        str += String(buf);
+        if (i < 2) {
+          str += ",";
+        }
+      }
+    }
+    if (inIthoPacket.deviceId2[0] == 0)  {
+      str += " --,--,--";
+    }
+    else {
+      str += " ";
+      for (uint8_t i = 0; i < 3; i++) {
+        sprintf(buf, "%02X", inIthoPacket.deviceId2[i]);
+        str += String(buf);
+        if (i < 2) {
+          str += ",";
+        }
+      }
+    }
+
+    str += " ";
+
+    sprintf(buf, "%02X", inIthoPacket.opcode[0]);
+    str += String(buf);
+    sprintf(buf, "%02X", inIthoPacket.opcode[1]);
+    str += String(buf);
+
+    str += " ";
+    str += String(inIthoPacket.len);
+    str += ":";
+
+    for (int i = inIthoPacket.payloadPos; i < inIthoPacket.payloadPos + inIthoPacket.len; i++) {
+      sprintf(buf, "%02X", inIthoPacket.dataDecoded[i]);
+      str += String(buf);
+      if (i < inIthoPacket.payloadPos + inIthoPacket.len - 1) {
+        str += ",";
+      }
+    }
+    str += "\n";
+    //    for (int i = 0; i < inIthoPacket.length; i++) {
+    //      sprintf(buf, "%02X", inIthoPacket.dataDecoded[i]);
+    //      str += String(buf);
+    //      if (i < inIthoPacket.length - 1) str += ",";
+    //    }
 
   }
   else {
     for (uint8_t i = 0; i < inIthoPacket.length; i++) {
-      str += String(inIthoPacket.dataDecoded[i]);
+      sprintf(buf, "%02X", inIthoPacket.dataDecoded[i]);
+      str += String(buf);
       if (i < inIthoPacket.length - 1) str += ",";
     }
 
@@ -845,4 +1028,189 @@ String IthoCC1101::LastMessageDecoded() {
   str += "\n";
   return str;
 
+}
+
+void IthoCC1101::setCCcalEnable( uint8_t enable ) {
+  if ( calEnabled != enable ) {
+    printf("calEnabled (%d) != enable (%d)\n", calEnabled, enable);
+    if ( enable ) { // Start calibration process
+      // Grab the current frequency in case we abort
+      uint8_t startFreq[1 + 3] = { CC1101_FREQ2, 0, 0, 0 };
+      readBurstRegister( startFreq + 1, startFreq[0], sizeof(startFreq) - 1);
+
+      f0 = ( (uint32_t)startFreq[1] << 16 )
+           | ( (uint32_t)startFreq[2] <<  8 )
+           | ( (uint32_t)startFreq[3] <<  0 );
+
+      calEnabled = 1;
+      calState = CAL_START;
+      calibrationTask.attach(1, +[](IthoCC1101 * IthoCC1101Instance) {
+        IthoCC1101Instance->cc_cal_task();
+      }, this);
+    }
+    else {
+      // Stop calibration process
+      calState = CAL_STOP;
+
+    }
+  }
+  else {
+
+  }
+
+}
+
+void IthoCC1101::abortCCcal() {
+  setCCcalEnable(0);
+  setCCcal(f0);
+  calibrationTask.detach();
+}
+
+void IthoCC1101::cc_cal_task() {
+  //check cal timeout
+  unsigned long now = millis();
+
+  uint8_t timeout = 0;
+
+  unsigned long interval = now - lastValid;
+  printf("cal_task timeout: %lu\n", timeoutCCcal - interval);
+
+  if ( interval > timeoutCCcal ) {
+    cc_cal_update( 0xFF, true );
+
+  }
+
+}
+
+uint32_t IthoCC1101::cc_cal( uint8_t validMsg, bool timeout ) {
+  // Store the search control values in 16 bits
+  // to avoid excessive 32 bit arithmetic
+  static int16_t x, y;
+  static int16_t step;
+  static int16_t low, high;
+
+  static uint32_t f;
+
+  switch ( calState ) {
+    case CAL_IDLE:
+      Serial.println("CAL_IDLE");
+      break;
+
+    case CAL_STOP:
+      Serial.println("CAL_STOP");
+      calState = CAL_IDLE;
+      calEnabled = 0;
+      calibrationTask.detach();
+      break;
+
+    case CAL_START:
+      Serial.println("CAL_START");
+      step = -STEP0;  // Initial search is for low limit
+      f = f0;
+      calState = CAL_BEGIN;
+      break;
+
+    case CAL_BEGIN:  // Begin initial search for extreme limit in direction of step
+      Serial.println("CAL_BEGIN");
+      y = 0;
+      x = step;
+      f = f0 + x;
+      calState = CAL_WAIT;
+      break;
+
+    case CAL_WAIT:
+      Serial.println("CAL_WAIT");
+      if ( validMsg == 0 ) {
+        // Move the initial search window out a step
+        x += step;
+        y += step;
+        f += step;
+      } else if ( timeout ) {
+        f -= step / 2;
+        calState = CAL_CHOP;
+      }
+      break;
+
+    case CAL_CHOP:
+      Serial.println("CAL_CHOP");
+      // Update appropriate boundary
+      if ( validMsg == 0 ) {
+        y  = ( x + y ) / 2;
+        f += ( x - y ) / 2;
+      } else if ( timeout ) {
+        x  = ( x + y ) / 2;
+        f -= ( x - y ) / 2;
+      }
+
+      if ( abs(x - y) <= 1  ) {
+        if ( step < 0 ) {
+          // Low limit found
+          low = y;
+          f = f0;
+          step = -step; // Search in opposite direction
+          calState = CAL_BEGIN;
+        } else {
+          // High limit found
+          high = y;
+          f = f0 + ( low + high ) / 2;
+          calState = CAL_STOP;
+        }
+      }
+  }
+
+  return f;
+}
+
+
+void IthoCC1101::cc_cal_update( uint8_t msgError, bool timeout ) {
+
+  if (calEnabled == 0) {
+    return;
+  }
+
+  uint32_t F = lastF;
+  unsigned long now = millis();
+
+  uint8_t isValid = msgError;
+
+
+  if ( isValid || timeout )
+    lastValid = now;
+
+  F = cc_cal( isValid, timeout );
+
+  if ( lastF != F ) {
+    if (calState == CAL_STOP) {
+      
+      calFinised = 1;
+    }
+
+    setCCcal(F);
+    lastF = F;
+
+    lastValid = now;
+  }
+
+}
+
+void IthoCC1101::setCCcal(uint32_t F) {
+  double freq = (F * 26) / (double)65536;
+
+  uint8_t param[3];
+  param[0] = (uint8_t)( ( F >> 16 ) & 0xFF ); //FREQ2
+  param[1] = (uint8_t)( ( F >> 8 ) & 0xFF );  //FREQ1
+  param[2] = (uint8_t)( ( F >> 0 ) & 0xFF );  //FREQ0
+
+
+  cc_freq[0] = param[2];
+  cc_freq[1] = param[1];
+  cc_freq[2] = param[0];
+
+  writeBurstRegister(CC1101_FREQ2, param, 3);
+
+
+}
+void IthoCC1101::resetCCcal() {
+  //reset to default values
+  setCCcal(2188650); //828.299Mhz
 }
