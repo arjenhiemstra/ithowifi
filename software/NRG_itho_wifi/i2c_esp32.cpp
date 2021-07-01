@@ -118,7 +118,12 @@ bool i2c_sendCmd(uint8_t addr, const uint8_t* cmd, size_t len) {
 }
 
 void i2c_slave_callback(const uint8_t* data, size_t len) {
-
+    for(uint16_t i=0;i<I2C_SLAVE_RX_BUF_LEN;i++) {
+      i2c_slave_data[i] = 0;
+    }
+    for(uint16_t i=0;i<len;i++) {
+      i2c_slave_data[i] = data[i];
+    }
     std::string s;
     s.reserve(len * 3 + 2);
     for (size_t i = 0; i < len; ++i) {
@@ -211,3 +216,4 @@ void i2c_slave_deinit() {
 
 bool callback_called = false;
 char i2c_slave_buf[I2C_SLAVE_RX_BUF_LEN];
+uint8_t i2c_slave_data[I2C_SLAVE_RX_BUF_LEN];

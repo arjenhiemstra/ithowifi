@@ -260,7 +260,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
             }
             else if (val == 24109) {
               uint8_t index  = root["index"];
-              uint32_t value  = root["value"];
+              int32_t value  = root["value"];
               setSetting2410(index, value);
             }
             else if (val == 12762) {
