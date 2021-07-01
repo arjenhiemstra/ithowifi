@@ -802,6 +802,28 @@ void sendQuery2410(uint8_t settingID) {
     callback_called = false;
     jsonSysmessage("itho2410", i2c_slave_buf);
 
+    int32_t curVal = i2c_slave_data[6] << 24; //6,7,8,9
+    curVal |= i2c_slave_data[7] << 16;
+    curVal |= i2c_slave_data[8] << 8;
+    curVal |= i2c_slave_data[9];
+    int32_t minVal = i2c_slave_data[10] << 24; //10,11,12,13
+    minVal |= i2c_slave_data[11] << 16;
+    minVal |= i2c_slave_data[12] << 8;
+    minVal |= i2c_slave_data[13];    
+    int32_t maxVal = i2c_slave_data[14] << 24; //14,15,16,17
+    maxVal |= i2c_slave_data[15] << 16;
+    maxVal |= i2c_slave_data[16] << 8;
+    maxVal |= i2c_slave_data[17];
+    
+    char tempbuffer[256];
+    
+    sprintf(tempbuffer, "%ld", curVal);
+    jsonSysmessage("itho2410cur", tempbuffer);
+    sprintf(tempbuffer, "%ld", minVal);
+    jsonSysmessage("itho2410min", tempbuffer);
+    sprintf(tempbuffer, "%ld", maxVal);
+    jsonSysmessage("itho2410max", tempbuffer);        
+
   }
   else {
     jsonSysmessage("itho2410", "failed");
@@ -813,14 +835,14 @@ void sendQuery2410(uint8_t settingID) {
 }
 
 
-void setSetting2410(uint8_t settingID, uint32_t value) {
+void setSetting2410(uint8_t settingID, int32_t value) {
 
   if (settingID == 7 && value == 1) {
     jsonSysmessage("itho2410set", "Warning: command ignored!");
     jsonSysmessage("itho2410setres", "Setting index 7 to 1 will switch off I2C!");
     return;
   }
-  
+
   uint8_t command[] = { 0x82, 0x80, 0x24, 0x10, 0x06, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF };
 
   command[23] = settingID;

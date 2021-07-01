@@ -55,3 +55,4 @@ void i2c_slave_callback(const uint8_t* data, size_t len);
 char toHex(uint8_t c);
 extern bool callback_called;
 extern char i2c_slave_buf[I2C_SLAVE_RX_BUF_LEN];
+extern uint8_t i2c_slave_data[I2C_SLAVE_RX_BUF_LEN];
