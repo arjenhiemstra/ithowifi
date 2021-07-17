@@ -93,7 +93,7 @@ esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size) {
 }
 
 bool i2c_sendBytes(const uint8_t* buf, size_t len) {
-
+  
   if (len) {
     esp_err_t rc = i2c_master_send((char*)buf, len);
     if (rc) {
@@ -185,7 +185,7 @@ void i2c_slave_init(i2c_slave_callback_t cb) {
   i2cbuf[0] = I2C_SLAVE_ADDRESS << 1;
   buflen = 1;
 
-  unsigned long timeoutmillis = millis() + 1000;
+  unsigned long timeoutmillis = millis() + 200;
 
   while (millis() < timeoutmillis) {
     while (1) {

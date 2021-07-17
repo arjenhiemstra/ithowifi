@@ -13,6 +13,7 @@ SystemConfig::SystemConfig() {
   syssec_api = 0;
   syssec_edit = 0;
   syssht30 = 0;
+  sysfirhum = 0;
   mqtt_active = 0;
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
   strlcpy(mqtt_username, "", sizeof(mqtt_username));
@@ -89,6 +90,10 @@ bool SystemConfig::set(JsonObjectConst obj) {
   if (!(const char*)obj["syssht30"].isNull()) {
     updated = true;
     syssht30 = obj["syssht30"];
+  }
+  if (!(const char*)obj["sysfirhum"].isNull()) {
+    updated = true;
+    sysfirhum = obj["sysfirhum"];
   }
   //MQTT Settings parse
   if (!(const char*)obj["mqtt_active"].isNull()) {
@@ -233,8 +238,21 @@ void SystemConfig::get(JsonObject obj) const {
     obj["syssec_api"] = syssec_api;
     obj["syssec_edit"] = syssec_edit;
     obj["syssht30"] = syssht30;
+    obj["sysfirhum"] = sysfirhum;
     obj["itho_rf_support"] = itho_rf_support;
-    obj["rfInitOK"] = rfInitOK;    
+    obj["rfInitOK"] = rfInitOK;
+    obj["itho_fallback"] = itho_fallback;
+    obj["itho_low"] = itho_low;
+    obj["itho_medium"] = itho_medium;
+    obj["itho_high"] = itho_high;
+    obj["itho_timer1"] = itho_timer1;
+    obj["itho_timer2"] = itho_timer2;
+    obj["itho_timer3"] = itho_timer3;
+    obj["itho_sendjoin"] = itho_sendjoin;
+    obj["itho_forcemedium"] = itho_forcemedium;
+    obj["itho_vremapi"] = itho_vremapi;
+    obj["itho_vremswap"] = itho_vremswap;  
+    obj["nonQ_cmd_clearsQ"] = nonQ_cmd_clearsQ;    
   }
   if (complete || get_mqtt_settings) {
     get_mqtt_settings = false;
@@ -257,18 +275,6 @@ void SystemConfig::get(JsonObject obj) const {
   }
   if (complete || get_itho_settings) {
     get_itho_settings = false;
-    obj["itho_fallback"] = itho_fallback;
-    obj["itho_low"] = itho_low;
-    obj["itho_medium"] = itho_medium;
-    obj["itho_high"] = itho_high;
-    obj["itho_timer1"] = itho_timer1;
-    obj["itho_timer2"] = itho_timer2;
-    obj["itho_timer3"] = itho_timer3;
-    obj["itho_sendjoin"] = itho_sendjoin;
-    obj["itho_forcemedium"] = itho_forcemedium;
-    obj["itho_vremapi"] = itho_vremapi;
-    obj["itho_vremswap"] = itho_vremswap;  
-    obj["nonQ_cmd_clearsQ"] = nonQ_cmd_clearsQ;
   }
   obj["version_of_program"] = config_struct_version;
 }

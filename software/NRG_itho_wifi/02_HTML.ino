@@ -10,6 +10,7 @@ const char html_mainpage[] PROGMEM = R"=====(
     <script src="/js/zepto.min.js"></script>
     <script src="/js/controls.js"></script>
     <link rel="stylesheet" href="pure-min.css">
+    <style>.ithoset{padding: .3em .2em !important;}.dot-elastic{position:relative;width:6px;height:6px;border-radius:5px;background-color:#039;color:#039;animation:dotElastic 1s infinite linear}.dot-elastic::after,.dot-elastic::before{content:'';display:inline-block;position:absolute;top:0}.dot-elastic::before{left:-15px;width:6px;height:6px;border-radius:5px;background-color:#039;color:#039;animation:dotElasticBefore 1s infinite linear}.dot-elastic::after{left:15px;width:6px;height:6px;border-radius:5px;background-color:#039;color:#039;animation:dotElasticAfter 1s infinite linear}@keyframes dotElasticBefore{0%{transform:scale(1,1)}25%{transform:scale(1,1.5)}50%{transform:scale(1,.67)}75%{transform:scale(1,1)}100%{transform:scale(1,1)}}@keyframes dotElastic{0%{transform:scale(1,1)}25%{transform:scale(1,1)}50%{transform:scale(1,1.5)}75%{transform:scale(1,1)}100%{transform:scale(1,1)}}@keyframes dotElasticAfter{0%{transform:scale(1,1)}25%{transform:scale(1,1)}50%{transform:scale(1,.67)}75%{transform:scale(1,1.5)}100%{transform:scale(1,1)}}</style>
 </head>
 <body>
 <div id="layout">
@@ -241,21 +242,6 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(F("<div>Config version: "));
   response->print(CONFIG_VERSION);
   response->print(F("<br><br><span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span></div>"));
-  response->print("<br><span>I2C virtual remote commands:</span><br><button id=\"button1\" class=\"pure-button pure-button-primary\">Low</button>&nbsp;<button id=\"button2\" class=\"pure-button pure-button-primary\">Medium</button>&nbsp;<button id=\"button3\" class=\"pure-button pure-button-primary\">High</button><br><br>");
-  response->print("<button id=\"buttonjoin\" class=\"pure-button pure-button-primary\">Join</button>&nbsp;<button id=\"buttonleave\" class=\"pure-button pure-button-primary\">Leave</button><br><br>");
-  response->print("<button id=\"buttontype\" class=\"pure-button pure-button-primary\">Query Devicetype</button><br><span>Result:&nbsp;</span><span id=\'ithotype\'></span><br><br>");
-  response->print("<button id=\"buttonstatusformat\" class=\"pure-button pure-button-primary\">Query Status Format</button><br><span>Result:&nbsp;</span><span id=\'ithostatusformat\'></span><br><br>");
-  response->print("<button id=\"buttonstatus\" class=\"pure-button pure-button-primary\">Query Status</button><br><span>Result:&nbsp;</span><span id=\'ithostatus\'></span><br><br>");
-  response->print("<button id=\"button2400\" class=\"pure-button pure-button-primary\">Query 2400</button><br><span>Result:&nbsp;</span><span id=\'itho2400\'></span><br><br>");
-  response->print("<button id=\"button2401\" class=\"pure-button pure-button-primary\">Query 2401</button><br><span>Result:&nbsp;</span><span id=\'itho2401\'></span><br><br>");
-  response->print("<button id=\"button2410\" class=\"pure-button pure-button-primary\">Query 2410</button>setting index: <input id=\"itho_setting_id\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"><br><span>Result:&nbsp;</span><span id=\'itho2410\'></span><br><span>Current:&nbsp;</span><span id=\'itho2410cur\'></span><br><span>Minimum value:&nbsp;</span><span id=\'itho2410min\'></span><br><span>Maximum value:&nbsp;</span><span id=\'itho2410max\'></span><br><br>");
-  response->print("<span style=\"color:red\">Warning!!<br> \"Set 2410\" changes the settings of your itho unit<br>Use with care and use only if you know what you are doing!</span><br>");
-  response->print("<button id=\"button2410set\" class=\"pure-button pure-button-primary\">Set 2410</button>setting index: <input id=\"itho_setting_id_set\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"> setting value: <input id=\"itho_setting_value_set\" type=\"number\" min=\"-2147483647\" max=\"2147483647\" size=\"10\" value=\"0\"><br><span>Sent command:&nbsp;</span><span id=\'itho2410set\'></span><br><span>Result:&nbsp;</span><span id=\'itho2410setres\'></span><br>");
-  response->print("<span style=\"color:red\">Warning!!</span><br><br>");
-  response->print("<button id=\"button31DA\" class=\"pure-button pure-button-primary\">Query 31DA</button><br><span>Result:&nbsp;</span><span id=\'itho31DA\'></span><br><br>");
-  response->print("<button id=\"button31D9\" class=\"pure-button pure-button-primary\">Query 31D9</button><br><span>Result:&nbsp;</span><span id=\'itho31D9\'></span><br>");
-  
-
   
   response->print(F("<br><span>File system: </span><span>"));
 #if defined (__HW_VERSION_ONE__)
@@ -320,8 +306,22 @@ void handleDebug(AsyncWebServerRequest *request) {
 #if defined (__HW_VERSION_TWO__)  
   response->print(F("</div></div><br><br><div id='rflog_outer' class='hidden'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>RF Log:</div>"));
   response->print(F("<div id='rflog' style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto'>"));
-  response->print(F("</div><div style='padding-top:5px;'><a href='#' class='pure-button' onclick=\"$('#rflog').empty()\">Clear</a></div></div></div><br><br>"));
+  response->print(F("</div><div style='padding-top:5px;'><a href='#' class='pure-button' onclick=\"$('#rflog').empty()\">Clear</a></div></div></div>"));
 #endif
+
+  response->print(F("<form class=\"pure-form pure-form-aligned\"><fieldset><legend><br>Low level itho I2C commands:</legend><br><span>I2C virtual remote commands:</span><br><button id=\"button1\" class=\"pure-button pure-button-primary\">Low</button>&nbsp;<button id=\"button2\" class=\"pure-button pure-button-primary\">Medium</button>&nbsp;<button id=\"button3\" class=\"pure-button pure-button-primary\">High</button><br><br>"));
+  response->print(F("<button id=\"buttonjoin\" class=\"pure-button pure-button-primary\">Join</button>&nbsp;<button id=\"buttonleave\" class=\"pure-button pure-button-primary\">Leave</button><br><br>"));
+  response->print(F("<button id=\"buttontype\" class=\"pure-button pure-button-primary\">Query Devicetype</button><br><span>Result:&nbsp;</span><span id=\'ithotype\'></span><br><br>"));
+  response->print(F("<button id=\"buttonstatusformat\" class=\"pure-button pure-button-primary\">Query Status Format</button><br><span>Result:&nbsp;</span><span id=\'ithostatusformat\'></span><br><br>"));
+  response->print(F("<button id=\"buttonstatus\" class=\"pure-button pure-button-primary\">Query Status</button><br><span>Result:&nbsp;</span><span id=\'ithostatus\'></span><br><br>"));
+  response->print(F("<button id=\"button2400\" class=\"pure-button pure-button-primary\">Query 2400</button><br><span>Result:&nbsp;</span><span id=\'itho2400\'></span><br><br>"));
+  response->print(F("<button id=\"button2401\" class=\"pure-button pure-button-primary\">Query 2401</button><br><span>Result:&nbsp;</span><span id=\'itho2401\'></span><br><br>"));
+  response->print(F("<button id=\"button2410\" class=\"pure-button pure-button-primary\">Query 2410</button>setting index: <input id=\"itho_setting_id\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"><br><span>Result:&nbsp;</span><span id=\'itho2410\'></span><br><span>Current:&nbsp;</span><span id=\'itho2410cur\'></span><br><span>Minimum value:&nbsp;</span><span id=\'itho2410min\'></span><br><span>Maximum value:&nbsp;</span><span id=\'itho2410max\'></span><br><br>"));
+  response->print(F("<span style=\"color:red\">Warning!!<br> \"Set 2410\" changes the settings of your itho unit<br>Use with care and use only if you know what you are doing!</span><br>"));
+  response->print(F("<button id=\"button2410set\" class=\"pure-button pure-button-primary\">Set 2410</button>setting index: <input id=\"itho_setting_id_set\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"> setting value: <input id=\"itho_setting_value_set\" type=\"number\" min=\"-2147483647\" max=\"2147483647\" size=\"10\" value=\"0\"><br><span>Sent command:&nbsp;</span><span id=\'itho2410set\'></span><br><span>Result:&nbsp;</span><span id=\'itho2410setres\'></span><br>"));
+  response->print(F("<span style=\"color:red\">Warning!!</span><br><br>"));
+  response->print(F("<button id=\"button31DA\" class=\"pure-button pure-button-primary\">Query 31DA</button><br><span>Result:&nbsp;</span><span id=\'itho31DA\'></span><br><br>"));
+  response->print(F("<button id=\"button31D9\" class=\"pure-button pure-button-primary\">Query 31D9</button><br><span>Result:&nbsp;</span><span id=\'itho31D9\'></span></fieldset></form><br>"));
   
   request->send(response);
   

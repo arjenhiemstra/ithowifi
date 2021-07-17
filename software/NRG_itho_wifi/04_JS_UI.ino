@@ -8,6 +8,7 @@ var itho_high = 254;
 var sht3x = -1;
 var websocketServerLocation = 'ws://' + window.location.hostname + '/ws';
 
+
 function startWebsock(websocketServerLocation){
   websock = new WebSocket(websocketServerLocation);
   websock.onmessage = function(b) {
@@ -16,100 +17,15 @@ function startWebsock(websocketServerLocation){
           var g = document.body;
           if (f.wifisettings) {
             let x = f.wifisettings;
-            $('#ssid').val(x.ssid);
-            $('#passwd').val(x.passwd);
-            var $radios = $('input[name=\'option-dhcp\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value=' + x.dhcp + ']').prop('checked', true);
-            }
-            radio("dhcp", x.dhcp);
-            $('#renew').val(x.renew);
-            $('#ip').val(x.ip);
-            $('#subnet').val(x.subnet);
-            $('#gateway').val(x.gateway);
-            $('#dns1').val(x.dns1);
-            $('#dns2').val(x.dns2);
-            $('#port').val(x.port);
+            processElements(x);
           }
           else if (f.systemsettings) {
             let x = f.systemsettings;
-            $('#sys_username').val(x.sys_username);
-            $('#sys_password').val(x.sys_password);
-            var $radios = $('input[name=\'option-syssec_web\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.syssec_web + '"]').prop('checked', true);
-            }
-            var $radios = $('input[name=\'option-syssec_api\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.syssec_api + '"]').prop('checked', true);
-            }        
-            var $radios = $('input[name=\'option-syssec_edit\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.syssec_edit + '"]').prop('checked', true);
-            }
-            var $radios = $('input[name=\'option-syssht30\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.syssht30 + '"]').prop('checked', true);
-            }
-            var $radios = $('input[name=\'option-mqtt_active\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.mqtt_active + '"]').prop('checked', true);
-            }
-            radio("mqtt_active", x.mqtt_active);
-            $('#mqtt_serverName').val(x.mqtt_serverName);
-            $('#mqtt_username').val(x.mqtt_username);
-            $('#mqtt_password').val(x.mqtt_password);
-            $('#mqtt_port').val(x.mqtt_port);
-            $('#mqtt_state_topic').val(x.mqtt_state_topic);
-            mqtt_state_topic_tmp = x.mqtt_state_topic;
-            $('#mqtt_sensor_topic').val(x.mqtt_sensor_topic);
-            $('#mqtt_ha_topic').val(x.mqtt_ha_topic);
-            $('#mqtt_cmd_topic').val(x.mqtt_cmd_topic);
-            mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
-            $('#mqtt_lwt_topic').val(x.mqtt_lwt_topic);
-            $radios = $('input[name=\'option-mqtt_domoticz_active\']');
             $('#mqtt_idx, #label-mqtt_idx').hide();
             $('#sensor_idx, #label-sensor_idx').hide();
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.mqtt_domoticz_active + '"]').prop('checked', true);
-            }
-            radio("mqtt_domoticz", x.mqtt_domoticz_active);
-            radio("mqtt_ha", x.mqtt_ha_active);
-            $radios = $('input[name=\'option-mqtt_ha_active\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.mqtt_ha_active + '"]').prop('checked', true);
-            }
-            radio("mqtt_ha", x.mqtt_ha_active);
-            $('#mqtt_idx').val(x.mqtt_idx);
-            $('#sensor_idx').val(x.sensor_idx);
-            $('#itho_fallback').val(x.itho_fallback);
-            $('#itho_low').val(x.itho_low);
-            $('#itho_medium').val(x.itho_medium);
-            $('#itho_high').val(x.itho_high);
-            $('#itho_timer1').val(x.itho_timer1);
-            $('#itho_timer2').val(x.itho_timer2);
-            $('#itho_timer3').val(x.itho_timer3);
-            $radios = $('input[name=\'option-vremotejoin_active\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.itho_sendjoin + '"]').prop('checked', true);
-            }
-            $radios = $('input[name=\'option-vremotemedium_active\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.itho_forcemedium + '"]').prop('checked', true);
-            }
-            $radios = $('input[name=\'option-vremoteapi_active\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.itho_vremapi + '"]').prop('checked', true);
-            }
-            $radios = $('input[name=\'option-vremoteswap_active\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.itho_vremswap + '"]').prop('checked', true);
-            }
-            $radios = $('input[name=\'option-itho_remotes_active\']');
-            if($radios.is(':checked') === false) {
-                $radios.filter('[value="' + x.itho_rf_support + '"]').prop('checked', true);
-            }
-            radio("itho_rf_support", x.itho_rf_support);
+            mqtt_state_topic_tmp = x.mqtt_state_topic;
+            mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
+            processElements(x);
             if (x.itho_rf_support == 1 && x.rfInitOK == false) {
               if (confirm("For changes to take effect click 'Ok' to reboot")) {
                 $('#main').empty();
@@ -121,11 +37,52 @@ function startWebsock(websocketServerLocation){
             if (x.itho_rf_support == 1 && x.rfInitOK == true) {              
               $('#remotemenu').removeClass('hidden');
             }
-          }     
+          }
           else if (f.remotes) {
             let x = f.remotes;
             $('#RemotesTable').empty();
             buildHtmlTable('#RemotesTable', x);
+          }
+          else if (f.ithodevinfo) {
+            let x = f.ithodevinfo;
+            for (key in x) {
+                if (x.hasOwnProperty(key)) {
+                    $('#' + key).text(x[key]);
+                }
+            }
+            if(x.itho_setlen) {
+              sessionStorage.setItem("itho_setlen", x.itho_setlen);
+            }
+          }          
+          else if (f.ithosettings) {
+            let x = f.ithosettings;
+
+            if(x.Index === 0 && x.update === false) {
+              $('#SettingsTable').empty();
+              //add header
+              addColumnHeader(x, '#SettingsTable', true);
+              $('#SettingsTable').append('<tbody>');
+            }
+            if(x.update === false) {
+              addRowTableIthoSettings($('#SettingsTable > tbody'), x);
+            }
+            else {
+              updateRowTableIthoSettings(x);
+            }
+            if(x.Index < sessionStorage.getItem("itho_setlen")-1 && x.loop === true) {
+              websock.send(JSON.stringify({
+                ithogetsetting: true,
+                index: (x.Index + 1),
+                update: x.update
+              }));
+            }
+            if(x.Index === sessionStorage.getItem("itho_setlen")-1 && x.update === false && x.loop === true) {
+              websock.send(JSON.stringify({
+                ithogetsetting: true,
+                index: 0,
+                update: true
+              }));
+            }
           }
           else if (f.wifiscanresult) {
             let x = f.wifiscanresult;
@@ -308,7 +265,19 @@ $(document).ready(function() {
           syssec_api:       $('input[name=\'option-syssec_api\']:checked').val(),          
           syssec_edit:      $('input[name=\'option-syssec_edit\']:checked').val(),
           syssht30:         $('input[name=\'option-syssht30\']:checked').val(),
-          itho_rf_support:  $('input[name=\'option-itho_remotes_active\']:checked').val()
+          sysfirhum:        $('input[name=\'option-sysfirhum\']:checked').val(),
+          itho_rf_support:  $('input[name=\'option-itho_rf_support\']:checked').val(),
+          itho_fallback:    $('#itho_fallback').val(),
+          itho_low:         $('#itho_low').val(),
+          itho_medium:      $('#itho_medium').val(),
+          itho_high:        $('#itho_high').val(),
+          itho_timer1:      $('#itho_timer1').val(),
+          itho_timer2:      $('#itho_timer2').val(),
+          itho_timer3:      $('#itho_timer3').val(),
+          itho_sendjoin:    $('input[name=\'option-itho_sendjoin\']:checked').val(),
+          itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
+          itho_vremapi:     $('input[name=\'option-itho_vremapi\']:checked').val(),
+          itho_vremswap:    $('input[name=\'itho_vremswap\']:checked').val()          
         }
       }));
       update_page('system');
@@ -339,17 +308,7 @@ $(document).ready(function() {
     else if ($(this).attr('id') == 'ithosubmit') {
       websock.send(JSON.stringify({
         systemsettings: {
-          itho_fallback:    $('#itho_fallback').val(),
-          itho_low:         $('#itho_low').val(),
-          itho_medium:      $('#itho_medium').val(),
-          itho_high:        $('#itho_high').val(),
-          itho_timer1:      $('#itho_timer1').val(),
-          itho_timer2:      $('#itho_timer2').val(),
-          itho_timer3:      $('#itho_timer3').val(),
-          itho_sendjoin:    $('input[name=\'option-vremotejoin_active\']:checked').val(),
-          itho_forcemedium: $('input[name=\'option-vremotemedium_active\']:checked').val(),
-          itho_vremapi:     $('input[name=\'option-vremoteapi_active\']:checked').val(),
-          itho_vremswap:    $('input[name=\'option-vremoteswap_active\']:checked').val()
+
         }
       }));
       update_page('itho');
@@ -367,14 +326,59 @@ $(document).ready(function() {
       }
     }
     else if ($(this).attr('id') == 'itho_update_remote') {
-      var selected = $('input[name=\'optionsRemotes\']:checked').val();
-      if (selected == null) {
+      var i = $('input[name=\'optionsRemotes\']:checked').val();
+      if (i == null) {
         alert("Please select a remote.");
       }
       else {
-        websock.send('{\"itho_update_remote\":' + selected + ', \"value\":\"' + $('#name_remote-' + selected).val() + '\"}');
+        websock.send('{\"itho_update_remote\":'+i+', \"value\":\"' + $('#name_remote-'+i).val() + '\"}');
       }
     }
+    else if ($(this).attr('id').substr(0, 15) == 'ithosetrefresh-') {
+      var row = parseInt($(this).attr('id').substr(15));
+      var i = $('input[name=\'options-ithoset\']:checked').val();
+      if (i == null) {
+        alert("Please select a row.");
+      }
+      else if (i != row) {
+        alert("Please select the correct row.");
+      }      
+      else {
+        $('input[name=\'options-ithoset\']:checked').prop('checked', false);
+        $('[id^=ithosetrefresh-]').each(function(index, item){
+          $('#ithosetrefresh-'+index).removeClass('pure-button-primary');
+          $('#ithosetupdate-'+index).removeClass('pure-button-primary');
+        });
+        $('#Current-'+i).html('<div style=\'margin: auto;\' class=\'dot-elastic\'></div>');
+        $('#Minimum-'+i).html('<div style=\'margin: auto;\' class=\'dot-elastic\'></div>');
+        $('#Maximum-'+i).html('<div style=\'margin: auto;\' class=\'dot-elastic\'></div>');
+        websock.send('{\"ithosetrefresh\":'+i+'}');
+      }
+    }
+    else if ($(this).attr('id').substr(0, 14) == 'ithosetupdate-') {
+      var row = parseInt($(this).attr('id').substr(14));
+      var i = $('input[name=\'options-ithoset\']:checked').val();
+      if (i == null) {
+        alert("Please select a row.");
+      }
+      else if (i != row) {
+        alert("Please select the correct row.");
+      }      
+      else {
+        websock.send(JSON.stringify({
+          ithosetupdate: i,
+          value: $('#name_ithoset-'+i).val()
+        }));     
+        $('input[name=\'options-ithoset\']:checked').prop('checked', false);
+        $('[id^=ithosetrefresh-]').each(function(index, item){
+          $('#ithosetrefresh-'+index).removeClass('pure-button-primary');
+          $('#ithosetupdate-'+index).removeClass('pure-button-primary');
+        });
+        $('#Current-'+i).html('<div style=\'margin: auto;\' class=\'dot-elastic\'></div>');
+        $('#Minimum-'+i).html('<div style=\'margin: auto;\' class=\'dot-elastic\'></div>');
+        $('#Maximum-'+i).html('<div style=\'margin: auto;\' class=\'dot-elastic\'></div>');        
+      }
+    }    
     else if ($(this).attr('id') == 'itho_ccc_toggle') {
       websock.send('{\"itho_ccc_toggle\":true}');
     }
@@ -449,19 +453,21 @@ $(document).ready(function() {
         ithobutton: 24109,
         index: $('#itho_setting_id_set').val(),
         value: $('#itho_setting_value_set').val()
-      }));
-      console.log(JSON.stringify({
-        ithobutton: 24109,
-        index: $('#itho_setting_id_set').val(),
-        value: $('#itho_setting_value_set').val()
-      }));      
+      }));  
     }
     else if ($(this).attr('id') == 'button31DA') {
       websock.send('{\"ithobutton\":12762}');
     }
     else if ($(this).attr('id') == 'button31D9') {
       websock.send('{\"ithobutton\":12761}');
-    }    
+    }
+    else if ($(this).attr('id') == 'ithogetsettings') {
+      websock.send(JSON.stringify({
+        ithogetsetting: true,
+        index: 0,
+        update: false
+      }));
+    }     
     else if ($(this).attr('id') == 'updatesubmit') {
       e.preventDefault();
       var form = $('#updateform')[0];
@@ -547,6 +553,26 @@ function removeID(id) {
     $('#' + id).remove();
 }
 
+function processElements(x) {
+  for (var key in x) {
+    if (x.hasOwnProperty(key)) {
+      var el = $('#' + key);
+      if(el.is('input')) {
+        $('#' + key).val(x[key]);
+      }
+      else {
+        var radios = $('input[name=\'option-' + key + '\']');
+        if(radios[1]) {
+          if(radios.is(':checked') === false) {
+              radios.filter('[value="' + x[key] + '"]').prop('checked', true);
+          }
+          radio(key, x[key]);
+        }
+      }
+    }
+  }
+}
+
 function removeAfter5secs(count) {
   //await timeoutPromise(200);
     new Promise(resolve => {
@@ -589,7 +615,7 @@ function radio(origin, state) {
       $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', true);
     }
   }
-  else if (origin == "mqtt_domoticz") {
+  else if (origin == "mqtt_domoticz_active") {
     if (state == 1) {
       $('#mqtt_idx').prop('readonly', false);
       $('#mqtt_idx, #label-mqtt_idx').show();
@@ -613,7 +639,7 @@ function radio(origin, state) {
       $('#mqtt_lwt_topic, #label-lwt_topic').show();
     }
   }
-  else if (origin == "mqtt_ha") {
+  else if (origin == "mqtt_ha_active") {
     if (state == 1) {
       $('#mqtt_ha_topic, #label-mqtt_ha').show();
       $('#mqtt_idx').prop('readonly', true);
@@ -627,13 +653,23 @@ function radio(origin, state) {
       $('#mqtt_ha_topic, #label-mqtt_ha').hide();
     }
   }
-  else if (origin == "remote") {
-    $('[id^=name_remote-]').each(function(index, item){
-        $(item).prop('readonly', true);
+  else if (origin == "remote" || origin == "ithoset") {
+    $('[id^=name_'+origin+'-]').each(function(index, item){
+      $('#name_'+origin+'-'+index).prop('readonly', true); 
       if (index == state) {
-        $(item).prop('readonly', false);
+        $('#name_'+origin+'-'+index).prop('readonly', false);
       }
     });
+    if(origin == "ithoset") {
+      $('[id^=ithosetrefresh-]').each(function(index, item){
+        $('#ithosetrefresh-'+index).removeClass('pure-button-primary');
+        $('#ithosetupdate-'+index).removeClass('pure-button-primary');
+        if (index == state) {
+          $('#ithosetrefresh-'+index).addClass('pure-button-primary');
+          $('#ithosetupdate-'+index).addClass('pure-button-primary');
+        }
+      });
+    }
   }
 }
 
@@ -646,11 +682,9 @@ const getSettings = async (page) => {
     await timeoutPromise(200);
     if(websock.readyState === 1){
     websock.send(JSON.stringify(new function(){ this[page] = 1; }));
-    //console.log(page + ' requested');
     return "success";
     }
   }
-  //console.log(page + ' requested but failed');
   return "failed";
 }
 
@@ -757,8 +791,7 @@ window.onload = function(){
   }(this, this.document));
 };
 
-function ValidateIPaddress(ipaddress) 
-{
+function ValidateIPaddress(ipaddress) {
  if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress)) {
     return true;
   }
@@ -847,18 +880,18 @@ function returnWifiSecSVG(secVal) {
 var remotesCount;
 
 function buildHtmlTable(selector, jsonVar) {
-  var columns = addAllColumnHeaders(jsonVar, selector);
+  var columns = addAllColumnHeaders(jsonVar, selector, true);
   var headerTbody$ = $('<tbody>');
   remotesCount = jsonVar.length;
   for (var i = 0; i < remotesCount; i++) {
     var row$ = $('<tr>');
-    row$.append($('<td>').html('<input type=\'radio\' id=\'option-select_remote-' + i + '\' name=\'optionsRemotes\' onchange=\"radio(\'remote\', '+i+')\" value=\'' + i + '\'/>'));
+    row$.append($('<td>').html('<input type=\'radio\' id=\'option-select_remote-'+i+'\' name=\'optionsRemotes\' onchange=\"radio(\'remote\','+i+')\" value=\''+i+'\'/>'));
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
       var cellValue = jsonVar[i][columns[colIndex]].toString();
       if (cellValue == null) cellValue = '';
       if (cellValue == "0,0,0") cellValue = "empty slot";
       if (colIndex == 2) {
-        row$.append($('<td>').html('<input type=\'text\' id=\'name_remote-' + i + '\' value=\'' + cellValue + '\' readonly=\'\' />'));
+        row$.append($('<td>').html('<input type=\'text\' id=\'name_remote-'+i+'\' value=\''+cellValue+'\' readonly=\'\' />'));
       }
       else {
         row$.append($('<td>').html(cellValue));
@@ -869,11 +902,67 @@ function buildHtmlTable(selector, jsonVar) {
   $(selector).append(headerTbody$);
 }
 
-function addAllColumnHeaders(jsonVar, selector) {
+function addRowTableIthoSettings(selector, jsonVar) {
+  var i = jsonVar.Index;
+  var row$ = $('<tr>');
+  row$.append($('<td class=\'ithoset\' style=\'text-align: center;vertical-align: middle;\'>').html('<input type=\'radio\' id=\'option-select_ithoset-'+i+'\' name=\'options-ithoset\' onchange=\"radio(\'ithoset\','+i+')\" value=\''+i+'\'/>'));
+  for (var key in jsonVar) {
+    if(key == "update") { continue; }
+    if(key == "loop") { continue; }
+    if(jsonVar[key] == null) {
+      row$.append($('<td class=\'ithoset\' id=\''+key+'-'+i+'\'>').html('<div style=\'margin: auto;\' class=\'dot-elastic\'></div>'));
+    }
+    else {
+      row$.append($('<td class=\'ithoset\'>').html(jsonVar[key]));
+    }
+  }
+  row$.append($('<td class=\'ithoset\'>').html('<button id=\'ithosetupdate-'+i+'\' class=\'pure-button\'>Update</button>'));
+  row$.append($('<td class=\'ithoset\'>').html('<button id=\'ithosetrefresh-'+i+'\' class=\'pure-button\'>Refresh</button>'));
+ 
+  $(selector).append(row$);
+}
+
+function updateRowTableIthoSettings(jsonVar) {
+  var i = jsonVar.Index;
+  for (var key in jsonVar) {
+    if(key == "Current") {
+      $('#' + key + '-' + i).html('<input type=\'text\' id=\'name_ithoset-'+i+'\' value=\''+jsonVar[key]+'\' readonly=\'\' />');
+    }
+    if(key == "Minimum" || key == "Maximum") { 
+      $('#' + key + '-' + i).html(jsonVar[key]);
+    }
+  }
+}
+
+function addColumnHeader(jsonVar, selector, appendRow) {
   var columnSet = [];
   var headerThead$ = $('<thead>');
   var headerTr$ = $('<tr>');
-  headerTr$.append($('<th>').html('select'));
+  headerTr$.append($('<th class=\'ithoset\'>').html('Select'));
+ 
+  for (var key in jsonVar) {
+    if(key == "update") { continue; }
+    if(key == "loop") { continue; }
+    if ($.inArray(key, columnSet) == -1) {
+      columnSet.push(key);
+      headerTr$.append($('<th class=\'ithoset\'>').html(key));
+    }
+  }
+  headerTr$.append($('<th class=\'ithoset\'>').html('&nbsp;'));
+  headerTr$.append($('<th class=\'ithoset\'>').html('&nbsp;'));
+  
+  headerThead$.append(headerTr$);
+  if(appendRow) {
+    $(selector).append(headerThead$);
+  }
+  return columnSet;
+}
+
+function addAllColumnHeaders(jsonVar, selector, appendRow) {
+  var columnSet = [];
+  var headerThead$ = $('<thead>');
+  var headerTr$ = $('<tr>');
+  headerTr$.append($('<th>').html('Select'));
   
   for (var i = 0; i < jsonVar.length; i++) {
     var rowHash = jsonVar[i];
@@ -885,10 +974,13 @@ function addAllColumnHeaders(jsonVar, selector) {
     }
   }
   headerThead$.append(headerTr$);
-  $(selector).append(headerThead$);
-
+  if(appendRow) {
+    $(selector).append(headerThead$);
+  }
   return columnSet;
 }
+
+
 
 //
 // HTML string literals
@@ -1031,47 +1123,6 @@ var html_systemsettings_start = `
               <input id="option-syssec_edit-1" type="radio" name="option-syssec_edit" value="1"> on
               <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
             </div>
-            <legend><br>Autodetect built-in itho humidity/temp sensor (reboot needed):</legend>
-            <p>The itho humidity/temp sensor is only present in the latest itho CVE series: CVE-S ECO.</p><p>Values will be posted on the MQTT sensor topic formatted as JSON.</p><p>Sensor support is limited, might be buggy and for testing only.</p>
-            <br>
-            <div class="pure-control-group">
-              <label for="option-syssht30" class="pure-radio">Hum/Temp sensor support</label> 
-              <input id="option-syssht30-1" type="radio" name="option-syssht30" value="1"> on
-              <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
-            </div>
-          </fieldset>
-      </form>
-<script>
-$(document).ready(function() {
-  getSettings('syssetup');
-});
-</script>
-`;
-
-var html_systemsettings_cc1101 = `
-            <legend><br>Autodetect CC1101 RF module (reboot needed):</legend>
-            <p>Activate the CC1101 RF module. If autodetect fails this setting will be automatically switched off again.</p>
-            <div class="pure-control-group">
-              <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
-              <input id="option-itho_remotes-1" type="radio" name="option-itho_remotes_active" onchange='radio("itho_remotes", 1)' value="1"> on
-              <input id="option-itho_remotes-0" type="radio" name="option-itho_remotes_active" onchange='radio("itho_remotes", 0)' value="0"> off
-            </div>
-            <br>
-`;
-
-var html_systemsettings_end = `
-            <div class="pure-controls">
-              <button id="syssumbit" class="pure-button pure-button-primary">Save</button>
-            </div>
-`;
-
-
-var html_ithosettings = `
-<div class="header"><h1>Itho settings</h1></div>
-<p>Configuration of Itho unit speed and timer values</p>
-<style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
-      <form class="pure-form pure-form-aligned">
-          <fieldset>
             <legend><br>Speed settings (0-254):</legend>
             <div class="pure-control-group">
               <label for="itho_fallback">Start/fallback speed</label>
@@ -1108,29 +1159,78 @@ var html_ithosettings = `
             <p>A join command will only be accepted by the itho unit after a power cycle.</p>
             <div class="pure-control-group">
               <label for="option-vremotejoin" class="pure-radio">Send join command</label>
-              <input id="option-vremotejoin-2" type="radio" name="option-vremotejoin_active" value="2"> every power on
-              <input id="option-vremotejoin-1" type="radio" name="option-vremotejoin_active" value="1"> next power on
-              <input id="option-vremotejoin-0" type="radio" name="option-vremotejoin_active" value="0"> off
+              <input id="option-vremotejoin-2" type="radio" name="option-itho_sendjoin" value="2"> every power on
+              <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1"> next power on
+              <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
             </div>
             <div class="pure-control-group">
               <label for="option-vremotemedium" class="pure-radio">Force medium mode</label>
-              <input id="option-vremotemedium-1" type="radio" name="option-vremotemedium_active" value="1"> on
-              <input id="option-vremotemedium-0" type="radio" name="option-vremotemedium_active" value="0"> off
+              <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1"> on
+              <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
             </div>
             <div class="pure-control-group hidden">
               <label for="option-vremoteapi" class="pure-radio">API uses virtual remote</label>
-              <input id="option-vremoteapi-1" type="radio" name="option-vremoteapi_active" value="1"> on
-              <input id="option-vremoteapi-0" type="radio" name="option-vremoteapi_active" value="0"> off
+              <input id="option-vremoteapi-1" type="radio" name="option-itho_vremapi" value="1"> on
+              <input id="option-vremoteapi-0" type="radio" name="option-itho_vremapi" value="0"> off
             </div>
             <div class="pure-control-group">
               <label for="option-vremoteswap" class="pure-radio">Swap high/low</label>
-              <input id="option-vremoteswap-1" type="radio" name="option-vremoteswap_active" value="1"> on
-              <input id="option-vremoteswap-0" type="radio" name="option-vremoteswap_active" value="0"> off
+              <input id="option-vremoteswap-1" type="radio" name="option-itho_vremswap" value="1"> on
+              <input id="option-vremoteswap-0" type="radio" name="option-itho_vremswap" value="0"> off
+            </div>            
+            <legend><br>Autodetect built-in humidity/temp sensor (reboot needed):</legend>
+            <p>The itho humidity/temp sensor is only present in the latest itho CVE series: CVE-S ECO.</p><p>Values will be posted on the MQTT sensor topic formatted as JSON.</p><p>Auto disable sensor support of the itho firmware if you have an alternative hum/temp sensor or want to readout the original sensor</p>
+            <br>
+            <div class="pure-control-group">
+              <label for="option-syssht30" class="pure-radio">Hum/Temp sensor support</label> 
+              <input id="option-syssht30-1" type="radio" name="option-syssht30" value="1"> on
+              <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
+            </div>
+            <div class="pure-control-group">
+              <label for="option-sysfirhum" class="pure-radio">Auto disable Hum/Temp sensor support in itho firmware at boot</label> 
+              <input id="option-sysfirhum-1" type="radio" name="option-sysfirhum" value="1"> on
+              <input id="option-sysfirhum-0" type="radio" name="option-sysfirhum" value="0"> off
+            </div>            
+          </fieldset>
+      </form>
+<script>
+$(document).ready(function() {
+  getSettings('syssetup');
+});
+</script>
+`;
+
+var html_systemsettings_cc1101 = `
+            <legend><br>Autodetect CC1101 RF module (reboot needed):</legend>
+            <p>Activate the CC1101 RF module. If autodetect fails this setting will be automatically switched off again.</p>
+            <div class="pure-control-group">
+              <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
+              <input id="option-itho_remotes-1" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 1)' value="1"> on
+              <input id="option-itho_remotes-0" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 0)' value="0"> off
             </div>
             <br>
+`;
+
+var html_systemsettings_end = `
             <div class="pure-controls">
-              <button id="ithosubmit" class="pure-button pure-button-primary">Save</button>
-            </div>            
+              <button id="syssumbit" class="pure-button pure-button-primary">Save</button>
+            </div>
+`;
+
+
+var html_ithosettings = `
+<div class="header"><h1>Itho settings</h1></div>
+<p>Configuration of the Itho unit</p>
+<style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
+      <form class="pure-form pure-form-aligned">
+          <fieldset>
+            <span>Itho device type: </span><span id="itho_devtype">retreiving...</span>
+            <br>
+            <span>Itho fw version: </span><span id="itho_fwversion">retreiving...</span>
+            <br><br>
+            <button id="ithogetsettings" class="pure-button pure-button-primary">Retrieve settings</button><br><br>
+            <span style="color:red">Warning!!<br>This controls low level settings of your itho unit, possibly damaging the unit.<br>Use with care and use only if you know what you are doing!</span><br><br>
+            <table id="SettingsTable" class="pure-table pure-table-bordered" style="font-size:.85em"></table><br><br>
           </fieldset>
       </form>
 <script>
@@ -1245,9 +1345,9 @@ var html_mqttsetup = `
             </div>
             <br>
             <div class="pure-control-group">
-              <label for="option-mqtt_ha" class="pure-radio">Home Assistant MQTT Discovery</label> 
-              <input id="option-mqtt_ha-1" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha", 1)' value="1"> on
-              <input id="option-mqtt_ha-0" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha", 0)' value="0"> off
+              <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label> 
+              <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha_active", 1)' value="1"> on
+              <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha_active", 0)' value="0"> off
             </div>
             <div class="pure-control-group">
               <label id="label-mqtt_ha" for="mqtt_ha_topic">Home Assistant Discovery topic prefix</label>
@@ -1255,9 +1355,9 @@ var html_mqttsetup = `
             </div>
             <br>
             <div class="pure-control-group">
-              <label for="option-mqtt_domoticz" class="pure-radio">Domoticz MQTT</label> 
-              <input id="option-mqtt_domoticz-1" type="radio" name="option-mqtt_domoticz_active" onchange='radio("mqtt_domoticz", 1)' value="1"> on
-              <input id="option-mqtt_domoticz-0" type="radio" name="option-mqtt_domoticz_active" onchange='radio("mqtt_domoticz", 0)' value="0"> off
+              <label for="option-mqtt_domoticz_active" class="pure-radio">Domoticz MQTT</label> 
+              <input id="option-mqtt_domoticz_active-1" type="radio" name="option-mqtt_domoticz_active" onchange='radio("mqtt_domoticz_active", 1)' value="1"> on
+              <input id="option-mqtt_domoticz_active-0" type="radio" name="option-mqtt_domoticz_active" onchange='radio("mqtt_domoticz_active", 0)' value="0"> off
             </div>
             <div class="pure-control-group">
               <label id="label-mqtt_idx" for="mqtt_idx" style="display: none;">Device IDX</label>

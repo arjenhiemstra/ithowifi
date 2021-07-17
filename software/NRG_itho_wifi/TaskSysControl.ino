@@ -6,6 +6,8 @@ void TaskSysControl( void * pvParameters ) {
 
   wifiInit();
 
+  init_vRemote();
+  
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
   initSensor();
 #endif

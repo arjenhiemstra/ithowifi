@@ -108,7 +108,22 @@ void execSystemControlTasks() {
   if (IthoInit) {
     IthoInit = ithoInitCheck();
   }
-  if (systemConfig.itho_sendjoin > 0 && coldBoot && ithoInitResult == 1 && !joinSend) {
+#if defined (__HW_VERSION_TWO__)
+  if (!i2cStartCommands && millis() > 15000) {
+    sendQueryDevicetype();
+
+    if(systemConfig.sysfirhum == 1 && ithoDeviceID == 0x1B) {
+      if(itho_fwversion == 25) {
+        updateSetting(63, 0);
+      }
+      else if (itho_fwversion == 26 || itho_fwversion == 27) {
+        updateSetting(71, 0);
+      }
+    }
+    i2cStartCommands = true;
+  }
+#endif  
+  if (systemConfig.itho_sendjoin > 0 && coldBoot && !joinSend && (ithoInitResult == 1 || millis() > 15000)) {
     joinSend = true;
     sendJoinI2C();
     logInput("Virtual remote join command send");
@@ -133,7 +148,7 @@ void execSystemControlTasks() {
   }
   if (ithoQueue.ithoSpeedUpdated) {
     ithoQueue.ithoSpeedUpdated = false;
-    writeIthoVal(ithoQueue.get_itho_speed());
+    sysStatReq = writeIthoVal(ithoQueue.get_itho_speed());
   }
   //System control tasks
   if ((WiFi.status() != WL_CONNECTED) && !wifiModeAP) {
