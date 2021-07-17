@@ -25,11 +25,18 @@
 #define SCLPIN      22
 #define WIFILED     17  // 17 / 2
 #define STATUSPIN   16
+#define BOOTSTATE   27
 #define ITHO_IRQ_PIN 4
 #define FAILSAVE_PIN 14
 
-
-
+//#elif defined (__HW_VERSION_TWO__)
+//#define HWREVISION "2"
+//#define SDAPIN      27
+//#define SCLPIN      26
+//#define WIFILED     17
+//#define ITHO_IRQ_PIN 4
+//#define STATUSPIN   16
+//#define FAILSAVE_PIN 32
 
 #else
 #error "Unsupported hardware"

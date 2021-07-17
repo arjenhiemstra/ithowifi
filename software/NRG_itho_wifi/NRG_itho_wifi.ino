@@ -1,4 +1,4 @@
-#define FWVERSION "2.3-alpha3"
+#define FWVERSION "2.3-alpha4"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -27,6 +27,9 @@
  
 #include "hardware.h"
 #include "i2c_esp32.h"
+#include "IthoSystem.h"
+#include "notifyClients.h"
+
 #include <ArduinoJson.h>  // https://github.com/bblanchon/ArduinoJson [6.17.3]
 #include <ESPAsyncWebServer.h>  // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
 #include <SPIFFSEditor.h>       // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
@@ -81,7 +84,6 @@ DNSServer dnsServer;
 PubSubClient mqttClient(client);
 
 AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
 AsyncEventSource events("/events");
 
 SpiffsFilePrint filePrint("/logfile", 2, 10000);
@@ -163,7 +165,6 @@ int MQTT_conn_state_new = 0;
 unsigned long lastMQTTReconnectAttempt = 0;
 unsigned long lastWIFIReconnectAttempt = 0;
 
-volatile uint16_t ithoCurrentVal   = 0;
 volatile uint16_t nextIthoVal = 0;
 volatile unsigned long nextIthoTimer = 0;
 
@@ -183,6 +184,7 @@ unsigned long lastLog = 0;
 //flags used
 bool coldBoot = false;
 bool joinSend = false;
+bool i2cStartCommands = false;
 int8_t ithoInitResult = 0;
 bool IthoInit = false;
 bool shouldReboot = false;
@@ -208,9 +210,9 @@ bool SHT3x_original = false;
 bool SHT3x_alternative = false;
 bool rfInitOK = false;
 
-size_t content_len;
 
-typedef enum { WEBINTERFACE, RFLOG } logtype;
+
+
 
 
 void dummyFunct() {

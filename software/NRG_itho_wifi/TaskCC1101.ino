@@ -6,7 +6,7 @@ byte RFTRSSI[3] = {0, 0, 0};
 byte RFTcommandpos = 0;
 bool RFTidChk[3] = {false, false, false};
 
-ICACHE_RAM_ATTR void ITHOinterrupt() {
+IRAM_ATTR void ITHOinterrupt() {
   rf.receivePacket();
   ithoCheck = true;
 }
@@ -165,16 +165,15 @@ void TaskCC1101( void * pvParameters ) {
     });
 
     //init the RF module
-    rf.init();
-    pinMode(ITHO_IRQ_PIN, INPUT);
+    rf.init();    
+    pinMode(ITHO_IRQ_PIN, INPUT);    
     attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, RISING);
-
+    
     //this portion of code will not be reached when no RF module is present: detach reboot script, switch on rf_supprt and load remotes config
     esp_task_wdt_add(NULL);
     reboot.detach();
     logInput("Setup: init of CC1101 RF module successful");
     rf.setDeviceID(getMac(6 - 3), getMac(6 - 2), getMac(6 - 1));
-
     systemConfig.itho_rf_support = 1;
     loadRemotesConfig();
     systemConfig.rfInitOK = true;

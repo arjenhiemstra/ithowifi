@@ -106,7 +106,16 @@ void failSafeBoot() {
 
 void hardwareInit() {
 
-  
+//Workaround for https://github.com/arjenhiemstra/ithowifi/issues/30
+#if defined (__HW_VERSION_TWO__)
+  if (digitalRead(BOOTSTATE) == LOW) {
+    pinMode(BOOTSTATE, OUTPUT);
+    digitalWrite(BOOTSTATE, HIGH);
+    esp_task_wdt_init(2, true);
+    esp_task_wdt_add(NULL);
+    while (true);
+  }
+#endif
 
   pinMode(STATUSPIN, INPUT);
   pinMode(WIFILED, OUTPUT);
@@ -116,7 +125,7 @@ void hardwareInit() {
   pinMode(FAILSAVE_PIN, INPUT);
   failSafeBoot();
 #endif
-  
+
   i2cInit();
 
   IthoInit = true;
@@ -136,7 +145,7 @@ bool ithoInitCheck() {
     ithoInitResult = 1;
     return false;
   }
-  ithoInitResult = -1;  
+  ithoInitResult = -1;
   return true;
 }
 
@@ -210,10 +219,28 @@ void initSensor() {
     else if (SHT3x_alternative) {
       logInput("Setup: Alternative SHT30 sensor found");
     }
+    if (SHT3x_original || SHT3x_alternative) return;
+
+    delay(200);
+    
+    if (sht_org.init() && sht_org.readSample()) {
+      Wire.endTransmission(true);
+      SHT3x_original = true;
+    }
+    else if (sht_alt.init() && sht_alt.readSample()) {
+      Wire.endTransmission(true);
+      SHT3x_alternative = true;
+    }
+    if (SHT3x_original) {
+      logInput("Setup: Original SHT30 sensor found (2nd try)");
+    }
+    else if (SHT3x_alternative) {
+      logInput("Setup: Alternative SHT30 sensor found (2nd try)");
+    }
     else {
       systemConfig.syssht30 = 0;
       logInput("Setup: SHT30 sensor not present");
-    }
+    }    
   }
 
 }
@@ -687,9 +714,17 @@ void logWifiInfo() {
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
 
-  sprintf(wifiBuff, "Setup: Virtual remote ID: %d,%d,%d", getMac(6 - 3), getMac(6 - 2), getMac(6 - 1));
-  logInput(wifiBuff);
+}
 
+void init_vRemote() {
+  //setup virtual remote
+  id0 = getMac(6 - 3);
+  id1 = getMac(6 - 2);
+  id2 = getMac(6 - 1);
+  swap = systemConfig.itho_vremswap;
+  char buff[128];
+  sprintf(buff, "Setup: Virtual remote ID: %d,%d,%d", id0, id1, id2);
+  logInput(buff);
 }
 
 void ArduinoOTAinit() {

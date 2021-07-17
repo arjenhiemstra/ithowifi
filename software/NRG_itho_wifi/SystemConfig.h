@@ -17,6 +17,7 @@ class SystemConfig {
     uint8_t syssec_api;
     uint8_t syssec_edit;
     uint8_t syssht30;
+    uint8_t sysfirhum;    
     uint8_t mqtt_active;
     char mqtt_serverName[65];
     char mqtt_username[32];

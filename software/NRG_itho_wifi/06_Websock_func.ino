@@ -1,42 +1,5 @@
 
 
-
-void notifyClients(AsyncWebSocketMessageBuffer* message) {
-#if defined (__HW_VERSION_TWO__)
-  yield();
-  if (xSemaphoreTake(mutexWSsend, (TickType_t) 100 / portTICK_PERIOD_MS) == pdTRUE) {
-#endif
-
-    ws.textAll(message);
-
-#if defined (__HW_VERSION_TWO__)
-    xSemaphoreGive(mutexWSsend);
-  }
-#endif
-
-}
-
-void notifyClients(const char * message, size_t len) {
-
-  AsyncWebSocketMessageBuffer * WSBuffer = ws.makeBuffer((uint8_t *)message, len);
-  notifyClients(WSBuffer);
-
-}
-
-void jsonSysmessage(const char * id, const char * message) {
-    char logBuff[LOG_BUF_SIZE] = "";
-    StaticJsonDocument<500> root;
-    
-    JsonObject systemstat = root.createNestedObject("sysmessage");
-    systemstat["id"] = id;
-    systemstat["message"] = message;
-    
-    strcpy(logBuff, "");
-    char buffer[500];
-    size_t len = serializeJson(root, buffer);
-    notifyClients(buffer, len);
-}
-
 void jsonWsSend(const char* rootName) {
   DynamicJsonDocument root(4000);
 
@@ -68,6 +31,13 @@ void jsonWsSend(const char* rootName) {
     JsonObject nested = root.createNestedObject(rootName);
     systemConfig.get(nested);
   }
+  else if (strcmp(rootName, "ithodevinfo")  == 0) {
+    // Create an object at the root
+    JsonObject nested = root.createNestedObject(rootName);
+    nested["itho_devtype"] = getIthoType(ithoDeviceID);
+    nested["itho_fwversion"] = itho_fwversion;
+    nested["itho_setlen"] = ithoSettingsLength;
+  }
 #if defined (__HW_VERSION_TWO__)
   else if (strcmp(rootName, "ithoremotes") == 0) {
     // Create an object at the root
@@ -81,56 +51,6 @@ void jsonWsSend(const char* rootName) {
     serializeJson(root, (char *)buffer->get(), len + 1);
     notifyClients(buffer);
   }
-}
-
-
-void jsonLogMessage(const __FlashStringHelper * str, logtype type) {
-  if (!str) return;
-  int length = strlen_P((PGM_P)str);
-  if (length == 0) return;
-#if defined (__HW_VERSION_ONE__)
-  if (length < 400) length = 400;
-  char message[400 + 1] = "";
-  strncat_P(message, (PGM_P)str, length);
-  jsonLogMessage(message, type);
-#else
-  jsonLogMessage((PGM_P)str, type);
-#endif
-}
-
-void jsonLogMessage(const char* message, logtype type) {
-#if defined (__HW_VERSION_TWO__)
-  yield();
-  if (xSemaphoreTake(mutexJSONLog, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
-#endif
-
-    StaticJsonDocument<512> root;
-    JsonObject messagebox;
-
-    switch (type) {
-      case RFLOG:
-        messagebox = root.createNestedObject("rflog");
-        break;
-      default:
-        messagebox = root.createNestedObject("messagebox");
-    }
-
-    messagebox["message"] = message;
-
-    char buffer[512];
-    size_t len = serializeJson(root, buffer);
-
-
-    notifyClients(buffer, len);
-
-#if defined (__HW_VERSION_TWO__)
-    xSemaphoreGive(mutexJSONLog);
-  }
-#endif
-
-
-
-
 }
 
 void jsonSystemstat() {
@@ -193,14 +113,14 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
       }
       //Serial.printf("%s\n",msg.c_str());
 
-      if (msg.startsWith("{\"wifiscan")) {
+      if (msg.startsWith("{\"wifiscan\"")) {
         //Serial.println("Start wifi scan");
         runscan = true;
       }
-      if (msg.startsWith("{\"sysstat")) {
+      if (msg.startsWith("{\"sysstat\"")) {
         sysStatReq = true;
       }
-      else if (msg.startsWith("{\"wifisettings") || msg.startsWith("{\"systemsettings")) {
+      else if (msg.startsWith("{\"wifisettings\"") || msg.startsWith("{\"systemsettings\"")) {
         DynamicJsonDocument root(2048);
         DeserializationError error = deserializeJson(root, msg.c_str());
         if (!error) {
@@ -228,7 +148,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         }
 
       }
-      else if (msg.startsWith("{\"ithobutton")) {
+      else if (msg.startsWith("{\"ithobutton\"")) {
         StaticJsonDocument<128> root;
         DeserializationError error = deserializeJson(root, msg);
         if (!error) {
@@ -256,7 +176,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
             }
             else if (val == 2410) {
               uint8_t index  = root["index"];
-              sendQuery2410(index);
+              sendQuery2410(index, true);
             }
             else if (val == 24109) {
               uint8_t index  = root["index"];
@@ -286,30 +206,58 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         jsonWsSend("systemsettings");
         sysStatReq = true;
       }
-      else if (msg.startsWith("{\"ithosetup")) {
-        systemConfig.get_itho_settings = true;
-        jsonWsSend("systemsettings");
+      else if (msg.startsWith("{\"ithosetup\"")) {
+        //systemConfig.get_itho_settings = true;
+        jsonWsSend("ithodevinfo");
         sysStatReq = true;
       }
+      else if (msg.startsWith("{\"ithogetsetting\"")) {
+        StaticJsonDocument<128> root;
+        DeserializationError error = deserializeJson(root, msg.c_str());
+        if (!error) {
+          uint8_t index = root["index"].as<unsigned int>();
+          bool updateState = root["update"].as<bool>();
+          getSetting(index, updateState, true);
+        }
+      }
+      else if (msg.startsWith("{\"ithosetrefresh\"")) {
+        StaticJsonDocument<128> root;
+        DeserializationError error = deserializeJson(root, msg.c_str());
+        if (!error) {
+          uint8_t index = root["ithosetrefresh"].as<unsigned int>();
+          getSetting(index, true, false);
+        }
+      }
+      else if (msg.startsWith("{\"ithosetupdate\"")) {
+        StaticJsonDocument<128> root;
+        DeserializationError error = deserializeJson(root, msg.c_str());
+        if (!error) {
+          uint8_t index = root["ithosetupdate"].as<unsigned int>();
+          int32_t value = root["value"].as<int32_t>();
+          updateSetting(index, value);
+          getSetting(index, true, false);
+        }
+      }      
+      
 #if defined (__HW_VERSION_TWO__)
-      else if (msg.startsWith("{\"ithoremotes")) {
+      else if (msg.startsWith("{\"ithoremotes\"")) {
         jsonWsSend("ithoremotes");
         sysStatReq = true;
       }
-      else if (msg.startsWith("{\"itho_llm")) {
+      else if (msg.startsWith("{\"itho_llm\"")) {
         toggleRemoteLLmode();
       }
-      else if (msg.startsWith("{\"itho_ccc_toggle")) {
+      else if (msg.startsWith("{\"itho_ccc_toggle\"")) {
         toggleCCcal();
       }
-      if (msg.startsWith("{\"itho_ccc_reset")) {
+      if (msg.startsWith("{\"itho_ccc_reset\"")) {
         resetCCcal();
         ithoCCstatReq = true;
       }      
-      if (msg.startsWith("{\"ithoccc")) {
+      if (msg.startsWith("{\"ithoccc\"")) {
         ithoCCstatReq = true;
       }      
-      else if (msg.startsWith("{\"itho_remove_remote")) {
+      else if (msg.startsWith("{\"itho_remove_remote\"")) {
         bool parseOK = false;
         int number = (msg.substring(22)).toInt();
         if (number == 0) {
@@ -325,7 +273,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
           saveRemotesflag = true;
         }
       }
-      else if (msg.startsWith("{\"itho_update_remote")) {
+      else if (msg.startsWith("{\"itho_update_remote\"")) {
         StaticJsonDocument<512> root;
         DeserializationError error = deserializeJson(root, msg.c_str());
         if (!error) {
@@ -337,19 +285,19 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         }
       }
 #endif
-      else if (msg.startsWith("{\"reboot")) {
+      else if (msg.startsWith("{\"reboot\"")) {
         shouldReboot = true;
       }
-      else if (msg.startsWith("{\"resetwificonf")) {
+      else if (msg.startsWith("{\"resetwificonf\"")) {
         resetWifiConfigflag = true;
       }
-      else if (msg.startsWith("{\"resetsysconf")) {
+      else if (msg.startsWith("{\"resetsysconf\"")) {
         resetSystemConfigflag = true;
       }
-      else if (msg.startsWith("{\"format")) {
+      else if (msg.startsWith("{\"format\"")) {
         formatFileSystem = true;
       }
-      else if (msg.startsWith("{\"itho")) {
+      else if (msg.startsWith("{\"itho\"")) {
         StaticJsonDocument<128> root;
         DeserializationError error = deserializeJson(root, msg);
         if (!error) {
@@ -455,33 +403,5 @@ void wifiScan() {
       WiFi.scanNetworks(true);
     }
   }
-
-}
-
-
-unsigned long LastotaWsUpdate = 0;
-
-void otaWSupdate(size_t prg, size_t sz) {
-  
-  if (millis() - LastotaWsUpdate >= 500) { //rate limit messages to twice a second
-    LastotaWsUpdate = millis();
-    int newPercent = int((prg * 100) / content_len);
-
-    StaticJsonDocument<256> root;
-    JsonObject ota = root.createNestedObject("ota");
-    ota["progress"] = prg;
-    ota["tsize"] = content_len;
-    ota["percent"] = newPercent;
-
-    char buffer[256];
-    size_t len = serializeJson(root, buffer);
-
-    notifyClients(buffer, len);
-
-#if defined (ENABLE_SERIAL)
-    printf("OTA Progress: %d%%\n", newPercent);
-#endif
-  }
-
 
 }

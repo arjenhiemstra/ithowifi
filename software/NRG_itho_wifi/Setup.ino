@@ -15,9 +15,11 @@ void setup() {
   logInit();
 
   wifiInit();
-
+  
   loadSystemConfig();
 
+  init_vRemote();
+  
 #if defined(ENABLE_SHT30_SENSOR_SUPPORT)
   initSensor();
 #endif
