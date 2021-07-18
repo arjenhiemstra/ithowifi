@@ -26,6 +26,7 @@
 #define WIFILED     17  // 17 / 2
 #define STATUSPIN   16
 #define ITHO_IRQ_PIN 4
+#define BOOTSTATE   27
 #define FAILSAVE_PIN 14
 #else
 #error "Unsupported hardware"

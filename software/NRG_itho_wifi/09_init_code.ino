@@ -106,6 +106,17 @@ void failSafeBoot() {
 
 void hardwareInit() {
 
+//Workaround for https://github.com/arjenhiemstra/ithowifi/issues/30
+#if defined (__HW_VERSION_TWO__)
+  if (digitalRead(BOOTSTATE) == LOW) {
+    pinMode(BOOTSTATE, OUTPUT);
+    digitalWrite(BOOTSTATE, HIGH);
+    esp_task_wdt_init(2, true);
+    esp_task_wdt_add(NULL);
+    while (true);
+  }
+#endif
+
   Wire.begin(SDAPIN, SCLPIN, 0);
 
   pinMode(STATUSPIN, INPUT);
