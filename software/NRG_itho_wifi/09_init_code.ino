@@ -164,21 +164,18 @@ void logInit() {
 
 #if defined (__HW_VERSION_ONE__)
   sprintf(logBuff, "System boot, last reset reason: %s", ESP.getResetReason().c_str());
-  if (strcmp(ESP.getResetReason().c_str(), "Power On") == 0 || strcmp(ESP.getResetReason().c_str(), "External System") == 0) {
-    coldBoot = true;
-  }
 #elif defined (__HW_VERSION_TWO__)
   uint8_t reason = esp_reset_reason();
   char buf[32] = "";
 
   switch ( reason)
   {
-    case 1 : strcpy(buf, "POWERON_RESET"); coldBoot = true; break;         /**<1,  Vbat power on reset*/
+    case 1 : strcpy(buf, "POWERON_RESET"); break;         /**<1,  Vbat power on reset*/
     case 3 : strcpy(buf, "SW_RESET"); break;              /**<3,  Software reset digital core*/
     case 4 : strcpy(buf, "OWDT_RESET"); break;            /**<4,  Legacy watch dog reset digital core*/
     case 5 : strcpy(buf, "DEEPSLEEP_RESET"); break;       /**<5,  Deep Sleep reset digital core*/
     case 6 : strcpy(buf, "SDIO_RESET"); break;            /**<6,  Reset by SLC module, reset digital core*/
-    case 7 : strcpy(buf, "TG0WDT_SYS_RESET"); coldBoot = true; break;      /**<7,  Timer Group0 Watch dog reset digital core*/
+    case 7 : strcpy(buf, "TG0WDT_SYS_RESET"); break;      /**<7,  Timer Group0 Watch dog reset digital core*/
     case 8 : strcpy(buf, "TG1WDT_SYS_RESET"); break;      /**<8,  Timer Group1 Watch dog reset digital core*/
     case 9 : strcpy(buf, "RTCWDT_SYS_RESET"); break;      /**<9,  RTC Watch dog Reset digital core*/
     case 10 : strcpy(buf, "INTRUSION_RESET"); break;      /**<10, Instrusion tested to reset CPU*/

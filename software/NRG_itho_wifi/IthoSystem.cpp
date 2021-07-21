@@ -269,7 +269,7 @@ const __FlashStringHelper *ihtoCVESettingsDescriptions[] =
   F("Remote RH sensor overrides internal or not"),
   F("Sampling time of the RH and temperature measurement"),
   F("Hysteresis RH before going back to normal operation"),
-  F("Rise in absolute humidity (X) at which it goes high"),
+  F("Rise in absolute humidity (X mg/kg) at which it goes high"),
   F("Hysteresis X before returning to normal operation"),
   F("Maximum time to remain in high by RH control"),
   F("0 = ventilation request wired sensor is ignored, 1 = ventilation request wired sensor is honored"),

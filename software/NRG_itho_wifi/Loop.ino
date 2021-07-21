@@ -123,7 +123,7 @@ void execSystemControlTasks() {
     i2cStartCommands = true;
   }
 #endif  
-  if (systemConfig.itho_sendjoin > 0 && coldBoot && !joinSend && (ithoInitResult == 1 || millis() > 15000)) {
+  if (systemConfig.itho_sendjoin > 0 && !joinSend && (ithoInitResult == 1 || millis() > 15000)) {
     joinSend = true;
     sendJoinI2C();
     logInput("Virtual remote join command send");
