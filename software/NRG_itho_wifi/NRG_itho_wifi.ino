@@ -182,7 +182,6 @@ unsigned long SHT3x_readout = 0;
 unsigned long lastLog = 0;
 
 //flags used
-bool coldBoot = false;
 bool joinSend = false;
 bool i2cStartCommands = false;
 int8_t ithoInitResult = 0;
