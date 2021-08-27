@@ -513,11 +513,10 @@ void HADiscoveryFan() {
   root["json_attr_t"] = (const char*)systemConfig.mqtt_sensor_topic;
   sprintf(s, "%s/not_used/but_needed_for_HA", systemConfig.mqtt_cmd_topic);
   root["cmd_t"] = s;
-  root["spd_cmd_t"] = (const char*)systemConfig.mqtt_cmd_topic;
-  root["spd_stat_t"] = (const char*)systemConfig.mqtt_state_topic;
-  root["payload_high_speed"] = systemConfig.itho_high;
-  root["payload_medium_speed"] = systemConfig.itho_medium;
-  root["payload_low_speed"] = systemConfig.itho_low;
+  root["pct_cmd_t"] = (const char*)systemConfig.mqtt_cmd_topic;
+  root["pct_cmd_tpl"] = "{{ value * 2.54 }}";  
+  root["pct_stat_t"] = (const char*)systemConfig.mqtt_state_topic;
+  root["pct_val_tpl"] = "{{ ((value | int) / 2.54) | round}}"";  
 
   sprintf(s, "%s/fan/%s/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
 
