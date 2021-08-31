@@ -1,0 +1,275 @@
+Cmp-Mod V01 Created by PcbNew   date = 2021 August 21, Saturday 17:27:19
+
+BeginCmp
+TimeStamp = 61212433
+Path = /613B5125
+Reference = R11;
+ValeurCmp = R1K;
+IdModule  = Resistor_SMD:R_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 61212130
+Path = /6164833C
+Reference = D2;
+ValeurCmp = D_Schottky;
+IdModule  = Diode_SMD:D_SOD-123;
+EndCmp
+
+BeginCmp
+TimeStamp = 61212117
+Path = /613CE017
+Reference = D1;
+ValeurCmp = D_Schottky;
+IdModule  = Diode_SMD:D_SOD-123;
+EndCmp
+
+BeginCmp
+TimeStamp = 61212078
+Path = /612C4FB5
+Reference = C3;
+ValeurCmp = 10uF;
+IdModule  = Capacitor_SMD:C_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 6012F6F6
+Path = /5F961074
+Reference = U2;
+ValeurCmp = CC1101-868MHz-Module;
+IdModule  = nrg_watch:CC1101-868MHz-Module;
+EndCmp
+
+BeginCmp
+TimeStamp = 60739F0D
+Path = /607A6198
+Reference = SW1;
+ValeurCmp = Fail safe;
+IdModule  = Button_Switch_SMD:SW_SPST_PTS810;
+EndCmp
+
+BeginCmp
+TimeStamp = 6076A460
+Path = /5FE55EC6
+Reference = C6;
+ValeurCmp = 10uF;
+IdModule  = Capacitor_SMD:C_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 6076CEBF
+Path = /5FBF514B
+Reference = C4;
+ValeurCmp = 470uF;
+IdModule  = Capacitor_SMD:C_Elec_6.3x7.7;
+EndCmp
+
+BeginCmp
+TimeStamp = 605A5316
+Path = /605C151F
+Reference = J5;
+ValeurCmp = Conn_02x02_Odd_Even;
+IdModule  = Connector_PinHeader_2.54mm:PinHeader_2x02_P2.54mm_Vertical;
+EndCmp
+
+BeginCmp
+TimeStamp = 6012EF97
+Path = /60133A20
+Reference = H2;
+ValeurCmp = MountingHole;
+IdModule  = MountingHole:MountingHole_2.5mm;
+EndCmp
+
+BeginCmp
+TimeStamp = 601280B5
+Path = /5E91B286
+Reference = ATtiny1614;
+ValeurCmp = ATtiny1614-SS;
+IdModule  = Package_SO:SOIC-14_3.9x8.7mm_P1.27mm;
+EndCmp
+
+BeginCmp
+TimeStamp = 60717618
+Path = /60167DAA
+Reference = J4;
+ValeurCmp = TC2030-MCP-NL;
+IdModule  = nrg_watch:TC2020-MCP-NL;
+EndCmp
+
+BeginCmp
+TimeStamp = 5FAECECD
+Path = /5FBF50FF
+Reference = U1;
+ValeurCmp = ESP32-WROOM;
+IdModule  = RF_Module:ESP32-WROOM-32;
+EndCmp
+
+BeginCmp
+TimeStamp = 5FB2F4D0
+Path = /5FB2CF38
+Reference = R10;
+ValeurCmp = R10K;
+IdModule  = Resistor_SMD:R_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 6013041A
+Path = /5FECC45C
+Reference = LED1;
+ValeurCmp = WIFI status;
+IdModule  = LED_SMD:LED_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 5FAEF781
+Path = /5FECC456
+Reference = R9;
+ValeurCmp = R100;
+IdModule  = Resistor_SMD:R_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 5FAED727
+Path = /5FBF50E3
+Reference = R8;
+ValeurCmp = R10K;
+IdModule  = Resistor_SMD:R_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 6076CDEA
+Path = /5FBF50E9
+Reference = R7;
+ValeurCmp = R10K;
+IdModule  = Resistor_SMD:R_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 5FAECC9A
+Path = /5FBF50CE
+Reference = J1;
+ValeurCmp = CONN_01X07;
+IdModule  = Connector_PinHeader_2.54mm:PinHeader_1x07_P2.54mm_Vertical;
+EndCmp
+
+BeginCmp
+TimeStamp = 6076F628
+Path = /5FBF513F
+Reference = C5;
+ValeurCmp = 0.1uF;
+IdModule  = Capacitor_SMD:C_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 6076CD99
+Path = /5FBF50D4
+Reference = C2;
+ValeurCmp = 1uF;
+IdModule  = Capacitor_SMD:C_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 5F9B20E3
+Path = /5F9B6F27
+Reference = J3;
+ValeurCmp = Conn_Coaxial;
+IdModule  = Connector_Coaxial:SMA_Amphenol_132289_EdgeMount;
+EndCmp
+
+BeginCmp
+TimeStamp = 6072EF8C
+Path = /5E6D3DEE
+Reference = LED2;
+ValeurCmp = itho status;
+IdModule  = LED_SMD:LED_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 5FD66691
+Path = /5EB53D69
+Reference = R6;
+ValeurCmp = R10K;
+IdModule  = Resistor_SMD:R_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 5E92FD46
+Path = /5E6D60E1
+Reference = R5;
+ValeurCmp = R100;
+IdModule  = Resistor_SMD:R_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 5FECDB64
+Path = /5E6FC65E
+Reference = R4;
+ValeurCmp = R10K;
+IdModule  = Resistor_SMD:R_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 6076BE03
+Path = /5E6FB711
+Reference = R3;
+ValeurCmp = R10K;
+IdModule  = Resistor_SMD:R_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 5E6CE871
+Path = /5E59F4DA
+Reference = R2;
+ValeurCmp = R10K;
+IdModule  = Resistor_SMD:R_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 6076BDD3
+Path = /5E59EF11
+Reference = R1;
+ValeurCmp = R10K;
+IdModule  = Resistor_SMD:R_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 6012803A
+Path = /5EA8CD1C
+Reference = C1;
+ValeurCmp = 0,1uF;
+IdModule  = Inductor_SMD:L_0805_2012Metric;
+EndCmp
+
+BeginCmp
+TimeStamp = 5E6CD948
+Path = /5E6D9A33
+Reference = Q2;
+ValeurCmp = BSS138;
+IdModule  = Package_TO_SOT_SMD:SOT-23;
+EndCmp
+
+BeginCmp
+TimeStamp = 6076BD9B
+Path = /5E6CE08C
+Reference = Q1;
+ValeurCmp = BSS138;
+IdModule  = Package_TO_SOT_SMD:SOT-23;
+EndCmp
+
+BeginCmp
+TimeStamp = 5E5D8A7B
+Path = /5E596DC0
+Reference = R-78E3.3;
+ValeurCmp = U2;
+IdModule  = Converter_DCDC:Converter_DCDC_RECOM_R-78E-0.5_THT;
+EndCmp
+
+BeginCmp
+TimeStamp = 5E5979F2
+Path = /5E609161
+Reference = J2;
+ValeurCmp = conn;
+IdModule  = Connector_PinSocket_2.54mm:PinSocket_2x04_P2.54mm_Vertical;
+EndCmp
+
+EndListe
