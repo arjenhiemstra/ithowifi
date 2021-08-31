@@ -14,10 +14,10 @@ Comment3 ""
 Comment4 ""
 $EndDescr
 $Comp
-L Regulator_Switching:R-78E5.0-0.5 R-78E3.0
+L Regulator_Switching:R-78E5.0-0.5 R-78E3.3
 U 1 1 5E596DC0
 P 4475 6550
-F 0 "R-78E3.0" H 4475 6792 50  0000 C CNN
+F 0 "R-78E3.3" H 4475 6792 50  0000 C CNN
 F 1 "U2" H 4475 6701 50  0000 C CNN
 F 2 "Converter_DCDC:Converter_DCDC_RECOM_R-78E-0.5_THT" H 4525 6300 50  0001 L CIN
 F 3 "https://www.recom-power.com/pdf/Innoline/R-78Exx-0.5.pdf" H 4475 6550 50  0001 C CNN
@@ -407,24 +407,8 @@ F 3 "" H 1925 3400 50  0001 C CNN
 	1    1925 3400
 	-1   0    0    -1  
 $EndComp
-$Comp
-L Device:C C?
-U 1 1 5FBF50D4
-P 3600 3100
-AR Path="/5FAE7423/5FBF50D4" Ref="C?"  Part="1" 
-AR Path="/5FBF50D4" Ref="C2"  Part="1" 
-F 0 "C2" H 3625 3200 50  0000 L CNN
-F 1 "1uF" H 3625 3000 50  0000 L CNN
-F 2 "Capacitor_SMD:C_0805_2012Metric" H 3638 2950 50  0001 C CNN
-F 3 "" H 3600 3100 50  0001 C CNN
-F 4 "C28323" H 3600 3100 50  0001 C CNN "LCSC"
-	1    3600 3100
-	0    1    -1   0   
-$EndComp
 Text GLabel 2675 3200 2    60   Input ~ 0
 D1/TX0
-Text GLabel 2675 3300 2    60   Input ~ 0
-D0/RX0
 NoConn ~ 2125 3500
 $Comp
 L power:GND #PWR?
@@ -439,23 +423,7 @@ F 3 "" H 2225 3750 50  0001 C CNN
 	1    2225 3750
 	-1   0    0    -1  
 $EndComp
-$Comp
-L Device:R R?
-U 1 1 5FBF50E3
-P 4025 2800
-AR Path="/5FAE7423/5FBF50E3" Ref="R?"  Part="1" 
-AR Path="/5FBF50E3" Ref="R8"  Part="1" 
-F 0 "R8" V 4105 2800 50  0000 C CNN
-F 1 "R10K" V 4025 2800 50  0000 C CNN
-F 2 "Resistor_SMD:R_0805_2012Metric" V 3955 2800 50  0001 C CNN
-F 3 "" H 4025 2800 50  0001 C CNN
-F 4 "C17414" H 4025 2800 50  0001 C CNN "LCSC"
-	1    4025 2800
-	1    0    0    1   
-$EndComp
-Text GLabel 4200 3300 2    60   Input ~ 0
-D0
-Text GLabel 4025 2400 1    60   Input ~ 0
+Text GLabel 5200 2025 1    60   Input ~ 0
 +3V3
 Text GLabel 2225 2875 1    60   Input ~ 0
 +3V3
@@ -470,19 +438,9 @@ Wire Wire Line
 Wire Wire Line
 	2125 3200 2675 3200
 Wire Wire Line
-	3850 2950 3850 3100
-Connection ~ 3850 3100
-Wire Wire Line
-	3850 2650 3850 2500
-Wire Wire Line
-	3850 2500 4025 2500
-Connection ~ 4025 2500
-Wire Wire Line
-	4025 2400 4025 2500
+	5200 2025 5200 2175
 Wire Wire Line
 	2225 3400 2225 2875
-Wire Wire Line
-	4025 2500 4025 2650
 $Comp
 L nrg_watch:ESP32-WROOM U?
 U 1 1 5FBF50FF
@@ -549,39 +507,7 @@ Wire Wire Line
 Text GLabel 8025 3950 2    50   Input ~ 0
 D4_IRQ
 Wire Wire Line
-	3750 3100 3850 3100
-Wire Wire Line
-	4950 2500 4950 3000
-Wire Wire Line
-	4200 3300 4025 3300
-$Comp
-L Device:D_Zener D?
-U 1 1 5FBF5174
-P 3600 3300
-AR Path="/5FAE7423/5FBF5174" Ref="D?"  Part="1" 
-AR Path="/5FBF5174" Ref="D1"  Part="1" 
-F 0 "D1" H 3600 3516 50  0000 C CNN
-F 1 "D_Zener" H 3600 3425 50  0000 C CNN
-F 2 "Diode_SMD:D_SOD-123" H 3600 3300 50  0001 C CNN
-F 3 "~" H 3600 3300 50  0001 C CNN
-F 4 "C8598" H 3600 3300 50  0001 C CNN "LCSC"
-	1    3600 3300
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	3750 3300 4025 3300
-Connection ~ 4025 3300
-Wire Wire Line
 	2125 3100 2525 3100
-Wire Wire Line
-	3450 3300 3250 3300
-Wire Wire Line
-	3250 3300 3250 3100
-Connection ~ 3250 3100
-Wire Wire Line
-	3250 3100 3450 3100
-Wire Wire Line
-	4025 2950 4025 3300
 Text GLabel 2400 3700 2    60   Input ~ 0
 UPDI
 Wire Wire Line
@@ -663,13 +589,6 @@ Wire Wire Line
 Wire Wire Line
 	10600 2375 10600 3350
 Wire Wire Line
-	4025 2500 4950 2500
-Wire Wire Line
-	3850 3100 4525 3100
-Wire Wire Line
-	4525 2900 4525 3100
-Connection ~ 4525 3100
-Wire Wire Line
 	8150 6800 8475 6800
 $Comp
 L Device:C C?
@@ -706,8 +625,6 @@ Wire Wire Line
 Connection ~ 3750 6550
 Wire Wire Line
 	3750 6550 4175 6550
-Wire Wire Line
-	4950 3000 5200 3000
 Wire Wire Line
 	4475 7425 4475 7225
 $Comp
@@ -780,15 +697,10 @@ Wire Wire Line
 Wire Wire Line
 	5200 4100 5200 4250
 Connection ~ 5200 4100
-Connection ~ 5200 3000
 Wire Wire Line
 	5200 3000 5775 3000
-Text GLabel 4525 2900 1    60   Input ~ 0
-EN
 Wire Wire Line
 	7725 5225 8875 5225
-Wire Wire Line
-	4525 3100 5775 3100
 Text GLabel 3050 5050 2    60   Input ~ 0
 UPDI
 Wire Wire Line
@@ -827,8 +739,6 @@ DTR
 Wire Wire Line
 	2525 2875 2525 3100
 Connection ~ 2525 3100
-Wire Wire Line
-	2525 3100 3250 3100
 Text GLabel 3050 4850 2    50   Input ~ 0
 DTR
 Text GLabel 1700 5050 0    60   Input ~ 0
@@ -1013,17 +923,154 @@ Wire Wire Line
 Wire Wire Line
 	14275 4775 14975 4775
 $Comp
+L Device:C C?
+U 1 1 5FBF50D4
+P 3600 3100
+AR Path="/5FAE7423/5FBF50D4" Ref="C?"  Part="1" 
+AR Path="/5FBF50D4" Ref="C2"  Part="1" 
+F 0 "C2" H 3625 3200 50  0000 L CNN
+F 1 "1uF" H 3625 3000 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric" H 3638 2950 50  0001 C CNN
+F 3 "" H 3600 3100 50  0001 C CNN
+F 4 "C28323" H 3600 3100 50  0001 C CNN "LCSC"
+	1    3600 3100
+	0    1    -1   0   
+$EndComp
+Connection ~ 5200 2175
+$Comp
 L Device:R R?
-U 1 1 5FBF50E9
-P 3850 2800
-AR Path="/5FAE7423/5FBF50E9" Ref="R?"  Part="1" 
-AR Path="/5FBF50E9" Ref="R7"  Part="1" 
-F 0 "R7" V 3930 2800 50  0000 C CNN
-F 1 "R10K" V 3850 2800 50  0000 C CNN
-F 2 "Resistor_SMD:R_0805_2012Metric" V 3780 2800 50  0001 C CNN
-F 3 "" H 3850 2800 50  0001 C CNN
-F 4 "C17414" H 3850 2800 50  0001 C CNN "LCSC"
-	1    3850 2800
+U 1 1 5FBF50E3
+P 4025 2500
+AR Path="/5FAE7423/5FBF50E3" Ref="R?"  Part="1" 
+AR Path="/5FBF50E3" Ref="R8"  Part="1" 
+F 0 "R8" V 4105 2500 50  0000 C CNN
+F 1 "R10K" V 4025 2500 50  0000 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 3955 2500 50  0001 C CNN
+F 3 "" H 4025 2500 50  0001 C CNN
+F 4 "C17414" H 4025 2500 50  0001 C CNN "LCSC"
+	1    4025 2500
 	1    0    0    1   
 $EndComp
+$Comp
+L Device:C C?
+U 1 1 612C4FB5
+P 4950 3400
+AR Path="/5FAE7423/612C4FB5" Ref="C?"  Part="1" 
+AR Path="/612C4FB5" Ref="C3"  Part="1" 
+F 0 "C3" H 4975 3500 50  0000 L CNN
+F 1 "10uF" H 4975 3300 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric" H 4988 3250 50  0001 C CNN
+F 3 "" H 4950 3400 50  0001 C CNN
+F 4 "C28323" H 4950 3400 50  0001 C CNN "LCSC"
+	1    4950 3400
+	1    0    0    1   
+$EndComp
+Wire Wire Line
+	4950 3250 4950 3100
+Connection ~ 4950 3100
+Wire Wire Line
+	4950 3100 5775 3100
+Wire Wire Line
+	4950 3550 4950 4250
+Wire Wire Line
+	4950 5225 5200 5225
+Connection ~ 5200 5225
+$Comp
+L Device:R R?
+U 1 1 613B5125
+P 4950 4400
+AR Path="/5FAE7423/613B5125" Ref="R?"  Part="1" 
+AR Path="/613B5125" Ref="R11"  Part="1" 
+F 0 "R11" V 5030 4400 50  0000 C CNN
+F 1 "R1K" V 4950 4400 50  0000 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 4880 4400 50  0001 C CNN
+F 3 "" H 4950 4400 50  0001 C CNN
+F 4 "C17414" H 4950 4400 50  0001 C CNN "LCSC"
+	1    4950 4400
+	1    0    0    1   
+$EndComp
+Wire Wire Line
+	4950 4550 4950 5225
+$Comp
+L Device:R R?
+U 1 1 5FBF50E9
+P 4750 2500
+AR Path="/5FAE7423/5FBF50E9" Ref="R?"  Part="1" 
+AR Path="/5FBF50E9" Ref="R7"  Part="1" 
+F 0 "R7" V 4830 2500 50  0000 C CNN
+F 1 "R10K" V 4750 2500 50  0000 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 4680 2500 50  0001 C CNN
+F 3 "" H 4750 2500 50  0001 C CNN
+F 4 "C17414" H 4750 2500 50  0001 C CNN "LCSC"
+	1    4750 2500
+	1    0    0    1   
+$EndComp
+Wire Wire Line
+	4950 2625 4950 3100
+Connection ~ 4950 2175
+Wire Wire Line
+	4950 2175 5200 2175
+$Comp
+L Device:D_Schottky D1
+U 1 1 613CE017
+P 3600 2825
+F 0 "D1" H 3600 3042 50  0000 C CNN
+F 1 "D_Schottky" H 3600 2951 50  0000 C CNN
+F 2 "Diode_SMD:D_SOD-123" H 3600 2825 50  0001 C CNN
+F 3 "~" H 3600 2825 50  0001 C CNN
+	1    3600 2825
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3250 2825 3450 2825
+Text GLabel 4225 2825 2    60   Input ~ 0
+D0
+Text GLabel 2675 3300 2    60   Input ~ 0
+D0/RX0
+Wire Wire Line
+	2525 3100 3250 3100
+Wire Wire Line
+	3750 2825 4025 2825
+Wire Wire Line
+	3250 2825 3250 3100
+Connection ~ 3250 3100
+Wire Wire Line
+	3250 3100 3450 3100
+Wire Wire Line
+	5200 2175 5200 3000
+Connection ~ 5200 3000
+Wire Wire Line
+	4950 2175 4950 2325
+Wire Wire Line
+	4025 2650 4025 2825
+Connection ~ 4025 2825
+Wire Wire Line
+	4025 2825 4225 2825
+Wire Wire Line
+	4025 2350 4025 2175
+Wire Wire Line
+	4025 2175 4750 2175
+Wire Wire Line
+	3750 3100 4750 3100
+$Comp
+L Device:D_Schottky D2
+U 1 1 6164833C
+P 4950 2475
+F 0 "D2" V 4904 2555 50  0000 L CNN
+F 1 "D_Schottky" H 4995 2555 50  0000 L CNN
+F 2 "Diode_SMD:D_SOD-123" H 4950 2475 50  0001 C CNN
+F 3 "~" H 4950 2475 50  0001 C CNN
+	1    4950 2475
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	4750 2175 4750 2350
+Connection ~ 4750 2175
+Wire Wire Line
+	4750 2175 4950 2175
+Wire Wire Line
+	4750 2650 4750 3100
+Connection ~ 4750 3100
+Wire Wire Line
+	4750 3100 4950 3100
 $EndSCHEMATC
