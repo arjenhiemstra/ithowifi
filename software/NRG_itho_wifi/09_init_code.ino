@@ -516,7 +516,7 @@ void HADiscoveryFan() {
   root["pct_cmd_t"] = (const char*)systemConfig.mqtt_cmd_topic;
   root["pct_cmd_tpl"] = "{{ value * 2.54 }}";  
   root["pct_stat_t"] = (const char*)systemConfig.mqtt_state_topic;
-  root["pct_val_tpl"] = "{{ ((value | int) / 2.54) | round}}"";  
+  root["pct_val_tpl"] = "{{ ((value | int) / 2.54) | round}}";  
 
   sprintf(s, "%s/fan/%s/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
 
