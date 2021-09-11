@@ -39,6 +39,22 @@
 //#define SYNC0 42
 //#define MDMCFG2 0x02 //16bit sync word / 16bit specific
 
+//calibration
+#define STEP0 0x10
+#define CAL_TIMEOUT ( 1UL * 15 * 1000 )
+
+enum cc_cal_state {
+  CAL_IDLE,
+  CAL_START,
+  CAL_BEGIN,
+  CAL_WAIT,
+  CAL_CHOP,
+  CAL_ABORT,
+  CAL_STOP
+};
+
+cc_cal_state calState = CAL_IDLE;
+
 // default constructor
 IthoCC1101::IthoCC1101(uint8_t counter, uint8_t sendTries) : CC1101()
 {
@@ -739,15 +755,6 @@ uint8_t IthoCC1101::getCounter2(IthoPacket *itho, uint8_t len) {
 
 uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet) {
 
-  uint8_t lenOutbuf = 0;
-
-  if ((itho->length * 20) % 8 == 0) { //inData len fits niecly in out buffer length
-    lenOutbuf = itho->length * 2.5;
-  }
-  else { //is this an issue? inData last byte does not fill out buffer length, add 1 out byte extra, padding is done after encode
-    lenOutbuf = (uint8_t)(itho->length * 2.5) + 0.5;
-  }
-
   uint8_t out_bytecounter = 14;   //index of Outbuf, start at offset 14, first part of the message is set manually
   uint8_t out_bitcounter = 0;     //bit position of current outbuf byte
   uint8_t out_patterncounter = 0; //bit counter to add 1 0 bit pattern after every 8 bits
@@ -1070,8 +1077,6 @@ void IthoCC1101::cc_cal_task() {
   //check cal timeout
   unsigned long now = millis();
 
-  uint8_t timeout = 0;
-
   unsigned long interval = now - lastValid;
   printf("cal_task timeout: %lu\n", timeoutCCcal - interval);
 
@@ -1097,6 +1102,7 @@ uint32_t IthoCC1101::cc_cal( uint8_t validMsg, bool timeout ) {
       break;
 
     case CAL_STOP:
+    case CAL_ABORT:
       Serial.println("CAL_STOP");
       calState = CAL_IDLE;
       calEnabled = 0;
@@ -1194,7 +1200,7 @@ void IthoCC1101::cc_cal_update( uint8_t msgError, bool timeout ) {
 }
 
 void IthoCC1101::setCCcal(uint32_t F) {
-  double freq = (F * 26) / (double)65536;
+  //double freq = (F * 26) / (double)65536;
 
   uint8_t param[3];
   param[0] = (uint8_t)( ( F >> 16 ) & 0xFF ); //FREQ2

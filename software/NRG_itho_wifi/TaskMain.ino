@@ -1,4 +1,4 @@
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
 void TaskInit( void * pvParameters ) {
   configASSERT( ( uint32_t ) pvParameters == 1UL );
   Ticker TaskTimeout;

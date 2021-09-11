@@ -1,4 +1,4 @@
-#define FWVERSION "2.3-alpha5"
+#define FWVERSION "2.3-alpha6"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -26,6 +26,7 @@
  */
  
 #include "hardware.h"
+#include "statics.h"
 #include "i2c_esp32.h"
 #include "IthoSystem.h"
 #include "notifyClients.h"
@@ -91,10 +92,11 @@ SpiffsFilePrint filePrint("/logfile", 2, 10000);
 Ticker IthoCMD;
 Ticker DelayedReq;
 Ticker DelayedSave;
+Ticker getSettingsHack;
 Ticker scan;
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
 FSInfo fs_info;
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
 Ticker timerLearnLeaveMode;
 Ticker timerCCcal;
 IthoCC1101 rf;
@@ -150,7 +152,6 @@ void TaskSysControl( void * parameter );
 #endif
 IthoQueue ithoQueue;
 System sys;
-SystemConfig systemConfig;
 WifiConfig wifiConfig;
 
 SHTSensor sht_org(SHTSensor::SHT3X);
@@ -168,9 +169,6 @@ unsigned long lastWIFIReconnectAttempt = 0;
 volatile uint16_t nextIthoVal = 0;
 volatile unsigned long nextIthoTimer = 0;
 
-float ithoHum = 0;
-float ithoTemp = 0;
-
 #define LOG_BUF_SIZE 128
 
 unsigned long updatetimer = 0;
@@ -179,6 +177,7 @@ unsigned long lastSysMessage = 0;
 unsigned long previousUpdate = 0;
 unsigned long wifiLedUpdate = 0;
 unsigned long SHT3x_readout = 0;
+unsigned long query2401tim = 0;
 unsigned long lastLog = 0;
 
 //flags used
@@ -201,7 +200,7 @@ bool ithoCCstatReq = false;
 bool formatFileSystem = false;
 bool runscan = false;
 bool updateIthoMQTT = false;
-bool SHT3xupdated = false;
+bool updateMQTTihtoStatus = false;
 volatile bool updateItho = false;
 volatile bool ithoCheck = false;
 volatile bool saveRemotesflag = false;
@@ -211,9 +210,89 @@ bool rfInitOK = false;
 
 
 
+#if defined (HW_VERSION_ONE)
+void setup() {
 
+#if defined (ENABLE_SERIAL)
+  Serial.begin(115200);
+  Serial.flush();
+  delay(100);
+#endif
 
+  hardwareInit();
 
-void dummyFunct() {
-  //some weird stuff with the arduino IDE
+  initFileSystem();
+
+  logInit();
+
+  wifiInit();
+  
+  loadSystemConfig();
+
+  init_vRemote();
+  
+#if defined(ENABLE_SHT30_SENSOR_SUPPORT)
+  initSensor();
+#endif
+
+  mqttInit();
+
+  ArduinoOTAinit();
+
+  websocketInit();
+
+  webServerInit();
+
+  MDNSinit();
+
+#if defined (HW_VERSION_TWO)
+  Ticker TaskTimeout;
+  CC1101TaskStart = true;
+  delay(500);
+#endif
+
+  logInput("Setup: done");
 }
+#elif defined (HW_VERSION_TWO)
+void setup() {
+
+#if defined (ENABLE_SERIAL)
+  Serial.begin(115200);
+  Serial.flush();
+  delay(100);
+#endif
+
+  xTaskInitHandle = xTaskCreateStaticPinnedToCore(
+                      TaskInit,
+                      "TaskInit",
+                      STACK_SIZE,
+                      ( void * ) 1,
+                      TASK_MAIN_PRIO,
+                      xTaskInitStack,
+                      &xTaskInitBuffer,
+                      CONFIG_ARDUINO_RUNNING_CORE);
+
+}
+
+#endif
+
+#if defined (HW_VERSION_ONE)
+void loop() {
+
+  yield();
+
+  execWebTasks();
+  execMQTTTasks();
+  execSystemControlTasks();
+  execLogAndConfigTasks();
+
+}
+#endif
+
+#if defined (HW_VERSION_TWO)
+void loop() {
+  yield();
+  esp_task_wdt_reset();
+}
+
+#endif

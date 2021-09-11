@@ -2,14 +2,12 @@
    Author: Klusjesman, supersjimmie, modified and reworked by arjenhiemstra
 */
 
-#ifndef __ITHOCC1101_H__
-#define __ITHOCC1101_H__
+#pragma once
 
 #include <stdio.h>
 #include "CC1101.h"
 #include "IthoPacket.h"
 #include <Ticker.h>
-
 
 //pa table settings
 const uint8_t ithoPaTableSend[8] = {0x6F, 0x26, 0x2E, 0x8C, 0x87, 0xCD, 0xC7, 0xC0};
@@ -49,21 +47,6 @@ const uint8_t ithoMessageLeaveCommandBytes[] =    {31, 201, 6, 0, 31, 201};
 
 //join
 //151,149,65,31,201,24,0,49,224,151,149,65,0,18,160,151,149,65,1,16,224
-
-//calibration
-#define STEP0 0x10
-#define CAL_TIMEOUT ( 1UL * 15 * 1000 )
-
-static enum cc_cal_state {
-  CAL_IDLE,
-  CAL_START,
-  CAL_BEGIN,
-  CAL_WAIT,
-  CAL_CHOP,
-  CAL_ABORT,
-  CAL_STOP
-} calState = CAL_IDLE;
-
 
 class IthoCC1101 : protected CC1101
 {
@@ -192,5 +175,3 @@ class IthoCC1101 : protected CC1101
 
 
 }; //IthoCC1101
-
-#endif //__ITHOCC1101_H__

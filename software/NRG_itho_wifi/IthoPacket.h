@@ -1,9 +1,8 @@
 /*
  * Author: Klusjesman, supersjimmie, modified and reworked by arjenhiemstra 
  */
-
-#ifndef ITHOPACKET_H_
-#define ITHOPACKET_H_
+ 
+#pragma once
 
 enum IthoCommand
 {    
@@ -22,11 +21,11 @@ enum IthoCommand
   IthoTimer2 = 9,
   IthoTimer3 = 10,
   
-  //duco c system remote
-  DucoStandby = 11,
-  DucoLow = 12,
-  DucoMedium = 13,
-  DucoHigh = 14
+//  //duco c system remote
+//  DucoStandby = 11,
+//  DucoLow = 12,
+//  DucoMedium = 13,
+//  DucoHigh = 14
 };
 
 enum message_state {
@@ -106,6 +105,3 @@ class IthoPacket
     
     uint8_t counter;    //0-255, counter is increased on every remote button press
 };
-
-
-#endif /* ITHOPACKET_H_ */

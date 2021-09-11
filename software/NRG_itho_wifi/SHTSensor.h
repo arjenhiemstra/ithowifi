@@ -26,8 +26,7 @@
  *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SHTSENSOR_H
-#define SHTSENSOR_H
+#pragma once
 
 #include <inttypes.h>
 
@@ -269,5 +268,3 @@ public:
   uint8_t mTemperatureAdcPin;
   uint8_t mReadResolutionBits;
 };
-
-#endif /* SHTSENSOR_H */

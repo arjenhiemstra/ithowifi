@@ -1,4 +1,16 @@
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
+
+void startTaskWeb() {
+  xTaskWebHandle = xTaskCreateStaticPinnedToCore(
+                     TaskWeb,
+                     "TaskWeb",
+                     STACK_SIZE_LARGE,
+                     ( void * ) 1,
+                     TASK_WEB_PRIO,
+                     xTaskWebStack,
+                     &xTaskWebBuffer,
+                     CONFIG_ARDUINO_RUNNING_CORE);
+}
 
 void TaskWeb( void * pvParameters ) {
   configASSERT( ( uint32_t ) pvParameters == 1UL );
@@ -35,3 +47,18 @@ void TaskWeb( void * pvParameters ) {
 }
 
 #endif
+
+void execWebTasks() {
+  ArduinoOTA.handle();
+  ws.cleanupClients();
+  if (millis() - previousUpdate >= 5000 || sysStatReq) {
+    if (millis() - lastSysMessage >= 1000 && !onOTA) { //rate limit messages to once a second
+      sysStatReq = false;
+      lastSysMessage = millis();
+      //remotes.llModeTimerUpdated = false;
+      previousUpdate = millis();
+      sys.updateFreeMem();
+      jsonSystemstat();
+    }
+  }
+}

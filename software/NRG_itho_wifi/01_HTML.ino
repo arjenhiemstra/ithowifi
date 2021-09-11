@@ -1,4 +1,7 @@
 
+
+#include <ESPAsyncWebServer.h>
+
 const char html_mainpage[] PROGMEM = R"=====(
 <!doctype html>
 <html lang="en">
@@ -27,7 +30,8 @@ const char html_mainpage[] PROGMEM = R"=====(
                 <li class="pure-menu-item"><a href="wifisetup" class="pure-menu-link">Wifi setup</a></li>
                 <li class="pure-menu-item"><a href="system" class="pure-menu-link">System settings</a></li>
                 <li class="pure-menu-item"><a href="itho" class="pure-menu-link">Itho settings</a></li>
-                <li id="remotemenu" class="pure-menu-item hidden"><a href="remotes" class="pure-menu-link">RF Remotes</a></li>
+                <li class="pure-menu-item"><a href="status" class="pure-menu-link">Itho status</a></li>                
+                <li id="remotemenu" class="pure-menu-item hidden"><a href="remotes" class="pure-menu-link">RF remotes</a></li>
                 <li class="pure-menu-item"><a href="mqtt" class="pure-menu-link">MQTT</a></li>
                 <li class="pure-menu-item"><a href="api" class="pure-menu-link">API</a></li>
                 <li class="pure-menu-item"><a href="help" class="pure-menu-link">Help</a></li>
@@ -118,7 +122,7 @@ void handleAPI(AsyncWebServerRequest *request) {
 
         parseOK = true;
       }
-#if defined (__HW_VERSION_TWO__)     
+#if defined (HW_VERSION_TWO)     
       if (strcmp(p->value().c_str(), "level0") == 0 ) {
         
         debugLevel = 0;
@@ -244,20 +248,20 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(F("<br><br><span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span></div>"));
   
   response->print(F("<br><span>File system: </span><span>"));
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
   SPIFFS.info(fs_info);
   response->print(fs_info.usedBytes);
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
   response->print(SPIFFS.usedBytes());
 #endif
   response->print(F(" bytes used / "));
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
   response->print(fs_info.totalBytes);
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
   response->print(SPIFFS.totalBytes());
 #endif   
   response->print(F(" bytes total</span><br><a href='#' class='pure-button' onclick=\"$('#main').empty();$('#main').append( html_edit );\">Edit filesystem</a>&nbsp;<button id=\"format\" class=\"pure-button\">Format filesystem</button>"));
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
   response->print(F("<br><br><span>CC1101 task memory: </span><span>"));
   response->print(TaskCC1101HWmark);
   response->print(F(" bytes free</span>"));
@@ -303,7 +307,7 @@ void handleDebug(AsyncWebServerRequest *request) {
 
   }
 
-#if defined (__HW_VERSION_TWO__)  
+#if defined (HW_VERSION_TWO)  
   response->print(F("</div></div><br><br><div id='rflog_outer' class='hidden'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>RF Log:</div>"));
   response->print(F("<div id='rflog' style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto'>"));
   response->print(F("</div><div style='padding-top:5px;'><a href='#' class='pure-button' onclick=\"$('#rflog').empty()\">Clear</a></div></div></div>"));
@@ -322,6 +326,9 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(F("<span style=\"color:red\">Warning!!</span><br><br>"));
   response->print(F("<button id=\"button31DA\" class=\"pure-button pure-button-primary\">Query 31DA</button><br><span>Result:&nbsp;</span><span id=\'itho31DA\'></span><br><br>"));
   response->print(F("<button id=\"button31D9\" class=\"pure-button pure-button-primary\">Query 31D9</button><br><span>Result:&nbsp;</span><span id=\'itho31D9\'></span></fieldset></form><br>"));
+
+  response->print("<br><br>");
+
   
   request->send(response);
   

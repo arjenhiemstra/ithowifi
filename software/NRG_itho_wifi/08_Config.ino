@@ -91,6 +91,7 @@ bool resetWifiConfig() {
     dontSaveConfig = true;
     return true;
   }
+  return false;
 }
 
 bool loadSystemConfig() {
@@ -158,8 +159,9 @@ bool resetSystemConfig() {
     dontSaveConfig = true;
     return true;
   }
+  return false;
 }
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
 
 uint16_t serializeRemotes(const IthoRemote &remotes, Print& dst) {
   DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 300));

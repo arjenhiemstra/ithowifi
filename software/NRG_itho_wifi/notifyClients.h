@@ -1,5 +1,4 @@
-#ifndef notifyClients_h
-#define notifyClients_h
+#pragma once
 
 #include <stdio.h>
 #include <string.h>
@@ -21,5 +20,3 @@ void jsonLogMessage(const __FlashStringHelper * str, logtype type);
 void jsonLogMessage(const char* message, logtype type);
 void jsonLogMessage(JsonObject obj, logtype type);
 void otaWSupdate(size_t prg, size_t sz);
-
-#endif // notifyClients_h

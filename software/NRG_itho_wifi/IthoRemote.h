@@ -1,5 +1,4 @@
-#ifndef IthoRemote_h
-#define IthoRemote_h
+#pragma once
 
 #define MAX_NUMBER_OF_REMOTES 10
 #define REMOTE_CONFIG_VERSION "001"
@@ -64,6 +63,3 @@ class IthoRemote {
 
 
 }; //IthoRemote
-
-
-#endif //IthoRemote_h

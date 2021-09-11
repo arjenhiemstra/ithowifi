@@ -1,9 +1,8 @@
 /*
  * Author: Klusjesman, modified bij supersjimmie for Arduino/ESP8266
  */
-
-#ifndef __CC1101_H__
-#define __CC1101_H__
+ 
+#pragma once
 
 #include <stdio.h>
 #include "CC1101Packet.h"
@@ -203,5 +202,3 @@ class CC1101
 		void reset();
 		
 }; //CC1101
-
-#endif //__CC1101_H__

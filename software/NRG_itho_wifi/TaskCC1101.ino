@@ -1,4 +1,4 @@
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
 
 
 IthoCommand RFTcommand[3] = {IthoUnknown, IthoUnknown, IthoUnknown};
@@ -36,6 +36,9 @@ void RFDebug(bool chk, int * id, IthoCommand cmd) {
     case IthoUnknown:
       strcat(debugLog, "unknown");
       break;
+    case IthoStandby:
+      strcat(debugLog, "standby");
+      break;      
     case IthoLow:
       strcat(debugLog, "low");
       break;
@@ -45,6 +48,9 @@ void RFDebug(bool chk, int * id, IthoCommand cmd) {
     case IthoHigh:
       strcat(debugLog, "high");
       break;
+    case IthoFull:
+      strcat(debugLog, "full");
+      break;      
     case IthoTimer1:
       strcat(debugLog, "timer1");
       break;
@@ -140,7 +146,17 @@ void resetCCcal() {
   rf.resetCCcal();
 }
 
-
+void startTaskCC1101() {
+  xTaskCC1101Handle = xTaskCreateStaticPinnedToCore(
+                        TaskCC1101,
+                        "TaskCC1101",
+                        STACK_SIZE,
+                        ( void * ) 1,
+                        TASK_CC1101_PRIO,
+                        xTaskCC1101Stack,
+                        &xTaskCC1101Buffer,
+                        CONFIG_ARDUINO_RUNNING_CORE);
+}
 
 void TaskCC1101( void * pvParameters ) {
   configASSERT( ( uint32_t ) pvParameters == 1UL );

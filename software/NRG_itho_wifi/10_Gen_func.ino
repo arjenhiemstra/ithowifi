@@ -187,7 +187,7 @@ void updateSensor() {
         Wire.endTransmission(true);
         ithoHum = sht_org.getHumidity();
         ithoTemp = sht_org.getTemperature();
-        SHT3xupdated = true;
+        temp_hum_updated = true;
       }
     }
     if (SHT3x_alternative) {
@@ -195,7 +195,7 @@ void updateSensor() {
         Wire.endTransmission(true);
         ithoHum = sht_alt.getHumidity();
         ithoTemp = sht_alt.getTemperature();
-        SHT3xupdated = true;
+        temp_hum_updated = true;
       }
     }
   }
@@ -227,8 +227,13 @@ bool writeIthoVal(uint16_t value) {
     if (timeout != 1000) {
 
       if (systemConfig.itho_forcemedium) {
-        sendButton(2);
-        delay(25);
+        buttonValue = 2;
+        buttonResult = false;
+        sendI2CButton = true;
+        auto timeoutmillis = millis() + 400;
+        while (!buttonResult && millis() < timeoutmillis) {
+          //wait for result
+        }
       }
       updateIthoMQTT = true;
 
@@ -240,13 +245,13 @@ bool writeIthoVal(uint16_t value) {
       //command[8] = 0 - (67 + b);
       command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
       Wire.beginTransmission(byte(0x00));
       for (uint8_t i = 1; i < sizeof(command); i++) {
         Wire.write(command[i]);
       }
       Wire.endTransmission(true);
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
       i2c_sendBytes(command, sizeof(command));
 #endif
 
@@ -260,34 +265,34 @@ bool writeIthoVal(uint16_t value) {
   }
   return false;
 }
-
-void receiveEvent(size_t howMany) {
-
-  char localbuf[512] = "";
-  uint16_t pos = 0;
-
-  while (Wire.available()) { // loop through all but the last 3
-    localbuf[pos] = Wire.read(); // receive byte as a character
-    //if(pos > sizeof(localbuf)) break;
-    pos++;
-  }
-
-  std::string s;
-  s.reserve(pos * 3 + 2);
-  for (size_t i = 0; i < pos; ++i) {
-    if (i)
-      s += ' ';
-    s += toHex(localbuf[i] >> 4);
-    s += toHex(localbuf[i] & 0xF);
-  }
-  strcpy(i2c_slave_buf, "");
-  strlcpy(i2c_slave_buf, s.c_str(), sizeof(i2c_slave_buf));
-
-  callback_called = true;
-}
+//
+//void receiveEvent(size_t howMany) {
+//
+//  char localbuf[512] = "";
+//  uint16_t pos = 0;
+//
+//  while (Wire.available()) { // loop through all but the last 3
+//    localbuf[pos] = Wire.read(); // receive byte as a character
+//    //if(pos > sizeof(localbuf)) break;
+//    pos++;
+//  }
+//
+//  std::string s;
+//  s.reserve(pos * 3 + 2);
+//  for (size_t i = 0; i < pos; ++i) {
+//    if (i)
+//      s += ' ';
+//    s += toHex(localbuf[i] >> 4);
+//    s += toHex(localbuf[i] & 0xF);
+//  }
+//  strcpy(i2c_slave_buf, "");
+//  strlcpy(i2c_slave_buf, s.c_str(), sizeof(i2c_slave_buf));
+//
+//  callback_called = true;
+//}
 
 void printTimestamp(Print * _logOutput) {
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
   if (time(nullptr)) {
     time_t now;
     struct tm * timeinfo;
@@ -298,7 +303,7 @@ void printTimestamp(Print * _logOutput) {
     strftime(timeStringBuff, sizeof(timeStringBuff), "%F %T ", timeinfo);
     _logOutput->print(timeStringBuff);
   } else
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
   struct tm timeinfo;
   if (getLocalTime(&timeinfo, 0)) {
     char timeStringBuff[50];  // 50 chars should be enough
@@ -318,7 +323,7 @@ void printNewline(Print * _logOutput) {
 }
 
 void logInput(const char * inputString) {
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
   yield();
   if (xSemaphoreTake(mutexLogTask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
 #endif
@@ -329,7 +334,7 @@ void logInput(const char * inputString) {
 
     filePrint.close();
 
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
     xSemaphoreGive(mutexLogTask);
   }
 #endif
