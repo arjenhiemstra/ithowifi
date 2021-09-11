@@ -1,5 +1,4 @@
-#ifndef IthoQueue_h
-#define IthoQueue_h
+#pragma once
 
 #define MAX_QUEUE 10
 #define QUEUE_UPDATE_MS 100
@@ -44,6 +43,3 @@ class IthoQueue {
 
 
 }; //IthoQueue
-
-
-#endif //IthoQueue_h

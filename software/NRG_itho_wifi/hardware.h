@@ -1,25 +1,24 @@
-#ifndef __HARDWARE_H__
-#define __HARDWARE_H__
+#pragma once
 
 #if defined (ESP8266)
-  #define __HW_VERSION_ONE__
+  #define HW_VERSION_ONE
 #elif defined (ESP32)
-  #define __HW_VERSION_TWO__
+  #define HW_VERSION_TWO
 #endif
 
-#if defined (__HW_VERSION_ONE__) || defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_ONE) || defined (HW_VERSION_TWO)
 #else
 #error "Define hardware revision in header file hardware.h"
 #endif
 
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
 #define HWREVISION "1"
 #define SDAPIN      4
 #define SCLPIN      5
 #define WIFILED     2
 #define STATUSPIN   14
 
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
 #define HWREVISION "2"
 #define SDAPIN      21
 #define SCLPIN      22
@@ -29,7 +28,7 @@
 #define ITHO_IRQ_PIN 4
 #define FAILSAVE_PIN 14
 
-//#elif defined (__HW_VERSION_TWO__)
+//#elif defined (HW_VERSION_TWO)
 //#define HWREVISION "2"
 //#define SDAPIN      27
 //#define SCLPIN      26
@@ -41,5 +40,3 @@
 #else
 #error "Unsupported hardware"
 #endif
-
-#endif //__HARDWARE_H__

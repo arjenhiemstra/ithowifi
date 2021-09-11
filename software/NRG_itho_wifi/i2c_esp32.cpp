@@ -7,7 +7,7 @@ char toHex(uint8_t c) {
   return c < 10 ? c + '0' : c + 'A' - 10;
 }
 
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
 
 #include <driver/i2c.h>
 #include <esp_log.h>
@@ -17,7 +17,7 @@ char toHex(uint8_t c) {
 #include <freertos/task.h>
 
 
-static i2c_slave_callback_t i2c_callback;
+//static i2c_slave_callback_t i2c_callback;
 uint8_t i2cbuf[I2C_SLAVE_RX_BUF_LEN];
 static size_t buflen;
 
@@ -117,74 +117,104 @@ bool i2c_sendCmd(uint8_t addr, const uint8_t* cmd, size_t len) {
   return false;
 }
 
-void i2c_slave_callback(const uint8_t* data, size_t len) {
-    for(uint16_t i=0;i<I2C_SLAVE_RX_BUF_LEN;i++) {
-      i2c_slave_data[i] = 0;
-    }
-    for(uint16_t i=0;i<len;i++) {
-      i2c_slave_data[i] = data[i];
-    }
-    std::string s;
-    s.reserve(len * 3 + 2);
-    for (size_t i = 0; i < len; ++i) {
-      if (i)
-        s += ' ';
-      s += toHex(data[i] >> 4);
-      s += toHex(data[i] & 0xF);
-    }
-    strcpy(i2c_slave_buf, "");
-    strlcpy(i2c_slave_buf, s.c_str(), sizeof(i2c_slave_buf));
-    
-  //    if (len > 6 && data[1] == 0x82 && data[2] == 0xA4 && data[3] == 0 && data[4] == 1 && data[5] < len - 5 && checksumOk(data, len)) {
-  //        portENTER_CRITICAL(&status_mux);
-  //        datatypes.assign((const char*)data + 6, data[5]);
-  //        portEXIT_CRITICAL(&status_mux);
-  //    }
-  //    if (len > 6 && data[1] == 0x82 && data[2] == 0xa4 && data[3] == 1 && data[4] == 1 && data[5] < len - 5 && checksumOk(data, len)) {
-  //        handleStatus(data + 6, len - 7);
-  //    }
-  //    if (reportHex) {
-  //        mqtt_publish_bin("esp-data-hex", s.c_str(), s.length());
-  //    }
-  //    if (verbose) {
-  //        printf("Slave: %s\n", s.c_str());
-  //    }
+//void i2c_slave_callback(const uint8_t* data, size_t len) {
+//    for(uint16_t i=0;i<I2C_SLAVE_RX_BUF_LEN;i++) {
+//      i2c_slave_data[i] = 0;
+//    }
+//    for(uint16_t i=0;i<len;i++) {
+//      i2c_slave_data[i] = data[i];
+//    }
+//    std::string s;
+//    s.reserve(len * 3 + 2);
+//    for (size_t i = 0; i < len; ++i) {
+//      if (i)
+//        s += ' ';
+//      s += toHex(data[i] >> 4);
+//      s += toHex(data[i] & 0xF);
+//    }
+//    strcpy(i2c_slave_buf, "");
+//    strlcpy(i2c_slave_buf, s.c_str(), sizeof(i2c_slave_buf));
+//    
+//  //    if (len > 6 && data[1] == 0x82 && data[2] == 0xA4 && data[3] == 0 && data[4] == 1 && data[5] < len - 5 && checksumOk(data, len)) {
+//  //        portENTER_CRITICAL(&status_mux);
+//  //        datatypes.assign((const char*)data + 6, data[5]);
+//  //        portEXIT_CRITICAL(&status_mux);
+//  //    }
+//  //    if (len > 6 && data[1] == 0x82 && data[2] == 0xa4 && data[3] == 1 && data[4] == 1 && data[5] < len - 5 && checksumOk(data, len)) {
+//  //        handleStatus(data + 6, len - 7);
+//  //    }
+//  //    if (reportHex) {
+//  //        mqtt_publish_bin("esp-data-hex", s.c_str(), s.length());
+//  //    }
+//  //    if (verbose) {
+//  //        printf("Slave: %s\n", s.c_str());
+//  //    }
+//
+//  callback_called = true;
+//
+//}
 
-  callback_called = true;
-
-}
 
 
+//static void i2c_slave_task(void* arg) {
+//  while (1) {
+//    i2cbuf[0] = I2C_SLAVE_ADDRESS << 1;
+//    buflen = 1;
+//    while (1) {
+//      int len1 = i2c_slave_read_buffer(I2C_SLAVE_NUM, i2cbuf + buflen, sizeof(i2cbuf) - buflen, 10);
+//      if (len1 <= 0)
+//        break;
+//      buflen += len1;
+//    }
+//    if (buflen > 1) {
+//      i2c_callback(i2cbuf, buflen);
+//      callback_called = true;
+//      vTaskDelete( NULL );
+//    }
+//  }
+//}
 
-static void i2c_slave_task(void* arg) {
-  while (1) {
-    i2cbuf[0] = I2C_SLAVE_ADDRESS << 1;
-    buflen = 1;
-    while (1) {
-      int len1 = i2c_slave_read_buffer(I2C_SLAVE_NUM, i2cbuf + buflen, sizeof(i2cbuf) - buflen, 10);
-      if (len1 <= 0)
-        break;
-      buflen += len1;
-    }
-    if (buflen > 1) {
-      i2c_callback(i2cbuf, buflen);
-      callback_called = true;
-      vTaskDelete( NULL );
-    }
-  }
-}
+//void i2c_slave_init(i2c_slave_callback_t cb) {
+//  i2c_config_t conf = {I2C_MODE_SLAVE,   I2C_SLAVE_SDA_IO,     I2C_SLAVE_SDA_PULLUP,
+//                       I2C_SLAVE_SCL_IO, I2C_SLAVE_SCL_PULLUP, {.slave = {0, I2C_SLAVE_ADDRESS}}
+//                      };
+//  i2c_param_config(I2C_SLAVE_NUM, &conf);
+//  i2c_callback = cb;
+//  i2c_driver_install(I2C_SLAVE_NUM, conf.mode, I2C_SLAVE_RX_BUF_LEN, 0, 0);
+//
+//  i2cbuf[0] = I2C_SLAVE_ADDRESS << 1;
+//  buflen = 1;
+//
+//  unsigned long timeoutmillis = millis() + 200;
+//
+//  while (millis() < timeoutmillis) {
+//    while (1) {
+//      int len1 = i2c_slave_read_buffer(I2C_SLAVE_NUM, i2cbuf + buflen, sizeof(i2cbuf) - buflen, 10);
+//      if (len1 <= 0)
+//        break;
+//      buflen += len1;
+//    }
+//    if (buflen > 1) {
+//      //callback_called = true;
+//      i2c_callback(i2cbuf, buflen);
+//    }    
+//  }
+//    
+//
+//  //xTaskCreatePinnedToCore(i2c_slave_task, "i2c_task", 4096, NULL, 22, &xTaskI2cSlaveHandle, 0);
+//}
 
-void i2c_slave_init(i2c_slave_callback_t cb) {
+size_t i2c_slave_receive(uint8_t i2c_receive_buf[]) {
   i2c_config_t conf = {I2C_MODE_SLAVE,   I2C_SLAVE_SDA_IO,     I2C_SLAVE_SDA_PULLUP,
                        I2C_SLAVE_SCL_IO, I2C_SLAVE_SCL_PULLUP, {.slave = {0, I2C_SLAVE_ADDRESS}}
                       };
   i2c_param_config(I2C_SLAVE_NUM, &conf);
-  i2c_callback = cb;
   i2c_driver_install(I2C_SLAVE_NUM, conf.mode, I2C_SLAVE_RX_BUF_LEN, 0, 0);
 
   i2cbuf[0] = I2C_SLAVE_ADDRESS << 1;
   buflen = 1;
 
+  //bool result = false;
   unsigned long timeoutmillis = millis() + 200;
 
   while (millis() < timeoutmillis) {
@@ -195,25 +225,25 @@ void i2c_slave_init(i2c_slave_callback_t cb) {
       buflen += len1;
     }
     if (buflen > 1) {
-      //callback_called = true;
-      i2c_callback(i2cbuf, buflen);
+      for(uint16_t i=0;i<buflen;i++) {
+        i2c_receive_buf[i] = i2cbuf[i];
+      }
     }    
   }
-    
-
-  //xTaskCreatePinnedToCore(i2c_slave_task, "i2c_task", 4096, NULL, 22, &xTaskI2cSlaveHandle, 0);
+  i2c_slave_deinit();
+  return buflen;
 }
 
-void i2c_slaveInit() {
-  i2c_slave_init(&i2c_slave_callback);
-}
-
+//void i2c_slaveInit() {
+//  i2c_slave_init(&i2c_slave_callback);
+//}
+//
 void i2c_slave_deinit() {
   i2c_driver_delete(I2C_SLAVE_NUM);
 }
 
-#endif //#if defined (__HW_VERSION_TWO__)
+#endif //#if defined (HW_VERSION_TWO)
 
-bool callback_called = false;
-char i2c_slave_buf[I2C_SLAVE_RX_BUF_LEN];
-uint8_t i2c_slave_data[I2C_SLAVE_RX_BUF_LEN];
+//bool callback_called = false;
+//char i2c_slave_buf[I2C_SLAVE_RX_BUF_LEN];
+//uint8_t i2c_slave_data[I2C_SLAVE_RX_BUF_LEN];

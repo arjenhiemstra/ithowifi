@@ -1,4 +1,5 @@
 #include "IthoRemote.h"
+
 #include <string.h>
 #include <Arduino.h>
 
@@ -87,7 +88,7 @@ int IthoRemote::removeRemote(int* id) {
   if (!this->checkID(id)) {
     return -1; //remote not registered
   }
-  if (!this->remoteCount > 0) {
+  if (this->remoteCount < 1) {
     return -2;
   }
 

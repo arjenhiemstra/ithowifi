@@ -1,5 +1,4 @@
-#ifndef SystemConfig_h
-#define SystemConfig_h
+#pragma once
 
 #define CONFIG_VERSION "004" //Change when SystemConfig struc changes
 
@@ -26,6 +25,7 @@ class SystemConfig {
     int mqtt_version;
     char mqtt_state_topic[128];
     char mqtt_sensor_topic[128];
+    char mqtt_ithostatus_topic[128];
     char mqtt_ha_topic[128];
     char mqtt_state_retain[5];
     char mqtt_cmd_topic[128];
@@ -66,5 +66,4 @@ class SystemConfig {
 
 }; //SystemConfig
 
-
-#endif //SystemConfig_h
+extern SystemConfig systemConfig;

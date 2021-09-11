@@ -1,5 +1,5 @@
 #define MQTT_BUFFER_SIZE 1024
-#if defined (__HW_VERSION_TWO__) && defined (ENABLE_FAILSAVE_BOOT)
+#if defined (HW_VERSION_TWO) && defined (ENABLE_FAILSAVE_BOOT)
 
 void failSafeBoot() {
 
@@ -107,7 +107,7 @@ void failSafeBoot() {
 void hardwareInit() {
 
 //Workaround for https://github.com/arjenhiemstra/ithowifi/issues/30
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
   if (digitalRead(BOOTSTATE) == LOW) {
     pinMode(BOOTSTATE, OUTPUT);
     digitalWrite(BOOTSTATE, HIGH);
@@ -121,7 +121,7 @@ void hardwareInit() {
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
 
-#if defined (__HW_VERSION_TWO__) && defined (ENABLE_FAILSAVE_BOOT)
+#if defined (HW_VERSION_TWO) && defined (ENABLE_FAILSAVE_BOOT)
   pinMode(FAILSAVE_PIN, INPUT);
   failSafeBoot();
 #endif
@@ -132,10 +132,10 @@ void hardwareInit() {
 }
 
 void i2cInit() {
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
   Wire.begin(SDAPIN, SCLPIN, 0);
   //Wire.onReceive(receiveEvent);
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
   i2c_master_init();
 #endif
 }
@@ -162,9 +162,9 @@ void logInit() {
   char logBuff[LOG_BUF_SIZE] = "";
 
 
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
   sprintf(logBuff, "System boot, last reset reason: %s", ESP.getResetReason().c_str());
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
   uint8_t reason = esp_reset_reason();
   char buf[32] = "";
 
@@ -247,7 +247,7 @@ bool initFileSystem() {
 
   //Serial.println("Mounting FS...");
 
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
 
   if (!SPIFFS.begin()) {
     //Serial.println("SPIFFS failed, needs formatting");
@@ -262,7 +262,7 @@ bool initFileSystem() {
     }
   }
 
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
   SPIFFS.begin(true);
 #endif
 
@@ -306,9 +306,9 @@ char* hostName() {
 uint8_t getMac(uint8_t i) {
   static uint8_t mac[6];
 
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
   WiFi.softAPmacAddress(mac);
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
 #endif
 
@@ -346,7 +346,7 @@ void setupWiFiAP() {
 
 
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
 #endif
   WiFi.disconnect(true);
@@ -354,9 +354,9 @@ void setupWiFiAP() {
   delay(200);
   WiFi.mode(WIFI_AP);
 
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
   WiFi.forceSleepWake();
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
   esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
   delay(100);
@@ -385,7 +385,7 @@ bool connectWiFiSTA()
   logInput("Connecting to wireless network...");
 #endif
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
 #endif
   WiFi.disconnect(true);
@@ -393,9 +393,9 @@ bool connectWiFiSTA()
   delay(200);
   WiFi.mode(WIFI_STA);
 
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
   WiFi.forceSleepWake();
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
   esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
 
@@ -436,10 +436,10 @@ bool connectWiFiSTA()
 
 
 
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
   WiFi.hostname(hostName());
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
   WiFi.setHostname(hostName());
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 #endif
@@ -448,7 +448,7 @@ bool connectWiFiSTA()
   uint8_t status = WiFi.status();
 
   while (millis() < timeoutmillis) {
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
     esp_task_wdt_reset();
 #endif
     status = WiFi.status();
@@ -606,13 +606,13 @@ bool setupMQTTClient() {
 
   if (systemConfig.mqtt_active) {
 
-    if (systemConfig.mqtt_serverName != "") {
+    if (strcmp(systemConfig.mqtt_serverName, "") != 0) {
 
       mqttClient.setServer(systemConfig.mqtt_serverName, systemConfig.mqtt_port);
       mqttClient.setCallback(mqttCallback);
       mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 
-      if (systemConfig.mqtt_username == "") {
+      if (strcmp(systemConfig.mqtt_username, "") == 0) {
         connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_lwt_topic, 0, true, "offline");
       }
       else {
@@ -636,8 +636,8 @@ bool setupMQTTClient() {
   else {
     mqttClient.publish(systemConfig.mqtt_lwt_topic, "offline", true);  //set to offline in case of graceful shutdown
     mqttClient.disconnect();
-    return false;
   }
+  return false;
 
 }
 
@@ -656,9 +656,9 @@ void logWifiInfo() {
   logInput("WiFi info:");
 
   const char* const modes[] = { "NULL", "STA", "AP", "STA+AP" };
-  const char* const phymodes[] = { "", "B", "G", "N" };
+  //const char* const phymodes[] = { "", "B", "G", "N" };
 
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
   sprintf(wifiBuff, "Mode:%s", modes[wifi_get_opmode()]);
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
@@ -694,7 +694,7 @@ void logWifiInfo() {
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
 
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
 
   sprintf(wifiBuff, "Mode:%s", modes[WiFi.getMode()]);
   logInput(wifiBuff);
@@ -777,14 +777,14 @@ void webServerInit() {
     //Handle upload
   });
 
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
   if (systemConfig.syssec_edit) {
     server.addHandler(new SPIFFSEditor(systemConfig.sys_username, systemConfig.sys_password));
   }
   else {
     server.addHandler(new SPIFFSEditor("", ""));
   }
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
   if (systemConfig.syssec_edit) {
     server.addHandler(new SPIFFSEditor(SPIFFS, systemConfig.sys_username, systemConfig.sys_password));
   }
@@ -908,7 +908,7 @@ void webServerInit() {
       Serial.println(buf);
 #endif
 
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
 
       detachInterrupt(ITHO_IRQ_PIN);
 
@@ -930,10 +930,10 @@ void webServerInit() {
 
 #endif
 
-#if defined (__HW_VERSION_ONE__)
+#if defined (HW_VERSION_ONE)
       Update.runAsync(true);
       if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)) {
-#elif defined (__HW_VERSION_TWO__)
+#elif defined (HW_VERSION_TWO)
       if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
 #endif
 #if defined (ENABLE_SERIAL)
@@ -990,7 +990,7 @@ void webServerInit() {
 void MDNSinit() {
 
 
-#if defined (__HW_VERSION_TWO__)
+#if defined (HW_VERSION_TWO)
   MDNS.begin(hostName());
   mdns_instance_name_set("NRG IthoWifi controller");
 #endif

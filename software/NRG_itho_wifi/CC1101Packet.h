@@ -2,8 +2,7 @@
  * Author: Klusjesman, modified bij supersjimmie for Arduino/ESP8266
  */
 
-#ifndef CC1101PACKET_H_
-#define CC1101PACKET_H_
+#pragma once
 
 #include <stdio.h>
 #include <Arduino.h>
@@ -18,6 +17,3 @@ class CC1101Packet
 		uint8_t length;
 		uint8_t data[MAX_RAW];
 };
-
-
-#endif /* CC1101PACKET_H_ */

@@ -1,11 +1,13 @@
 
+
 const char controls_js[] PROGMEM = R"=====(
 
 var count = 0;
 var itho_low = 0;
 var itho_medium = 127;
 var itho_high = 254;
-var sht3x = -1;
+var sensor = -1;
+var statustimer = 0;
 var websocketServerLocation = 'ws://' + window.location.hostname + '/ws';
 
 
@@ -43,6 +45,11 @@ function startWebsock(websocketServerLocation){
             $('#RemotesTable').empty();
             buildHtmlTable('#RemotesTable', x);
           }
+          else if (f.ithosatusinfo) {
+            let x = f.ithosatusinfo;
+            $('#StatusTable').empty();
+            buildHtmlStatusTable('#StatusTable', x);
+          }          
           else if (f.ithodevinfo) {
             let x = f.ithodevinfo;
             for (key in x) {
@@ -124,8 +131,8 @@ function startWebsock(websocketServerLocation){
               initstatus = 'unknown status';
             }
             $('#ithoinit').html(initstatus);
-            if ('sht3x' in x) {
-              sht3x = x.sht3x;
+            if ('sensor' in x) {
+              sensor = x.sensor;
             }
             if(x.itho_llm > 0) {
               $('#itho_llm').removeClass();
@@ -294,6 +301,7 @@ $(document).ready(function() {
           mqtt_version:         $('#mqtt_version').val(),
           mqtt_state_topic:     $('#mqtt_state_topic').val(),
           mqtt_sensor_topic:    $('#mqtt_sensor_topic').val(),
+          mqtt_ithostatus_topic:$('#mqtt_ithostatus_topic').val(),
           mqtt_ha_topic:        $('#mqtt_ha_topic').val(),
           mqtt_cmd_topic:       $('#mqtt_cmd_topic').val(),
           mqtt_lwt_topic:       $('#mqtt_lwt_topic').val(),
@@ -605,12 +613,12 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_active") {
     if (state == 1) {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_ithostatus_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', false);
       $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', false);
     }
     else {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_ithostatus_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', true);
       $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', true);
     }
@@ -619,11 +627,11 @@ function radio(origin, state) {
     if (state == 1) {
       $('#mqtt_idx').prop('readonly', false);
       $('#mqtt_idx, #label-mqtt_idx').show();
-      if(sht3x > 0) { $('#sensor_idx, #label-sensor_idx').show(); }
+      if(sensor > 0) { $('#sensor_idx, #label-sensor_idx').show(); }
       else { $('#sensor_idx, #label-sensor_idx').hide(); }
       $('#mqtt_state_topic').val("domoticz/in");
       $('#mqtt_cmd_topic').val("domoticz/out");
-      $('#mqtt_sensor_topic, #label-mqtt_sensor').hide();
+      $('#mqtt_sensor_topic, #mqtt_ithostatus_topic, #label-mqtt_sensor').hide();
       $('#mqtt_ha_topic, #label-mqtt_ha').hide();
       $('#mqtt_lwt_topic, #label-lwt_topic').hide();
     }
@@ -633,8 +641,8 @@ function radio(origin, state) {
       $('#sensor_idx, #label-sensor_idx').hide();
       $('#mqtt_state_topic').val(mqtt_state_topic_tmp);
       $('#mqtt_cmd_topic').val(mqtt_cmd_topic_tmp);
-      if(sht3x > 0) { $('#mqtt_sensor_topic, #label-mqtt_sensor').show(); }
-      else { $('#mqtt_sensor_topic, #label-mqtt_sensor').hide(); }
+      if(sensor > 0) { $('#mqtt_sensor_topic, #mqtt_ithostatus_topic, #label-mqtt_sensor').show(); }
+      else { $('#mqtt_sensor_topic, #mqtt_ithostatus_topic, #label-mqtt_sensor').hide(); }
       $('#mqtt_ha_topic, #label-mqtt_ha').show();
       $('#mqtt_lwt_topic, #label-lwt_topic').show();
     }
@@ -645,8 +653,8 @@ function radio(origin, state) {
       $('#mqtt_idx').prop('readonly', true);
       $('#mqtt_idx, #label-mqtt_idx').hide();
       $('#sensor_idx, #label-sensor_idx').hide();
-      if(sht3x > 0) { $('#mqtt_sensor_topic, #label-mqtt_sensor').show(); }
-      else { $('#mqtt_sensor_topic, #label-mqtt_sensor').hide(); }
+      if(sensor > 0) { $('#mqtt_sensor_topic, #mqtt_ithostatus_topic, #label-mqtt_sensor').show(); }
+      else { $('#mqtt_sensor_topic, #mqtt_ithostatus_topic, #label-mqtt_sensor').hide(); }
       $('#mqtt_lwt_topic, #label-lwt_topic').show();
     }
     else {
@@ -742,6 +750,7 @@ function update_page(page) {
       $('#sys_fieldset').append(html_systemsettings_end);
     }
     if (page == 'itho') { $('#main').append(html_ithosettings); }
+    if (page == 'status') { $('#main').append(html_ithostatus); }
     if (page == 'remotes') { $('#main').append(html_remotessetup); }    
     if (page == 'mqtt') { $('#main').append(html_mqttsetup); }
     if (page == 'api') { $('#main').append(html_api); }      
@@ -902,6 +911,28 @@ function buildHtmlTable(selector, jsonVar) {
   $(selector).append(headerTbody$);
 }
 
+function buildHtmlStatusTable(selector, jsonVar) {
+  var headerThead$ = $('<thead>');
+  var headerTr$ = $('<tr>');
+  headerTr$.append($('<th>').html('Label'));
+  headerTr$.append($('<th>').html('Value'));
+  headerThead$.append(headerTr$);
+  $(selector).append(headerThead$);
+
+  var headerTbody$ = $('<tbody>');
+
+  for (var key in jsonVar) {
+    var row$ = $('<tr>');
+    row$.append($('<td>').html(key));
+    row$.append($('<td>').html(jsonVar[key]));
+    headerTbody$.append(row$);
+  }
+  
+  $(selector).append(headerTbody$);
+  
+}
+
+
 function addRowTableIthoSettings(selector, jsonVar) {
   var i = jsonVar.Index;
   var row$ = $('<tr>');
@@ -1021,6 +1052,7 @@ var html_index = `
 <script>
 $(document).ready(function() {
   getSettings('sysstat');
+  statustimer = 0;
 });
 </script>
 
@@ -1089,6 +1121,7 @@ var html_wifisetup = `
 <script>
 $(document).ready(function() {
   getSettings('wifisetup');
+  statustimer = 0;
 });
 </script>
 `;
@@ -1196,6 +1229,7 @@ var html_systemsettings_start = `
 <script>
 $(document).ready(function() {
   getSettings('syssetup');
+  statustimer = 0;
 });
 </script>
 `;
@@ -1236,6 +1270,29 @@ var html_ithosettings = `
 <script>
 $(document).ready(function() {
   getSettings('ithosetup');
+  statustimer = 0;
+});
+</script>
+`;
+
+var html_ithostatus = `
+<div class="header"><h1>Itho status</h1></div>
+<p>System values of the itho unit<br><br>Also available on MQTT topics where the label is the last part of the topic name: itho/ithostatus/[label] .<br>The list of available labels depends on the itho model/version and is generated automatically.</p>
+<style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
+      <form class="pure-form pure-form-aligned">
+          <fieldset>
+            <table id="StatusTable" class="pure-table pure-table-bordered"></table><br><br>
+          </fieldset>
+      </form>
+<script>
+$(document).ready(function() {
+  statustimer = 1;
+  function repeat() {
+    if(!statustimer) return;
+    getSettings('ithostatus');
+    setTimeout(repeat, 5000);
+  }
+  repeat();
 });
 </script>
 `;
@@ -1290,6 +1347,7 @@ var html_remotessetup = `
 $(document).ready(function() {
   getSettings('ithoremotes');
   getSettings('ithoccc');
+  statustimer = 0;
 });
 </script>
 `;
@@ -1336,6 +1394,10 @@ var html_mqttsetup = `
                 <input id="mqtt_sensor_topic" maxlength="120" type="text">
             </div>
             <div class="pure-control-group">
+              <label id="label-mqtt_ithostatus" for="mqtt_ithostatus_topic">Itho status</label>
+                <input id="mqtt_ithostatus_topic" maxlength="120" type="text">
+            </div>
+            <div class="pure-control-group">
               <label for="mqtt_cmd_topic">Command topic</label>
                 <input id="mqtt_cmd_topic" maxlength="120" type="text">
             </div>
@@ -1376,6 +1438,7 @@ var html_mqttsetup = `
 <script>
 $(document).ready(function() {
   getSettings('mqttsetup');
+  statustimer = 0;
 });
 </script>
 `;
@@ -1537,6 +1600,7 @@ $.ajax({
     
   }
 })
+statustimer = 0;
 
 </script>
 `;

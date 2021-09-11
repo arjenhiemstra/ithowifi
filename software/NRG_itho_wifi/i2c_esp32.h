@@ -1,3 +1,4 @@
+#pragma once
 
 #define WRITE_BIT I2C_MASTER_WRITE  /*!< I2C master write */
 #define READ_BIT I2C_MASTER_READ    /*!< I2C master read */
@@ -28,8 +29,8 @@
 #include <stdint.h>
 #include "hardware.h"
 
-#if defined (__HW_VERSION_TWO__)
-#pragma once
+#if defined (HW_VERSION_TWO)
+
 #include <driver/gpio.h>
 
 
@@ -44,17 +45,19 @@ bool i2c_sendBytes(const uint8_t* buf, size_t len);
 bool i2c_sendCmd(uint8_t addr, const uint8_t* cmd, size_t len);
 
 
-typedef void (*i2c_slave_callback_t)(const uint8_t* data, size_t len);
+//typedef void (*i2c_slave_callback_t)(const uint8_t* data, size_t len);
 
-void i2c_slave_init(i2c_slave_callback_t cb);
-void i2c_slaveInit();
+//void i2c_slave_init(i2c_slave_callback_t cb);
+size_t i2c_slave_receive(uint8_t i2c_receive_buf[]);
+
+//void i2c_slaveInit();
 void i2c_slave_deinit();
 void i2c_slave_callback(const uint8_t* data, size_t len);
 
 
-#endif //#if defined (__HW_VERSION_TWO__)
+#endif //#if defined (HW_VERSION_TWO)
 
 char toHex(uint8_t c);
-extern bool callback_called;
-extern char i2c_slave_buf[I2C_SLAVE_RX_BUF_LEN];
-extern uint8_t i2c_slave_data[I2C_SLAVE_RX_BUF_LEN];
+//extern bool callback_called;
+//extern char i2c_slave_buf[I2C_SLAVE_RX_BUF_LEN];
+//extern uint8_t i2c_slave_data[I2C_SLAVE_RX_BUF_LEN];

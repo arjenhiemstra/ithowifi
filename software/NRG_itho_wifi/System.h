@@ -1,5 +1,4 @@
-#ifndef System_h
-#define System_h
+#pragma once
 
 #include <Arduino.h>
 
@@ -46,5 +45,3 @@ class System {
     uint32_t memMaxBlock;
     char retval[25];
 };
-
-#endif
