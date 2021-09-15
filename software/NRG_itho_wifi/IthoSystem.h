@@ -1,12 +1,11 @@
 #pragma once
 
 #include <stdio.h>
-#include <string.h>
+#include <string>
 #include <vector>
 #include <Arduino.h>
 
 extern size_t itho2401len;
-
 
 extern uint8_t ithoDeviceID;
 extern uint8_t itho_fwversion;
@@ -64,6 +63,7 @@ void updateSetting(uint8_t i, int32_t value);
 struct ihtoDeviceType* getSettingsPtr(uint8_t deviceID, uint8_t version);
 
 uint8_t checksum(const uint8_t* buf, size_t buflen);
+void sendI2CPWMinit();
 void sendButton(uint8_t number, bool i2c_result_updateweb);
 void sendJoinI2C(bool i2c_result_updateweb);
 void sendLeaveI2C(bool i2c_result_updateweb);

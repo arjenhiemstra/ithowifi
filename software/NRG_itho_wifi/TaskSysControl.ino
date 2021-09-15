@@ -64,13 +64,18 @@ void TaskSysControl( void * pvParameters ) {
 
 void execSystemControlTasks() {
 
-  if (IthoInit) {
+  if (IthoInit && millis() > 250) {
     IthoInit = ithoInitCheck();
   }
 #if defined (HW_VERSION_TWO)
   if (!i2cStartCommands && millis() > 15000) {
     sendQueryDevicetype(i2c_result_updateweb);
-
+    if (itho_fwversion > 0) {
+      ithoInitResult = 1;
+    }
+    else {
+      ithoInitResult = -1;
+    }
     if (systemConfig.sysfirhum == 1 && ithoDeviceID == 0x1B) {
       if (itho_fwversion == 25) {
         updateSetting(63, 0);

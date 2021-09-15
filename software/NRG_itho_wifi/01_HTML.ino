@@ -328,7 +328,6 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(F("<button id=\"button31D9\" class=\"pure-button pure-button-primary\">Query 31D9</button><br><span>Result:&nbsp;</span><span id=\'itho31D9\'></span></fieldset></form><br>"));
 
   response->print("<br><br>");
-
   
   request->send(response);
   
