@@ -5,6 +5,9 @@
 #include <vector>
 #include <Arduino.h>
 
+extern size_t itho2401len;
+
+
 extern uint8_t ithoDeviceID;
 extern uint8_t itho_fwversion;
 extern volatile uint16_t ithoCurrentVal;

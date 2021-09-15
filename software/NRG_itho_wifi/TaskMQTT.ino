@@ -96,10 +96,33 @@ void execMQTTTasks() {
           mqttClient.publish(systemConfig.mqtt_state_topic, buffer, true);
         }
         else {
-          sprintf(buffer, "{\"temp\":%1.1f,\"hum\":%1.1f}", ithoTemp, ithoHum);
+          char buffer[1024];
+          StaticJsonDocument<1024> root;
+          root["temp"] = ithoTemp;
+          root["hum"] = ithoHum;
+
+          root["itho2401len"] = itho2401len;
+
+          for (const auto& ithoStat : ithoStatus) {
+            if (ithoStat.type == ihtoDeviceStatus::is_byte) {
+              root[ithoStat.name.c_str()] = ithoStat.value.byteval;
+            }
+            else if (ithoStat.type == ihtoDeviceStatus::is_uint) {
+              root[ithoStat.name.c_str()] = ithoStat.value.uintval;
+            }
+            else if (ithoStat.type == ihtoDeviceStatus::is_int) {
+              root[ithoStat.name.c_str()] = ithoStat.value.intval;
+            }
+            else if (ithoStat.type == ihtoDeviceStatus::is_float) {
+              root[ithoStat.name.c_str()] = ithoStat.value.floatval;
+            }
+            else {
+              root["error"] = 0;
+            }
+          }
+          serializeJson(root, buffer);
           mqttClient.publish(systemConfig.mqtt_sensor_topic, buffer, true);
         }
-
       }
     }
     if (updateMQTTihtoStatus) {
@@ -109,7 +132,7 @@ void execMQTTTasks() {
           char val[128];
           char s[160];
           sprintf(s, "%s/%s" , (const char*)systemConfig.mqtt_ithostatus_topic, ithoStat.name.c_str());
-          
+
           if (ithoStat.type == ihtoDeviceStatus::is_byte) {
             sprintf(val, "%d", ithoStat.value.byteval);
           }
@@ -127,7 +150,11 @@ void execMQTTTasks() {
           }
           mqttClient.publish(s, val, true);
         }
-
+        char val[32];
+        char s[160];
+        sprintf(val, "%d", itho2401len);
+        sprintf(s, "%s/%s" , (const char*)systemConfig.mqtt_ithostatus_topic, "itho2401len");
+        mqttClient.publish(s, val, true);
       }
     }
 

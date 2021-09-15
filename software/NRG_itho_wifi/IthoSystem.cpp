@@ -5,6 +5,7 @@
 #include "i2c_esp32.h"
 #include "notifyClients.h"
 
+size_t itho2401len = 0;
 
 uint8_t ithoDeviceID = 0;
 uint8_t itho_fwversion = 0;
@@ -872,6 +873,9 @@ void sendQuery2401(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
+  
+  itho2401len = len;
+  
   if (len > 0) {
 
     if (i2c_result_updateweb) {
