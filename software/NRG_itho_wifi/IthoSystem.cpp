@@ -42,8 +42,7 @@ bool temp_hum_updated = false;
 float ithoHum = 0;
 float ithoTemp = 0;
 
-const uint8_t itho_14v134[]   {0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 102, 103, 255};
-const uint8_t itho_14v2[]     {0, 1, 2, 3, 4, 5, 6, 7, 102, 103, 255};
+const uint8_t itho_14v14[]   {0, 1, 2, 3, 4, 5, 6, 7, 102, 103, 255};
 const uint8_t itho_14v5[]     {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 26, 48, 49, 50, 51, 96, 52, 53, 97, 98, 99, 100, 101, 102, 103, 255};
 const uint8_t itho_14v6[]     {0, 1, 2, 3, 4, 5, 6, 7, 26, 48, 49, 50, 51, 96, 52, 53, 97, 98, 99, 100, 101, 102, 103, 255};
 
@@ -63,7 +62,7 @@ const uint8_t itho_1Bv25[]    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
 const uint8_t itho_1Bv2627[]  {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 255};
 
 
-const uint8_t *ihto14Versions[] = { itho_14v134, itho_14v2, itho_14v134, itho_14v134, itho_14v5, itho_14v6 };
+const uint8_t *ihto14Versions[] = { nullptr, itho_14v14, itho_14v14, itho_14v14, itho_14v14, itho_14v5, itho_14v6 };
 const uint8_t *ihto1BVersions[] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_1Bv6, itho_1Bv7, itho_1Bv8, itho_1Bv9, itho_1Bv10, itho_1Bv11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_1Bv17, itho_1Bv1820, nullptr, itho_1Bv1820, itho_1Bv21, itho_1Bv22, nullptr, itho_1Bv24, itho_1Bv25, itho_1Bv2627, itho_1Bv2627 };
 
 const uint8_t itho_14sv14[]    {0, 1, 2, 3, 4, 5, 6, 255};
@@ -76,8 +75,8 @@ const uint8_t itho_1Bsv2021[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 255
 const uint8_t itho_1Bsv22[]   {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 255};
 const uint8_t itho_1Bsv2427[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 255};
 
-const uint8_t *ihto14Status[]   = { itho_14sv14, itho_14sv14, itho_14sv14, itho_14sv14, itho_1Bsv57, itho_1Bsv57 };
-const uint8_t *ihto1BStatus[]   = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_1Bsv57, itho_1Bsv57, itho_1Bsv8, itho_1Bsv911, itho_1Bsv911, itho_1Bsv911, nullptr, nullptr, nullptr, nullptr, nullptr, itho_1Bsv17, itho_1Bsv18, nullptr, itho_1Bsv2021, itho_1Bsv2021, itho_1Bsv22, nullptr, itho_1Bsv2427, itho_1Bsv2427, itho_1Bsv2427, itho_1Bsv2427 };
+const uint8_t *ihto14Status[]   = { nullptr, itho_14sv14, itho_14sv14, itho_14sv14, itho_14sv14, itho_1Bsv57, itho_1Bsv57, itho_1Bsv57 };
+const uint8_t *ihto1BStatus[]   = { nullptr, nullptr, nullptr, nullptr, nullptr, itho_1Bsv57, itho_1Bsv57, itho_1Bsv57, itho_1Bsv8, itho_1Bsv911, itho_1Bsv911, itho_1Bsv911, nullptr, nullptr, nullptr, nullptr, nullptr, itho_1Bsv17, itho_1Bsv18, nullptr, itho_1Bsv2021, itho_1Bsv2021, itho_1Bsv22, nullptr, itho_1Bsv2427, itho_1Bsv2427, itho_1Bsv2427, itho_1Bsv2427 };
 
 struct ihtoDeviceType {
   uint8_t ID;
@@ -523,6 +522,24 @@ uint8_t checksum(const uint8_t* buf, size_t buflen) {
 }
 
 
+void sendI2CPWMinit() {
+
+  uint8_t command[] = { 0x82, 0xEF, 0xC0, 0x00, 0x01, 0x06, 0x00, 0x00, 0x09, 0x00, 0x09, 0x00, 0xB6 };
+
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+  while (digitalRead(SCLPIN) == LOW) {
+    yield();
+    delay(1);
+  }
+
+#if defined (HW_VERSION_TWO)
+  
+  i2c_sendBytes(command, sizeof(command));
+
+#endif
+
+}
 
 uint8_t cmdCounter = 0;
 
@@ -663,7 +680,7 @@ void sendQueryDevicetype(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 0) {
+  if (len > 2) {
     jsonSysmessage("ithotype", i2cbuf2string(i2cbuf, len).c_str());
     ithoDeviceID = i2cbuf[9];
     itho_fwversion = i2cbuf[11];
@@ -697,7 +714,7 @@ void sendQueryStatusFormat(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 0) {
+  if (len > 2) {
     jsonSysmessage("ithostatusformat", i2cbuf2string(i2cbuf, len).c_str());
 
   }
@@ -729,7 +746,7 @@ void sendQueryStatus(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 0) {
+  if (len > 2) {
     jsonSysmessage("ithostatus", i2cbuf2string(i2cbuf, len).c_str());
 
   }
@@ -777,7 +794,7 @@ void sendQuery2400(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 0) {
+  if (len > 2) {
     if (i2c_result_updateweb) {
       i2c_result_updateweb = false;
       jsonSysmessage("itho2400", i2cbuf2string(i2cbuf, len).c_str());
@@ -873,10 +890,10 @@ void sendQuery2401(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  
+
   itho2401len = len;
-  
-  if (len > 0) {
+
+  if (len > 2) {
 
     if (i2c_result_updateweb) {
       i2c_result_updateweb = false;
@@ -963,7 +980,7 @@ void sendQuery31DA(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 0) {
+  if (len > 2) {
     jsonSysmessage("itho31DA", i2cbuf2string(i2cbuf, len).c_str());
 
   }
@@ -993,7 +1010,7 @@ void sendQuery31D9(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 0) {
+  if (len > 2) {
     jsonSysmessage("itho31D9", i2cbuf2string(i2cbuf, len).c_str());
   }
   else {
@@ -1030,7 +1047,7 @@ int32_t * sendQuery2410(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 0) {
+  if (len > 2) {
 
     //current value
     values[0] = i2cbuf[6] << 24; //6,7,8,9
@@ -1116,7 +1133,7 @@ void setSetting2410(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 0) {
+  if (len > 2) {
     if (command[6] == i2cbuf[6] && command[7] == i2cbuf[7] && command[8] == i2cbuf[8] && command[9] == i2cbuf[9] && command[23] == i2cbuf[23]) {
       jsonSysmessage("itho2410setres", "confirmed");
     }

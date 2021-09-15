@@ -142,11 +142,10 @@ void i2cInit() {
 
 bool ithoInitCheck() {
   if (digitalRead(STATUSPIN) == LOW) {
-    ithoInitResult = 1;
     return false;
   }
-  ithoInitResult = -1;
-  return true;
+  sendI2CPWMinit();
+  return false;
 }
 
 void logInit() {

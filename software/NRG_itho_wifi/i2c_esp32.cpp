@@ -219,7 +219,7 @@ size_t i2c_slave_receive(uint8_t i2c_receive_buf[]) {
 
   while (millis() < timeoutmillis) {
     while (1) {
-      int len1 = i2c_slave_read_buffer(I2C_SLAVE_NUM, i2cbuf + buflen, sizeof(i2cbuf) - buflen, 10);
+      int len1 = i2c_slave_read_buffer(I2C_SLAVE_NUM, i2cbuf + buflen, sizeof(i2cbuf) - buflen, 100);
       if (len1 <= 0)
         break;
       buflen += len1;
