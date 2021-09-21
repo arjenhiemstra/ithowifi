@@ -43,16 +43,16 @@ void jsonWsSend(const char* rootName) {
     JsonObject nested = root.createNestedObject(rootName);
     if (!ithoStatus.empty()) {
       for (const auto& ithoStat : ithoStatus) {
-        if (ithoStat.type == ihtoDeviceStatus::is_byte) {
+        if (ithoStat.type == ithoDeviceStatus::is_byte) {
           nested[ithoStat.name.c_str()] = ithoStat.value.byteval;
         }
-        else if (ithoStat.type == ihtoDeviceStatus::is_uint) {
+        else if (ithoStat.type == ithoDeviceStatus::is_uint) {
           nested[ithoStat.name.c_str()] = ithoStat.value.uintval;
         }
-        else if (ithoStat.type == ihtoDeviceStatus::is_int) {
+        else if (ithoStat.type == ithoDeviceStatus::is_int) {
           nested[ithoStat.name.c_str()] = ithoStat.value.intval;
         }
-        else if (ithoStat.type == ihtoDeviceStatus::is_float) {
+        else if (ithoStat.type == ithoDeviceStatus::is_float) {
           nested[ithoStat.name.c_str()] = ithoStat.value.floatval;
         }
         else {

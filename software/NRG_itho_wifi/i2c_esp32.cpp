@@ -43,7 +43,7 @@ esp_err_t i2c_master_send(char* buf, uint32_t len) {
   i2c_master_start(link);
   i2c_master_write(link, (uint8_t*)buf, len, true);
   i2c_master_stop(link);
-  rc = i2c_master_cmd_begin(I2C_MASTER_NUM, link, 1000);
+  rc = i2c_master_cmd_begin(I2C_MASTER_NUM, link, 200 / portTICK_RATE_MS);
   i2c_cmd_link_delete(link);
 
   i2c_master_deinit();
@@ -62,7 +62,7 @@ esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t* cmd, uint32_t len
   i2c_master_write_byte(link, (addr << 1) | WRITE_BIT, ACK_CHECK_EN);
   i2c_master_write(link, (uint8_t*)cmd, len, true);
   i2c_master_stop(link);
-  rc = i2c_master_cmd_begin(I2C_MASTER_NUM, link, 1000);
+  rc = i2c_master_cmd_begin(I2C_MASTER_NUM, link, 200 / portTICK_RATE_MS);
   i2c_cmd_link_delete(link);
 
   i2c_master_deinit();
@@ -84,7 +84,7 @@ esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size) {
   }
   i2c_master_read_byte(link, data_rd + size - 1, (i2c_ack_type_t)NACK_VAL);
   i2c_master_stop(link);
-  rc = i2c_master_cmd_begin(I2C_MASTER_NUM, link, 1000 / portTICK_RATE_MS);
+  rc = i2c_master_cmd_begin(I2C_MASTER_NUM, link, 200 / portTICK_RATE_MS);
   i2c_cmd_link_delete(link);
 
   i2c_master_deinit();
@@ -93,7 +93,7 @@ esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size) {
 }
 
 bool i2c_sendBytes(const uint8_t* buf, size_t len) {
-  
+
   if (len) {
     esp_err_t rc = i2c_master_send((char*)buf, len);
     if (rc) {
@@ -134,7 +134,7 @@ bool i2c_sendCmd(uint8_t addr, const uint8_t* cmd, size_t len) {
 //    }
 //    strcpy(i2c_slave_buf, "");
 //    strlcpy(i2c_slave_buf, s.c_str(), sizeof(i2c_slave_buf));
-//    
+//
 //  //    if (len > 6 && data[1] == 0x82 && data[2] == 0xA4 && data[3] == 0 && data[4] == 1 && data[5] < len - 5 && checksumOk(data, len)) {
 //  //        portENTER_CRITICAL(&status_mux);
 //  //        datatypes.assign((const char*)data + 6, data[5]);
@@ -197,9 +197,9 @@ bool i2c_sendCmd(uint8_t addr, const uint8_t* cmd, size_t len) {
 //    if (buflen > 1) {
 //      //callback_called = true;
 //      i2c_callback(i2cbuf, buflen);
-//    }    
+//    }
 //  }
-//    
+//
 //
 //  //xTaskCreatePinnedToCore(i2c_slave_task, "i2c_task", 4096, NULL, 22, &xTaskI2cSlaveHandle, 0);
 //}
@@ -209,26 +209,24 @@ size_t i2c_slave_receive(uint8_t i2c_receive_buf[]) {
                        I2C_SLAVE_SCL_IO, I2C_SLAVE_SCL_PULLUP, {.slave = {0, I2C_SLAVE_ADDRESS}}
                       };
   i2c_param_config(I2C_SLAVE_NUM, &conf);
+  
+  i2c_set_timeout(I2C_SLAVE_NUM, 1000000);
+  
   i2c_driver_install(I2C_SLAVE_NUM, conf.mode, I2C_SLAVE_RX_BUF_LEN, 0, 0);
 
   i2cbuf[0] = I2C_SLAVE_ADDRESS << 1;
   buflen = 1;
 
-  //bool result = false;
-  unsigned long timeoutmillis = millis() + 200;
-
-  while (millis() < timeoutmillis) {
-    while (1) {
-      int len1 = i2c_slave_read_buffer(I2C_SLAVE_NUM, i2cbuf + buflen, sizeof(i2cbuf) - buflen, 100);
-      if (len1 <= 0)
-        break;
-      buflen += len1;
+  while (1) {
+    int len1 = i2c_slave_read_buffer(I2C_SLAVE_NUM, i2cbuf + buflen, sizeof(i2cbuf) - buflen, 50 / portTICK_RATE_MS );
+    if (len1 <= 0)
+      break;
+    buflen += len1;
+  }
+  if (buflen > 1) {
+    for (uint16_t i = 0; i < buflen; i++) {
+      i2c_receive_buf[i] = i2cbuf[i];
     }
-    if (buflen > 1) {
-      for(uint16_t i=0;i<buflen;i++) {
-        i2c_receive_buf[i] = i2cbuf[i];
-      }
-    }    
   }
   i2c_slave_deinit();
   return buflen;

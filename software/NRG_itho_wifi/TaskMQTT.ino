@@ -1,4 +1,5 @@
 #if defined (HW_VERSION_TWO)
+#include <cmath>
 
 void startTaskMQTT() {
   xTaskMQTTHandle = xTaskCreateStaticPinnedToCore(
@@ -101,19 +102,24 @@ void execMQTTTasks() {
           root["temp"] = ithoTemp;
           root["hum"] = ithoHum;
 
+
+          auto b = 611.21 * pow(2.7183, ((18.678 - ithoTemp / 234.5) * ithoTemp) / (257.14 + ithoTemp));
+          auto ppmw = b / (101325 - b) * ithoHum / 100 * 0.62145 * 1000000;
+          root["ppmw"] = ppmw;
+
           root["itho2401len"] = itho2401len;
 
           for (const auto& ithoStat : ithoStatus) {
-            if (ithoStat.type == ihtoDeviceStatus::is_byte) {
+            if (ithoStat.type == ithoDeviceStatus::is_byte) {
               root[ithoStat.name.c_str()] = ithoStat.value.byteval;
             }
-            else if (ithoStat.type == ihtoDeviceStatus::is_uint) {
+            else if (ithoStat.type == ithoDeviceStatus::is_uint) {
               root[ithoStat.name.c_str()] = ithoStat.value.uintval;
             }
-            else if (ithoStat.type == ihtoDeviceStatus::is_int) {
+            else if (ithoStat.type == ithoDeviceStatus::is_int) {
               root[ithoStat.name.c_str()] = ithoStat.value.intval;
             }
-            else if (ithoStat.type == ihtoDeviceStatus::is_float) {
+            else if (ithoStat.type == ithoDeviceStatus::is_float) {
               root[ithoStat.name.c_str()] = ithoStat.value.floatval;
             }
             else {
@@ -133,16 +139,16 @@ void execMQTTTasks() {
           char s[160];
           sprintf(s, "%s/%s" , (const char*)systemConfig.mqtt_ithostatus_topic, ithoStat.name.c_str());
 
-          if (ithoStat.type == ihtoDeviceStatus::is_byte) {
+          if (ithoStat.type == ithoDeviceStatus::is_byte) {
             sprintf(val, "%d", ithoStat.value.byteval);
           }
-          else if (ithoStat.type == ihtoDeviceStatus::is_uint) {
+          else if (ithoStat.type == ithoDeviceStatus::is_uint) {
             sprintf(val, "%u", ithoStat.value.uintval);
           }
-          else if (ithoStat.type == ihtoDeviceStatus::is_int) {
+          else if (ithoStat.type == ithoDeviceStatus::is_int) {
             sprintf(val, "%d", ithoStat.value.intval);
           }
-          else if (ithoStat.type == ihtoDeviceStatus::is_float) {
+          else if (ithoStat.type == ithoDeviceStatus::is_float) {
             sprintf(val, "%.2f", ithoStat.value.floatval);
           }
           else {
@@ -155,6 +161,29 @@ void execMQTTTasks() {
         sprintf(val, "%d", itho2401len);
         sprintf(s, "%s/%s" , (const char*)systemConfig.mqtt_ithostatus_topic, "itho2401len");
         mqttClient.publish(s, val, true);
+      }
+      if (!ithoMeasurements.empty()) {
+        for (const auto& ithoMeaserment : ithoMeasurements) {
+
+          char val[128];
+          char s[160];
+          sprintf(s, "%s/%s" , (const char*)systemConfig.mqtt_ithostatus_topic, ithoMeaserment.name.c_str());
+          if (ithoMeaserment.type == ithoDeviceMeasurements::is_int) {
+            sprintf(val, "%d", ithoMeaserment.value.intval);
+          }
+          else if (ithoMeaserment.type == ithoDeviceMeasurements::is_float) {
+            sprintf(val, "%.2f", ithoMeaserment.value.floatval);
+          }
+          else if (ithoMeaserment.type == ithoDeviceMeasurements::is_string) {
+            sprintf(val, "%s", ithoMeaserment.value.valStatus);
+          }
+          else {
+            strcpy(val, "value error");
+          }
+
+          mqttClient.publish(s, val, true);
+
+        }
       }
     }
 

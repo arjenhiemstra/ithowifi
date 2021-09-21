@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <map>
+#include <cstring>
 #include <Arduino.h>
 
 extern size_t itho2401len;
@@ -39,7 +41,7 @@ extern bool temp_hum_updated;
 extern float ithoHum;
 extern float ithoTemp;
 
-struct ihtoDeviceStatus {
+struct ithoDeviceStatus {
   std::string name;
   enum { is_byte, is_int, is_uint, is_float } type;
   uint8_t length;
@@ -52,14 +54,26 @@ struct ihtoDeviceStatus {
   uint32_t divider;
 };
 
-extern std::vector<ihtoDeviceStatus> ithoStatus;
 
-char* getIthoType(uint8_t deviceID);
-int getSettingsLength(uint8_t deviceID, uint8_t version);
-void getSetting(uint8_t i, bool updateState, bool loop = false);
-void getSetting(uint8_t i, bool updateState, bool loop, struct ihtoDeviceType* getSettingsPtr, uint8_t version);
-void getSatusLabel(uint8_t i, struct ihtoDeviceType* getStatusPtr, uint8_t version, char* fStringBuf) ;
-void updateSetting(uint8_t i, int32_t value);
+struct ithoDeviceMeasurements {
+  std::string name;
+  enum { is_int, is_float, is_string } type;
+  union {
+    int32_t intval;
+    float floatval;
+    char valStatus[32];
+  } value;
+};
+ 
+extern std::vector<ithoDeviceStatus> ithoStatus;
+extern std::vector<ithoDeviceMeasurements> ithoMeasurements;
+
+char* getIthoType(const uint8_t deviceID);
+int getSettingsLength(const uint8_t deviceID, const uint8_t version);
+void getSetting(const uint8_t i, const bool updateState, const bool loop = false);
+void getSetting(const uint8_t i, const bool updateState, const bool loop, const struct ihtoDeviceType* getSettingsPtr, const uint8_t version);
+void getSatusLabel(const uint8_t i, const struct ihtoDeviceType* getStatusPtr, const uint8_t version, char* fStringBuf) ;
+void updateSetting(const uint8_t i, const int32_t value);
 struct ihtoDeviceType* getSettingsPtr(uint8_t deviceID, uint8_t version);
 
 uint8_t checksum(const uint8_t* buf, size_t buflen);

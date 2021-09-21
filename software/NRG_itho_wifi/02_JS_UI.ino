@@ -361,6 +361,7 @@ $(document).ready(function() {
         $('#Minimum-'+i).html('<div style=\'margin: auto;\' class=\'dot-elastic\'></div>');
         $('#Maximum-'+i).html('<div style=\'margin: auto;\' class=\'dot-elastic\'></div>');
         websock.send('{\"ithosetrefresh\":'+i+'}');
+        console.log('{\"ithosetrefresh\":'+i+'}');
       }
     }
     else if ($(this).attr('id').substr(0, 14) == 'ithosetupdate-') {
@@ -375,8 +376,8 @@ $(document).ready(function() {
       else {
         websock.send(JSON.stringify({
           ithosetupdate: i,
-          value: $('#name_ithoset-'+i).val()
-        }));     
+          value: parseInt($('#name_ithoset-'+i).val())
+        }));
         $('input[name=\'options-ithoset\']:checked').prop('checked', false);
         $('[id^=ithosetrefresh-]').each(function(index, item){
           $('#ithosetrefresh-'+index).removeClass('pure-button-primary');
@@ -453,15 +454,15 @@ $(document).ready(function() {
     else if ($(this).attr('id') == 'button2410') {
       websock.send(JSON.stringify({
         ithobutton: 2410,
-        index: $('#itho_setting_id').val()
+        index: parseInt($('#itho_setting_id').val())
       }));
     }
     else if ($(this).attr('id') == 'button2410set') {
       websock.send(JSON.stringify({
         ithobutton: 24109,
         index: $('#itho_setting_id_set').val(),
-        value: $('#itho_setting_value_set').val()
-      }));  
+        value: parseInt($('#itho_setting_value_set').val())
+      }));
     }
     else if ($(this).attr('id') == 'button31DA') {
       websock.send('{\"ithobutton\":12762}');

@@ -32,7 +32,7 @@ void TaskSysControl( void * pvParameters ) {
     yield();
     esp_task_wdt_reset();
 
-    TaskTimeout.once_ms(1000, []() {
+    TaskTimeout.once_ms(3000, []() {
       logInput("Error: Task SysControl timed out!");
     });
 
@@ -72,6 +72,7 @@ void execSystemControlTasks() {
     sendQueryDevicetype(i2c_result_updateweb);
     if (itho_fwversion > 0) {
       ithoInitResult = 1;
+      digitalWrite(ITHOSTATUS, HIGH);
     }
     else {
       ithoInitResult = -1;
@@ -91,7 +92,7 @@ void execSystemControlTasks() {
     i2cStartCommands = true;
   }
 #endif
-  if (systemConfig.itho_sendjoin > 0 && !joinSend && (ithoInitResult == 1 || millis() > 15000)) {
+  if (systemConfig.itho_sendjoin > 0 && !joinSend && ithoInitResult == 1) {
     joinSend = true;
     sendJoinI2C(i2c_result_updateweb);
     logInput("Virtual remote join command send");
@@ -170,6 +171,7 @@ void execSystemControlTasks() {
   if (millis() - query2401tim >= 5000 && i2cStartCommands) {
     query2401tim = millis();
     sendQuery2401(i2c_result_updateweb);
+    sendQuery31DA(i2c_result_updateweb);
     updateMQTTihtoStatus = true;
   }
   if (sendI2CButton) {
