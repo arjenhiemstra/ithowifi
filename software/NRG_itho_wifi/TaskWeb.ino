@@ -32,7 +32,7 @@ void TaskWeb( void * pvParameters ) {
     yield();
     esp_task_wdt_reset();
 
-    TaskTimeout.once_ms(1000, []() {
+    TaskTimeout.once_ms(3000, []() {
       logInput("Error: Task Web timed out!");
     });
 

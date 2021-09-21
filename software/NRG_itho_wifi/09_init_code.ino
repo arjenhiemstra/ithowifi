@@ -3,10 +3,10 @@
 
 void failSafeBoot() {
 
-  long defaultWaitStart = millis();
-  long ledblink = 0;
+  auto defaultWaitStart = millis() + 2000;
+  auto ledblink = 0;
 
-  while (millis() - defaultWaitStart < 2000) {
+  while (millis() < defaultWaitStart) {
     yield();
 
     if (digitalRead(FAILSAVE_PIN) == HIGH) {
@@ -117,9 +117,12 @@ void hardwareInit() {
   }
 #endif
 
-  pinMode(STATUSPIN, INPUT);
+  pinMode(STATUSPIN, INPUT_PULLUP);
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
+  pinMode(ITHOSTATUS, OUTPUT);
+  digitalWrite(ITHOSTATUS, LOW);
+
 
 #if defined (HW_VERSION_TWO) && defined (ENABLE_FAILSAVE_BOOT)
   pinMode(FAILSAVE_PIN, INPUT);
@@ -443,8 +446,8 @@ bool connectWiFiSTA()
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 #endif
 
-  unsigned long timeoutmillis = millis() + 30000;
-  uint8_t status = WiFi.status();
+  auto timeoutmillis = millis() + 30000;
+  auto status = WiFi.status();
 
   while (millis() < timeoutmillis) {
 #if defined (HW_VERSION_TWO)

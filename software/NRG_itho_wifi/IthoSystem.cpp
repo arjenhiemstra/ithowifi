@@ -16,7 +16,8 @@ uint8_t id2 = 0;
 int8_t swap = 0;
 struct ihtoDeviceType* ithoSettingsptr = getSettingsPtr(ithoDeviceID, itho_fwversion);
 int ithoSettingsLength = getSettingsLength(ithoDeviceID, itho_fwversion);
-std::vector<ihtoDeviceStatus> ithoStatus;
+std::vector<ithoDeviceStatus> ithoStatus;
+std::vector<ithoDeviceMeasurements> ithoMeasurements;
 
 bool sendI2CButton = false;
 bool sendI2CJoin = false;
@@ -378,9 +379,74 @@ const __FlashStringHelper *ihtoCVEStatusLabels[] =
   F("co2tim")
 };
 
+static const std::map<uint8_t, std::string> fanInfo = {
+  {0x00, "off"},
+  {0X01, "low"},
+  {0X02, "medium"},
+  {0X03, "high"},
+  {0X04, "speed 4"},
+  {0X05, "speed 5"},
+  {0X06, "speed 6"},
+  {0X07, "speed 7"},
+  {0X08, "speed 8"},
+  {0X09, "speed 9"},
+  {0X0A, "speed 10"},
+  {0X0B, "timer 1"},
+  {0X0C, "timer 2"},
+  {0X0D, "timer 3"},
+  {0X0E, "timer 4"},
+  {0X0F, "timer 5"},
+  {0X10, "timer 6"},
+  {0X11, "timer 7"},
+  {0X12, "timer 8"},
+  {0X13, "timer 9"},
+  {0X14, "timer 10"},
+  {0X15, "away"},
+  {0X16, "absolute minimum"},
+  {0X17, "absolute maximum"},
+  {0x18, "auto"},
+  {0x18, "night"}
+};
 
+const std::map<uint8_t, std::string> fanSensorErrors = {
+  {0xEF, "not available"},
+  {0XF0, "shorted sensor"},
+  {0XF1, "open sensor"},
+  {0XF2, "not available error"},
+  {0XF3, "out of range high"},
+  {0XF4, "out of range low"},
+  {0XF5, "not reliable"},
+  {0XF6, "reserved error"},
+  {0XF7, "reserved error"},
+  {0XF8, "reserved error"},
+  {0XF9, "reserved error"},
+  {0XFA, "reserved error"},
+  {0XFB, "reserved error"},
+  {0XFC, "reserved error"},
+  {0XFD, "reserved error"},
+  {0XFE, "reserved error"},
+  {0XFF, "non specified error"}
+};
 
-char* getIthoType(uint8_t deviceID) {
+const std::map<uint8_t, std::string> fanSensorErrors2 = {
+  {0x7F, "not available"},
+  {0X80, "shorted sensor"},
+  {0X81, "open sensor"},
+  {0X82, "not available error"},
+  {0X83, "out of range high"},
+  {0X84, "out of range low"},
+  {0X85, "not reliable"}
+};
+
+const std::map<uint8_t, std::string> fanHeatErrors = {
+  {0xEF, "not available"},
+  {0XF0, "open actuato"},
+  {0XF1, "shorted actuato"},
+  {0XF2, "not available error"},
+  {0XFF, "non specified error"}
+};
+
+char* getIthoType(const uint8_t deviceID) {
   static char ithoDeviceType[32] = "Unkown device type";
 
   struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
@@ -394,7 +460,7 @@ char* getIthoType(uint8_t deviceID) {
   return ithoDeviceType;
 }
 
-int getSettingsLength(uint8_t deviceID, uint8_t version) {
+int getSettingsLength(const uint8_t deviceID, const uint8_t version) {
 
   struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
   struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
@@ -419,11 +485,11 @@ int getSettingsLength(uint8_t deviceID, uint8_t version) {
   return -1;
 }
 
-void getSetting(uint8_t i, bool updateState, bool loop) {
+void getSetting(const uint8_t i, const bool updateState, const bool loop) {
   getSetting(i, updateState, loop, ithoSettingsptr, itho_fwversion);
 }
 
-void getSetting(uint8_t i, bool updateState, bool loop, struct ihtoDeviceType* getSettingsPtr, uint8_t version) {
+void getSetting(const uint8_t i, const bool updateState, const bool loop, const struct ihtoDeviceType* getSettingsPtr, const uint8_t version) {
   if (getSettingsPtr == nullptr) {
     return;
   }
@@ -479,7 +545,7 @@ void getSetting(uint8_t i, bool updateState, bool loop, struct ihtoDeviceType* g
   jsonLogMessage(root, ITHOSETTINGS);
 }
 
-void getSatusLabel(uint8_t i, struct ihtoDeviceType* getStatusPtr, uint8_t version, char* fStringBuf) {
+void getSatusLabel(const uint8_t i, const struct ihtoDeviceType* getStatusPtr, const uint8_t version, char* fStringBuf) {
 
   if (getStatusPtr == nullptr) {
     return;
@@ -488,7 +554,7 @@ void getSatusLabel(uint8_t i, struct ihtoDeviceType* getStatusPtr, uint8_t versi
 
 }
 
-void updateSetting(uint8_t i, int32_t value) {
+void updateSetting(const uint8_t i, const int32_t value) {
   index2410 = i;
   value2410 = value;
   i2c_result_updateweb = false;
@@ -534,7 +600,7 @@ void sendI2CPWMinit() {
   }
 
 #if defined (HW_VERSION_TWO)
-  
+
   i2c_sendBytes(command, sizeof(command));
 
 #endif
@@ -804,7 +870,7 @@ void sendQuery2400(bool i2c_result_updateweb) {
       ithoStatus.clear();
     }
     for (uint8_t i = 0; i < i2cbuf[5]; i++) {
-      ithoStatus.push_back(ihtoDeviceStatus());
+      ithoStatus.push_back(ithoDeviceStatus());
 
       if (itho_fwversion != 0) {
         char fStringBuf[32];
@@ -823,14 +889,14 @@ void sendQuery2400(bool i2c_result_updateweb) {
       ithoStatus.back().divider = 0;
       if ((i2cbuf[6 + i] & 0x07) == 0) { //integer value
         if ((i2cbuf[6 + i] & 0x80) == 1) { //signed value
-          ithoStatus.back().type = ihtoDeviceStatus::is_int;
+          ithoStatus.back().type = ithoDeviceStatus::is_int;
         }
         else {
-          ithoStatus.back().type = ihtoDeviceStatus::is_uint;
+          ithoStatus.back().type = ithoDeviceStatus::is_uint;
         }
       }
       else {
-        ithoStatus.back().type = ihtoDeviceStatus::is_float;
+        ithoStatus.back().type = ithoDeviceStatus::is_float;
         ithoStatus.back().divider = quick_pow10((i2cbuf[6 + i] & 0x07));
       }
       if (((i2cbuf[6 + i] >> 3) & 0x07) == 0) {
@@ -842,16 +908,16 @@ void sendQuery2400(bool i2c_result_updateweb) {
 
       //special cases
       if (i2cbuf[6 + i] == 0x0C || i2cbuf[6 + i] == 0x6C) {
-        ithoStatus.back().type = ihtoDeviceStatus::is_byte;
+        ithoStatus.back().type = ithoDeviceStatus::is_byte;
         ithoStatus.back().length = 1;
       }
       if (i2cbuf[6 + i] == 0x0F) {
-        ithoStatus.back().type = ihtoDeviceStatus::is_float;
+        ithoStatus.back().type = ithoDeviceStatus::is_float;
         ithoStatus.back().length = 1;
         ithoStatus.back().divider = 2;
       }
       if (i2cbuf[6 + i] == 0x5B) {
-        ithoStatus.back().type = ihtoDeviceStatus::is_uint;
+        ithoStatus.back().type = ithoDeviceStatus::is_uint;
         ithoStatus.back().length = 2;
       }
 
@@ -909,13 +975,13 @@ void sendQuery2401(bool i2c_result_updateweb) {
         for (int i = ithoStat.length; i > 0; i--) {
           tempVal |= i2cbuf[statusPos + (ithoStat.length - i)] << ((i - 1) * 8);
         }
-        if (ithoStat.type == ihtoDeviceStatus::is_byte) {
+        if (ithoStat.type == ithoDeviceStatus::is_byte) {
           ithoStat.value.byteval = (byte)tempVal;
         }
-        if (ithoStat.type == ihtoDeviceStatus::is_uint) {
+        if (ithoStat.type == ithoDeviceStatus::is_uint) {
           ithoStat.value.uintval = tempVal;
         }
-        if (ithoStat.type == ihtoDeviceStatus::is_int) {
+        if (ithoStat.type == ithoDeviceStatus::is_int) {
           if (ithoStat.length == 4) {
             tempVal = (int32_t)tempVal;
           }
@@ -927,7 +993,7 @@ void sendQuery2401(bool i2c_result_updateweb) {
           }
           ithoStat.value.intval = tempVal;
         }
-        if (ithoStat.type == ihtoDeviceStatus::is_float) {
+        if (ithoStat.type == ithoDeviceStatus::is_float) {
           ithoStat.value.floatval = (float)tempVal / ithoStat.divider;
         }
         statusPos += ithoStat.length;
@@ -975,17 +1041,341 @@ void sendQuery31DA(bool i2c_result_updateweb) {
 
 #endif
 
+
 #if defined (HW_VERSION_TWO)
   i2c_sendBytes(command, sizeof(command));
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 2) {
-    jsonSysmessage("itho31DA", i2cbuf2string(i2cbuf, len).c_str());
+
+  if (len > 5) {
+
+    if (i2c_result_updateweb) {
+      i2c_result_updateweb = false;
+      jsonSysmessage("itho31DA", i2cbuf2string(i2cbuf, len).c_str());
+    }
+
+    auto dataLength = i2cbuf[5];
+
+    auto dataStart = 6;
+    if (!ithoMeasurements.empty()) {
+      ithoMeasurements.clear();
+    }
+
+    if (dataLength > 0) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("AirQuality (%)");
+      if (i2cbuf[0 + dataStart] > 200) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanSensorErrors.find(i2cbuf[0 + dataStart]);
+        if (it != fanSensorErrors.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_int;
+        ithoMeasurements.back().value.intval = i2cbuf[0 + dataStart];
+      }
+
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("AirQbased on");
+      ithoMeasurements.back().type = ithoDeviceMeasurements::is_int;
+      ithoMeasurements.back().value.intval = i2cbuf[1 + dataStart];
+    }
+    if (dataLength > 1) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("CO2level (ppm)");
+      if (i2cbuf[2 + dataStart] >= 0x7F) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanSensorErrors2.find(i2cbuf[2 + dataStart]);
+        if (it != fanSensorErrors2.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        int32_t tempVal = i2cbuf[2 + dataStart] << 8;
+        tempVal |= i2cbuf[3 + dataStart];
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_int;
+        ithoMeasurements.back().value.intval = tempVal;
+      }
+    }
+    if (dataLength > 3) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("Indoorhumidity (%)");
+      if (i2cbuf[4 + dataStart] > 200) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanSensorErrors.find(i2cbuf[4 + dataStart]);
+        if (it != fanSensorErrors.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_int;
+        ithoMeasurements.back().value.intval = i2cbuf[4 + dataStart];
+      }
+    }
+    if (dataLength > 4) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("Outdoorhumidity (%)");
+      if (i2cbuf[5 + dataStart] > 200) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanSensorErrors.find(i2cbuf[5 + dataStart]);
+        if (it != fanSensorErrors.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = i2cbuf[5 + dataStart] / 2;
+      }
+    }
+    if (dataLength > 5) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("Exhausttemp (°C)");
+      if (i2cbuf[6 + dataStart] >= 0x7F) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanSensorErrors2.find(i2cbuf[6 + dataStart]);
+        if (it != fanSensorErrors2.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        int32_t tempVal = i2cbuf[6 + dataStart] << 8;
+        tempVal |= i2cbuf[7 + dataStart];
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = tempVal / 100.0;
+      }
+    }
+    if (dataLength > 7) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("SupplyTemp (°C)");
+      if (i2cbuf[8 + dataStart] >= 0x7F) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanSensorErrors2.find(i2cbuf[8 + dataStart]);
+        if (it != fanSensorErrors2.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        int32_t tempVal = i2cbuf[8 + dataStart] << 8;
+        tempVal |= i2cbuf[9 + dataStart];
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = tempVal / 100.0;
+      }
+    }
+    if (dataLength > 9) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("IndoorTemp (°C)");
+      if (i2cbuf[10 + dataStart] >= 0x7F) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanSensorErrors2.find(i2cbuf[10 + dataStart]);
+        if (it != fanSensorErrors2.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        int32_t tempVal = i2cbuf[10 + dataStart] << 8;
+        tempVal |= i2cbuf[11 + dataStart];
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = tempVal / 100.0;
+      }
+    }
+    if (dataLength > 11) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("OutdoorTemp (°C)");
+      if (i2cbuf[12 + dataStart] >= 0x7F) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanSensorErrors2.find(i2cbuf[12 + dataStart]);
+        if (it != fanSensorErrors2.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        int32_t tempVal = i2cbuf[12 + dataStart] << 8;
+        tempVal |= i2cbuf[13 + dataStart];
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = tempVal / 100.0;
+      }
+    }
+    if (dataLength > 13) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("SpeedCap");
+      ithoMeasurements.back().type = ithoDeviceMeasurements::is_int;
+      int32_t tempVal = i2cbuf[14 + dataStart] << 8;
+      tempVal |= i2cbuf[15 + dataStart];
+      ithoMeasurements.back().value.intval = tempVal;
+    }
+    if (dataLength > 15) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("BypassPos (%)");
+      if (i2cbuf[16 + dataStart] > 200) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanSensorErrors.find(i2cbuf[16 + dataStart]);
+        if (it != fanSensorErrors.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = i2cbuf[16 + dataStart] / 2;
+      }
+    }
+    if (dataLength > 16) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("FanInfo");
+      ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+
+      auto it = fanInfo.find(i2cbuf[17 + dataStart]);
+      if (it != fanInfo.end()) {
+        strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+      }
+      else {
+        strcpy(ithoMeasurements.back().value.valStatus, "unknown");
+      }
+    }
+    if (dataLength > 17) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("ExhFanSpeed (%)");
+      if (i2cbuf[18 + dataStart] > 200) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        strcpy(ithoMeasurements.back().value.valStatus, "not available");
+      }
+      else {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = i2cbuf[18 + dataStart] / 2;
+      }
+    }
+    if (dataLength > 18) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("InFanSpeed (%)");
+      if (i2cbuf[19 + dataStart] > 200) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        strcpy(ithoMeasurements.back().value.valStatus, "not available");
+      }
+      else {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = i2cbuf[19 + dataStart] / 2;
+      }
+    }
+    if (dataLength > 19) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("RemainingTime (min)");
+      int32_t tempVal = i2cbuf[20 + dataStart] << 8;
+      tempVal |= i2cbuf[21 + dataStart];
+      ithoMeasurements.back().type = ithoDeviceMeasurements::is_int;
+      ithoMeasurements.back().value.intval = tempVal;
+    }
+    if (dataLength > 21) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("PostHeat (%)");
+      if (i2cbuf[22 + dataStart] > 200) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanHeatErrors.find(i2cbuf[22 + dataStart]);
+        if (it != fanHeatErrors.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = i2cbuf[22 + dataStart] / 2;
+      }
+    }
+    if (dataLength > 22) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("PreHeat (%)");
+      if (i2cbuf[23 + dataStart] > 200) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanHeatErrors.find(i2cbuf[23 + dataStart]);
+        if (it != fanHeatErrors.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = i2cbuf[23 + dataStart] / 2;
+      }
+    }
+    if (dataLength > 23) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("InFlow (l sec)");
+      if (i2cbuf[24 + dataStart] >= 0x7F) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanSensorErrors2.find(i2cbuf[24 + dataStart]);
+        if (it != fanSensorErrors2.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        int32_t tempVal = i2cbuf[24 + dataStart] << 8;
+        tempVal |= i2cbuf[25 + dataStart];
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = tempVal / 100.0;
+      }
+    }
+    if (dataLength > 25) {
+      ithoMeasurements.push_back(ithoDeviceMeasurements());
+      ithoMeasurements.back().name.assign("ExhFlow (l sec)");
+
+      if (i2cbuf[26 + dataStart] >= 0x7F) {
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
+        auto it = fanSensorErrors2.find(i2cbuf[26 + dataStart]);
+        if (it != fanSensorErrors2.end()) {
+          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
+        }
+        else {
+          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
+        }
+      }
+      else {
+        int32_t tempVal = i2cbuf[26 + dataStart] << 8;
+        tempVal |= i2cbuf[27 + dataStart];
+        ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
+        ithoMeasurements.back().value.floatval = tempVal / 100.0;
+      }
+    }
 
   }
   else {
-    jsonSysmessage("itho31DA", "failed");
+    if (i2c_result_updateweb) {
+      i2c_result_updateweb = false;
+      jsonSysmessage("itho31DA", "failed");
+    }
   }
 
 #endif
@@ -1010,11 +1400,57 @@ void sendQuery31D9(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 2) {
-    jsonSysmessage("itho31D9", i2cbuf2string(i2cbuf, len).c_str());
+  if (len > 5) {
+
+    if (i2c_result_updateweb) {
+      i2c_result_updateweb = false;
+      jsonSysmessage("itho31D9", i2cbuf2string(i2cbuf, len).c_str());
+    }
+
+    auto dataLength = i2cbuf[5];
+
+    auto dataStart = 6;
+
+    if (i2cbuf[0 + dataStart] == 0x80) {
+      //internal fault
+    }
+    else {
+      //no fault
+    }
+    if (i2cbuf[0 + dataStart] == 0x40) {
+      //frost cycle active
+    }
+    else {
+      //frost cycle not active
+    }
+    if (i2cbuf[0 + dataStart] == 0x20) {
+      //filter dirty
+    }
+    else {
+      //filter clean
+    }
+//    if (i2cbuf[0 + dataStart] == 0x10) {
+//      //unknown
+//    }
+//    if (i2cbuf[0 + dataStart] == 0x08) {
+//      //unknown
+//    }
+//    if (i2cbuf[0 + dataStart] == 0x04) {
+//      //unknown
+//    }
+//    if (i2cbuf[0 + dataStart] == 0x02) {
+//      //unknown
+//    }
+//    if (i2cbuf[0 + dataStart] == 0x01) {
+//      //unknown
+//    }
+    float fanSpeed = i2cbuf[1 + dataStart] / 2;
   }
   else {
-    jsonSysmessage("itho31D9", "failed");
+    if (i2c_result_updateweb) {
+      i2c_result_updateweb = false;
+      jsonSysmessage("itho31D9", "failed");
+    }
   }
 
 #endif
@@ -1049,22 +1485,15 @@ int32_t * sendQuery2410(bool i2c_result_updateweb) {
   size_t len = i2c_slave_receive(i2cbuf);
   if (len > 2) {
 
-    //current value
-    values[0] = i2cbuf[6] << 24; //6,7,8,9
-    values[0] |= i2cbuf[7] << 16;
-    values[0] |= i2cbuf[8] << 8;
-    values[0] |= i2cbuf[9];
-    //min value
-    values[1] = i2cbuf[10] << 24; //10,11,12,13
-    values[1] |= i2cbuf[11] << 16;
-    values[1] |= i2cbuf[12] << 8;
-    values[1] |= i2cbuf[13];
-    //max value
-    values[2] = i2cbuf[14] << 24; //14,15,16,17
-    values[2] |= i2cbuf[15] << 16;
-    values[2] |= i2cbuf[16] << 8;
-    values[2] |= i2cbuf[17];
+    uint8_t tempBuf[] = { i2cbuf[9], i2cbuf[8], i2cbuf[7], i2cbuf[6] };
+    std::memcpy(&values[0], tempBuf, 4);
 
+    uint8_t tempBuf2[] = { i2cbuf[13], i2cbuf[12], i2cbuf[11], i2cbuf[10] };
+    std::memcpy(&values[1], tempBuf2, 4);
+
+    uint8_t tempBuf3[] = { i2cbuf[17], i2cbuf[16], i2cbuf[15], i2cbuf[14] };
+    std::memcpy(&values[2], tempBuf3, 4);
+        
     if (i2c_result_updateweb) {
       jsonSysmessage("itho2410", i2cbuf2string(i2cbuf, len).c_str());
 
@@ -1104,16 +1533,12 @@ void setSetting2410(bool i2c_result_updateweb) {
   uint8_t command[] = { 0x82, 0x80, 0x24, 0x10, 0x06, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF };
 
   command[23] = index2410;
-
+    
   command[9] = value2410 & 0xFF;
-  if (value2410 > 255) {
-    command[8] = (value2410 >> 8) & 0xFF;
-  }
-  if (value2410 > 65535) {
-    command[6] = (value2410 >> 24) & 0xFF;
-    command[7] = (value2410 >> 16) & 0xFF;
-  }
-
+  command[8] = (value2410 >> 8) & 0xFF;
+  command[7] = (value2410 >> 16) & 0xFF;
+  command[6] = (value2410 >> 24) & 0xFF;
+  
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
   jsonSysmessage("itho2410set", i2cbuf2string(command, sizeof(command)).c_str());

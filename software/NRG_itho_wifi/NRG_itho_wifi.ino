@@ -1,4 +1,4 @@
-#define FWVERSION "2.3-alpha8"
+#define FWVERSION "2.3-alpha9"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -13,7 +13,7 @@
  * 
  * Used libs and versions are mentioned below.
  * 
- * uncomment #define ENABLE_SHT30_SENSOR_SUPPORT to include readout support of the built-in hum and temp sensor of some itho boxes. This is experimental and might not work properly!
+ * uncomment #define ENABLE_SHT30_SENSOR_SUPPORT to include readout support of the built-in hum and temp sensor of some itho boxes.
  * 
  * For HW rev 1:
  * Select 'LOLIN(WEMOS)D1 R2 & mini' as board
@@ -24,7 +24,22 @@
  * 
  * 
  */
- 
+
+/*
+ Backlog:
+ * make hostname configurable
+ * make MQTT sensor update time configurable
+ * Add DemandFlow and HRU information
+ * Add remote buttons to API
+ * Decode 31D9 message
+ * Improve I2C reliability
+ * Restore compatibility with HW rev 1
+ * Restructure MQTT topics
+ * Include support for RFT-RV and RFT-CO2 remotes
+ * 
+ */
+
+
 #include "hardware.h"
 #include "statics.h"
 #include "i2c_esp32.h"
