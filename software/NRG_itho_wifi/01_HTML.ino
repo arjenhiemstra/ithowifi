@@ -57,8 +57,7 @@ const char html_mainpage[] PROGMEM = R"=====(
 
 void handleAPI(AsyncWebServerRequest *request) {
   bool parseOK = false;
-  nextIthoTimer = 0;
-  
+
   int params = request->params();
   
   if (systemConfig.syssec_api) {
@@ -98,7 +97,7 @@ void handleAPI(AsyncWebServerRequest *request) {
       }
       else if (strcmp(p->value().c_str(), "queue") == 0 ) {
         AsyncResponseStream *response = request->beginResponseStream("text/html");        
-        DynamicJsonDocument root(1000);
+        StaticJsonDocument<500> root;
         JsonObject obj = root.to<JsonObject>(); // Fill the object
         ithoQueue.get(obj);
         obj["ithoSpeed"] = ithoQueue.ithoSpeed;
@@ -108,123 +107,113 @@ void handleAPI(AsyncWebServerRequest *request) {
         request->send(response);
         
         return;
-      }      
-    }
-    else if(strcmp(p->name().c_str(), "debug") == 0) {
-      if (strcmp(p->value().c_str(), "format") == 0 ) {
-        formatFileSystem = true;
-        parseOK = true;
       }
-      if (strcmp(p->value().c_str(), "reboot") == 0 ) {
+      else if (strcmp(p->value().c_str(), "ithostatus") == 0 ) {
+        AsyncResponseStream *response = request->beginResponseStream("text/html");        
+        DynamicJsonDocument doc(6000);
         
-        shouldReboot = true;
-        jsonLogMessage(F("Reboot requested"), WEBINTERFACE);
-
-        parseOK = true;
+        if (doc.capacity() == 0) {
+          logInput("MQTT: JsonDocument memory allocation failed (html api)");
+          return;
+        }
+        
+        JsonObject root = doc.to<JsonObject>();
+        getIthoStatusJSON(root);
+        
+        serializeJson(root, *response);
+        request->send(response);
+        
+        return;
       }
+      else if (strcmp(p->value().c_str(), "lastcmd") == 0 ) {
+        AsyncResponseStream *response = request->beginResponseStream("text/html");        
+        DynamicJsonDocument doc(1000);
+        
+        JsonObject root = doc.to<JsonObject>();
+        getLastCMDinfoJSON(root);
+        
+        serializeJson(root, *response);
+        request->send(response);
+        
+        return;
+      }      
+      else if (strcmp(p->value().c_str(), "remotesinfo") == 0 ) {
+        AsyncResponseStream *response = request->beginResponseStream("text/html");        
+        DynamicJsonDocument doc(2000);
+                
+        JsonObject root = doc.to<JsonObject>();
+        
+        getRemotesInfoJSON(root);
+        
+        serializeJson(root, *response);
+        request->send(response);
+        
+        return;
+      }         
+    }
+    else if(strcmp(p->name().c_str(), "command") == 0) {
+      parseOK = ithoExecCommand(p->value().c_str(), HTMLAPI);
+    }
+    else if(strcmp(p->name().c_str(), "vremote") == 0) {
+      parseOK = ithoI2CCommand(p->value().c_str(), HTMLAPI);
+    }
+    else if(strcmp(p->name().c_str(), "speed") == 0) {
+      parseOK = ithoSetSpeed(p->value().c_str(), HTMLAPI);
+    }
+    else if(strcmp(p->name().c_str(), "timer") == 0) {
+      parseOK = ithoSetTimer(p->value().c_str(), HTMLAPI);
+    }    
+    else if(strcmp(p->name().c_str(), "debug") == 0) {
 #if defined (HW_VERSION_TWO)     
       if (strcmp(p->value().c_str(), "level0") == 0 ) {
         
         debugLevel = 0;
-        
+        rf.setAllowAll(false);
         sprintf(logBuff, "Debug level = %d", debugLevel);
-        jsonLogMessage(logBuff, WEBINTERFACE);
+        logMessagejson(logBuff, WEBINTERFACE);
         strcpy(logBuff, "");
         parseOK = true;
       }
       if (strcmp(p->value().c_str(), "level1") == 0 ) {
         
         debugLevel = 1;
-        
+        rf.setAllowAll(true);
         sprintf(logBuff, "Debug level = %d", debugLevel);
-        jsonLogMessage(logBuff, WEBINTERFACE);
+        logMessagejson(logBuff, WEBINTERFACE);
         strcpy(logBuff, "");
         parseOK = true;
       }        
       if (strcmp(p->value().c_str(), "level2") == 0 ) {
         
         debugLevel = 2;
-        
+        rf.setAllowAll(false);
         sprintf(logBuff, "Debug level = %d", debugLevel);
-        jsonLogMessage(logBuff, WEBINTERFACE);
+        logMessagejson(logBuff, WEBINTERFACE);
         strcpy(logBuff, "");
         parseOK = true;
       }
       if (strcmp(p->value().c_str(), "level3") == 0 ) {
         
         debugLevel = 3;
-        
+        rf.setAllowAll(true);
         sprintf(logBuff, "Debug level = %d", debugLevel);
-        jsonLogMessage(logBuff, WEBINTERFACE);
+        logMessagejson(logBuff, WEBINTERFACE);
         strcpy(logBuff, "");
         parseOK = true;
       }      
-#endif  
-    }      
-    else if(strcmp(p->name().c_str(), "command") == 0) {
-      if (strcmp(p->value().c_str(), "low") == 0 ) {
+#endif
+      if (strcmp(p->value().c_str(), "format") == 0 ) {
+        formatFileSystem = true;
         parseOK = true;
-        nextIthoVal = systemConfig.itho_low;
-        updateItho = true;
       }
-      else if (strcmp(p->value().c_str(), "medium") == 0 ) {
+      if (strcmp(p->value().c_str(), "reboot") == 0 ) {
+        shouldReboot = true;
+        logMessagejson(F("Reboot requested"), WEBINTERFACE);
         parseOK = true;
-        nextIthoVal = systemConfig.itho_medium;
-        updateItho = true;
-      }
-      else if (strcmp(p->value().c_str(), "high") == 0 ) {
-        parseOK = true;
-        nextIthoVal = systemConfig.itho_high;
-        updateItho = true;      
-      }
-      else if (strcmp(p->value().c_str(), "timer1") == 0 ) {
-        parseOK = true;
-        nextIthoVal = systemConfig.itho_high;
-        nextIthoTimer = systemConfig.itho_timer1;
-        updateItho = true;  
-      }
-      else if (strcmp(p->value().c_str(), "timer2") == 0 ) {
-        parseOK = true;
-        nextIthoVal = systemConfig.itho_high;
-        nextIthoTimer = systemConfig.itho_timer2;
-        updateItho = true;  
-      }
-      else if (strcmp(p->value().c_str(), "timer3") == 0 ) {
-        parseOK = true;
-        nextIthoVal = systemConfig.itho_high;
-        nextIthoTimer = systemConfig.itho_timer3;
-        updateItho = true;  
-      }
-      else if (strcmp(p->value().c_str(), "clearqueue") == 0 ) {
-        parseOK = true;
-        clearQueue = true;
       }
     }
-    else if(strcmp(p->name().c_str(), "speed") == 0) {
-      uint16_t val = strtoul (p->value().c_str(), NULL, 10);
-      if (val > 0 && val < 255) {
-        parseOK = true;
-        nextIthoVal = val;
-        updateItho = true;        
-      }    
-      else if (strcmp(p->value().c_str(), "0") == 0 ) {
-        parseOK = true;
-        nextIthoVal = 0;
-        updateItho = true;
-      }
-  
-    }
-    else if(strcmp(p->name().c_str(), "timer") == 0) {
-      uint16_t timer = strtoul (p->value().c_str(), NULL, 10);
-      if (timer > 0 && timer < 65535) {
-        parseOK = true;
-        nextIthoTimer = timer;
-        updateItho = true;        
-      }    
-    }  
 
   }
-
 
   if(parseOK) {
     request->send(200, "text/html", "OK");
@@ -318,8 +307,6 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print(F("<button id=\"buttontype\" class=\"pure-button pure-button-primary\">Query Devicetype</button><br><span>Result:&nbsp;</span><span id=\'ithotype\'></span><br><br>"));
   response->print(F("<button id=\"buttonstatusformat\" class=\"pure-button pure-button-primary\">Query Status Format</button><br><span>Result:&nbsp;</span><span id=\'ithostatusformat\'></span><br><br>"));
   response->print(F("<button id=\"buttonstatus\" class=\"pure-button pure-button-primary\">Query Status</button><br><span>Result:&nbsp;</span><span id=\'ithostatus\'></span><br><br>"));
-  response->print(F("<button id=\"button2400\" class=\"pure-button pure-button-primary\">Query 2400</button><br><span>Result:&nbsp;</span><span id=\'itho2400\'></span><br><br>"));
-  response->print(F("<button id=\"button2401\" class=\"pure-button pure-button-primary\">Query 2401</button><br><span>Result:&nbsp;</span><span id=\'itho2401\'></span><br><br>"));
   response->print(F("<button id=\"button2410\" class=\"pure-button pure-button-primary\">Query 2410</button>setting index: <input id=\"itho_setting_id\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"><br><span>Result:&nbsp;</span><span id=\'itho2410\'></span><br><span>Current:&nbsp;</span><span id=\'itho2410cur\'></span><br><span>Minimum value:&nbsp;</span><span id=\'itho2410min\'></span><br><span>Maximum value:&nbsp;</span><span id=\'itho2410max\'></span><br><br>"));
   response->print(F("<span style=\"color:red\">Warning!!<br> \"Set 2410\" changes the settings of your itho unit<br>Use with care and use only if you know what you are doing!</span><br>"));
   response->print(F("<button id=\"button2410set\" class=\"pure-button pure-button-primary\">Set 2410</button>setting index: <input id=\"itho_setting_id_set\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"> setting value: <input id=\"itho_setting_value_set\" type=\"number\" min=\"-2147483647\" max=\"2147483647\" size=\"10\" value=\"0\"><br><span>Sent command:&nbsp;</span><span id=\'itho2410set\'></span><br><span>Result:&nbsp;</span><span id=\'itho2410setres\'></span><br>"));

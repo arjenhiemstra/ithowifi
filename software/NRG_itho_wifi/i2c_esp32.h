@@ -1,5 +1,8 @@
 #pragma once
 
+#include "hardware.h"
+#include "dbglog.h"
+
 #define WRITE_BIT I2C_MASTER_WRITE  /*!< I2C master write */
 #define READ_BIT I2C_MASTER_READ    /*!< I2C master read */
 #define ACK_CHECK_EN 0x1            /*!< I2C master will check ack from slave*/
@@ -7,31 +10,36 @@
 #define ACK_VAL 0x0                 /*!< I2C ack value */
 #define NACK_VAL 0x1                /*!< I2C nack value */
 
+#if defined (CVE)
 #define I2C_MASTER_SDA_IO     GPIO_NUM_21
 #define I2C_MASTER_SCL_IO     GPIO_NUM_22
-//#define I2C_MASTER_SDA_IO     GPIO_NUM_27
-//#define I2C_MASTER_SCL_IO     GPIO_NUM_26
+#elif defined (NON_CVE)
+#define I2C_MASTER_SDA_IO     GPIO_NUM_27
+#define I2C_MASTER_SCL_IO     GPIO_NUM_26
+#endif
 #define I2C_MASTER_SDA_PULLUP GPIO_PULLUP_DISABLE
 #define I2C_MASTER_SCL_PULLUP GPIO_PULLUP_DISABLE
 #define I2C_MASTER_NUM        I2C_NUM_0
 #define I2C_MASTER_FREQ_HZ    100000
 
+#if defined (CVE)
 #define I2C_SLAVE_SDA_IO     GPIO_NUM_21
 #define I2C_SLAVE_SCL_IO     GPIO_NUM_22
-//#define I2C_SLAVE_SDA_IO     GPIO_NUM_14
-//#define I2C_SLAVE_SCL_IO     GPIO_NUM_33
+#elif defined (NON_CVE)
+#define I2C_SLAVE_SDA_IO     GPIO_NUM_27
+#define I2C_SLAVE_SCL_IO     GPIO_NUM_26
+#endif
+
 #define I2C_SLAVE_SDA_PULLUP GPIO_PULLUP_DISABLE
 #define I2C_SLAVE_SCL_PULLUP GPIO_PULLUP_DISABLE
-#define I2C_SLAVE_NUM        I2C_NUM_1
+#define I2C_SLAVE_NUM        I2C_NUM_0
 #define I2C_SLAVE_RX_BUF_LEN 512
 #define I2C_SLAVE_ADDRESS    0x40
-
-#include <stdint.h>
-#include "hardware.h"
 
 #if defined (HW_VERSION_TWO)
 
 #include <driver/gpio.h>
+#include <stdint.h>
 
 
 extern uint8_t i2cbuf[I2C_SLAVE_RX_BUF_LEN];

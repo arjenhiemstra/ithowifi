@@ -67,13 +67,14 @@ void execMQTTTasks() {
       updateIthoMQTT = false;
       updateState(ithoCurrentVal);
     }
-#if defined(ENABLE_SHT30_SENSOR_SUPPORT)
-    if (temp_hum_updated) {
-      temp_hum_updated = false;
+    if (updateMQTTihtoStatus) {
+      updateMQTTihtoStatus = false;
+
       if (mqttClient.connected()) {
-        char buffer[512];
+
 
         if (systemConfig.mqtt_domoticz_active) {
+          char buffer[512];
           auto humstat = 0;
           // Humidity Status
           if (ithoHum < 31) {
@@ -97,97 +98,12 @@ void execMQTTTasks() {
           mqttClient.publish(systemConfig.mqtt_state_topic, buffer, true);
         }
         else {
-          char buffer[1024];
-          StaticJsonDocument<1024> root;
-          root["temp"] = ithoTemp;
-          root["hum"] = ithoHum;
-
-
-          auto b = 611.21 * pow(2.7183, ((18.678 - ithoTemp / 234.5) * ithoTemp) / (257.14 + ithoTemp));
-          auto ppmw = b / (101325 - b) * ithoHum / 100 * 0.62145 * 1000000;
-          root["ppmw"] = ppmw;
-
-          root["itho2401len"] = itho2401len;
-
-          for (const auto& ithoStat : ithoStatus) {
-            if (ithoStat.type == ithoDeviceStatus::is_byte) {
-              root[ithoStat.name.c_str()] = ithoStat.value.byteval;
-            }
-            else if (ithoStat.type == ithoDeviceStatus::is_uint) {
-              root[ithoStat.name.c_str()] = ithoStat.value.uintval;
-            }
-            else if (ithoStat.type == ithoDeviceStatus::is_int) {
-              root[ithoStat.name.c_str()] = ithoStat.value.intval;
-            }
-            else if (ithoStat.type == ithoDeviceStatus::is_float) {
-              root[ithoStat.name.c_str()] = ithoStat.value.floatval;
-            }
-            else {
-              root["error"] = 0;
-            }
-          }
-          serializeJson(root, buffer);
-          mqttClient.publish(systemConfig.mqtt_sensor_topic, buffer, true);
+          mqttSendStatus();
+          mqttSendRemotesInfo();
+          mqttPublishLastcmd();
         }
       }
     }
-    if (updateMQTTihtoStatus) {
-      updateMQTTihtoStatus = false;
-      if (!ithoStatus.empty()) {
-        for (const auto& ithoStat : ithoStatus) {
-          char val[128];
-          char s[160];
-          sprintf(s, "%s/%s" , (const char*)systemConfig.mqtt_ithostatus_topic, ithoStat.name.c_str());
-
-          if (ithoStat.type == ithoDeviceStatus::is_byte) {
-            sprintf(val, "%d", ithoStat.value.byteval);
-          }
-          else if (ithoStat.type == ithoDeviceStatus::is_uint) {
-            sprintf(val, "%u", ithoStat.value.uintval);
-          }
-          else if (ithoStat.type == ithoDeviceStatus::is_int) {
-            sprintf(val, "%d", ithoStat.value.intval);
-          }
-          else if (ithoStat.type == ithoDeviceStatus::is_float) {
-            sprintf(val, "%.2f", ithoStat.value.floatval);
-          }
-          else {
-            strcpy(val, "value error");
-          }
-          mqttClient.publish(s, val, true);
-        }
-        char val[32];
-        char s[160];
-        sprintf(val, "%d", itho2401len);
-        sprintf(s, "%s/%s" , (const char*)systemConfig.mqtt_ithostatus_topic, "itho2401len");
-        mqttClient.publish(s, val, true);
-      }
-      if (!ithoMeasurements.empty()) {
-        for (const auto& ithoMeaserment : ithoMeasurements) {
-
-          char val[128];
-          char s[160];
-          sprintf(s, "%s/%s" , (const char*)systemConfig.mqtt_ithostatus_topic, ithoMeaserment.name.c_str());
-          if (ithoMeaserment.type == ithoDeviceMeasurements::is_int) {
-            sprintf(val, "%d", ithoMeaserment.value.intval);
-          }
-          else if (ithoMeaserment.type == ithoDeviceMeasurements::is_float) {
-            sprintf(val, "%.2f", ithoMeaserment.value.floatval);
-          }
-          else if (ithoMeaserment.type == ithoDeviceMeasurements::is_string) {
-            sprintf(val, "%s", ithoMeaserment.value.valStatus);
-          }
-          else {
-            strcpy(val, "value error");
-          }
-
-          mqttClient.publish(s, val, true);
-
-        }
-      }
-    }
-
-#endif
     mqttClient.loop();
   }
   else {
@@ -201,4 +117,358 @@ void execMQTTTasks() {
       }
     }
   }
+}
+
+void mqttSendStatus() {
+
+  DynamicJsonDocument doc(6000);
+
+  if (doc.capacity() == 0) {
+    logInput("MQTT: JsonDocument memory allocation failed (itho status)");
+    return;
+  }
+
+  JsonObject root = doc.to<JsonObject>();
+  getIthoStatusJSON(root);
+
+  size_t len = measureJson(root);
+
+  if (mqttClient.getBufferSize() < len) {
+    mqttClient.setBufferSize(len);
+  }
+  if (mqttClient.beginPublish(systemConfig.mqtt_ithostatus_topic, len, true)) {
+    serializeJson(root, mqttClient);
+    if (!mqttClient.endPublish()) logInput("MQTT: Failed to send payload (itho status)");
+  }
+  // reset buffer
+  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+
+}
+void mqttSendRemotesInfo() {
+  DynamicJsonDocument doc(1000);
+
+  if (doc.capacity() == 0) {
+    logInput("MQTT: JsonDocument memory allocation failed (itho remote info)");
+    return;
+  }
+
+  JsonObject root = doc.to<JsonObject>();
+    
+  getRemotesInfoJSON(root);
+
+  size_t len = measureJson(root);
+
+  if (mqttClient.getBufferSize() < len) {
+    mqttClient.setBufferSize(len);
+  }
+  if (mqttClient.beginPublish(systemConfig.mqtt_remotesinfo_topic, len, true)) {
+    serializeJson(root, mqttClient);
+    if (!mqttClient.endPublish()) logInput("MQTT: Failed to send payload (itho remote info))");
+  }
+  // reset buffer
+  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+}
+
+void mqttPublishLastcmd() {
+  DynamicJsonDocument doc(1000);
+
+  JsonObject root = doc.to<JsonObject>();
+    
+  getLastCMDinfoJSON(root);
+
+  size_t len = measureJson(root);
+
+  if (mqttClient.getBufferSize() < len) {
+    mqttClient.setBufferSize(len);
+  }
+  if (mqttClient.beginPublish(systemConfig.mqtt_lastcmd_topic, len, true)) {
+    serializeJson(root, mqttClient);
+    if (!mqttClient.endPublish()) logInput("MQTT: Failed to send payload (last cmd info))");
+  }
+  // reset buffer
+  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+
+
+  if (topic == NULL) return;
+  if (payload == NULL) return;
+
+  bool dtype = true;
+  if (systemConfig.mqtt_domoticz_active) {
+    dtype = false;
+  }
+
+  if (length > 1023) length = 1023;
+
+  char s_payload[length];
+  memcpy(s_payload, payload, length);
+  s_payload[length] = '\0';
+
+  if (strcmp(topic, systemConfig.mqtt_cmd_topic) == 0) {
+    StaticJsonDocument<1024> root;
+    DeserializationError error = deserializeJson(root, s_payload);
+    if (!error) {
+      bool jsonCmd = false;
+      if (!(const char*)root["idx"].isNull()) {
+        jsonCmd = true;
+        //printf("JSON parse -- idx match\n");
+        uint16_t idx = root["idx"].as<uint16_t>();
+        if (idx == systemConfig.mqtt_idx) {
+          if (!(const char*)root["svalue1"].isNull()) {
+            uint16_t invalue = root["svalue1"].as<uint16_t>();
+            double value = invalue * 2.54;
+            ithoSetSpeed((uint16_t)value, MQTTAPI);
+          }
+        }
+      }
+      if (!(const char*)root["dtype"].isNull()) {
+        const char* value = root["dtype"] | "";
+        if (strcmp(value, "ithofan") == 0) {
+          dtype = true;
+        }
+      }
+      if (dtype) {
+        /*
+           standard true, unless mqtt_domoticz_active == "on"
+           if mqtt_domoticz_active == "on"
+              this should be set to true first by a JSON containing key:value pair "dtype":"ithofan",
+              otherwise different commands might get processed due to domoticz general domoticz/out topic structure
+        */
+        if (!(const char*)root["command"].isNull()) {
+          jsonCmd = true;
+          const char* value = root["command"] | "";
+          ithoExecCommand(value, MQTTAPI);
+        }
+        if (!(const char*)root["vremote"].isNull()) {
+          jsonCmd = true;
+          const char* value = root["vremote"] | "";
+          ithoI2CCommand(value, MQTTAPI);
+        }
+        if (!(const char*)root["speed"].isNull()) {
+          jsonCmd = true;
+          ithoSetSpeed(root["speed"].as<uint16_t>(), MQTTAPI);
+        }
+        if (!(const char*)root["timer"].isNull()) {
+          jsonCmd = true;
+          ithoSetTimer(root["timer"].as<uint16_t>(), MQTTAPI);
+        }
+        if (!(const char*)root["clearqueue"].isNull()) {
+          jsonCmd = true;
+          const char* value = root["clearqueue"] | "";
+          if (strcmp(value, "true") == 0) {
+            clearQueue = true;
+          }
+        }
+        if (!jsonCmd) {
+          ithoSetSpeed(s_payload, MQTTAPI);
+        }
+      }
+
+    }
+    else {
+      ithoExecCommand(s_payload, MQTTAPI);
+    }
+
+  }
+  else {
+    //topic unknown
+  }
+}
+
+void updateState(uint16_t newState) {
+
+  systemConfig.itho_fallback = newState;
+
+  if (mqttClient.connected()) {
+    char buffer[512];
+
+    if (systemConfig.mqtt_domoticz_active) {
+      int nvalue = 1;
+      double state = 1.0;
+      if (newState > 0) {
+        state  = newState / 2.54;
+      }
+
+      newState = uint16_t(state + 0.5);
+      char buf[10];
+      sprintf(buf, "%d", newState);
+
+      StaticJsonDocument<512> root;
+      root["command"] = "switchlight";
+      root["idx"] = systemConfig.mqtt_idx;
+      root["nvalue"] = nvalue;
+      root["switchcmd"] = "Set Level";
+      root["level"] = buf;
+      serializeJson(root, buffer);
+    }
+    else {
+      sprintf(buffer, "%d", newState);
+    }
+    mqttClient.publish(systemConfig.mqtt_state_topic, buffer, true);
+
+  }
+}
+
+
+void mqttHomeAssistantDiscovery()
+{
+  if (!systemConfig.mqtt_active || !mqttClient.connected() || !systemConfig.mqtt_ha_active) return;
+  logInput("HA DISCOVERY: Start publishing MQTT Home Assistant Discovery...");
+
+  HADiscoveryFan();
+
+  if (!SHT3x_original || !SHT3x_alternative) return;
+  HADiscoveryHumidity();
+  HADiscoveryTemperature();
+}
+
+
+void HADiscoveryFan() {
+  DynamicJsonDocument doc(2048);
+  JsonObject root = doc.to<JsonObject>(); // Fill the object
+  char s[160];
+
+  addHADevInfo(root);
+  root["avty_t"] = (const char*)systemConfig.mqtt_lwt_topic;
+  sprintf(s, "%s_fan", hostName());
+  root["uniq_id"] = s;
+  root["name"] = s;
+  root["stat_t"] = (const char*)systemConfig.mqtt_lwt_topic;
+  root["stat_val_tpl"] = "{% if value == 'online' %}ON{% else %}OFF{% endif %}";
+  root["json_attr_t"] = (const char*)systemConfig.mqtt_ithostatus_topic;
+  sprintf(s, "%s/not_used/but_needed_for_HA", systemConfig.mqtt_cmd_topic);
+  root["cmd_t"] = s;
+  root["pct_cmd_t"] = (const char*)systemConfig.mqtt_cmd_topic;
+  root["pct_cmd_tpl"] = "{{ value * 2.54 }}";
+  root["pct_stat_t"] = (const char*)systemConfig.mqtt_state_topic;
+  root["pct_val_tpl"] = "{{ ((value | int) / 2.54) | round}}";
+
+  sprintf(s, "%s/fan/%s/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
+
+  sendHADiscovery(root, s);
+
+}
+
+void HADiscoveryTemperature() {
+  DynamicJsonDocument doc(2048);
+  JsonObject root = doc.to<JsonObject>(); // Fill the object
+  char s[160];
+
+  addHADevInfo(root);
+  root["avty_t"] = (const char*)systemConfig.mqtt_lwt_topic;
+  root["dev_cla"] = "temperature";
+  sprintf(s, "%s_temperature", hostName());
+  root["uniq_id"] = s;
+  root["name"] = s;
+  root["stat_t"] = (const char*)systemConfig.mqtt_ithostatus_topic;
+  root["val_tpl"] = "{{ value_json.temp }}";
+
+  sprintf(s, "%s/sensor/%s/temp/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
+
+  sendHADiscovery(root, s);
+}
+
+void HADiscoveryHumidity() {
+  DynamicJsonDocument doc(2048);
+  JsonObject root = doc.to<JsonObject>(); // Fill the object
+  char s[160];
+
+  addHADevInfo(root);
+  root["avty_t"] = (const char*)systemConfig.mqtt_lwt_topic;
+  root["dev_cla"] = "humidity";
+  sprintf(s, "%s_humidity", hostName());
+  root["uniq_id"] = s;
+  root["name"] = s;
+  root["stat_t"] = (const char*)systemConfig.mqtt_ithostatus_topic;
+  root["val_tpl"] = "{{ value_json.hum }}";
+
+  sprintf(s, "%s/sensor/%s/hum/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
+
+  sendHADiscovery(root, s);
+}
+
+void addHADevInfo(JsonObject obj) {
+  char s[64];
+  JsonObject dev = obj.createNestedObject("dev");
+  dev["identifiers"] = hostName();
+  dev["manufacturer"] = "Arjen Hiemstra";
+  dev["model"] = "ITHO Wifi Add-on";
+  sprintf(s, "ITHO-WIFI(%s)", hostName());
+  dev["name"] = s;
+  sprintf(s, "HW: v%s, FW: %s", HWREVISION, FWVERSION);
+  dev["sw_version"] = s;
+
+}
+
+void sendHADiscovery(JsonObject obj, const char* topic)
+{
+  size_t payloadSize = measureJson(obj);
+  //max header + topic + content. Copied logic from PubSubClien::publish(), PubSubClient.cpp:482
+  size_t packetSize = MQTT_MAX_HEADER_SIZE + 2 + strlen(topic) + payloadSize;
+
+  if (mqttClient.getBufferSize() < packetSize)
+  {
+    logInput("MQTT: buffer too small, resizing... (HA discovery)");
+    mqttClient.setBufferSize(packetSize);
+  }
+
+  if (mqttClient.beginPublish(topic, payloadSize, true))
+  {
+    serializeJson(obj, mqttClient);
+    if (!mqttClient.endPublish()) logInput("MQTT: Failed to send payload (HA discovery)");
+  }
+  else
+  {
+    logInput("MQTT: Failed to start building message (HA discovery)");
+  }
+
+  // reset buffer
+  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+}
+
+bool setupMQTTClient() {
+  int connectResult;
+
+  if (systemConfig.mqtt_active) {
+
+    if (strcmp(systemConfig.mqtt_serverName, "") != 0) {
+
+      mqttClient.setServer(systemConfig.mqtt_serverName, systemConfig.mqtt_port);
+      mqttClient.setCallback(mqttCallback);
+      mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+
+      if (strcmp(systemConfig.mqtt_username, "") == 0) {
+        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_lwt_topic, 0, true, "offline");
+      }
+      else {
+        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_username, systemConfig.mqtt_password, systemConfig.mqtt_lwt_topic, 0, true, "offline");
+      }
+
+      if (!connectResult) {
+        return false;
+      }
+
+      if (mqttClient.connected()) {
+        mqttClient.subscribe(systemConfig.mqtt_cmd_topic);
+        mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", true);
+
+        mqttHomeAssistantDiscovery();
+        return true;
+      }
+    }
+
+  }
+  else {
+    mqttClient.publish(systemConfig.mqtt_lwt_topic, "offline", true);  //set to offline in case of graceful shutdown
+    mqttClient.disconnect();
+  }
+  return false;
+
+}
+
+boolean reconnect() {
+  setupMQTTClient();
+  return mqttClient.connected();
 }

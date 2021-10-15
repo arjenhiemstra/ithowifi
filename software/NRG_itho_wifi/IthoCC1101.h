@@ -8,6 +8,40 @@
 #include "CC1101.h"
 #include "IthoPacket.h"
 #include <Ticker.h>
+#include <string>
+
+#define MAX_NUMBER_OF_REMOTES 10
+
+//struct ithoRFCapab {
+//  std::string name;
+//  int32_t value;
+//};
+//
+//struct ithoRFDevices {
+//  uint32_t deviceId;
+//  std::vector<ithoRFCapab> Capabilities;
+//
+//  ithoRFDevices(): deviceId(0), Capabilities()
+//  {
+//  }
+//
+//};
+
+struct ithoRFDevice {
+  uint32_t deviceId {0};
+//  char name[16];
+  IthoCommand lastCommand {IthoUnknown};
+  int32_t co2 {0xEFFF};
+  int32_t temp {0xEFFF};
+  int32_t hum {0xEFFF};
+  int32_t dewpoint {0xEFFF};
+  int32_t battery {0xEFFF};
+};
+
+struct ithoRFDevices {
+  uint8_t count {0};
+  ithoRFDevice device[MAX_NUMBER_OF_REMOTES];
+};
 
 //pa table settings
 const uint8_t ithoPaTableSend[8] = {0x6F, 0x26, 0x2E, 0x8C, 0x87, 0xCD, 0xC7, 0xC0};
@@ -48,6 +82,8 @@ const uint8_t ithoMessageLeaveCommandBytes[] =    {31, 201, 6, 0, 31, 201};
 //join
 //151,149,65,31,201,24,0,49,224,151,149,65,0,18,160,151,149,65,1,16,224
 
+class IthoPacket;
+
 class IthoCC1101 : protected CC1101
 {
   private:
@@ -66,13 +102,20 @@ class IthoCC1101 : protected CC1101
     uint8_t cc_freq[3]; //FREQ0, FREQ1, FREQ2
     uint32_t f0;
     unsigned long lastValid;
-    uint32_t lastF;    
-    
+    uint32_t lastF;
+
     //CC1101 calibration
     Ticker calibrationTask;
     void cc_cal_task();
     uint32_t cc_cal( uint8_t validMsg, bool timeout );
     void cc_cal_update( uint8_t msgError, bool timeout );
+
+    //Itho remotes
+//    std::vector<ithoRFDevices> IthoRFDevices;
+    bool bindAllowed;
+    bool allowAll;
+    ithoRFDevices ithoRF;
+
     //functions
   public:
     IthoCC1101(uint8_t counter = 0, uint8_t sendTries = 3);   //set initial counter value
@@ -98,6 +141,27 @@ class IthoCC1101 : protected CC1101
       this->outIthoPacket.deviceId[2] = byte2;
     }
 
+    bool addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2);
+    bool addRFDevice(uint32_t ID);
+    bool removeRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2);
+    bool removeRFDevice(uint32_t ID);
+    bool checkRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2);
+    bool checkRFDevice(uint32_t ID);
+    void setBindAllowed(bool input) {
+      bindAllowed = input;
+    }
+    bool getBindAllowed() {
+      return bindAllowed;
+    }
+    void setAllowAll(bool input) {
+      allowAll = input;
+    }
+    bool getAllowAll() {
+      return allowAll;
+    }
+    const struct ithoRFDevices &getRFdevices() const {
+      return ithoRF;
+    }    
     //receive
     uint8_t receivePacket();  //read RX fifo
     bool checkForNewPacket();
@@ -142,9 +206,16 @@ class IthoCC1101 : protected CC1101
       return timeoutCCcal;
     }
     uint32_t getCCcalTimer() {
-      return (millis() - lastValid) > timeoutCCcal?0:timeoutCCcal - (millis() - lastValid);
+      return (millis() - lastValid) > timeoutCCcal ? 0 : timeoutCCcal - (millis() - lastValid);
     }
-
+    void handleBind();
+    void handleLevel();
+    void handleTimer();
+    void handleStatus();
+    void handleRemotestatus();
+    void handleTemphum();
+    void handleCo2();
+    void handleBattery();
 
   protected:
   private:

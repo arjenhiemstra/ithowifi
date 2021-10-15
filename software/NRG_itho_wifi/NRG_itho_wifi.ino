@@ -1,10 +1,8 @@
-#define FWVERSION "2.3-alpha9"
+#define FWVERSION "2.3-beta1"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
-//#define INFORMATIVE_LOGGING
 //#define ENABLE_SERIAL
-#define ENABLE_SHT30_SENSOR_SUPPORT
 
 /*
  * 
@@ -12,8 +10,6 @@
  * Build is done using Arduino IDE
  * 
  * Used libs and versions are mentioned below.
- * 
- * uncomment #define ENABLE_SHT30_SENSOR_SUPPORT to include readout support of the built-in hum and temp sensor of some itho boxes.
  * 
  * For HW rev 1:
  * Select 'LOLIN(WEMOS)D1 R2 & mini' as board
@@ -27,25 +23,20 @@
 
 /*
  Backlog:
- * make hostname configurable
- * make MQTT sensor update time configurable
- * Add DemandFlow and HRU information
- * Add remote buttons to API
- * Decode 31D9 message
- * Improve I2C reliability
- * Restore compatibility with HW rev 1
- * Restructure MQTT topics
- * Include support for RFT-RV and RFT-CO2 remotes
+ * (todo) i2c always slave unless master
+ * (todo) Restructure MQTT topics
+ * (todo) Restore compatibility with HW rev 1
  * 
  */
 
 
 #include "hardware.h"
+#include "dbglog.h"
 #include "statics.h"
 #include "i2c_esp32.h"
 #include "IthoSystem.h"
 #include "notifyClients.h"
-
+#include "IthoCC1101.h"
 #include <ArduinoJson.h>  // https://github.com/bblanchon/ArduinoJson [6.17.3]
 #include <ESPAsyncWebServer.h>  // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
 #include <SPIFFSEditor.h>       // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
@@ -86,10 +77,7 @@
 #include "IthoCC1101.h"   // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "IthoPacket.h"   // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "IthoRemote.h"
-char debugLog[200];
-bool debugLogInput = false;
-uint8_t debugLevel = 0;
-Ticker LogMessage;
+
 #else
 #error "Unsupported hardware"
 #endif
@@ -107,7 +95,6 @@ SpiffsFilePrint filePrint("/logfile", 2, 10000);
 Ticker IthoCMD;
 Ticker DelayedReq;
 Ticker DelayedSave;
-Ticker getSettingsHack;
 Ticker scan;
 #if defined (HW_VERSION_ONE)
 FSInfo fs_info;
@@ -180,6 +167,7 @@ int MQTT_conn_state = -5;
 int MQTT_conn_state_new = 0;
 unsigned long lastMQTTReconnectAttempt = 0;
 unsigned long lastWIFIReconnectAttempt = 0;
+uint8_t debugLevel = 0;
 
 volatile uint16_t nextIthoVal = 0;
 volatile unsigned long nextIthoTimer = 0;
@@ -216,14 +204,11 @@ bool formatFileSystem = false;
 bool runscan = false;
 bool updateIthoMQTT = false;
 bool updateMQTTihtoStatus = false;
-volatile bool updateItho = false;
 volatile bool ithoCheck = false;
 volatile bool saveRemotesflag = false;
 bool SHT3x_original = false;
 bool SHT3x_alternative = false;
 bool rfInitOK = false;
-
-
 
 #if defined (HW_VERSION_ONE)
 void setup() {
@@ -246,9 +231,7 @@ void setup() {
 
   init_vRemote();
   
-#if defined(ENABLE_SHT30_SENSOR_SUPPORT)
   initSensor();
-#endif
 
   mqttInit();
 

@@ -3,6 +3,7 @@
 */
 #define DEBUG 0
 
+//printf("Leading text "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(byte));
 #define BYTE_TO_BINARY_PATTERN "%c,%c,%c,%c,%c,%c,%c,%c,"
 #define BYTE_TO_BINARY(byte)  \
   (byte & 0x80 ? '1' : '0'), \
@@ -15,6 +16,7 @@
   (byte & 0x01 ? '1' : '0')
 
 #include "IthoCC1101.h"
+#include "IthoPacket.h"
 #include <string.h>
 #include <Arduino.h>
 #include <SPI.h>
@@ -55,6 +57,7 @@ enum cc_cal_state {
 
 cc_cal_state calState = CAL_IDLE;
 
+
 // default constructor
 IthoCC1101::IthoCC1101(uint8_t counter, uint8_t sendTries) : CC1101()
 {
@@ -75,7 +78,12 @@ IthoCC1101::IthoCC1101(uint8_t counter, uint8_t sendTries) : CC1101()
   cc_freq[2] = 0x21;
   f0 = 0;
   lastValid = 0;
-  lastF = 0;  
+  lastF = 0;
+
+  bindAllowed = false;
+  allowAll = true;
+
+
 
 } //IthoCC1101
 
@@ -348,41 +356,27 @@ bool IthoCC1101::parseMessageCommand() {
   }
   inIthoPacket.type = inIthoPacket.dataDecoded[0] >> 4;
 
-  inIthoPacket.deviceId0[0] = 0;
-  inIthoPacket.deviceId0[1] = 0;
-  inIthoPacket.deviceId0[2] = 0;
-  inIthoPacket.deviceId1[0] = 0;
-  inIthoPacket.deviceId1[1] = 0;
-  inIthoPacket.deviceId1[2] = 0;
-  inIthoPacket.deviceId2[0] = 0;
-  inIthoPacket.deviceId2[1] = 0;
-  inIthoPacket.deviceId2[2] = 0;
+  inIthoPacket.deviceId0 = 0;
+  inIthoPacket.deviceId1 = 0;
+  inIthoPacket.deviceId2 = 0;
 
   //get DeviceID fields
   uint8_t idfield = (inIthoPacket.dataDecoded[0] >> 2) & 0x03;
 
   if (idfield == 0x00 || idfield == 0x02 || idfield == 0x03) {
-    inIthoPacket.deviceId0[0] = inIthoPacket.dataDecoded[dataPos];
-    inIthoPacket.deviceId0[1] = inIthoPacket.dataDecoded[dataPos + 1];
-    inIthoPacket.deviceId0[2] = inIthoPacket.dataDecoded[dataPos + 2];
+    inIthoPacket.deviceId0 = inIthoPacket.dataDecoded[dataPos] << 16 | inIthoPacket.dataDecoded[dataPos + 1] << 8 | inIthoPacket.dataDecoded[dataPos + 2];
     dataPos += 3;
     if (idfield == 0x00 || idfield == 0x03) {
-      inIthoPacket.deviceId1[0] = inIthoPacket.dataDecoded[dataPos];
-      inIthoPacket.deviceId1[1] = inIthoPacket.dataDecoded[dataPos + 1];
-      inIthoPacket.deviceId1[2] = inIthoPacket.dataDecoded[dataPos + 2];
+      inIthoPacket.deviceId1 = inIthoPacket.dataDecoded[dataPos] << 16 | inIthoPacket.dataDecoded[dataPos + 1] << 8 | inIthoPacket.dataDecoded[dataPos + 2];
       dataPos += 3;
     }
     if (idfield == 0x00 || idfield == 0x02) {
-      inIthoPacket.deviceId2[0] = inIthoPacket.dataDecoded[dataPos];
-      inIthoPacket.deviceId2[1] = inIthoPacket.dataDecoded[dataPos + 1];
-      inIthoPacket.deviceId2[2] = inIthoPacket.dataDecoded[dataPos + 2];
+      inIthoPacket.deviceId2 = inIthoPacket.dataDecoded[dataPos] << 16 | inIthoPacket.dataDecoded[dataPos + 1] << 8 | inIthoPacket.dataDecoded[dataPos + 2];
       dataPos += 3;
     }
   }
   else {
-    inIthoPacket.deviceId2[0] = inIthoPacket.dataDecoded[dataPos];
-    inIthoPacket.deviceId2[1] = inIthoPacket.dataDecoded[dataPos + 1];
-    inIthoPacket.deviceId2[2] = inIthoPacket.dataDecoded[dataPos + 2];
+    inIthoPacket.deviceId2 = inIthoPacket.dataDecoded[dataPos] << 16 | inIthoPacket.dataDecoded[dataPos + 1] << 8 | inIthoPacket.dataDecoded[dataPos + 2];
     dataPos += 3;
   }
 
@@ -405,8 +399,7 @@ bool IthoCC1101::parseMessageCommand() {
   }
 
   //Get the two bytes of the opcode
-  inIthoPacket.opcode[0] = inIthoPacket.dataDecoded[dataPos];
-  inIthoPacket.opcode[1] = inIthoPacket.dataDecoded[dataPos + 1];
+  inIthoPacket.opcode = inIthoPacket.dataDecoded[dataPos] << 8 | inIthoPacket.dataDecoded[dataPos + 1];
   dataPos += 2;
 
   //Payload length
@@ -447,39 +440,36 @@ bool IthoCC1101::parseMessageCommand() {
   //counter1
   inIthoPacket.counter = inIthoPacket.dataDecoded[4];
 
-  bool isHighCommand      = checkIthoCommand(&inIthoPacket, ithoMessageHighCommandBytes);
-  bool isRVHighCommand    = checkIthoCommand(&inIthoPacket, ithoMessageRVHighCommandBytes);
-  bool isMediumCommand    = checkIthoCommand(&inIthoPacket, ithoMessageMediumCommandBytes);
-  bool isRVMediumCommand  = checkIthoCommand(&inIthoPacket, ithoMessageRVMediumCommandBytes);
-  bool isLowCommand       = checkIthoCommand(&inIthoPacket, ithoMessageLowCommandBytes);
-  bool isRVLowCommand     = checkIthoCommand(&inIthoPacket, ithoMessageRVLowCommandBytes);
-  bool isRVAutoCommand    = checkIthoCommand(&inIthoPacket, ithoMessageRVAutoCommandBytes);
-  bool isStandByCommand   = checkIthoCommand(&inIthoPacket, ithoMessageStandByCommandBytes);
-  bool isTimer1Command    = checkIthoCommand(&inIthoPacket, ithoMessageTimer1CommandBytes);
-  bool isTimer2Command    = checkIthoCommand(&inIthoPacket, ithoMessageTimer2CommandBytes);
-  bool isTimer3Command    = checkIthoCommand(&inIthoPacket, ithoMessageTimer3CommandBytes);
-  bool isJoinCommand      = checkIthoCommand(&inIthoPacket, ithoMessageJoinCommandBytes);
-  bool isJoin2Command     = checkIthoCommand(&inIthoPacket, ithoMessageJoin2CommandBytes);
-  bool isRVJoinCommand    = checkIthoCommand(&inIthoPacket, ithoMessageRVJoinCommandBytes);
-  bool isLeaveCommand     = checkIthoCommand(&inIthoPacket, ithoMessageLeaveCommandBytes);
+  //handle command
+  switch (inIthoPacket.opcode) {
+    case IthoPacket::Type::BIND :
+      handleBind();
+      break;
+    case IthoPacket::Type::LEVEL :
+      handleLevel();
+      break;
+    case IthoPacket::Type::SETPOINT :
+      break;
+    case IthoPacket::Type::TIMER :
+      handleTimer();
+      break;
+    case IthoPacket::Type::STATUS :
+      handleStatus();
+      break;
+    case IthoPacket::Type::REMOTESTATUS :
+      handleRemotestatus();
+      break;
+    case IthoPacket::Type::TEMPHUM :
+      handleTemphum();
+      break;
+    case IthoPacket::Type::CO2 :
+      handleCo2();
+      break;
+    case IthoPacket::Type::BATTERY :
+      handleBattery();
+      break;
+  }
 
-  //determine command
-
-  if (isHighCommand)     inIthoPacket.command = IthoHigh;
-  if (isRVHighCommand)   inIthoPacket.command = IthoHigh;
-  if (isMediumCommand)   inIthoPacket.command = IthoMedium;
-  if (isRVMediumCommand) inIthoPacket.command = IthoMedium;
-  if (isLowCommand)      inIthoPacket.command = IthoLow;
-  if (isRVLowCommand)    inIthoPacket.command = IthoLow;
-  if (isRVAutoCommand)   inIthoPacket.command = IthoStandby;
-  if (isStandByCommand)  inIthoPacket.command = IthoStandby;
-  if (isTimer1Command)   inIthoPacket.command = IthoTimer1;
-  if (isTimer2Command)   inIthoPacket.command = IthoTimer2;
-  if (isTimer3Command)   inIthoPacket.command = IthoTimer3;
-  if (isJoinCommand)     inIthoPacket.command = IthoJoin;
-  if (isJoin2Command)    inIthoPacket.command = IthoJoin;
-  if (isRVJoinCommand)   inIthoPacket.command = IthoJoin;
-  if (isLeaveCommand)    inIthoPacket.command = IthoLeave;
 
   return true;
 }
@@ -766,7 +756,6 @@ uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet) {
     packet->data[i] = 0;
   }
 
-  //Serial.println();
   for (uint8_t dataByte = 0; dataByte < itho->length; dataByte++) {
     for (uint8_t dataBit = 0; dataBit < 8; dataBit++) {                                     //process a full dataByte at a time resulting in 20 output bits (2.5 bytes) with the pattern 7x6x5x4x 10 3x2x1x0x 10 7x6x5x4x 10 3x2x1x0x 10 etc
       if (out_bitcounter == 8) {                                                            //check if new byte is needed
@@ -945,9 +934,10 @@ String IthoCC1101::getLastMessagestr(bool ashex) {
 String IthoCC1101::LastMessageDecoded() {
 
   String str;
-  char buf[4];
+
 
   if (inIthoPacket.length > 11) {
+
     str += String(MsgType[inIthoPacket.type]);
 
     if (inIthoPacket.param0 == 0)  {
@@ -958,51 +948,39 @@ String IthoCC1101::LastMessageDecoded() {
       str += String(inIthoPacket.param0);
     }
 
-    if (inIthoPacket.deviceId0[0] == 0)  {
+    if (inIthoPacket.deviceId0 == 0)  {
       str += " --,--,--";
     }
     else {
       str += " ";
-      for (uint8_t i = 0; i < 3; i++) {
-        sprintf(buf, "%02X", inIthoPacket.deviceId0[i]);
-        str += String(buf);
-        if (i < 2) {
-          str += ",";
-        }
-      }
+      char buf[10];
+      snprintf(buf, sizeof(buf), "%02X,%02X,%02X", inIthoPacket.deviceId0 >> 16 & 0xFF, inIthoPacket.deviceId0 >> 8 & 0xFF, inIthoPacket.deviceId0 & 0xFF);
+      str += String(buf);
     }
-    if (inIthoPacket.deviceId1[0] == 0)  {
+    if (inIthoPacket.deviceId1 == 0)  {
       str += " --,--,--";
     }
     else {
       str += " ";
-      for (uint8_t i = 0; i < 3; i++) {
-        sprintf(buf, "%02X", inIthoPacket.deviceId1[i]);
-        str += String(buf);
-        if (i < 2) {
-          str += ",";
-        }
-      }
+      char buf[10];
+      sprintf(buf, "%02X,%02X,%02X", inIthoPacket.deviceId1 >> 16 & 0xFF, inIthoPacket.deviceId1 >> 8 & 0xFF, inIthoPacket.deviceId1 & 0xFF);
+      str += String(buf);
     }
-    if (inIthoPacket.deviceId2[0] == 0)  {
+    if (inIthoPacket.deviceId2 == 0)  {
       str += " --,--,--";
     }
     else {
       str += " ";
-      for (uint8_t i = 0; i < 3; i++) {
-        sprintf(buf, "%02X", inIthoPacket.deviceId2[i]);
-        str += String(buf);
-        if (i < 2) {
-          str += ",";
-        }
-      }
+      char buf[10];
+      sprintf(buf, "%02X,%02X,%02X", inIthoPacket.deviceId2 >> 16 & 0xFF, inIthoPacket.deviceId2 >> 8 & 0xFF, inIthoPacket.deviceId2 & 0xFF);
+      str += String(buf);
     }
+
 
     str += " ";
 
-    sprintf(buf, "%02X", inIthoPacket.opcode[0]);
-    str += String(buf);
-    sprintf(buf, "%02X", inIthoPacket.opcode[1]);
+    char buf[10];
+    sprintf(buf, "%04X", inIthoPacket.opcode);
     str += String(buf);
 
     str += " ";
@@ -1026,6 +1004,7 @@ String IthoCC1101::LastMessageDecoded() {
   }
   else {
     for (uint8_t i = 0; i < inIthoPacket.length; i++) {
+      char buf[10];
       sprintf(buf, "%02X", inIthoPacket.dataDecoded[i]);
       str += String(buf);
       if (i < inIthoPacket.length - 1) str += ",";
@@ -1039,7 +1018,7 @@ String IthoCC1101::LastMessageDecoded() {
 
 void IthoCC1101::setCCcalEnable( uint8_t enable ) {
   if ( calEnabled != enable ) {
-    printf("calEnabled (%d) != enable (%d)\n", calEnabled, enable);
+    //printf("calEnabled (%d) != enable (%d)\n", calEnabled, enable);
     if ( enable ) { // Start calibration process
       // Grab the current frequency in case we abort
       uint8_t startFreq[1 + 3] = { CC1101_FREQ2, 0, 0, 0 };
@@ -1078,7 +1057,7 @@ void IthoCC1101::cc_cal_task() {
   unsigned long now = millis();
 
   unsigned long interval = now - lastValid;
-  printf("cal_task timeout: %lu\n", timeoutCCcal - interval);
+  //printf("cal_task timeout: %lu\n", timeoutCCcal - interval);
 
   if ( interval > timeoutCCcal ) {
     cc_cal_update( 0xFF, true );
@@ -1098,26 +1077,26 @@ uint32_t IthoCC1101::cc_cal( uint8_t validMsg, bool timeout ) {
 
   switch ( calState ) {
     case CAL_IDLE:
-      Serial.println("CAL_IDLE");
+      //Serial.println("CAL_IDLE");
       break;
 
     case CAL_STOP:
     case CAL_ABORT:
-      Serial.println("CAL_STOP");
+      //Serial.println("CAL_STOP");
       calState = CAL_IDLE;
       calEnabled = 0;
       calibrationTask.detach();
       break;
 
     case CAL_START:
-      Serial.println("CAL_START");
+      //Serial.println("CAL_START");
       step = -STEP0;  // Initial search is for low limit
       f = f0;
       calState = CAL_BEGIN;
       break;
 
     case CAL_BEGIN:  // Begin initial search for extreme limit in direction of step
-      Serial.println("CAL_BEGIN");
+      //Serial.println("CAL_BEGIN");
       y = 0;
       x = step;
       f = f0 + x;
@@ -1125,7 +1104,7 @@ uint32_t IthoCC1101::cc_cal( uint8_t validMsg, bool timeout ) {
       break;
 
     case CAL_WAIT:
-      Serial.println("CAL_WAIT");
+      //Serial.println("CAL_WAIT");
       if ( validMsg == 0 ) {
         // Move the initial search window out a step
         x += step;
@@ -1138,7 +1117,7 @@ uint32_t IthoCC1101::cc_cal( uint8_t validMsg, bool timeout ) {
       break;
 
     case CAL_CHOP:
-      Serial.println("CAL_CHOP");
+      //Serial.println("CAL_CHOP");
       // Update appropriate boundary
       if ( validMsg == 0 ) {
         y  = ( x + y ) / 2;
@@ -1174,7 +1153,6 @@ void IthoCC1101::cc_cal_update( uint8_t msgError, bool timeout ) {
     return;
   }
 
-  uint32_t F = lastF;
   unsigned long now = millis();
 
   uint8_t isValid = msgError;
@@ -1183,11 +1161,11 @@ void IthoCC1101::cc_cal_update( uint8_t msgError, bool timeout ) {
   if ( isValid || timeout )
     lastValid = now;
 
-  F = cc_cal( isValid, timeout );
+  uint32_t F = cc_cal( isValid, timeout );
 
   if ( lastF != F ) {
     if (calState == CAL_STOP) {
-      
+
       calFinised = 1;
     }
 
@@ -1219,4 +1197,270 @@ void IthoCC1101::setCCcal(uint32_t F) {
 void IthoCC1101::resetCCcal() {
   //reset to default values
   setCCcal(2188650); //828.299Mhz
+}
+
+
+
+bool IthoCC1101::addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2) {
+  uint32_t tempID = byte0 << 16 | byte1 << 8 | byte2;
+  return addRFDevice(tempID);
+}
+bool IthoCC1101::addRFDevice(uint32_t ID) {
+  if (!bindAllowed) return false;
+  if (checkRFDevice(ID)) return false; //device already registered
+
+  for (auto& item : ithoRF.device) {
+    if (item.deviceId == 0) { //pick the first available slot
+      item.deviceId = ID;
+      ithoRF.count++;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IthoCC1101::removeRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2) {
+  uint32_t tempID = byte0 << 16 | byte1 << 8 | byte2;
+  return addRFDevice(tempID);
+}
+
+bool IthoCC1101::removeRFDevice(uint32_t ID) {
+  if (!bindAllowed) return false;
+  if (!checkRFDevice(ID)) return false; //device not registered
+
+  for (auto& item : ithoRF.device) {
+    if (item.deviceId == ID) {
+      item.deviceId = 0;
+      //      strcpy(item.name, "");
+      item.lastCommand = IthoUnknown;
+      item.co2 = 0xEFFF;
+      item.temp = 0xEFFF;
+      item.hum = 0xEFFF;
+      item.dewpoint = 0xEFFF;
+      item.battery = 0xEFFF;
+      ithoRF.count--;
+      return true;
+    }
+  }
+
+  return false; //not found
+}
+
+bool IthoCC1101::checkRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2) {
+  uint32_t tempID = byte0 << 16 | byte1 << 8 | byte2;
+  return checkRFDevice(tempID);
+}
+
+bool IthoCC1101::checkRFDevice(uint32_t ID) {
+  for (auto& item : ithoRF.device) {
+    if (item.deviceId == ID) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void IthoCC1101::handleBind() {
+  uint32_t tempID = 0;
+  if (inIthoPacket.deviceId0 != 0) tempID = inIthoPacket.deviceId0;
+  else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;
+  else return;
+
+  if ( checkIthoCommand(&inIthoPacket, ithoMessageLeaveCommandBytes) ) {
+    inIthoPacket.command = IthoLeave;
+    if (bindAllowed) {
+      removeRFDevice(tempID);
+    }
+  }
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageJoinCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageJoin2CommandBytes) ) {
+    inIthoPacket.command = IthoJoin;
+    if (bindAllowed) {
+      addRFDevice(tempID);
+    }
+  }
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageRVJoinCommandBytes) ) {
+    inIthoPacket.command = IthoJoin;
+    if (bindAllowed) {
+      addRFDevice(tempID);
+    }
+    //TODO: handle join handshake
+  }
+
+  for (auto& item : ithoRF.device) {
+    if (item.deviceId == tempID) {
+      item.lastCommand = inIthoPacket.command;
+    }
+  }
+  
+}
+
+void IthoCC1101::handleLevel() {
+  uint32_t tempID = 0;
+  if (inIthoPacket.deviceId0 != 0) tempID = inIthoPacket.deviceId0;
+  else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;
+  else return;
+
+  if (!allowAll) {
+    if (!checkRFDevice( tempID )) return;
+  }
+  if ( checkIthoCommand(&inIthoPacket, ithoMessageHighCommandBytes) ) {
+    inIthoPacket.command = IthoHigh;
+  }
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageMediumCommandBytes) ) {
+    inIthoPacket.command = IthoMedium;
+  }
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageLowCommandBytes) ) {
+    inIthoPacket.command = IthoLow;
+  }
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageStandByCommandBytes) ) {
+    inIthoPacket.command = IthoStandby;
+  }
+
+  for (auto& item : ithoRF.device) {
+    if (item.deviceId == tempID) {
+      item.lastCommand = inIthoPacket.command;
+    }
+  }
+  
+}
+
+void IthoCC1101::handleTimer() {
+  uint32_t tempID = 0;
+  if (inIthoPacket.deviceId0 != 0) tempID = inIthoPacket.deviceId0;
+  else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;
+  else return;
+
+  if (!allowAll) {
+    if (!checkRFDevice( tempID )) return;
+  }
+  if ( checkIthoCommand(&inIthoPacket, ithoMessageTimer1CommandBytes) ) {
+    inIthoPacket.command = IthoTimer1;
+  }
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageTimer2CommandBytes) ) {
+    inIthoPacket.command = IthoTimer2;
+  }
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageTimer3CommandBytes) ) {
+    inIthoPacket.command = IthoTimer3;
+  }
+
+  for (auto& item : ithoRF.device) {
+    if (item.deviceId == tempID) {
+      item.lastCommand = inIthoPacket.command;
+    }
+  }
+
+}
+void IthoCC1101::handleStatus() {
+  uint32_t tempID = 0;
+  if (inIthoPacket.deviceId0 != 0) tempID = inIthoPacket.deviceId0;
+  else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;
+  else return;
+
+  if (!checkRFDevice( tempID )) return;
+
+  for (auto& item : ithoRF.device) {
+    if (item.deviceId == tempID) {
+      //store last command
+    }
+  }
+}
+void IthoCC1101::handleRemotestatus() {
+  uint32_t tempID = 0;
+  if (inIthoPacket.deviceId0 != 0) tempID = inIthoPacket.deviceId0;
+  else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;
+  else return;
+
+  if (!checkRFDevice( tempID )) return;
+
+  for (auto& item : ithoRF.device) {
+    if (item.deviceId == tempID) {
+      //store last command
+    }
+  }
+
+}
+void IthoCC1101::handleTemphum() {
+  /*
+     message length: 6
+     message opcode: 0x12A0
+     byte[0]    : unknown
+     byte[1]    : humidity
+     bytes[2:3] : temperature
+     bytes[4:5] : dewpoint temperature
+
+  */
+  if(inIthoPacket.error > 0) return;
+  uint32_t tempID = 0;
+  if (inIthoPacket.deviceId0 != 0) tempID = inIthoPacket.deviceId0;
+  else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;
+  else return;
+
+  if (!checkRFDevice( tempID )) return;
+  int32_t tempHum  = inIthoPacket.dataDecoded[inIthoPacket.payloadPos + 1];
+  int32_t tempTemp = inIthoPacket.dataDecoded[inIthoPacket.payloadPos + 2] << 8 | inIthoPacket.dataDecoded[inIthoPacket.payloadPos + 3];
+  int32_t tempDewp = inIthoPacket.dataDecoded[inIthoPacket.payloadPos + 4] << 8 | inIthoPacket.dataDecoded[inIthoPacket.payloadPos + 5];
+
+  for (auto& item : ithoRF.device) {
+    if (item.deviceId == tempID) {
+      item.temp = tempTemp;
+      item.hum = tempHum;
+      item.dewpoint = tempDewp;
+    }
+  }
+
+}
+
+
+void IthoCC1101::handleCo2() {
+  /*
+     message length: 3
+     message opcode: 0x1298
+     byte[0]    : unknown
+     bytes[1:2] : CO2 level
+
+  */
+  if(inIthoPacket.error > 0) return;
+  uint32_t tempID = 0;
+  if (inIthoPacket.deviceId0 != 0) tempID = inIthoPacket.deviceId0;
+  else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;
+  else return;
+
+  if (!checkRFDevice( tempID )) return;
+  int32_t tempVal = inIthoPacket.dataDecoded[inIthoPacket.payloadPos + 1] << 8 | inIthoPacket.dataDecoded[inIthoPacket.payloadPos + 2];
+
+  for (auto& item : ithoRF.device) {
+    if (item.deviceId == tempID) {
+      item.co2 = tempVal;
+    }
+  }
+
+}
+void IthoCC1101::handleBattery() {
+  /*
+     message length: 3
+     message opcode: 0x1060
+     byte[0]  : zone_id
+     byte[1]  : battery level percentage (0xFF = no percentage present)
+     byte[2]  : battery state (0x01 OK, 0x00 LOW)
+
+  */
+  if(inIthoPacket.error > 0) return;
+  uint32_t tempID = 0;
+  if (inIthoPacket.deviceId0 != 0) tempID = inIthoPacket.deviceId0;
+  else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;
+  else return;
+
+  if (!checkRFDevice( tempID )) return;
+  int32_t tempVal = 10;
+  if (inIthoPacket.dataDecoded[inIthoPacket.payloadPos + 1] == 0xFF) {
+    if (inIthoPacket.dataDecoded[inIthoPacket.payloadPos + 2] == 0x01) tempVal = 100;
+  }
+  else {
+    tempVal = (int32_t)inIthoPacket.dataDecoded[inIthoPacket.payloadPos + 1] / 2;
+  }
+  for (auto& item : ithoRF.device) {
+    if (item.deviceId == tempID) {
+      item.battery = tempVal;
+    }
+  }
 }

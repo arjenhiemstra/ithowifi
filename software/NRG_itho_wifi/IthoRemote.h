@@ -1,7 +1,7 @@
 #pragma once
 
 #define MAX_NUMBER_OF_REMOTES 10
-#define REMOTE_CONFIG_VERSION "001"
+#define REMOTE_CONFIG_VERSION "002"
 
 #include <stdio.h>
 #include <string.h>
@@ -15,14 +15,7 @@ class IthoRemote {
     struct Remote {
       uint8_t ID[3] { 0, 0, 0 };
       char name[32];
-      uint8_t button1{ IthoLow };
-      uint8_t button2{ IthoMedium };
-      uint8_t button3{ IthoHigh };
-      uint8_t button4{ IthoTimer1 };
-      uint8_t button5{ IthoTimer2 };
-      uint8_t button6{ IthoTimer3 };
-      uint8_t button7{ IthoJoin };
-      uint8_t button8{ IthoLeave };      
+      StaticJsonDocument<128> capabilities;
       void set(JsonObjectConst);
       void get(JsonObject, int index) const;
     };
@@ -50,15 +43,20 @@ class IthoRemote {
     };
     int registerNewRemote(int* id);
     int removeRemote(int* id);
+    int removeRemote(uint8_t index);
+    void addCapabilities(uint8_t remoteIndex, const char* name, int32_t value);
     void updateRemoteName(uint8_t index, char* remoteName);
+    int remoteIndex(int32_t id);
     int remoteIndex(int* id);
     int * getRemoteIDbyIndex(int index);
     char * getRemoteNamebyIndex(int index);
+    char * lastRemoteName;
     bool checkID(int* id);
     bool configLoaded;
     char config_struct_version[4];
     bool set(JsonObjectConst);
     void get(JsonObject) const;
+    void getCapabilities(JsonObject obj) const;
   protected:
 
 

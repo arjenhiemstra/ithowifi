@@ -35,7 +35,7 @@ class IthoQueue {
     };
     mutable bool ithoSpeedUpdated { true };
     void set_itho_fallback_speed(uint16_t speedVal) { fallBackSpeed = speedVal;};
-    void get(JsonObject) const;
+    void get(JsonObject);
     IthoQueue();
     ~IthoQueue();
 
