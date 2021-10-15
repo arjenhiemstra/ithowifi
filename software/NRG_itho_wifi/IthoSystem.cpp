@@ -4,6 +4,7 @@
 #include "hardware.h"
 #include "i2c_esp32.h"
 #include "notifyClients.h"
+#include "IthoSystemConsts.h"
 
 size_t itho2401len = 0;
 
@@ -14,12 +15,23 @@ uint8_t id0 = 0;
 uint8_t id1 = 0;
 uint8_t id2 = 0;
 int8_t swap = 0;
-struct ihtoDeviceType* ithoSettingsptr = getSettingsPtr(ithoDeviceID, itho_fwversion);
+struct ihtoDeviceType* ithoDeviceptr = getDevicePtr(ithoDeviceID);
 int ithoSettingsLength = getSettingsLength(ithoDeviceID, itho_fwversion);
 std::vector<ithoDeviceStatus> ithoStatus;
 std::vector<ithoDeviceMeasurements> ithoMeasurements;
+std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
+struct lastCommand lastCmd;
+
+const std::map<cmdOrigin, const char*> cmdOriginMap = {
+  {cmdOrigin::HTMLAPI, "HTML API"},
+  {cmdOrigin::MQTTAPI, "MQTT API"},
+  {cmdOrigin::REMOTE, "remote"},
+  {cmdOrigin::WEB, "web interface"},
+  {cmdOrigin::UNKNOWN, "unknown"}
+};
 
 bool sendI2CButton = false;
+bool sendI2CTimer = false;
 bool sendI2CJoin = false;
 bool sendI2CLeave = false;
 bool sendI2CDevicetype = false;
@@ -27,424 +39,59 @@ bool sendI2CStatusFormat = false;
 bool sendI2CStatus = false;
 bool send31DA = false;
 bool send31D9 = false;
-bool send2400 = false;
-bool send2401 = false;
 bool get2410 = false;
 bool set2410 = false;
 bool buttonResult = false;
 uint8_t buttonValue = 0;
+uint8_t timerValue = 0;
 uint8_t index2410 = 0;
 int32_t value2410 = 0;
 int32_t * resultPtr2410 = nullptr;
 bool i2c_result_updateweb = false;
 
 bool itho_internal_hum_temp = false;
-bool temp_hum_updated = false;
 float ithoHum = 0;
 float ithoTemp = 0;
 
-const uint8_t itho_14v14[]   {0, 1, 2, 3, 4, 5, 6, 7, 102, 103, 255};
-const uint8_t itho_14v5[]     {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 26, 48, 49, 50, 51, 96, 52, 53, 97, 98, 99, 100, 101, 102, 103, 255};
-const uint8_t itho_14v6[]     {0, 1, 2, 3, 4, 5, 6, 7, 26, 48, 49, 50, 51, 96, 52, 53, 97, 98, 99, 100, 101, 102, 103, 255};
-
-
-const uint8_t itho_1Bv6[]     {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 26, 48, 49, 50, 51, 96, 52, 53, 97, 98, 99, 100, 101, 102, 103, 255};
-const uint8_t itho_1Bv7[]     {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 26, 48, 49, 50, 51, 96, 52, 53, 97, 98, 99, 55, 56, 57, 58, 59, 61, 62, 63, 64, 65, 66, 255};
-const uint8_t itho_1Bv8[]     {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 104, 17, 18, 19, 26, 48, 49, 50, 51, 96, 52, 53, 97, 98, 99, 55, 56, 57, 58, 59, 61, 62, 63, 64, 65, 66, 255};
-const uint8_t itho_1Bv9[]     {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 104, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 48, 49, 50, 51, 96, 52, 53, 97, 98, 99, 55, 56, 57, 58, 59, 61, 62, 63, 64, 65, 66, 255};
-const uint8_t itho_1Bv10[]    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 104, 17, 18, 19, 20, 21, 22, 23, 24, 25, 48, 49, 50, 51, 96, 52, 53, 97, 98, 99, 55, 56, 57, 58, 59, 61, 62, 63, 64, 105, 65, 66, 255};
-const uint8_t itho_1Bv11[]    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 104, 17, 18, 19, 20, 21, 22, 23, 24, 25, 105, 48, 49, 50, 51, 96, 52, 53, 97, 98, 99, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 255};
-const uint8_t itho_1Bv17[]    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 106, 30, 31, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 255};
-const uint8_t itho_1Bv1820[]  {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 255};
-const uint8_t itho_1Bv21[]    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 255};
-const uint8_t itho_1Bv22[]    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 65, 66, 255};
-const uint8_t itho_1Bv24[]    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 255};
-const uint8_t itho_1Bv25[]    {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 255};
-const uint8_t itho_1Bv2627[]  {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 255};
-
-
-const uint8_t *ihto14Versions[] = { nullptr, itho_14v14, itho_14v14, itho_14v14, itho_14v14, itho_14v5, itho_14v6 };
-const uint8_t *ihto1BVersions[] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_1Bv6, itho_1Bv7, itho_1Bv8, itho_1Bv9, itho_1Bv10, itho_1Bv11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_1Bv17, itho_1Bv1820, nullptr, itho_1Bv1820, itho_1Bv21, itho_1Bv22, nullptr, itho_1Bv24, itho_1Bv25, itho_1Bv2627, itho_1Bv2627 };
-
-const uint8_t itho_14sv14[]    {0, 1, 2, 3, 4, 5, 6, 255};
-const uint8_t itho_1Bsv57[]    {0, 1, 2, 3, 4, 5, 6, 8, 12, 13, 28, 14, 15, 255};
-const uint8_t itho_1Bsv8[]    {0, 1, 2, 3, 4, 5, 6, 7, 27, 8, 12, 13, 28, 14, 15, 255};
-const uint8_t itho_1Bsv911[]  {0, 1, 2, 3, 4, 5, 6, 7, 27, 8, 12, 13, 28, 14, 15, 29, 9, 29, 30, 31, 32, 255};
-const uint8_t itho_1Bsv17[]   {0, 1, 2, 3, 4, 5, 6, 7, 27, 8, 9, 12, 13, 28, 14, 15, 255};
-const uint8_t itho_1Bsv18[]   {0, 1, 2, 3, 4, 5, 6, 7, 27, 8, 9, 12, 13, 14, 15, 255};
-const uint8_t itho_1Bsv2021[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 255};
-const uint8_t itho_1Bsv22[]   {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 255};
-const uint8_t itho_1Bsv2427[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 255};
-
-const uint8_t *ihto14Status[]   = { nullptr, itho_14sv14, itho_14sv14, itho_14sv14, itho_14sv14, itho_1Bsv57, itho_1Bsv57, itho_1Bsv57 };
-const uint8_t *ihto1BStatus[]   = { nullptr, nullptr, nullptr, nullptr, nullptr, itho_1Bsv57, itho_1Bsv57, itho_1Bsv57, itho_1Bsv8, itho_1Bsv911, itho_1Bsv911, itho_1Bsv911, nullptr, nullptr, nullptr, nullptr, nullptr, itho_1Bsv17, itho_1Bsv18, nullptr, itho_1Bsv2021, itho_1Bsv2021, itho_1Bsv22, nullptr, itho_1Bsv2427, itho_1Bsv2427, itho_1Bsv2427, itho_1Bsv2427 };
+Ticker getSettingsHack;
+SemaphoreHandle_t mutexI2Ctask;
 
 struct ihtoDeviceType {
   uint8_t ID;
   const char *name;
-  const uint8_t **versions;
+  const uint8_t **settingsMapping;
   uint8_t versionsLen;
-  const uint8_t **statuslbl;
+  const __FlashStringHelper **settingsDescriptions;
+  const uint8_t **statusLabelMapping;
+  const __FlashStringHelper **settingsStatusLabels;
+
 };
 
 
 struct ihtoDeviceType ithoDevices[] {
-  { 0x01, "Air curtain",        nullptr, 0 , nullptr },
-  { 0x03, "HRU ECO-fan",        nullptr, 0 , nullptr },
-  { 0x08, "LoadBoiler",         nullptr, 0 , nullptr },
-  { 0x0A, "GGBB",               nullptr, 0 , nullptr },
-  { 0x0B, "DemandFlow",         nullptr, 0 , nullptr },
-  { 0x0C, "CO2 relay",          nullptr, 0 , nullptr },
-  { 0x0D, "Heatpump",           nullptr, 0 , nullptr },
-  { 0x0E, "OLB Single",         nullptr, 0 , nullptr },
-  { 0x0F, "AutoTemp",           nullptr, 0 , nullptr },
-  { 0x10, "OLB Double",         nullptr, 0 , nullptr },
-  { 0x11, "RF+",                nullptr, 0 , nullptr },
-  { 0x14, "CVE",                ihto14Versions, sizeof(ihto14Versions) / sizeof(ihto14Versions[0]) , ihto14Status },
-  { 0x15, "Extended",           nullptr, 0 , nullptr },
-  { 0x16, "Extended Plus",      nullptr, 0 , nullptr },
-  { 0x1A, "AreaFlow",           nullptr, 0 , nullptr },
-  { 0x1B, "CVE-Silent",         ihto1BVersions, sizeof(ihto1BVersions) / sizeof(ihto1BVersions[0]) , ihto1BStatus },
-  { 0x1C, "CVE-SilentExt",      nullptr, 0 , nullptr },
-  { 0x1D, "CVE-SilentExtPlus",  nullptr, 0 , nullptr },
-  { 0x20, "RF_CO2",             nullptr, 0 , nullptr },
-  { 0x2B, "HRU 350",            nullptr, 0 , nullptr }
+  { 0x01, "Air curtain",        nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x03, "HRU ECO-fan",        ithoHRUecoFanSettingsMap, sizeof(ithoHRUecoFanSettingsMap) / sizeof(ithoHRUecoFanSettingsMap[0]), ihtoHRUecoFanSettingsDescriptions, ithoHRUecoFanStatusMap, ihtoHRUecoFanStatusLabels },
+  { 0x08, "LoadBoiler",         nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x0A, "GGBB",               nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x0B, "DemandFlow",         ithoDemandFlowSettingsMap, sizeof(ithoDemandFlowSettingsMap) / sizeof(ithoDemandFlowSettingsMap[0]), ihtoDemandFlowSettingsDescriptions, ithoDemandFlowStatusMap, ihtoDemandFlowStatusLabels  },
+  { 0x0C, "CO2 relay",          nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x0D, "Heatpump",           nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x0E, "OLB Single",         nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x0F, "AutoTemp",           nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x10, "OLB Double",         nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x11, "RF+",                nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x14, "CVE",                itho14SettingsMap, sizeof(itho14SettingsMap) / sizeof(itho14SettingsMap[0]), ihtoCVESettingsDescriptions, itho14StatusMap, ihtoCVEStatusLabels  },
+  { 0x15, "Extended",           nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x16, "Extended Plus",      nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x1A, "AreaFlow",           nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x1B, "CVE-Silent",         itho1BSettingsMap, sizeof(itho1BSettingsMap) / sizeof(itho1BSettingsMap[0]), ihtoCVESettingsDescriptions, itho1BStatusMap, ihtoCVEStatusLabels  },
+  { 0x1C, "CVE-SilentExt",      nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x1D, "CVE-SilentExtPlus",  nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x20, "RF_CO2",             nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x2B, "HRU 350",            ithoHRU350SettingsMap, sizeof(ithoHRU350SettingsMap) / sizeof(ithoHRU350SettingsMap[0]), ihtoHRU350SettingsDescriptions, ithoHRU350StatusMap, ihtoHRU350StatusLabels  }
 };
 
 
-//struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
-//struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices)/sizeof(ithoDevices[0]);
-//while ( ithoDevicesptr < ithoDevicesendPtr ){
-//   // do your thing with the ptr
-//   ithoDevicesptr++;
-//}
-
-const __FlashStringHelper *ihtoCVESettingsLabels[] =
-{
-  F("oemNumber"),
-  F("Unit version"),
-  F("minAdjustMinimumSpeed"),
-  F("maxAdjustMinimumSpeed"),
-  F("minAdjustMaximumSpeed"),
-  F("maxAdjustMaximumSpeed"),
-  F("RFEnabled"),
-  F("I2cIdle"),
-  F("Constant_Ca2"),
-  F("Constant_Ca1"),
-  F("Constant_Ca0"),
-  F("Constant_Cb2"),
-  F("Constant_Cb1"),
-  F("Constant_Cb0"),
-  F("Constant_Cc2"),
-  F("Constant_Cc1"),
-  F("Constant_Cc0"),
-  F("Away wait time"),
-  F("Max delayed wait time"),
-  F("Delayed away level"),
-  F("PIR_Level1"),
-  F("PIR_Level2"),
-  F("PIR_Level1_waittime"),
-  F("PIR_Level2_waittime"),
-  F("PIR_RunOn_Level1"),
-  F("PIR_RunOn_Level2"),
-  F("CO2MinVentilation"),
-  F("maxTimeHighSpeed"),
-  F("maxTimeOtherSpeeds"),
-  F("fallbackPreviousSpeed"),
-  F("poorCo2Quality"),
-  F("goodCo2Quality"),
-  F("Amount of floors"),
-  F("Inhabitants"),
-  F("nightOnePersonOneFloorOptima1"),
-  F("nightTwoPersonsOneFloorOptima1"),
-  F("nightMultiPersonsOneFloorOptima1"),
-  F("nightOnePersonMultiFloorOptima1"),
-  F("nightTwoPersonsMultiFloorOptima1"),
-  F("nightMultiPersonsMultiFloorOptima1"),
-  F("nightOnePersonOneFloorOptima2"),
-  F("nightTwoPersonsOneFloorOptima2"),
-  F("nightMultiPersonsOneFloorOptima2"),
-  F("nightOnePersonMultiFloorOptima2"),
-  F("nightTwoPersonsMultiFloorOptima2"),
-  F("nightMultiPersonsMultiFloorOptima2"),
-  F("autoVentilationOneFloor"),
-  F("autoVentilationMultiFloor"),
-  F("CO2personsAbsent"),
-  F("CO2personsPresent"),
-  F("MinFanSetpValveLowCO2"),
-  F("MinFanSetpValveHighCO2"),
-  F("CO2Fan100ValveLow"),
-  F("CO2Fan100ValveHigh"),
-  F("CO2MaxFanSlope"),
-  F("CO2PeriodTime"),
-  F("CO2RiseLevel"),
-  F("CO2DropLevel"),
-  F("DeltaNormalAdjustment"),
-  F("BlockingTimeFan"),
-  F("BlockingTimeLimiter"),
-  F("MinFanSpeedStopBlocking"),
-  F("MaxFanSlopeBlocking"),
-  F("CO2RiseStartBlocking"),
-  F("MaxFanSpeedBlocking"),
-  F("ManualControl"),
-  F("ManualFanSpeed"),
-  F("dewPointStartHeater"),
-  F("dewPointStopHeater"),
-  F("minHeaterOnTime"),
-  F("minHeaterOffTime"),
-  F("RHsensorDetected"),
-  F("RHventHighDemand"),
-  F("RHminOnTime"),
-  F("OverruleInternCtrl"),
-  F("SampleTimeInternCtrl"),
-  F("RVOffInternCtrl"),
-  F("XOnInternCtrl"),
-  F("XOffInternCtrl"),
-  F("MaxTimeOnInternCtrl"),
-  F("UseWiredRh"),
-  F("RhSensorInterval"),
-  F("StoreInterval"),
-  F("RHventHighDemand"),
-  F("RHmin"),
-  F("RHmax"),
-  F("RHstart"),
-  F("RHstop"),
-  F("RHIncrease"),
-  F("RHminOnTime"),
-  F("RHdiff"),
-  F("RHconstantDiff"),
-  F("RHconstantTime"),
-  F("RHlow"),
-  F("RHselectOperationMode"),
-  F("RHsensitivityIncrease"),
-  F("CO2MinFanSetpValveHigh_PIR"),
-  F("CO2fan100valveHighPIR"),
-  F("CO2MaxFanSetpChMin"),
-  F("PersonPresentTime"),
-  F("Sample cyclustijd interval"),
-  F("Stabilize periode"),
-  F("ManualControl"),
-  F("ManualFanSpeed"),
-  F("Away speed"),
-  F("MinVentilationCO2Baseflow"),
-  F("heatrae")
-};
-
-const __FlashStringHelper *ihtoCVESettingsDescriptions[] =
-{
-  F("OEM number"),
-  F("Print version (1 is high performance)"),
-  F("Min setting of potentiometer low"),
-  F("Max setting of potentiometer low"),
-  F("Min setting of potentiometer high"),
-  F("Max setting of potentiometer high"),
-  F("RF enable"),
-  F("I2C mode"),
-  F("Fan constant Ca2"),
-  F("Fan constant Ca1"),
-  F("Fan constant Ca0"),
-  F("Fan constant Cb2"),
-  F("Fan constant Cb1"),
-  F("Fan constant Cb0"),
-  F("Fan constant cc2"),
-  F("Fan constant cc1"),
-  F("Fan constant Cc0"),
-  F("Block time auto. reset absence"),
-  F("Max. time deferred absence"),
-  F("Min. time deferred absence"),
-  F("PIR level 1"),
-  F("PIR level 2"),
-  F("PIR level 1 waiting time"),
-  F("PIR level 2 waiting time"),
-  F("PIR level 1 running time"),
-  F("PIR level 2 running time"),
-  F("Minimum ventilation level in Auto without CO2 sensor"),
-  F("Max time in high"),
-  F("Max time in low or middle"),
-  F("Mode after maximum time high"),
-  F("CO2 value air quality moderate, Display in spIDer"),
-  F("CO2 value air quality good, Display in spIDer"),
-  F("Type of dwelling, 1 = apartment; 2 = family home"),
-  F("Number of occupants, 3 and more occupants = 3"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto Night mode"),
-  F("Minimum ventilation speed during Auto mode"),
-  F("Minimum ventilation speed during Auto mode"),
-  F("CO2 value absent"),
-  F("CO2 value present"),
-  F("Min valve speed low AreaFlow"),
-  F("Min. valve speed high AreaFlow"),
-  F("CO2 value vent. 100% valve low"),
-  F("CO2 value Vent. 100% valve high"),
-  F("Max speed change CO2 control"),
-  F("CO2 period time"),
-  F("CO2 change rising"),
-  F("CO2 change decreasing CO2"),
-  F("CO2 change constant CO2"),
-  F("Blocking time fan speed"),
-  F("Blocking time maximum duration"),
-  F("Stop blocking time at low demand"),
-  F("Max. speed change CO2 reg. Blocking time"),
-  F("CO2 increase start of blocking time"),
-  F("Max speed up during disabling time"),
-  F("Manual operation"),
-  F("Manual operation speed"),
-  F("Dew point at which RV-IC heater should start"),
-  F("Dew point at which the RV-IC heater should stop"),
-  F("Minimum time the RV-IC heater is on"),
-  F("Maximum time to run the RV-IC heater"),
-  F("RH sensor found/available"),
-  F("Fan level to which it will go when the RH control switches on"),
-  F("Minimum time for fan to go high in RH control"),
-  F("Remote RH sensor overrides internal or not"),
-  F("Sampling time of the RH and temperature measurement"),
-  F("Hysteresis RH before going back to normal operation"),
-  F("Rise in absolute humidity (X mg/kg) at which it goes high"),
-  F("Hysteresis X before returning to normal operation"),
-  F("Maximum time to remain in high by RH control"),
-  F("0 = ventilation request wired sensor is ignored, 1 = ventilation request wired sensor is honored"),
-  F("Measurement interval wired RH sensor"),
-  F("Measurement storage interval to determine delta’s"),
-  F("Maximum ventilation demand"),
-  F("Minimum level to start wet room control"),
-  F("Maximum level wet room control"),
-  F("Always start ventilation above this value"),
-  F("Stop ventilation below this value"),
-  F("Detection level fast increase of humidity"),
-  F("Minimum time demand is send"),
-  F("Absolute RH percentage"),
-  F("RH assumed constant when variation is less than this value"),
-  F("Time to detect constant RH"),
-  F("Stop ventilation below this value"),
-  F("Configuration setting 1: 0 = no control performed, 1 = bathroom, 2 = wet room."),
-  F("User setting 1: 1 = interval => 1 * number, 2 = 2 * etc."),
-  F("Min. Fan setpoint at valve high and PIR"),
-  F("CO2 concentration at 100% valve high and PIR"),
-  F("Max speed change per minute"),
-  F("Expiration time PIR present"),
-  F("Period time"),
-  F("Stabilization period"),
-  F("Manual control"),
-  F("Speed with manual operation"),
-  F("Speed when absence"),
-  F("Min. Fan setpoint BaseFlow available"),
-  F("heatrae")
-};
-
-const __FlashStringHelper *ihtoCVEStatusLabels[] =
-{
-  F("VentLevel"),
-  F("FanSetp"),
-  F("FanSpeed"),
-  F("Error"),
-  F("Selection"),
-  F("StartUpCounter"),
-  F("OperatingHours"),
-  F("AwayTimer"),
-  F("CO2"),
-  F("hRFspeedLevel"),
-  F("RelativeHumidity"),
-  F("Temperature"),
-  F("CO2speed"),
-  F("klep"),
-  F("zone"),
-  F("sampletim"),
-  F("sensorfault"),
-  F("humidity"),
-  F("temperature"),
-  F("selectop"),
-  F("enhbath"),
-  F("counterstop"),
-  F("countermintime"),
-  F("ventreq"),
-  F("storeactual"),
-  F("storeprevfirst"),
-  F("storeprevsec"),
-  F("DelayAwayTimer"),
-  F("perstim"),
-  F("hRFspeedAbs"),
-  F("nxtHrfSpeedLevel"),
-  F("HspeedTimer"),
-  F("NewLevelTime"),
-  F("co2tim")
-};
-
-static const std::map<uint8_t, std::string> fanInfo = {
-  {0x00, "off"},
-  {0X01, "low"},
-  {0X02, "medium"},
-  {0X03, "high"},
-  {0X04, "speed 4"},
-  {0X05, "speed 5"},
-  {0X06, "speed 6"},
-  {0X07, "speed 7"},
-  {0X08, "speed 8"},
-  {0X09, "speed 9"},
-  {0X0A, "speed 10"},
-  {0X0B, "timer 1"},
-  {0X0C, "timer 2"},
-  {0X0D, "timer 3"},
-  {0X0E, "timer 4"},
-  {0X0F, "timer 5"},
-  {0X10, "timer 6"},
-  {0X11, "timer 7"},
-  {0X12, "timer 8"},
-  {0X13, "timer 9"},
-  {0X14, "timer 10"},
-  {0X15, "away"},
-  {0X16, "absolute minimum"},
-  {0X17, "absolute maximum"},
-  {0x18, "auto"},
-  {0x18, "night"}
-};
-
-const std::map<uint8_t, std::string> fanSensorErrors = {
-  {0xEF, "not available"},
-  {0XF0, "shorted sensor"},
-  {0XF1, "open sensor"},
-  {0XF2, "not available error"},
-  {0XF3, "out of range high"},
-  {0XF4, "out of range low"},
-  {0XF5, "not reliable"},
-  {0XF6, "reserved error"},
-  {0XF7, "reserved error"},
-  {0XF8, "reserved error"},
-  {0XF9, "reserved error"},
-  {0XFA, "reserved error"},
-  {0XFB, "reserved error"},
-  {0XFC, "reserved error"},
-  {0XFD, "reserved error"},
-  {0XFE, "reserved error"},
-  {0XFF, "non specified error"}
-};
-
-const std::map<uint8_t, std::string> fanSensorErrors2 = {
-  {0x7F, "not available"},
-  {0X80, "shorted sensor"},
-  {0X81, "open sensor"},
-  {0X82, "not available error"},
-  {0X83, "out of range high"},
-  {0X84, "out of range low"},
-  {0X85, "not reliable"}
-};
-
-const std::map<uint8_t, std::string> fanHeatErrors = {
-  {0xEF, "not available"},
-  {0XF0, "open actuato"},
-  {0XF1, "shorted actuato"},
-  {0XF2, "not available error"},
-  {0XFF, "non specified error"}
-};
 
 char* getIthoType(const uint8_t deviceID) {
   static char ithoDeviceType[32] = "Unkown device type";
@@ -466,15 +113,18 @@ int getSettingsLength(const uint8_t deviceID, const uint8_t version) {
   struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
   while ( ithoDevicesptr < ithoDevicesendPtr ) {
     if (ithoDevicesptr->ID == deviceID) {
-      if (ithoDevicesptr->versions == nullptr) {
+      if (ithoDevicesptr->settingsMapping == nullptr) {
         return -2; //Settings not available for this device
       }
-      if (*(ithoDevicesptr->versions + version) == nullptr) {
+      if (version > ithoDevicesptr->versionsLen) {
+        return -3; //Settings not available for this version
+      }
+      if (*(ithoDevicesptr->settingsMapping + version) == nullptr) {
         return -3; //Settings not available for this version
       }
 
       for (int i = 0; i < 255; i++) {
-        if ((int) * (*(ithoDevicesptr->versions + version) + i) == 255) {
+        if ((int) * (*(ithoDevicesptr->settingsMapping + version) + i) == 255) {
           //end of array
           return i;
         }
@@ -485,30 +135,37 @@ int getSettingsLength(const uint8_t deviceID, const uint8_t version) {
   return -1;
 }
 
-void getSetting(const uint8_t i, const bool updateState, const bool loop) {
-  getSetting(i, updateState, loop, ithoSettingsptr, itho_fwversion);
+void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop) {
+  getSetting(i, updateState, updateweb, loop, ithoDeviceptr, ithoDeviceID, itho_fwversion);
 }
 
-void getSetting(const uint8_t i, const bool updateState, const bool loop, const struct ihtoDeviceType* getSettingsPtr, const uint8_t version) {
-  if (getSettingsPtr == nullptr) {
+void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop, const struct ihtoDeviceType* settingsPtr, const uint8_t deviceID, const uint8_t version) {
+
+  int settingsLen = getSettingsLength(deviceID, version);
+  if (settingsLen < 0) {
+    logMessagejson(F("Settings not available for this device or its firmware version"), WEBINTERFACE);
     return;
   }
 
-  char fStringBuf[128];
-  strcpy_P(fStringBuf, (PGM_P)ihtoCVESettingsLabels[(int) * (*(getSettingsPtr->versions + version) + i)]);
-
   char fDescBuf[128];
-  strcpy_P(fDescBuf, (PGM_P)ihtoCVESettingsDescriptions[(int) * (*(getSettingsPtr->versions + version) + i)]);
+  strcpy_P( fDescBuf, (PGM_P)(settingsPtr->settingsDescriptions[(int) * (*(settingsPtr->settingsMapping + version) + i)]) );
 
   StaticJsonDocument<512> doc;
   JsonObject root = doc.to<JsonObject>();
 
 
   root["Index"] = i;
-  //root["Setting"] = fStringBuf;
   root["Description"] = fDescBuf;
 
-  if (updateState) {
+  if (!updateState && !updateweb) {
+    root["update"] = false;
+    root["loop"] = loop;
+    root["Current"] = nullptr;
+    root["Minimum"] = nullptr;
+    root["Maximum"] = nullptr;
+    logMessagejson(root, ITHOSETTINGS);
+  }
+  else if (updateState && !updateweb) {
     index2410 = i;
     i2c_result_updateweb = false;
     resultPtr2410 = nullptr;
@@ -530,42 +187,40 @@ void getSetting(const uint8_t i, const bool updateState, const bool loop, const 
       root["Minimum"] = nullptr;
       root["Maximum"] = nullptr;
     }
-
-
+    logMessagejson(root, ITHOSETTINGS);
   }
   else {
-    root["update"] = false;
-    root["loop"] = loop;
-    root["Current"] = nullptr;
-    root["Minimum"] = nullptr;
-    root["Maximum"] = nullptr;
+    index2410 = i;
+    i2c_result_updateweb = updateweb;
+    resultPtr2410 = nullptr;
+    get2410 = true;
   }
 
-
-  jsonLogMessage(root, ITHOSETTINGS);
 }
 
-void getSatusLabel(const uint8_t i, const struct ihtoDeviceType* getStatusPtr, const uint8_t version, char* fStringBuf) {
+void getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPtr, const uint8_t version, char* fStringBuf) {
 
-  if (getStatusPtr == nullptr) {
+  if (statusPtr == nullptr) {
+    strcpy(fStringBuf, "nullptr error");
     return;
   }
-  strcpy_P(fStringBuf, (PGM_P)ihtoCVEStatusLabels[(int) * (*(getStatusPtr->statuslbl + version) + i)]);
+  strcpy_P(fStringBuf, (PGM_P)(statusPtr->settingsStatusLabels[(int) * (*(statusPtr->statusLabelMapping + version) + i)]) );
 
 }
 
-void updateSetting(const uint8_t i, const int32_t value) {
-  index2410 = i;
-  value2410 = value;
-  i2c_result_updateweb = false;
-  set2410 = true;
-}
-
-struct ihtoDeviceType* getSettingsPtr(uint8_t deviceID, uint8_t version) {
-  int settingsLen = getSettingsLength(deviceID, version);
-  if (settingsLen < 0) {
-    return nullptr;
+void updateSetting(const uint8_t i, const int32_t value, bool webupdate) {
+#if defined (HW_VERSION_TWO)
+  if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
+#endif
+    i2c_result_updateweb = webupdate;
+    index2410 = i;
+    value2410 = value;
+    set2410 = true;
   }
+}
+
+struct ihtoDeviceType* getDevicePtr(uint8_t deviceID) {
+
   struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
   struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
   while ( ithoDevicesptr < ithoDevicesendPtr ) {
@@ -609,7 +264,7 @@ void sendI2CPWMinit() {
 
 uint8_t cmdCounter = 0;
 
-void sendButton(uint8_t number, bool i2c_result_updateweb) {
+void sendButton(uint8_t number, bool & updateweb) {
 
   uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x11, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x22, 0xF1, 0x03, 0x00, 0x01, 0x04, 0x00, 0x00, 0xFF };
 
@@ -651,7 +306,39 @@ void sendButton(uint8_t number, bool i2c_result_updateweb) {
 
 }
 
-void sendJoinI2C(bool i2c_result_updateweb) {
+void sendTimer(uint8_t timer, bool & updateweb) {
+
+  uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x11, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x22, 0xF3, 0x03, 0x00, 0x00, 0xFF, 0x00, 0x00, 0xFF };
+
+  command[11] = id0;
+  command[12] = id1;
+  command[13] = id2;
+
+  command[14] = cmdCounter;
+  cmdCounter++;
+
+  command[20] = timer;
+
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+#if defined (HW_VERSION_ONE)
+  Wire.beginTransmission(byte(0x41));
+  for (uint8_t i = 1; i < sizeof(command); i++) {
+    Wire.write(command[i]);
+  }
+  Wire.endTransmission(true);
+#elif defined (HW_VERSION_TWO)
+  i2c_sendBytes(command, sizeof(command));
+#endif
+
+}
+
+void sendJoinI2C(bool & updateweb) {
 
   uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x1F, 0xC9, 0x0C, 0x00, 0x22, 0xF1, 0xFF, 0xFF, 0xFF, 0x01, 0x10, 0xE0, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF };
 
@@ -690,7 +377,7 @@ void sendJoinI2C(bool i2c_result_updateweb) {
 
 }
 
-void sendLeaveI2C(bool i2c_result_updateweb) {
+void sendLeaveI2C(bool & updateweb) {
 
   uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x14, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x1F, 0xC9, 0x06, 0x00, 0x1F, 0xC9, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF };
 
@@ -725,14 +412,11 @@ void sendLeaveI2C(bool i2c_result_updateweb) {
 
 }
 
-void sendQueryDevicetype(bool i2c_result_updateweb) {
+void sendQueryDevicetype(bool & updateweb) {
 
   uint8_t command[] = { 0x82, 0x80, 0x90, 0xE0, 0x04, 0x00, 0x8A };
 
-  Serial.println(1);
-
   while (digitalRead(SCLPIN) == LOW ) {
-    Serial.println(2);
     yield();
     delay(1);
   }
@@ -745,87 +429,34 @@ void sendQueryDevicetype(bool i2c_result_updateweb) {
   i2c_sendBytes(command, sizeof(command));
 
   uint8_t i2cbuf[512] {};
+
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 2) {
-    jsonSysmessage("ithotype", i2cbuf2string(i2cbuf, len).c_str());
+
+  //if (len > 2) {
+  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
+    if (updateweb) {
+      updateweb = false;
+
+      jsonSysmessage("ithotype", i2cbuf2string(i2cbuf, len).c_str());
+    }
+
     ithoDeviceID = i2cbuf[9];
     itho_fwversion = i2cbuf[11];
-    ithoSettingsptr = getSettingsPtr(ithoDeviceID, itho_fwversion);
+    ithoDeviceptr = getDevicePtr(ithoDeviceID);
     ithoSettingsLength = getSettingsLength(ithoDeviceID, itho_fwversion);
   }
   else {
-    jsonSysmessage("ithotype", "failed");
+    if (updateweb) {
+      updateweb = false;
+      jsonSysmessage("ithotype", "failed");
+    }
   }
 
 #endif
 
 }
 
-void sendQueryStatusFormat(bool i2c_result_updateweb) {
-
-  uint8_t command[] = { 0x82, 0x80, 0xA4, 0x00, 0x04, 0x00, 0x56 };
-
-  while (digitalRead(SCLPIN) == LOW ) {
-    yield();
-    delay(1);
-  }
-
-
-#if defined (HW_VERSION_ONE)
-
-#endif
-
-#if defined (HW_VERSION_TWO)
-  i2c_sendBytes(command, sizeof(command));
-
-  uint8_t i2cbuf[512] {};
-  size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 2) {
-    jsonSysmessage("ithostatusformat", i2cbuf2string(i2cbuf, len).c_str());
-
-  }
-  else {
-    jsonSysmessage("ithostatusformat", "failed");
-  }
-
-#endif
-
-
-}
-
-void sendQueryStatus(bool i2c_result_updateweb) {
-
-  uint8_t command[] = { 0x82, 0x80, 0xA4, 0x01, 0x04, 0x00, 0x55 };
-
-  while (digitalRead(SCLPIN) == LOW ) {
-    yield();
-    delay(1);
-  }
-
-
-#if defined (HW_VERSION_ONE)
-
-#endif
-
-#if defined (HW_VERSION_TWO)
-  i2c_sendBytes(command, sizeof(command));
-
-  uint8_t i2cbuf[512] {};
-  size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 2) {
-    jsonSysmessage("ithostatus", i2cbuf2string(i2cbuf, len).c_str());
-
-  }
-  else {
-    jsonSysmessage("ithostatus", "failed");
-  }
-
-#endif
-
-
-}
-
-void sendQuery2400(bool i2c_result_updateweb) {
+void sendQueryStatusFormat(bool & updateweb) {
 
   uint8_t command[] = { 0x82, 0x80, 0x24, 0x00, 0x04, 0x00, 0xD6 };
 
@@ -860,31 +491,24 @@ void sendQuery2400(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 2) {
-    if (i2c_result_updateweb) {
-      i2c_result_updateweb = false;
-      jsonSysmessage("itho2400", i2cbuf2string(i2cbuf, len).c_str());
+  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
+    if (updateweb) {
+      updateweb = false;
+      jsonSysmessage("ithostatusformat", i2cbuf2string(i2cbuf, len).c_str());
     }
 
     if (!ithoStatus.empty()) {
       ithoStatus.clear();
     }
+    if (!(itho_fwversion > 0)) return;
+
     for (uint8_t i = 0; i < i2cbuf[5]; i++) {
       ithoStatus.push_back(ithoDeviceStatus());
 
-      if (itho_fwversion != 0) {
-        char fStringBuf[32];
-        getSatusLabel(i, ithoSettingsptr, itho_fwversion, fStringBuf);
-        ithoStatus.back().name.assign(fStringBuf);
-        if (!systemConfig.syssht30) {
-          if (strcmp(fStringBuf, "RelativeHumidity") == 0 || strcmp(fStringBuf, "humidity") == 0 || strcmp(fStringBuf, "Temperature") == 0 || strcmp(fStringBuf, "temperature") == 0) {
-            itho_internal_hum_temp = true;
-          }
-        }
-      }
-      else {
-        ithoStatus.back().name.assign("error");
-      }
+      char fStringBuf[32];
+      getSatusLabel(i, ithoDeviceptr, itho_fwversion, fStringBuf);
+
+      ithoStatus.back().name.assign(fStringBuf);
 
       ithoStatus.back().divider = 0;
       if ((i2cbuf[6 + i] & 0x07) == 0) { //integer value
@@ -925,9 +549,9 @@ void sendQuery2400(bool i2c_result_updateweb) {
 
   }
   else {
-    if (i2c_result_updateweb) {
-      i2c_result_updateweb = false;
-      jsonSysmessage("itho2400", "failed");
+    if (updateweb) {
+      updateweb = false;
+      jsonSysmessage("ithostatusformat", "failed");
     }
   }
 
@@ -935,10 +559,10 @@ void sendQuery2400(bool i2c_result_updateweb) {
 #endif
 
 
-
 }
 
-void sendQuery2401(bool i2c_result_updateweb) {
+void sendQueryStatus(bool & updateweb) {
+
 
   uint8_t command[] = { 0x82, 0x80, 0x24, 0x01, 0x04, 0x00, 0xD5 };
 
@@ -959,11 +583,11 @@ void sendQuery2401(bool i2c_result_updateweb) {
 
   itho2401len = len;
 
-  if (len > 2) {
+  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
 
-    if (i2c_result_updateweb) {
-      i2c_result_updateweb = false;
-      jsonSysmessage("itho2401", i2cbuf2string(i2cbuf, len).c_str());
+    if (updateweb) {
+      updateweb = false;
+      jsonSysmessage("ithostatus", i2cbuf2string(i2cbuf, len).c_str());
     }
 
     int statusPos = 6; //first byte with status info
@@ -975,6 +599,7 @@ void sendQuery2401(bool i2c_result_updateweb) {
         for (int i = ithoStat.length; i > 0; i--) {
           tempVal |= i2cbuf[statusPos + (ithoStat.length - i)] << ((i - 1) * 8);
         }
+
         if (ithoStat.type == ithoDeviceStatus::is_byte) {
           ithoStat.value.byteval = (byte)tempVal;
         }
@@ -996,21 +621,46 @@ void sendQuery2401(bool i2c_result_updateweb) {
         if (ithoStat.type == ithoDeviceStatus::is_float) {
           ithoStat.value.floatval = (float)tempVal / ithoStat.divider;
         }
+
         statusPos += ithoStat.length;
-        if (!systemConfig.syssht30) {
-          if (strcmp(ithoStat.name.c_str(), "RelativeHumidity") == 0 || strcmp(ithoStat.name.c_str(), "humidity") == 0) {
-            if (ithoStat.value.floatval < 100.0 && ithoStat.value.floatval > 0.0) {
-              temp_hum_updated = true;
-              ithoHum = ithoStat.value.floatval;
-            }
-          }
-          if (strcmp(ithoStat.name.c_str(), "Temperature") == 0 || strcmp(ithoStat.name.c_str(), "temperature") == 0) {
-            if (ithoStat.value.floatval < 100.0 && ithoStat.value.floatval > 0.0) {
-              temp_hum_updated = true;
-              ithoTemp = ithoStat.value.floatval;
-            }
+
+        if (strcmp(ithoStat.name.c_str(), "CO2") == 0) {
+          if (ithoStat.value.intval == 0x8200) {
+            ithoStat.type = ithoDeviceStatus::is_string;
+            ithoStat.value.stringval = fanSensorErrors.begin()->second;
           }
         }
+        if (strcmp(ithoStat.name.c_str(), "hRFspeedLevel") == 0) {
+          if (ithoStat.value.intval == 0xEF) {
+            ithoStat.type = ithoDeviceStatus::is_string;
+            ithoStat.value.stringval = fanSensorErrors.begin()->second;
+          }
+        }
+        if (strcmp(ithoStat.name.c_str(), "RelativeHumidity") == 0 || strcmp(ithoStat.name.c_str(), "humidity") == 0) {
+          if (ithoStat.value.floatval < 100.0) {
+            if (!systemConfig.syssht30) {
+              ithoHum = ithoStat.value.floatval;
+              itho_internal_hum_temp = true;
+            }
+          }
+          else {
+            ithoStat.type = ithoDeviceStatus::is_string;
+            ithoStat.value.stringval = fanSensorErrors.begin()->second;
+          }
+        }
+        if (strcmp(ithoStat.name.c_str(), "Temperature") == 0 || strcmp(ithoStat.name.c_str(), "temperature") == 0) {
+          if (ithoStat.value.floatval < 100.0) {
+            if (!systemConfig.syssht30) {
+              ithoTemp = ithoStat.value.floatval;
+              itho_internal_hum_temp = true;
+            }
+          }
+          else {
+            ithoStat.type = ithoDeviceStatus::is_string;
+            ithoStat.value.stringval = fanSensorErrors.begin()->second;
+          }
+        }
+
 
       }
     }
@@ -1018,9 +668,9 @@ void sendQuery2401(bool i2c_result_updateweb) {
 
   }
   else {
-    if (i2c_result_updateweb) {
-      i2c_result_updateweb = false;
-      jsonSysmessage("itho2401", "failed");
+    if (updateweb) {
+      updateweb = false;
+      jsonSysmessage("ithostatus", "failed");
     }
   }
 
@@ -1028,7 +678,7 @@ void sendQuery2401(bool i2c_result_updateweb) {
 
 }
 
-void sendQuery31DA(bool i2c_result_updateweb) {
+void sendQuery31DA(bool & updateweb) {
 
   uint8_t command[] = { 0x82, 0x80, 0x31, 0xDA, 0x04, 0x00, 0xEF };
 
@@ -1048,10 +698,10 @@ void sendQuery31DA(bool i2c_result_updateweb) {
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
 
-  if (len > 5) {
+  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
 
-    if (i2c_result_updateweb) {
-      i2c_result_updateweb = false;
+    if (updateweb) {
+      updateweb = false;
       jsonSysmessage("itho31DA", i2cbuf2string(i2cbuf, len).c_str());
     }
 
@@ -1068,12 +718,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[0 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors.find(i2cbuf[0 + dataStart]);
-        if (it != fanSensorErrors.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanSensorErrors.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors.rbegin()->second;
       }
       else {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_int;
@@ -1091,12 +737,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[2 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[2 + dataStart]);
-        if (it != fanSensorErrors2.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanSensorErrors2.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors2.rbegin()->second;
       }
       else {
         int32_t tempVal = i2cbuf[2 + dataStart] << 8;
@@ -1111,12 +753,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[4 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors.find(i2cbuf[4 + dataStart]);
-        if (it != fanSensorErrors.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanSensorErrors.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors.rbegin()->second;
       }
       else {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_int;
@@ -1129,12 +767,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[5 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors.find(i2cbuf[5 + dataStart]);
-        if (it != fanSensorErrors.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanSensorErrors.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors.rbegin()->second;
       }
       else {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
@@ -1147,12 +781,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[6 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[6 + dataStart]);
-        if (it != fanSensorErrors2.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanSensorErrors2.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors2.rbegin()->second;
       }
       else {
         int32_t tempVal = i2cbuf[6 + dataStart] << 8;
@@ -1167,12 +797,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[8 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[8 + dataStart]);
-        if (it != fanSensorErrors2.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanSensorErrors2.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors2.rbegin()->second;
       }
       else {
         int32_t tempVal = i2cbuf[8 + dataStart] << 8;
@@ -1187,12 +813,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[10 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[10 + dataStart]);
-        if (it != fanSensorErrors2.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanSensorErrors2.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors2.rbegin()->second;
       }
       else {
         int32_t tempVal = i2cbuf[10 + dataStart] << 8;
@@ -1207,12 +829,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[12 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[12 + dataStart]);
-        if (it != fanSensorErrors2.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanSensorErrors2.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors2.rbegin()->second;
       }
       else {
         int32_t tempVal = i2cbuf[12 + dataStart] << 8;
@@ -1235,12 +853,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[16 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors.find(i2cbuf[16 + dataStart]);
-        if (it != fanSensorErrors.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanSensorErrors.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors.rbegin()->second;
       }
       else {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
@@ -1251,21 +865,19 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
       ithoMeasurements.back().name.assign("FanInfo");
       ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
-
       auto it = fanInfo.find(i2cbuf[17 + dataStart]);
-      if (it != fanInfo.end()) {
-        strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-      }
-      else {
-        strcpy(ithoMeasurements.back().value.valStatus, "unknown");
-      }
+      if (it != fanInfo.end()) ithoMeasurements.back().value.stringval = it->second;
+      else ithoMeasurements.back().value.stringval = fanInfo.rbegin()->second;
     }
     if (dataLength > 17) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
       ithoMeasurements.back().name.assign("ExhFanSpeed (%)");
       if (i2cbuf[18 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
-        strcpy(ithoMeasurements.back().value.valStatus, "not available");
+        auto it = fanSensorErrors.find(i2cbuf[18 + dataStart]);
+        if (it != fanSensorErrors.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors.rbegin()->second;
+
       }
       else {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
@@ -1277,7 +889,9 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       ithoMeasurements.back().name.assign("InFanSpeed (%)");
       if (i2cbuf[19 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
-        strcpy(ithoMeasurements.back().value.valStatus, "not available");
+        auto it = fanSensorErrors.find(i2cbuf[19 + dataStart]);
+        if (it != fanSensorErrors.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors.rbegin()->second;
       }
       else {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
@@ -1298,12 +912,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[22 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanHeatErrors.find(i2cbuf[22 + dataStart]);
-        if (it != fanHeatErrors.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanHeatErrors.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanHeatErrors.rbegin()->second;
       }
       else {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
@@ -1316,12 +926,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[23 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanHeatErrors.find(i2cbuf[23 + dataStart]);
-        if (it != fanHeatErrors.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanHeatErrors.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanHeatErrors.rbegin()->second;
       }
       else {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_float;
@@ -1334,12 +940,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[24 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[24 + dataStart]);
-        if (it != fanSensorErrors2.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanSensorErrors2.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors2.rbegin()->second;
       }
       else {
         int32_t tempVal = i2cbuf[24 + dataStart] << 8;
@@ -1355,12 +957,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
       if (i2cbuf[26 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[26 + dataStart]);
-        if (it != fanSensorErrors2.end()) {
-          strcpy(ithoMeasurements.back().value.valStatus, it->second.c_str());
-        }
-        else {
-          strcpy(ithoMeasurements.back().value.valStatus, "unknown error");
-        }
+        if (it != fanSensorErrors2.end()) ithoMeasurements.back().value.stringval = it->second;
+        else ithoMeasurements.back().value.stringval = fanSensorErrors2.rbegin()->second;
       }
       else {
         int32_t tempVal = i2cbuf[26 + dataStart] << 8;
@@ -1372,8 +970,8 @@ void sendQuery31DA(bool i2c_result_updateweb) {
 
   }
   else {
-    if (i2c_result_updateweb) {
-      i2c_result_updateweb = false;
+    if (updateweb) {
+      updateweb = false;
       jsonSysmessage("itho31DA", "failed");
     }
   }
@@ -1382,7 +980,7 @@ void sendQuery31DA(bool i2c_result_updateweb) {
 
 }
 
-void sendQuery31D9(bool i2c_result_updateweb) {
+void sendQuery31D9(bool & updateweb) {
 
   uint8_t command[] = { 0x82, 0x80, 0x31, 0xD9, 0x04, 0x00, 0xF0 };
 
@@ -1400,55 +998,68 @@ void sendQuery31D9(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 5) {
+  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
 
-    if (i2c_result_updateweb) {
-      i2c_result_updateweb = false;
+    if (updateweb) {
+      updateweb = false;
       jsonSysmessage("itho31D9", i2cbuf2string(i2cbuf, len).c_str());
     }
 
-    auto dataLength = i2cbuf[5];
+    //auto dataLength = i2cbuf[5];
 
     auto dataStart = 6;
 
+    if (!ithoInternalMeasurements.empty()) {
+      ithoInternalMeasurements.clear();
+    }
+
+    float tempVal = i2cbuf[1 + dataStart] / 2.0;
+    ithoDeviceMeasurements sTemp = {"speed status", ithoDeviceMeasurements::is_float, {.floatval = tempVal} } ;
+    ithoInternalMeasurements.push_back(sTemp);
+
+    int status = 0;
     if (i2cbuf[0 + dataStart] == 0x80) {
-      //internal fault
+      status = 1; //fault
     }
     else {
-      //no fault
+      status = 0; //no fault
     }
+    ithoInternalMeasurements.push_back({"internal fault", ithoDeviceMeasurements::is_int, {.intval = status}});
     if (i2cbuf[0 + dataStart] == 0x40) {
-      //frost cycle active
+      status = 1; //frost cycle active
     }
     else {
-      //frost cycle not active
+      status = 0; //frost cycle not active
     }
+    ithoInternalMeasurements.push_back({"frost cycle", ithoDeviceMeasurements::is_int, {.intval = status}});
     if (i2cbuf[0 + dataStart] == 0x20) {
-      //filter dirty
+      status = 1; //filter dirty
     }
     else {
-      //filter clean
+      status = 0; //filter clean
     }
-//    if (i2cbuf[0 + dataStart] == 0x10) {
-//      //unknown
-//    }
-//    if (i2cbuf[0 + dataStart] == 0x08) {
-//      //unknown
-//    }
-//    if (i2cbuf[0 + dataStart] == 0x04) {
-//      //unknown
-//    }
-//    if (i2cbuf[0 + dataStart] == 0x02) {
-//      //unknown
-//    }
-//    if (i2cbuf[0 + dataStart] == 0x01) {
-//      //unknown
-//    }
-    float fanSpeed = i2cbuf[1 + dataStart] / 2;
+    ithoInternalMeasurements.push_back({"filter dirty", ithoDeviceMeasurements::is_int, {.intval = status}});
+    //    if (i2cbuf[0 + dataStart] == 0x10) {
+    //      //unknown
+    //    }
+    //    if (i2cbuf[0 + dataStart] == 0x08) {
+    //      //unknown
+    //    }
+    //    if (i2cbuf[0 + dataStart] == 0x04) {
+    //      //unknown
+    //    }
+    //    if (i2cbuf[0 + dataStart] == 0x02) {
+    //      //unknown
+    //    }
+    //    if (i2cbuf[0 + dataStart] == 0x01) {
+    //      //unknown
+    //    }
+
+
   }
   else {
-    if (i2c_result_updateweb) {
-      i2c_result_updateweb = false;
+    if (updateweb) {
+      updateweb = false;
       jsonSysmessage("itho31D9", "failed");
     }
   }
@@ -1457,7 +1068,7 @@ void sendQuery31D9(bool i2c_result_updateweb) {
 
 }
 
-int32_t * sendQuery2410(bool i2c_result_updateweb) {
+int32_t * sendQuery2410(bool & updateweb) {
 
   static int32_t values[3];
   values[0] = 0;
@@ -1483,7 +1094,7 @@ int32_t * sendQuery2410(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 2) {
+  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
 
     uint8_t tempBuf[] = { i2cbuf[9], i2cbuf[8], i2cbuf[7], i2cbuf[6] };
     std::memcpy(&values[0], tempBuf, 4);
@@ -1493,8 +1104,9 @@ int32_t * sendQuery2410(bool i2c_result_updateweb) {
 
     uint8_t tempBuf3[] = { i2cbuf[17], i2cbuf[16], i2cbuf[15], i2cbuf[14] };
     std::memcpy(&values[2], tempBuf3, 4);
-        
-    if (i2c_result_updateweb) {
+
+    if (updateweb) {
+      updateweb = false;
       jsonSysmessage("itho2410", i2cbuf2string(i2cbuf, len).c_str());
 
       char tempbuffer[256];
@@ -1510,7 +1122,8 @@ int32_t * sendQuery2410(bool i2c_result_updateweb) {
 
   }
   else {
-    if (i2c_result_updateweb) {
+    if (updateweb) {
+      updateweb = false;
       jsonSysmessage("itho2410", "failed");
     }
 
@@ -1523,22 +1136,22 @@ int32_t * sendQuery2410(bool i2c_result_updateweb) {
 
 }
 
-void setSetting2410(bool i2c_result_updateweb) {
+void setSetting2410(bool & updateweb) {
 
-  if (index2410 == 7 && value2410 == 1) {
-    jsonLogMessage("<br>!!Warning!! Command ignored!<br>Setting index 7 to value 1 will switch off I2C!", WEBINTERFACE);
+  if (index2410 == 7 && value2410 == 1 && (ithoDeviceID == 0x14 || ithoDeviceID == 0x1B)) {
+    logMessagejson(F("<br>!!Warning!! Command ignored!<br>Setting index 7 to value 1 will switch off I2C!"), WEBINTERFACE);
     return;
   }
 
   uint8_t command[] = { 0x82, 0x80, 0x24, 0x10, 0x06, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF };
 
   command[23] = index2410;
-    
+
   command[9] = value2410 & 0xFF;
   command[8] = (value2410 >> 8) & 0xFF;
   command[7] = (value2410 >> 16) & 0xFF;
   command[6] = (value2410 >> 24) & 0xFF;
-  
+
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
   jsonSysmessage("itho2410set", i2cbuf2string(command, sizeof(command)).c_str());
@@ -1558,17 +1171,24 @@ void setSetting2410(bool i2c_result_updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 2) {
-    if (command[6] == i2cbuf[6] && command[7] == i2cbuf[7] && command[8] == i2cbuf[8] && command[9] == i2cbuf[9] && command[23] == i2cbuf[23]) {
-      jsonSysmessage("itho2410setres", "confirmed");
-    }
-    else {
-      jsonSysmessage("itho2410setres", "confirmation failed");
+  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
+    if (updateweb) {
+      updateweb = false;
+      if (len > 2) {
+        if (command[6] == i2cbuf[6] && command[7] == i2cbuf[7] && command[8] == i2cbuf[8] && command[9] == i2cbuf[9] && command[23] == i2cbuf[23]) {
+          jsonSysmessage("itho2410setres", "confirmed");
+        }
+        else {
+          jsonSysmessage("itho2410setres", "confirmation failed");
+        }
+      }
+      else {
+        jsonSysmessage("itho2410setres", "failed");
+      }
     }
   }
-  else {
-    jsonSysmessage("itho2410setres", "failed");
-  }
+
+
 
 #endif
 
@@ -1579,7 +1199,6 @@ int quick_pow10(int n) {
     1, 10, 100, 1000, 10000,
     100000, 1000000, 10000000, 100000000, 1000000000
   };
-
   return pow10[n];
 }
 
@@ -1593,5 +1212,4 @@ std::string i2cbuf2string(const uint8_t* data, size_t len) {
     s += toHex(data[i] & 0xF);
   }
   return s;
-
 }

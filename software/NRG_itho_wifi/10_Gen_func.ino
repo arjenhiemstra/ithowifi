@@ -1,211 +1,264 @@
+void getIthoStatusJSON(JsonObject root) {
+  root["temp"] = ithoTemp;
+  root["hum"] = ithoHum;
 
-void mqttCallback(char* topic, byte* payload, unsigned int length) {
-
-
-  if (topic == NULL) return;
-  if (payload == NULL) return;
-
-  int16_t val = -1;
-  unsigned long timer = 0;
-  bool dtype = true;
-  if (systemConfig.mqtt_domoticz_active) {
-    dtype = false;
+  auto b = 611.21 * pow(2.7183, ((18.678 - ithoTemp / 234.5) * ithoTemp) / (257.14 + ithoTemp));
+  auto ppmw = b / (101325 - b) * ithoHum / 100 * 0.62145 * 1000000;
+  root["ppmw"] = ppmw;
+  if (!ithoInternalMeasurements.empty()) {
+    for (const auto& internalMeasurement : ithoInternalMeasurements) {
+      if (internalMeasurement.type == ithoDeviceMeasurements::is_int) {
+        root[internalMeasurement.name.c_str()] = internalMeasurement.value.intval;
+      }
+      else if (internalMeasurement.type == ithoDeviceMeasurements::is_float) {
+        root[internalMeasurement.name.c_str()] = internalMeasurement.value.floatval;
+      }
+      else {
+        root["error"] = 0;
+      }
+    }
   }
-
-  if (length > 1023) length = 1023;
-
-  char s_payload[length];
-  memcpy(s_payload, payload, length);
-  s_payload[length] = '\0';
-
-  if (strcmp(topic, systemConfig.mqtt_cmd_topic) == 0) {
-    StaticJsonDocument<1024> root;
-    DeserializationError error = deserializeJson(root, s_payload);
-    if (!error) {
-      bool jsonCmd = false;
-      if (!(const char*)root["idx"].isNull()) {
-        jsonCmd = true;
-        //printf("JSON parse -- idx match\n");
-        uint16_t idx = root["idx"].as<uint16_t>();
-        if (idx == systemConfig.mqtt_idx) {
-          if (!(const char*)root["svalue1"].isNull()) {
-            uint16_t invalue = root["svalue1"].as<uint16_t>();
-            double value = invalue * 2.54;
-            val = (uint16_t)value;
-            timer = 0;
-          }
-        }
+  if (!ithoMeasurements.empty()) {
+    for (const auto& ithoMeaserment : ithoMeasurements) {
+      if (ithoMeaserment.type == ithoDeviceMeasurements::is_int) {
+        root[ithoMeaserment.name.c_str()] = ithoMeaserment.value.intval;
       }
-      if (!(const char*)root["dtype"].isNull()) {
-        const char* value = root["dtype"] | "";
-        if (strcmp(value, "ithofan") == 0) {
-          dtype = true;
-        }
+      else if (ithoMeaserment.type == ithoDeviceMeasurements::is_float) {
+        root[ithoMeaserment.name.c_str()] = ithoMeaserment.value.floatval;
       }
-      if (dtype) {
-        /*
-           standard true, unless mqtt_domoticz_active == "on"
-           if mqtt_domoticz_active == "on"
-              this should be set to true first by a JSON containing key:value pair "dtype":"ithofan",
-              otherwise different commands might get processed due to domoticz general domoticz/out topic structure
-        */
-        if (!(const char*)root["command"].isNull()) {
-          jsonCmd = true;
-          const char* value = root["command"] | "";
-          if (strcmp(value, "low") == 0) {
-            val = systemConfig.itho_low;
-            timer = 0;
-          }
-          else if (strcmp(value, "medium") == 0) {
-            val = systemConfig.itho_medium;
-            timer = 0;
-          }
-          else if (strcmp(value, "high") == 0) {
-            val = systemConfig.itho_high;
-            timer = 0;
-          }
-          else if (strcmp(value, "timer1") == 0) {
-            val = systemConfig.itho_high;
-            timer = systemConfig.itho_timer1;
-          }
-          else if (strcmp(value, "timer2") == 0) {
-            val = systemConfig.itho_high;
-            timer = systemConfig.itho_timer2;
-          }
-          else if (strcmp(value, "timer3") == 0) {
-            val = systemConfig.itho_high;
-            timer = systemConfig.itho_timer3;
-          }
-          if (strcmp(value, "clearqueue") == 0) {
-            clearQueue = true;
-          }
-        }
-        if (!(const char*)root["speed"].isNull()) {
-          jsonCmd = true;
-          val = root["speed"].as<uint16_t>();
-        }
-        if (!(const char*)root["timer"].isNull()) {
-          jsonCmd = true;
-          timer = root["timer"].as<uint16_t>();
-        }
-        if (!(const char*)root["clearqueue"].isNull()) {
-          jsonCmd = true;
-          const char* value = root["clearqueue"] | "";
-          if (strcmp(value, "true") == 0) {
-            clearQueue = true;
-          }
-        }
-        if (!jsonCmd) {
-          val = strtoul (s_payload, NULL, 10);
-          timer = 0;
-        }
+      else if (ithoMeaserment.type == ithoDeviceMeasurements::is_string) {
+        root[ithoMeaserment.name.c_str()] = ithoMeaserment.value.stringval;
       }
-
     }
-    else {
-      if (strcmp(s_payload, "low") == 0) {
-        val = systemConfig.itho_low;
-        timer = 0;
+  }
+  if (!ithoStatus.empty()) {
+    for (const auto& ithoStat : ithoStatus) {
+      if (ithoStat.type == ithoDeviceStatus::is_byte) {
+        root[ithoStat.name.c_str()] = ithoStat.value.byteval;
       }
-      else if (strcmp(s_payload, "medium") == 0) {
-        val = systemConfig.itho_medium;
-        timer = 0;
+      else if (ithoStat.type == ithoDeviceStatus::is_uint) {
+        root[ithoStat.name.c_str()] = ithoStat.value.uintval;
       }
-      else if (strcmp(s_payload, "high") == 0) {
-        val = systemConfig.itho_high;
-        timer = 0;
+      else if (ithoStat.type == ithoDeviceStatus::is_int) {
+        root[ithoStat.name.c_str()] = ithoStat.value.intval;
       }
-      else if (strcmp(s_payload, "timer1") == 0) {
-        val = systemConfig.itho_high;
-        timer = systemConfig.itho_timer1;
+      else if (ithoStat.type == ithoDeviceStatus::is_float) {
+        root[ithoStat.name.c_str()] = ithoStat.value.floatval;
       }
-      else if (strcmp(s_payload, "timer2") == 0) {
-        val = systemConfig.itho_high;
-        timer = systemConfig.itho_timer2;
-      }
-      else if (strcmp(s_payload, "timer3") == 0) {
-        val = systemConfig.itho_high;
-        timer = systemConfig.itho_timer3;
-      }
-      else if (strcmp(s_payload, "clearqueue") == 0) {
-        ithoQueue.clear_queue();
+      else if (ithoStat.type == ithoDeviceStatus::is_string) {
+        root[ithoStat.name.c_str()] = ithoStat.value.stringval;
       }
     }
 
-    if (val != -1) {
-      nextIthoVal = val;
-      nextIthoTimer = timer;
-      //printf("Update -- nextIthoVal:%d, nextIthoTimer:%d\n", nextIthoVal, nextIthoTimer);
-      updateItho = true;
-    }
+  }
+}
+
+void getRemotesInfoJSON(JsonObject root) {
+
+  remotes.getCapabilities(root);
+
+}
+
+
+bool ithoExecCommand(const char* command, cmdOrigin origin)
+{
+  D_LOG("EXEC COMMAND\n");
+  if (strcmp(command, "low") == 0) {
+    ithoSetSpeed(systemConfig.itho_low, origin);
+  }
+  else if (strcmp(command, "medium") == 0) {
+    ithoSetSpeed(systemConfig.itho_medium, origin);
+  }
+  else if (strcmp(command, "high") == 0) {
+    ithoSetSpeed(systemConfig.itho_high, origin);
+  }
+  else if (strcmp(command, "timer1") == 0) {
+    ithoSetTimer(systemConfig.itho_timer1, origin);
+  }
+  else if (strcmp(command, "timer2") == 0) {
+    ithoSetTimer(systemConfig.itho_timer2, origin);
+  }
+  else if (strcmp(command, "timer3") == 0) {
+    ithoSetTimer(systemConfig.itho_timer3, origin);
+  }
+  else if (strcmp(command, "clearqueue") == 0) {
+    clearQueue = true;
   }
   else {
-    //topic unknown
+    return false;
   }
+  return true;
+
 }
 
-void updateState(uint16_t newState) {
 
-  systemConfig.itho_fallback = newState;
+bool ithoI2CCommand(const char* command, cmdOrigin origin) {
 
-  if (mqttClient.connected()) {
-    char buffer[512];
-
-    if (systemConfig.mqtt_domoticz_active) {
-      int nvalue = 1;
-      double state = 1.0;
-      if (newState > 0) {
-        state  = newState / 2.54;
-      }
-
-      newState = uint16_t(state + 0.5);
-      char buf[10];
-      sprintf(buf, "%d", newState);
-
-      StaticJsonDocument<512> root;
-      root["command"] = "switchlight";
-      root["idx"] = systemConfig.mqtt_idx;
-      root["nvalue"] = nvalue;
-      root["switchcmd"] = "Set Level";
-      root["level"] = buf;
-      serializeJson(root, buffer);
-    }
-    else {
-      sprintf(buffer, "%d", newState);
-    }
-    mqttClient.publish(systemConfig.mqtt_state_topic, buffer, true);
-
+  D_LOG("EXEC VREMOTE COMMAND\n");
+#if defined (HW_VERSION_TWO)
+  if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
   }
-}
-
-#if defined(ENABLE_SHT30_SENSOR_SUPPORT)
-void updateSensor() {
-
-  if (SHT3x_original || SHT3x_alternative) {
-    if (SHT3x_original) {
-      if (sht_org.readSample()) {
-        Wire.endTransmission(true);
-        ithoHum = sht_org.getHumidity();
-        ithoTemp = sht_org.getTemperature();
-        temp_hum_updated = true;
-      }
-    }
-    if (SHT3x_alternative) {
-      if (sht_alt.readSample()) {
-        Wire.endTransmission(true);
-        ithoHum = sht_alt.getHumidity();
-        ithoTemp = sht_alt.getTemperature();
-        temp_hum_updated = true;
-      }
-    }
+  else {
+    return false;
   }
-
-}
 #endif
+
+  if (strcmp(command, "low") == 0) {
+    buttonValue = 1;
+    sendI2CButton = true;
+  }
+  else if (strcmp(command, "medium") == 0) {
+    buttonValue = 2;
+    sendI2CButton = true;
+  }
+  else if (strcmp(command, "high") == 0) {
+    buttonValue = 3;
+    sendI2CButton = true;
+  }
+  else if (strcmp(command, "timer1") == 0) {
+    timerValue = 10;
+    sendI2CTimer = true;
+  }
+  else if (strcmp(command, "timer2") == 0) {
+    timerValue = 20;
+    sendI2CTimer = true;
+  }
+  else if (strcmp(command, "timer3") == 0) {
+    timerValue = 30;
+    sendI2CTimer = true;
+  }
+  else if (strcmp(command, "join") == 0) {
+    sendI2CJoin = true;
+  }
+  else if (strcmp(command, "leave") == 0) {
+    sendI2CLeave = true;
+  }
+  else if (strcmp(command, "type") == 0) {
+    sendI2CDevicetype = true;
+  }
+  else if (strcmp(command, "status") == 0) {
+    sendI2CStatus = true;
+  }
+  else if (strcmp(command, "statusformat") == 0) {
+    sendI2CStatusFormat = true;
+  }
+  else if (strcmp(command, "31DA") == 0) {
+    send31DA = true;
+  }
+  else if (strcmp(command, "31D9") == 0) {
+    send31D9 = true;
+  }
+  else {
+#if defined (HW_VERSION_TWO)
+    xSemaphoreGive(mutexI2Ctask);
+#endif
+    return false;
+  }
+
+  logLastCommand(command, origin);
+  return true;
+
+}
+
+bool ithoSetSpeed(const char* speed, cmdOrigin origin) {
+  uint16_t val = strtoul(speed, NULL, 10);
+  return ithoSetSpeed(val, origin);
+}
+
+bool ithoSetSpeed(uint16_t speed, cmdOrigin origin) {
+  D_LOG("SET SPEED\n");
+  if (speed < 255) {
+    nextIthoVal = speed;
+    nextIthoTimer = 0;
+    updateItho();
+  }
+  else {
+    return false;
+  }
+
+  char buf[32] {};
+  sprintf(buf, "speed:%d", speed);
+  logLastCommand(buf, origin);
+  return true;
+}
+
+bool ithoSetTimer(const char* timer, cmdOrigin origin) {
+  uint16_t t = strtoul(timer, NULL, 10);
+  return ithoSetTimer(t, origin);
+}
+
+bool ithoSetTimer(uint16_t timer, cmdOrigin origin) {
+  D_LOG("SET TIMER\n");
+  if (timer > 0 && timer < 65535) {
+    nextIthoTimer = timer;
+    nextIthoVal = systemConfig.itho_high;
+    updateItho();
+  }
+  else {
+    return false;
+  }
+
+  char buf[32] {};
+  sprintf(buf, "timer:%d", timer);
+  logLastCommand(buf, origin);
+  return true;
+
+}
+
+void logLastCommand(const char* command, cmdOrigin origin) {
+
+  if (origin != REMOTE) {
+    const char* source;
+    auto it = cmdOriginMap.find(origin);
+    if (it != cmdOriginMap.end()) source = it->second;
+    else source = cmdOriginMap.rbegin()->second;
+    logLastCommand(command, source);
+  }
+  else {
+    logLastCommand(command, remotes.lastRemoteName);
+  }
+
+}
+
+void logLastCommand(const char* command, const char* source) {
+
+  lastCmd.source = source;
+  lastCmd.command = command;
+
+  if (time(nullptr)) {
+    time_t now;
+    time(&now);
+    lastCmd.timestamp = now;
+
+  } else
+  {
+    lastCmd.timestamp = (time_t)millis();
+  }
+
+}
+
+void getLastCMDinfoJSON(JsonObject root) {
+
+  root["source"] = lastCmd.source;
+  root["command"] = lastCmd.command;
+  root["timestamp"] = lastCmd.timestamp;
+
+}
+
+void updateItho() {
+  if (systemConfig.itho_rf_support) {
+    IthoCMD.once_ms(150, add2queue);
+  }
+  else {
+    add2queue();
+  }
+}
 
 void add2queue() {
   ithoQueue.add2queue(nextIthoVal, nextIthoTimer, systemConfig.nonQ_cmd_clearsQ);
 }
+
+
 
 // Update itho Value
 bool writeIthoVal(uint16_t value) {
@@ -215,6 +268,15 @@ bool writeIthoVal(uint16_t value) {
   }
 
   if (ithoCurrentVal != value) {
+
+#if defined (HW_VERSION_TWO)
+    if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
+    }
+    else {
+      return false;
+    }
+#endif
+
     uint16_t valTemp = ithoCurrentVal;
     ithoCurrentVal = value;
 
@@ -261,35 +323,14 @@ bool writeIthoVal(uint16_t value) {
       ithoCurrentVal = valTemp;
       ithoQueue.add2queue(valTemp, 0, systemConfig.nonQ_cmd_clearsQ);
     }
+#if defined (HW_VERSION_TWO)
+    xSemaphoreGive(mutexI2Ctask);
+#endif
     return true;
   }
   return false;
 }
-//
-//void receiveEvent(size_t howMany) {
-//
-//  char localbuf[512] = "";
-//  uint16_t pos = 0;
-//
-//  while (Wire.available()) { // loop through all but the last 3
-//    localbuf[pos] = Wire.read(); // receive byte as a character
-//    //if(pos > sizeof(localbuf)) break;
-//    pos++;
-//  }
-//
-//  std::string s;
-//  s.reserve(pos * 3 + 2);
-//  for (size_t i = 0; i < pos; ++i) {
-//    if (i)
-//      s += ' ';
-//    s += toHex(localbuf[i] >> 4);
-//    s += toHex(localbuf[i] & 0xF);
-//  }
-//  strcpy(i2c_slave_buf, "");
-//  strlcpy(i2c_slave_buf, s.c_str(), sizeof(i2c_slave_buf));
-//
-//  callback_called = true;
-//}
+
 
 void printTimestamp(Print * _logOutput) {
 #if defined (HW_VERSION_ONE)
@@ -334,10 +375,81 @@ void logInput(const char * inputString) {
 
     filePrint.close();
 
+#if defined (ENABLE_SERIAL)
+    D_LOG("%s\n", inputString);
+#endif
+
 #if defined (HW_VERSION_TWO)
     xSemaphoreGive(mutexLogTask);
   }
 #endif
 
+
+}
+
+
+void logWifiInfo() {
+
+  char wifiBuff[128];
+
+  logInput("WiFi: connection successful");
+
+
+  logInput("WiFi info:");
+
+  const char* const modes[] = { "NULL", "STA", "AP", "STA+AP" };
+  //const char* const phymodes[] = { "", "B", "G", "N" };
+
+#if defined (HW_VERSION_ONE)
+  sprintf(wifiBuff, "Mode:%s", modes[wifi_get_opmode()]);
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
+
+  sprintf(wifiBuff, "PHY mode:%s", phymodes[(int) wifi_get_phy_mode()]);
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
+
+  sprintf(wifiBuff, "Channel:%d", wifi_get_channel());
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
+
+  sprintf(wifiBuff, "AP id:%d", wifi_station_get_current_ap_id());
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
+
+  sprintf(wifiBuff, "Status:%d", wifi_station_get_connect_status());
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
+
+  sprintf(wifiBuff, "Auto connect:%d", wifi_station_get_auto_connect());
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
+
+  struct station_config conf;
+  wifi_station_get_config(&conf);
+
+  char ssid[33]; //ssid can be up to 32chars, => plus null term
+  memcpy(ssid, conf.ssid, sizeof(conf.ssid));
+  ssid[32] = 0; //nullterm in case of 32 char ssid
+
+  sprintf(wifiBuff, "SSID (%d):%s", strlen(ssid), ssid);
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
+
+#elif defined (HW_VERSION_TWO)
+
+  sprintf(wifiBuff, "Mode:%s", modes[WiFi.getMode()]);
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
+
+  sprintf(wifiBuff, "Status:%d", WiFi.status());
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
+#endif
+
+  IPAddress ip = WiFi.localIP();
+  sprintf(wifiBuff, "IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+  logInput(wifiBuff);
+  strcpy(wifiBuff, "");
 
 }

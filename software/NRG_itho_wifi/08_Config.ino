@@ -2,77 +2,52 @@
 
 bool loadWifiConfig() {
   if (!SPIFFS.exists("/wifi.json")) {
-    #if defined (INFORMATIVE_LOGGING)
-    logInput("Setup: writing initial wifi config");
-    #endif
-    //Serial.println("Writing initial wifi config");
+    D_LOG("Setup: writing initial wifi config\n");
     if (!saveWifiConfig()) {
-      #if defined (INFORMATIVE_LOGGING)
-      logInput("Setup: failed writing initial wifi config");
-      #endif
-      //Serial.println("Failed writing initial default config");
+      D_LOG("Setup: failed writing initial wifi config\n");
       return false;
     }
   }
 
   File configFile = SPIFFS.open("/wifi.json", "r");
   if (!configFile) {
-    #if defined (INFORMATIVE_LOGGING)
-    logInput("Setup: failed to open wifi config file");
-    #endif
-    //Serial.println("Failed to open wifi config file");
+    D_LOG("Setup: failed to open wifi config file\n");
     return false;
   }
   //SPIFFS.exists(path)
 
   size_t size = configFile.size();
   if (size > 1024) {
-    #if defined (INFORMATIVE_LOGGING)
-    logInput("Setup: wifi config file size is too large");
-    #endif
-    //Serial.println("Wifi config file size is too large");
+    D_LOG("Setup: wifi config file size is too large\n");
     return false;
   }
 
   DynamicJsonDocument root(1024);
   DeserializationError error = deserializeJson(root, configFile);
   if (error) {
-    #if defined (INFORMATIVE_LOGGING)
-    logInput("Setup: wifi config load DeserializationError");
-    #endif
-    //Serial.println("wifi config load: DeserializationError");
+    D_LOG("Setup: wifi config load DeserializationError\n");
     return false;
   }
-
-
 
   if (root["ssid"] == "") {
-    #if defined (INFORMATIVE_LOGGING)
-    logInput("Setup: initial wifi config still there, start WifiAP");
-    #endif
-    //Serial.println("initial config still there, start WifiAP");
+    D_LOG("Setup: initial wifi config still there, start WifiAP\n");
     return false;
   }
-
   if (wifiConfig.set(root.as<JsonObject>())) {
-
-    //Serial.println("wifiConfig.set ok");
-
   }
-  #if defined (INFORMATIVE_LOGGING)
-  logInput("Setup: wifi config loaded successful");
-  #endif
+  D_LOG("Setup: wifi config loaded successful\n");
   return true;
 }
 
 bool saveWifiConfig() {
   DynamicJsonDocument doc(2048);
-  JsonObject root = doc.to<JsonObject>(); // Fill the object
+  JsonObject root = doc.to<JsonObject>();
+  // Fill the object
   wifiConfig.get(root);
 
   File configFile = SPIFFS.open("/wifi.json", "w");
   if (!configFile) {
-    //Serial.println("Failed to open default config file for writing");
+    D_LOG("Failed to open default config file for writing\n");
     return false;
   }
 
@@ -97,21 +72,21 @@ bool resetWifiConfig() {
 bool loadSystemConfig() {
 
   if (!SPIFFS.exists("/config.json")) {
-    //Serial.println("Writing initial default config");
+    D_LOG("Writing initial default config\n");
     if (!saveSystemConfig()) {
-      //Serial.println("Failed writing initial default config");
+      D_LOG("Failed writing initial default config\n");
       return false;
     }
   }
   File configFile = SPIFFS.open("/config.json", "r");
   if (!configFile) {
-    //Serial.println("Failed to open system config file");
+    D_LOG("Failed to open system config file\n");
     return false;
   }
 
   size_t size = configFile.size();
   if (size > 2048) {
-    //Serial.println("System config file size is too large");
+    D_LOG("System config file size is too large\n");
     return false;
   }
 
@@ -121,7 +96,7 @@ bool loadSystemConfig() {
     return false;
 
   systemConfig.configLoaded = systemConfig.set(root.as<JsonObject>());
-  //Serial.print("config :"); Serial.println(result);
+  D_LOG("config : %d\n", systemConfig.configLoaded);
 
   if (!systemConfig.configLoaded) {
     logInput("Config version mismatch, resetting config...");
@@ -137,12 +112,13 @@ bool loadSystemConfig() {
 
 bool saveSystemConfig() {
   DynamicJsonDocument doc(2048);
-  JsonObject root = doc.to<JsonObject>(); // Fill the object
+  JsonObject root = doc.to<JsonObject>(); 
+
   systemConfig.get(root);
 
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
-    //Serial.println("Failed to open default config file for writing");
+    D_LOG("Failed to open default config file for writing\n");
     return false;
   }
 
@@ -165,10 +141,11 @@ bool resetSystemConfig() {
 
 uint16_t serializeRemotes(const IthoRemote &remotes, Print& dst) {
   DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 300));
-  // Create an object at the root
-  JsonObject root = doc.to<JsonObject>(); // Fill the object
+
+  JsonObject root = doc.to<JsonObject>(); 
+
   remotes.get(root);
-  // Serialize JSON to file
+
   return serializeJson(doc, dst) > 0;
 }
 
@@ -182,16 +159,16 @@ bool saveRemotesConfig() {
 bool saveFileRemotes(const char *filename, const IthoRemote &remotes) { // Open file for writing
   File file = SPIFFS.open(filename, "w");
   if (!file) {
-    //Serial.println(F("Failed to create remotes file"));
+    D_LOG("Failed to create remotes file\n");
     return false;
   }
   // Serialize JSON to file
   bool success = serializeRemotes(remotes, file);
   if (!success) {
-    //Serial.println(F("Failed to serialize remotes"));
+    D_LOG("Failed to serialize remotes\n");
     return false;
   }
-  //Serial.println(F("File saved"));
+  D_LOG("File saved\n");
   return true;
 }
 
@@ -199,7 +176,6 @@ bool deserializeRemotes(Stream &src, IthoRemote &remotes) {
 
   DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 300));
 
-  // Parse the JSON object in the file
   DeserializationError err = deserializeJson(doc, src);
   if (err) {
     logInput("Failed to deserialize remotes config json");
@@ -241,15 +217,16 @@ bool loadRemotesConfig() {
 
 bool loadFileRemotes(const char *filename, IthoRemote &remotes) { // Open file for reading
   File file = SPIFFS.open(filename, "r");
-  // This may fail if the file is missing
+
   if (!file) {
-    //Serial.println(F("Failed to open config file")); return false;
+    D_LOG("Failed to open config file\n"); 
+    return false;
   }
-  // Parse the JSON object in the file
+
   bool success = deserializeRemotes(file, remotes);
-  // This may fail if the JSON is invalid
+
   if (!success) {
-    //Serial.println(F("Failed to deserialize configuration"));
+    D_LOG("Failed to deserialize configuration\n");
     return false;
   }
   return true;

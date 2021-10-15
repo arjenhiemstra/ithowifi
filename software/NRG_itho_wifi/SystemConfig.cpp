@@ -22,8 +22,9 @@ SystemConfig::SystemConfig() {
   mqtt_port = 1883;
   mqtt_version = 1;
   strlcpy(mqtt_state_topic, "itho/state", sizeof(mqtt_state_topic));
-  strlcpy(mqtt_sensor_topic, "itho/sensor", sizeof(mqtt_sensor_topic));
-  strlcpy(mqtt_ithostatus_topic, "itho/ithostatus", sizeof(mqtt_ithostatus_topic));  
+  strlcpy(mqtt_ithostatus_topic, "itho/ithostatus", sizeof(mqtt_ithostatus_topic));
+  strlcpy(mqtt_remotesinfo_topic, "itho/remotesinfo", sizeof(mqtt_remotesinfo_topic));
+  strlcpy(mqtt_lastcmd_topic, "itho/lastcmd", sizeof(mqtt_lastcmd_topic));
   strlcpy(mqtt_ha_topic, "homeassistant", sizeof(mqtt_ha_topic));
   strlcpy(mqtt_state_retain, "yes", sizeof(mqtt_state_retain));
   strlcpy(mqtt_cmd_topic, "itho/cmd", sizeof(mqtt_cmd_topic));
@@ -42,6 +43,7 @@ SystemConfig::SystemConfig() {
   itho_timer1 = 10;
   itho_timer2 = 20;
   itho_timer3 = 30;
+  itho_updatefreq = 5;
   itho_sendjoin = 0;
   itho_forcemedium = 0;
   itho_vremapi = 0;
@@ -127,14 +129,18 @@ bool SystemConfig::set(JsonObjectConst obj) {
     updated = true;
     strlcpy(mqtt_state_topic, obj["mqtt_state_topic"], sizeof(mqtt_state_topic));
   }
-  if (!(const char*)obj["mqtt_sensor_topic"].isNull()) {
-    updated = true;
-    strlcpy(mqtt_sensor_topic, obj["mqtt_sensor_topic"], sizeof(mqtt_sensor_topic));
-  }
   if (!(const char*)obj["mqtt_ithostatus_topic"].isNull()) {
     updated = true;
     strlcpy(mqtt_ithostatus_topic, obj["mqtt_ithostatus_topic"], sizeof(mqtt_ithostatus_topic));
   }
+  if (!(const char*)obj["mqtt_remotesinfo_topic"].isNull()) {
+    updated = true;
+    strlcpy(mqtt_remotesinfo_topic, obj["mqtt_remotesinfo_topic"], sizeof(mqtt_remotesinfo_topic));
+  }
+  if (!(const char*)obj["mqtt_lastcmd_topic"].isNull()) {
+    updated = true;
+    strlcpy(mqtt_lastcmd_topic, obj["mqtt_lastcmd_topic"], sizeof(mqtt_lastcmd_topic));
+  }  
   if (!(const char *)obj["mqtt_ha_topic"].isNull()) {
     updated = true;
     mqtt_updated = true;
@@ -199,6 +205,10 @@ bool SystemConfig::set(JsonObjectConst obj) {
     updated = true;
     itho_timer3 = obj["itho_timer3"];
   }
+  if (!(const char*)obj["itho_updatefreq"].isNull()) {
+    updated = true;
+    itho_updatefreq = obj["itho_updatefreq"];
+  }  
   if (!(const char*)obj["itho_sendjoin"].isNull()) {
     updated = true;
     itho_sendjoin = obj["itho_sendjoin"];
@@ -254,6 +264,7 @@ void SystemConfig::get(JsonObject obj) const {
     obj["itho_timer1"] = itho_timer1;
     obj["itho_timer2"] = itho_timer2;
     obj["itho_timer3"] = itho_timer3;
+    obj["itho_updatefreq"] = itho_updatefreq;
     obj["itho_sendjoin"] = itho_sendjoin;
     obj["itho_forcemedium"] = itho_forcemedium;
     obj["itho_vremapi"] = itho_vremapi;
@@ -269,8 +280,9 @@ void SystemConfig::get(JsonObject obj) const {
     obj["mqtt_port"] = mqtt_port;
     obj["mqtt_version"] = mqtt_version;
     obj["mqtt_state_topic"] = mqtt_state_topic;
-    obj["mqtt_sensor_topic"] = mqtt_sensor_topic;
     obj["mqtt_ithostatus_topic"] = mqtt_ithostatus_topic;
+    obj["mqtt_remotesinfo_topic"] = mqtt_remotesinfo_topic;
+    obj["mqtt_lastcmd_topic"] = mqtt_lastcmd_topic;
     obj["mqtt_state_retain"] = mqtt_state_retain;
     obj["mqtt_cmd_topic"] = mqtt_cmd_topic;
     obj["mqtt_lwt_topic"] = mqtt_lwt_topic;

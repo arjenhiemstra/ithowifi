@@ -17,6 +17,7 @@ WifiConfig::WifiConfig() {
   strlcpy(dns1, "8.8.8.8", sizeof(dns1));
   strlcpy(dns2, "8.8.4.4", sizeof(dns2));
   port = 80;
+  strlcpy(hostname, "", sizeof(hostname));  
 } //WifiConfig
 
 // default destructor
@@ -66,6 +67,10 @@ bool WifiConfig::set(JsonObjectConst obj) {
   if (!(const char*)obj["port"].isNull()) {
     updated = true;
     port = obj["port"];
+  }
+  if (!(const char*)obj["hostname"].isNull()) {
+    updated = true;
+    strlcpy(hostname, obj["hostname"], sizeof(hostname));
   }  
   return updated;
 }
@@ -81,4 +86,5 @@ void WifiConfig::get(JsonObject obj) const {
   obj["dns1"] = dns1;
   obj["dns2"] = dns2;
   obj["port"] = port;
+  obj["hostname"] = hostname;
 }

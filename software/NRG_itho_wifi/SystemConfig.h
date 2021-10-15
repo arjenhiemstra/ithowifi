@@ -1,6 +1,6 @@
 #pragma once
 
-#define CONFIG_VERSION "004" //Change when SystemConfig struc changes
+#define CONFIG_VERSION "005" //Change when SystemConfig struc changes
 
 #include <stdio.h>
 #include <string.h>
@@ -24,8 +24,9 @@ class SystemConfig {
     int mqtt_port;
     int mqtt_version;
     char mqtt_state_topic[128];
-    char mqtt_sensor_topic[128];
     char mqtt_ithostatus_topic[128];
+    char mqtt_remotesinfo_topic[128];
+    char mqtt_lastcmd_topic[128];    
     char mqtt_ha_topic[128];
     char mqtt_state_retain[5];
     char mqtt_cmd_topic[128];
@@ -44,6 +45,7 @@ class SystemConfig {
     uint16_t itho_timer1;
     uint16_t itho_timer2;
     uint16_t itho_timer3;
+    uint16_t itho_updatefreq;
     uint8_t itho_sendjoin;
     uint8_t itho_forcemedium;
     uint8_t itho_vremapi;

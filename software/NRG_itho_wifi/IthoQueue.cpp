@@ -90,7 +90,7 @@ void IthoQueue::Queue::get(JsonObject obj, int index) const {
   obj["valid"] = valid;
 
 }
-void IthoQueue::get(JsonObject obj) const {
+void IthoQueue::get(JsonObject obj) {
   // Add "queue" object
   JsonArray q = obj.createNestedArray("queue");
   // Add each queue item in the array

@@ -45,30 +45,22 @@ void TaskConfigAndLog( void * pvParameters ) {
 
 void execLogAndConfigTasks() {
   //Logging and config tasks
-#if defined (HW_VERSION_TWO)
-  if (debugLogInput) {
-    debugLogInput = false;
-    LogMessage.once_ms(150, []() {
-      jsonLogMessage(debugLog, RFLOG);
-    } );
-  }
-#endif
   if (saveSystemConfigflag) {
     saveSystemConfigflag = false;
     if (saveSystemConfig()) {
-      jsonLogMessage(F("System settings saved successful"), WEBINTERFACE);
+      logMessagejson(F("System settings saved"), WEBINTERFACE);
     }
     else {
-      jsonLogMessage(F("System settings save failed: Unable to write config file"), WEBINTERFACE);
+      logMessagejson(F("Failed saving System settings: Unable to write config file"), WEBINTERFACE);
     }
   }
   if (saveWifiConfigflag) {
     saveWifiConfigflag = false;
     if (saveWifiConfig()) {
-      jsonLogMessage(F("Wifi settings saved successful, reboot the device"), WEBINTERFACE);
+      logMessagejson(F("Wifi settings saved, reboot the device"), WEBINTERFACE);
     }
     else {
-      jsonLogMessage(F("Wifi settings save failed: Unable to write config file"), WEBINTERFACE);
+      logMessagejson(F("Failed saving Wifi settings: Unable to write config file"), WEBINTERFACE);
     }
   }
 #if defined (HW_VERSION_TWO)
@@ -83,19 +75,19 @@ void execLogAndConfigTasks() {
   if (resetWifiConfigflag) {
     resetWifiConfigflag = false;
     if (resetWifiConfig()) {
-      jsonLogMessage(F("Wifi settings restored, reboot the device"), WEBINTERFACE);
+      logMessagejson(F("Wifi settings restored, reboot the device"), WEBINTERFACE);
     }
     else {
-      jsonLogMessage(F("Wifi settings restore failed, please try again"), WEBINTERFACE);
+      logMessagejson(F("Failed restoring Wifi settings, please try again"), WEBINTERFACE);
     }
   }
   if (resetSystemConfigflag) {
     resetSystemConfigflag = false;
     if (resetSystemConfig()) {
-      jsonLogMessage(F("System settings restored, reboot the device"), WEBINTERFACE);
+      logMessagejson(F("System settings restored, reboot the device"), WEBINTERFACE);
     }
     else {
-      jsonLogMessage(F("System settings restore failed, please try again"), WEBINTERFACE);
+      logMessagejson(F("Failed restoring System settings, please try again"), WEBINTERFACE);
     }
   }
 
@@ -115,18 +107,18 @@ void execLogAndConfigTasks() {
 
     if (SPIFFS.format()) {
       systemstat["format"] = 1;
-      strcpy(logBuff, "Filesystem format = success");
+      strcpy(logBuff, "Filesystem format done");
       dontSaveConfig = true;
     }
     else {
       systemstat["format"] = 0;
-      strcpy(logBuff, "Filesystem format = failed");
+      strcpy(logBuff, "Unable to format");
     }
-    jsonLogMessage(logBuff, WEBINTERFACE);
+    logMessagejson(logBuff, WEBINTERFACE);
     strcpy(logBuff, "");
-    char buffer[128];
-    size_t len = serializeJson(root, buffer);
-    notifyClients(buffer, len);
+
+    notifyClients(root.as<JsonObjectConst>());
+
   }
 
 }

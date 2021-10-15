@@ -7,7 +7,9 @@ var itho_low = 0;
 var itho_medium = 127;
 var itho_high = 254;
 var sensor = -1;
-var statustimer = 0;
+
+sessionStorage.setItem("statustimer", 0);
+
 var websocketServerLocation = 'ws://' + window.location.hostname + '/ws';
 
 
@@ -109,7 +111,7 @@ function startWebsock(websocketServerLocation){
             var button = returnMqttState(x.mqqtstatus);
             $('#mqtt_conn').addClass("pure-button " + button.button);
             $('#mqtt_conn').text(button.state);
-            $('#itho').val(x.itho);
+            $('#ithoslider').val(x.itho);
             $('#ithotextval').html(x.itho);
             if ('itho_low' in x) {
               itho_low = x.itho_low;
@@ -166,7 +168,7 @@ function startWebsock(websocketServerLocation){
             let x = f.rflog;
             $('#rflog_outer').removeClass('hidden');
             var d = new Date();
-            $('#rflog').prepend(d.toISOString() + ': ' + x.message + '<br>');
+            $('#rflog').prepend(d.toLocaleString('nl-NL') + ': ' + x.message + '<br>');
           }
           else if (f.ota) {
             let x = f.ota;
@@ -219,11 +221,11 @@ function startWebsock(websocketServerLocation){
   };
 }
 
-
 $(document).ready(function() {
   document.getElementById("layout").style.opacity = 0.3;
   document.getElementById("loader").style.display = "block";
   startWebsock(websocketServerLocation);
+    
   //handle menu clicks
   $(document).on('click', 'ul.pure-menu-list li a', function(event) {
     var page = $(this).attr('href');
@@ -241,10 +243,19 @@ $(document).ready(function() {
   $(document).on('change', 'input', function(e) {
     if ($(this).attr('name') == 'optionsWifi') {
       $('#ssid').val($(this).attr('value'));
-    } 
-  }); 
+    }
+  });
   //handle submit buttons
   $(document).on('click', 'button', function(e) {
+    if ($(this).attr('id') == 'itho_low') {
+      updateSlider(itho_low);
+    }
+    if ($(this).attr('id') == 'itho_medium') {
+      updateSlider(itho_medium);
+    }
+    if ($(this).attr('id') == 'itho_high') {
+      updateSlider(itho_high);
+    }
     if ($(this).attr('id') == 'wifisubmit') {
       websock.send(JSON.stringify({
         wifisettings: {
@@ -257,7 +268,8 @@ $(document).ready(function() {
           gateway:  $('#gateway').val(),
           dns1:     $('#dns1').val(),
           dns2:     $('#dns2').val(),
-          port:     $('#port').val()
+          port:     $('#port').val(),
+          hostname: $('#hostname').val()
         }
       }));
       update_page('wifisetup');
@@ -281,6 +293,7 @@ $(document).ready(function() {
           itho_timer1:      $('#itho_timer1').val(),
           itho_timer2:      $('#itho_timer2').val(),
           itho_timer3:      $('#itho_timer3').val(),
+          itho_updatefreq:  $('#itho_updatefreq').val(),
           itho_sendjoin:    $('input[name=\'option-itho_sendjoin\']:checked').val(),
           itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
           itho_vremapi:     $('input[name=\'option-itho_vremapi\']:checked').val(),
@@ -293,22 +306,23 @@ $(document).ready(function() {
     else if ($(this).attr('id') == 'mqttsubmit') {
       websock.send(JSON.stringify({
         systemsettings: {
-          mqtt_active:          $('input[name=\'option-mqtt_active\']:checked').val(),
-          mqtt_serverName:      $('#mqtt_serverName').val(),
-          mqtt_username:        $('#mqtt_username').val(),
-          mqtt_password:        $('#mqtt_password').val(),
-          mqtt_port:            $('#mqtt_port').val(),
-          mqtt_version:         $('#mqtt_version').val(),
-          mqtt_state_topic:     $('#mqtt_state_topic').val(),
-          mqtt_sensor_topic:    $('#mqtt_sensor_topic').val(),
-          mqtt_ithostatus_topic:$('#mqtt_ithostatus_topic').val(),
-          mqtt_ha_topic:        $('#mqtt_ha_topic').val(),
-          mqtt_cmd_topic:       $('#mqtt_cmd_topic').val(),
-          mqtt_lwt_topic:       $('#mqtt_lwt_topic').val(),
-          mqtt_idx:             $('#mqtt_idx').val(),
-          sensor_idx:           $('#sensor_idx').val(),
-          mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val(),
-          mqtt_ha_active:       $('input[name=\'option-mqtt_ha_active\']:checked').val()
+          mqtt_active:           $('input[name=\'option-mqtt_active\']:checked').val(),
+          mqtt_serverName:       $('#mqtt_serverName').val(),
+          mqtt_username:         $('#mqtt_username').val(),
+          mqtt_password:         $('#mqtt_password').val(),
+          mqtt_port:             $('#mqtt_port').val(),
+          mqtt_version:          $('#mqtt_version').val(),
+          mqtt_state_topic:      $('#mqtt_state_topic').val(),
+          mqtt_ithostatus_topic: $('#mqtt_ithostatus_topic').val(),
+          mqtt_remotesinfo_topic:$('#mqtt_remotesinfo_topic').val(),
+          mqtt_lastcmd_topic:    $('#mqtt_lastcmd_topic').val(),
+          mqtt_ha_topic:         $('#mqtt_ha_topic').val(),
+          mqtt_cmd_topic:        $('#mqtt_cmd_topic').val(),
+          mqtt_lwt_topic:        $('#mqtt_lwt_topic').val(),
+          mqtt_idx:              $('#mqtt_idx').val(),
+          sensor_idx:            $('#sensor_idx').val(),
+          mqtt_domoticz_active:  $('input[name=\'option-mqtt_domoticz_active\']:checked').val(),
+          mqtt_ha_active:        $('input[name=\'option-mqtt_ha_active\']:checked').val()
         }
       }));
       update_page('mqtt');
@@ -361,7 +375,6 @@ $(document).ready(function() {
         $('#Minimum-'+i).html('<div style=\'margin: auto;\' class=\'dot-elastic\'></div>');
         $('#Maximum-'+i).html('<div style=\'margin: auto;\' class=\'dot-elastic\'></div>');
         websock.send('{\"ithosetrefresh\":'+i+'}');
-        console.log('{\"ithosetrefresh\":'+i+'}');
       }
     }
     else if ($(this).attr('id').substr(0, 14) == 'ithosetupdate-') {
@@ -407,7 +420,7 @@ $(document).ready(function() {
     else if ($(this).attr('id') == 'reboot') {
       if (confirm("This will reboot the device, are you sure?")) {
         $('#rebootscript').append(html_reboot_script);
-        websock.send('{\"reboot\":true}');
+        websock.send('{\"reboot\":true,\"donsaveconf\":'+document.getElementById("dontsaveconf").checked+'}');
       }
     }
     else if ($(this).attr('id') == 'format') {
@@ -422,34 +435,28 @@ $(document).ready(function() {
       websock.send('{\"wifiscan\":true}');
     }
     else if ($(this).attr('id') == 'button1') {
-      websock.send('{\"ithobutton\":1}');
+      websock.send('{\"ithobutton\":\"low\"}');
     }
     else if ($(this).attr('id') == 'button2') {
-      websock.send('{\"ithobutton\":2}');
+      websock.send('{\"ithobutton\":\"medium\"}');
     }
     else if ($(this).attr('id') == 'button3') {
-      websock.send('{\"ithobutton\":3}');
+      websock.send('{\"ithobutton\":\"high\"}');
     }
     else if ($(this).attr('id') == 'buttonjoin') {
-      websock.send('{\"ithobutton\":11}');
+      websock.send('{\"ithobutton\":\"join\"}');
     }
     else if ($(this).attr('id') == 'buttonleave') {
-      websock.send('{\"ithobutton\":99}');
+      websock.send('{\"ithobutton\":\"leave\"}');
     }
     else if ($(this).attr('id') == 'buttontype') {
-      websock.send('{\"ithobutton\":20}');
+      websock.send('{\"ithobutton\":\"type\"}');
     }
     else if ($(this).attr('id') == 'buttonstatus') {
-      websock.send('{\"ithobutton\":30}');
+      websock.send('{\"ithobutton\":\"status\"}');
     }
     else if ($(this).attr('id') == 'buttonstatusformat') {
-      websock.send('{\"ithobutton\":31}');
-    }
-    else if ($(this).attr('id') == 'button2400') {
-      websock.send('{\"ithobutton\":2400}');
-    }
-    else if ($(this).attr('id') == 'button2401') {
-      websock.send('{\"ithobutton\":2401}');
+      websock.send('{\"ithobutton\":\"statusformat\"}');
     }
     else if ($(this).attr('id') == 'button2410') {
       websock.send(JSON.stringify({
@@ -465,10 +472,10 @@ $(document).ready(function() {
       }));
     }
     else if ($(this).attr('id') == 'button31DA') {
-      websock.send('{\"ithobutton\":12762}');
+      websock.send('{\"ithobutton\":\"31DA\"}');
     }
     else if ($(this).attr('id') == 'button31D9') {
-      websock.send('{\"ithobutton\":12761}');
+      websock.send('{\"ithobutton\":\"31D9\"}');
     }
     else if ($(this).attr('id') == 'ithogetsettings') {
       websock.send(JSON.stringify({
@@ -490,6 +497,8 @@ $(document).ready(function() {
         removeAfter5secs(count);
         return;
       }
+      $('#updatesubmit').addClass("pure-button-disabled");
+      $('#updatesubmit').text("Update in progress...");
       $('#uploadProgress').show();
       $('#updateProgress').show();
       $('#uploadprg').show();
@@ -508,10 +517,6 @@ $(document).ready(function() {
                       var per = Math.round(10 + (((evt.loaded / evt.total)*100)*0.9));
                       $('#uploadprg').html('File upload progress: ' + per + '%');
                       moveBar(per, "uploadBar");
-                      if (per == 100) {
-                        $('#uploaddone').show();
-                        $('#uploaddone').html('Done!');
-                      }
                   }
              }, false);
              return xhr;
@@ -519,14 +524,13 @@ $(document).ready(function() {
           success:function(d, s) {
               moveBar(100, "updateBar");
               $('#updateprg').html('Firmware update progress: 100%');
-              $('#updatedone').show();
-              $('#updatedone').html('Done!');  
-              console.log('success!')
+              $('#updatesubmit').text("Update finished");
               $('#time').show();
               startCountdown();
          },
           error: function () {
-            console.log('failed!');
+            $('#updatesubmit').text("Update failed");
+            $('#time').show();
             startCountdown();
           }
         });
@@ -614,12 +618,12 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_active") {
     if (state == 1) {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_ithostatus_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', false);
       $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', false);
     }
     else {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_sensor_topic, #mqtt_ithostatus_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
       $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', true);
       $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', true);
     }
@@ -627,36 +631,23 @@ function radio(origin, state) {
   else if (origin == "mqtt_domoticz_active") {
     if (state == 1) {
       $('#mqtt_idx').prop('readonly', false);
-      $('#mqtt_idx, #label-mqtt_idx').show();
-      if(sensor > 0) { $('#sensor_idx, #label-sensor_idx').show(); }
-      else { $('#sensor_idx, #label-sensor_idx').hide(); }
+      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').show();
       $('#mqtt_state_topic').val("domoticz/in");
       $('#mqtt_cmd_topic').val("domoticz/out");
-      $('#mqtt_sensor_topic, #mqtt_ithostatus_topic, #label-mqtt_sensor').hide();
-      $('#mqtt_ha_topic, #label-mqtt_ha').hide();
-      $('#mqtt_lwt_topic, #label-lwt_topic').hide();
+      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd, #mqtt_ha_topic, #label-mqtt_ha, #mqtt_lwt_topic, #label-lwt_topic').hide();
     }
     else {
       $('#mqtt_idx').prop('readonly', true);
-      $('#mqtt_idx, #label-mqtt_idx').hide();
-      $('#sensor_idx, #label-sensor_idx').hide();
+      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
       $('#mqtt_state_topic').val(mqtt_state_topic_tmp);
       $('#mqtt_cmd_topic').val(mqtt_cmd_topic_tmp);
-      if(sensor > 0) { $('#mqtt_sensor_topic, #mqtt_ithostatus_topic, #label-mqtt_sensor').show(); }
-      else { $('#mqtt_sensor_topic, #mqtt_ithostatus_topic, #label-mqtt_sensor').hide(); }
-      $('#mqtt_ha_topic, #label-mqtt_ha').show();
-      $('#mqtt_lwt_topic, #label-lwt_topic').show();
+      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd ,#mqtt_lwt_topic, #label-lwt_topic').show();
     }
   }
   else if (origin == "mqtt_ha_active") {
     if (state == 1) {
-      $('#mqtt_ha_topic, #label-mqtt_ha').show();
-      $('#mqtt_idx').prop('readonly', true);
-      $('#mqtt_idx, #label-mqtt_idx').hide();
-      $('#sensor_idx, #label-sensor_idx').hide();
-      if(sensor > 0) { $('#mqtt_sensor_topic, #mqtt_ithostatus_topic, #label-mqtt_sensor').show(); }
-      else { $('#mqtt_sensor_topic, #mqtt_ithostatus_topic, #label-mqtt_sensor').hide(); }
-      $('#mqtt_lwt_topic, #label-lwt_topic').show();
+      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd, #mqtt_ha_topic, #label-mqtt_ha, #mqtt_lwt_topic, #label-lwt_topic').show();
+      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
     }
     else {
       $('#mqtt_ha_topic, #label-mqtt_ha').hide();
@@ -685,16 +676,15 @@ function radio(origin, state) {
 function timeoutPromise(timer) {
   return new Promise(resolve => setTimeout(resolve, timer));
 }
-// try 10 times within 2 secs to send a websock request
-const getSettings = async (page) => {  
-  for (let i = 1; i < 11; i++) {
-    await timeoutPromise(200);
-    if(websock.readyState === 1){
-    websock.send(JSON.stringify(new function(){ this[page] = 1; }));
-    return "success";
-    }
+
+function getSettings(pagevalue) {
+  if(websock.readyState === 1 ){
+    websock.send('{\"' + pagevalue + '\":1}');
   }
-  return "failed";
+  else {
+    console.log("websock not open"); 
+  }
+  
 }
 
 //
@@ -731,6 +721,7 @@ function moveBar(nPer, element) {
 //
 //
 //
+
 function updateSlider(value) {
   var val = parseInt(value);
   if (isNaN(val)) val = 0;
@@ -741,7 +732,10 @@ function updateSlider(value) {
 //function to load html main content
 var lastPageReq = "";
 function update_page(page) {
-    lastPageReq = page;  
+    lastPageReq = page;
+    if(page != 'status') {
+      sessionStorage.setItem("statustimer", 0);
+    }
     $('#main').empty();
     $('#main').css('max-width', '768px')
     if (page == 'index') { $('#main').append(html_index); }
@@ -897,14 +891,29 @@ function buildHtmlTable(selector, jsonVar) {
     var row$ = $('<tr>');
     row$.append($('<td>').html('<input type=\'radio\' id=\'option-select_remote-'+i+'\' name=\'optionsRemotes\' onchange=\"radio(\'remote\','+i+')\" value=\''+i+'\'/>'));
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
-      var cellValue = jsonVar[i][columns[colIndex]].toString();
-      if (cellValue == null) cellValue = '';
-      if (cellValue == "0,0,0") cellValue = "empty slot";
-      if (colIndex == 2) {
-        row$.append($('<td>').html('<input type=\'text\' id=\'name_remote-'+i+'\' value=\''+cellValue+'\' readonly=\'\' />'));
+      if (colIndex == 3) {
+        var str = '';
+        var JSONObj = jsonVar[i][columns[colIndex]];
+        if (JSONObj != null) {
+          for (let value in JSONObj) {
+            if (JSONObj.hasOwnProperty(value)) {
+              str += value + ':' + JSONObj[value];
+              if(value != Object.keys(JSONObj).pop()) str += ', ';
+            }
+          }             
+        }
+        row$.append($('<td>').html(str));
       }
-      else {
-        row$.append($('<td>').html(cellValue));
+      else {     
+        var cellValue = jsonVar[i][columns[colIndex]].toString();
+        if (cellValue == null) cellValue = '';
+        if (cellValue == "0,0,0") cellValue = "empty slot";
+        if (colIndex == 2) {
+          row$.append($('<td>').html('<input type=\'text\' id=\'name_remote-'+i+'\' value=\''+cellValue+'\' readonly=\'\' />'));
+        }
+        else {
+          row$.append($('<td>').html(cellValue));
+        }
       }
     }
     headerTbody$.append(row$);
@@ -1038,9 +1047,9 @@ var html_index = `
           -
         </div>  
       </div>
-      <input id="itho" type="range" min="0" max="254" value="0" class="slider" onchange="updateSlider(this.value)" style="width: 100%; margin: 0 0 2em 0;">
+      <input id="ithoslider" type="range" min="0" max="254" value="0" class="slider" style="width: 100%; margin: 0 0 2em 0;">
       <div style="text-align: center">
-        <a href="#" class="pure-button" onclick="updateSlider(itho_low)" style="float: left;">Low</a> <a href="#" onclick="updateSlider(itho_medium)" class="pure-button">Medium</a> <a href="#" class="pure-button" onclick="updateSlider(itho_high)" style="float: right;">High</a>
+        <button id="itho_low" class="pure-button" style="float: left;">Low</button><button id="itho_medium" class="pure-button">Medium</button><button id="itho_high" class="pure-button" style="float: right;">High</button>
       </div>
       <div style="text-align: center;margin: 2em 0 0 0;">
         <div id="sensor_temp"></div>
@@ -1052,8 +1061,13 @@ var html_index = `
 </div>
 <script>
 $(document).ready(function() {
+  var slide = document.getElementById("ithoslider");
+  if(!!slide) {
+    slide.addEventListener("click", function() {
+      updateSlider(this.value);
+    });
+  }
   getSettings('sysstat');
-  statustimer = 0;
 });
 </script>
 
@@ -1085,6 +1099,10 @@ var html_wifisetup = `
             <div class="pure-control-group">
               <label for="renew">DHCP Renew interval</label>
                 <input id="renew" type="text">
+            </div>
+            <div class="pure-control-group">
+              <label for="hostname">Hostname</label>
+                <input id="hostname" type="text">
             </div>
             <div class="pure-control-group">
               <label for="ip">IP address</label>
@@ -1122,7 +1140,6 @@ var html_wifisetup = `
 <script>
 $(document).ready(function() {
   getSettings('wifisetup');
-  statustimer = 0;
 });
 </script>
 `;
@@ -1187,6 +1204,12 @@ var html_systemsettings_start = `
               <label for="itho_timer3">Timer3</label>
                 <input id="itho_timer3" type="number" min="0" max="65535" size="6">
             </div>
+            <legend><br>Itho status update frequency (0-65535 seconds):</legend>
+            <p>Controls the rate at which sensor data, status data and system information is requested and updated on the API (HTML/MQTT)</p>
+            <div class="pure-control-group">
+              <label for="itho_updatefreq">Update frequency</label>
+                <input id="itho_updatefreq" type="number" min="0" max="65535" size="6">
+            </div>          
             <legend><br>Virtual remote settings:</legend>
             <p>The add-on can present itself as a virtual remote that can be joined to the itho unit.</p>
             <p>This virtual remote can be used to force the itho unit in medium mode before sending a command from the add-on. This way the add-on can overrule the current speed settings of the itho (ie. due to active input from a built in humidity sensor or another remote)</p>
@@ -1213,7 +1236,8 @@ var html_systemsettings_start = `
               <input id="option-vremoteswap-0" type="radio" name="option-itho_vremswap" value="0"> off
             </div>            
             <legend><br>Autodetect built-in humidity/temp sensor (reboot needed):</legend>
-            <p>The itho humidity/temp sensor is only present in the latest itho CVE series: CVE-S ECO.</p><p>Values will be posted on the MQTT sensor topic formatted as JSON.</p><p>Auto disable sensor support of the itho firmware if you have an alternative hum/temp sensor or want to readout the original sensor</p>
+            <p>The itho humidity/temp sensor is only present in the latest itho CVE series: CVE-S ECO.</p><p>Values will be posted on the MQTT sensor topic formatted as JSON.</p><p>Auto disable sensor support of the itho firmware if you have an alternative hum/temp sensor built in or want to readout the original sensor / prevent the itho unit to react on humidity by itself.</p>
+            <p>Enabling sensor readout of the original sensor without auto disable set to 'on' will result in a crash of the itho firmware after which a power cycle is needed to restore normal operation.</p>
             <br>
             <div class="pure-control-group">
               <label for="option-syssht30" class="pure-radio">Hum/Temp sensor support</label> 
@@ -1230,7 +1254,6 @@ var html_systemsettings_start = `
 <script>
 $(document).ready(function() {
   getSettings('syssetup');
-  statustimer = 0;
 });
 </script>
 `;
@@ -1271,7 +1294,6 @@ var html_ithosettings = `
 <script>
 $(document).ready(function() {
   getSettings('ithosetup');
-  statustimer = 0;
 });
 </script>
 `;
@@ -1287,9 +1309,9 @@ var html_ithostatus = `
       </form>
 <script>
 $(document).ready(function() {
-  statustimer = 1;
+  sessionStorage.setItem("statustimer", 1);
   function repeat() {
-    if(!statustimer) return;
+    if(sessionStorage.getItem("statustimer") != 1) return;
     getSettings('ithostatus');
     setTimeout(repeat, 5000);
   }
@@ -1348,7 +1370,6 @@ var html_remotessetup = `
 $(document).ready(function() {
   getSettings('ithoremotes');
   getSettings('ithoccc');
-  statustimer = 0;
 });
 </script>
 `;
@@ -1391,13 +1412,17 @@ var html_mqttsetup = `
                 <input id="mqtt_state_topic" maxlength="120" type="text">
             </div>
             <div class="pure-control-group">
-              <label id="label-mqtt_sensor" for="mqtt_sensor_topic">Sensor topic</label>
-                <input id="mqtt_sensor_topic" maxlength="120" type="text">
-            </div>
-            <div class="pure-control-group">
-              <label id="label-mqtt_ithostatus" for="mqtt_ithostatus_topic">Itho status</label>
+              <label id="label-mqtt_ithostatus" for="mqtt_ithostatus_topic">Itho status topic</label>
                 <input id="mqtt_ithostatus_topic" maxlength="120" type="text">
             </div>
+            <div class="pure-control-group">
+              <label id="label-mqtt_remotesinfo" for="mqtt_remotesinfo_topic">Remotes info topic</label>
+                <input id="mqtt_remotesinfo_topic" maxlength="120" type="text">
+            </div>
+            <div class="pure-control-group">
+              <label id="label-mqtt_lastcmd" for="mqtt_lastcmd_topic">Last command info topic</label>
+                <input id="mqtt_lastcmd_topic" maxlength="120" type="text">
+            </div>            
             <div class="pure-control-group">
               <label for="mqtt_cmd_topic">Command topic</label>
                 <input id="mqtt_cmd_topic" maxlength="120" type="text">
@@ -1439,7 +1464,6 @@ var html_mqttsetup = `
 <script>
 $(document).ready(function() {
   getSettings('mqttsetup');
-  statustimer = 0;
 });
 </script>
 `;
@@ -1468,23 +1492,12 @@ Unless specified otherwise:<br><ul>
 <li>String values must be supplied with quote marks in accordance with JSON standards</li>
 </ul>
 <br>
-<strong>API table:</strong>
-<table class="pure-table pure-table-bordered" style="font-size:.85em"><thead><tr><th>key or param</th><th>datatype</th><th style="width:160px">value</th><th>datatype</th><th style="text-align:center">MQTT<br>(JSON)</th><th style="text-align:center">HTML<br>(URL params)</th></tr></thead>
-<tbody><tr><td>dtype</td><td>string</td><td>ithofan</td><td>string</td><td style="text-align:center">●</td><td style="text-align:center">◌</td></tr><tr><td colspan="6">Comments:<br><em>If Domoticz MQTT support is on and commands originate from other than configured IDX, this key/value pair needs to be present for commands to get processed.</em></td></tr>
-<tr><td>username</td><td>string</td><td>max 20 chars long</td><td>string</td><td style="text-align:center">◌</td><td style="text-align:center">●</td></tr><tr><td>password</td><td>string</td><td>max 20 chars long</td><td>string</td><td style="text-align:center">◌</td><td style="text-align:center">●</td></tr>
-<tr><td>command</td><td>string</td><td>low, medium, high, timer1, timer2, timer3, clearqueue</td><td>string</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br>
-<em>Resulting speed/timer settings are configurable. Value without timer sets the base/fallback speed of the fan. Timers will be queued on highest speed setting first for the duration of the timer.<br>For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em></td></tr>
-<tr><td>speed</td><td>string</td><td>0-254</td><td>uint8_t</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>Speed without a timer will reset the queue (different behaviour configurable) and set a new base/fallback speed.<br>
-For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em></td></tr><tr><td>timer</td><td>string</td><td>0-65535</td><td>uint16_t</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br>
-<em>only effective with "command" or "speed" key/param present, could overrule timer value of timer1, timer2, timer3. Highest speed setting on the queue will be active for the duration of the timer.</em></td></tr><tr><td>clearqueue</td><td>string</td><td>true</td><td>string</td>
-<td style="text-align:center">●</td><td style="text-align:center">◌</td></tr><tr><td colspan="6">Comments:<br><em>Clear all timers on the queue, scheduled to run after all other commands have been processed. Speed will fallback to last value before items got enqueued</em></td></tr><tr><td>get</td>
-<td>string</td><td>currentspeed</td><td>string</td><td style="text-align:center">◌</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>Returns current active itho speed setting in range 0-254</em></td></tr><tr><td></td><td></td><td>0-254</td><td>uint8_t</td>
-<td style="text-align:center">●</td><td style="text-align:center">◌</td></tr><tr><td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td></tr></tbody></table><p><br><br></p>
+<strong>API table:</strong><table class="pure-table pure-table-bordered" style="font-size:.85em"> <thead> <tr> <th>key or param</th> <th>datatype</th> <th style="width:160px">value</th> <th>datatype</th> <th style="text-align:center">MQTT<br>(JSON)</th> <th style="text-align:center">HTML<br>(URL params)</th> </tr> </thead> <tbody> <tr> <td>dtype</td> <td>string</td> <td>ithofan</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>If Domoticz MQTT support is on and commands originate from other than configured IDX, this key/value pair needs to be present for commands to get processed.</em></td> </tr> <tr> <td>username</td> <td>string</td> <td>max 20 chars long</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td>password</td> <td>string</td> <td>max 20 chars long</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td>command</td> <td>string</td> <td>low, medium, high, timer1, timer2, timer3, clearqueue</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Resulting speed/timer settings are configurable. Value without timer sets the base/fallback speed of the fan. Timers will be queued on highest speed setting first for the duration of the timer.<br> For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em> </td> </tr> <tr> <td>vremote</td> <td>string</td> <td>low, medium, high, timer1, timer2, timer3, join, leave</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>These commands work as a normal physical remote. For these commands to work the virtual remote needs to be activated and joined with the itho unit first</em></td> </tr> <tr> <td>speed</td> <td>string</td> <td>0-254</td> <td>uint8_t</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Speed without a timer will reset the queue (different behaviour configurable) and set a new base/fallback speed.<br> For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em> </td> </tr> <tr> <td>timer</td> <td>string</td> <td>0-65535</td> <td>uint16_t</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>only effective with "command" or "speed" key/param present, could overrule timer value of timer1, timer2, timer3. Highest speed setting on the queue will be active for the duration of the timer.</em></td> </tr> <tr> <td>clearqueue</td> <td>string</td> <td>true</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Clear all timers on the queue, scheduled to run after all other commands have been processed. Speed will fallback to last value before items got enqueued</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>currentspeed</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns current active itho speed setting in range 0-254</em></td> </tr> <tr> <td></td> <td></td> <td>0-254</td> <td>uint8_t</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>ithostatus</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns JSON with all available sensor data, status data and system information. Available keys depend on itho device and firmware version</em></td> </tr> <tr> <td></td> <td></td> <td>Variable keys</td> <td>JSON</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "Itho status topic", see for more info the comments on ithostatus of the HTML API</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>remotesinfo</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key = remote name, value is JSON with all received capabilities of the remote. Depending on make and model this can be the last command, temperature, humidity, battery and/or co2 levels.</em></td> </tr> <tr> <td></td> <td></td> <td>Variable keys</td> <td>JSON</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "Remotes info topic", see for more info the comments on remotesinfo of the HTML API</em></td> </tr> </tbody></table><p><br><br></p>
 `;
 
 var html_help = `
 <div class="header"><h1>Need some help?</h1></div>
-<br><br><span>More information and contact options are available at GitHub: <a href='https://github.com/arjenhiemstra/ithowifi' target='_blank'>https://github.com/arjenhiemstra/ithowifi</a></span>  
+<br><br><span>More information and contact options are available at GitHub: <a href='https://github.com/arjenhiemstra/ithowifi' target='_blank'>https://github.com/arjenhiemstra/ithowifi</a></span>
 `;
 
 var html_reboot_script = `
@@ -1498,7 +1511,7 @@ $(document).ready(function() {
 
 var html_edit = `
 <div class="header"><h1>File editor</h1></div>
-<p>Be very carefull, use only if absolutely necessary!</p><br>
+<p>Be very carefull, use only if absolutely necessary!</p><p>To activate a changed config file; go to the reset page, check the 'Don't save config' checkbox and reboot.</p><br>
 <iframe id="editor" src="/edit" width="100%" height="100%" style="border:none;padding:5px"></iframe>
 <script>
 $(document).ready(function() {
@@ -1514,7 +1527,7 @@ var html_reset = `
     <button id="reboot" class="pure-button">Restart device</button>
     <button id="resetwificonf" class="pure-button">Restore wifi config</button>
     <button id="resetsysconf" class="pure-button">Restore system config</button>
-
+    <br><br><input type="checkbox" id="dontsaveconf"><label for="dontsaveconf"> Don't save config</label>
     <div id="rebootscript"></div>
   </fieldset>
 </form>    
@@ -1548,12 +1561,10 @@ var html_update = `
   <div id="uploadProgress" style="border-radius: 20px;max-width: 300px;background-color: #ccc;display: none;">
     <div id="uploadBar" style="border-radius: 20px;width: 10%;height: 20px;background-color: #999;"></div>
   </div>
-  <div id="uploaddone" style="display: none;"></div>
   <p id="updateprg" style="display: none;">Firmware update progress: 0%</p>
   <div id="updateProgress" style="border-radius: 20px;max-width: 300px;background-color: #ccc;display: none;">
     <div id="updateBar" style="border-radius: 20px;width: 10%;height: 20px;background-color: #999;"></div>    
   </div>
-  <div id="updatedone" style="display: none;"></div>
   <p id="time" style="display: none;">This page will reload to the start page in... </p>
 </form>
 <script>
@@ -1601,7 +1612,6 @@ $.ajax({
     
   }
 })
-statustimer = 0;
 
 </script>
 `;

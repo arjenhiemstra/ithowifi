@@ -6,7 +6,8 @@ void TaskInit( void * pvParameters ) {
   mutexLogTask = xSemaphoreCreateMutex();
   mutexJSONLog = xSemaphoreCreateMutex();
   mutexWSsend = xSemaphoreCreateMutex();
-
+  mutexI2Ctask = xSemaphoreCreateMutex();
+  
   hardwareInit();
   
   startTaskConfigAndLog();
@@ -14,10 +15,6 @@ void TaskInit( void * pvParameters ) {
   while (!TaskInitReady) {
     yield();
   }
-
-#if defined (ENABLE_SERIAL)
-  Serial.println("Setup: done");
-#endif
 
   esp_task_wdt_init(40, true);
   logInput("Setup: done");

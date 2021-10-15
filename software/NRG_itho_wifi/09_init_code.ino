@@ -45,7 +45,7 @@ void failSafeBoot() {
       }, [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
         if (!index) {
           content_len = request->contentLength();
-          //Serial.printf("Update Start: %s\n", filename.c_str());
+          D_LOG("Update Start: %s\n", filename.c_str());
           if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
             Update.printError(Serial);
           }
@@ -106,8 +106,8 @@ void failSafeBoot() {
 
 void hardwareInit() {
 
-//Workaround for https://github.com/arjenhiemstra/ithowifi/issues/30
-#if defined (HW_VERSION_TWO)
+  //Workaround for https://github.com/arjenhiemstra/ithowifi/issues/30
+#if defined (HW_VERSION_TWO) && defined (CVE)
   if (digitalRead(BOOTSTATE) == LOW) {
     pinMode(BOOTSTATE, OUTPUT);
     digitalWrite(BOOTSTATE, HIGH);
@@ -120,9 +120,10 @@ void hardwareInit() {
   pinMode(STATUSPIN, INPUT_PULLUP);
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
+#if defined (CVE)
   pinMode(ITHOSTATUS, OUTPUT);
   digitalWrite(ITHOSTATUS, LOW);
-
+#endif
 
 #if defined (HW_VERSION_TWO) && defined (ENABLE_FAILSAVE_BOOT)
   pinMode(FAILSAVE_PIN, INPUT);
@@ -144,10 +145,12 @@ void i2cInit() {
 }
 
 bool ithoInitCheck() {
+#if defined (CVE)  
   if (digitalRead(STATUSPIN) == LOW) {
     return false;
   }
   sendI2CPWMinit();
+#endif  
   return false;
 }
 
@@ -200,7 +203,6 @@ void logInit() {
 
 }
 
-#if defined(ENABLE_SHT30_SENSOR_SUPPORT)
 void initSensor() {
 
   if (systemConfig.syssht30) {
@@ -221,7 +223,7 @@ void initSensor() {
     if (SHT3x_original || SHT3x_alternative) return;
 
     delay(200);
-    
+
     if (sht_org.init() && sht_org.readSample()) {
       Wire.endTransmission(true);
       SHT3x_original = true;
@@ -239,27 +241,26 @@ void initSensor() {
     else {
       systemConfig.syssht30 = 0;
       logInput("Setup: SHT30 sensor not present");
-    }    
+    }
   }
 
 }
-#endif
 
 bool initFileSystem() {
 
-  //Serial.println("Mounting FS...");
+  D_LOG("Mounting FS...\n");
 
 #if defined (HW_VERSION_ONE)
 
   if (!SPIFFS.begin()) {
-    //Serial.println("SPIFFS failed, needs formatting");
+    D_LOG("SPIFFS failed, needs formatting\n");
     handleFormat();
     delay(500);
     ESP.restart();
   }
   else {
     if (!SPIFFS.info(fs_info)) {
-      //Serial.println("fs_info failed");
+      D_LOG("fs_info failed\n");
       return false;
     }
   }
@@ -274,25 +275,25 @@ bool initFileSystem() {
 
 void handleFormat()
 {
-  //Serial.println("Format SPIFFS");
+  D_LOG("Format SPIFFS\n");
   if (SPIFFS.format())
   {
     if (!SPIFFS.begin())
     {
-      //Serial.println("Format SPIFFS failed");
+      D_LOG("Format SPIFFS failed\n");
     }
   }
   else
   {
-    //Serial.println("Format SPIFFS failed");
+    D_LOG("Format SPIFFS failed\n");
   }
   if (!SPIFFS.begin())
   {
-    //Serial.println("SPIFFS failed, needs formatting");
+    D_LOG("SPIFFS failed, needs formatting\n");
   }
   else
   {
-    //Serial.println("SPIFFS mounted");
+    D_LOG("SPIFFS mounted\n");
   }
 }
 
@@ -300,7 +301,13 @@ void handleFormat()
 char* hostName() {
   static char hostName[32];
 
-  sprintf(hostName, "%s%02x%02x", espName, getMac(6 - 2), getMac(6 - 1));
+  if (strcmp(wifiConfig.hostname, "") == 0) {
+    sprintf(hostName, "%s%02x%02x", espName, getMac(6 - 2), getMac(6 - 1));
+  }
+  else {
+    strlcpy(hostName, wifiConfig.hostname, sizeof(hostName));
+  }
+
 
   return hostName;
 }
@@ -383,14 +390,17 @@ void setupWiFiAP() {
 bool connectWiFiSTA()
 {
   wifiModeAP = false;
-#if defined (INFORMATIVE_LOGGING)
-  logInput("Connecting to wireless network...");
-#endif
+  D_LOG("Connecting to wireless network...\n");
+  
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
 #if defined (HW_VERSION_TWO)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
 #endif
   WiFi.disconnect(true);
+#if defined (HW_VERSION_TWO)  
+  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
+  WiFi.setHostname(hostName());  
+#endif  
   WiFi.setAutoReconnect(false);
   delay(200);
   WiFi.mode(WIFI_STA);
@@ -442,7 +452,6 @@ bool connectWiFiSTA()
   WiFi.hostname(hostName());
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 #elif defined (HW_VERSION_TWO)
-  WiFi.setHostname(hostName());
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 #endif
 
@@ -487,232 +496,6 @@ void mqttInit() {
   }
 }
 
-void mqttHomeAssistantDiscovery()
-{
-  if (!systemConfig.mqtt_active || !mqttClient.connected() || !systemConfig.mqtt_ha_active) return;
-  logInput("HA DISCOVERY: Start publishing MQTT Home Assistant Discovery...");
-
-  HADiscoveryFan();
-
-  if (!SHT3x_original || !SHT3x_alternative) return;
-  HADiscoveryHumidity();
-  HADiscoveryTemperature();
-}
-
-
-void HADiscoveryFan() {
-  DynamicJsonDocument doc(2048);
-  JsonObject root = doc.to<JsonObject>(); // Fill the object
-  char s[160];
-
-  addHADevInfo(root);
-  root["avty_t"] = (const char*)systemConfig.mqtt_lwt_topic;
-  sprintf(s, "%s_fan", hostName());
-  root["uniq_id"] = s;
-  root["name"] = s;
-  root["stat_t"] = (const char*)systemConfig.mqtt_lwt_topic;
-  root["stat_val_tpl"] = "{% if value == 'online' %}ON{% else %}OFF{% endif %}";
-  root["json_attr_t"] = (const char*)systemConfig.mqtt_sensor_topic;
-  sprintf(s, "%s/not_used/but_needed_for_HA", systemConfig.mqtt_cmd_topic);
-  root["cmd_t"] = s;
-  root["pct_cmd_t"] = (const char*)systemConfig.mqtt_cmd_topic;
-  root["pct_cmd_tpl"] = "{{ value * 2.54 }}";  
-  root["pct_stat_t"] = (const char*)systemConfig.mqtt_state_topic;
-  root["pct_val_tpl"] = "{{ ((value | int) / 2.54) | round}}";  
-
-  sprintf(s, "%s/fan/%s/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
-
-  sendHADiscovery(root, s);
-
-}
-
-void HADiscoveryTemperature() {
-  DynamicJsonDocument doc(2048);
-  JsonObject root = doc.to<JsonObject>(); // Fill the object
-  char s[160];
-
-  addHADevInfo(root);
-  root["avty_t"] = (const char*)systemConfig.mqtt_lwt_topic;
-  root["dev_cla"] = "temperature";
-  sprintf(s, "%s_temperature", hostName());
-  root["uniq_id"] = s;
-  root["name"] = s;
-  root["stat_t"] = (const char*)systemConfig.mqtt_sensor_topic;
-  root["val_tpl"] = "{{ value_json.temp }}";
-
-  sprintf(s, "%s/sensor/%s/temp/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
-
-  sendHADiscovery(root, s);
-}
-
-void HADiscoveryHumidity() {
-  DynamicJsonDocument doc(2048);
-  JsonObject root = doc.to<JsonObject>(); // Fill the object
-  char s[160];
-
-  addHADevInfo(root);
-  root["avty_t"] = (const char*)systemConfig.mqtt_lwt_topic;
-  root["dev_cla"] = "humidity";
-  sprintf(s, "%s_humidity", hostName());
-  root["uniq_id"] = s;
-  root["name"] = s;
-  root["stat_t"] = (const char*)systemConfig.mqtt_sensor_topic;
-  root["val_tpl"] = "{{ value_json.hum }}";
-
-  sprintf(s, "%s/sensor/%s/hum/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
-
-  sendHADiscovery(root, s);
-}
-
-void addHADevInfo(JsonObject obj) {
-  char s[64];
-  JsonObject dev = obj.createNestedObject("dev");
-  dev["identifiers"] = hostName();
-  dev["manufacturer"] = "Arjen Hiemstra";
-  dev["model"] = "ITHO Wifi Add-on";
-  sprintf(s, "ITHO-WIFI(%s)", hostName());
-  dev["name"] = s;
-  sprintf(s, "HW: v%s, FW: %s", HWREVISION, FWVERSION);
-  dev["sw_version"] = s;
-
-}
-
-void sendHADiscovery(JsonObject obj, const char* topic)
-{
-  size_t payloadSize = measureJson(obj);
-  //max header + topic + content. Copied logic from PubSubClien::publish(), PubSubClient.cpp:482
-  size_t packetSize = MQTT_MAX_HEADER_SIZE + 2 + strlen(topic) + payloadSize;
-
-  if (mqttClient.getBufferSize() < packetSize)
-  {
-    logInput("MQTT: buffer too small, resizing... (HA discovery)");
-    mqttClient.setBufferSize(packetSize);
-  }
-
-  if (mqttClient.beginPublish(topic, payloadSize, true))
-  {
-    serializeJson(obj, mqttClient);
-    if (!mqttClient.endPublish()) logInput("MQTT: Failed to send payload (HA discovery)");
-  }
-  else
-  {
-    logInput("MQTT: Failed to start building message (HA discovery)");
-  }
-
-  // reset buffer
-  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
-}
-
-bool setupMQTTClient() {
-  int connectResult;
-
-  if (systemConfig.mqtt_active) {
-
-    if (strcmp(systemConfig.mqtt_serverName, "") != 0) {
-
-      mqttClient.setServer(systemConfig.mqtt_serverName, systemConfig.mqtt_port);
-      mqttClient.setCallback(mqttCallback);
-      mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
-
-      if (strcmp(systemConfig.mqtt_username, "") == 0) {
-        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_lwt_topic, 0, true, "offline");
-      }
-      else {
-        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_username, systemConfig.mqtt_password, systemConfig.mqtt_lwt_topic, 0, true, "offline");
-      }
-
-      if (!connectResult) {
-        return false;
-      }
-
-      if (mqttClient.connected()) {
-        mqttClient.subscribe(systemConfig.mqtt_cmd_topic);
-        mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", true);
-
-        mqttHomeAssistantDiscovery();
-        return true;
-      }
-    }
-
-  }
-  else {
-    mqttClient.publish(systemConfig.mqtt_lwt_topic, "offline", true);  //set to offline in case of graceful shutdown
-    mqttClient.disconnect();
-  }
-  return false;
-
-}
-
-boolean reconnect() {
-  setupMQTTClient();
-  return mqttClient.connected();
-}
-
-void logWifiInfo() {
-
-  char wifiBuff[128];
-
-  logInput("WiFi: connection successful");
-
-
-  logInput("WiFi info:");
-
-  const char* const modes[] = { "NULL", "STA", "AP", "STA+AP" };
-  //const char* const phymodes[] = { "", "B", "G", "N" };
-
-#if defined (HW_VERSION_ONE)
-  sprintf(wifiBuff, "Mode:%s", modes[wifi_get_opmode()]);
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  sprintf(wifiBuff, "PHY mode:%s", phymodes[(int) wifi_get_phy_mode()]);
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  sprintf(wifiBuff, "Channel:%d", wifi_get_channel());
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  sprintf(wifiBuff, "AP id:%d", wifi_station_get_current_ap_id());
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  sprintf(wifiBuff, "Status:%d", wifi_station_get_connect_status());
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  sprintf(wifiBuff, "Auto connect:%d", wifi_station_get_auto_connect());
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  struct station_config conf;
-  wifi_station_get_config(&conf);
-
-  char ssid[33]; //ssid can be up to 32chars, => plus null term
-  memcpy(ssid, conf.ssid, sizeof(conf.ssid));
-  ssid[32] = 0; //nullterm in case of 32 char ssid
-
-  sprintf(wifiBuff, "SSID (%d):%s", strlen(ssid), ssid);
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-#elif defined (HW_VERSION_TWO)
-
-  sprintf(wifiBuff, "Mode:%s", modes[WiFi.getMode()]);
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  sprintf(wifiBuff, "Status:%d", WiFi.status());
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-#endif
-
-  IPAddress ip = WiFi.localIP();
-  sprintf(wifiBuff, "IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-}
 
 void init_vRemote() {
   //setup virtual remote
@@ -894,7 +677,7 @@ void webServerInit() {
   [](AsyncWebServerRequest * request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     if (!index) {
 #if defined (ENABLE_SERIAL)
-      Serial.println("Begin OTA update");
+      D_LOG("Begin OTA update\n");
 #endif
       onOTA = true;
       dontSaveConfig = true;
@@ -906,9 +689,6 @@ void webServerInit() {
       strcat(buf, "Firmware update: ");
       strncat(buf, filename.c_str(), sizeof(buf) - strlen(buf) - 1);
       logInput(buf);
-#if defined (ENABLE_SERIAL)
-      Serial.println(buf);
-#endif
 
 #if defined (HW_VERSION_TWO)
 
@@ -927,7 +707,7 @@ void webServerInit() {
       esp_task_wdt_delete( xTaskConfigAndLogHandle );
 
 #if defined (ENABLE_SERIAL)
-      Serial.println("Tasks detached");
+      D_LOG("Tasks detached\n");
 #endif
 
 #endif
@@ -953,7 +733,7 @@ void webServerInit() {
     if (final) {
       if (Update.end(true)) {
 #if defined (ENABLE_SERIAL)
-        printf("Update Success: %uB\n", index + len);
+        D_LOG("Update Success: %uB\n", index + len);
 #endif
       } else {
 #if defined (ENABLE_SERIAL)
@@ -970,7 +750,7 @@ void webServerInit() {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
         return request->requestAuthentication();
     }
-    jsonLogMessage(F("Reset requested Device will reboot in a few seconds..."), WEBINTERFACE);
+    logMessagejson(F("Reset requested. Device will reboot in a few seconds..."), WEBINTERFACE);
     delay(200);
     shouldReboot = true;
   });

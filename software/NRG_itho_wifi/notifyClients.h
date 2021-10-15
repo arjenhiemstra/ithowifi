@@ -14,9 +14,10 @@ extern size_t content_len;
 void notifyClients(AsyncWebSocketMessageBuffer* message);
 
 void notifyClients(const char * message, size_t len);
+void notifyClients(JsonObjectConst obj);
 
 void jsonSysmessage(const char * id, const char * message);
-void jsonLogMessage(const __FlashStringHelper * str, logtype type);
-void jsonLogMessage(const char* message, logtype type);
-void jsonLogMessage(JsonObject obj, logtype type);
+void logMessagejson(const __FlashStringHelper * str, logtype type);
+void logMessagejson(const char* message, logtype type);
+void logMessagejson(JsonObject obj, logtype type);
 void otaWSupdate(size_t prg, size_t sz);
