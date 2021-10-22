@@ -10,13 +10,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-extern size_t itho2401len;
-
 extern uint8_t ithoDeviceID;
 extern uint8_t itho_fwversion;
 extern volatile uint16_t ithoCurrentVal;
 extern uint8_t id0, id1, id2;
-extern int8_t swap;
 extern struct ihtoDeviceType* ithoDeviceptr;
 extern int ithoSettingsLength;
 
@@ -85,7 +82,7 @@ extern std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 
 struct lastCommand {
   const char* source;
-  const char* command;
+  char command[20];
   time_t timestamp;
 };
 

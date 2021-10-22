@@ -16,7 +16,6 @@ class SystemConfig {
     uint8_t syssec_api;
     uint8_t syssec_edit;
     uint8_t syssht30;
-    uint8_t sysfirhum;    
     uint8_t mqtt_active;
     char mqtt_serverName[65];
     char mqtt_username[32];
@@ -48,8 +47,6 @@ class SystemConfig {
     uint16_t itho_updatefreq;
     uint8_t itho_sendjoin;
     uint8_t itho_forcemedium;
-    uint8_t itho_vremapi;
-    uint8_t itho_vremswap;
     uint8_t itho_rf_support;
     mutable bool rfInitOK;
     uint8_t nonQ_cmd_clearsQ;

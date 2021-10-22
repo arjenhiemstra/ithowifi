@@ -1,4 +1,4 @@
-#define FWVERSION "2.3-beta1"
+#define FWVERSION "2.3-beta2"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -204,6 +204,7 @@ bool formatFileSystem = false;
 bool runscan = false;
 bool updateIthoMQTT = false;
 bool updateMQTTihtoStatus = false;
+bool sendHomeAssistantDiscovery = false;
 volatile bool ithoCheck = false;
 volatile bool saveRemotesflag = false;
 bool SHT3x_original = false;

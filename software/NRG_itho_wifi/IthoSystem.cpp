@@ -6,15 +6,12 @@
 #include "notifyClients.h"
 #include "IthoSystemConsts.h"
 
-size_t itho2401len = 0;
-
 uint8_t ithoDeviceID = 0;
 uint8_t itho_fwversion = 0;
 volatile uint16_t ithoCurrentVal = 0;
 uint8_t id0 = 0;
 uint8_t id1 = 0;
 uint8_t id2 = 0;
-int8_t swap = 0;
 struct ihtoDeviceType* ithoDeviceptr = getDevicePtr(ithoDeviceID);
 int ithoSettingsLength = getSettingsLength(ithoDeviceID, itho_fwversion);
 std::vector<ithoDeviceStatus> ithoStatus;
@@ -275,15 +272,6 @@ void sendButton(uint8_t number, bool & updateweb) {
   command[14] = cmdCounter;
   cmdCounter++;
 
-  if (swap) {
-    if (number == 1) {
-      number = 3;
-    }
-    else if (number == 3) {
-      number = 1;
-    }
-  }
-
   command[19] += number;
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
@@ -433,7 +421,7 @@ void sendQueryDevicetype(bool & updateweb) {
   size_t len = i2c_slave_receive(i2cbuf);
 
   //if (len > 2) {
-  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
     if (updateweb) {
       updateweb = false;
 
@@ -491,7 +479,7 @@ void sendQueryStatusFormat(bool & updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
     if (updateweb) {
       updateweb = false;
       jsonSysmessage("ithostatusformat", i2cbuf2string(i2cbuf, len).c_str());
@@ -581,9 +569,7 @@ void sendQueryStatus(bool & updateweb) {
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
 
-  itho2401len = len;
-
-  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
 
     if (updateweb) {
       updateweb = false;
@@ -637,7 +623,7 @@ void sendQueryStatus(bool & updateweb) {
           }
         }
         if (strcmp(ithoStat.name.c_str(), "RelativeHumidity") == 0 || strcmp(ithoStat.name.c_str(), "humidity") == 0) {
-          if (ithoStat.value.floatval < 100.0) {
+          if (ithoStat.value.floatval > 1.0 && ithoStat.value.floatval < 100.0) {
             if (!systemConfig.syssht30) {
               ithoHum = ithoStat.value.floatval;
               itho_internal_hum_temp = true;
@@ -649,7 +635,7 @@ void sendQueryStatus(bool & updateweb) {
           }
         }
         if (strcmp(ithoStat.name.c_str(), "Temperature") == 0 || strcmp(ithoStat.name.c_str(), "temperature") == 0) {
-          if (ithoStat.value.floatval < 100.0) {
+          if (ithoStat.value.floatval > 1.0 && ithoStat.value.floatval < 100.0) {
             if (!systemConfig.syssht30) {
               ithoTemp = ithoStat.value.floatval;
               itho_internal_hum_temp = true;
@@ -698,7 +684,7 @@ void sendQuery31DA(bool & updateweb) {
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
 
-  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
 
     if (updateweb) {
       updateweb = false;
@@ -998,7 +984,7 @@ void sendQuery31D9(bool & updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
 
     if (updateweb) {
       updateweb = false;
@@ -1094,7 +1080,7 @@ int32_t * sendQuery2410(bool & updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
 
     uint8_t tempBuf[] = { i2cbuf[9], i2cbuf[8], i2cbuf[7], i2cbuf[6] };
     std::memcpy(&values[0], tempBuf, 4);
@@ -1171,7 +1157,7 @@ void setSetting2410(bool & updateweb) {
 
   uint8_t i2cbuf[512] {};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
     if (updateweb) {
       updateweb = false;
       if (len > 2) {

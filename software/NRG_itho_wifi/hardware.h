@@ -34,7 +34,7 @@
 #define ITHOSTATUS   13
 
 #elif defined (HW_VERSION_TWO) && defined (NON_CVE)
-#define HWREVISION "1"
+#define HWREVISION "NON-CVE 1"
 #define SDAPIN      27
 #define SCLPIN      26
 #define WIFILED     17  // 17 / 2

@@ -1221,7 +1221,7 @@ bool IthoCC1101::addRFDevice(uint32_t ID) {
 
 bool IthoCC1101::removeRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2) {
   uint32_t tempID = byte0 << 16 | byte1 << 8 | byte2;
-  return addRFDevice(tempID);
+  return removeRFDevice(tempID);
 }
 
 bool IthoCC1101::removeRFDevice(uint32_t ID) {

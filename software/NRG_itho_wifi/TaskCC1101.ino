@@ -304,7 +304,8 @@ void TaskCC1101( void * pvParameters ) {
 
           const ithoRFDevices &rfDevices = rf.getRFdevices();
           for (auto& item : rfDevices.device) {
-            int remIndex = remotes.remoteIndex(item.deviceId);
+            if (item.deviceId == 0) continue;
+            int remIndex = remotes.remoteIndex(item.deviceId);            
             if (remIndex != -1) {
               remotes.addCapabilities(remIndex, "lastcmd", item.lastCommand);
               if (item.co2 != 0xEFFF) {
@@ -324,6 +325,7 @@ void TaskCC1101( void * pvParameters ) {
               }
             }
           }
+
         }
       }
       if (ithoCCstatReq) {
