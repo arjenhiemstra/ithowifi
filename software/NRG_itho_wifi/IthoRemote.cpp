@@ -70,7 +70,7 @@ int IthoRemote::removeRemote(int* id) {
 
   int index = this->remoteIndex(id);
 
-  if (index <= 0) return -1;
+  if (index < 0) return -1;
 
   for (uint8_t i = 0; i < 3; i++) {
     remotes[index].ID[i] = 0;
@@ -86,8 +86,7 @@ int IthoRemote::removeRemote(int* id) {
 
 int IthoRemote::removeRemote(uint8_t index) {
 
-  if (index <= 0) return -1;
-  if (index > MAX_NUMBER_OF_REMOTES) return -1;
+  if (!(index < MAX_NUMBER_OF_REMOTES)) return -1;
 
   if (remotes[index].ID[0] != 0 && remotes[index].ID[1] != 0 && remotes[index].ID[2] != 0) {
     for (uint8_t i = 0; i < 3; i++) {
@@ -118,7 +117,7 @@ void IthoRemote::addCapabilities(uint8_t remoteIndex, const char* name, int32_t 
 }
 
 int IthoRemote::remoteIndex(int32_t id) {
-  if (id <= 0) return -1;
+  if (id < 0) return -1;
   int tempID[3];
   tempID[0] = (id >> 16) & 0xFF;
   tempID[1] = (id >> 8) & 0xFF;

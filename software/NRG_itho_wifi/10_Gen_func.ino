@@ -59,7 +59,6 @@ void getRemotesInfoJSON(JsonObject root) {
 
 }
 
-
 bool ithoExecCommand(const char* command, cmdOrigin origin)
 {
   D_LOG("EXEC COMMAND\n");
@@ -223,7 +222,7 @@ void logLastCommand(const char* command, cmdOrigin origin) {
 void logLastCommand(const char* command, const char* source) {
 
   lastCmd.source = source;
-  lastCmd.command = command;
+  strcpy(lastCmd.command, command);
 
   if (time(nullptr)) {
     time_t now;

@@ -502,7 +502,6 @@ void init_vRemote() {
   id0 = getMac(6 - 3);
   id1 = getMac(6 - 2);
   id2 = getMac(6 - 1);
-  swap = systemConfig.itho_vremswap;
   char buff[128];
   sprintf(buff, "Setup: Virtual remote ID: %d,%d,%d", id0, id1, id2);
   logInput(buff);

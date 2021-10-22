@@ -62,7 +62,9 @@ void execMQTTTasks() {
     sysStatReq = true;
   }
   if (mqttClient.connected()) {
-
+    if(sendHomeAssistantDiscovery) {
+      mqttHomeAssistantDiscovery();
+    }
     if (updateIthoMQTT) {
       updateIthoMQTT = false;
       updateState(ithoCurrentVal);
@@ -113,6 +115,7 @@ void execMQTTTasks() {
       lastMQTTReconnectAttempt = millis();
       // Attempt to reconnect
       if (reconnect()) {
+        sendHomeAssistantDiscovery = true;
         lastMQTTReconnectAttempt = 0;
       }
     }
@@ -315,11 +318,12 @@ void updateState(uint16_t newState) {
 void mqttHomeAssistantDiscovery()
 {
   if (!systemConfig.mqtt_active || !mqttClient.connected() || !systemConfig.mqtt_ha_active) return;
+  sendHomeAssistantDiscovery = false;
   logInput("HA DISCOVERY: Start publishing MQTT Home Assistant Discovery...");
 
   HADiscoveryFan();
 
-  if (!SHT3x_original || !SHT3x_alternative) return;
+  if (!SHT3x_original && !SHT3x_alternative && !itho_internal_hum_temp) return;
   HADiscoveryHumidity();
   HADiscoveryTemperature();
 }
@@ -454,7 +458,6 @@ bool setupMQTTClient() {
         mqttClient.subscribe(systemConfig.mqtt_cmd_topic);
         mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", true);
 
-        mqttHomeAssistantDiscovery();
         return true;
       }
     }

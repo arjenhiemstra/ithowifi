@@ -47,12 +47,6 @@ struct ithoRFDevices {
 const uint8_t ithoPaTableSend[8] = {0x6F, 0x26, 0x2E, 0x8C, 0x87, 0xCD, 0xC7, 0xC0};
 const uint8_t ithoPaTableReceive[8] = {0x6F, 0x26, 0x2E, 0x7F, 0x8A, 0x84, 0xCA, 0xC4};
 
-const uint8_t messageOpcodeRemote[] =        { 0x22, 0xF1 };
-const uint8_t messageOpcodeRemoteAutoCO2[] = { 0x22, 0xF8 };
-const uint8_t messageOpcodeTimer[] =         { 0x22, 0xF3 };
-const uint8_t messageOpcodeRFTRV[] =         { 0x31, 0xE0 };
-const uint8_t messageOpcodeRFBind[] =        { 0x1F, 0xC9 };
-
 //message command bytes
 const uint8_t ithoMessageRVHighCommandBytes[] =   {49, 224, 4, 0, 0, 200, 0};
 const uint8_t ithoMessageHighCommandBytes[] =     {34, 241, 3, 0, 4, 4};

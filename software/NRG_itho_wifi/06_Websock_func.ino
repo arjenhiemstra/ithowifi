@@ -159,7 +159,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
             }
             else if (val == 24109) {
               updateSetting(root["index"].as<int8_t>(), root["value"].as<int32_t>(), true);
-            }            
+            }
           }
           else {
             i2c_result_updateweb = true;
@@ -229,22 +229,22 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
       }
       else if (msg.find("{\"itho_remove_remote\"") != std::string::npos) {
         bool parseOK = false;
-        int number = atoi( (msg.substr(22, len)).c_str() );
-        if (number == 0) {
-          if (strcmp(msg.substr(22, 23).c_str(), "0") == 0) {
+        StaticJsonDocument<128> root;
+        DeserializationError error = deserializeJson(root, msg.c_str());
+        if (!error) {
+          int number = root["itho_remove_remote"];
+          if (number > 0 && number < MAX_NUMBER_OF_REMOTES + 1) {
             parseOK = true;
+            number--; //+1 was added earlier to offset index from 0
           }
-        }
-        else if (number > 0 && number < MAX_NUMBER_OF_REMOTES) {
-          parseOK = true;
-        }
-        if (parseOK) {
-          remotes.removeRemote(number);
-          int* id = remotes.getRemoteIDbyIndex(number);
-          rf.setBindAllowed(true);
-          rf.removeRFDevice(*id, *(id + 1), *(id + 2));
-          rf.setBindAllowed(false);
-          saveRemotesflag = true;
+          if (parseOK) {
+            remotes.removeRemote(number);
+            int* id = remotes.getRemoteIDbyIndex(number);
+            rf.setBindAllowed(true);
+            rf.removeRFDevice(*id, *(id + 1), *(id + 2));
+            rf.setBindAllowed(false);
+            saveRemotesflag = true;
+          }
         }
       }
       else if (msg.find("{\"itho_update_remote\"") != std::string::npos) {

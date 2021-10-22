@@ -14,7 +14,6 @@ SystemConfig::SystemConfig() {
   syssec_api = 0;
   syssec_edit = 0;
   syssht30 = 0;
-  sysfirhum = 0;
   mqtt_active = 0;
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
   strlcpy(mqtt_username, "", sizeof(mqtt_username));
@@ -46,8 +45,6 @@ SystemConfig::SystemConfig() {
   itho_updatefreq = 5;
   itho_sendjoin = 0;
   itho_forcemedium = 0;
-  itho_vremapi = 0;
-  itho_vremswap = 0;
   itho_rf_support = 0;
   rfInitOK = false;
   nonQ_cmd_clearsQ = 1;
@@ -94,10 +91,6 @@ bool SystemConfig::set(JsonObjectConst obj) {
   if (!(const char*)obj["syssht30"].isNull()) {
     updated = true;
     syssht30 = obj["syssht30"];
-  }
-  if (!(const char*)obj["sysfirhum"].isNull()) {
-    updated = true;
-    sysfirhum = obj["sysfirhum"];
   }
   //MQTT Settings parse
   if (!(const char*)obj["mqtt_active"].isNull()) {
@@ -217,14 +210,6 @@ bool SystemConfig::set(JsonObjectConst obj) {
     updated = true;
     itho_forcemedium = obj["itho_forcemedium"];
   }
-  if (!(const char*)obj["itho_vremapi"].isNull()) {
-    updated = true;
-    itho_vremapi = obj["itho_vremapi"];
-  }
-  if (!(const char*)obj["itho_vremswap"].isNull()) {
-    updated = true;
-    itho_vremswap = obj["itho_vremswap"];
-  }
   if (!(const char*)obj["itho_rf_support"].isNull()) {
     updated = true;
     itho_rf_support = obj["itho_rf_support"];
@@ -254,7 +239,6 @@ void SystemConfig::get(JsonObject obj) const {
     obj["syssec_api"] = syssec_api;
     obj["syssec_edit"] = syssec_edit;
     obj["syssht30"] = syssht30;
-    obj["sysfirhum"] = sysfirhum;
     obj["itho_rf_support"] = itho_rf_support;
     obj["rfInitOK"] = rfInitOK;
     obj["itho_fallback"] = itho_fallback;
@@ -267,8 +251,6 @@ void SystemConfig::get(JsonObject obj) const {
     obj["itho_updatefreq"] = itho_updatefreq;
     obj["itho_sendjoin"] = itho_sendjoin;
     obj["itho_forcemedium"] = itho_forcemedium;
-    obj["itho_vremapi"] = itho_vremapi;
-    obj["itho_vremswap"] = itho_vremswap;  
     obj["nonQ_cmd_clearsQ"] = nonQ_cmd_clearsQ;    
   }
   if (complete || get_mqtt_settings) {

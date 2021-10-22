@@ -32,7 +32,7 @@ void TaskSysControl( void * pvParameters ) {
     yield();
     esp_task_wdt_reset();
 
-    TaskTimeout.once_ms(3000, []() {
+    TaskTimeout.once_ms(35000, []() {
       logInput("Error: Task SysControl timed out!");
     });
 
@@ -83,7 +83,7 @@ void execSystemControlTasks() {
       digitalWrite(ITHOSTATUS, HIGH);
 #endif
 #if defined (HW_VERSION_TWO)
-      if (systemConfig.sysfirhum == 1 && ithoDeviceID == 0x1B) {
+      if (systemConfig.syssht30 == 1 && ithoDeviceID == 0x1B) {
         if (itho_fwversion == 25) {
           updateSetting(63, 0, false);
         }
@@ -100,6 +100,7 @@ void execSystemControlTasks() {
         sendQueryStatus(i2c_result_updateweb);
         xSemaphoreGive(mutexI2Ctask);
       }
+      sendHomeAssistantDiscovery = true;
     }
     else {
       ithoInitResult = -1;
