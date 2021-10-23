@@ -388,6 +388,7 @@ void HADiscoveryHumidity() {
   root["name"] = s;
   root["stat_t"] = (const char*)systemConfig.mqtt_ithostatus_topic;
   root["val_tpl"] = "{{ value_json.hum }}";
+  root["unit_of_meas"] = "%";
 
   sprintf(s, "%s/sensor/%s/hum/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
 
