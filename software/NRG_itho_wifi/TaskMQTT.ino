@@ -368,6 +368,7 @@ void HADiscoveryTemperature() {
   root["name"] = s;
   root["stat_t"] = (const char*)systemConfig.mqtt_ithostatus_topic;
   root["val_tpl"] = "{{ value_json.temp }}";
+  root["unit_of_meas"] = "°C";
 
   sprintf(s, "%s/sensor/%s/temp/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
 
