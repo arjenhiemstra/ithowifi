@@ -1,0 +1,10 @@
+(sym_lib_table
+  (lib (name MCU_NodeMCU)(type Legacy)(uri "${KIPRJMOD}/KiCad lib/MCU_NodeMCU.lib")(options "")(descr ""))
+  (lib (name kicad_test-cache)(type Legacy)(uri "/Users/arjen/ownCloud/Hardware Development/nrgwatch 3.0 (original) copy/kicad_test-cache.lib")(options "")(descr ""))
+  (lib (name W5500)(type Legacy)(uri "/Users/arjen/ownCloud/Hardware Development/nrgwatch 3.0 (original) copy/W5500.lib")(options "")(descr ""))
+  (lib (name nrgwatch_board_2-rescue)(type Legacy)(uri "/Users/arjen/ownCloud/Hardware Development/nrgwatch 3.3/nrgwatch_board_2-rescue.lib")(options "")(descr ""))
+  (lib (name rgb-smt-led)(type Legacy)(uri "/Users/arjen/ownCloud/Hardware Development/nrgwatch 3.0 (original) copy/rgb-smt-led.lib")(options "")(descr ""))
+  (lib (name ESP32-footprints-Shem-Lib)(type Legacy)(uri "/Users/arjen/ownCloud/Hardware Development/nrgwatch 3.3/ESP32-footprints-Shem-Lib.lib")(options "")(descr ""))
+  (lib (name rgb-led)(type Legacy)(uri "/Users/arjen/ownCloud/Hardware Development/nrgwatch 3.0 (original) copy/rgb-led.lib")(options "")(descr ""))
+  (lib (name ithowifi-rescue)(type Legacy)(uri ${KIPRJMOD}/ithowifi-rescue.lib)(options "")(descr ""))
+)

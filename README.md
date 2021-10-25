@@ -8,8 +8,9 @@ Finished boards can be ordered in my webshop:
 or in my Tindie store:  
 [https://www.tindie.com/products/19680/](https://www.tindie.com/products/19680/)  
 
-   
-![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/pcb.png "Add-on PCB")   
+|CVE Add-on|non-CVE wifi module|
+|:---:|:---:|
+|![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/pcb.png "CVE Add-on PCB")  |  ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/non-cve pcb.jpg "non-CVE module PCB")|
 
 ## WiFi add-on to control itho central ventilation boxes
 

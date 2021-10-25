@@ -1,0 +1,122 @@
+EESchema-DOCLIB  Version 2.0
+#
+#
+# ESP8266
+#
+$CMP ESP8266EX
+D ESP8266 Espressif Wi-Fi SOC, 32 pins, 0.5mm pitch, 6x6mm QFN48.
+K Espressif Wi-Fi SoC IoT
+F https://espressif.com/en/products/hardware/esp8266ex/resources
+$ENDCMP
+#
+$CMP ESP8266EX_FULL
+D ESP8266 Espressif Wi-Fi SOC, 32 pins, 0.5mm pitch, 6x6mm QFN48, symbol with fully-elaborated pin names.
+K Espressif Wi-Fi SoC IoT
+F https://espressif.com/en/products/hardware/esp8266ex/resources
+$ENDCMP
+#
+$CMP ESP-01
+D ESP8266 ESP-01 module, PCB antenna, 8 pins, 0.1 in.
+K MODULE ESP8266 ESP-8266
+F http://l0l.org.uk/2014/12/esp8266-modules-hardware-guide-gotta-catch-em-all/
+$ENDCMP
+#
+$CMP ESP-02
+D ESP8266 ESP-02 module, no antenna, 8 castellated pins, 0.1 in.
+K MODULE ESP8266 ESP-8266
+F http://l0l.org.uk/2014/12/esp8266-modules-hardware-guide-gotta-catch-em-all/
+$ENDCMP
+#
+$CMP ESP-03
+D ESP8266 ESP-03 module, ceramic antenna, 14 castellated pins, 2 mm.
+K MODULE ESP8266 ESP-8266
+F http://l0l.org.uk/2014/12/esp8266-modules-hardware-guide-gotta-catch-em-all/
+$ENDCMP
+#
+$CMP ESP-04
+D ESP8266 ESP-04 module, no antenna, 14 castellated pins, 2 mm.
+K MODULE ESP8266 ESP-8266
+F http://l0l.org.uk/2014/12/esp8266-modules-hardware-guide-gotta-catch-em-all/
+$ENDCMP
+#
+$CMP ESP-05
+D ESP8266 ESP-05 module, no antenna, 5 pins, 0.1 in.
+K MODULE ESP8266 ESP-8266
+F http://l0l.org.uk/2014/12/esp8266-modules-hardware-guide-gotta-catch-em-all/
+$ENDCMP
+#
+$CMP ESP-07
+D ESP8266 ESP-07 module, ceramic antenna, 16 castellated pins, 2 mm.
+K MODULE ESP8266 ESP-8266
+F http://l0l.org.uk/2014/12/esp8266-modules-hardware-guide-gotta-catch-em-all/
+$ENDCMP
+#
+$CMP ESP-08
+D ESP8266 ESP-08 module, no antenna, 16 castellated pins, 2 mm.
+K MODULE ESP8266 ESP-8266
+F http://l0l.org.uk/2014/12/esp8266-modules-hardware-guide-gotta-catch-em-all/
+$ENDCMP
+#
+$CMP ESP-12
+D ESP8266 ESP-12 module, PCB antenna, 16 castellated pins, pins, 2mm.
+K MODULE ESP8266 ESP-8266
+F http://www.esp8266.com/wiki/doku.php?id=esp8266-module-family
+$ENDCMP
+#
+$CMP ESP-12E
+D ESP8266 ESP-12E module, PCB antenna, 22 castellated pins, 2mm.
+K MODULE ESP8266 ESP-8266
+F http://www.esp8266.com/wiki/doku.php?id=esp8266-module-family
+$ENDCMP
+#
+$CMP ESP-12F
+D ESP8266 ESP-12F module, PCB antenna, 22 castellated pins, 2mm.
+K MODULE ESP8266 ESP-8266
+F http://www.esp8266.com/wiki/doku.php?id=esp8266-module-family
+$ENDCMP
+#
+$CMP ESP-13-WROOM-02
+D ESP8266 ESP-13-WROOM-02 module, PCB antenna, 18 castellated pins, 1.5mm.
+K MODULE ESP8266 ESP-8266
+F https://s3-ap-northeast-1.amazonaws.com/cerevo-share/ESP8266/ESP_WROOM_02_Datasheet_EN_v0.3.pdf
+$ENDCMP
+#
+$CMP ESP-14
+D ESP8266 ESP-14 module, PCB antenna, 22 castellated pins, 2mm.
+K MODULE ESP8266 ESP-8266
+F http://www.electrodragon.com/w/ESP-14
+$ENDCMP
+#
+$CMP ESP-201
+D ESP8266 ESP-201 module, PCB antenna, 26 pins, 0.1 in.
+K MODULE ESP8266 ESP-8266
+F http://adlerweb.deviantart.com/art/ESP8266-ESP-201-Module-Pinout-Diagram-Cheat-Sheet-575951137
+$ENDCMP
+#
+#
+# ESP32
+#
+$CMP ESP32
+D ESP32 Espressif Wi-Fi/Bluetooth SOC, 48 pins, 0.4mm pitch, 6x6mm QFN48.
+K Espressif Wi-Fi Bluetooth SoC IoT
+F https://espressif.com/sites/default/files/documentation/esp32_datasheet_en_0.pdf
+$ENDCMP
+#
+$CMP ESP32_FULL
+D ESP32 Espressif Wi-Fi/Bluetooth SOC, 48 pins, 0.4mm pitch, 6x6mm QFN48, symbol with fully-elaborated pin names.
+K Espressif Wi-Fi Bluetooth SoC IoT
+F https://espressif.com/sites/default/files/documentation/esp32_datasheet_en_0.pdf
+$ENDCMP
+#
+$CMP ESP32-WROOM
+D ESP32 ESP32-WROOM module, PCB antenna, 38 pins, 1.27mm.
+K MODULE ESP32
+F https://espressif.com/sites/default/files/documentation/esp_wroom_32_datasheet_en.pdf
+$ENDCMP
+#
+$CMP ESP32S
+D ESP32 ESP32S module, PCB antenna, 38 pins, 1.27mm.
+K MODULE ESP32
+F http://www.shenzhen2u.com/ESP-32S
+$ENDCMP
+#End Doc Library
