@@ -1,5 +1,5 @@
 # ithowifi
-ESP based WiFi controller for itho central ventilation boxes
+ESP based WiFi controller for itho central ventilation units
 
 *(note: I'm in no way a professional hardware/software engineer and have no background in these subjects. I like this for a hobby, to learn and to share my projects)*
 
@@ -10,9 +10,9 @@ or in my Tindie store:
 
 |CVE Add-on|non-CVE wifi module|
 |:---:|:---:|
-|![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/pcb.png "CVE Add-on PCB")  |  ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/non-cve pcb.jpg "non-CVE module PCB")|
+|![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/pcb.png "CVE Add-on PCB")  |  ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/non-cve pcb.jpeg "non-CVE module PCB")|
 
-## WiFi add-on to control itho central ventilation boxes
+## WiFi add-on to control itho central ventilation units
 
 -   Control your* Itho Daalderop CVE with one simple add-on module
 -   No hardware changes needed to the itho box, no warranty void
@@ -25,17 +25,23 @@ Two versions of the firmware are available:
 * A simple version with hardcoded SSID and password.
 * A more advanced version that starts an access point when no SSID can be connected and allows you to setup the device specifics (Wifi and MQTT settings) and save them on SPIFFS using the webinterface.
 
-The firmware for the Attiny, which handles the i2c initialisation is the same for both the simple and advanced Wemos firmware.
 
-###  Models confirmed to work:
+###  CVE Models confirmed to work:
 -   CVE ECO 2 (this unit is also sold by the brand 'Heatrae Sadia' in the uk) *
 -   CVE ECO RFT SE/SP *
 -   CVE-S eco fan RFT
 -   CVE-S S CO2 (CO2 sensor not usable with this add-on)
 -   HRU 200 ECO (also sold as 'Elektrodesign EHR 140 Akor BP' and 'Heatrae Sadia Advance Plus')
 
+###  NON-CVE Models confirmed to work:
+-   HRU eco fan
+-   HRU 350
+-   DemandFlow
+-	QualityFlow
+
+
 ###   An important note about the firmware:
-The add-on is able to control the itho box in standard or medium mode setting only. This means you can use the original remote but if you leave the itho box in low or high setting the itho won't accept commands from the add-on. This is itho designed behaviour. Adding a CC1101 RF module and/or letting the add-on present itself as virtual remote can circumvent this issue.
+The cve add-on is able to control the itho unit in standard or medium mode setting only. This means you can use the original remote but if you leave the itho box in low or high setting the itho won't accept commands from the add-on. This is itho designed behaviour. Adding a CC1101 RF module and/or letting the add-on present itself as virtual remote can circumvent this issue.
   
 ## I2C protocol
 
