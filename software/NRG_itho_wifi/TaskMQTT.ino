@@ -367,7 +367,9 @@ void HADiscoveryTemperature() {
   root["uniq_id"] = s;
   root["name"] = s;
   root["stat_t"] = (const char*)systemConfig.mqtt_ithostatus_topic;
+  root["stat_cla"] = "measurement";
   root["val_tpl"] = "{{ value_json.temp }}";
+  root["unit_of_meas"] = "°C";
 
   sprintf(s, "%s/sensor/%s/temp/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
 
@@ -386,7 +388,9 @@ void HADiscoveryHumidity() {
   root["uniq_id"] = s;
   root["name"] = s;
   root["stat_t"] = (const char*)systemConfig.mqtt_ithostatus_topic;
+  root["stat_cla"] = "measurement";
   root["val_tpl"] = "{{ value_json.hum }}";
+  root["unit_of_meas"] = "%";
 
   sprintf(s, "%s/sensor/%s/hum/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
 
