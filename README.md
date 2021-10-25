@@ -10,7 +10,7 @@ or in my Tindie store:
 
 |CVE Add-on|non-CVE wifi module|
 |:---:|:---:|
-|![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/pcb.png "CVE Add-on PCB")  |  ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/non-cve-pcb.jpeg "non-CVE module PCB")|
+|![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/pcb.png "CVE Add-on PCB")  |  ![alt text](https://github.com/arjenhiemstra/ithowifi/blob/master/images/non-cve-pcb.png "non-CVE module PCB")|
 
 ## WiFi add-on to control itho central ventilation units
 
