@@ -59,33 +59,38 @@ void getRemotesInfoJSON(JsonObject root) {
 
 }
 
-bool ithoExecCommand(const char* command, cmdOrigin origin)
-{
+bool ithoExecCommand(const char* command, cmdOrigin origin) {
   D_LOG("EXEC COMMAND\n");
-  if (strcmp(command, "low") == 0) {
-    ithoSetSpeed(systemConfig.itho_low, origin);
-  }
-  else if (strcmp(command, "medium") == 0) {
-    ithoSetSpeed(systemConfig.itho_medium, origin);
-  }
-  else if (strcmp(command, "high") == 0) {
-    ithoSetSpeed(systemConfig.itho_high, origin);
-  }
-  else if (strcmp(command, "timer1") == 0) {
-    ithoSetTimer(systemConfig.itho_timer1, origin);
-  }
-  else if (strcmp(command, "timer2") == 0) {
-    ithoSetTimer(systemConfig.itho_timer2, origin);
-  }
-  else if (strcmp(command, "timer3") == 0) {
-    ithoSetTimer(systemConfig.itho_timer3, origin);
-  }
-  else if (strcmp(command, "clearqueue") == 0) {
-    clearQueue = true;
+  if (systemConfig.itho_vremoteapi) {
+    return ithoI2CCommand(command, origin);
   }
   else {
-    return false;
+    if (strcmp(command, "low") == 0) {
+      ithoSetSpeed(systemConfig.itho_low, origin);
+    }
+    else if (strcmp(command, "medium") == 0) {
+      ithoSetSpeed(systemConfig.itho_medium, origin);
+    }
+    else if (strcmp(command, "high") == 0) {
+      ithoSetSpeed(systemConfig.itho_high, origin);
+    }
+    else if (strcmp(command, "timer1") == 0) {
+      ithoSetTimer(systemConfig.itho_timer1, origin);
+    }
+    else if (strcmp(command, "timer2") == 0) {
+      ithoSetTimer(systemConfig.itho_timer2, origin);
+    }
+    else if (strcmp(command, "timer3") == 0) {
+      ithoSetTimer(systemConfig.itho_timer3, origin);
+    }
+    else if (strcmp(command, "clearqueue") == 0) {
+      clearQueue = true;
+    }
+    else {
+      return false;
+    }    
   }
+
   return true;
 
 }
@@ -115,15 +120,15 @@ bool ithoI2CCommand(const char* command, cmdOrigin origin) {
     sendI2CButton = true;
   }
   else if (strcmp(command, "timer1") == 0) {
-    timerValue = 10;
+    timerValue = systemConfig.itho_timer1;
     sendI2CTimer = true;
   }
   else if (strcmp(command, "timer2") == 0) {
-    timerValue = 20;
+    timerValue = systemConfig.itho_timer2;
     sendI2CTimer = true;
   }
   else if (strcmp(command, "timer3") == 0) {
-    timerValue = 30;
+    timerValue = systemConfig.itho_timer3;
     sendI2CTimer = true;
   }
   else if (strcmp(command, "join") == 0) {
@@ -202,6 +207,29 @@ bool ithoSetTimer(uint16_t timer, cmdOrigin origin) {
   logLastCommand(buf, origin);
   return true;
 
+}
+
+bool ithoSetSpeedTimer(const char* speed, const char* timer, cmdOrigin origin) {
+  uint16_t speedval = strtoul(speed, NULL, 10);
+  uint16_t timerval = strtoul(speed, NULL, 10);
+  return ithoSetSpeedTimer(speedval, timerval, origin);
+}
+
+bool ithoSetSpeedTimer(uint16_t speed, uint16_t timer, cmdOrigin origin) {
+  D_LOG("SET SPEED AND TIMER\n");
+  if (speed < 255) {
+    nextIthoVal = speed;
+    nextIthoTimer = timer;
+    updateItho();
+  }
+  else {
+    return false;
+  }
+
+  char buf[32] {};
+  sprintf(buf, "speed:%d,timer:%d", speed, timer);
+  logLastCommand(buf, origin);
+  return true;
 }
 
 void logLastCommand(const char* command, cmdOrigin origin) {

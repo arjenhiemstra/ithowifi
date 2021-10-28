@@ -1,4 +1,4 @@
-#define FWVERSION "2.3-beta2"
+#define FWVERSION "2.3-beta3"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -26,6 +26,8 @@
  * (todo) i2c always slave unless master
  * (todo) Restructure MQTT topics
  * (todo) Restore compatibility with HW rev 1
+ * (todo) recheck status format if failed on boot
+ * (todo) implement settings format check to correctly handle shorter than 32 bit values
  * 
  */
 

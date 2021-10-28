@@ -268,22 +268,22 @@ void TaskCC1101( void * pvParameters ) {
             if (chk) {
               remotes.lastRemoteName = remotes.getRemoteNamebyIndex(remotes.remoteIndex(id));
               if (cmd == IthoLow) {
-                ithoSetSpeed(systemConfig.itho_low, REMOTE);
+                ithoExecCommand("low", REMOTE);
               }
               if (cmd == IthoMedium) {
-                ithoSetSpeed(systemConfig.itho_medium, REMOTE);
+                ithoExecCommand("medium", REMOTE);
               }
               if (cmd == IthoHigh) {
-                ithoSetSpeed(systemConfig.itho_high, REMOTE);
+                ithoExecCommand("high", REMOTE);
               }
               if (cmd == IthoTimer1) {
-                ithoSetTimer(systemConfig.itho_timer1, REMOTE);
+                ithoExecCommand("timer1", REMOTE);
               }
               if (cmd == IthoTimer2) {
-                ithoSetTimer(systemConfig.itho_timer2, REMOTE);
+                ithoExecCommand("timer2", REMOTE);
               }
               if (cmd == IthoTimer3) {
-                ithoSetTimer(systemConfig.itho_timer3, REMOTE);
+                ithoExecCommand("timer3", REMOTE);
               }
               if (cmd == IthoJoin && !remotes.remoteLearnLeaveStatus()) {
               }

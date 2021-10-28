@@ -101,7 +101,7 @@ int IthoRemote::removeRemote(uint8_t index) {
   return 1;
 }
 
-void IthoRemote::updateRemoteName(uint8_t index, char* remoteName) {
+void IthoRemote::updateRemoteName(uint8_t index, const char* remoteName) {
   strlcpy(remotes[index].name, remoteName, sizeof(remotes[index].name));
 }
 

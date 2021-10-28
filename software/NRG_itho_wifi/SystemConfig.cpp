@@ -45,6 +45,7 @@ SystemConfig::SystemConfig() {
   itho_updatefreq = 5;
   itho_sendjoin = 0;
   itho_forcemedium = 0;
+  itho_vremoteapi = 0;
   itho_rf_support = 0;
   rfInitOK = false;
   nonQ_cmd_clearsQ = 1;
@@ -210,6 +211,10 @@ bool SystemConfig::set(JsonObjectConst obj) {
     updated = true;
     itho_forcemedium = obj["itho_forcemedium"];
   }
+  if (!(const char*)obj["itho_vremoteapi"].isNull()) {
+    updated = true;
+    itho_vremoteapi = obj["itho_vremoteapi"];
+  }
   if (!(const char*)obj["itho_rf_support"].isNull()) {
     updated = true;
     itho_rf_support = obj["itho_rf_support"];
@@ -251,6 +256,7 @@ void SystemConfig::get(JsonObject obj) const {
     obj["itho_updatefreq"] = itho_updatefreq;
     obj["itho_sendjoin"] = itho_sendjoin;
     obj["itho_forcemedium"] = itho_forcemedium;
+    obj["itho_vremoteapi"] = itho_vremoteapi;
     obj["nonQ_cmd_clearsQ"] = nonQ_cmd_clearsQ;    
   }
   if (complete || get_mqtt_settings) {

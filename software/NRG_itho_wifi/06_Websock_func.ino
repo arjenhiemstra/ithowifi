@@ -252,9 +252,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         DeserializationError error = deserializeJson(root, msg.c_str());
         if (!error) {
           uint8_t index = root["itho_update_remote"].as<unsigned int>();
-          char remoteName[32];
-          strlcpy(remoteName, root["value"] | "", sizeof(remoteName));
-          remotes.updateRemoteName(index, remoteName);
+          remotes.updateRemoteName(index, root["value"] | "");
           saveRemotesflag = true;
         }
       }

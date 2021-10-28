@@ -10,7 +10,7 @@
     },
     "NON-CVE 1": {
       "latest_fw":"2.3-beta2",
-      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/non-cve_rev_1/nrgitho-noncve-v2.3-beta2.bin"
+      "link":"https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/non-cve_rev_1/nrgitho-noncve-v2.3-beta3.bin"
     }
   }
 }
