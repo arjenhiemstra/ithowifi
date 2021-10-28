@@ -45,7 +45,7 @@ class IthoRemote {
     int removeRemote(int* id);
     int removeRemote(uint8_t index);
     void addCapabilities(uint8_t remoteIndex, const char* name, int32_t value);
-    void updateRemoteName(uint8_t index, char* remoteName);
+    void updateRemoteName(uint8_t index, const char* remoteName);
     int remoteIndex(int32_t id);
     int remoteIndex(int* id);
     int * getRemoteIDbyIndex(int index);

@@ -158,10 +158,22 @@ void handleAPI(AsyncWebServerRequest *request) {
       parseOK = ithoI2CCommand(p->value().c_str(), HTMLAPI);
     }
     else if(strcmp(p->name().c_str(), "speed") == 0) {
-      parseOK = ithoSetSpeed(p->value().c_str(), HTMLAPI);
+      const char * speed = p->value().c_str();
+      for(int i=0;i<params;i++){
+        if(strcmp(p->name().c_str(), "timer") == 0) {
+          parseOK = ithoSetSpeedTimer(speed, p->value().c_str(), HTMLAPI);
+        }
+      }
+      if(!parseOK) parseOK = ithoSetSpeed(speed, HTMLAPI);
     }
     else if(strcmp(p->name().c_str(), "timer") == 0) {
-      parseOK = ithoSetTimer(p->value().c_str(), HTMLAPI);
+      const char * timer = p->value().c_str();
+      for(int i=0;i<params;i++){
+        if(strcmp(p->name().c_str(), "speed") == 0) {
+          parseOK = ithoSetSpeedTimer(p->value().c_str(), timer, HTMLAPI);
+        }
+      }
+      if(!parseOK) parseOK = ithoSetTimer(timer, HTMLAPI);
     }    
     else if(strcmp(p->name().c_str(), "debug") == 0) {
 #if defined (HW_VERSION_TWO)     

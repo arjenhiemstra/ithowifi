@@ -294,7 +294,8 @@ $(document).ready(function() {
           itho_timer3:      $('#itho_timer3').val(),
           itho_updatefreq:  $('#itho_updatefreq').val(),
           itho_sendjoin:    $('input[name=\'option-itho_sendjoin\']:checked').val(),
-          itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val()
+          itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
+          itho_vremoteapi:  $('input[name=\'option-itho_vremoteapi\']:checked').val()
         }
       }));
       update_page('system');
@@ -638,9 +639,9 @@ function getSettings(pagevalue) {
     websock.send('{\"' + pagevalue + '\":1}');
   }
   else {
-    console.log("websock not open"); 
+    console.log("websock not open");
+    setTimeout(getSettings, 1000, pagevalue);
   }
-  
 }
 
 //
@@ -1130,7 +1131,7 @@ var html_systemsettings_start = `
               <input id="option-syssec_edit-1" type="radio" name="option-syssec_edit" value="1"> on
               <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
             </div>
-            <legend><br>Speed settings (0-254):</legend>
+            <legend><br>Speed settings (CVE only) (0-254):</legend>
             <div class="pure-control-group">
               <label for="itho_fallback">Start/fallback speed</label>
                 <input id="itho_fallback" type="number" min="0" max="254" size="6">
@@ -1147,10 +1148,10 @@ var html_systemsettings_start = `
               <label for="itho_high">High</label>
                 <input id="itho_high" type="number" min="0" max="254" size="6">
             </div>
-            <legend><br>Timer settings (0-65535 minutes):</legend>
+            <legend><br>Timer settings (0-254 minutes):</legend>
             <div class="pure-control-group">
               <label for="itho_timer1">Timer1</label>
-                <input id="itho_timer1" type="number" min="0" max="65535" size="6">
+                <input id="itho_timer1" type="number" min="0" max="254" size="6">
             </div>
             <div class="pure-control-group">
               <label for="itho_timer2">Timer2</label>
@@ -1170,6 +1171,7 @@ var html_systemsettings_start = `
             <p>The add-on can present itself as a virtual remote that can be joined to the itho unit.</p>
             <p>This virtual remote can be used to force the itho unit in medium mode before sending a command from the add-on. This way the add-on can overrule the current speed settings of the itho (ie. due to active input from a built in humidity sensor or another remote)</p>
             <p>A join command will only be accepted by the itho unit after a power cycle.</p>
+            <p>Received commands from RF remotes can be translated to matching virtual remote commands for non-CVE devices. The 0-254 speed control does not work for these devices, the timer settings do work as expected.
             <div class="pure-control-group">
               <label for="option-vremotejoin" class="pure-radio">Send join command</label>
               <input id="option-vremotejoin-2" type="radio" name="option-itho_sendjoin" value="2"> every power on
@@ -1181,6 +1183,11 @@ var html_systemsettings_start = `
               <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1"> on
               <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
             </div>
+            <div class="pure-control-group">
+              <label for="option-vremoteapi" class="pure-radio">Map RF remotes to virtual remote</label>
+              <input id="option-vremoteapi-1" type="radio" name="option-itho_vremoteapi" value="1"> on
+              <input id="option-vremoteapi-0" type="radio" name="option-itho_vremoteapi" value="0"> off
+            </div>            
             <legend><br>Built-in humidity/temp sensor support (reboot needed):</legend>
             <p>Enabling this feature will, on boot, detect the presence of a supported humidity/temp sensor (either original itho or a supported alternative SHT30 sensor) and readout its values.</p><p>Values will be available through the API formatted as JSON.</p>
             <p>If your itho has a built-in sensor by default and just the hum/temp values are enough, leave this setting set to 'off'.</p>

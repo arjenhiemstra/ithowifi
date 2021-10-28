@@ -251,11 +251,21 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         }
         if (!(const char*)root["speed"].isNull()) {
           jsonCmd = true;
-          ithoSetSpeed(root["speed"].as<uint16_t>(), MQTTAPI);
+          if (!(const char*)root["timer"].isNull()) {
+            ithoSetSpeedTimer(root["speed"].as<uint16_t>(), root["timer"].as<uint16_t>(), MQTTAPI);
+          }
+          else {
+            ithoSetSpeed(root["speed"].as<uint16_t>(), MQTTAPI);
+          }          
         }
         if (!(const char*)root["timer"].isNull()) {
           jsonCmd = true;
-          ithoSetTimer(root["timer"].as<uint16_t>(), MQTTAPI);
+          if (!(const char*)root["speed"].isNull()) {
+            ithoSetSpeedTimer(root["speed"].as<uint16_t>(), root["timer"].as<uint16_t>(), MQTTAPI);
+          }
+          else {
+            ithoSetSpeed(root["timer"].as<uint16_t>(), MQTTAPI);
+          }
         }
         if (!(const char*)root["clearqueue"].isNull()) {
           jsonCmd = true;
