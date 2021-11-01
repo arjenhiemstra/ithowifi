@@ -59,6 +59,38 @@ void getRemotesInfoJSON(JsonObject root) {
 
 }
 
+void getIthoSettingsBackupJSON(JsonObject root) {
+
+  if (ithoSettingsArray != nullptr) {
+    for (int i = 0; i < ithoSettingsLength; i++) {
+      char buf[12];
+      itoa(i, buf, 10);
+
+      if (ithoSettingsArray[i].type == ithoSettings::is_int8) {
+        int8_t val;
+        std::memcpy(&val, &ithoSettingsArray[i].value, sizeof(val));
+        root[buf] = val;    
+      }
+      else if (ithoSettingsArray[i].type == ithoSettings::is_int16) {
+        int16_t val;
+        std::memcpy(&val, &ithoSettingsArray[i].value, sizeof(val));
+        root[buf] = val;
+      }
+      else if (ithoSettingsArray[i].type == ithoSettings::is_int32) {
+        root[buf] = ithoSettingsArray[i].value;
+      }
+      else {
+        uint32_t val;
+        std::memcpy(&val, &ithoSettingsArray[i].value, sizeof(val));
+        root[buf] = val;
+      }
+
+
+    }
+  }
+
+}
+
 bool ithoExecCommand(const char* command, cmdOrigin origin) {
   D_LOG("EXEC COMMAND\n");
   if (systemConfig.itho_vremoteapi) {
@@ -88,7 +120,7 @@ bool ithoExecCommand(const char* command, cmdOrigin origin) {
     }
     else {
       return false;
-    }    
+    }
   }
 
   return true;

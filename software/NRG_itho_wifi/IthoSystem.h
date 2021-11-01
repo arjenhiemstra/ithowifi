@@ -15,7 +15,7 @@ extern uint8_t itho_fwversion;
 extern volatile uint16_t ithoCurrentVal;
 extern uint8_t id0, id1, id2;
 extern struct ihtoDeviceType* ithoDeviceptr;
-extern int ithoSettingsLength;
+extern int16_t ithoSettingsLength;
 
 extern bool sendI2CButton;
 extern bool sendI2CTimer;
@@ -53,7 +53,7 @@ enum cmdOrigin {
 
 struct ithoDeviceStatus {
   std::string name;
-  enum { is_byte, is_int, is_uint, is_float, is_string } type;
+  enum : uint8_t { is_byte, is_int, is_uint, is_float, is_string } type;
   uint8_t length;
   union {
     byte byteval;
@@ -68,7 +68,7 @@ struct ithoDeviceStatus {
 
 struct ithoDeviceMeasurements {
   std::string name;
-  enum { is_int, is_float, is_string } type;
+  enum : uint8_t { is_int, is_float, is_string } type;
   union {
     int32_t intval;
     float floatval;
@@ -89,6 +89,15 @@ struct lastCommand {
 extern struct lastCommand lastCmd;
 
 extern const std::map<cmdOrigin, const char*> cmdOriginMap;
+
+struct ithoSettings {
+  enum : uint8_t { is_int8, is_int16, is_int32, is_uint8, is_uint16, is_uint32, is_float2, is_float10, is_float100, is_float1000, is_unknown } type {is_unknown};
+  int32_t value {0};
+  uint8_t length {0};
+};
+
+extern ithoSettings * ithoSettingsArray;
+
 
 
 char* getIthoType(const uint8_t deviceID);

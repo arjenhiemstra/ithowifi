@@ -158,7 +158,22 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
               getSetting(root["index"].as<int8_t>(), false, true, false);
             }
             else if (val == 24109) {
-              updateSetting(root["index"].as<int8_t>(), root["value"].as<int32_t>(), true);
+              uint8_t index = root["ithosetupdate"].as<uint8_t>();
+              if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 2), false);
+              }
+              else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 10), false);
+              }
+              else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 100), false);
+              }
+              else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 1000), false);
+              }
+              else {
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);
+              }
             }
           }
           else {
@@ -205,7 +220,24 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         StaticJsonDocument<128> root;
         DeserializationError error = deserializeJson(root, msg.c_str());
         if (!error) {
-          updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);
+          uint8_t index = root["ithosetupdate"].as<uint8_t>();
+          if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 2), false);
+          }
+          else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 10), false);
+          }
+          else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 100), false);
+          }
+          else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 1000), false);
+          }
+          else {
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);
+          }
+
+
         }
       }
 

@@ -383,10 +383,19 @@ $(document).ready(function() {
         alert("Please select the correct row.");
       }      
       else {
-        websock.send(JSON.stringify({
-          ithosetupdate: i,
-          value: parseInt($('#name_ithoset-'+i).val())
-        }));
+        if(Number.isInteger( parseFloat($('#name_ithoset-'+i).val()) )) {
+          websock.send(JSON.stringify({
+            ithosetupdate: i,
+            value: parseInt($('#name_ithoset-'+i).val())
+          }));       
+        }
+        else {
+          websock.send(JSON.stringify({
+            ithosetupdate: i,
+            value: parseFloat($('#name_ithoset-'+i).val())
+          }));             
+        }
+
         $('input[name=\'options-ithoset\']:checked').prop('checked', false);
         $('[id^=ithosetrefresh-]').each(function(index, item){
           $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).removeClass('pure-button-primary');
@@ -654,12 +663,9 @@ function resetPage() {
 }
 function tick() {
   var timeDisplay = document.getElementById('time');
-  var min = Math.floor(secondsRemaining/60);
-  var sec=secondsRemaining-(min*60);
-  if (sec<10) {
-      sec='0'+sec;
-  }
-  var message = 'This page will reload to the start page in ' + min.toString() + ':' + sec + ' seconds...';
+  var sec=secondsRemaining-(Math.floor(secondsRemaining/60)*60);
+  if (sec<10) sec='0'+sec;
+  var message = `This page will reload to the start page in ${sec} seconds...`;
   timeDisplay.innerHTML = message;
   if (secondsRemaining === 0) { 
     clearInterval(intervalHandle);
@@ -1103,7 +1109,7 @@ $(document).ready(function() {
 
 var html_systemsettings_start = `
 <div class="header"><h1>System settings</h1></div>
-<p>Configuration of generic system (security) settings</p>
+<p>Configuration of add-on (security) settings.</p>
 <style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
       <form class="pure-form pure-form-aligned">
           <fieldset id="sys_fieldset">
@@ -1155,14 +1161,14 @@ var html_systemsettings_start = `
             </div>
             <div class="pure-control-group">
               <label for="itho_timer2">Timer2</label>
-                <input id="itho_timer2" type="number" min="0" max="65535" size="6">
+                <input id="itho_timer2" type="number" min="0" max="254" size="6">
             </div>
             <div class="pure-control-group">
               <label for="itho_timer3">Timer3</label>
-                <input id="itho_timer3" type="number" min="0" max="65535" size="6">
+                <input id="itho_timer3" type="number" min="0" max="254" size="6">
             </div>
             <legend><br>Itho status update frequency (0-65535 seconds):</legend>
-            <p>Controls the rate at which sensor data, status data and system information is requested and updated on the API (HTML/MQTT)</p>
+            <p>Controls the rate at which sensor data, status data and system information is requested and updated on the API (Web/MQTT)</p>
             <div class="pure-control-group">
               <label for="itho_updatefreq">Update frequency</label>
                 <input id="itho_updatefreq" type="number" min="0" max="65535" size="6">
@@ -1189,13 +1195,11 @@ var html_systemsettings_start = `
               <input id="option-vremoteapi-0" type="radio" name="option-itho_vremoteapi" value="0"> off
             </div>            
             <legend><br>Built-in humidity/temp sensor support (reboot needed):</legend>
-            <p>Enabling this feature will, on boot, detect the presence of a supported humidity/temp sensor (either original itho or a supported alternative SHT30 sensor) and readout its values.</p><p>Values will be available through the API formatted as JSON.</p>
-            <p>If your itho has a built-in sensor by default and just the hum/temp values are enough, leave this setting set to 'off'.</p>
-            <p>Enabling this feature on itho units with the original sensor built-in by default will also disable the readout of the sensor by the itho firmware and prevent the itho unit to react on humidity by itself.</p>
-            
+            <p>The add-on firmware by default makes available the humidity/temperature data (via web page, API, MQTT) if an original sensor was fitted.</p>
+            <p>Additional sensor support may be enabled to disable the itho firmware sensor support (box will not respond to humidity changes) and to access an alternative or a retrofitted SHT30 sensor.</p>            
             <br>
             <div class="pure-control-group">
-              <label for="option-syssht30" class="pure-radio">Hum/Temp sensor support</label> 
+              <label for="option-syssht30" class="pure-radio">Additional sensor support</label> 
               <input id="option-syssht30-1" type="radio" name="option-syssht30" value="1"> on
               <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
             </div>      
@@ -1422,8 +1426,8 @@ $(document).ready(function() {
 var html_api = `
 <div class="header"><h1>IthoWifi - API</h1></div>
 <h3>API Description</h3>
-<strong>General information HTML API</strong><br><br>
-A simple HTML API is available at the following URL: <a href='api.html' target='_blank'>api.html</a><br><br>
+<strong>General information Web API</strong><br><br>
+A simple Web API is available at the following URL: <a href='api.html' target='_blank'>api.html</a><br><br>
 The request should be formatted as follows: <br>http://[DNS or IP]/api.html?[param]=[value]<br><br>
 ie. http://192.168.4.1/api.html?command=medium<br>
 or<br>
@@ -1442,7 +1446,7 @@ Unless specified otherwise:<br><ul>
 <li>String values must be supplied with quote marks in accordance with JSON standards</li>
 </ul>
 <br>
-<strong>API table:</strong><table class="pure-table pure-table-bordered" style="font-size:.85em"> <thead> <tr> <th>key or param</th> <th>datatype</th> <th style="width:160px">value</th> <th>datatype</th> <th style="text-align:center">MQTT<br>(JSON)</th> <th style="text-align:center">HTML<br>(URL params)</th> </tr> </thead> <tbody> <tr> <td>dtype</td> <td>string</td> <td>ithofan</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>If Domoticz MQTT support is on and commands originate from other than configured IDX, this key/value pair needs to be present for commands to get processed.</em></td> </tr> <tr> <td>username</td> <td>string</td> <td>max 20 chars long</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td>password</td> <td>string</td> <td>max 20 chars long</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td>command</td> <td>string</td> <td>low, medium, high, timer1, timer2, timer3, clearqueue</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Resulting speed/timer settings are configurable. Value without timer sets the base/fallback speed of the fan. Timers will be queued on highest speed setting first for the duration of the timer.<br> For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em> </td> </tr> <tr> <td>vremote</td> <td>string</td> <td>low, medium, high, timer1, timer2, timer3, join, leave</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>These commands work as a normal physical remote. For these commands to work the virtual remote needs to be activated and joined with the itho unit first</em></td> </tr> <tr> <td>speed</td> <td>string</td> <td>0-254</td> <td>uint8_t</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Speed without a timer will reset the queue (different behaviour configurable) and set a new base/fallback speed.<br> For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em> </td> </tr> <tr> <td>timer</td> <td>string</td> <td>0-65535</td> <td>uint16_t</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>only effective with "command" or "speed" key/param present, could overrule timer value of timer1, timer2, timer3. Highest speed setting on the queue will be active for the duration of the timer.</em></td> </tr> <tr> <td>clearqueue</td> <td>string</td> <td>true</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Clear all timers on the queue, scheduled to run after all other commands have been processed. Speed will fallback to last value before items got enqueued</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>currentspeed</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns current active itho speed setting in range 0-254</em></td> </tr> <tr> <td></td> <td></td> <td>0-254</td> <td>uint8_t</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>ithostatus</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns JSON with all available sensor data, status data and system information. Available keys depend on itho device and firmware version</em></td> </tr> <tr> <td></td> <td></td> <td>Variable keys</td> <td>JSON</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "Itho status topic", see for more info the comments on ithostatus of the HTML API</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>remotesinfo</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key = remote name, value is JSON with all received capabilities of the remote. Depending on make and model this can be the last command, temperature, humidity, battery and/or co2 levels.</em></td> </tr> <tr> <td></td> <td></td> <td>Variable keys</td> <td>JSON</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "Remotes info topic", see for more info the comments on remotesinfo of the HTML API</em></td> </tr> </tbody></table><p><br><br></p>
+<strong>API table:</strong><table class="pure-table pure-table-bordered" style="font-size:.85em"> <thead> <tr> <th>key or param</th> <th>datatype</th> <th style="width:160px">value</th> <th>datatype</th> <th style="text-align:center">MQTT<br>(JSON)</th> <th style="text-align:center">Web<br>(URL params)</th> </tr> </thead> <tbody> <tr> <td>dtype</td> <td>string</td> <td>ithofan</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>If Domoticz MQTT support is on and commands originate from other than configured IDX, this key/value pair needs to be present for commands to get processed.</em></td> </tr> <tr> <td>username</td> <td>string</td> <td>max 20 chars long</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td>password</td> <td>string</td> <td>max 20 chars long</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td>command</td> <td>string</td> <td>low, medium, high, timer1, timer2, timer3, clearqueue</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Resulting speed/timer settings are configurable. Value without timer sets the base/fallback speed of the fan. Timers will be queued on highest speed setting first for the duration of the timer.<br> For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em> </td> </tr> <tr> <td>vremote</td> <td>string</td> <td>low, medium, high, timer1, timer2, timer3, join, leave</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>These commands work as a normal physical remote. For these commands to work the virtual remote needs to be activated and joined with the itho unit first</em></td> </tr> <tr> <td>speed</td> <td>string</td> <td>0-254</td> <td>uint8_t</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Speed without a timer will reset the queue (different behaviour configurable) and set a new base/fallback speed.<br> For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em> </td> </tr> <tr> <td>timer</td> <td>string</td> <td>0-65535</td> <td>uint16_t</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>only effective with "command" or "speed" key/param present, could overrule timer value of timer1, timer2, timer3. Highest speed setting on the queue will be active for the duration of the timer.</em></td> </tr> <tr> <td>clearqueue</td> <td>string</td> <td>true</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Clear all timers on the queue, scheduled to run after all other commands have been processed. Speed will fallback to last value before items got enqueued</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>currentspeed</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns current active itho speed setting in range 0-254</em></td> </tr> <tr> <td></td> <td></td> <td>0-254</td> <td>uint8_t</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>ithostatus</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns JSON with all available sensor data, status data and system information. Available keys depend on itho device and firmware version</em></td> </tr> <tr> <td></td> <td></td> <td>Variable keys</td> <td>JSON</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "Itho status topic", see for more info the comments on ithostatus of the Web API</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>remotesinfo</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key = remote name, value is JSON with all received capabilities of the remote. Depending on make and model this can be the last command, temperature, humidity, battery and/or co2 levels.</em></td> </tr> <tr> <td></td> <td></td> <td>Variable keys</td> <td>JSON</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "Remotes info topic", see for more info the comments on remotesinfo of the Web API</em></td> </tr> </tbody></table><p><br><br></p>
 `;
 
 var html_help = `
@@ -1474,10 +1478,9 @@ var html_reset = `
 <div class="header"><h1>Restart/Restore device</h1></div><br><br>
 <form class="pure-form">
   <fieldset>
-    <button id="reboot" class="pure-button">Restart device</button>
-    <button id="resetwificonf" class="pure-button">Restore wifi config</button>
-    <button id="resetsysconf" class="pure-button">Restore system config</button>
-    <br><br><input type="checkbox" id="dontsaveconf"><label for="dontsaveconf"> Don't save config</label>
+    <button id="reboot" class="pure-button">Restart device</button>&nbsp;&nbsp;<input type="checkbox" id="dontsaveconf"><label for="dontsaveconf"> Don't save config</label><br><br>
+    <button id="resetwificonf" class="pure-button">Restore wifi config</button>&nbsp;&nbsp;<button id="resetsysconf" class="pure-button">Restore system config</button><br><br>
+    <button id="format" class="pure-button">Format filesystem</button>
     <div id="rebootscript"></div>
   </fieldset>
 </form>    

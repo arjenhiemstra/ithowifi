@@ -12,12 +12,13 @@ volatile uint16_t ithoCurrentVal = 0;
 uint8_t id0 = 0;
 uint8_t id1 = 0;
 uint8_t id2 = 0;
-struct ihtoDeviceType* ithoDeviceptr = getDevicePtr(ithoDeviceID);
-int ithoSettingsLength = getSettingsLength(ithoDeviceID, itho_fwversion);
+struct ihtoDeviceType* ithoDeviceptr = nullptr;
+int16_t ithoSettingsLength = 0;
 std::vector<ithoDeviceStatus> ithoStatus;
 std::vector<ithoDeviceMeasurements> ithoMeasurements;
 std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 struct lastCommand lastCmd;
+ithoSettings * ithoSettingsArray = nullptr;
 
 const std::map<cmdOrigin, const char*> cmdOriginMap = {
   {cmdOrigin::HTMLAPI, "HTML API"},
@@ -123,6 +124,7 @@ int getSettingsLength(const uint8_t deviceID, const uint8_t version) {
       for (int i = 0; i < 255; i++) {
         if ((int) * (*(ithoDevicesptr->settingsMapping + version) + i) == 255) {
           //end of array
+          if (ithoSettingsArray == nullptr) ithoSettingsArray = new ithoSettings[i];
           return i;
         }
       }
@@ -175,9 +177,46 @@ void getSetting(const uint8_t i, const bool updateState, const bool updateweb, c
     root["update"] = true;
     root["loop"] = loop;
     if (resultPtr2410 != nullptr) {
-      root["Current"] = *(resultPtr2410 + 0);
-      root["Minimum"] = *(resultPtr2410 + 1);
-      root["Maximum"] = *(resultPtr2410 + 2);
+      if (ithoSettingsArray[index2410].type == ithoSettings::is_int8) {
+        root["Current"] = *(reinterpret_cast<int8_t*>(resultPtr2410 + 0));
+        root["Minimum"] = *(reinterpret_cast<int8_t*>(resultPtr2410 + 1));
+        root["Maximum"] = *(reinterpret_cast<int8_t*>(resultPtr2410 + 2));
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_int16) {
+        root["Current"] = *(reinterpret_cast<int16_t*>(resultPtr2410 + 0));
+        root["Minimum"] = *(reinterpret_cast<int16_t*>(resultPtr2410 + 1));
+        root["Maximum"] = *(reinterpret_cast<int16_t*>(resultPtr2410 + 2));
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_uint8 || ithoSettingsArray[index2410].type == ithoSettings::is_uint16 || ithoSettingsArray[index2410].type == ithoSettings::is_uint32) {
+        root["Current"] = *(reinterpret_cast<uint32_t*>(resultPtr2410 + 0));
+        root["Minimum"] = *(reinterpret_cast<uint32_t*>(resultPtr2410 + 1));
+        root["Maximum"] = *(reinterpret_cast<uint32_t*>(resultPtr2410 + 2));
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float2) {
+        root["Current"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 0)) / 2.0;
+        root["Minimum"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 1)) / 2.0;
+        root["Maximum"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 2)) / 2.0;
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float10) {
+        root["Current"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 0)) / 10.0;
+        root["Minimum"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 1)) / 10.0;
+        root["Maximum"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 2)) / 10.0;
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float100) {
+        root["Current"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 0)) / 100.0;
+        root["Minimum"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 1)) / 100.0;
+        root["Maximum"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 2)) / 100.0;
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float1000) {
+        root["Current"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 0)) / 1000.0;
+        root["Minimum"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 1)) / 1000.0;
+        root["Maximum"] = *(reinterpret_cast<int32_t*>(resultPtr2410 + 2)) / 1000.0;
+      }
+      else {
+        root["Current"] = *(resultPtr2410 + 0);
+        root["Minimum"] = *(resultPtr2410 + 1);
+        root["Maximum"] = *(resultPtr2410 + 2);
+      }
     }
     else {
       root["Current"] = nullptr;
@@ -500,11 +539,11 @@ void sendQueryStatusFormat(bool & updateweb) {
 
       ithoStatus.back().divider = 0;
       if ((i2cbuf[6 + i] & 0x07) == 0) { //integer value
-        if ((i2cbuf[6 + i] & 0x80) == 1) { //signed value
-          ithoStatus.back().type = ithoDeviceStatus::is_int;
+        if ((i2cbuf[6 + i] & 0x80) == 0) { //unsigned value
+          ithoStatus.back().type = ithoDeviceStatus::is_uint;
         }
         else {
-          ithoStatus.back().type = ithoDeviceStatus::is_uint;
+          ithoStatus.back().type = ithoDeviceStatus::is_int;
         }
       }
       else {
@@ -1091,18 +1130,137 @@ int32_t * sendQuery2410(bool & updateweb) {
     uint8_t tempBuf3[] = { i2cbuf[17], i2cbuf[16], i2cbuf[15], i2cbuf[14] };
     std::memcpy(&values[2], tempBuf3, 4);
 
+
+    ithoSettingsArray[index2410].value = values[0];
+
+    if (((i2cbuf[22] >> 3) & 0x07) == 0) {
+      ithoSettingsArray[index2410].length = 1;
+    }
+    else {
+      ithoSettingsArray[index2410].length = (i2cbuf[22] >> 3) & 0x07;
+    }
+
+    if ((i2cbuf[22] & 0x07) == 0) { //integer value
+      if ((i2cbuf[22] & 0x80) == 0) { //unsigned value
+        if (ithoSettingsArray[index2410].length == 1) {
+          ithoSettingsArray[index2410].type = ithoSettings::is_uint8;
+        }
+        else if (ithoSettingsArray[index2410].length == 2) {
+          ithoSettingsArray[index2410].type = ithoSettings::is_uint16;
+        }
+        else {
+          ithoSettingsArray[index2410].type = ithoSettings::is_uint32;
+        }
+      }
+      else {
+        if (ithoSettingsArray[index2410].length == 1) {
+          ithoSettingsArray[index2410].type = ithoSettings::is_int8;
+        }
+        else if (ithoSettingsArray[index2410].length == 2) {
+          ithoSettingsArray[index2410].type = ithoSettings::is_int16;
+        }
+        else {
+          ithoSettingsArray[index2410].type = ithoSettings::is_int32;
+        }
+      }
+    }
+    else { //float
+
+      if ((i2cbuf[22] & 0x04) != 0) {
+        ithoSettingsArray[index2410].type = ithoSettings::is_float1000;
+      }
+      else if ((i2cbuf[22] & 0x02) != 0) {
+        ithoSettingsArray[index2410].type = ithoSettings::is_float100;
+      }
+      else if ((i2cbuf[22] & 0x01) != 0) {
+        ithoSettingsArray[index2410].type = ithoSettings::is_float10;
+      }
+      else {
+        ithoSettingsArray[index2410].type = ithoSettings::is_unknown;
+      }
+
+    }
+    //special cases
+    if (i2cbuf[22] == 0x01) {
+      ithoSettingsArray[index2410].type = ithoSettings::is_uint8;
+    }
+
     if (updateweb) {
       updateweb = false;
       jsonSysmessage("itho2410", i2cbuf2string(i2cbuf, len).c_str());
 
-      char tempbuffer[256];
+      char tempbuffer0[256];
+      char tempbuffer1[256];
+      char tempbuffer2[256];
 
-      sprintf(tempbuffer, "%d", values[0]);
-      jsonSysmessage("itho2410cur", tempbuffer);
-      sprintf(tempbuffer, "%d", values[1]);
-      jsonSysmessage("itho2410min", tempbuffer);
-      sprintf(tempbuffer, "%d", values[2]);
-      jsonSysmessage("itho2410max", tempbuffer);
+      if (ithoSettingsArray[index2410].type == ithoSettings::is_uint8 || ithoSettingsArray[index2410].type == ithoSettings::is_uint16 || ithoSettingsArray[index2410].type == ithoSettings::is_uint32) { //unsigned value
+        uint32_t val[3];
+        std::memcpy(&val[0], &values[0], sizeof(val[0]));
+        std::memcpy(&val[1], &values[1], sizeof(val[0]));
+        std::memcpy(&val[2], &values[2], sizeof(val[0]));
+        sprintf(tempbuffer0, "%u", val[0]);
+        sprintf(tempbuffer1, "%u", val[1]);
+        sprintf(tempbuffer2, "%u", val[2]);
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_int8) {
+        int8_t val[3];
+        std::memcpy(&val[0], &values[0], sizeof(val[0]));
+        std::memcpy(&val[1], &values[1], sizeof(val[0]));
+        std::memcpy(&val[2], &values[2], sizeof(val[0]));
+        sprintf(tempbuffer0, "%d", val[0]);
+        sprintf(tempbuffer1, "%d", val[1]);
+        sprintf(tempbuffer2, "%d", val[2]);
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_int16) {
+        int16_t val[3];
+        std::memcpy(&val[0], &values[0], sizeof(val[0]));
+        std::memcpy(&val[1], &values[1], sizeof(val[0]));
+        std::memcpy(&val[2], &values[2], sizeof(val[0]));
+        sprintf(tempbuffer0, "%d", val[0]);
+        sprintf(tempbuffer1, "%d", val[1]);
+        sprintf(tempbuffer2, "%d", val[2]);
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_int32) {
+        sprintf(tempbuffer0, "%d", values[0]);
+        sprintf(tempbuffer1, "%d", values[1]);
+        sprintf(tempbuffer2, "%d", values[2]);
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float10) {
+        float val[3];
+        val[0] = values[0] / 10.0f;
+        val[1] = values[1] / 10.0f;
+        val[2] = values[2] / 10.0f;
+        sprintf(tempbuffer0, "%.1f", val[0]);
+        sprintf(tempbuffer1, "%.1f", val[1]);
+        sprintf(tempbuffer2, "%.1f", val[2]);
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float100) {
+        float val[3];
+        val[0] = values[0] / 100.0f;
+        val[1] = values[1] / 100.0f;
+        val[2] = values[2] / 100.0f;
+        sprintf(tempbuffer0, "%.2f", val[0]);
+        sprintf(tempbuffer1, "%.2f", val[1]);
+        sprintf(tempbuffer2, "%.2f", val[2]);
+      }
+      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float1000) {
+        float val[3];
+        val[0] = values[0] / 1000.0f;
+        val[1] = values[1] / 1000.0f;
+        val[2] = values[2] / 1000.0f;
+        sprintf(tempbuffer0, "%.3f", val[0]);
+        sprintf(tempbuffer1, "%.3f", val[1]);
+        sprintf(tempbuffer2, "%.3f", val[2]);
+      }
+      else {
+        sprintf(tempbuffer0, "%d", values[0]);
+        sprintf(tempbuffer1, "%d", values[1]);
+        sprintf(tempbuffer2, "%d", values[2]);
+      }
+      jsonSysmessage("itho2410cur", tempbuffer0);
+      jsonSysmessage("itho2410min", tempbuffer1);
+      jsonSysmessage("itho2410max", tempbuffer2);
+
     }
 
 
@@ -1133,10 +1291,26 @@ void setSetting2410(bool & updateweb) {
 
   command[23] = index2410;
 
-  command[9] = value2410 & 0xFF;
-  command[8] = (value2410 >> 8) & 0xFF;
-  command[7] = (value2410 >> 16) & 0xFF;
-  command[6] = (value2410 >> 24) & 0xFF;
+  if (ithoSettingsArray[index2410].type == ithoSettings::is_uint8 || ithoSettingsArray[index2410].type == ithoSettings::is_int8) {
+    command[9] = value2410 & 0xFF;
+  }
+  else if (ithoSettingsArray[index2410].type == ithoSettings::is_uint16 || ithoSettingsArray[index2410].type == ithoSettings::is_int16) {
+    command[9] = value2410 & 0xFF;
+    command[8] = (value2410 >> 8) & 0xFF;
+  }
+  else if (ithoSettingsArray[index2410].type == ithoSettings::is_uint32 || ithoSettingsArray[index2410].type == ithoSettings::is_int32 || ithoSettingsArray[index2410].type == ithoSettings::is_float2 || ithoSettingsArray[index2410].type == ithoSettings::is_float10 || ithoSettingsArray[index2410].type == ithoSettings::is_float100 || ithoSettingsArray[index2410].type == ithoSettings::is_float1000) {
+    command[9] = value2410 & 0xFF;
+    command[8] = (value2410 >> 8) & 0xFF;
+    command[7] = (value2410 >> 16) & 0xFF;
+    command[6] = (value2410 >> 24) & 0xFF;
+  }
+  else {
+    if (updateweb) {
+      updateweb = false;
+      jsonSysmessage("itho2410setres", "format error, first use query 2410");
+    }
+    return; //unsupported value format
+  }
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 

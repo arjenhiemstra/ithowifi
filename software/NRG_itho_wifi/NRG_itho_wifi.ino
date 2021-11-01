@@ -1,4 +1,4 @@
-#define FWVERSION "2.3-beta3"
+#define FWVERSION "2.3-beta4"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -25,10 +25,11 @@
  Backlog:
  * (todo) i2c always slave unless master
  * (todo) Restructure MQTT topics
- * (todo) Restore compatibility with HW rev 1
+ * (todo) Restore compatibility with HW rev 1 (probaly not possible anymore)
  * (todo) recheck status format if failed on boot
- * (todo) implement settings format check to correctly handle shorter than 32 bit values
- * 
+ * (done) implement settings format check to correctly handle shorter than 32 bit values
+ * (todo) After timer, go back to fallback or last value
+ * (todo) Prevent crash when multiple webbroser tabs open to the add-on and retreiving settings
  */
 
 
@@ -39,7 +40,7 @@
 #include "IthoSystem.h"
 #include "notifyClients.h"
 #include "IthoCC1101.h"
-#include <ArduinoJson.h>  // https://github.com/bblanchon/ArduinoJson [6.17.3]
+#include <ArduinoJson.h>  // https://github.com/bblanchon/ArduinoJson [6.18.5]
 #include <ESPAsyncWebServer.h>  // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
 #include <SPIFFSEditor.h>       // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
 #include <DNSServer.h>
@@ -47,6 +48,7 @@
 #include <Wire.h>
 #include <time.h>
 #include <Ticker.h>
+#include <string>
 
 #include <ArduinoLog.h>       // https://github.com/thijse/Arduino-Log [1.0.3]
 #include <SpiffsFilePrint.h>  // https://github.com/PRosenb/SPIFFS_FilePrint [1.0.0]
