@@ -103,6 +103,7 @@ void execMQTTTasks() {
           mqttSendStatus();
           mqttSendRemotesInfo();
           mqttPublishLastcmd();
+          //mqttSendSettingsJSON();
         }
       }
     }
@@ -187,6 +188,26 @@ void mqttPublishLastcmd() {
   if (mqttClient.beginPublish(systemConfig.mqtt_lastcmd_topic, len, true)) {
     serializeJson(root, mqttClient);
     if (!mqttClient.endPublish()) logInput("MQTT: Failed to send payload (last cmd info))");
+  }
+  // reset buffer
+  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+}
+
+void mqttSendSettingsJSON() {
+  DynamicJsonDocument doc(4000);
+
+  JsonObject root = doc.to<JsonObject>();
+    
+  getIthoSettingsBackupJSON(root);
+
+  size_t len = measureJson(root);
+
+  if (mqttClient.getBufferSize() < len) {
+    mqttClient.setBufferSize(len);
+  }
+  if (mqttClient.beginPublish("itho/settingstest", len, true)) {
+    serializeJson(root, mqttClient);
+    if (!mqttClient.endPublish()) logInput("MQTT: Failed to send payload (itho remote info))");
   }
   // reset buffer
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);

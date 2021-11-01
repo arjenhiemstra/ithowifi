@@ -1,7 +1,7 @@
 #pragma once
 
-#define CVE
-//#define NON_CVE
+//#define CVE
+#define NON_CVE
 
 #if defined (ESP8266)
   #define HW_VERSION_ONE

@@ -67,7 +67,7 @@ void execSystemControlTasks() {
   if (IthoInit && millis() > 250) {
     IthoInit = ithoInitCheck();
   }
-  
+
 #if defined (HW_VERSION_TWO)
   if (!i2cStartCommands && millis() > 15000 && (millis() - lastI2CinitRequest > 5000) ) {
     lastI2CinitRequest = millis();
@@ -106,7 +106,7 @@ void execSystemControlTasks() {
       ithoInitResult = -1;
     }
   }
-#endif  
+#endif
 
   if (systemConfig.itho_sendjoin > 0 && !joinSend && ithoInitResult == 1) {
     joinSend = true;
@@ -277,8 +277,8 @@ void execSystemControlTasks() {
     setSetting2410(i2c_result_updateweb);
     set2410 = false;
 #if defined (HW_VERSION_TWO)
-      xSemaphoreGive(mutexI2Ctask);
-#endif    
+    xSemaphoreGive(mutexI2Ctask);
+#endif
     getSettingsHack.once_ms(1, []() {
       getSetting(index2410, true, false, false);
     });

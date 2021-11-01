@@ -1,4 +1,4 @@
-#define MQTT_BUFFER_SIZE 1024
+#define MQTT_BUFFER_SIZE 5120
 #if defined (HW_VERSION_TWO) && defined (ENABLE_FAILSAVE_BOOT)
 
 void failSafeBoot() {

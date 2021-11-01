@@ -261,7 +261,7 @@ void handleDebug(AsyncWebServerRequest *request) {
 #elif defined (HW_VERSION_TWO)
   response->print(SPIFFS.totalBytes());
 #endif   
-  response->print(F(" bytes total</span><br><a href='#' class='pure-button' onclick=\"$('#main').empty();$('#main').append( html_edit );\">Edit filesystem</a>&nbsp;<button id=\"format\" class=\"pure-button\">Format filesystem</button>"));
+  response->print(F(" bytes total</span><br><a href='#' class='pure-button' onclick=\"$('#main').empty();$('#main').append( html_edit );\">Edit filesystem</a>"));
 #if defined (HW_VERSION_TWO)
   response->print(F("<br><br><span>CC1101 task memory: </span><span>"));
   response->print(TaskCC1101HWmark);

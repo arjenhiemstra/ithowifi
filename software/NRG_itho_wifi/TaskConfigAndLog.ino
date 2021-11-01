@@ -107,17 +107,22 @@ void execLogAndConfigTasks() {
 
     if (SPIFFS.format()) {
       systemstat["format"] = 1;
+      notifyClients(root.as<JsonObjectConst>());
       strcpy(logBuff, "Filesystem format done");
-      dontSaveConfig = true;
+      logMessagejson(logBuff, WEBINTERFACE);
+      strcpy(logBuff, "Device rebooting, connect to accesspoint to setup the device");
+      logMessagejson(logBuff, WEBINTERFACE);      
+      esp_task_wdt_init(1, true);
+      esp_task_wdt_add(NULL);
+      while (true);
     }
     else {
       systemstat["format"] = 0;
       strcpy(logBuff, "Unable to format");
+      logMessagejson(logBuff, WEBINTERFACE);
+      notifyClients(root.as<JsonObjectConst>());
     }
-    logMessagejson(logBuff, WEBINTERFACE);
-    strcpy(logBuff, "");
-
-    notifyClients(root.as<JsonObjectConst>());
+    strcpy(logBuff, "");  
 
   }
 
