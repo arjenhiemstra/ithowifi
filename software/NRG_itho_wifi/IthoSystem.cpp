@@ -57,8 +57,8 @@ SemaphoreHandle_t mutexI2Ctask;
 struct ihtoDeviceType {
   uint8_t ID;
   const char *name;
-  const uint8_t **settingsMapping;
-  uint8_t versionsLen;
+  const uint16_t **settingsMapping;
+  uint16_t versionsLen;
   const __FlashStringHelper **settingsDescriptions;
   const uint8_t **statusLabelMapping;
   const __FlashStringHelper **settingsStatusLabels;
@@ -73,7 +73,7 @@ struct ihtoDeviceType ithoDevices[] {
   { 0x0A, "GGBB",               nullptr, 0, nullptr, nullptr, nullptr },
   { 0x0B, "DemandFlow",         ithoDemandFlowSettingsMap, sizeof(ithoDemandFlowSettingsMap) / sizeof(ithoDemandFlowSettingsMap[0]), ihtoDemandFlowSettingsDescriptions, ithoDemandFlowStatusMap, ihtoDemandFlowStatusLabels  },
   { 0x0C, "CO2 relay",          nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x0D, "Heatpump",           nullptr, 0, nullptr, nullptr, nullptr },
+  { 0x0D, "Heatpump",           nullptr, 0, nullptr, ithoWPUSstatusMap, ithoWPUStatusLabels },
   { 0x0E, "OLB Single",         nullptr, 0, nullptr, nullptr, nullptr },
   { 0x0F, "AutoTemp",           nullptr, 0, nullptr, nullptr, nullptr },
   { 0x10, "OLB Double",         nullptr, 0, nullptr, nullptr, nullptr },
