@@ -1005,4 +1005,15 @@ Wire Wire Line
 Connection ~ 10875 6900
 Wire Wire Line
 	10875 6900 10950 6900
+$Comp
+L Mechanical:MountingHole H3
+U 1 1 61941A13
+P 10300 10575
+F 0 "H3" H 10400 10621 50  0000 L CNN
+F 1 "MountingHole" H 10400 10530 50  0000 L CNN
+F 2 "MountingHole:MountingHole_2.5mm" H 10300 10575 50  0001 C CNN
+F 3 "~" H 10300 10575 50  0001 C CNN
+	1    10300 10575
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC

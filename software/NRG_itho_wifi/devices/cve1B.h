@@ -1,0 +1,188 @@
+#pragma once
+
+const uint8_t itho_CVE1Bsetting6[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,255};
+const uint8_t itho_CVE1Bsetting7[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,32,33,34,35,36,37,38,39,40,30,31,255};
+const uint8_t itho_CVE1Bsetting8[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,41,42,43,44,17,18,19,20,21,22,23,24,25,26,27,32,33,34,35,36,37,38,39,40,30,31,255};
+const uint8_t itho_CVE1Bsetting9[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,41,42,43,44,45,46,47,48,49,17,18,19,20,21,22,23,24,25,26,27,32,33,34,35,36,37,38,39,40,30,31,255};
+const uint8_t itho_CVE1Bsetting10[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,41,42,43,44,45,46,47,48,49,50,18,19,20,21,22,23,24,25,26,27,32,33,34,35,36,37,38,39,40,51,30,31,255};
+const uint8_t itho_CVE1Bsetting11[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,41,42,43,44,45,46,47,48,49,50,51,18,19,20,21,22,23,24,25,26,27,32,33,34,35,36,52,37,38,39,40,30,31,255};
+const uint8_t itho_CVE1Bsetting17_20[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,42,43,44,45,46,47,48,49,50,53,54,55,56,57,58,59,60,61,62,63,64,65,32,33,34,66,67,68,37,38,39,40,30,31,255};
+const uint8_t itho_CVE1Bsetting21[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,42,43,44,45,46,47,48,49,50,53,54,55,69,57,58,70,71,59,60,61,62,63,64,65,32,33,34,66,67,68,37,38,39,40,30,31,255};
+const uint8_t itho_CVE1Bsetting22[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,42,43,44,45,46,47,48,49,50,53,54,55,69,57,58,70,71,59,60,61,62,63,64,65,32,33,34,66,67,68,37,38,39,40,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,30,31,255};
+const uint8_t itho_CVE1Bsetting24[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,42,43,44,45,46,47,48,49,50,53,54,55,69,57,58,70,71,59,60,61,62,63,64,65,32,33,34,66,67,68,37,38,39,40,30,31,88,89,90,91,92,75,81,93,94,95,96,97,98,255};
+const uint8_t itho_CVE1Bsetting25[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,42,43,44,45,46,47,48,49,50,53,54,55,69,57,58,70,71,99,100,101,102,103,104,59,60,61,62,63,64,65,32,33,34,66,67,68,37,38,39,40,30,31,88,89,90,91,92,75,81,93,94,95,96,97,98,255};
+const uint8_t itho_CVE1Bsetting26_27[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,42,43,44,45,46,47,48,49,50,53,54,55,69,57,58,70,71,105,106,107,108,109,110,111,112,113,114,115,116,117,118,59,60,61,62,63,64,65,32,33,34,66,67,68,37,38,39,40,30,31,88,89,90,91,92,75,81,93,94,95,96,97,98,255};
+
+
+const __FlashStringHelper *ithoCVE1BSettingsLabels[] =  {
+    F("OEM number"),
+    F("Print version"),
+    F("Min setting of potentiometer low (rpm)"),
+    F("Max setting of potentiometer low (rpm)"),
+    F("Min setting of potentiometer high (rpm)"),
+    F("Max setting of potentiometer high (rpm)"),
+    F("RF enable"),
+    F("I2C mode"),
+    F("Fan constant Ca2"),
+    F("Fan constant Ca1"),
+    F("Fan constant Ca0"),
+    F("Fan constant Cb2"),
+    F("Fan constant Cb1"),
+    F("Fan constant Cb0"),
+    F("Fan constant Cc2"),
+    F("Fan constant Cc1"),
+    F("Fan constant Cc0"),
+    F("Minimum ventilation (%)"),
+    F("CO2 concentration absent (ppm)"),
+    F("CO2 concentration present (ppm)"),
+    F("Min. Fan setpoint at valve low (%)"),
+    F("Min. Fan setpoint at valve high (%)"),
+    F("Min. Fan setpoint at valve high and PIR (%)"),
+    F("CO2 concentration at 100% valve low (ppm)"),
+    F("CO2 concentration at 100% valve high (ppm)"),
+    F("CO2 concentration at 100% valve high and PIR (ppm)"),
+    F("Max speed change per minute (%)"),
+    F("Expiration time PIR present (Min)"),
+    F("Period time (min)"),
+    F("Stabilization period (min)"),
+    F("Manual operation"),
+    F("Speed at manual operation (rpm)"),
+    F("Period time CO2 equations (min)"),
+    F("CO2 detection limit at rising CO2 (ppm)"),
+    F("CO2 detection limit at falling CO2 (ppm)"),
+    F("CO2 rise detection limit normal situation (ppm)"),
+    F("Time duration of speed stop (min)"),
+    F("Speed stop ramp block (%)"),
+    F("Max speed change during speed blockade (%/min)"),
+    F("Delta CO2 start speed block (ppm)"),
+    F("Max speed change during speed blockade (%)"),
+    F("Speed at absence (rpm)"),
+    F("Block time auto. reset absence (min)"),
+    F("Max. time deferred absence (min)"),
+    F("Min. desire for deferred absence (%)"),
+    F("PIR level 1 (%)"),
+    F("PIR level 2 (%)"),
+    F("PIR level 1 wait time (sec)"),
+    F("PIR level 2 wait time (sec)"),
+    F("PIR level 2 running time (sec)"),
+    F("PIR level 2 running time (sec)"),
+    F("Min fan setpoint BaseFlow present"),
+    F("Maximum period rev. block (min)"),
+    F("Minimum CO2 ventilation level (%)"),
+    F("Max time high speed (min)"),
+    F("Max time other speeds (min)"),
+    F("Heatrae"),
+    F("PoorCo2Quality (ppm)"),
+    F("GoodCo2Quality (ppm)"),
+    F("CO2 value absent (ppm)"),
+    F("CO2 value present (ppm)"),
+    F("Min speed low CO2 (%)"),
+    F("Min speed high CO2 (%)"),
+    F("CO2 fan 100% valve low ?? (ppm)"),
+    F("CO2 fan 100% valve high ?? (ppm)"),
+    F("CO2 max fan slope ?? (%/min)"),
+    F("Delta normal adjustment ?? (ppm)"),
+    F("Blocking time fan (min)"),
+    F("Block time limiter (min)"),
+    F("Position after maximum time high"),
+    F("Type of dwelling"),
+    F("Number of occupants"),
+    F("UseWiredRh"),
+    F("RhSensorInterval (0.1s)"),
+    F("StoreInterval (s)"),
+    F("RHventHighDemand (%)"),
+    F("RHmin (%)"),
+    F("RHmax (%)"),
+    F("RHstart (%)"),
+    F("RHstop (%)"),
+    F("RHIncrease (%)"),
+    F("RHminOnTime (min)"),
+    F("RHdiff (%)"),
+    F("RHconstantDiff (%)"),
+    F("RHconstantTime (min)"),
+    F("RHlow (%)"),
+    F("RHselectOperationMode"),
+    F("RHsensitivityIncrease"),
+    F("Dew point at which the RV-IC heater should start (K)"),
+    F("Dew point at which the RV-IC heater should stop (K)"),
+    F("Minimum time the RV-IC heater is on (min)"),
+    F("Maximum time the RV-IC heater should be on (min)"),
+    F("RH sensor found/available"),
+    F("Loose RV sensor overrides internal yes/no"),
+    F("Sampling time of the RH and temperature measurement (sec)"),
+    F("Hysteresis RH for return to normal operation (%)"),
+    F("Rise in absolute humidity (X) at which it goes to high (mg/kg)"),
+    F("Hysteresis X before falling back to normal operation (mg/kg)"),
+    F("Maximum time it is allowed to remain in high by RH control (min)"),
+    F("NightOnePersonOneFloor (%)"),
+    F("NightTwoPersonsOneFloor (%)"),
+    F("NightMultiPersonsOneFloor (%)"),
+    F("NightOnePersonMultiFloor (%)"),
+    F("NightTwoPersonsMultiFloor (%)"),
+    F("NightMultiPersonsMultiFloor (%)"),
+    F("NightOnePersonOneFloorOptima1 (%)"),
+    F("NightTwoPersonsOneFloorOptima1 (%)"),
+    F("NightMultiPersonsOneFloorOptima1 (%)"),
+    F("NightOnePersonMultiFloorOptima1 (%)"),
+    F("NightTwoPersonsMultiFloorOptima1 (%)"),
+    F("NightMultiPersonsMultiFloorOptima1 (%)"),
+    F("NightOnePersonOneFloorOptima2 (%)"),
+    F("NightTwoPersonsOneFloorOptima2 (%)"),
+    F("NightMultiPersonsOneFloorOptima2 (%)"),
+    F("NightOnePersonMultiFloorOptima2 (%)"),
+    F("NightTwoPersonsMultiFloorOptima2 (%)"),
+    F("NightMultiPersonsMultiFloorOptima2 (%)"),
+    F("AutoVentilationOneFloor (%)"),
+    F("AutoVentilationMultiFloor (%)")
+};
+const uint8_t itho_CVE1Bstatus6[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,255};
+const uint8_t itho_CVE1Bstatus7[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,255};
+const uint8_t itho_CVE1Bstatus8[] { 0,1,2,3,4,5,6,14,15,7,8,9,10,11,12,255};
+const uint8_t itho_CVE1Bstatus9_11[]  { 0,1,2,3,4,5,6,14,15,7,8,9,10,11,12,16,17,18,19,20,21,255};
+const uint8_t itho_CVE1Bstatus17[] { 0,1,2,3,4,5,6,14,15,7,17,8,9,10,11,12,255};
+const uint8_t itho_CVE1Bstatus18[] { 0,1,2,3,4,5,6,14,15,7,17,8,9,11,12,255};
+const uint8_t itho_CVE1Bstatus20_21[] { 0,1,2,3,4,5,6,14,7,17,8,9,11,12,255};
+const uint8_t itho_CVE1Bstatus22[] { 0,1,2,3,4,5,6,14,7,17,8,9,11,12,22,23,24,25,26,27,28,29,30,31,32,255};
+const uint8_t itho_CVE1Bstatus24_27[] { 0,1,2,3,4,5,6,14,7,17,33,34,255};
+
+
+const __FlashStringHelper *ithoCVE1BStatusLabels[] =  {
+    F("Fan setpoint (%)"),
+    F("Fan setpoint (rpm)"),
+    F("Fan speed (rpm)"),
+    F("Fault"),
+    F("Selection"),
+    F("Start-up counter"),
+    F("Hour meter (hours)"),
+    F("CO2 concentration (ppm)"),
+    F("Auto ventilation setpoint (%)"),
+    F("Valve"),
+    F("Presence timer (sec)"),
+    F("Sample period"),
+    F("Cycle timer"),
+    F("Sample timer"),
+    F("Absence (min)"),
+    F("Delayed absence (min)"),
+    F("Rfspeed absolute"),
+    F("Rfspeed level"),
+    F("Next Rfspeed absolute"),
+    F("Next Rfspeed level"),
+    F("Speed timer"),
+    F("New level time"),
+    F("Sensor fault"),
+    F("Internal humidity (%)"),
+    F("Internal temp (°C)"),
+    F("Selected mode"),
+    F("Enhanced bathroom"),
+    F("Counter stop (s)"),
+    F("Counter min time (s)"),
+    F("Ventilation request (%)"),
+    F("Measurement actual (%)"),
+    F("Measurement previous first (%)"),
+    F("Measurement previous second (%)"),
+    F("RelativeHumidity"),
+    F("Temperature")
+};
+
+const uint8_t *itho1BSettingsMap[] =	{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,  itho_CVE1Bsetting6, itho_CVE1Bsetting7, itho_CVE1Bsetting8, itho_CVE1Bsetting9, itho_CVE1Bsetting10, itho_CVE1Bsetting11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bsetting17_20, itho_CVE1Bsetting17_20, nullptr, itho_CVE1Bsetting17_20, itho_CVE1Bsetting21, itho_CVE1Bsetting22, nullptr, itho_CVE1Bsetting24, itho_CVE1Bsetting25, itho_CVE1Bsetting26_27 };
+const uint8_t  *itho1BStatusMap[]   =	{ nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bstatus6, itho_CVE1Bstatus7, itho_CVE1Bstatus8, itho_CVE1Bstatus9_11, itho_CVE1Bstatus9_11, itho_CVE1Bstatus9_11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bstatus17, itho_CVE1Bstatus18, nullptr, itho_CVE1Bstatus20_21, itho_CVE1Bstatus20_21, itho_CVE1Bstatus22, nullptr, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27};

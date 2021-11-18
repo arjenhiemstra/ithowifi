@@ -1,10 +1,17 @@
 
 #include "SystemConfig.h"
 #include "IthoSystem.h"
+#include "devices/cve14.h"
+#include "devices/cve1B.h"
+#include "devices/hru350.h"
+#include "devices/hrueco.h"
+#include "devices/demandflow.h"
+#include "devices/autotemp.h"
+#include "devices/wpu.h"
+#include "devices/error_info_labels.h"
 #include "hardware.h"
 #include "i2c_esp32.h"
 #include "notifyClients.h"
-#include "IthoSystemConsts.h"
 
 uint8_t ithoDeviceID = 0;
 uint8_t itho_fwversion = 0;
@@ -14,6 +21,7 @@ uint8_t id1 = 0;
 uint8_t id2 = 0;
 struct ihtoDeviceType* ithoDeviceptr = nullptr;
 int16_t ithoSettingsLength = 0;
+int16_t ithoStatusLabelLength = 0;
 std::vector<ithoDeviceStatus> ithoStatus;
 std::vector<ithoDeviceMeasurements> ithoMeasurements;
 std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
@@ -57,36 +65,36 @@ SemaphoreHandle_t mutexI2Ctask;
 struct ihtoDeviceType {
   uint8_t ID;
   const char *name;
-  const uint16_t **settingsMapping;
-  uint16_t versionsLen;
+  const uint8_t **settingsMapping;
+  uint8_t versionsMapLen;
   const __FlashStringHelper **settingsDescriptions;
   const uint8_t **statusLabelMapping;
+  uint8_t statusMapLen;
   const __FlashStringHelper **settingsStatusLabels;
-
 };
 
 
 struct ihtoDeviceType ithoDevices[] {
-  { 0x01, "Air curtain",        nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x03, "HRU ECO-fan",        ithoHRUecoFanSettingsMap, sizeof(ithoHRUecoFanSettingsMap) / sizeof(ithoHRUecoFanSettingsMap[0]), ihtoHRUecoFanSettingsDescriptions, ithoHRUecoFanStatusMap, ihtoHRUecoFanStatusLabels },
-  { 0x08, "LoadBoiler",         nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x0A, "GGBB",               nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x0B, "DemandFlow",         ithoDemandFlowSettingsMap, sizeof(ithoDemandFlowSettingsMap) / sizeof(ithoDemandFlowSettingsMap[0]), ihtoDemandFlowSettingsDescriptions, ithoDemandFlowStatusMap, ihtoDemandFlowStatusLabels  },
-  { 0x0C, "CO2 relay",          nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x0D, "Heatpump",           nullptr, 0, nullptr, ithoWPUSstatusMap, ithoWPUStatusLabels },
-  { 0x0E, "OLB Single",         nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x0F, "AutoTemp",           nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x10, "OLB Double",         nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x11, "RF+",                nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x14, "CVE",                itho14SettingsMap, sizeof(itho14SettingsMap) / sizeof(itho14SettingsMap[0]), ihtoCVESettingsDescriptions, itho14StatusMap, ihtoCVEStatusLabels  },
-  { 0x15, "Extended",           nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x16, "Extended Plus",      nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x1A, "AreaFlow",           nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x1B, "CVE-Silent",         itho1BSettingsMap, sizeof(itho1BSettingsMap) / sizeof(itho1BSettingsMap[0]), ihtoCVESettingsDescriptions, itho1BStatusMap, ihtoCVEStatusLabels  },
-  { 0x1C, "CVE-SilentExt",      nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x1D, "CVE-SilentExtPlus",  nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x20, "RF_CO2",             nullptr, 0, nullptr, nullptr, nullptr },
-  { 0x2B, "HRU 350",            ithoHRU350SettingsMap, sizeof(ithoHRU350SettingsMap) / sizeof(ithoHRU350SettingsMap[0]), ihtoHRU350SettingsDescriptions, ithoHRU350StatusMap, ihtoHRU350StatusLabels  }
+  { 0x01, "Air curtain",        nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x03, "HRU ECO-fan",        ithoHRUecoFanSettingsMap, sizeof(ithoHRUecoFanSettingsMap) / sizeof(ithoHRUecoFanSettingsMap[0]), ithoHRUecoSettingsLabels, ithoHRUecoFanStatusMap, sizeof(ithoHRUecoFanStatusMap) / sizeof(ithoHRUecoFanStatusMap[0]), ithoHRUecoStatusLabels },
+  { 0x08, "LoadBoiler",         nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x0A, "GGBB",               nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x0B, "DemandFlow",         ithoDemandFlowSettingsMap, sizeof(ithoDemandFlowSettingsMap) / sizeof(ithoDemandFlowSettingsMap[0]), ithoDemandFlowStatusLabels, ithoDemandFlowStatusMap, sizeof(ithoDemandFlowStatusMap) / sizeof(ithoDemandFlowStatusMap[0]), ithoDemandFlowStatusLabels  },
+  { 0x0C, "CO2 relay",          nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x0D, "Heatpump",           ithoWPUSettingsMap, sizeof(ithoWPUSettingsMap) / sizeof(ithoWPUSettingsMap[0]), ithoWPUSettingsLabels, ithoWPUStatusMap, sizeof(ithoWPUStatusMap) / sizeof(ithoWPUStatusMap[0]), ithoWPUStatusLabels },
+  { 0x0E, "OLB Single",         nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x0F, "AutoTemp",           ithoAutoTempSettingsMap, sizeof(ithoAutoTempSettingsMap) / sizeof(ithoAutoTempSettingsMap[0]), ithoAutoTempSettingsLabels, ithoAutoTempStatusMap, sizeof(ithoAutoTempStatusMap) / sizeof(ithoAutoTempStatusMap[0]), ithoAutoTempStatusLabels },
+  { 0x10, "OLB Double",         nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x11, "RF+",                nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x14, "CVE",                itho14SettingsMap, sizeof(itho14SettingsMap) / sizeof(itho14SettingsMap[0]), ithoCVE14SettingsLabels, itho14StatusMap, sizeof(itho14StatusMap) / sizeof(itho14StatusMap[0]), ithoCVE14StatusLabels  },
+  { 0x15, "Extended",           nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x16, "Extended Plus",      nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x1A, "AreaFlow",           nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x1B, "CVE-Silent",         itho1BSettingsMap, sizeof(itho1BSettingsMap) / sizeof(itho1BSettingsMap[0]), ithoCVE1BSettingsLabels, itho1BStatusMap, sizeof(itho1BStatusMap) / sizeof(itho1BStatusMap[0]), ithoCVE1BStatusLabels  },
+  { 0x1C, "CVE-SilentExt",      nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x1D, "CVE-SilentExtPlus",  nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x20, "RF_CO2",             nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x2B, "HRU 350",            ithoHRU350SettingsMap, sizeof(ithoHRU350SettingsMap) / sizeof(ithoHRU350SettingsMap[0]), ithoHRU350SettingsLabels, ithoHRU350StatusMap, sizeof(ithoHRU350StatusMap) / sizeof(ithoHRU350StatusMap[0]), ithoHRU350StatusLabels  }
 };
 
 
@@ -114,10 +122,7 @@ int getSettingsLength(const uint8_t deviceID, const uint8_t version) {
       if (ithoDevicesptr->settingsMapping == nullptr) {
         return -2; //Settings not available for this device
       }
-      if (version > ithoDevicesptr->versionsLen) {
-        return -3; //Settings not available for this version
-      }
-      if (*(ithoDevicesptr->settingsMapping + version) == nullptr) {
+      if (version > ithoDevicesptr->versionsMapLen) {
         return -3; //Settings not available for this version
       }
 
@@ -234,12 +239,47 @@ void getSetting(const uint8_t i, const bool updateState, const bool updateweb, c
 
 }
 
+int getSatusLabelLength(const uint8_t deviceID, const uint8_t version) {
+
+  struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
+  struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
+  while ( ithoDevicesptr < ithoDevicesendPtr ) {
+    if (ithoDevicesptr->ID == deviceID) {
+      if (ithoDevicesptr->statusLabelMapping == nullptr) {
+        return -2; //Labels not available for this device
+      }
+      if (version > ithoDevicesptr->statusMapLen) {
+        return -3; //Labels not available for this version
+      }
+
+      for (int i = 0; i < 255; i++) {
+        if ((int) * (*(ithoDevicesptr->statusLabelMapping + version) + i) == 255) {
+          //end of array
+          return i;
+        }
+      }
+    }
+    ithoDevicesptr++;
+  }
+  return -1;
+}
+
 void getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPtr, const uint8_t version, char* fStringBuf) {
 
   if (statusPtr == nullptr) {
     strcpy(fStringBuf, "nullptr error");
     return;
   }
+  if (ithoStatusLabelLength == -2) {
+    strcpy(fStringBuf, "no label for device error");
+  }
+  if (ithoStatusLabelLength == -3) {
+    strcpy(fStringBuf, "no label for version error");
+  }
+  if (ithoStatusLabelLength < i) {
+    strcpy(fStringBuf, "label out of bound error");
+  }
+    
   strcpy_P(fStringBuf, (PGM_P)(statusPtr->settingsStatusLabels[(int) * (*(statusPtr->statusLabelMapping + version) + i)]) );
 
 }
@@ -528,7 +568,7 @@ void sendQueryStatusFormat(bool & updateweb) {
       ithoStatus.clear();
     }
     if (!(itho_fwversion > 0)) return;
-
+    ithoStatusLabelLength = getSatusLabelLength(ithoDeviceID, itho_fwversion);
     for (uint8_t i = 0; i < i2cbuf[5]; i++) {
       ithoStatus.push_back(ithoDeviceStatus());
 

@@ -1,4 +1,4 @@
-#define FWVERSION "2.3-beta4-wputest"
+#define FWVERSION "2.3-beta5"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -27,9 +27,9 @@
  * (todo) Restructure MQTT topics
  * (todo) Restore compatibility with HW rev 1 (probaly not possible anymore)
  * (todo) recheck status format if failed on boot
- * (done) implement settings format check to correctly handle shorter than 32 bit values
  * (todo) After timer, go back to fallback or last value
  * (todo) Prevent crash when multiple webbroser tabs open to the add-on and retreiving settings
+ * (todo) add option to monitor remotes only (ignore button presses)
  */
 
 
