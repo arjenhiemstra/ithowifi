@@ -262,69 +262,48 @@ Wire Wire Line
 $Comp
 L Device:R R?
 U 1 1 61392B04
-P 5250 2950
+P 7175 1850
 AR Path="/5FAE7423/61392B04" Ref="R?"  Part="1" 
 AR Path="/61392B04" Ref="R12"  Part="1" 
-F 0 "R12" V 5330 2950 50  0000 C CNN
-F 1 "R10K" V 5250 2950 50  0000 C CNN
-F 2 "Resistor_SMD:R_0805_2012Metric" V 5180 2950 50  0001 C CNN
-F 3 "" H 5250 2950 50  0001 C CNN
-F 4 "C17414" H 5250 2950 50  0001 C CNN "LCSC"
-	1    5250 2950
+F 0 "R12" V 7255 1850 50  0000 C CNN
+F 1 "R10K" V 7175 1850 50  0000 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 7105 1850 50  0001 C CNN
+F 3 "" H 7175 1850 50  0001 C CNN
+F 4 "C17414" H 7175 1850 50  0001 C CNN "LCSC"
+	1    7175 1850
 	1    0    0    1   
 $EndComp
 $Comp
 L Device:R R?
 U 1 1 61392B18
-P 5250 3650
+P 10150 1500
 AR Path="/5FAE7423/61392B18" Ref="R?"  Part="1" 
 AR Path="/61392B18" Ref="R13"  Part="1" 
-F 0 "R13" V 5330 3650 50  0000 C CNN
-F 1 "R10K" V 5250 3650 50  0000 C CNN
-F 2 "Resistor_SMD:R_0805_2012Metric" V 5180 3650 50  0001 C CNN
-F 3 "" H 5250 3650 50  0001 C CNN
-F 4 "C17414" H 5250 3650 50  0001 C CNN "LCSC"
-	1    5250 3650
+F 0 "R13" V 10230 1500 50  0000 C CNN
+F 1 "R10K" V 10150 1500 50  0000 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 10080 1500 50  0001 C CNN
+F 3 "" H 10150 1500 50  0001 C CNN
+F 4 "C17414" H 10150 1500 50  0001 C CNN "LCSC"
+	1    10150 1500
 	1    0    0    1   
 $EndComp
-Wire Wire Line
-	4775 3875 5250 3875
 Text GLabel 5375 3875 2    60   Input ~ 0
 D0
 Text GLabel 5375 2725 2    60   Input ~ 0
 EN
-Connection ~ 5250 3875
-Wire Wire Line
-	5250 3875 5375 3875
 $Comp
 L power:+3V3 #PWR0113
 U 1 1 6142FA42
-P 5525 3250
-F 0 "#PWR0113" H 5525 3100 50  0001 C CNN
-F 1 "+3V3" H 5540 3423 50  0000 C CNN
-F 2 "" H 5525 3250 50  0001 C CNN
-F 3 "" H 5525 3250 50  0001 C CNN
-	1    5525 3250
+P 10150 1175
+F 0 "#PWR0113" H 10150 1025 50  0001 C CNN
+F 1 "+3V3" H 10165 1348 50  0000 C CNN
+F 2 "" H 10150 1175 50  0001 C CNN
+F 3 "" H 10150 1175 50  0001 C CNN
+	1    10150 1175
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	5250 3800 5250 3875
-Wire Wire Line
-	4775 2725 5250 2725
-Wire Wire Line
-	5250 2800 5250 2725
-Connection ~ 5250 2725
-Wire Wire Line
-	5250 2725 5375 2725
-Wire Wire Line
-	5250 3100 5250 3325
-Wire Wire Line
-	5525 3250 5525 3325
-Wire Wire Line
-	5525 3325 5250 3325
-Connection ~ 5250 3325
-Wire Wire Line
-	5250 3325 5250 3500
+	10150 1175 10150 1350
 Text GLabel 5150 2550 2    60   Input ~ 0
 D1/TX0
 Text GLabel 5150 2450 2    60   Input ~ 0
@@ -365,184 +344,6 @@ F 3 "~" H 10300 9900 50  0001 C CNN
 	1    10300 9900
 	1    0    0    -1  
 $EndComp
-Connection ~ 6850 2525
-Wire Wire Line
-	6850 2525 6850 3175
-Wire Wire Line
-	6850 2525 6850 2450
-Wire Wire Line
-	7425 2525 6850 2525
-Connection ~ 6850 1925
-Wire Wire Line
-	6850 1725 6850 1925
-Wire Wire Line
-	6850 1925 6850 2050
-$Comp
-L Switch:SW_Push SW1
-U 1 1 607A6198
-P 6850 2250
-F 0 "SW1" V 6896 2202 50  0000 R CNN
-F 1 "Fail safe" V 6805 2202 50  0000 R CNN
-F 2 "nrg_watch:TS-1187" H 6850 2450 50  0001 C CNN
-F 3 "~" H 6850 2450 50  0001 C CNN
-F 4 "C92589" V 6850 2250 50  0001 C CNN "LCSC"
-	1    6850 2250
-	0    -1   -1   0   
-$EndComp
-Connection ~ 7325 2825
-Wire Wire Line
-	7325 2825 6325 2825
-Connection ~ 7325 2725
-Wire Wire Line
-	7325 2625 7425 2625
-Wire Wire Line
-	7325 2725 7325 2625
-Wire Wire Line
-	7325 2725 7425 2725
-Wire Wire Line
-	7325 2825 7325 2725
-Wire Wire Line
-	7325 2825 7425 2825
-Wire Wire Line
-	7325 2925 7425 2925
-Connection ~ 7325 2925
-Connection ~ 7325 3025
-Wire Wire Line
-	7325 3025 7325 2925
-Wire Wire Line
-	7325 3025 7425 3025
-Wire Wire Line
-	7325 3625 7325 3025
-Wire Wire Line
-	8025 3625 7325 3625
-Wire Wire Line
-	8025 3575 8025 3625
-Wire Wire Line
-	6325 2925 7325 2925
-Wire Wire Line
-	9275 2675 9675 2675
-Text GLabel 9675 2675 2    50   Input ~ 0
-D17_WIFI_STATUS
-Connection ~ 6850 4150
-Wire Wire Line
-	6325 2025 6550 2025
-$Comp
-L power:+3V3 #PWR0114
-U 1 1 614794C2
-P 6850 1725
-F 0 "#PWR0114" H 6850 1575 50  0001 C CNN
-F 1 "+3V3" H 6865 1898 50  0000 C CNN
-F 2 "" H 6850 1725 50  0001 C CNN
-F 3 "" H 6850 1725 50  0001 C CNN
-	1    6850 1725
-	1    0    0    -1  
-$EndComp
-Text GLabel 6325 2925 0    50   Input ~ 0
-SDA_L
-Text GLabel 6325 2825 0    50   Input ~ 0
-SCL_L
-Text GLabel 6325 2025 0    60   Input ~ 0
-EN
-Wire Wire Line
-	6850 1925 7425 1925
-Wire Wire Line
-	6850 4150 7225 4150
-Wire Wire Line
-	6850 3475 6850 4150
-$Comp
-L Device:R R?
-U 1 1 5FB2CF38
-P 6850 3325
-AR Path="/5FAE7423/5FB2CF38" Ref="R?"  Part="1" 
-AR Path="/5FB2CF38" Ref="R10"  Part="1" 
-F 0 "R10" V 6930 3325 50  0000 C CNN
-F 1 "R10K" V 6850 3325 50  0000 C CNN
-F 2 "Resistor_SMD:R_0805_2012Metric" V 6780 3325 50  0001 C CNN
-F 3 "" H 6850 3325 50  0001 C CNN
-F 4 "C17414" H 6850 3325 50  0001 C CNN "LCSC"
-	1    6850 3325
-	1    0    0    1   
-$EndComp
-Wire Wire Line
-	7225 4150 7925 4150
-Connection ~ 7225 4150
-Wire Wire Line
-	7225 3225 7225 4150
-Wire Wire Line
-	7925 4150 9375 4150
-Connection ~ 7925 4150
-Wire Wire Line
-	7925 3575 7925 4150
-Connection ~ 9375 3175
-Wire Wire Line
-	9375 3175 9375 4150
-Wire Wire Line
-	9275 2575 9675 2575
-Text GLabel 9675 2575 2    60   Input ~ 0
-D5_SS
-Text GLabel 9675 2875 2    50   Input ~ 0
-D4_IRQ
-Wire Wire Line
-	9675 2875 9275 2875
-Text GLabel 9675 2375 2    60   Input ~ 0
-D19_MISO
-Wire Wire Line
-	9675 2975 9275 2975
-Text GLabel 9675 2975 2    60   Input ~ 0
-D0
-Wire Wire Line
-	9275 1975 9675 1975
-Wire Wire Line
-	9275 2075 9675 2075
-Text GLabel 9675 1975 2    60   Input ~ 0
-D1/TX0
-Text GLabel 9675 2075 2    60   Input ~ 0
-D0/RX0
-Wire Wire Line
-	9275 1775 9675 1775
-Wire Wire Line
-	9275 2375 9675 2375
-Wire Wire Line
-	9275 2475 9675 2475
-Text GLabel 9675 2475 2    60   Input ~ 0
-D18_SCK
-Text GLabel 9675 1775 2    60   Input ~ 0
-D23_MOSI
-Wire Wire Line
-	9375 3175 9275 3175
-Wire Wire Line
-	9375 3075 9375 3175
-Wire Wire Line
-	9275 3075 9375 3075
-Wire Wire Line
-	7225 3225 7425 3225
-$Comp
-L nrg_watch:ESP32-WROOM U?
-U 1 1 5FBF50FF
-P 8375 2525
-AR Path="/5FAE7423/5FBF50FF" Ref="U?"  Part="1" 
-AR Path="/5FBF50FF" Ref="U1"  Part="1" 
-F 0 "U1" H 8350 3912 60  0000 C CNN
-F 1 "ESP32-WROOM" H 8350 3806 60  0000 C CNN
-F 2 "RF_Module:ESP32-WROOM-32" H 8725 3875 60  0001 C CNN
-F 3 "" H 7925 2975 60  0001 C CNN
-F 4 "C473012" H 8375 2525 50  0001 C CNN "LCSC"
-	1    8375 2525
-	1    0    0    -1  
-$EndComp
-$Comp
-L power:GND #PWR05
-U 1 1 5E5C19D8
-P 6850 4350
-F 0 "#PWR05" H 6850 4100 50  0001 C CNN
-F 1 "GND" H 6855 4177 50  0000 C CNN
-F 2 "" H 6850 4350 50  0001 C CNN
-F 3 "" H 6850 4350 50  0001 C CNN
-	1    6850 4350
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	6850 4350 6850 4150
 Wire Wire Line
 	11800 2350 12125 2350
 $Comp
@@ -630,9 +431,6 @@ Wire Wire Line
 	1575 5625 1575 5700
 Wire Wire Line
 	1250 5625 1575 5625
-Connection ~ 2525 7125
-Wire Wire Line
-	2525 7125 1975 7125
 Text GLabel 1850 5950 1    50   Input ~ 0
 D17_WIFI_STATUS
 Wire Wire Line
@@ -1121,9 +919,7 @@ Wire Wire Line
 Wire Wire Line
 	1250 6000 1250 6800
 Wire Wire Line
-	1975 7125 1975 6700
-Wire Wire Line
-	1975 6700 2125 6700
+	1875 7125 1875 6700
 Wire Wire Line
 	1850 5950 1850 6100
 Wire Wire Line
@@ -1221,29 +1017,6 @@ Text GLabel 4275 8950 0    60   Input ~ 0
 D1/TX0
 Text GLabel 4275 8850 0    60   Input ~ 0
 D0/RX0
-$Comp
-L Device:C C?
-U 1 1 61261C3E
-P 6550 3300
-AR Path="/5FAE7423/61261C3E" Ref="C?"  Part="1" 
-AR Path="/61261C3E" Ref="C8"  Part="1" 
-F 0 "C8" H 6575 3400 50  0000 L CNN
-F 1 "10uF" H 6575 3200 50  0000 L CNN
-F 2 "Capacitor_SMD:C_0805_2012Metric" H 6588 3150 50  0001 C CNN
-F 3 "" H 6550 3300 50  0001 C CNN
-F 4 "C15850" H 6550 3300 50  0001 C CNN "LCSC"
-	1    6550 3300
-	1    0    0    1   
-$EndComp
-Wire Wire Line
-	6550 3150 6550 2025
-Connection ~ 6550 2025
-Wire Wire Line
-	6550 2025 7425 2025
-Wire Wire Line
-	6550 4150 6850 4150
-Wire Wire Line
-	6550 3450 6550 4150
 $Comp
 L Interface_USB:CH340G U3
 U 1 1 61743ABC
@@ -1384,78 +1157,278 @@ Text GLabel 3575 4575 2    60   Input ~ 0
 RTS
 Text GLabel 3575 4475 2    60   Input ~ 0
 DTR
-$Comp
-L nrg_watch:TC2030-MCP-NL J7
-U 1 1 61AFBF70
-P 5500 4700
-F 0 "J7" H 5500 5065 50  0000 C CNN
-F 1 "TC2030-MCP-NL" H 5500 4974 50  0000 C CNN
-F 2 "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical" H 5500 4950 50  0001 C CNN
-F 3 "" H 5500 4950 50  0001 C CNN
-	1    5500 4700
-	1    0    0    -1  
-$EndComp
-$Comp
-L power:GND #PWR02
-U 1 1 61AFD71A
-P 6225 4925
-F 0 "#PWR02" H 6225 4675 50  0001 C CNN
-F 1 "GND" H 6230 4752 50  0000 C CNN
-F 2 "" H 6225 4925 50  0001 C CNN
-F 3 "" H 6225 4925 50  0001 C CNN
-	1    6225 4925
-	1    0    0    -1  
-$EndComp
-$Comp
-L power:+3V3 #PWR01
-U 1 1 61B0B690
-P 4525 4425
-F 0 "#PWR01" H 4525 4275 50  0001 C CNN
-F 1 "+3V3" H 4540 4598 50  0000 C CNN
-F 2 "" H 4525 4425 50  0001 C CNN
-F 3 "" H 4525 4425 50  0001 C CNN
-	1    4525 4425
-	-1   0    0    -1  
-$EndComp
-Wire Wire Line
-	5900 4700 6225 4700
-Wire Wire Line
-	6225 4700 6225 4925
-Text GLabel 5900 4600 2    60   Input ~ 0
-DTR
-Text GLabel 5100 4700 0    60   Input ~ 0
-D0/RX0
-Text GLabel 5100 4600 0    60   Input ~ 0
-D1/TX0
-Wire Wire Line
-	4525 4800 5100 4800
-Wire Wire Line
-	4525 4425 4525 4800
 NoConn ~ 1250 2950
-NoConn ~ 5900 4800
 NoConn ~ 2925 6100
 NoConn ~ 2925 6300
 NoConn ~ 2925 6800
 NoConn ~ 12125 2650
-NoConn ~ 7425 2125
-NoConn ~ 7425 2225
-NoConn ~ 7425 2325
-NoConn ~ 7425 2425
-NoConn ~ 7425 3125
-NoConn ~ 8125 3575
-NoConn ~ 8225 3575
-NoConn ~ 8325 3575
-NoConn ~ 8425 3575
-NoConn ~ 8525 3575
-NoConn ~ 8625 3575
-NoConn ~ 8725 3575
-NoConn ~ 8825 3575
-NoConn ~ 9275 2775
-NoConn ~ 9275 2175
-NoConn ~ 9275 1875
 NoConn ~ 3425 2750
 NoConn ~ 3425 2850
 NoConn ~ 2625 2550
 NoConn ~ 3425 2950
 NoConn ~ 3425 3050
+Text GLabel 1875 7125 3    50   Input ~ 0
+D16_SYS_STATUS
+Wire Wire Line
+	1875 6700 2125 6700
+Connection ~ 7475 2600
+Wire Wire Line
+	7475 2600 7475 3250
+Wire Wire Line
+	7475 2600 7475 2525
+Wire Wire Line
+	8050 2600 7475 2600
+Wire Wire Line
+	7475 2000 7475 2125
+$Comp
+L Switch:SW_Push SW1
+U 1 1 607A6198
+P 7475 2325
+F 0 "SW1" V 7521 2277 50  0000 R CNN
+F 1 "Fail safe" V 7430 2277 50  0000 R CNN
+F 2 "nrg_watch:TS-1187" H 7475 2525 50  0001 C CNN
+F 3 "~" H 7475 2525 50  0001 C CNN
+F 4 "C92589" V 7475 2325 50  0001 C CNN "LCSC"
+	1    7475 2325
+	0    -1   -1   0   
+$EndComp
+Connection ~ 7950 2800
+Wire Wire Line
+	7950 2700 8050 2700
+Wire Wire Line
+	7950 2800 7950 2700
+Wire Wire Line
+	7950 2800 8050 2800
+Wire Wire Line
+	7950 2900 7950 2800
+Wire Wire Line
+	7950 2900 8050 2900
+Wire Wire Line
+	7950 3000 8050 3000
+Connection ~ 7950 3100
+Wire Wire Line
+	7950 3100 7950 3000
+Wire Wire Line
+	7950 3100 8050 3100
+Wire Wire Line
+	7950 3700 7950 3100
+Wire Wire Line
+	8650 3700 7950 3700
+Wire Wire Line
+	8650 3650 8650 3700
+Wire Wire Line
+	9900 2750 10300 2750
+Text GLabel 10300 2750 2    50   Input ~ 0
+D17_WIFI_STATUS
+Connection ~ 7475 4225
+$Comp
+L power:+3V3 #PWR0114
+U 1 1 614794C2
+P 7475 1425
+F 0 "#PWR0114" H 7475 1275 50  0001 C CNN
+F 1 "+3V3" H 7490 1598 50  0000 C CNN
+F 2 "" H 7475 1425 50  0001 C CNN
+F 3 "" H 7475 1425 50  0001 C CNN
+	1    7475 1425
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7475 2000 8050 2000
+Wire Wire Line
+	7475 4225 7850 4225
+Wire Wire Line
+	7475 3550 7475 4225
+$Comp
+L Device:R R?
+U 1 1 5FB2CF38
+P 7475 3400
+AR Path="/5FAE7423/5FB2CF38" Ref="R?"  Part="1" 
+AR Path="/5FB2CF38" Ref="R10"  Part="1" 
+F 0 "R10" V 7555 3400 50  0000 C CNN
+F 1 "R10K" V 7475 3400 50  0000 C CNN
+F 2 "Resistor_SMD:R_0805_2012Metric" V 7405 3400 50  0001 C CNN
+F 3 "" H 7475 3400 50  0001 C CNN
+F 4 "C17414" H 7475 3400 50  0001 C CNN "LCSC"
+	1    7475 3400
+	1    0    0    1   
+$EndComp
+Wire Wire Line
+	7850 4225 8550 4225
+Connection ~ 7850 4225
+Wire Wire Line
+	7850 3300 7850 4225
+Wire Wire Line
+	8550 4225 10000 4225
+Connection ~ 8550 4225
+Wire Wire Line
+	8550 3650 8550 4225
+Connection ~ 10000 3250
+Wire Wire Line
+	10000 3250 10000 4225
+Wire Wire Line
+	9900 2650 10300 2650
+Text GLabel 10300 2650 2    60   Input ~ 0
+D5_SS
+Text GLabel 10300 2950 2    50   Input ~ 0
+D4_IRQ
+Wire Wire Line
+	10300 2950 9900 2950
+Text GLabel 10300 2450 2    60   Input ~ 0
+D19_MISO
+Wire Wire Line
+	10300 3050 10150 3050
+Text GLabel 10300 3050 2    60   Input ~ 0
+D0
+Wire Wire Line
+	9900 2050 10300 2050
+Wire Wire Line
+	9900 2150 10300 2150
+Text GLabel 10300 2050 2    60   Input ~ 0
+D1/TX0
+Text GLabel 10300 2150 2    60   Input ~ 0
+D0/RX0
+Wire Wire Line
+	9900 1850 10300 1850
+Wire Wire Line
+	9900 2450 10300 2450
+Wire Wire Line
+	9900 2550 10300 2550
+Text GLabel 10300 2550 2    60   Input ~ 0
+D18_SCK
+Text GLabel 10300 1850 2    60   Input ~ 0
+D23_MOSI
+Wire Wire Line
+	10000 3250 9900 3250
+Wire Wire Line
+	10000 3150 10000 3250
+Wire Wire Line
+	9900 3150 10000 3150
+Wire Wire Line
+	7850 3300 8050 3300
+$Comp
+L power:GND #PWR05
+U 1 1 5E5C19D8
+P 7475 4425
+F 0 "#PWR05" H 7475 4175 50  0001 C CNN
+F 1 "GND" H 7480 4252 50  0000 C CNN
+F 2 "" H 7475 4425 50  0001 C CNN
+F 3 "" H 7475 4425 50  0001 C CNN
+	1    7475 4425
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7475 4425 7475 4225
+$Comp
+L Device:C C?
+U 1 1 61261C3E
+P 7175 3375
+AR Path="/5FAE7423/61261C3E" Ref="C?"  Part="1" 
+AR Path="/61261C3E" Ref="C8"  Part="1" 
+F 0 "C8" H 7200 3475 50  0000 L CNN
+F 1 "10uF" H 7200 3275 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric" H 7213 3225 50  0001 C CNN
+F 3 "" H 7175 3375 50  0001 C CNN
+F 4 "C15850" H 7175 3375 50  0001 C CNN "LCSC"
+	1    7175 3375
+	1    0    0    1   
+$EndComp
+Wire Wire Line
+	7175 3225 7175 2100
+Wire Wire Line
+	7175 2100 8050 2100
+Wire Wire Line
+	7175 4225 7475 4225
+Wire Wire Line
+	7175 3525 7175 4225
+NoConn ~ 8050 2200
+NoConn ~ 8050 2300
+NoConn ~ 8050 2400
+NoConn ~ 8050 2500
+NoConn ~ 8050 3200
+NoConn ~ 8750 3650
+NoConn ~ 8850 3650
+NoConn ~ 8950 3650
+NoConn ~ 9050 3650
+NoConn ~ 9150 3650
+NoConn ~ 9250 3650
+NoConn ~ 9350 3650
+NoConn ~ 9450 3650
+NoConn ~ 9900 2250
+NoConn ~ 9900 1950
+Text GLabel 10300 2850 2    50   Input ~ 0
+D16_SYS_STATUS
+$Comp
+L nrg_watch:ESP32-WROOM U?
+U 1 1 5FBF50FF
+P 9000 2600
+AR Path="/5FAE7423/5FBF50FF" Ref="U?"  Part="1" 
+AR Path="/5FBF50FF" Ref="U1"  Part="1" 
+F 0 "U1" H 8975 3987 60  0000 C CNN
+F 1 "ESP32-WROOM" H 8975 3881 60  0000 C CNN
+F 2 "RF_Module:ESP32-WROOM-32" H 9350 3950 60  0001 C CNN
+F 3 "" H 8550 3050 60  0001 C CNN
+F 4 "C473012" H 9000 2600 50  0001 C CNN "LCSC"
+	1    9000 2600
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	9900 2850 10300 2850
+Text GLabel 6700 2100 0    60   Input ~ 0
+EN
+$Comp
+L Switch:SW_Push SW?
+U 1 1 61A8C12E
+P 6825 2325
+F 0 "SW?" V 6871 2277 50  0000 R CNN
+F 1 "Reset" V 6780 2277 50  0000 R CNN
+F 2 "nrg_watch:TS-1187" H 6825 2525 50  0001 C CNN
+F 3 "~" H 6825 2525 50  0001 C CNN
+F 4 "C92589" V 6825 2325 50  0001 C CNN "LCSC"
+	1    6825 2325
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	6825 2125 6825 2100
+Wire Wire Line
+	6700 2100 6825 2100
+Connection ~ 6825 2100
+Wire Wire Line
+	6825 2100 7175 2100
+Connection ~ 7175 2100
+Text GLabel 6725 3000 0    50   Input ~ 0
+SDA_L
+Text GLabel 6725 2900 0    50   Input ~ 0
+SCL_L
+Wire Wire Line
+	6725 2900 7950 2900
+Connection ~ 7950 2900
+Wire Wire Line
+	6725 3000 7950 3000
+Connection ~ 7950 3000
+Wire Wire Line
+	6825 2525 6825 4225
+Wire Wire Line
+	6825 4225 7175 4225
+Connection ~ 7175 4225
+Wire Wire Line
+	7475 1625 7175 1625
+Wire Wire Line
+	7175 1625 7175 1700
+Wire Wire Line
+	7175 2000 7175 2100
+Wire Wire Line
+	7475 1425 7475 1625
+Connection ~ 7475 2000
+Connection ~ 7475 1625
+Wire Wire Line
+	7475 1625 7475 2000
+Wire Wire Line
+	10150 1650 10150 3050
+Connection ~ 10150 3050
+Wire Wire Line
+	10150 3050 9900 3050
+Wire Wire Line
+	4775 2725 5375 2725
+Wire Wire Line
+	4775 3875 5375 3875
 $EndSCHEMATC

@@ -1,0 +1,4 @@
+(fp_lib_table
+  (lib (name Sensor_Humidity)(type KiCad)(uri /Users/arjen/ownCloud/SoftwareDevelopment/ithowifi/hardware/Sensor_Humidity.pretty)(options "")(descr ""))
+  (lib (name mte_panelizing)(type KiCad)(uri /Users/arjen/ownCloud/SoftwareDevelopment/ithowifi/hardware/mte_panelizing.pretty)(options "")(descr ""))
+)

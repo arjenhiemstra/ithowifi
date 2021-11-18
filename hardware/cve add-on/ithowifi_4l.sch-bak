@@ -235,11 +235,9 @@ F 4 "C2293" H 6100 7125 50  0001 C CNN "LCSC"
 $EndComp
 Connection ~ 9675 7825
 Wire Wire Line
-	11150 7825 11375 7825
-Wire Wire Line
 	11150 7100 11150 7825
 Wire Wire Line
-	10675 6900 10950 6900
+	10675 6900 10875 6900
 $Comp
 L Connector:Conn_Coaxial J3
 U 1 1 5F9B6F27
@@ -912,15 +910,14 @@ Wire Wire Line
 $Comp
 L Mechanical:MountingHole_Pad H1
 U 1 1 61465D2F
-P 11375 7725
-F 0 "H1" H 11475 7774 50  0000 L CNN
-F 1 "MountingHole_Pad" H 11475 7683 50  0000 L CNN
-F 2 "Connector_Pin:Pin_D1.0mm_L10.0mm" H 11375 7725 50  0001 C CNN
-F 3 "~" H 11375 7725 50  0001 C CNN
-	1    11375 7725
+P 10875 6475
+F 0 "H1" H 10975 6524 50  0000 L CNN
+F 1 "MountingHole_Pad" H 10975 6433 50  0000 L CNN
+F 2 "Connector_Pin:Pin_D1.0mm_L10.0mm" H 10875 6475 50  0001 C CNN
+F 3 "~" H 10875 6475 50  0001 C CNN
+	1    10875 6475
 	1    0    0    -1  
 $EndComp
-Connection ~ 11150 7825
 Wire Wire Line
 	11150 7825 9675 7825
 Text GLabel 2675 3700 2    60   Input ~ 0
@@ -1003,4 +1000,9 @@ Wire Wire Line
 Wire Wire Line
 	4725 5225 4950 5225
 Connection ~ 4950 5225
+Wire Wire Line
+	10875 6575 10875 6900
+Connection ~ 10875 6900
+Wire Wire Line
+	10875 6900 10950 6900
 $EndSCHEMATC
