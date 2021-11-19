@@ -12,6 +12,7 @@
 #include "hardware.h"
 #include "i2c_esp32.h"
 #include "notifyClients.h"
+#include "flashLog.h"
 
 uint8_t ithoDeviceID = 0;
 uint8_t itho_fwversion = 0;
@@ -79,7 +80,7 @@ struct ihtoDeviceType ithoDevices[] {
   { 0x03, "HRU ECO-fan",        ithoHRUecoFanSettingsMap, sizeof(ithoHRUecoFanSettingsMap) / sizeof(ithoHRUecoFanSettingsMap[0]), ithoHRUecoSettingsLabels, ithoHRUecoFanStatusMap, sizeof(ithoHRUecoFanStatusMap) / sizeof(ithoHRUecoFanStatusMap[0]), ithoHRUecoStatusLabels },
   { 0x08, "LoadBoiler",         nullptr, 0, nullptr, nullptr, 0, nullptr },
   { 0x0A, "GGBB",               nullptr, 0, nullptr, nullptr, 0, nullptr },
-  { 0x0B, "DemandFlow",         ithoDemandFlowSettingsMap, sizeof(ithoDemandFlowSettingsMap) / sizeof(ithoDemandFlowSettingsMap[0]), ithoDemandFlowStatusLabels, ithoDemandFlowStatusMap, sizeof(ithoDemandFlowStatusMap) / sizeof(ithoDemandFlowStatusMap[0]), ithoDemandFlowStatusLabels  },
+  { 0x0B, "DemandFlow",         ithoDemandFlowSettingsMap, sizeof(ithoDemandFlowSettingsMap) / sizeof(ithoDemandFlowSettingsMap[0]), ithoDemandFlowSettingsLabels, ithoDemandFlowStatusMap, sizeof(ithoDemandFlowStatusMap) / sizeof(ithoDemandFlowStatusMap[0]), ithoDemandFlowStatusLabels  },
   { 0x0C, "CO2 relay",          nullptr, 0, nullptr, nullptr, 0, nullptr },
   { 0x0D, "Heatpump",           ithoWPUSettingsMap, sizeof(ithoWPUSettingsMap) / sizeof(ithoWPUSettingsMap[0]), ithoWPUSettingsLabels, ithoWPUStatusMap, sizeof(ithoWPUStatusMap) / sizeof(ithoWPUStatusMap[0]), ithoWPUStatusLabels },
   { 0x0E, "OLB Single",         nullptr, 0, nullptr, nullptr, 0, nullptr },
@@ -122,7 +123,7 @@ int getSettingsLength(const uint8_t deviceID, const uint8_t version) {
       if (ithoDevicesptr->settingsMapping == nullptr) {
         return -2; //Settings not available for this device
       }
-      if (version > ithoDevicesptr->versionsMapLen) {
+      if (version > (ithoDevicesptr->versionsMapLen - 1)) {
         return -3; //Settings not available for this version
       }
 
@@ -248,7 +249,7 @@ int getSatusLabelLength(const uint8_t deviceID, const uint8_t version) {
       if (ithoDevicesptr->statusLabelMapping == nullptr) {
         return -2; //Labels not available for this device
       }
-      if (version > ithoDevicesptr->statusMapLen) {
+      if (version > (ithoDevicesptr->statusMapLen - 1)) {
         return -3; //Labels not available for this version
       }
 
@@ -270,17 +271,18 @@ void getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPtr, cons
     strcpy(fStringBuf, "nullptr error");
     return;
   }
-  if (ithoStatusLabelLength == -2) {
+  else if (ithoStatusLabelLength == -2) {
     strcpy(fStringBuf, "no label for device error");
   }
-  if (ithoStatusLabelLength == -3) {
+  else if (ithoStatusLabelLength == -3) {
     strcpy(fStringBuf, "no label for version error");
   }
-  if (ithoStatusLabelLength < i) {
+  else if (!(i < ithoStatusLabelLength)) {
     strcpy(fStringBuf, "label out of bound error");
   }
-    
-  strcpy_P(fStringBuf, (PGM_P)(statusPtr->settingsStatusLabels[(int) * (*(statusPtr->statusLabelMapping + version) + i)]) );
+  else {
+    strcpy_P(fStringBuf, (PGM_P)(statusPtr->settingsStatusLabels[(int) * (*(statusPtr->statusLabelMapping + version) + i)]) );
+  }
 
 }
 
@@ -569,7 +571,8 @@ void sendQueryStatusFormat(bool & updateweb) {
     }
     if (!(itho_fwversion > 0)) return;
     ithoStatusLabelLength = getSatusLabelLength(ithoDeviceID, itho_fwversion);
-    for (uint8_t i = 0; i < i2cbuf[5]; i++) {
+    uint8_t len = i2cbuf[5];
+    for (uint8_t i = 0; i < len; i++) {
       ithoStatus.push_back(ithoDeviceStatus());
 
       char fStringBuf[32];

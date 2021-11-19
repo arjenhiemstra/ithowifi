@@ -2,6 +2,9 @@
 
 #define LOG_BUF_SIZE 128
 
+SemaphoreHandle_t mutexJSONLog;
+SemaphoreHandle_t mutexWSsend;
+
 AsyncWebSocket ws("/ws");
 unsigned long LastotaWsUpdate = 0;
 size_t content_len = 0;

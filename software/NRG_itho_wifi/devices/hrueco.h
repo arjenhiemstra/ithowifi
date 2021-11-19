@@ -84,15 +84,15 @@ const __FlashStringHelper *ithoHRUecoSettingsLabels[] =  {
 const uint8_t itho_HRUecostatus2_4[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,255};
 const uint8_t itho_HRUecostatus6_7[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,255};
 const uint8_t itho_HRUecostatus8[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,255};
-const uint8_t itho_HRUecostatus10_12[] { 22,23,0,2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,255};
+const uint8_t itho_HRUecostatus10_12[] { 22,23,1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,255};
 
 
 const __FlashStringHelper *ithoHRUecoStatusLabels[] =  {
     F("Supply fan (%)"),
-    F("Supply fan rpm (rpm)"),
+    F("Supply fan (rpm)"),
     F("Supply fan actual (rpm)"),
     F("Exhaust fan (%)"),
-    F("Exhaust fan rpm (rpm)"),
+    F("Exhaust fan (rpm)"),
     F("Exhaust fan actual (rpm)"),
     F("Supply temp (°C)"),
     F("Exhaust temp (°C)"),
@@ -105,7 +105,7 @@ const __FlashStringHelper *ithoHRUecoStatusLabels[] =  {
     F("Summerday"),
     F("Frost timer (sec)"),
     F("Boiler timer (min)"),
-    F("Startup counter"),
+    F("Frost block"),
     F("Current position"),
     F("VKKswitch"),
     F("GHEswitch"),

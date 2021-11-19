@@ -53,7 +53,7 @@ const __FlashStringHelper *ithoCVE1BSettingsLabels[] =  {
     F("CO2 rise detection limit normal situation (ppm)"),
     F("Time duration of speed stop (min)"),
     F("Speed stop ramp block (%)"),
-    F("Max speed change during speed blockade (%/min)"),
+    F("Max speed change during speed blockade (%_min)"),
     F("Delta CO2 start speed block (ppm)"),
     F("Max speed change during speed blockade (%)"),
     F("Speed at absence (rpm)"),
@@ -78,10 +78,10 @@ const __FlashStringHelper *ithoCVE1BSettingsLabels[] =  {
     F("CO2 value present (ppm)"),
     F("Min speed low CO2 (%)"),
     F("Min speed high CO2 (%)"),
-    F("CO2 fan 100% valve low ?? (ppm)"),
-    F("CO2 fan 100% valve high ?? (ppm)"),
-    F("CO2 max fan slope ?? (%/min)"),
-    F("Delta normal adjustment ?? (ppm)"),
+    F("CO2 fan 100% valve low (ppm)"),
+    F("CO2 fan 100% valve high (ppm)"),
+    F("CO2 max fan slope (%_min)"),
+    F("Delta normal adjustment (ppm)"),
     F("Blocking time fan (min)"),
     F("Block time limiter (min)"),
     F("Position after maximum time high"),
@@ -107,12 +107,12 @@ const __FlashStringHelper *ithoCVE1BSettingsLabels[] =  {
     F("Dew point at which the RV-IC heater should stop (K)"),
     F("Minimum time the RV-IC heater is on (min)"),
     F("Maximum time the RV-IC heater should be on (min)"),
-    F("RH sensor found/available"),
-    F("Loose RV sensor overrides internal yes/no"),
+    F("RH sensor found_available"),
+    F("Loose RV sensor overrides internal yes_no"),
     F("Sampling time of the RH and temperature measurement (sec)"),
     F("Hysteresis RH for return to normal operation (%)"),
-    F("Rise in absolute humidity (X) at which it goes to high (mg/kg)"),
-    F("Hysteresis X before falling back to normal operation (mg/kg)"),
+    F("Rise in absolute humidity (X) at which it goes to high (mg_kg)"),
+    F("Hysteresis X before falling back to normal operation (mg_kg)"),
     F("Maximum time it is allowed to remain in high by RH control (min)"),
     F("NightOnePersonOneFloor (%)"),
     F("NightTwoPersonsOneFloor (%)"),
@@ -153,7 +153,7 @@ const __FlashStringHelper *ithoCVE1BStatusLabels[] =  {
     F("Fault"),
     F("Selection"),
     F("Start-up counter"),
-    F("Hour meter (hours)"),
+    F("Total operation (hours)"),
     F("CO2 concentration (ppm)"),
     F("Auto ventilation setpoint (%)"),
     F("Valve"),
@@ -184,5 +184,5 @@ const __FlashStringHelper *ithoCVE1BStatusLabels[] =  {
     F("Temperature")
 };
 
-const uint8_t *itho1BSettingsMap[] =	{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,  itho_CVE1Bsetting6, itho_CVE1Bsetting7, itho_CVE1Bsetting8, itho_CVE1Bsetting9, itho_CVE1Bsetting10, itho_CVE1Bsetting11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bsetting17_20, itho_CVE1Bsetting17_20, nullptr, itho_CVE1Bsetting17_20, itho_CVE1Bsetting21, itho_CVE1Bsetting22, nullptr, itho_CVE1Bsetting24, itho_CVE1Bsetting25, itho_CVE1Bsetting26_27 };
-const uint8_t  *itho1BStatusMap[]   =	{ nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bstatus6, itho_CVE1Bstatus7, itho_CVE1Bstatus8, itho_CVE1Bstatus9_11, itho_CVE1Bstatus9_11, itho_CVE1Bstatus9_11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bstatus17, itho_CVE1Bstatus18, nullptr, itho_CVE1Bstatus20_21, itho_CVE1Bstatus20_21, itho_CVE1Bstatus22, nullptr, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27};
+const uint8_t *itho1BSettingsMap[] =	{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bsetting6, itho_CVE1Bsetting7, itho_CVE1Bsetting8, itho_CVE1Bsetting9, itho_CVE1Bsetting10, itho_CVE1Bsetting11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bsetting17_20, itho_CVE1Bsetting17_20, nullptr, itho_CVE1Bsetting17_20, itho_CVE1Bsetting21, itho_CVE1Bsetting22, nullptr, itho_CVE1Bsetting24, itho_CVE1Bsetting25, itho_CVE1Bsetting26_27, itho_CVE1Bsetting26_27 };
+const uint8_t  *itho1BStatusMap[]   =	{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bstatus6, itho_CVE1Bstatus7, itho_CVE1Bstatus8, itho_CVE1Bstatus9_11, itho_CVE1Bstatus9_11, itho_CVE1Bstatus9_11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bstatus17, itho_CVE1Bstatus18, nullptr, itho_CVE1Bstatus20_21, itho_CVE1Bstatus20_21, itho_CVE1Bstatus22, nullptr, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27};
