@@ -1,4 +1,4 @@
-#define FWVERSION "2.3-beta5"
+#define FWVERSION "2.3-beta6"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -35,6 +35,7 @@
 
 #include "hardware.h"
 #include "dbglog.h"
+#include "flashLog.h"
 #include "statics.h"
 #include "i2c_esp32.h"
 #include "IthoSystem.h"
@@ -49,9 +50,6 @@
 #include <time.h>
 #include <Ticker.h>
 #include <string>
-
-#include <ArduinoLog.h>       // https://github.com/thijse/Arduino-Log [1.0.3]
-#include <SpiffsFilePrint.h>  // https://github.com/PRosenb/SPIFFS_FilePrint [1.0.0]
 
 #include "IthoQueue.h"
 #include "System.h"
@@ -94,7 +92,7 @@ PubSubClient mqttClient(client);
 AsyncWebServer server(80);
 AsyncEventSource events("/events");
 
-SpiffsFilePrint filePrint("/logfile", 2, 10000);
+
 
 Ticker IthoCMD;
 Ticker DelayedReq;
@@ -118,9 +116,6 @@ IthoRemote remotes;
 #define TASK_WEB_PRIO             5
 #define TASK_CONFIG_AND_LOG_PRIO  5
 #define TASK_SYS_CONTROL_PRIO     5
-static SemaphoreHandle_t mutexLogTask;
-static SemaphoreHandle_t mutexJSONLog;
-static SemaphoreHandle_t mutexWSsend;
 Ticker TaskCC1101Timeout;
 Ticker TaskMQTTTimeout;
 Ticker TaskConfigAndLogTimeout;

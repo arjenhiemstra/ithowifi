@@ -51,12 +51,12 @@ const __FlashStringHelper *ithoCVE14StatusLabels[] =  {
     F("Error"),
     F("Selection"),
     F("Startup counter"),
-    F("Hour meter (hours)"),
+    F("Total operation (hours)"),
     F("CO2 value (ppm)"),
     F("CO2 ventilation (%)"),
     F("Valve"),
     F("Presence timer (sec)"),
-    F("Condition"),
+    F("Zone"),
     F("Cycle timer"),
     F("Sample timer")
 };

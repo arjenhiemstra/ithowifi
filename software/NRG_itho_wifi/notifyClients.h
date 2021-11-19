@@ -5,8 +5,12 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 extern AsyncWebSocket ws;
+extern SemaphoreHandle_t mutexJSONLog;
+extern SemaphoreHandle_t mutexWSsend;
 
 typedef enum { WEBINTERFACE, RFLOG, ITHOSETTINGS } logtype;
 extern size_t content_len;
