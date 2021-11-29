@@ -1,10 +1,13 @@
 void getIthoStatusJSON(JsonObject root) {
-  root["temp"] = ithoTemp;
-  root["hum"] = ithoHum;
+  if (SHT3x_original || SHT3x_alternative || itho_internal_hum_temp) {
+    root["temp"] = ithoTemp;
+    root["hum"] = ithoHum;
 
-  auto b = 611.21 * pow(2.7183, ((18.678 - ithoTemp / 234.5) * ithoTemp) / (257.14 + ithoTemp));
-  auto ppmw = b / (101325 - b) * ithoHum / 100 * 0.62145 * 1000000;
-  root["ppmw"] = ppmw;
+    auto b = 611.21 * pow(2.7183, ((18.678 - ithoTemp / 234.5) * ithoTemp) / (257.14 + ithoTemp));
+    auto ppmw = b / (101325 - b) * ithoHum / 100 * 0.62145 * 1000000;
+    root["ppmw"] = (int)(ppmw+0.5);
+  }
+
   if (!ithoInternalMeasurements.empty()) {
     for (const auto& internalMeasurement : ithoInternalMeasurements) {
       if (internalMeasurement.type == ithoDeviceMeasurements::is_int) {
@@ -69,7 +72,7 @@ void getIthoSettingsBackupJSON(JsonObject root) {
       if (ithoSettingsArray[i].type == ithoSettings::is_int8) {
         int8_t val;
         std::memcpy(&val, &ithoSettingsArray[i].value, sizeof(val));
-        root[buf] = val;    
+        root[buf] = val;
       }
       else if (ithoSettingsArray[i].type == ithoSettings::is_int16) {
         int16_t val;

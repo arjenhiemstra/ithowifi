@@ -1,7 +1,7 @@
 #include "flashLog.h"
 #include "hardware.h"
 
-SpiffsFilePrint filePrint("/logfile", 2, 10000);
+FSFilePrint filePrint(LITTLEFS, "/logfile", 2, 10000);
 SemaphoreHandle_t mutexLogTask;
 
 void printTimestamp(Print * _logOutput) {

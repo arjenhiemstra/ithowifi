@@ -66,12 +66,12 @@ SemaphoreHandle_t mutexI2Ctask;
 struct ihtoDeviceType {
   uint8_t ID;
   const char *name;
-  const uint8_t **settingsMapping;
-  uint8_t versionsMapLen;
+  const uint16_t **settingsMapping;
+  uint16_t versionsMapLen;
   const __FlashStringHelper **settingsDescriptions;
   const uint8_t **statusLabelMapping;
   uint8_t statusMapLen;
-  const __FlashStringHelper **settingsStatusLabels;
+  struct ithoLabels *settingsStatusLabels;
 };
 
 
@@ -127,8 +127,8 @@ int getSettingsLength(const uint8_t deviceID, const uint8_t version) {
         return -3; //Settings not available for this version
       }
 
-      for (int i = 0; i < 255; i++) {
-        if ((int) * (*(ithoDevicesptr->settingsMapping + version) + i) == 255) {
+      for (int i = 0; i < 999; i++) {
+        if ((int) * (*(ithoDevicesptr->settingsMapping + version) + i) == 999) {
           //end of array
           if (ithoSettingsArray == nullptr) ithoSettingsArray = new ithoSettings[i];
           return i;
@@ -240,7 +240,7 @@ void getSetting(const uint8_t i, const bool updateState, const bool updateweb, c
 
 }
 
-int getSatusLabelLength(const uint8_t deviceID, const uint8_t version) {
+int getStatusLabelLength(const uint8_t deviceID, const uint8_t version) {
 
   struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
   struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
@@ -281,7 +281,12 @@ void getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPtr, cons
     strcpy(fStringBuf, "label out of bound error");
   }
   else {
-    strcpy_P(fStringBuf, (PGM_P)(statusPtr->settingsStatusLabels[(int) * (*(statusPtr->statusLabelMapping + version) + i)]) );
+    if (systemConfig.api_normalize == 0) {
+      strcpy_P(fStringBuf, (PGM_P)(statusPtr->settingsStatusLabels[(int) * (*(statusPtr->statusLabelMapping + version) + i)].labelFull));
+    }
+    else {
+      strcpy_P(fStringBuf, (PGM_P)(statusPtr->settingsStatusLabels[(int) * (*(statusPtr->statusLabelMapping + version) + i)].labelNormalized));
+    }
   }
 
 }
@@ -559,7 +564,7 @@ void sendQueryStatusFormat(bool & updateweb) {
   i2c_sendBytes(command, sizeof(command));
 
   uint8_t i2cbuf[512] {};
-  size_t len = i2c_slave_receive(i2cbuf);
+  uint8_t len = i2c_slave_receive(i2cbuf);
   if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1)) {
     if (updateweb) {
       updateweb = false;
@@ -570,9 +575,9 @@ void sendQueryStatusFormat(bool & updateweb) {
       ithoStatus.clear();
     }
     if (!(itho_fwversion > 0)) return;
-    ithoStatusLabelLength = getSatusLabelLength(ithoDeviceID, itho_fwversion);
-    uint8_t len = i2cbuf[5];
-    for (uint8_t i = 0; i < len; i++) {
+    ithoStatusLabelLength = getStatusLabelLength(ithoDeviceID, itho_fwversion);
+    const uint8_t endPos = i2cbuf[5];
+    for (uint8_t i = 0; i < endPos; i++) {
       ithoStatus.push_back(ithoDeviceStatus());
 
       char fStringBuf[32];
@@ -662,7 +667,6 @@ void sendQueryStatus(bool & updateweb) {
 
     if (!ithoStatus.empty()) {
       for (auto& ithoStat : ithoStatus) {
-        //for (auto& ithoStat : ithoStatus) {
         auto tempVal = 0;
         for (int i = ithoStat.length; i > 0; i--) {
           tempVal |= i2cbuf[statusPos + (ithoStat.length - i)] << ((i - 1) * 8);
@@ -779,10 +783,19 @@ void sendQuery31DA(bool & updateweb) {
     if (!ithoMeasurements.empty()) {
       ithoMeasurements.clear();
     }
-
+    const int labelLen = 19;
+    static const char* labels31DA[labelLen] {};
+    for (int i = 0; i < labelLen; i++) {
+      if (systemConfig.api_normalize == 0) {
+        labels31DA[i] = (PGM_P)(itho31DALabels[i].labelFull);
+      }
+      else {
+        labels31DA[i] = (PGM_P)(itho31DALabels[i].labelNormalized);
+      }
+    }
     if (dataLength > 0) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("AirQuality (%)");
+      ithoMeasurements.back().name.assign(labels31DA[0]);
       if (i2cbuf[0 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors.find(i2cbuf[0 + dataStart]);
@@ -795,13 +808,13 @@ void sendQuery31DA(bool & updateweb) {
       }
 
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("AirQbased on");
+      ithoMeasurements.back().name.assign(labels31DA[1]);
       ithoMeasurements.back().type = ithoDeviceMeasurements::is_int;
       ithoMeasurements.back().value.intval = i2cbuf[1 + dataStart];
     }
     if (dataLength > 1) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("CO2level (ppm)");
+      ithoMeasurements.back().name.assign(labels31DA[2]);
       if (i2cbuf[2 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[2 + dataStart]);
@@ -817,7 +830,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 3) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("Indoorhumidity (%)");
+      ithoMeasurements.back().name.assign(labels31DA[3]);
       if (i2cbuf[4 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors.find(i2cbuf[4 + dataStart]);
@@ -831,7 +844,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 4) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("Outdoorhumidity (%)");
+      ithoMeasurements.back().name.assign(labels31DA[4]);
       if (i2cbuf[5 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors.find(i2cbuf[5 + dataStart]);
@@ -845,7 +858,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 5) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("Exhausttemp (°C)");
+      ithoMeasurements.back().name.assign(labels31DA[5]);
       if (i2cbuf[6 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[6 + dataStart]);
@@ -861,7 +874,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 7) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("SupplyTemp (°C)");
+      ithoMeasurements.back().name.assign(labels31DA[6]);
       if (i2cbuf[8 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[8 + dataStart]);
@@ -877,7 +890,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 9) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("IndoorTemp (°C)");
+      ithoMeasurements.back().name.assign(labels31DA[7]);
       if (i2cbuf[10 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[10 + dataStart]);
@@ -893,7 +906,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 11) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("OutdoorTemp (°C)");
+      ithoMeasurements.back().name.assign(labels31DA[8]);
       if (i2cbuf[12 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[12 + dataStart]);
@@ -909,7 +922,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 13) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("SpeedCap");
+      ithoMeasurements.back().name.assign(labels31DA[9]);
       ithoMeasurements.back().type = ithoDeviceMeasurements::is_int;
       int32_t tempVal = i2cbuf[14 + dataStart] << 8;
       tempVal |= i2cbuf[15 + dataStart];
@@ -917,7 +930,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 15) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("BypassPos (%)");
+      ithoMeasurements.back().name.assign(labels31DA[10]);
       if (i2cbuf[16 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors.find(i2cbuf[16 + dataStart]);
@@ -931,7 +944,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 16) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("FanInfo");
+      ithoMeasurements.back().name.assign(labels31DA[11]);
       ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
       auto it = fanInfo.find(i2cbuf[17 + dataStart]);
       if (it != fanInfo.end()) ithoMeasurements.back().value.stringval = it->second;
@@ -939,7 +952,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 17) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("ExhFanSpeed (%)");
+      ithoMeasurements.back().name.assign(labels31DA[12]);
       if (i2cbuf[18 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors.find(i2cbuf[18 + dataStart]);
@@ -954,7 +967,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 18) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("InFanSpeed (%)");
+      ithoMeasurements.back().name.assign(labels31DA[13]);
       if (i2cbuf[19 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors.find(i2cbuf[19 + dataStart]);
@@ -968,7 +981,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 19) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("RemainingTime (min)");
+      ithoMeasurements.back().name.assign(labels31DA[14]);
       int32_t tempVal = i2cbuf[20 + dataStart] << 8;
       tempVal |= i2cbuf[21 + dataStart];
       ithoMeasurements.back().type = ithoDeviceMeasurements::is_int;
@@ -976,7 +989,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 21) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("PostHeat (%)");
+      ithoMeasurements.back().name.assign(labels31DA[15]);
       if (i2cbuf[22 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanHeatErrors.find(i2cbuf[22 + dataStart]);
@@ -990,7 +1003,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 22) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("PreHeat (%)");
+      ithoMeasurements.back().name.assign(labels31DA[16]);
       if (i2cbuf[23 + dataStart] > 200) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanHeatErrors.find(i2cbuf[23 + dataStart]);
@@ -1004,7 +1017,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 23) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("InFlow (l sec)");
+      ithoMeasurements.back().name.assign(labels31DA[17]);
       if (i2cbuf[24 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
         auto it = fanSensorErrors2.find(i2cbuf[24 + dataStart]);
@@ -1020,7 +1033,7 @@ void sendQuery31DA(bool & updateweb) {
     }
     if (dataLength > 25) {
       ithoMeasurements.push_back(ithoDeviceMeasurements());
-      ithoMeasurements.back().name.assign("ExhFlow (l sec)");
+      ithoMeasurements.back().name.assign(labels31DA[18]);
 
       if (i2cbuf[26 + dataStart] >= 0x7F) {
         ithoMeasurements.back().type = ithoDeviceMeasurements::is_string;
@@ -1073,16 +1086,24 @@ void sendQuery31D9(bool & updateweb) {
       jsonSysmessage("itho31D9", i2cbuf2string(i2cbuf, len).c_str());
     }
 
-    //auto dataLength = i2cbuf[5];
-
     auto dataStart = 6;
 
     if (!ithoInternalMeasurements.empty()) {
       ithoInternalMeasurements.clear();
     }
+    const int labelLen = 4;
+    static const char* labels31D9[labelLen] {};
+    for (int i = 0; i < labelLen; i++) {
+      if (systemConfig.api_normalize == 0) {
+        labels31D9[i] = (PGM_P)(itho31D9Labels[i].labelFull);
+      }
+      else {
+        labels31D9[i] = (PGM_P)(itho31D9Labels[i].labelNormalized);
+      }
+    }
 
     float tempVal = i2cbuf[1 + dataStart] / 2.0;
-    ithoDeviceMeasurements sTemp = {"speed status", ithoDeviceMeasurements::is_float, {.floatval = tempVal} } ;
+    ithoDeviceMeasurements sTemp = {labels31D9[0], ithoDeviceMeasurements::is_float, {.floatval = tempVal} } ;
     ithoInternalMeasurements.push_back(sTemp);
 
     int status = 0;
@@ -1092,21 +1113,21 @@ void sendQuery31D9(bool & updateweb) {
     else {
       status = 0; //no fault
     }
-    ithoInternalMeasurements.push_back({"internal fault", ithoDeviceMeasurements::is_int, {.intval = status}});
+    ithoInternalMeasurements.push_back({labels31D9[1], ithoDeviceMeasurements::is_int, {.intval = status}});
     if (i2cbuf[0 + dataStart] == 0x40) {
       status = 1; //frost cycle active
     }
     else {
       status = 0; //frost cycle not active
     }
-    ithoInternalMeasurements.push_back({"frost cycle", ithoDeviceMeasurements::is_int, {.intval = status}});
+    ithoInternalMeasurements.push_back({labels31D9[2], ithoDeviceMeasurements::is_int, {.intval = status}});
     if (i2cbuf[0 + dataStart] == 0x20) {
       status = 1; //filter dirty
     }
     else {
       status = 0; //filter clean
     }
-    ithoInternalMeasurements.push_back({"filter dirty", ithoDeviceMeasurements::is_int, {.intval = status}});
+    ithoInternalMeasurements.push_back({labels31D9[3], ithoDeviceMeasurements::is_int, {.intval = status}});
     //    if (i2cbuf[0 + dataStart] == 0x10) {
     //      //unknown
     //    }

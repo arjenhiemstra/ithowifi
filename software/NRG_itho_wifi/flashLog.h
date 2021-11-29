@@ -8,9 +8,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <ArduinoLog.h>       // https://github.com/thijse/Arduino-Log [1.0.3]
-#include <SpiffsFilePrint.h>  // https://github.com/PRosenb/SPIFFS_FilePrint [1.0.0]
+#include <FSFilePrint.h>      
+#include <FS.h>
+#include <LITTLEFS.h>
 
-extern SpiffsFilePrint filePrint;
+//#include <SpiffsFilePrint.h>  // https://github.com/PRosenb/SPIFFS_FilePrint [1.0.0]
+
+extern FSFilePrint filePrint;
 
 extern SemaphoreHandle_t mutexLogTask;
 

@@ -11,7 +11,7 @@ void failSafeBoot() {
 
     if (digitalRead(FAILSAVE_PIN) == HIGH) {
 
-      SPIFFS.format();
+      LITTLEFS.format();
 
       IPAddress apIP(192, 168, 4, 1);
       IPAddress netMsk(255, 255, 255, 0);
@@ -241,21 +241,21 @@ bool initFileSystem() {
 
 #if defined (HW_VERSION_ONE)
 
-  if (!SPIFFS.begin()) {
-    D_LOG("SPIFFS failed, needs formatting\n");
+  if (!LITTLEFS.begin()) {
+    D_LOG("LITTLEFS failed, needs formatting\n");
     handleFormat();
     delay(500);
     ESP.restart();
   }
   else {
-    if (!SPIFFS.info(fs_info)) {
+    if (!LITTLEFS.info(fs_info)) {
       D_LOG("fs_info failed\n");
       return false;
     }
   }
 
 #elif defined (HW_VERSION_TWO)
-  SPIFFS.begin(true);
+  LITTLEFS.begin(true);
 #endif
 
   return true;
@@ -264,25 +264,25 @@ bool initFileSystem() {
 
 void handleFormat()
 {
-  D_LOG("Format SPIFFS\n");
-  if (SPIFFS.format())
+  D_LOG("Format LITTLEFS\n");
+  if (LITTLEFS.format())
   {
-    if (!SPIFFS.begin())
+    if (!LITTLEFS.begin())
     {
-      D_LOG("Format SPIFFS failed\n");
+      D_LOG("Format LITTLEFS failed\n");
     }
   }
   else
   {
-    D_LOG("Format SPIFFS failed\n");
+    D_LOG("Format LITTLEFS failed\n");
   }
-  if (!SPIFFS.begin())
+  if (!LITTLEFS.begin())
   {
-    D_LOG("SPIFFS failed, needs formatting\n");
+    D_LOG("LITTLEFS failed, needs formatting\n");
   }
   else
   {
-    D_LOG("SPIFFS mounted\n");
+    D_LOG("LITTLEFS mounted\n");
   }
 }
 
@@ -559,10 +559,10 @@ void webServerInit() {
   }
 #elif defined (HW_VERSION_TWO)
   if (systemConfig.syssec_edit) {
-    server.addHandler(new SPIFFSEditor(SPIFFS, systemConfig.sys_username, systemConfig.sys_password));
+    server.addHandler(new SPIFFSEditor(LITTLEFS, systemConfig.sys_username, systemConfig.sys_password));
   }
   else {
-    server.addHandler(new SPIFFSEditor(SPIFFS, "", ""));
+    server.addHandler(new SPIFFSEditor(LITTLEFS, "", ""));
   }
 #endif
 

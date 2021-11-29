@@ -283,6 +283,7 @@ $(document).ready(function() {
           syssec_web:       $('input[name=\'option-syssec_web\']:checked').val(),          
           syssec_api:       $('input[name=\'option-syssec_api\']:checked').val(),          
           syssec_edit:      $('input[name=\'option-syssec_edit\']:checked').val(),
+          api_normalize:    $('input[name=\'option-api_normalize\']:checked').val(),
           syssht30:         $('input[name=\'option-syssht30\']:checked').val(),
           itho_rf_support:  $('input[name=\'option-itho_rf_support\']:checked').val(),
           itho_fallback:    $('#itho_fallback').val(),
@@ -1136,6 +1137,13 @@ var html_systemsettings_start = `
               <label for="option-syssec_edit" class="pure-radio">File editor authentication</label> 
               <input id="option-syssec_edit-1" type="radio" name="option-syssec_edit" value="1"> on
               <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
+            </div>
+            <legend><br>API settings (reboot needed):</legend>
+            <p>Have api keys on the WebAPI, MQTT API and Itho Status page normlized (all lowercase, no spaces and special charactars).</p>
+            <div class="pure-control-group">
+              <label for="option-api_normalize" class="pure-radio">Normalize keys</label> 
+              <input id="option-api_normalize-1" type="radio" name="option-api_normalize" value="1"> on
+              <input id="option-api_normalize-0" type="radio" name="option-api_normalize" value="0"> off
             </div>
             <legend><br>Speed settings (CVE only) (0-254):</legend>
             <div class="pure-control-group">

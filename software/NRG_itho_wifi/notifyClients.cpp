@@ -25,19 +25,22 @@ void notifyClients(AsyncWebSocketMessageBuffer* message) {
 }
 
 void notifyClients(const char * message, size_t len) {
-
-  AsyncWebSocketMessageBuffer * WSBuffer = ws.makeBuffer((uint8_t *)message, len);
-  notifyClients(WSBuffer);
-
+//  char* buffer = new char[len + 1];
+  AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer((uint8_t *)message, len);
+  notifyClients(buffer);
+  //delete[] buffer;
 }
 
 void notifyClients(JsonObjectConst obj) {
   size_t len = measureJson(obj);
+//  char* buffer = new char[len + 1];  
   AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
   if (buffer) {
     serializeJson(obj, (char *)buffer->get(), len + 1);
     notifyClients(buffer);
-  }  
+  }
+  //delete[] buffer;
+  
 }
 
 void jsonSysmessage(const char * id, const char * message) {
@@ -51,7 +54,7 @@ void jsonSysmessage(const char * id, const char * message) {
   strcpy(logBuff, "");
 
   notifyClients(root.as<JsonObjectConst>());
-  
+
 }
 
 

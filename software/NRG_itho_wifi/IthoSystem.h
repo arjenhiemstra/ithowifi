@@ -104,6 +104,7 @@ char* getIthoType(const uint8_t deviceID);
 int getSettingsLength(const uint8_t deviceID, const uint8_t version);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop = false);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop, const struct ihtoDeviceType* settingsPtr, const uint8_t deviceID, const uint8_t version);
+int getStatusLabelLength(const uint8_t deviceID, const uint8_t version);
 void getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPtr, const uint8_t version, char* fStringBuf) ;
 void updateSetting(const uint8_t i, const int32_t value, bool webupdate);
 struct ihtoDeviceType* getDevicePtr(uint8_t deviceID);

@@ -1,5 +1,10 @@
 #pragma once
 
+struct ithoLabels {
+  const __FlashStringHelper *labelFull;
+  const __FlashStringHelper *labelNormalized;
+};
+
 static const std::map<uint8_t, const char*> fanInfo = {
   {0x00, "off"},
   {0X01, "low"},
@@ -68,4 +73,33 @@ const std::map<uint8_t, const char*> fanHeatErrors = {
   {0XF1, "shorted actuato"},
   {0XF2, "not available error"},
   {0XFF, "unknown error"}
+};
+
+struct ithoLabels itho31D9Labels[] {
+	{ F("Speed status"),	F("speed-status") },
+	{ F("Internal fault"),	F("internal-fault") },
+	{ F("Frost cycle"),		F("frost-cycle") },
+	{ F("Filter dirty"),	F("filter-dirty") }
+};
+
+struct ithoLabels itho31DALabels[] {
+	{ F("AirQuality (%)"),		F("airquality_perc") },
+	{ F("AirQbased on"),		F("airq-based-on") },
+	{ F("CO2level (ppm)"),		F("co2level_ppm") },
+	{ F("Indoorhumidity (%)"),	F("indoor-humidity_perc") },
+	{ F("Outdoorhumidity (%)"),	F("outdoor-humidity_perc") },
+	{ F("Exhausttemp (°C)"),	F("exhausttemp_c") },
+	{ F("SupplyTemp (°C)"),		F("supply-temp_c") },
+	{ F("IndoorTemp (°C)"),		F("indoor-temp_c") },
+	{ F("OutdoorTemp (°C)"),	F("outdoor-temp_c") },
+	{ F("SpeedCap"),			F("speed-cap") },
+	{ F("BypassPos (%)"),		F("bypass-pos_perc") },
+	{ F("FanInfo"),				F("fan-info") },
+	{ F("ExhFanSpeed (%)"),		F("exh-fan-speed_perc") },
+	{ F("InFanSpeed (%)"),		F("in-fan-speed_perc") },
+	{ F("RemainingTime (min)"),	F("remaining-time_min") },
+	{ F("PostHeat (%)"),		F("post-heat_perc") },
+	{ F("PreHeat (%)"),			F("pre-heat_perc") },
+	{ F("InFlow (l sec)"),		F("in-flow-l_sec") },
+	{ F("ExhFlow (l sec)"),		F("exh-flow-l_sec") }
 };
