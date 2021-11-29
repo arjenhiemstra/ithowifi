@@ -13,6 +13,7 @@ SystemConfig::SystemConfig() {
   syssec_web = 0;
   syssec_api = 0;
   syssec_edit = 0;
+  api_normalize = 0;
   syssht30 = 0;
   mqtt_active = 0;
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
@@ -88,6 +89,10 @@ bool SystemConfig::set(JsonObjectConst obj) {
   if (!(const char*)obj["syssec_edit"].isNull()) {
     updated = true;
     syssec_edit = obj["syssec_edit"];
+  }
+  if (!(const char*)obj["api_normalize"].isNull()) {
+    updated = true;
+    api_normalize = obj["api_normalize"];
   }
   if (!(const char*)obj["syssht30"].isNull()) {
     updated = true;
@@ -243,6 +248,7 @@ void SystemConfig::get(JsonObject obj) const {
     obj["syssec_web"] = syssec_web;
     obj["syssec_api"] = syssec_api;
     obj["syssec_edit"] = syssec_edit;
+    obj["api_normalize"] = api_normalize;
     obj["syssht30"] = syssht30;
     obj["itho_rf_support"] = itho_rf_support;
     obj["rfInitOK"] = rfInitOK;

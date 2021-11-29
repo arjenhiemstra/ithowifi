@@ -1,9 +1,10 @@
 #pragma once
 
-const uint8_t itho_CVE14setting1_4[] { 0,1,2,3,4,5,6,7,8,9,255};
-const uint8_t itho_CVE14setting5[] { 0,1,2,3,4,5,6,7,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,8,9,255};
-const uint8_t itho_CVE14setting6[] { 0,1,2,3,4,5,6,7,19,20,32,22,23,24,25,26,27,28,29,30,31,8,9,255};
+#include "error_info_labels.h"
 
+const uint16_t itho_CVE14setting1_4[]	{ 0,1,2,3,4,5,6,7,8,9,999};
+const uint16_t itho_CVE14setting5[] 	{ 0,1,2,3,4,5,6,7,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,8,9,999};
+const uint16_t itho_CVE14setting6[] 	{ 0,1,2,3,4,5,6,7,19,20,32,22,23,24,25,26,27,28,29,30,31,8,9,999};
 
 const __FlashStringHelper *ithoCVE14SettingsLabels[] =  {
     F("OEM number"),
@@ -40,26 +41,26 @@ const __FlashStringHelper *ithoCVE14SettingsLabels[] =  {
     F("Measuring time (min)"),
     F("CO2 concentration present (ppm)")
 };
+
 const uint8_t itho_CVE14status1_4[] { 0,1,2,3,4,5,6,255};
 const uint8_t itho_CVE14status5_6[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,255};
 
-
-const __FlashStringHelper *ithoCVE14StatusLabels[] =  {
-    F("Ventilation level (%)"),
-    F("Fan setpoint (rpm)"),
-    F("Fan speed (rpm)"),
-    F("Error"),
-    F("Selection"),
-    F("Startup counter"),
-    F("Total operation (hours)"),
-    F("CO2 value (ppm)"),
-    F("CO2 ventilation (%)"),
-    F("Valve"),
-    F("Presence timer (sec)"),
-    F("Zone"),
-    F("Cycle timer"),
-    F("Sample timer")
+struct ithoLabels ithoCVE14StatusLabels[] {
+	{ F("Ventilation level (%)"),	F("ventilation-level_perc") },
+	{ F("Fan setpoint (rpm)"),		F("fan-setpoint_rpm") },
+	{ F("Fan speed (rpm)"), 		F("fan-speed_rpm") },
+	{ F("Error"), 				F("error") },
+	{ F("Selection"), 				F("selection") },
+	{ F("Startup counter"), 		F("startup-counter") },
+	{ F("Total operation (hours)"), F("total-operation_hours") },
+	{ F("CO2 value (ppm)"), 		F("co2-value_ppm") },
+	{ F("CO2 ventilation (%)"), 	F("co2ventilation_perc") },
+	{ F("Valve"), 					F("valve") },
+	{ F("Presence timer (sec)"),	F("presence-timer_sec") },
+	{ F("Condition"), 				F("condition") },
+	{ F("Cycle timer"), 			F("cycle-timer") },
+	{ F("Sample timer"), 			F("sample-timer") }
 };
 
-const uint8_t *itho14SettingsMap[] =	{ nullptr, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting5, itho_CVE14setting6 };
-const uint8_t  *itho14StatusMap[]   =	{ nullptr, itho_CVE14status1_4, itho_CVE14status1_4, itho_CVE14status1_4, itho_CVE14status1_4, itho_CVE14status5_6, itho_CVE14status5_6 };
+const uint16_t *itho14SettingsMap[] =	{ nullptr, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting5,  itho_CVE14setting6  };
+const uint8_t  *itho14StatusMap[]   =	{ nullptr, itho_CVE14status1_4,  itho_CVE14status1_4,  itho_CVE14status1_4,  itho_CVE14status1_4,  itho_CVE14status5_6, itho_CVE14status5_6 };

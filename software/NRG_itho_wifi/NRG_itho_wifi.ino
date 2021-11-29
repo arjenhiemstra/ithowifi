@@ -1,4 +1,4 @@
-#define FWVERSION "2.3-beta6"
+#define FWVERSION "2.3-beta7"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -72,7 +72,9 @@
 #include "esp_wifi.h"
 #include <ESPmDNS.h>
 #include <AsyncTCP.h>
-#include "SPIFFS.h"
+//#include "SPIFFS.h"
+#include <LITTLEFS.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_task_wdt.h"

@@ -105,7 +105,7 @@ void execLogAndConfigTasks() {
     StaticJsonDocument<128> root;
     JsonObject systemstat = root.createNestedObject("systemstat");
 
-    if (SPIFFS.format()) {
+    if (LITTLEFS.format()) {
       systemstat["format"] = 1;
       notifyClients(root.as<JsonObjectConst>());
       strcpy(logBuff, "Filesystem format done");
