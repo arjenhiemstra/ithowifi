@@ -11,6 +11,7 @@ void failSafeBoot() {
 
     if (digitalRead(FAILSAVE_PIN) == HIGH) {
 
+      ACTIVE_FS.begin(true);
       ACTIVE_FS.format();
 
       IPAddress apIP(192, 168, 4, 1);
