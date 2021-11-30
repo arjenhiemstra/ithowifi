@@ -1,28 +1,16 @@
 #pragma once
 
-//#define CVE
-#define NON_CVE
+#define CVE
+//#define NON_CVE
 
-#if defined (ESP8266)
-  #define HW_VERSION_ONE
-#elif defined (ESP32)
-  #define HW_VERSION_TWO
-#endif
+#define ACTIVE_FS LITTLEFS
 
-#if defined (HW_VERSION_ONE) || defined (HW_VERSION_TWO)
+#if defined (ESP32)
 #else
-#error "Define hardware revision in header file hardware.h"
+#error "Usupported hardware"
 #endif
 
-
-#if defined (HW_VERSION_ONE) && defined (CVE)
-#define HWREVISION "1"
-#define SDAPIN      4
-#define SCLPIN      5
-#define WIFILED     2
-#define STATUSPIN   14
-
-#elif defined (HW_VERSION_TWO) && defined (CVE)
+#if defined (CVE)
 #define HWREVISION "2"
 #define SDAPIN       21
 #define SCLPIN       22
@@ -33,7 +21,7 @@
 #define FAILSAVE_PIN 14
 #define ITHOSTATUS   13
 
-#elif defined (HW_VERSION_TWO) && defined (NON_CVE)
+#elif defined (NON_CVE)
 #define HWREVISION "NON-CVE 1"
 #define SDAPIN      27
 #define SCLPIN      26

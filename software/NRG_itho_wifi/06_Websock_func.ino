@@ -5,26 +5,26 @@ void jsonWsSend(const char* rootName) {
 
   if (strcmp(rootName, "wifisettings") == 0) {
     JsonObject nested = root.createNestedObject(rootName);
-    nested[F("ssid")] = wifiConfig.ssid;
-    nested[F("passwd")] = wifiConfig.passwd;
-    nested[F("dhcp")] = wifiConfig.dhcp;
-    nested[F("renew")] = wifiConfig.renew;
+    nested["ssid"] = wifiConfig.ssid;
+    nested["passwd"] = wifiConfig.passwd;
+    nested["dhcp"] = wifiConfig.dhcp;
+    nested["renew"] = wifiConfig.renew;
     if (strcmp(wifiConfig.dhcp, "off") == 0) {
-      nested[F("ip")] = wifiConfig.ip;
-      nested[F("subnet")] = wifiConfig.subnet;
-      nested[F("gateway")] = wifiConfig.gateway;
-      nested[F("dns1")] = wifiConfig.dns1;
-      nested[F("dns2")] = wifiConfig.dns2;
+      nested["ip"] = wifiConfig.ip;
+      nested["subnet"] = wifiConfig.subnet;
+      nested["gateway"] = wifiConfig.gateway;
+      nested["dns1"] = wifiConfig.dns1;
+      nested["dns2"] = wifiConfig.dns2;
     }
     else {
-      nested[F("ip")] = WiFi.localIP().toString();
-      nested[F("subnet")] = WiFi.subnetMask().toString();
-      nested[F("gateway")] = WiFi.gatewayIP().toString();
-      nested[F("dns1")] = WiFi.dnsIP().toString();
-      nested[F("dns2")] = WiFi.dnsIP(1).toString();
+      nested["ip"] = WiFi.localIP().toString();
+      nested["subnet"] = WiFi.subnetMask().toString();
+      nested["gateway"] = WiFi.gatewayIP().toString();
+      nested["dns1"] = WiFi.dnsIP().toString();
+      nested["dns2"] = WiFi.dnsIP(1).toString();
     }
-    nested[F("port")] = wifiConfig.port;
-    nested[F("hostname")] = hostName();
+    nested["port"] = wifiConfig.port;
+    nested["hostname"] = hostName();
   }
   else if (strcmp(rootName, "systemsettings")  == 0) {
     // Create an object at the root
@@ -34,23 +34,20 @@ void jsonWsSend(const char* rootName) {
   else if (strcmp(rootName, "ithodevinfo")  == 0) {
     // Create an object at the root
     JsonObject nested = root.createNestedObject(rootName);
-    nested[F("itho_devtype")] = getIthoType(ithoDeviceID);
-    nested[F("itho_fwversion")] = itho_fwversion;
-    nested[F("itho_setlen")] = ithoSettingsLength;
+    nested["itho_devtype"] = getIthoType(ithoDeviceID);
+    nested["itho_fwversion"] = itho_fwversion;
+    nested["itho_setlen"] = ithoSettingsLength;
   }
   else if (strcmp(rootName, "ithosatusinfo")  == 0) {
     // Create an object at the root
     JsonObject nested = root.createNestedObject(rootName);
     getIthoStatusJSON(nested);
   }
-
-#if defined (HW_VERSION_TWO)
   else if (strcmp(rootName, "ithoremotes") == 0) {
     // Create an object at the root
     JsonObject obj = root.to<JsonObject>(); // Fill the object
     remotes.get(obj);
   }
-#endif
   notifyClients(root.as<JsonObjectConst>());
 }
 
@@ -58,24 +55,22 @@ void jsonSystemstat() {
   StaticJsonDocument<512> root;
   //JsonObject root = jsonBuffer.createObject();
   JsonObject systemstat = root.createNestedObject("systemstat");
-  systemstat[F("freemem")] = sys.getMemHigh();
-  systemstat[F("memlow")] = sys.getMemLow();
-  systemstat[F("mqqtstatus")] = MQTT_conn_state;
-  systemstat[F("itho")] = ithoCurrentVal;
-  systemstat[F("itho_low")] = systemConfig.itho_low;
-  systemstat[F("itho_medium")] = systemConfig.itho_medium;
-  systemstat[F("itho_high")] = systemConfig.itho_high;
+  systemstat["freemem"] = sys.getMemHigh();
+  systemstat["memlow"] = sys.getMemLow();
+  systemstat["mqqtstatus"] = MQTT_conn_state;
+  systemstat["itho"] = ithoCurrentVal;
+  systemstat["itho_low"] = systemConfig.itho_low;
+  systemstat["itho_medium"] = systemConfig.itho_medium;
+  systemstat["itho_high"] = systemConfig.itho_high;
 
   if (SHT3x_original || SHT3x_alternative || itho_internal_hum_temp)
   {
-    systemstat[F("sensor_temp")] = ithoTemp;
-    systemstat[F("sensor_hum")] = ithoHum;
-    systemstat[F("sensor")] = 1;
+    systemstat["sensor_temp"] = ithoTemp;
+    systemstat["sensor_hum"] = ithoHum;
+    systemstat["sensor"] = 1;
   }
-#if defined (HW_VERSION_TWO)
-  systemstat[F("itho_llm")] = remotes.getllModeTime();
-#endif
-  systemstat[F("ithoinit")] = ithoInitResult;
+  systemstat["itho_llm"] = remotes.getllModeTime();
+  systemstat["ithoinit"] = ithoInitResult;
 
   notifyClients(root.as<JsonObjectConst>());
 
@@ -240,8 +235,6 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
 
         }
       }
-
-#if defined (HW_VERSION_TWO)
       else if (msg.find("{\"ithoremotes\"") != std::string::npos) {
         jsonWsSend("ithoremotes");
         sysStatReq = true;
@@ -288,7 +281,6 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
           saveRemotesflag = true;
         }
       }
-#endif
       else if (msg.find("{\"reboot\"") != std::string::npos) {
         StaticJsonDocument<128> root;
         DeserializationError error = deserializeJson(root, msg.c_str());

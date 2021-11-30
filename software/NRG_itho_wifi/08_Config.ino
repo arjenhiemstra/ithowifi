@@ -1,7 +1,7 @@
 
 
 bool loadWifiConfig() {
-  if (!LITTLEFS.exists("/wifi.json")) {
+  if (!ACTIVE_FS.exists("/wifi.json")) {
     D_LOG("Setup: writing initial wifi config\n");
     if (!saveWifiConfig()) {
       D_LOG("Setup: failed writing initial wifi config\n");
@@ -9,12 +9,12 @@ bool loadWifiConfig() {
     }
   }
 
-  File configFile = LITTLEFS.open("/wifi.json", "r");
+  File configFile = ACTIVE_FS.open("/wifi.json", "r");
   if (!configFile) {
     D_LOG("Setup: failed to open wifi config file\n");
     return false;
   }
-  //LITTLEFS.exists(path)
+  //ACTIVE_FS.exists(path)
 
   size_t size = configFile.size();
   if (size > 1024) {
@@ -45,7 +45,7 @@ bool saveWifiConfig() {
   // Fill the object
   wifiConfig.get(root);
 
-  File configFile = LITTLEFS.open("/wifi.json", "w");
+  File configFile = ACTIVE_FS.open("/wifi.json", "w");
   if (!configFile) {
     D_LOG("Failed to open default config file for writing\n");
     return false;
@@ -59,10 +59,10 @@ bool saveWifiConfig() {
 }
 
 bool resetWifiConfig() {
-  if (!LITTLEFS.remove("/wifi.json")) {
+  if (!ACTIVE_FS.remove("/wifi.json")) {
     return false;
   }
-  if (!LITTLEFS.exists("/wifi.json")) {
+  if (!ACTIVE_FS.exists("/wifi.json")) {
     dontSaveConfig = true;
     return true;
   }
@@ -71,14 +71,14 @@ bool resetWifiConfig() {
 
 bool loadSystemConfig() {
 
-  if (!LITTLEFS.exists("/config.json")) {
+  if (!ACTIVE_FS.exists("/config.json")) {
     D_LOG("Writing initial default config\n");
     if (!saveSystemConfig()) {
       D_LOG("Failed writing initial default config\n");
       return false;
     }
   }
-  File configFile = LITTLEFS.open("/config.json", "r");
+  File configFile = ACTIVE_FS.open("/config.json", "r");
   if (!configFile) {
     D_LOG("Failed to open system config file\n");
     return false;
@@ -116,7 +116,7 @@ bool saveSystemConfig() {
 
   systemConfig.get(root);
 
-  File configFile = LITTLEFS.open("/config.json", "w");
+  File configFile = ACTIVE_FS.open("/config.json", "w");
   if (!configFile) {
     D_LOG("Failed to open default config file for writing\n");
     return false;
@@ -128,16 +128,16 @@ bool saveSystemConfig() {
 }
 
 bool resetSystemConfig() {
-  if (!LITTLEFS.remove("/config.json")) {
+  if (!ACTIVE_FS.remove("/config.json")) {
     return false;
   }
-  if (!LITTLEFS.exists("/config.json")) {
+  if (!ACTIVE_FS.exists("/config.json")) {
     dontSaveConfig = true;
     return true;
   }
   return false;
 }
-#if defined (HW_VERSION_TWO)
+
 
 uint16_t serializeRemotes(const IthoRemote &remotes, Print& dst) {
   DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 300));
@@ -157,7 +157,7 @@ bool saveRemotesConfig() {
 }
 
 bool saveFileRemotes(const char *filename, const IthoRemote &remotes) { // Open file for writing
-  File file = LITTLEFS.open(filename, "w");
+  File file = ACTIVE_FS.open(filename, "w");
   if (!file) {
     D_LOG("Failed to create remotes file\n");
     return false;
@@ -216,7 +216,7 @@ bool loadRemotesConfig() {
 }
 
 bool loadFileRemotes(const char *filename, IthoRemote &remotes) { // Open file for reading
-  File file = LITTLEFS.open(filename, "r");
+  File file = ACTIVE_FS.open(filename, "r");
 
   if (!file) {
     D_LOG("Failed to open config file\n"); 
@@ -231,4 +231,3 @@ bool loadFileRemotes(const char *filename, IthoRemote &remotes) { // Open file f
   }
   return true;
 }
-#endif

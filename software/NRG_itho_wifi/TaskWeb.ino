@@ -1,4 +1,3 @@
-#if defined (HW_VERSION_TWO)
 
 void startTaskWeb() {
   xTaskWebHandle = xTaskCreateStaticPinnedToCore(
@@ -45,8 +44,6 @@ void TaskWeb( void * pvParameters ) {
   //else delete task
   vTaskDelete( NULL );
 }
-
-#endif
 
 void execWebTasks() {
   ArduinoOTA.handle();

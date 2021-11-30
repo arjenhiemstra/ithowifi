@@ -8,7 +8,6 @@ char toHex(uint8_t c) {
   return c < 10 ? c + '0' : c + 'A' - 10;
 }
 
-#if defined (HW_VERSION_TWO)
 
 #include <driver/i2c.h>
 #include <esp_log.h>
@@ -261,7 +260,6 @@ void i2c_slave_deinit() {
   i2c_driver_delete(I2C_SLAVE_NUM);
 }
 
-#endif //#if defined (HW_VERSION_TWO)
 
 //bool callback_called = false;
 //char i2c_slave_buf[I2C_SLAVE_RX_BUF_LEN];

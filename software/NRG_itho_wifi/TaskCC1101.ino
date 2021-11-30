@@ -1,4 +1,3 @@
-#if defined (HW_VERSION_TWO)
 
 
 IthoCommand RFTcommand[3] = {IthoUnknown, IthoUnknown, IthoUnknown};
@@ -339,5 +338,3 @@ void TaskCC1101( void * pvParameters ) {
   //else delete task
   vTaskDelete( NULL );
 }
-
-#endif

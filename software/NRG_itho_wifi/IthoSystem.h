@@ -52,7 +52,7 @@ enum cmdOrigin {
 };
 
 struct ithoDeviceStatus {
-  std::string name;
+  const char* name;
   enum : uint8_t { is_byte, is_int, is_uint, is_float, is_string } type;
   uint8_t length;
   union {
@@ -67,7 +67,7 @@ struct ithoDeviceStatus {
 
 
 struct ithoDeviceMeasurements {
-  std::string name;
+  const char* name;
   enum : uint8_t { is_int, is_float, is_string } type;
   union {
     int32_t intval;
@@ -105,7 +105,7 @@ int getSettingsLength(const uint8_t deviceID, const uint8_t version);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop = false);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop, const struct ihtoDeviceType* settingsPtr, const uint8_t deviceID, const uint8_t version);
 int getStatusLabelLength(const uint8_t deviceID, const uint8_t version);
-void getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPtr, const uint8_t version, char* fStringBuf) ;
+const char* getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPtr, const uint8_t version) ;
 void updateSetting(const uint8_t i, const int32_t value, bool webupdate);
 struct ihtoDeviceType* getDevicePtr(uint8_t deviceID);
 

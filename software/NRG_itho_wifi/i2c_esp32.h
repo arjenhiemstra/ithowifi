@@ -36,7 +36,6 @@
 #define I2C_SLAVE_RX_BUF_LEN 512
 #define I2C_SLAVE_ADDRESS    0x40
 
-#if defined (HW_VERSION_TWO)
 
 #include <driver/gpio.h>
 #include <stdint.h>
@@ -62,8 +61,6 @@ size_t i2c_slave_receive(uint8_t i2c_receive_buf[]);
 void i2c_slave_deinit();
 void i2c_slave_callback(const uint8_t* data, size_t len);
 
-
-#endif //#if defined (HW_VERSION_TWO)
 
 char toHex(uint8_t c);
 //extern bool callback_called;
