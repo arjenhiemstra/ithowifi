@@ -4,6 +4,7 @@
 #define ENABLE_FAILSAVE_BOOT
 //#define ENABLE_SERIAL
 
+
 /*
  * 
  * Info to compile the firmware yourself:
@@ -60,31 +61,20 @@
 #include <FS.h>
 #include "SHTSensor.h"
 
-#if defined (ESP8266)
-#include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
-#include <ESPAsyncTCP.h>      // https://github.com/me-no-dev/AsyncTCP [latest]
-#include <Hash.h>
+//#include "SPIFFS.h"
+#include <LITTLEFS.h>
 
-#elif defined (ESP32)
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include "esp_wifi.h"
 #include <ESPmDNS.h>
 #include <AsyncTCP.h>
-//#include "SPIFFS.h"
-#include <LITTLEFS.h>
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_task_wdt.h"
 #include "IthoCC1101.h"   // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "IthoPacket.h"   // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "IthoRemote.h"
-
-#else
-#error "Unsupported hardware"
-#endif
 
 
 WiFiClient client;
@@ -100,9 +90,6 @@ Ticker IthoCMD;
 Ticker DelayedReq;
 Ticker DelayedSave;
 Ticker scan;
-#if defined (HW_VERSION_ONE)
-FSInfo fs_info;
-#elif defined (HW_VERSION_TWO)
 Ticker timerLearnLeaveMode;
 Ticker timerCCcal;
 IthoCC1101 rf;
@@ -152,7 +139,7 @@ void TaskMQTT( void * parameter );
 void TaskWeb( void * parameter );
 void TaskConfigAndLog( void * parameter );
 void TaskSysControl( void * parameter );
-#endif
+
 IthoQueue ithoQueue;
 System sys;
 WifiConfig wifiConfig;
@@ -212,48 +199,6 @@ bool SHT3x_original = false;
 bool SHT3x_alternative = false;
 bool rfInitOK = false;
 
-#if defined (HW_VERSION_ONE)
-void setup() {
-
-#if defined (ENABLE_SERIAL)
-  Serial.begin(115200);
-  Serial.flush();
-  delay(100);
-#endif
-
-  hardwareInit();
-
-  initFileSystem();
-
-  logInit();
-
-  wifiInit();
-  
-  loadSystemConfig();
-
-  init_vRemote();
-  
-  initSensor();
-
-  mqttInit();
-
-  ArduinoOTAinit();
-
-  websocketInit();
-
-  webServerInit();
-
-  MDNSinit();
-
-#if defined (HW_VERSION_TWO)
-  Ticker TaskTimeout;
-  CC1101TaskStart = true;
-  delay(500);
-#endif
-
-  logInput("Setup: done");
-}
-#elif defined (HW_VERSION_TWO)
 void setup() {
 
 #if defined (ENABLE_SERIAL)
@@ -274,25 +219,7 @@ void setup() {
 
 }
 
-#endif
-
-#if defined (HW_VERSION_ONE)
-void loop() {
-
-  yield();
-
-  execWebTasks();
-  execMQTTTasks();
-  execSystemControlTasks();
-  execLogAndConfigTasks();
-
-}
-#endif
-
-#if defined (HW_VERSION_TWO)
 void loop() {
   yield();
   esp_task_wdt_reset();
 }
-
-#endif

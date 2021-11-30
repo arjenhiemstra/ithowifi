@@ -1,4 +1,4 @@
-#if defined (HW_VERSION_TWO)
+
 #include <cmath>
 
 void startTaskMQTT() {
@@ -41,7 +41,7 @@ void TaskMQTT( void * pvParameters ) {
   vTaskDelete( NULL );
 }
 
-#endif
+
 
 
 void execMQTTTasks() {

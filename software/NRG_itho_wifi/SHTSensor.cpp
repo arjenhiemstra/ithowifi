@@ -62,41 +62,13 @@ bool SHTI2cSensor::readFromI2c(uint8_t i2cAddress,
                                uint8_t duration)
 {
 
-
-#if defined (HW_VERSION_ONE)
-  Wire.beginTransmission(i2cAddress);
-  for (int i = 0; i < commandLength; ++i) {
-    if (Wire.write(i2cCommand[i]) != 1) {
-      return false;
-    }
-  }
-
-  if (Wire.endTransmission(true) != 0) {
-    return false;
-  }
-#elif defined (HW_VERSION_TWO)
   if(!i2c_sendCmd(i2cAddress, i2cCommand, commandLength)) {
     return false;
   }
-#endif
   
   delay(duration);
 
-#if defined (HW_VERSION_ONE)
-  Wire.requestFrom(i2cAddress, dataLength);
-
-  // check if the same number of bytes are received that are requested.
-  if (Wire.available() != dataLength) {
-    return false;
-  }
-
-  for (int i = 0; i < dataLength; ++i) {
-    data[i] = Wire.read();
-  }
-#elif defined (HW_VERSION_TWO)
   i2c_master_read_slave(i2cAddress, data, dataLength);
-#endif
-
 
   return true;
   

@@ -1,5 +1,5 @@
 #define MQTT_BUFFER_SIZE 5120
-#if defined (HW_VERSION_TWO) && defined (ENABLE_FAILSAVE_BOOT)
+#if defined (ENABLE_FAILSAVE_BOOT)
 
 void failSafeBoot() {
 
@@ -11,7 +11,7 @@ void failSafeBoot() {
 
     if (digitalRead(FAILSAVE_PIN) == HIGH) {
 
-      LITTLEFS.format();
+      ACTIVE_FS.format();
 
       IPAddress apIP(192, 168, 4, 1);
       IPAddress netMsk(255, 255, 255, 0);
@@ -114,7 +114,7 @@ void hardwareInit() {
   digitalWrite(ITHOSTATUS, LOW);
 #endif
 
-#if defined (HW_VERSION_TWO) && defined (ENABLE_FAILSAVE_BOOT)
+#if defined (ENABLE_FAILSAVE_BOOT)
   pinMode(FAILSAVE_PIN, INPUT);
   failSafeBoot();
 #endif
@@ -125,12 +125,7 @@ void hardwareInit() {
 }
 
 void i2cInit() {
-#if defined (HW_VERSION_ONE)
-  Wire.begin(SDAPIN, SCLPIN, 0);
-  //Wire.onReceive(receiveEvent);
-#elif defined (HW_VERSION_TWO)
   i2c_master_init();
-#endif
 }
 
 bool ithoInitCheck() {
@@ -155,10 +150,6 @@ void logInit() {
   delay(100);
   char logBuff[LOG_BUF_SIZE] = "";
 
-
-#if defined (HW_VERSION_ONE)
-  sprintf(logBuff, "System boot, last reset reason: %s", ESP.getResetReason().c_str());
-#elif defined (HW_VERSION_TWO)
   uint8_t reason = esp_reset_reason();
   char buf[32] = "";
 
@@ -182,7 +173,6 @@ void logInit() {
     default : strcpy(buf, "NO_MEAN");
   }
   sprintf(logBuff, "System boot, last reset reason: %s", buf);
-#endif
 
   logInput(logBuff);
 
@@ -239,24 +229,7 @@ bool initFileSystem() {
 
   D_LOG("Mounting FS...\n");
 
-#if defined (HW_VERSION_ONE)
-
-  if (!LITTLEFS.begin()) {
-    D_LOG("LITTLEFS failed, needs formatting\n");
-    handleFormat();
-    delay(500);
-    ESP.restart();
-  }
-  else {
-    if (!LITTLEFS.info(fs_info)) {
-      D_LOG("fs_info failed\n");
-      return false;
-    }
-  }
-
-#elif defined (HW_VERSION_TWO)
-  LITTLEFS.begin(true);
-#endif
+  ACTIVE_FS.begin(true);
 
   return true;
 }
@@ -264,25 +237,25 @@ bool initFileSystem() {
 
 void handleFormat()
 {
-  D_LOG("Format LITTLEFS\n");
-  if (LITTLEFS.format())
+  D_LOG("Format filesystem\n");
+  if (ACTIVE_FS.format())
   {
-    if (!LITTLEFS.begin())
+    if (!ACTIVE_FS.begin())
     {
-      D_LOG("Format LITTLEFS failed\n");
+      D_LOG("Format filesystem failed\n");
     }
   }
   else
   {
-    D_LOG("Format LITTLEFS failed\n");
+    D_LOG("Format filesystem failed\n");
   }
-  if (!LITTLEFS.begin())
+  if (!ACTIVE_FS.begin())
   {
-    D_LOG("LITTLEFS failed, needs formatting\n");
+    D_LOG("Filesystem failed, needs formatting\n");
   }
   else
   {
-    D_LOG("LITTLEFS mounted\n");
+    D_LOG("Filesystem mounted\n");
   }
 }
 
@@ -304,11 +277,7 @@ char* hostName() {
 uint8_t getMac(uint8_t i) {
   static uint8_t mac[6];
 
-#if defined (HW_VERSION_ONE)
-  WiFi.softAPmacAddress(mac);
-#elif defined (HW_VERSION_TWO)
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
-#endif
 
   return mac[i];
 }
@@ -344,19 +313,15 @@ void setupWiFiAP() {
 
 
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
-#if defined (HW_VERSION_TWO)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-#endif
+
   WiFi.disconnect(true);
   WiFi.setAutoReconnect(false);
   delay(200);
   WiFi.mode(WIFI_AP);
 
-#if defined (HW_VERSION_ONE)
-  WiFi.forceSleepWake();
-#elif defined (HW_VERSION_TWO)
   esp_wifi_set_ps(WIFI_PS_NONE);
-#endif
+
   delay(100);
 
   WiFi.softAPConfig(apIP, apIP, netMsk);
@@ -382,23 +347,18 @@ bool connectWiFiSTA()
   D_LOG("Connecting to wireless network...\n");
   
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
-#if defined (HW_VERSION_TWO)
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-#endif
   WiFi.disconnect(true);
-#if defined (HW_VERSION_TWO)  
+
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
   WiFi.setHostname(hostName());  
-#endif  
+
   WiFi.setAutoReconnect(false);
   delay(200);
   WiFi.mode(WIFI_STA);
 
-#if defined (HW_VERSION_ONE)
-  WiFi.forceSleepWake();
-#elif defined (HW_VERSION_TWO)
   esp_wifi_set_ps(WIFI_PS_NONE);
-#endif
+
 
   if (strcmp(wifiConfig.dhcp, "off") == 0) {
     bool configOK = true;
@@ -435,22 +395,15 @@ bool connectWiFiSTA()
 
   delay(200);
 
-
-
-#if defined (HW_VERSION_ONE)
-  WiFi.hostname(hostName());
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
-#elif defined (HW_VERSION_TWO)
-  WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
-#endif
 
   auto timeoutmillis = millis() + 30000;
   auto status = WiFi.status();
 
   while (millis() < timeoutmillis) {
-#if defined (HW_VERSION_TWO)
+
     esp_task_wdt_reset();
-#endif
+
     status = WiFi.status();
     if (status == WL_CONNECTED) {
       digitalWrite(WIFILED, LOW);
@@ -550,21 +503,12 @@ void webServerInit() {
     //Handle upload
   });
 
-#if defined (HW_VERSION_ONE)
   if (systemConfig.syssec_edit) {
-    server.addHandler(new SPIFFSEditor(systemConfig.sys_username, systemConfig.sys_password));
+    server.addHandler(new SPIFFSEditor(ACTIVE_FS, systemConfig.sys_username, systemConfig.sys_password));
   }
   else {
-    server.addHandler(new SPIFFSEditor("", ""));
+    server.addHandler(new SPIFFSEditor(ACTIVE_FS, "", ""));
   }
-#elif defined (HW_VERSION_TWO)
-  if (systemConfig.syssec_edit) {
-    server.addHandler(new SPIFFSEditor(LITTLEFS, systemConfig.sys_username, systemConfig.sys_password));
-  }
-  else {
-    server.addHandler(new SPIFFSEditor(LITTLEFS, "", ""));
-  }
-#endif
 
   // css_code
   server.on("/pure-min.css", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -678,7 +622,6 @@ void webServerInit() {
       strncat(buf, filename.c_str(), sizeof(buf) - strlen(buf) - 1);
       logInput(buf);
 
-#if defined (HW_VERSION_TWO)
 
       detachInterrupt(ITHO_IRQ_PIN);
 
@@ -698,14 +641,9 @@ void webServerInit() {
       D_LOG("Tasks detached\n");
 #endif
 
-#endif
 
-#if defined (HW_VERSION_ONE)
-      Update.runAsync(true);
-      if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)) {
-#elif defined (HW_VERSION_TWO)
+
       if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
-#endif
 #if defined (ENABLE_SERIAL)
         Update.printError(Serial);
 #endif
@@ -738,7 +676,7 @@ void webServerInit() {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
         return request->requestAuthentication();
     }
-    logMessagejson(F("Reset requested. Device will reboot in a few seconds..."), WEBINTERFACE);
+    logMessagejson("Reset requested. Device will reboot in a few seconds...", WEBINTERFACE);
     delay(200);
     shouldReboot = true;
   });
@@ -759,11 +697,9 @@ void webServerInit() {
 
 void MDNSinit() {
 
-
-#if defined (HW_VERSION_TWO)
   MDNS.begin(hostName());
   mdns_instance_name_set("NRG IthoWifi controller");
-#endif
+
   MDNS.addService("http", "tcp", 80);
 
   char logBuff[LOG_BUF_SIZE] = "";

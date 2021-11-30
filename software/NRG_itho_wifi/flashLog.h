@@ -11,6 +11,7 @@
 #include <FSFilePrint.h>      
 #include <FS.h>
 #include <LITTLEFS.h>
+#include "hardware.h"
 
 //#include <SpiffsFilePrint.h>  // https://github.com/PRosenb/SPIFFS_FilePrint [1.0.0]
 

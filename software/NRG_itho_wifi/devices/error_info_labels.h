@@ -1,8 +1,8 @@
 #pragma once
 
 struct ithoLabels {
-  const __FlashStringHelper *labelFull;
-  const __FlashStringHelper *labelNormalized;
+  const char* labelFull;
+  const char* labelNormalized;
 };
 
 static const std::map<uint8_t, const char*> fanInfo = {
@@ -31,7 +31,6 @@ static const std::map<uint8_t, const char*> fanInfo = {
   {0X16, "absolute minimum"},
   {0X17, "absolute maximum"},
   {0x18, "auto"},
-  {0x18, "night"},
   {0xFF, "unknown"}
 };
 
@@ -75,31 +74,38 @@ const std::map<uint8_t, const char*> fanHeatErrors = {
   {0XFF, "unknown error"}
 };
 
+struct ithoLabels ithoLabelErrors[] {
+	{   "Nullptr error" ,				  "nullptr-error"},
+	{   "No label for device error" ,	  "no-label-for-device-error"},
+	{   "No label for version error" ,	  "no-label-for-version-error"},
+	{   "Label out of bound error" ,	  "label-out-of-bound-error"}
+};
+
 struct ithoLabels itho31D9Labels[] {
-	{ F("Speed status"),	F("speed-status") },
-	{ F("Internal fault"),	F("internal-fault") },
-	{ F("Frost cycle"),		F("frost-cycle") },
-	{ F("Filter dirty"),	F("filter-dirty") }
+	{   "Speed status" ,	  "speed-status"},
+	{   "Internal fault" ,	  "internal-fault"},
+	{   "Frost cycle" ,		  "frost-cycle"},
+	{   "Filter dirty" ,	  "filter-dirty"}
 };
 
 struct ithoLabels itho31DALabels[] {
-	{ F("AirQuality (%)"),		F("airquality_perc") },
-	{ F("AirQbased on"),		F("airq-based-on") },
-	{ F("CO2level (ppm)"),		F("co2level_ppm") },
-	{ F("Indoorhumidity (%)"),	F("indoor-humidity_perc") },
-	{ F("Outdoorhumidity (%)"),	F("outdoor-humidity_perc") },
-	{ F("Exhausttemp (°C)"),	F("exhausttemp_c") },
-	{ F("SupplyTemp (°C)"),		F("supply-temp_c") },
-	{ F("IndoorTemp (°C)"),		F("indoor-temp_c") },
-	{ F("OutdoorTemp (°C)"),	F("outdoor-temp_c") },
-	{ F("SpeedCap"),			F("speed-cap") },
-	{ F("BypassPos (%)"),		F("bypass-pos_perc") },
-	{ F("FanInfo"),				F("fan-info") },
-	{ F("ExhFanSpeed (%)"),		F("exh-fan-speed_perc") },
-	{ F("InFanSpeed (%)"),		F("in-fan-speed_perc") },
-	{ F("RemainingTime (min)"),	F("remaining-time_min") },
-	{ F("PostHeat (%)"),		F("post-heat_perc") },
-	{ F("PreHeat (%)"),			F("pre-heat_perc") },
-	{ F("InFlow (l sec)"),		F("in-flow-l_sec") },
-	{ F("ExhFlow (l sec)"),		F("exh-flow-l_sec") }
+	{   "AirQuality (%)" ,		  "airquality_perc"},
+	{   "AirQbased on" ,		  "airq-based-on"},
+	{   "CO2level (ppm)" ,		  "co2level_ppm"},
+	{   "Indoorhumidity (%)" ,	  "indoor-humidity_perc"},
+	{   "Outdoorhumidity (%)" ,	  "outdoor-humidity_perc"},
+	{   "Exhausttemp (°C)" ,	  "exhausttemp_c"},
+	{   "SupplyTemp (°C)" ,		  "supply-temp_c"},
+	{   "IndoorTemp (°C)" ,		  "indoor-temp_c"},
+	{   "OutdoorTemp (°C)" ,	  "outdoor-temp_c"},
+	{   "SpeedCap" ,			  "speed-cap"},
+	{   "BypassPos (%)" ,		  "bypass-pos_perc"},
+	{   "FanInfo" ,				  "fan-info"},
+	{   "ExhFanSpeed (%)" ,		  "exh-fan-speed_perc"},
+	{   "InFanSpeed (%)" ,		  "in-fan-speed_perc"},
+	{   "RemainingTime (min)" ,	  "remaining-time_min"},
+	{   "PostHeat (%)" ,		  "post-heat_perc"},
+	{   "PreHeat (%)" ,			  "pre-heat_perc"},
+	{   "InFlow (l sec)" ,		  "in-flow-l_sec"},
+	{   "ExhFlow (l sec)" ,		  "exh-flow-l_sec"}
 };

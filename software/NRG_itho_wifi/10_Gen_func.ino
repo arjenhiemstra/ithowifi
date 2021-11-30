@@ -11,10 +11,10 @@ void getIthoStatusJSON(JsonObject root) {
   if (!ithoInternalMeasurements.empty()) {
     for (const auto& internalMeasurement : ithoInternalMeasurements) {
       if (internalMeasurement.type == ithoDeviceMeasurements::is_int) {
-        root[internalMeasurement.name.c_str()] = internalMeasurement.value.intval;
+        root[internalMeasurement.name] = internalMeasurement.value.intval;
       }
       else if (internalMeasurement.type == ithoDeviceMeasurements::is_float) {
-        root[internalMeasurement.name.c_str()] = internalMeasurement.value.floatval;
+        root[internalMeasurement.name] = internalMeasurement.value.floatval;
       }
       else {
         root["error"] = 0;
@@ -24,32 +24,32 @@ void getIthoStatusJSON(JsonObject root) {
   if (!ithoMeasurements.empty()) {
     for (const auto& ithoMeaserment : ithoMeasurements) {
       if (ithoMeaserment.type == ithoDeviceMeasurements::is_int) {
-        root[ithoMeaserment.name.c_str()] = ithoMeaserment.value.intval;
+        root[ithoMeaserment.name] = ithoMeaserment.value.intval;
       }
       else if (ithoMeaserment.type == ithoDeviceMeasurements::is_float) {
-        root[ithoMeaserment.name.c_str()] = ithoMeaserment.value.floatval;
+        root[ithoMeaserment.name] = ithoMeaserment.value.floatval;
       }
       else if (ithoMeaserment.type == ithoDeviceMeasurements::is_string) {
-        root[ithoMeaserment.name.c_str()] = ithoMeaserment.value.stringval;
+        root[ithoMeaserment.name] = ithoMeaserment.value.stringval;
       }
     }
   }
   if (!ithoStatus.empty()) {
     for (const auto& ithoStat : ithoStatus) {
       if (ithoStat.type == ithoDeviceStatus::is_byte) {
-        root[ithoStat.name.c_str()] = ithoStat.value.byteval;
+        root[ithoStat.name] = ithoStat.value.byteval;
       }
       else if (ithoStat.type == ithoDeviceStatus::is_uint) {
-        root[ithoStat.name.c_str()] = ithoStat.value.uintval;
+        root[ithoStat.name] = ithoStat.value.uintval;
       }
       else if (ithoStat.type == ithoDeviceStatus::is_int) {
-        root[ithoStat.name.c_str()] = ithoStat.value.intval;
+        root[ithoStat.name] = ithoStat.value.intval;
       }
       else if (ithoStat.type == ithoDeviceStatus::is_float) {
-        root[ithoStat.name.c_str()] = ithoStat.value.floatval;
+        root[ithoStat.name] = ithoStat.value.floatval;
       }
       else if (ithoStat.type == ithoDeviceStatus::is_string) {
-        root[ithoStat.name.c_str()] = ithoStat.value.stringval;
+        root[ithoStat.name] = ithoStat.value.stringval;
       }
     }
 
@@ -134,13 +134,13 @@ bool ithoExecCommand(const char* command, cmdOrigin origin) {
 bool ithoI2CCommand(const char* command, cmdOrigin origin) {
 
   D_LOG("EXEC VREMOTE COMMAND\n");
-#if defined (HW_VERSION_TWO)
+
   if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
   }
   else {
     return false;
   }
-#endif
+
 
   if (strcmp(command, "low") == 0) {
     buttonValue = 1;
@@ -188,9 +188,9 @@ bool ithoI2CCommand(const char* command, cmdOrigin origin) {
     send31D9 = true;
   }
   else {
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
+
     return false;
   }
 
@@ -331,13 +331,11 @@ bool writeIthoVal(uint16_t value) {
 
   if (ithoCurrentVal != value) {
 
-#if defined (HW_VERSION_TWO)
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
     }
     else {
       return false;
     }
-#endif
 
     uint16_t valTemp = ithoCurrentVal;
     ithoCurrentVal = value;
@@ -369,15 +367,7 @@ bool writeIthoVal(uint16_t value) {
       //command[8] = 0 - (67 + b);
       command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-#if defined (HW_VERSION_ONE)
-      Wire.beginTransmission(byte(0x00));
-      for (uint8_t i = 1; i < sizeof(command); i++) {
-        Wire.write(command[i]);
-      }
-      Wire.endTransmission(true);
-#elif defined (HW_VERSION_TWO)
       i2c_sendBytes(command, sizeof(command));
-#endif
 
     }
     else {
@@ -385,9 +375,9 @@ bool writeIthoVal(uint16_t value) {
       ithoCurrentVal = valTemp;
       ithoQueue.add2queue(valTemp, 0, systemConfig.nonQ_cmd_clearsQ);
     }
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
+
     return true;
   }
   return false;
@@ -409,44 +399,6 @@ void logWifiInfo() {
   const char* const modes[] = { "NULL", "STA", "AP", "STA+AP" };
   //const char* const phymodes[] = { "", "B", "G", "N" };
 
-#if defined (HW_VERSION_ONE)
-  sprintf(wifiBuff, "Mode:%s", modes[wifi_get_opmode()]);
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  sprintf(wifiBuff, "PHY mode:%s", phymodes[(int) wifi_get_phy_mode()]);
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  sprintf(wifiBuff, "Channel:%d", wifi_get_channel());
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  sprintf(wifiBuff, "AP id:%d", wifi_station_get_current_ap_id());
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  sprintf(wifiBuff, "Status:%d", wifi_station_get_connect_status());
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  sprintf(wifiBuff, "Auto connect:%d", wifi_station_get_auto_connect());
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-  struct station_config conf;
-  wifi_station_get_config(&conf);
-
-  char ssid[33]; //ssid can be up to 32chars, => plus null term
-  memcpy(ssid, conf.ssid, sizeof(conf.ssid));
-  ssid[32] = 0; //nullterm in case of 32 char ssid
-
-  sprintf(wifiBuff, "SSID (%d):%s", strlen(ssid), ssid);
-  logInput(wifiBuff);
-  strcpy(wifiBuff, "");
-
-#elif defined (HW_VERSION_TWO)
-
   sprintf(wifiBuff, "Mode:%s", modes[WiFi.getMode()]);
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
@@ -454,7 +406,6 @@ void logWifiInfo() {
   sprintf(wifiBuff, "Status:%d", WiFi.status());
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
-#endif
 
   IPAddress ip = WiFi.localIP();
   sprintf(wifiBuff, "IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);

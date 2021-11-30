@@ -1,4 +1,3 @@
-#if defined (HW_VERSION_TWO)
 
 unsigned long lastI2CinitRequest = 0;
 
@@ -57,10 +56,6 @@ void TaskSysControl( void * pvParameters ) {
   vTaskDelete( NULL );
 }
 
-#endif
-
-
-
 
 void execSystemControlTasks() {
 
@@ -68,7 +63,6 @@ void execSystemControlTasks() {
     IthoInit = ithoInitCheck();
   }
 
-#if defined (HW_VERSION_TWO)
   if (!i2cStartCommands && millis() > 15000 && (millis() - lastI2CinitRequest > 5000) ) {
     lastI2CinitRequest = millis();
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 1000 / portTICK_PERIOD_MS) == pdTRUE) {
@@ -78,11 +72,9 @@ void execSystemControlTasks() {
     if (itho_fwversion > 0) {
       ithoInitResult = 1;
       i2cStartCommands = true;
-#endif
 #if defined (CVE)
       digitalWrite(ITHOSTATUS, HIGH);
 #endif
-#if defined (HW_VERSION_TWO)
       if (systemConfig.syssht30 == 1 && ithoDeviceID == 0x1B) {
         if (itho_fwversion == 25) {
           updateSetting(63, 0, false);
@@ -106,19 +98,15 @@ void execSystemControlTasks() {
       ithoInitResult = -1;
     }
   }
-#endif
 
   if (systemConfig.itho_sendjoin > 0 && !joinSend && ithoInitResult == 1) {
     joinSend = true;
-#if defined (HW_VERSION_TWO)
+
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
-#endif
       sendJoinI2C(i2c_result_updateweb);
       xSemaphoreGive(mutexI2Ctask);
       logInput("Virtual remote join command send");
-#if defined (HW_VERSION_TWO)
     }
-#endif
     if (systemConfig.itho_sendjoin == 1) {
       systemConfig.itho_sendjoin = 0;
       saveSystemConfig();
@@ -150,17 +138,6 @@ void execSystemControlTasks() {
       }
     }
   }
-#if defined (HW_VERSION_ONE)
-  if (shouldReboot) {
-    logInput("Reboot requested");
-    if (!dontSaveConfig) {
-      saveSystemConfig();
-    }
-    delay(1000);
-    ESP.restart();
-    delay(2000);
-  }
-#endif
   if (runscan) {
     runscan = false;
     scan.once_ms(10, wifiScan);
@@ -204,81 +181,71 @@ void execSystemControlTasks() {
     sendI2CButton = false;
     sendButton(buttonValue, i2c_result_updateweb);
     i2c_result_updateweb = false;
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
   }
   if (sendI2CTimer) {
     sendI2CTimer = false;
     sendTimer(timerValue, i2c_result_updateweb);
     i2c_result_updateweb = false;
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
   }
   if (sendI2CJoin) {
     sendI2CJoin = false;
     sendJoinI2C(i2c_result_updateweb);
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
   }
   if (sendI2CLeave) {
     sendI2CLeave = false;
     sendLeaveI2C(i2c_result_updateweb);
     i2c_result_updateweb = false;
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
   }
   if (sendI2CDevicetype) {
     sendI2CDevicetype = false;
     sendQueryDevicetype(i2c_result_updateweb);
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
   }
   if (sendI2CStatusFormat) {
     sendI2CStatusFormat = false;
     sendQueryStatusFormat(i2c_result_updateweb);
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
   }
   if (sendI2CStatus) {
     sendI2CStatus = false;
     sendQueryStatus(i2c_result_updateweb);
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
   }
   if (send31DA) {
     send31DA = false;
     sendQuery31DA(i2c_result_updateweb);
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
   }
   if (send31D9) {
     send31D9 = false;
     sendQuery31D9(i2c_result_updateweb);
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
   }
   if (get2410) {
     get2410 = false;
     resultPtr2410 = sendQuery2410(i2c_result_updateweb);
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
   }
   if (set2410) {
     setSetting2410(i2c_result_updateweb);
     set2410 = false;
-#if defined (HW_VERSION_TWO)
+
     xSemaphoreGive(mutexI2Ctask);
-#endif
+
     getSettingsHack.once_ms(1, []() {
       getSetting(index2410, true, false, false);
     });

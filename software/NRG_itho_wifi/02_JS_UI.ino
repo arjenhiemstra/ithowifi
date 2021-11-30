@@ -1,6 +1,6 @@
 
 
-const char controls_js[] PROGMEM = R"=====(
+const char* controls_js = R"=====(
 
 var count = 0;
 var itho_low = 0;
@@ -1138,8 +1138,8 @@ var html_systemsettings_start = `
               <input id="option-syssec_edit-1" type="radio" name="option-syssec_edit" value="1"> on
               <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
             </div>
-            <legend><br>API settings (reboot needed):</legend>
-            <p>Have api keys on the WebAPI, MQTT API and Itho Status page normlized (all lowercase, no spaces and special charactars).</p>
+            <legend><br>API settings:</legend>
+            <p>Have api keys on the WebAPI, MQTT API and Itho Status page normlized (all lowercase, no spaces and special characters).</p>
             <div class="pure-control-group">
               <label for="option-api_normalize" class="pure-radio">Normalize keys</label> 
               <input id="option-api_normalize-1" type="radio" name="option-api_normalize" value="1"> on

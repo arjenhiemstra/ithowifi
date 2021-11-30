@@ -10,17 +10,13 @@ unsigned long LastotaWsUpdate = 0;
 size_t content_len = 0;
 
 void notifyClients(AsyncWebSocketMessageBuffer* message) {
-#if defined (HW_VERSION_TWO)
   yield();
   if (xSemaphoreTake(mutexWSsend, (TickType_t) 100 / portTICK_PERIOD_MS) == pdTRUE) {
-#endif
 
     ws.textAll(message);
 
-#if defined (HW_VERSION_TWO)
     xSemaphoreGive(mutexWSsend);
   }
-#endif
 
 }
 
@@ -57,26 +53,9 @@ void jsonSysmessage(const char * id, const char * message) {
 
 }
 
-
-void logMessagejson(const __FlashStringHelper * str, logtype type) {
-  if (!str) return;
-  int length = strlen_P((PGM_P)str);
-  if (length == 0) return;
-#if defined (HW_VERSION_ONE)
-  if (length < 400) length = 400;
-  char message[400 + 1] = "";
-  strncat_P(message, (PGM_P)str, length);
-  logMessagejson(message, type);
-#else
-  logMessagejson((PGM_P)str, type);
-#endif
-}
-
 void logMessagejson(const char* message, logtype type) {
-#if defined (HW_VERSION_TWO)
   yield();
   if (xSemaphoreTake(mutexJSONLog, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
-#endif
 
     StaticJsonDocument<512> root;
     JsonObject messagebox;
@@ -96,17 +75,13 @@ void logMessagejson(const char* message, logtype type) {
 
     notifyClients(root.as<JsonObjectConst>());
 
-#if defined (HW_VERSION_TWO)
     xSemaphoreGive(mutexJSONLog);
   }
-#endif
 }
 
 void logMessagejson(JsonObject obj, logtype type) {
-#if defined (HW_VERSION_TWO)
   yield();
   if (xSemaphoreTake(mutexJSONLog, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
-#endif
 
     StaticJsonDocument<512> root;
     JsonObject messagebox = root.to<JsonObject>(); // Fill the object
@@ -128,10 +103,8 @@ void logMessagejson(JsonObject obj, logtype type) {
 
     notifyClients(root.as<JsonObjectConst>());
 
-#if defined (HW_VERSION_TWO)
     xSemaphoreGive(mutexJSONLog);
   }
-#endif
 }
 
 void otaWSupdate(size_t prg, size_t sz) {
