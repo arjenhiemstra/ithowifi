@@ -1099,6 +1099,7 @@ var html_wifisetup = `
         <div><p>Scan results:</p></div>
       </div>
       <div id="wifiscanresult"></div>
+      <br><br><br>
     </div>
 </div>
 <script>

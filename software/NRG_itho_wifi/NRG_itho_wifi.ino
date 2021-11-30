@@ -1,4 +1,4 @@
-#define FWVERSION "2.3-beta7"
+#define FWVERSION "2.3.0"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -8,17 +8,17 @@
 /*
  * 
  * Info to compile the firmware yourself:
- * Build is done using Arduino IDE
+ * Build is done using Arduino IDE, used libs are downloaded when cloning from git.
  * 
- * Used libs and versions are mentioned below.
- * 
- * For HW rev 1:
- * Select 'LOLIN(WEMOS)D1 R2 & mini' as board
- * 
- * For HW rev 2:
+ * For CVE rev 2 (module for itho fans):
  * Select 'ESP32 Dev Module' as board
  * Choose partition scheme: Minimal SPIFFS (1.9 APP with OTA)
+ * goto file hardware.h and uncomment CVE and comment NON_CVE define
  * 
+ * For non CVE rev 1 (module with RJ45 connector):
+ * Select 'ESP32 Dev Module' as board
+ * Choose partition scheme: Minimal SPIFFS (1.9 APP with OTA)
+ * goto file hardware.h and uncomment NON_CVE and comment CVE define
  * 
  */
 
@@ -26,7 +26,6 @@
  Backlog:
  * (todo) i2c always slave unless master
  * (todo) Restructure MQTT topics
- * (todo) Restore compatibility with HW rev 1 (probaly not possible anymore)
  * (todo) recheck status format if failed on boot
  * (todo) After timer, go back to fallback or last value
  * (todo) Prevent crash when multiple webbroser tabs open to the add-on and retreiving settings
