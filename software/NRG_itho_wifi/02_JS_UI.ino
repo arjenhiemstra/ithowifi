@@ -423,7 +423,7 @@ $(document).ready(function() {
     else if ($(this).attr('id') == 'reboot') {
       if (confirm("This will reboot the device, are you sure?")) {
         $('#rebootscript').append(html_reboot_script);
-        websock.send('{\"reboot\":true,\"donsaveconf\":'+document.getElementById("dontsaveconf").checked+'}');
+        websock.send('{\"reboot\":true,\"dontsaveconf\":'+document.getElementById("dontsaveconf").checked+'}');
       }
     }
     else if ($(this).attr('id') == 'format') {
@@ -431,7 +431,7 @@ $(document).ready(function() {
         websock.send('{\"format\":true}');
         $('#format').text('Formatting...');
       }
-    }    
+    }
     else if ($(this).attr('id') == 'wifiscan') {
       $('.ScanResults').remove();
       $('.hidden').removeClass('hidden');

@@ -45,7 +45,7 @@ const char* ithoCVE14SettingsLabels[] =  {
 const uint8_t itho_CVE14status1_4[] { 0,1,2,3,4,5,6,255};
 const uint8_t itho_CVE14status5_6[] { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,255};
 
-struct ithoLabels ithoCVE14StatusLabels[] {
+const struct ithoLabels ithoCVE14StatusLabels[] {
 	{  "Ventilation level (%)",	 	"ventilation-level_perc" },
 	{  "Fan setpoint (rpm)",		"fan-setpoint_rpm" },
 	{  "Fan speed (rpm)", 		 	"fan-speed_rpm" },

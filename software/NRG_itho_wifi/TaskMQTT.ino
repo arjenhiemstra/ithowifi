@@ -213,7 +213,7 @@ void mqttSendSettingsJSON() {
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }
 
-void mqttCallback(char* topic, byte* payload, unsigned int length) {
+void mqttCallback(const char* topic, const byte* payload, unsigned int length) {
 
 
   if (topic == NULL) return;

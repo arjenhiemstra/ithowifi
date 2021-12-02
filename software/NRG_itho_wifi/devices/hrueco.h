@@ -102,7 +102,7 @@ const uint8_t itho_HRUecostatus6_7[] 	{ 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
 const uint8_t itho_HRUecostatus8[] 		{ 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,255};
 const uint8_t itho_HRUecostatus10_12[] 	{ 22,23,0,2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,255};
 
-struct ithoLabels ithoHRUecoStatusLabels[] {
+const struct ithoLabels ithoHRUecoStatusLabels[] {
 	{   "Supply requested (rpm)",  	  "supply-requested_rpm" },
 	{   "Supply fan speed (rpm)",  	  "supply-fan speed_rpm" },
 	{   "Supply actual (rpm)",  	  "supply-actual_rpm" },

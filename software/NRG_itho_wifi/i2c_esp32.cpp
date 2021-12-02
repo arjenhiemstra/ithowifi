@@ -33,7 +33,7 @@ void i2c_master_deinit() {
   i2c_driver_delete(I2C_MASTER_NUM);
 }
 
-esp_err_t i2c_master_send(char* buf, uint32_t len) {
+esp_err_t i2c_master_send(const char* buf, uint32_t len) {
   i2c_master_init();
 
   esp_err_t rc;
@@ -115,7 +115,7 @@ esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size) {
 bool i2c_sendBytes(const uint8_t* buf, size_t len) {
 
   if (len) {
-    esp_err_t rc = i2c_master_send((char*)buf, len);
+    esp_err_t rc = i2c_master_send((const char*)buf, len);
     if (rc) {
       D_LOG("Master send: %d\n", rc);
       return false;

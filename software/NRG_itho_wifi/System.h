@@ -16,7 +16,7 @@ class System {
       Sample: 1:20:23:50 = 1 day, 20 hours, 23 minutes and 50 seconds
       @return char *: pointer!
     */
-    char * uptime();
+    const char * uptime();
 
     /**
       Returns the free RAM

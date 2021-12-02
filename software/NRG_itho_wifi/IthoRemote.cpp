@@ -39,7 +39,7 @@ void IthoRemote::updatellModeTimer() {
   }
 }
 
-int IthoRemote::registerNewRemote(int* id) {
+int IthoRemote::registerNewRemote(const int* id) {
   if (this->checkID(id)) {
     return -1; //remote already registered
   }
@@ -60,7 +60,7 @@ int IthoRemote::registerNewRemote(int* id) {
   return 1;
 }
 
-int IthoRemote::removeRemote(int* id) {
+int IthoRemote::removeRemote(const int* id) {
   if (!this->checkID(id)) {
     return -1; //remote not registered
   }
@@ -84,7 +84,7 @@ int IthoRemote::removeRemote(int* id) {
   return 1;
 }
 
-int IthoRemote::removeRemote(uint8_t index) {
+int IthoRemote::removeRemote(const uint8_t index) {
 
   if (!(index < MAX_NUMBER_OF_REMOTES)) return -1;
 
@@ -101,7 +101,7 @@ int IthoRemote::removeRemote(uint8_t index) {
   return 1;
 }
 
-void IthoRemote::updateRemoteName(uint8_t index, const char* remoteName) {
+void IthoRemote::updateRemoteName(const uint8_t index, const char* remoteName) {
   strlcpy(remotes[index].name, remoteName, sizeof(remotes[index].name));
 }
 
@@ -116,7 +116,7 @@ void IthoRemote::addCapabilities(uint8_t remoteIndex, const char* name, int32_t 
 
 }
 
-int IthoRemote::remoteIndex(int32_t id) {
+int IthoRemote::remoteIndex(const int32_t id) {
   if (id < 0) return -1;
   int tempID[3];
   tempID[0] = (id >> 16) & 0xFF;
@@ -125,7 +125,7 @@ int IthoRemote::remoteIndex(int32_t id) {
   return remoteIndex(tempID);
 }
 
-int IthoRemote::remoteIndex(int* id) {
+int IthoRemote::remoteIndex(const int* id) {
   int noKnown = 0;
   for (uint8_t i = 0; i < MAX_NUMBER_OF_REMOTES; i++) {
     for (uint8_t y = 0; y < 3; y++) {
@@ -142,7 +142,7 @@ int IthoRemote::remoteIndex(int* id) {
   return -1;
 }
 
-int * IthoRemote::getRemoteIDbyIndex(int index) {
+const int * IthoRemote::getRemoteIDbyIndex(const int index) {
   static int id[3];
   for (uint8_t i = 0; i < 3; i++) {
     id[i] = remotes[index].ID[i];
@@ -151,11 +151,11 @@ int * IthoRemote::getRemoteIDbyIndex(int index) {
 }
 
 
-char * IthoRemote::getRemoteNamebyIndex(int index) {
+const char * IthoRemote::getRemoteNamebyIndex(const int index) {
   return remotes[index].name;
 }
 
-bool IthoRemote::checkID(int* id)
+bool IthoRemote::checkID(const int* id)
 {
   int noKnown = 0;
   for (uint8_t i = 0; i < MAX_NUMBER_OF_REMOTES; i++) {

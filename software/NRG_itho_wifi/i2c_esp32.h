@@ -45,7 +45,7 @@ extern uint8_t i2cbuf[I2C_SLAVE_RX_BUF_LEN];
 
 void i2c_master_init();
 void i2c_master_deinit();
-esp_err_t i2c_master_send(char* buf, uint32_t len);
+esp_err_t i2c_master_send(const char* buf, uint32_t len);
 esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t* cmd, uint32_t len);
 esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size);
 bool i2c_sendBytes(const uint8_t* buf, size_t len);

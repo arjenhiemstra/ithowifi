@@ -146,7 +146,7 @@ const uint8_t itho_CVE1Bstatus22[] 		{ 0,1,2,3,4,5,6,14,7,17,8,9,11,12,22,23,24,
 const uint8_t itho_CVE1Bstatus24_27[] 	{ 0,1,2,3,4,5,6,14,7,17,33,34,255};
 
 
-struct ithoLabels ithoCVE1BStatusLabels[] =  {
+const struct ithoLabels ithoCVE1BStatusLabels[] =  {
 	{   "Ventilation setpoint (%)",  		  "ventilation-setpoint_perc" },
 	{   "Fan setpoint (rpm)",  				  "fan-setpoint_rpm" },
 	{   "Fan speed (rpm)",  				  "fan-speed_rpm" },
