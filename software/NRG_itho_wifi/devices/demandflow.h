@@ -267,7 +267,7 @@ const uint8_t itho_DemandFlowstatus14[] { 67,68,0,1,79,80,81,82,83,84,2,3,85,86,
 const uint8_t itho_DemandFlowstatus15_17[] { 67,68,0,1,79,80,81,82,83,84,2,3,85,86,87,88,4,89,5,6,7,8,9,10,11,12,13,14,15,16,17,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,18,61,62,63,64,65,66,69,70,71,72,73,74,75,76,77,78,255};
 const uint8_t itho_DemandFlowstatus18_21[] { 67,68,0,1,79,80,81,82,83,84,2,3,85,86,87,88,4,89,5,90,6,7,8,9,10,11,12,13,14,15,16,17,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,18,61,62,63,64,65,66,91,92,69,70,71,72,73,74,75,76,77,78,255};
 
-struct ithoLabels ithoDemandFlowStatusLabels[] {
+const struct ithoLabels ithoDemandFlowStatusLabels[] {
 	{   "Operating status", 						  "operating-status" },
 	{   "Setting", 									  "setting" },
 	{   "RH bathroom 1 (%)", 						  "rv-bathroom-1_perc" },

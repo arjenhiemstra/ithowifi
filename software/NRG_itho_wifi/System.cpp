@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "System.h"
 
-char* System::uptime()
+const char* System::uptime()
 {
   char buffer[65];
 

@@ -38,20 +38,20 @@ class IthoRemote {
     uint8_t getllModeTime() {
       return llModeTime;
     };
-    void setllModeTime(int timeVal) {
+    void setllModeTime(const int timeVal) {
       llModeTime = timeVal;
     };
-    int registerNewRemote(int* id);
-    int removeRemote(int* id);
-    int removeRemote(uint8_t index);
-    void addCapabilities(uint8_t remoteIndex, const char* name, int32_t value);
-    void updateRemoteName(uint8_t index, const char* remoteName);
-    int remoteIndex(int32_t id);
-    int remoteIndex(int* id);
-    int * getRemoteIDbyIndex(int index);
-    char * getRemoteNamebyIndex(int index);
-    char * lastRemoteName;
-    bool checkID(int* id);
+    int registerNewRemote(const int* id);
+    int removeRemote(const int* id);
+    int removeRemote(const uint8_t index);
+    void addCapabilities(const uint8_t remoteIndex, const char* name, int32_t value);
+    void updateRemoteName(const uint8_t index, const char* remoteName);
+    int remoteIndex(const int32_t id);
+    int remoteIndex(const int* id);
+    const int * getRemoteIDbyIndex(const int index);
+    const char * getRemoteNamebyIndex(const int index);
+    const char * lastRemoteName;
+    bool checkID(const int* id);
     bool configLoaded;
     char config_struct_version[4];
     bool set(JsonObjectConst);

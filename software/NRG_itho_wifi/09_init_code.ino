@@ -261,7 +261,7 @@ void handleFormat()
 }
 
 
-char* hostName() {
+const char* hostName() {
   static char hostName[32];
 
   if (strcmp(wifiConfig.hostname, "") == 0) {

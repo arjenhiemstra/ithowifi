@@ -20,7 +20,7 @@ volatile uint16_t ithoCurrentVal = 0;
 uint8_t id0 = 0;
 uint8_t id1 = 0;
 uint8_t id2 = 0;
-struct ihtoDeviceType* ithoDeviceptr = nullptr;
+const struct ihtoDeviceType* ithoDeviceptr = nullptr;
 int16_t ithoSettingsLength = 0;
 int16_t ithoStatusLabelLength = 0;
 std::vector<ithoDeviceStatus> ithoStatus;
@@ -71,11 +71,11 @@ struct ihtoDeviceType {
   const char **settingsDescriptions;
   const uint8_t **statusLabelMapping;
   uint8_t statusMapLen;
-  struct ithoLabels *settingsStatusLabels;
+  const struct ithoLabels *settingsStatusLabels;
 };
 
 
-struct ihtoDeviceType ithoDevices[] {
+const struct ihtoDeviceType ithoDevices[] {
   { 0x01, "Air curtain",        nullptr, 0, nullptr, nullptr, 0, nullptr },
   { 0x03, "HRU ECO-fan",        ithoHRUecoFanSettingsMap, sizeof(ithoHRUecoFanSettingsMap) / sizeof(ithoHRUecoFanSettingsMap[0]), ithoHRUecoSettingsLabels, ithoHRUecoFanStatusMap, sizeof(ithoHRUecoFanStatusMap) / sizeof(ithoHRUecoFanStatusMap[0]), ithoHRUecoStatusLabels },
   { 0x08, "LoadBoiler",         nullptr, 0, nullptr, nullptr, 0, nullptr },
@@ -100,11 +100,11 @@ struct ihtoDeviceType ithoDevices[] {
 
 
 
-char* getIthoType(const uint8_t deviceID) {
+const char* getIthoType(const uint8_t deviceID) {
   static char ithoDeviceType[32] = "Unkown device type";
 
-  struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
-  struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
+  const struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
+  const struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
   while ( ithoDevicesptr < ithoDevicesendPtr ) {
     if (ithoDevicesptr->ID == deviceID) {
       strcpy(ithoDeviceType, ithoDevicesptr->name);
@@ -116,8 +116,8 @@ char* getIthoType(const uint8_t deviceID) {
 
 int getSettingsLength(const uint8_t deviceID, const uint8_t version) {
 
-  struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
-  struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
+  const struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
+  const struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
   while ( ithoDevicesptr < ithoDevicesendPtr ) {
     if (ithoDevicesptr->ID == deviceID) {
       if (ithoDevicesptr->settingsMapping == nullptr) {
@@ -238,8 +238,8 @@ void getSetting(const uint8_t i, const bool updateState, const bool updateweb, c
 
 int getStatusLabelLength(const uint8_t deviceID, const uint8_t version) {
 
-  struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
-  struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
+  const struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
+  const struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
   while ( ithoDevicesptr < ithoDevicesendPtr ) {
     if (ithoDevicesptr->ID == deviceID) {
       if (ithoDevicesptr->statusLabelMapping == nullptr) {
@@ -317,10 +317,10 @@ void updateSetting(const uint8_t i, const int32_t value, bool webupdate) {
   }
 }
 
-struct ihtoDeviceType* getDevicePtr(uint8_t deviceID) {
+const struct ihtoDeviceType* getDevicePtr(const uint8_t deviceID) {
 
-  struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
-  struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
+  const struct ihtoDeviceType* ithoDevicesptr = ithoDevices;
+  const struct ihtoDeviceType* ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
   while ( ithoDevicesptr < ithoDevicesendPtr ) {
     if (ithoDevicesptr->ID == deviceID) {
       return ithoDevicesptr;
@@ -358,7 +358,7 @@ void sendI2CPWMinit() {
 
 uint8_t cmdCounter = 0;
 
-void sendButton(uint8_t number, bool & updateweb) {
+void sendButton(const uint8_t number, bool & updateweb) {
 
   uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x11, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x22, 0xF1, 0x03, 0x00, 0x01, 0x04, 0x00, 0x00, 0xFF };
 
@@ -384,7 +384,7 @@ void sendButton(uint8_t number, bool & updateweb) {
 
 }
 
-void sendTimer(uint8_t timer, bool & updateweb) {
+void sendTimer(const uint8_t timer, bool & updateweb) {
 
   uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x11, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x22, 0xF3, 0x03, 0x00, 0x00, 0xFF, 0x00, 0x00, 0xFF };
 

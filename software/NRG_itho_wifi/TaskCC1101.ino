@@ -193,7 +193,7 @@ void TaskCC1101( void * pvParameters ) {
     loadRemotesConfig();
     rf.setBindAllowed(true);
     for (int i = 0; i < remotes.getRemoteCount(); i++) {
-      int *id = remotes.getRemoteIDbyIndex(i);
+      const int *id = remotes.getRemoteIDbyIndex(i);
       rf.addRFDevice(*id, *(id + 1), *(id + 2));
     }
     rf.setBindAllowed(false);

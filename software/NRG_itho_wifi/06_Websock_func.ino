@@ -264,7 +264,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
           }
           if (parseOK) {
             remotes.removeRemote(number);
-            int* id = remotes.getRemoteIDbyIndex(number);
+            const int* id = remotes.getRemoteIDbyIndex(number);
             rf.setBindAllowed(true);
             rf.removeRFDevice(*id, *(id + 1), *(id + 2));
             rf.setBindAllowed(false);

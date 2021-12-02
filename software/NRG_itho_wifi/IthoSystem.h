@@ -14,7 +14,7 @@ extern uint8_t ithoDeviceID;
 extern uint8_t itho_fwversion;
 extern volatile uint16_t ithoCurrentVal;
 extern uint8_t id0, id1, id2;
-extern struct ihtoDeviceType* ithoDeviceptr;
+extern const struct ihtoDeviceType* ithoDeviceptr;
 extern int16_t ithoSettingsLength;
 
 extern bool sendI2CButton;
@@ -100,19 +100,19 @@ extern ithoSettings * ithoSettingsArray;
 
 
 
-char* getIthoType(const uint8_t deviceID);
+const char* getIthoType(const uint8_t deviceID);
 int getSettingsLength(const uint8_t deviceID, const uint8_t version);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop = false);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop, const struct ihtoDeviceType* settingsPtr, const uint8_t deviceID, const uint8_t version);
 int getStatusLabelLength(const uint8_t deviceID, const uint8_t version);
 const char* getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPtr, const uint8_t version) ;
 void updateSetting(const uint8_t i, const int32_t value, bool webupdate);
-struct ihtoDeviceType* getDevicePtr(uint8_t deviceID);
+const struct ihtoDeviceType* getDevicePtr(const uint8_t deviceID);
 
 uint8_t checksum(const uint8_t* buf, size_t buflen);
 void sendI2CPWMinit();
-void sendButton(uint8_t number, bool &updateweb);
-void sendTimer(uint8_t timer, bool &updateweb);
+void sendButton(const uint8_t number, bool &updateweb);
+void sendTimer(const uint8_t timer, bool &updateweb);
 void sendJoinI2C(bool &updateweb);
 void sendLeaveI2C(bool &updateweb);
 void sendQueryDevicetype(bool &updateweb);
