@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include <inttypes.h>
+#include <cinttypes>
 
 // Forward declaration
 class SHTSensorDriver;

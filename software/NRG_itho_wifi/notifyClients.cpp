@@ -1,43 +1,52 @@
+#include <Arduino.h>
 #include "notifyClients.h"
 
 #define LOG_BUF_SIZE 128
 
+struct mg_mgr mgr;
+const char *s_listen_on_ws = "ws://0.0.0.0:8000";
+
 SemaphoreHandle_t mutexJSONLog;
 SemaphoreHandle_t mutexWSsend;
 
-AsyncWebSocket ws("/ws");
+//AsyncWebSocket ws("/ws");
+
 unsigned long LastotaWsUpdate = 0;
 size_t content_len = 0;
 
-void notifyClients(AsyncWebSocketMessageBuffer* message) {
+void notifyClients(const char* message) {
   yield();
   if (xSemaphoreTake(mutexWSsend, (TickType_t) 100 / portTICK_PERIOD_MS) == pdTRUE) {
 
-    ws.textAll(message);
+    //ws.textAll(message);
+    wsSendAll(&mgr, message);
 
     xSemaphoreGive(mutexWSsend);
   }
 
 }
 
-void notifyClients(const char * message, size_t len) {
-//  char* buffer = new char[len + 1];
-  AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer((uint8_t *)message, len);
-  notifyClients(buffer);
-  //delete[] buffer;
-}
-
 void notifyClients(JsonObjectConst obj) {
   size_t len = measureJson(obj);
-//  char* buffer = new char[len + 1];  
-  AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
+  char* buffer = new char[len + 1];  
+  //AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
   if (buffer) {
-    serializeJson(obj, (char *)buffer->get(), len + 1);
+    serializeJson(obj, buffer, len + 1);
     notifyClients(buffer);
   }
-  //delete[] buffer;
+  delete[] buffer;
   
 }
+
+void wsSendAll(void *arg, const char* message) {
+  struct mg_mgr *mgr = (struct mg_mgr *) arg;
+  // Broadcast "hi" message to all connected websocket clients.
+  // Traverse over all connections
+  for (struct mg_connection *c = mgr->conns; c != NULL; c = c->next) {
+    mg_ws_send(c, message, strlen(message), WEBSOCKET_OP_TEXT);
+  }
+}
+
 
 void jsonSysmessage(const char * id, const char * message) {
   char logBuff[LOG_BUF_SIZE] = "";

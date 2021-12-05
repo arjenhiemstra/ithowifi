@@ -128,7 +128,7 @@ int getSettingsLength(const uint8_t deviceID, const uint8_t version) {
       }
 
       for (int i = 0; i < 999; i++) {
-        if ((int) * (*(ithoDevicesptr->settingsMapping + version) + i) == 999) {
+        if (static_cast<int>( * (*(ithoDevicesptr->settingsMapping + version) + i) == 999 )) {
           //end of array
           if (ithoSettingsArray == nullptr) ithoSettingsArray = new ithoSettings[i];
           return i;
@@ -156,7 +156,7 @@ void getSetting(const uint8_t i, const bool updateState, const bool updateweb, c
   JsonObject root = doc.to<JsonObject>();
 
   root["Index"] = i;
-  root["Description"] = settingsPtr->settingsDescriptions[(int) * (*(settingsPtr->settingsMapping + version) + i)];
+  root["Description"] = settingsPtr->settingsDescriptions[static_cast<int>( * (*(settingsPtr->settingsMapping + version) + i ))];
 
   if (!updateState && !updateweb) {
     root["update"] = false;
@@ -250,7 +250,7 @@ int getStatusLabelLength(const uint8_t deviceID, const uint8_t version) {
       }
 
       for (int i = 0; i < 255; i++) {
-        if ((int) * (*(ithoDevicesptr->statusLabelMapping + version) + i) == 255) {
+        if (static_cast<int>( * (*(ithoDevicesptr->statusLabelMapping + version) + i) == 255 )) {
           //end of array
           return i;
         }
@@ -297,10 +297,10 @@ const char* getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPt
   }
   else {
     if (systemConfig.api_normalize == 0) {
-      return (statusPtr->settingsStatusLabels[(int) * (*(statusPtr->statusLabelMapping + version) + i)].labelFull);
+      return (statusPtr->settingsStatusLabels[static_cast<int>( * (*(statusPtr->statusLabelMapping + version) + i) )].labelFull);
     }
     else {
-      return (statusPtr->settingsStatusLabels[(int) * (*(statusPtr->statusLabelMapping + version) + i)].labelNormalized);
+      return (statusPtr->settingsStatusLabels[static_cast<int>( * (*(statusPtr->statusLabelMapping + version) + i) )].labelNormalized);
     }
   }
 

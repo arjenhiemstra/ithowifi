@@ -1,14 +1,6 @@
-#include "i2c_esp32.h"
-#include "IthoSystem.h"
 #include <string>
+
 #include <Arduino.h>
-
-
-char toHex(uint8_t c) {
-  return c < 10 ? c + '0' : c + 'A' - 10;
-}
-
-
 #include <driver/i2c.h>
 #include <esp_log.h>
 #include <esp_system.h>
@@ -16,6 +8,13 @@ char toHex(uint8_t c) {
 #include <freertos/queue.h>
 #include <freertos/task.h>
 
+#include "i2c_esp32.h"
+#include "IthoSystem.h"
+
+
+char toHex(uint8_t c) {
+  return c < 10 ? c + '0' : c + 'A' - 10;
+}
 
 //static i2c_slave_callback_t i2c_callback;
 uint8_t i2cbuf[I2C_SLAVE_RX_BUF_LEN];

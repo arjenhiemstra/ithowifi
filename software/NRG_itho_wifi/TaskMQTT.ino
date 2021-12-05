@@ -227,7 +227,7 @@ void mqttCallback(const char* topic, const byte* payload, unsigned int length) {
   if (length > 1023) length = 1023;
 
   char s_payload[length];
-  memcpy(s_payload, payload, length);
+  std::memcpy(s_payload, payload, length);
   s_payload[length] = '\0';
 
   if (strcmp(topic, systemConfig.mqtt_cmd_topic) == 0) {

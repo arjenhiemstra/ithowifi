@@ -10,7 +10,7 @@ var sensor = -1;
 
 sessionStorage.setItem("statustimer", 0);
 
-var websocketServerLocation = 'ws://' + window.location.hostname + '/ws';
+var websocketServerLocation = 'ws://' + window.location.hostname + ':8000/ws';
 
 
 function startWebsock(websocketServerLocation){

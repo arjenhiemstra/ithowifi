@@ -3,11 +3,13 @@
 #define MAX_NUMBER_OF_REMOTES 10
 #define REMOTE_CONFIG_VERSION "002"
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <string>
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <Ticker.h>
+
 #include "IthoPacket.h"
 
 class IthoRemote {

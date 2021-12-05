@@ -174,6 +174,8 @@ void TaskCC1101( void * pvParameters ) {
     reboot.attach(2, []() {
       logInput("Setup: init of CC1101 RF module failed");
       saveSystemConfig();
+      delay(1000);
+      ACTIVE_FS.end();
       esp_task_wdt_init(1, true);
       esp_task_wdt_add(NULL);
       while (true);

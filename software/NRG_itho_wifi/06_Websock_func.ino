@@ -76,239 +76,222 @@ void jsonSystemstat() {
 
 }
 
+static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
+  if (ev == MG_EV_HTTP_MSG) {
+    struct mg_http_message *hm = (struct mg_http_message *) ev_data;
+    if (mg_http_match_uri(hm, "/ws")) {
+      // Upgrade to websocket. From now on, a connection is a full-duplex
+      // Websocket connection, which will receive MG_EV_WS_MSG events.
+      mg_ws_upgrade(c, hm, NULL);
+    }
+  }
+  else if (ev == MG_EV_WS_MSG) {
+    // Got websocket frame. Received data is wm->data.
+    struct mg_ws_message *wm = (struct mg_ws_message *) ev_data;
+    std::string msg = wm->data.ptr;
 
-void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) {
-  if (type == WS_EVT_CONNECT) {
-    D_LOG("ws[%s][%u] connect\n", server->url(), client->id());
-    client->ping();
-  } else if (type == WS_EVT_DISCONNECT) {
-    D_LOG("ws[%s][%u] disconnect: %u\n", server->url(), client->id(), client->id());
-  } else if (type == WS_EVT_ERROR) {
-    D_LOG("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t*)arg), (char*)data);
-  } else if (type == WS_EVT_PONG) {
-    D_LOG("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len) ? (char*)data : "");
-  } else if (type == WS_EVT_DATA) {
-    AwsFrameInfo * info = (AwsFrameInfo*)arg;
-    std::string msg;
-    if (info->final && info->index == 0 && info->len == len) {
-      //the whole message is in a single frame and we got all of it's data
-      D_LOG("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT) ? "text" : "binary", info->len);
+    D_LOG("%s\n", msg.c_str());
 
-      if (info->opcode == WS_TEXT) {
-        msg.reserve(len + 2);
-        for (size_t i = 0; i < info->len; i++) {
-          msg += (char) data[i];
-        }
-      } else {
-        msg.reserve(len * 3 + 2);
-        char buff[3];
-        for (size_t i = 0; i < info->len; i++) {
-          sprintf(buff, "%02x ", (uint8_t) data[i]);
-          msg += buff ;
-        }
-      }
-      D_LOG("%s\n", msg.c_str());
+    if (msg.find("{\"wifiscan\"") != std::string::npos) {
+      D_LOG("Start wifi scan\n");
+      runscan = true;
+    }
+    if (msg.find("{\"sysstat\"") != std::string::npos) {
+      sysStatReq = true;
+    }
+    else if (msg.find("{\"wifisettings\"") != std::string::npos || msg.find("{\"systemsettings\"") != std::string::npos) {
+      DynamicJsonDocument root(2048);
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        JsonObject obj = root.as<JsonObject>();
+        for (JsonPair p : obj) {
+          if (strcmp(p.key().c_str(), "systemsettings") == 0) {
+            if (p.value().is<JsonObject>()) {
 
-      if (msg.find("{\"wifiscan\"") != std::string::npos) {
-        D_LOG("Start wifi scan\n");
-        runscan = true;
-      }
-      if (msg.find("{\"sysstat\"") != std::string::npos) {
-        sysStatReq = true;
-      }
-      else if (msg.find("{\"wifisettings\"") != std::string::npos || msg.find("{\"systemsettings\"") != std::string::npos) {
-        DynamicJsonDocument root(2048);
-        DeserializationError error = deserializeJson(root, msg.c_str());
-        if (!error) {
-          JsonObject obj = root.as<JsonObject>();
-          for (JsonPair p : obj) {
-            if (strcmp(p.key().c_str(), "systemsettings") == 0) {
-              if (p.value().is<JsonObject>()) {
-
-                JsonObject obj = p.value();
-                if (systemConfig.set(obj)) {
-                  saveSystemConfigflag = true;
-                }
-              }
-            }
-            if (strcmp(p.key().c_str(), "wifisettings") == 0) {
-              if (p.value().is<JsonObject>()) {
-
-                JsonObject obj = p.value();
-                if (wifiConfig.set(obj)) {
-                  saveWifiConfigflag = true;
-                }
+              JsonObject obj = p.value();
+              if (systemConfig.set(obj)) {
+                saveSystemConfigflag = true;
               }
             }
           }
-        }
-      }
-      else if (msg.find("{\"ithobutton\"") != std::string::npos) {
-        StaticJsonDocument<128> root;
-        DeserializationError error = deserializeJson(root, msg);
-        if (!error) {
-          if (root["ithobutton"].as<const char*>() == nullptr) {
-            uint16_t val  = root["ithobutton"].as<uint16_t>();
-            if (val == 2410) {
-              getSetting(root["index"].as<int8_t>(), false, true, false);
-            }
-            else if (val == 24109) {
-              uint8_t index = root["ithosetupdate"].as<uint8_t>();
-              if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 2), false);
-              }
-              else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 10), false);
-              }
-              else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 100), false);
-              }
-              else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 1000), false);
-              }
-              else {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);
+          if (strcmp(p.key().c_str(), "wifisettings") == 0) {
+            if (p.value().is<JsonObject>()) {
+
+              JsonObject obj = p.value();
+              if (wifiConfig.set(obj)) {
+                saveWifiConfigflag = true;
               }
             }
           }
-          else {
-            i2c_result_updateweb = true;
-            ithoI2CCommand(root["ithobutton"], WEB);
-          }
-        }
-      }
-      else if (msg.find("{\"wifisetup\"") != std::string::npos) {
-        jsonWsSend("wifisettings");
-      }
-      else if (msg.find("{\"syssetup\"") != std::string::npos) {
-        systemConfig.get_sys_settings = true;
-        jsonWsSend("systemsettings");
-      }
-      else if (msg.find("{\"mqttsetup\"") != std::string::npos) {
-        systemConfig.get_mqtt_settings = true;
-        jsonWsSend("systemsettings");
-        sysStatReq = true;
-      }
-      else if (msg.find("{\"ithosetup\"") != std::string::npos) {
-        jsonWsSend("ithodevinfo");
-        sysStatReq = true;
-      }
-      else if (msg.find("{\"ithostatus\"") != std::string::npos) {
-        jsonWsSend("ithosatusinfo");
-        sysStatReq = true;
-      }
-      else if (msg.find("{\"ithogetsetting\"") != std::string::npos) {
-        StaticJsonDocument<128> root;
-        DeserializationError error = deserializeJson(root, msg.c_str());
-        if (!error) {
-          getSetting(root["index"].as<uint8_t>(), root["update"].as<bool>(), false, true);
-        }
-      }
-      else if (msg.find("{\"ithosetrefresh\"") != std::string::npos) {
-        StaticJsonDocument<128> root;
-        DeserializationError error = deserializeJson(root, msg.c_str());
-        if (!error) {
-          getSetting(root["ithosetrefresh"].as<uint8_t>(), true, false, false);
-        }
-      }
-      else if (msg.find("{\"ithosetupdate\"") != std::string::npos) {
-        StaticJsonDocument<128> root;
-        DeserializationError error = deserializeJson(root, msg.c_str());
-        if (!error) {
-          uint8_t index = root["ithosetupdate"].as<uint8_t>();
-          if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 2), false);
-          }
-          else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 10), false);
-          }
-          else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 100), false);
-          }
-          else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 1000), false);
-          }
-          else {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);
-          }
-
-
-        }
-      }
-      else if (msg.find("{\"ithoremotes\"") != std::string::npos) {
-        jsonWsSend("ithoremotes");
-        sysStatReq = true;
-      }
-      else if (msg.find("{\"itho_llm\"") != std::string::npos) {
-        toggleRemoteLLmode();
-      }
-      else if (msg.find("{\"itho_ccc_toggle\"") != std::string::npos) {
-        toggleCCcal();
-      }
-      if (msg.find("{\"itho_ccc_reset\"") != std::string::npos) {
-        resetCCcal();
-        ithoCCstatReq = true;
-      }
-      if (msg.find("{\"ithoccc\"") != std::string::npos) {
-        ithoCCstatReq = true;
-      }
-      else if (msg.find("{\"itho_remove_remote\"") != std::string::npos) {
-        bool parseOK = false;
-        StaticJsonDocument<128> root;
-        DeserializationError error = deserializeJson(root, msg.c_str());
-        if (!error) {
-          int number = root["itho_remove_remote"];
-          if (number > 0 && number < MAX_NUMBER_OF_REMOTES + 1) {
-            parseOK = true;
-            number--; //+1 was added earlier to offset index from 0
-          }
-          if (parseOK) {
-            remotes.removeRemote(number);
-            const int* id = remotes.getRemoteIDbyIndex(number);
-            rf.setBindAllowed(true);
-            rf.removeRFDevice(*id, *(id + 1), *(id + 2));
-            rf.setBindAllowed(false);
-            saveRemotesflag = true;
-          }
-        }
-      }
-      else if (msg.find("{\"itho_update_remote\"") != std::string::npos) {
-        StaticJsonDocument<512> root;
-        DeserializationError error = deserializeJson(root, msg.c_str());
-        if (!error) {
-          uint8_t index = root["itho_update_remote"].as<unsigned int>();
-          remotes.updateRemoteName(index, root["value"] | "");
-          saveRemotesflag = true;
-        }
-      }
-      else if (msg.find("{\"reboot\"") != std::string::npos) {
-        StaticJsonDocument<128> root;
-        DeserializationError error = deserializeJson(root, msg.c_str());
-        if (!error) {
-          shouldReboot = root["reboot"];
-          dontSaveConfig = root["dontsaveconf"];
-        }
-      }
-      else if (msg.find("{\"resetwificonf\"") != std::string::npos) {
-        resetWifiConfigflag = true;
-      }
-      else if (msg.find("{\"resetsysconf\"") != std::string::npos) {
-        resetSystemConfigflag = true;
-      }
-      else if (msg.find("{\"format\"") != std::string::npos) {
-        formatFileSystem = true;
-      }
-      else if (msg.find("{\"itho\"") != std::string::npos) {
-        StaticJsonDocument<128> root;
-        DeserializationError error = deserializeJson(root, msg);
-        if (!error) {
-          ithoSetSpeed(root["itho"].as<uint16_t>(), WEB);
         }
       }
     }
-  }
-}
+    else if (msg.find("{\"ithobutton\"") != std::string::npos) {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg);
+      if (!error) {
+        if (root["ithobutton"].as<const char*>() == nullptr) {
+          uint16_t val  = root["ithobutton"].as<uint16_t>();
+          if (val == 2410) {
+            getSetting(root["index"].as<int8_t>(), false, true, false);
+          }
+          else if (val == 24109) {
+            uint8_t index = root["ithosetupdate"].as<uint8_t>();
+            if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
+              updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 2), false);
+            }
+            else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
+              updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 10), false);
+            }
+            else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
+              updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 100), false);
+            }
+            else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
+              updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 1000), false);
+            }
+            else {
+              updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);
+            }
+          }
+        }
+        else {
+          i2c_result_updateweb = true;
+          ithoI2CCommand(root["ithobutton"], WEB);
+        }
+      }
+    }
+    else if (msg.find("{\"wifisetup\"") != std::string::npos) {
+      jsonWsSend("wifisettings");
+    }
+    else if (msg.find("{\"syssetup\"") != std::string::npos) {
+      systemConfig.get_sys_settings = true;
+      jsonWsSend("systemsettings");
+    }
+    else if (msg.find("{\"mqttsetup\"") != std::string::npos) {
+      systemConfig.get_mqtt_settings = true;
+      jsonWsSend("systemsettings");
+      sysStatReq = true;
+    }
+    else if (msg.find("{\"ithosetup\"") != std::string::npos) {
+      jsonWsSend("ithodevinfo");
+      sysStatReq = true;
+    }
+    else if (msg.find("{\"ithostatus\"") != std::string::npos) {
+      jsonWsSend("ithosatusinfo");
+      sysStatReq = true;
+    }
+    else if (msg.find("{\"ithogetsetting\"") != std::string::npos) {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        getSetting(root["index"].as<uint8_t>(), root["update"].as<bool>(), false, true);
+      }
+    }
+    else if (msg.find("{\"ithosetrefresh\"") != std::string::npos) {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        getSetting(root["ithosetrefresh"].as<uint8_t>(), true, false, false);
+      }
+    }
+    else if (msg.find("{\"ithosetupdate\"") != std::string::npos) {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        uint8_t index = root["ithosetupdate"].as<uint8_t>();
+        if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
+          updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 2), false);
+        }
+        else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
+          updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 10), false);
+        }
+        else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
+          updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 100), false);
+        }
+        else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
+          updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 1000), false);
+        }
+        else {
+          updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);
+        }
 
+
+      }
+    }
+    else if (msg.find("{\"ithoremotes\"") != std::string::npos) {
+      jsonWsSend("ithoremotes");
+      sysStatReq = true;
+    }
+    else if (msg.find("{\"itho_llm\"") != std::string::npos) {
+      toggleRemoteLLmode();
+    }
+    else if (msg.find("{\"itho_ccc_toggle\"") != std::string::npos) {
+      toggleCCcal();
+    }
+    if (msg.find("{\"itho_ccc_reset\"") != std::string::npos) {
+      resetCCcal();
+      ithoCCstatReq = true;
+    }
+    if (msg.find("{\"ithoccc\"") != std::string::npos) {
+      ithoCCstatReq = true;
+    }
+    else if (msg.find("{\"itho_remove_remote\"") != std::string::npos) {
+      bool parseOK = false;
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        int number = root["itho_remove_remote"];
+        if (number > 0 && number < MAX_NUMBER_OF_REMOTES + 1) {
+          parseOK = true;
+          number--; //+1 was added earlier to offset index from 0
+        }
+        if (parseOK) {
+          remotes.removeRemote(number);
+          const int* id = remotes.getRemoteIDbyIndex(number);
+          rf.setBindAllowed(true);
+          rf.removeRFDevice(*id, *(id + 1), *(id + 2));
+          rf.setBindAllowed(false);
+          saveRemotesflag = true;
+        }
+      }
+    }
+    else if (msg.find("{\"itho_update_remote\"") != std::string::npos) {
+      StaticJsonDocument<512> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        uint8_t index = root["itho_update_remote"].as<unsigned int>();
+        remotes.updateRemoteName(index, root["value"] | "");
+        saveRemotesflag = true;
+      }
+    }
+    else if (msg.find("{\"reboot\"") != std::string::npos) {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        shouldReboot = root["reboot"];
+        dontSaveConfig = root["dontsaveconf"];
+      }
+    }
+    else if (msg.find("{\"resetwificonf\"") != std::string::npos) {
+      resetWifiConfigflag = true;
+    }
+    else if (msg.find("{\"resetsysconf\"") != std::string::npos) {
+      resetSystemConfigflag = true;
+    }
+    else if (msg.find("{\"format\"") != std::string::npos) {
+      formatFileSystem = true;
+    }
+    else if (msg.find("{\"itho\"") != std::string::npos) {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg);
+      if (!error) {
+        ithoSetSpeed(root["itho"].as<uint16_t>(), WEB);
+      }
+    }
+
+  }
+  (void) fn_data;
+}
 
 
 void wifiScan() {

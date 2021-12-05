@@ -22,3 +22,6 @@ url=https://github.com/arjenhiemstra/FS_FilePrint
 [submodule "software/lib/ESPAsyncTCP"]
 	path = software/lib/ESPAsyncTCP
 	url = https://github.com/me-no-dev/ESPAsyncTCP
+[submodule "software/lib/Mongoose"]
+	path = software/lib/Mongoose
+	url = https://github.com/cesanta/mongoose.git

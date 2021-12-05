@@ -1,24 +1,29 @@
 #pragma once
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <string>
+
+#include "mongoose.h"
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
-extern AsyncWebSocket ws;
+extern struct mg_mgr mgr;
+extern const char *s_listen_on_ws;
+
+
+//extern AsyncWebSocket ws;
 extern SemaphoreHandle_t mutexJSONLog;
 extern SemaphoreHandle_t mutexWSsend;
 
 typedef enum { WEBINTERFACE, RFLOG, ITHOSETTINGS } logtype;
 extern size_t content_len;
 
-void notifyClients(AsyncWebSocketMessageBuffer* message);
-
-void notifyClients(const char * message, size_t len);
+void notifyClients(const char* message);
 void notifyClients(JsonObjectConst obj);
+void wsSendAll(void *arg, const char* message);
 
 void jsonSysmessage(const char * id, const char * message);
 void logMessagejson(const char* message, logtype type);

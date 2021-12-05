@@ -1,4 +1,4 @@
-#define FWVERSION "2.3.2"
+#define FWVERSION "2.3.3"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -50,6 +50,7 @@
 #include <time.h>
 #include <Ticker.h>
 #include <string>
+#include <cstring>
 
 #include "IthoQueue.h"
 #include "System.h"
@@ -68,8 +69,8 @@
 #include "esp_wifi.h"
 #include <ESPmDNS.h>
 #include <AsyncTCP.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include "esp_task_wdt.h"
 #include "IthoCC1101.h"   // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "IthoPacket.h"   // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
@@ -169,6 +170,7 @@ unsigned long wifiLedUpdate = 0;
 unsigned long SHT3x_readout = 0;
 unsigned long query2401tim = 0;
 unsigned long lastLog = 0;
+unsigned long lastVersionCheck;
 
 //flags used
 bool joinSend = false;

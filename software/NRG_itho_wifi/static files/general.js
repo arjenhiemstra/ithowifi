@@ -1,0 +1,1 @@
+var on_ap = false; var hostname = 'nrg-itho-zolder'; var fw_version = '2.3.2'; var hw_revision = '2'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });

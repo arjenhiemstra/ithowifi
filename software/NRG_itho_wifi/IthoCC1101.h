@@ -4,11 +4,15 @@
 
 #pragma once
 
-#include <stdio.h>
+#include <cstdio>
+#include <string>
+
+#include <Ticker.h>
+
 #include "CC1101.h"
 #include "IthoPacket.h"
-#include <Ticker.h>
-#include <string>
+
+
 
 #define MAX_NUMBER_OF_REMOTES 10
 

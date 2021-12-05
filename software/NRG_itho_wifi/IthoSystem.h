@@ -1,14 +1,15 @@
 #pragma once
 
-#include <stdio.h>
+#include <cstdio>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <map>
-#include <cstring>
+
 #include <Arduino.h>
 #include <Ticker.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 extern uint8_t ithoDeviceID;
 extern uint8_t itho_fwversion;

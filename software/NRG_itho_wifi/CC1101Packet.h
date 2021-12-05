@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <stdio.h>
+#include <cstdio>
 #include <Arduino.h>
 
 #define CC1101_BUFFER_LEN        64

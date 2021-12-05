@@ -2,11 +2,13 @@
 
 #define WIFI_CONFIG_VERSION "001"
 
-#include "hardware.h"
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <string>
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
+
+#include "hardware.h"
 
 class WifiConfig {
   private:
