@@ -2,8 +2,9 @@
 
 #define CONFIG_VERSION "005" //Change when SystemConfig struc changes
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <string>
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 

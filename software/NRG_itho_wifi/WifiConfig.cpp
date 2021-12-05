@@ -1,6 +1,8 @@
-#include "WifiConfig.h"
-#include <string.h>
+#include <string>
+
 #include <Arduino.h>
+
+#include "WifiConfig.h"
 
 
 // default constructor

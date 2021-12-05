@@ -17,7 +17,7 @@
 
 #include "IthoCC1101.h"
 #include "IthoPacket.h"
-#include <string.h>
+#include <string>
 #include <Arduino.h>
 #include <SPI.h>
 

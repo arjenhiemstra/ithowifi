@@ -4,7 +4,7 @@
  
 #pragma once
 
-#include <stdio.h>
+#include <cstdio>
 #include "CC1101Packet.h"
 #include <SPI.h>
 // On Arduino, SPI pins are predefined

@@ -40,14 +40,15 @@ void TaskWeb( void * pvParameters ) {
     TaskWebHWmark = uxTaskGetStackHighWaterMark( NULL );
     vTaskDelay(25 / portTICK_PERIOD_MS);
   }
-
+  mg_mgr_free(&mgr);
   //else delete task
   vTaskDelete( NULL );
 }
 
 void execWebTasks() {
   ArduinoOTA.handle();
-  ws.cleanupClients();
+  //ws.cleanupClients();
+  mg_mgr_poll(&mgr, 1000);
   if (millis() - previousUpdate >= 5000 || sysStatReq) {
     if (millis() - lastSysMessage >= 1000 && !onOTA) { //rate limit messages to once a second
       sysStatReq = false;

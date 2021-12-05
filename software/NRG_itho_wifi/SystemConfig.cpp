@@ -1,6 +1,8 @@
-#include "SystemConfig.h"
-#include <string.h>
+#include <string>
+
 #include <Arduino.h>
+
+#include "SystemConfig.h"
 
 SystemConfig systemConfig;
 

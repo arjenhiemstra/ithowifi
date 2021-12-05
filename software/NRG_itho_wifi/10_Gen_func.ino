@@ -1,11 +1,11 @@
 void getIthoStatusJSON(JsonObject root) {
   if (SHT3x_original || SHT3x_alternative || itho_internal_hum_temp) {
-    root["temp"] = ithoTemp;
-    root["hum"] = ithoHum;
+    root["temp"] = static_cast<int>(ithoTemp * 10 + 0.5) / 10.0;
+    root["hum"] = static_cast<int>(ithoHum * 10 + 0.5) / 10.0;
 
     auto b = 611.21 * pow(2.7183, ((18.678 - ithoTemp / 234.5) * ithoTemp) / (257.14 + ithoTemp));
     auto ppmw = b / (101325 - b) * ithoHum / 100 * 0.62145 * 1000000;
-    root["ppmw"] = (int)(ppmw+0.5);
+    root["ppmw"] = static_cast<int>(ppmw+0.5);
   }
 
   if (!ithoInternalMeasurements.empty()) {

@@ -43,6 +43,8 @@ void TaskSysControl( void * pvParameters ) {
       if (!dontSaveConfig) {
         saveSystemConfig();
       }
+      delay(1000);
+      ACTIVE_FS.end();
       esp_task_wdt_init(1, true);
       esp_task_wdt_add(NULL);
       while (true);
@@ -159,6 +161,13 @@ void execSystemControlTasks() {
       }
     }
 
+  }
+  if (!(itho_fwversion > 0) && millis() - lastVersionCheck > 60000) {
+    lastVersionCheck = millis();
+    if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 1000 / portTICK_PERIOD_MS) == pdTRUE) {
+      sendQueryDevicetype(i2c_result_updateweb);
+      xSemaphoreGive(mutexI2Ctask);
+    }
   }
   //request itho status every 5 sec.
   if (millis() - query2401tim >= systemConfig.itho_updatefreq * 1000UL && i2cStartCommands) {

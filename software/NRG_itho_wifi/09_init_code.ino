@@ -10,7 +10,7 @@ void failSafeBoot() {
     yield();
 
     if (digitalRead(FAILSAVE_PIN) == HIGH) {
-
+      
       ACTIVE_FS.begin(true);
       ACTIVE_FS.format();
 
@@ -71,6 +71,7 @@ void failSafeBoot() {
       for (;;) {
         yield();
         if (shouldReboot) {
+          ACTIVE_FS.end();
           delay(1000);
           esp_task_wdt_init(1, true);
           esp_task_wdt_add(NULL);
@@ -487,8 +488,9 @@ void ArduinoOTAinit() {
 }
 
 void websocketInit() {
-  ws.onEvent(onWsEvent);
-  server.addHandler(&ws);
+  mg_log_set("0");
+  mg_mgr_init(&mgr);  // Initialise event manager
+  mg_http_listen(&mgr, s_listen_on_ws, wsEvent, NULL);  // Create WS listener
 }
 
 void webServerInit() {

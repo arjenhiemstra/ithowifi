@@ -1,6 +1,6 @@
 #include "IthoRemote.h"
 
-#include <string.h>
+#include <string>
 #include <Arduino.h>
 
 

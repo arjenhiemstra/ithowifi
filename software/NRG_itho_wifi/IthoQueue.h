@@ -3,10 +3,10 @@
 #define MAX_QUEUE 10
 #define QUEUE_UPDATE_MS 100
 
-
 #include <algorithm>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <string>
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <Ticker.h>

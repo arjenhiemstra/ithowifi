@@ -26,7 +26,8 @@
  *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <inttypes.h>
+#include <cinttypes>
+
 #include <Wire.h>
 #include <Arduino.h>
 

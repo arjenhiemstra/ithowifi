@@ -1,5 +1,7 @@
-#include "IthoQueue.h"
 #include <algorithm>
+
+#include "IthoQueue.h"
+
 
 
 // default constructor
