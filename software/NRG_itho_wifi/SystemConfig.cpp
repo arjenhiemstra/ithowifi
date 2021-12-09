@@ -98,7 +98,9 @@ bool SystemConfig::set(JsonObjectConst obj) {
   }
   if (!(const char*)obj["syssht30"].isNull()) {
     updated = true;
-    syssht30 = obj["syssht30"];
+    unsigned char value = obj["syssht30"];
+    if(value == 0 && syssht30 == 1) value = 2; //reset itho setting if applicable
+    syssht30 = value;
   }
   //MQTT Settings parse
   if (!(const char*)obj["mqtt_active"].isNull()) {

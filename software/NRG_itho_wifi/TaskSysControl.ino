@@ -69,6 +69,9 @@ void execSystemControlTasks() {
     lastI2CinitRequest = millis();
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 1000 / portTICK_PERIOD_MS) == pdTRUE) {
       sendQueryDevicetype(i2c_result_updateweb);
+      char logBuff[LOG_BUF_SIZE] = "";
+      sprintf(logBuff, "I2C init: QueryDevicetype - fw:%d hw:%d", itho_fwversion, ithoDeviceID);
+      logInput(logBuff);
       xSemaphoreGive(mutexI2Ctask);
     }
     if (itho_fwversion > 0) {
@@ -76,24 +79,67 @@ void execSystemControlTasks() {
       i2cStartCommands = true;
 #if defined (CVE)
       digitalWrite(ITHOSTATUS, HIGH);
+#elif defined (NON_CVE)
+      digitalWrite(STATUSPIN, HIGH);
 #endif
-      if (systemConfig.syssht30 == 1 && ithoDeviceID == 0x1B) {
-        if (itho_fwversion == 25) {
-          updateSetting(63, 0, false);
+
+      if (systemConfig.syssht30 > 0) {
+        if (ithoDeviceID == 0x1B) {
+
+          if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 1000 / portTICK_PERIOD_MS) == pdTRUE) {
+            i2c_result_updateweb = false;
+
+            index2410 = 0;
+
+            if (systemConfig.syssht30 == 1) {
+              /*
+                 switch itho hum setting off on every boot because
+                 hum sensor setting gets restored in itho firmware after power cycle
+              */
+              value2410 = 0;
+            }
+
+            else if (systemConfig.syssht30 == 2) {
+              /*
+                 if value == 2 setting changed from 1 -> 0
+                 then restore itho hum setting back to "on"
+              */
+              value2410 = 1;
+            }
+            if (itho_fwversion == 25) {
+              index2410 = 63;
+            }
+            else if (itho_fwversion == 26 || itho_fwversion == 27) {
+              index2410 = 71;
+            }
+            if (index2410 > 0) {
+              sendQuery2410(i2c_result_updateweb);
+              setSetting2410(i2c_result_updateweb);
+              char logBuff[LOG_BUF_SIZE] = "";
+              sprintf(logBuff, "I2C init: set hum sensor in itho firmware to: %s", value2410 ? "on" : "off" );
+              logInput(logBuff);
+            }
+            xSemaphoreGive(mutexI2Ctask);
+          }
         }
-        else if (itho_fwversion == 26 || itho_fwversion == 27) {
-          updateSetting(71, 0, false);
+        if (systemConfig.syssht30 == 2) {
+          systemConfig.syssht30 = 0;
+          saveSystemConfig();
         }
       }
-
       if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 1000 / portTICK_PERIOD_MS) == pdTRUE) {
         sendQueryStatusFormat(i2c_result_updateweb);
+        char logBuff[LOG_BUF_SIZE] = "";
+        sprintf(logBuff, "I2C init: QueryStatusFormat - items:%d", ithoStatus.size() );
+        logInput(logBuff);
         xSemaphoreGive(mutexI2Ctask);
       }
       if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 1000 / portTICK_PERIOD_MS) == pdTRUE) {
         sendQueryStatus(i2c_result_updateweb);
+        logInput("I2C init: QueryStatus");
         xSemaphoreGive(mutexI2Ctask);
       }
+
       sendHomeAssistantDiscovery = true;
     }
     else {
@@ -107,7 +153,7 @@ void execSystemControlTasks() {
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
       sendJoinI2C(i2c_result_updateweb);
       xSemaphoreGive(mutexI2Ctask);
-      logInput("Virtual remote join command send");
+      logInput("I2C init: Virtual remote join command send");
     }
     if (systemConfig.itho_sendjoin == 1) {
       systemConfig.itho_sendjoin = 0;
@@ -260,7 +306,7 @@ void execSystemControlTasks() {
     });
   }
 
-  if (systemConfig.syssht30) {
+  if (systemConfig.syssht30 == 1) {
     if (millis() - SHT3x_readout >= systemConfig.itho_updatefreq * 1000UL && (SHT3x_original || SHT3x_alternative)) {
       SHT3x_readout = millis();
 

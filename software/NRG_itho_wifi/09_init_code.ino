@@ -108,14 +108,16 @@ void failSafeBoot() {
 
 void hardwareInit() {
 
-  pinMode(STATUSPIN, INPUT_PULLUP);
   pinMode(WIFILED, OUTPUT);
   digitalWrite(WIFILED, HIGH);
 #if defined (CVE)
+  pinMode(STATUSPIN, INPUT_PULLUP);
   pinMode(ITHOSTATUS, OUTPUT);
   digitalWrite(ITHOSTATUS, LOW);
+#elif defined (NON_CVE)
+  pinMode(STATUSPIN, OUTPUT);
+  digitalWrite(STATUSPIN, LOW);
 #endif
-
 #if defined (ENABLE_FAILSAVE_BOOT)
   pinMode(FAILSAVE_PIN, INPUT);
   failSafeBoot();
@@ -186,7 +188,7 @@ void logInit() {
 
 void initSensor() {
 
-  if (systemConfig.syssht30) {
+  if (systemConfig.syssht30 == 1) {
     if (sht_org.init() && sht_org.readSample()) {
       Wire.endTransmission(true);
       SHT3x_original = true;

@@ -1027,7 +1027,7 @@ var html_index = `
 $(document).ready(function() {
   var slide = document.getElementById("ithoslider");
   if(!!slide) {
-    slide.addEventListener("click", function() {
+    slide.addEventListener("change", function() {
       updateSlider(this.value);
     });
   }
