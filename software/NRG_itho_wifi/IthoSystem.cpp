@@ -653,7 +653,7 @@ void sendQueryStatus(bool & updateweb) {
         }
         if (strcmp("RelativeHumidity", ithoStat.name) == 0 || strcmp("relativehumidity", ithoStat.name) == 0) {
           if (ithoStat.value.floatval > 1.0 && ithoStat.value.floatval < 100.0) {
-            if (!systemConfig.syssht30) {
+            if (systemConfig.syssht30 == 0) {
               ithoHum = ithoStat.value.floatval;
               itho_internal_hum_temp = true;
             }
@@ -665,7 +665,7 @@ void sendQueryStatus(bool & updateweb) {
         }
         if (strcmp("Temperature", ithoStat.name) == 0 || strcmp("temperature", ithoStat.name) == 0) {
           if (ithoStat.value.floatval > 1.0 && ithoStat.value.floatval < 100.0) {
-            if (!systemConfig.syssht30) {
+            if (systemConfig.syssht30 == 0) {
               ithoTemp = ithoStat.value.floatval;
               itho_internal_hum_temp = true;
             }

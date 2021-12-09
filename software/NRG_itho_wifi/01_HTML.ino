@@ -82,6 +82,10 @@ void handleAPI(AsyncWebServerRequest *request) {
       return;
     }  
   }
+
+
+  const char * speed = nullptr;
+  const char * timer = nullptr;
   
   for(int i=0;i<params;i++){
     char logBuff[LOG_BUF_SIZE] = "";
@@ -97,7 +101,7 @@ void handleAPI(AsyncWebServerRequest *request) {
       }
       else if (strcmp(p->value().c_str(), "queue") == 0 ) {
         AsyncResponseStream *response = request->beginResponseStream("text/html");        
-        StaticJsonDocument<500> root;
+        StaticJsonDocument<1000> root;
         JsonObject obj = root.to<JsonObject>(); // Fill the object
         ithoQueue.get(obj);
         obj["ithoSpeed"] = ithoQueue.ithoSpeed;
@@ -158,23 +162,11 @@ void handleAPI(AsyncWebServerRequest *request) {
       parseOK = ithoI2CCommand(p->value().c_str(), HTMLAPI);
     }
     else if(strcmp(p->name().c_str(), "speed") == 0) {
-      const char * speed = p->value().c_str();
-      for(int i=0;i<params;i++){
-        if(strcmp(p->name().c_str(), "timer") == 0) {
-          parseOK = ithoSetSpeedTimer(speed, p->value().c_str(), HTMLAPI);
-        }
-      }
-      if(!parseOK) parseOK = ithoSetSpeed(speed, HTMLAPI);
+      speed = p->value().c_str();
     }
     else if(strcmp(p->name().c_str(), "timer") == 0) {
-      const char * timer = p->value().c_str();
-      for(int i=0;i<params;i++){
-        if(strcmp(p->name().c_str(), "speed") == 0) {
-          parseOK = ithoSetSpeedTimer(p->value().c_str(), timer, HTMLAPI);
-        }
-      }
-      if(!parseOK) parseOK = ithoSetTimer(timer, HTMLAPI);
-    }    
+      timer = p->value().c_str();
+    }
     else if(strcmp(p->name().c_str(), "debug") == 0) {
       if (strcmp(p->value().c_str(), "level0") == 0 ) {
         
@@ -222,9 +214,17 @@ void handleAPI(AsyncWebServerRequest *request) {
         parseOK = true;
       }
     }
-
   }
-
+  //check speed & timer
+  if(speed != nullptr && speed != nullptr) {
+    parseOK = ithoSetSpeedTimer(speed, timer, HTMLAPI);
+  }
+  else if(speed != nullptr && timer == nullptr) {
+    parseOK = ithoSetSpeed(speed, HTMLAPI);
+  }
+  else if(timer != nullptr && speed == nullptr) {
+    parseOK = ithoSetTimer(timer, HTMLAPI);
+  }
   if(parseOK) {
     request->send(200, "text/html", "OK");
   }
