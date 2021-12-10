@@ -32,6 +32,7 @@ Two versions of the firmware are available:
 -   CVE-S eco fan RFT
 -   CVE-S S CO2 (CO2 sensor not usable with this add-on)
 -   HRU 200 ECO (also sold as 'Elektrodesign EHR 140 Akor BP' and 'Heatrae Sadia Advance Plus')
+-   CVE-S Optima
 
 ###  NON-CVE Models confirmed to work:
 -   HRU eco fan
