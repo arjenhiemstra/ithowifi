@@ -216,13 +216,13 @@ void handleAPI(AsyncWebServerRequest *request) {
     }
   }
   //check speed & timer
-  if(speed != nullptr && speed != nullptr) {
+  if(speed != nullptr && timer != nullptr) {
     parseOK = ithoSetSpeedTimer(speed, timer, HTMLAPI);
   }
   else if(speed != nullptr && timer == nullptr) {
     parseOK = ithoSetSpeed(speed, HTMLAPI);
   }
-  else if(timer != nullptr && speed == nullptr) {
+  else if(timer != nullptr && speed == nullptr) {  
     parseOK = ithoSetTimer(timer, HTMLAPI);
   }
   if(parseOK) {
