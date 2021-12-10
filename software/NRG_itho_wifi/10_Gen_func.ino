@@ -246,7 +246,7 @@ bool ithoSetTimer(uint16_t timer, cmdOrigin origin) {
 
 bool ithoSetSpeedTimer(const char* speed, const char* timer, cmdOrigin origin) {
   uint16_t speedval = strtoul(speed, NULL, 10);
-  uint16_t timerval = strtoul(speed, NULL, 10);
+  uint16_t timerval = strtoul(timer, NULL, 10);
   return ithoSetSpeedTimer(speedval, timerval, origin);
 }
 

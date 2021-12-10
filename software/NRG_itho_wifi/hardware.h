@@ -1,7 +1,7 @@
 #pragma once
 
-//#define CVE
-#define NON_CVE
+#define CVE
+//#define NON_CVE
 
 #define ACTIVE_FS LITTLEFS
 
