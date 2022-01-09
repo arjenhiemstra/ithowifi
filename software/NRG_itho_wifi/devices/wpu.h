@@ -518,7 +518,7 @@ const struct ithoLabels ithoWPUStatusLabels[] {
 	{   "Free cooling", 										  "free-cooling" },
 	{   "Expansion valve (pls)", 								  "expansion-valve_pls" },
 	{   "Room temp (°C)", 										  "room-temp_c" },
-	{   "Requested room temp (°Csp)", 							  "requested-roomemp_csp" },
+	{   "Requested room temp (°C)", 							  "requested-roomemp_c" },
 	{   "Heat demand thermost. (%)", 							  "heat-demand-thermost._perc" },
 	{   "Status", 												  "status" },
 	{   "Sub_status", 											  "sub_status" },
