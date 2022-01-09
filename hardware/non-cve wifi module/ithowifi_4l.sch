@@ -1134,17 +1134,6 @@ Wire Wire Line
 Connection ~ 14525 2450
 Wire Wire Line
 	14525 2450 14600 2450
-$Comp
-L Connector:Conn_01x02_Male J6
-U 1 1 61A92742
-P 3375 4475
-F 0 "J6" H 3483 4656 50  0000 C CNN
-F 1 "Conn_01x02_Male" H 3483 4565 50  0000 C CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 3375 4475 50  0001 C CNN
-F 3 "~" H 3375 4475 50  0001 C CNN
-	1    3375 4475
-	1    0    0    -1  
-$EndComp
 Wire Wire Line
 	3425 3250 3975 3250
 Wire Wire Line
@@ -1153,10 +1142,6 @@ Text GLabel 3650 3150 1    60   Input ~ 0
 DTR
 Text GLabel 3650 3250 3    60   Input ~ 0
 RTS
-Text GLabel 3575 4575 2    60   Input ~ 0
-RTS
-Text GLabel 3575 4475 2    60   Input ~ 0
-DTR
 NoConn ~ 1250 2950
 NoConn ~ 2925 6100
 NoConn ~ 2925 6300
