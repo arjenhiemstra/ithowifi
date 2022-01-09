@@ -2,8 +2,7 @@
  * Author: Klusjesman, supersjimmie, modified and reworked by arjenhiemstra 
  */
 
-#ifndef ITHOPACKET_H_
-#define ITHOPACKET_H_
+#pragma once
 
 enum IthoCommand
 {    
@@ -43,6 +42,3 @@ class IthoPacket
     
     uint8_t counter;    //0-255, counter is increased on every remote button press
 };
-
-
-#endif /* ITHOPACKET_H_ */

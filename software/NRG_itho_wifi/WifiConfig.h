@@ -1,5 +1,4 @@
-#ifndef WifiConfig_h
-#define WifiConfig_h
+#pragma once
 
 #define WIFI_CONFIG_VERSION "001"
 
@@ -33,6 +32,3 @@ class WifiConfig {
 
 
 }; //WifiConfig
-
-
-#endif //WifiConfig_h

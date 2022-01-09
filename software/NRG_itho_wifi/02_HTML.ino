@@ -246,16 +246,16 @@ void handleDebug(AsyncWebServerRequest *request) {
   
   response->print(F("<br><span>File system: </span><span>"));
 #if defined (__HW_VERSION_ONE__)
-  SPIFFS.info(fs_info);
+  ACTIVE_FS.info(fs_info);
   response->print(fs_info.usedBytes);
 #elif defined (__HW_VERSION_TWO__)
-  response->print(SPIFFS.usedBytes());
+  response->print(ACTIVE_FS.usedBytes());
 #endif
   response->print(F(" bytes used / "));
 #if defined (__HW_VERSION_ONE__)
   response->print(fs_info.totalBytes);
 #elif defined (__HW_VERSION_TWO__)
-  response->print(SPIFFS.totalBytes());
+  response->print(ACTIVE_FS.totalBytes());
 #endif   
   response->print(F(" bytes total</span><br><a href='#' class='pure-button' onclick=\"$('#main').empty();$('#main').append( html_edit );\">Edit filesystem</a>&nbsp;<button id=\"format\" class=\"pure-button\">Format filesystem</button>"));
 #if defined (__HW_VERSION_TWO__)
@@ -281,7 +281,7 @@ void handleDebug(AsyncWebServerRequest *request) {
   char link[24] = "";
   char linkcur[24] = "";
 
-  if ( SPIFFS.exists("/logfile0.current.log") ) {
+  if ( ACTIVE_FS.exists("/logfile0.current.log") ) {
     strlcpy(linkcur, "/logfile0.current.log", sizeof(linkcur));
     strlcpy(link, "/logfile1.log", sizeof(link));
   }
@@ -290,7 +290,7 @@ void handleDebug(AsyncWebServerRequest *request) {
     strlcpy(link, "/logfile0.log", sizeof(link));      
   }
 
-  File file = SPIFFS.open(linkcur, FILE_READ);
+  File file = ACTIVE_FS.open(linkcur, FILE_READ);
   while (file.available()) {
     if(char(file.peek()) == '\n') response->print("<br>");
     response->print(char(file.read()));
@@ -299,7 +299,7 @@ void handleDebug(AsyncWebServerRequest *request) {
 
   response->print(F("</div><div style='padding-top:5px;'><a class='pure-button' href='/curlog'>Download current logfile</a>"));
 
-  if ( SPIFFS.exists(link) ) {
+  if ( ACTIVE_FS.exists(link) ) {
     response->print(F("&nbsp;<a class='pure-button' href='/prevlog'>Download previous logfile</a>"));
 
   }
@@ -323,13 +323,13 @@ void handleCurLogDownload(AsyncWebServerRequest *request) {
       return request->requestAuthentication();          
   }  
   char link[24] = "";
-  if (  SPIFFS.exists("/logfile0.current.log") ) {
+  if (  ACTIVE_FS.exists("/logfile0.current.log") ) {
     strlcpy(link, "/logfile0.current.log", sizeof(link));
   }
   else {
     strlcpy(link, "/logfile1.current.log", sizeof(link));
   }  
-  request->send(SPIFFS, link, "", true);
+  request->send(ACTIVE_FS, link, "", true);
 }
 
 void handlePrevLogDownload(AsyncWebServerRequest *request) {
@@ -338,11 +338,11 @@ void handlePrevLogDownload(AsyncWebServerRequest *request) {
       return request->requestAuthentication();          
   }  
   char link[24] = "";
-  if (  SPIFFS.exists("/logfile0.current.log") ) {
+  if (  ACTIVE_FS.exists("/logfile0.current.log") ) {
     strlcpy(link, "/logfile1.log", sizeof(link));
   }
   else {
      strlcpy(link, "/logfile0.log", sizeof(link)); 
   }  
-  request->send(SPIFFS, link, "", true);
+  request->send(ACTIVE_FS, link, "", true);
 }

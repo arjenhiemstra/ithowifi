@@ -11,7 +11,8 @@ void failSafeBoot() {
 
     if (digitalRead(FAILSAVE_PIN) == HIGH) {
 
-      SPIFFS.format();
+      ACTIVE_FS.begin(true);
+      ACTIVE_FS.format();
 
       IPAddress apIP(192, 168, 4, 1);
       IPAddress netMsk(255, 255, 255, 0);
@@ -125,7 +126,7 @@ bool ithoInitCheck() {
     ithoInitResult = 1;
     return false;
   }
-  ithoInitResult = -1;  
+  ithoInitResult = -1;
   return true;
 }
 
@@ -214,21 +215,21 @@ bool initFileSystem() {
 
 #if defined (__HW_VERSION_ONE__)
 
-  if (!SPIFFS.begin()) {
-    //Serial.println("SPIFFS failed, needs formatting");
+  if (!ACTIVE_FS.begin()) {
+    //Serial.println("ACTIVE_FS failed, needs formatting");
     handleFormat();
     delay(500);
     ESP.restart();
   }
   else {
-    if (!SPIFFS.info(fs_info)) {
+    if (!ACTIVE_FS.info(fs_info)) {
       //Serial.println("fs_info failed");
       return false;
     }
   }
 
 #elif defined (__HW_VERSION_TWO__)
-  SPIFFS.begin(true);
+  ACTIVE_FS.begin(true);
 #endif
 
   return true;
@@ -237,25 +238,25 @@ bool initFileSystem() {
 
 void handleFormat()
 {
-  //Serial.println("Format SPIFFS");
-  if (SPIFFS.format())
+  //Serial.println("Format ACTIVE_FS");
+  if (ACTIVE_FS.format())
   {
-    if (!SPIFFS.begin())
+    if (!ACTIVE_FS.begin())
     {
-      //Serial.println("Format SPIFFS failed");
+      //Serial.println("Format ACTIVE_FS failed");
     }
   }
   else
   {
-    //Serial.println("Format SPIFFS failed");
+    //Serial.println("Format ACTIVE_FS failed");
   }
-  if (!SPIFFS.begin())
+  if (!ACTIVE_FS.begin())
   {
-    //Serial.println("SPIFFS failed, needs formatting");
+    //Serial.println("ACTIVE_FS failed, needs formatting");
   }
   else
   {
-    //Serial.println("SPIFFS mounted");
+    //Serial.println("ACTIVE_FS mounted");
   }
 }
 
@@ -479,10 +480,10 @@ void HADiscoveryFan() {
   sprintf(s, "%s/not_used/but_needed_for_HA", systemConfig.mqtt_cmd_topic);
   root["cmd_t"] = s;
   root["pct_cmd_t"] = (const char*)systemConfig.mqtt_cmd_topic;
-  root["pct_cmd_tpl"] = "{{ value * 2.54 }}";  
+  root["pct_cmd_tpl"] = "{{ value * 2.54 }}";
   root["pct_stat_t"] = (const char*)systemConfig.mqtt_state_topic;
   root["pct_val_tpl"] = "{{ ((value | int) / 2.54) | round}}";
-  
+
   sprintf(s, "%s/fan/%s/config" , (const char*)systemConfig.mqtt_ha_topic, hostName());
 
   sendHADiscovery(root, s);
@@ -571,13 +572,13 @@ bool setupMQTTClient() {
 
   if (systemConfig.mqtt_active) {
 
-    if (systemConfig.mqtt_serverName != "") {
+    if (strcmp(systemConfig.mqtt_serverName, "") != 0) {
 
       mqttClient.setServer(systemConfig.mqtt_serverName, systemConfig.mqtt_port);
       mqttClient.setCallback(mqttCallback);
       mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 
-      if (systemConfig.mqtt_username == "") {
+      if (strcmp(systemConfig.mqtt_username, "") == 0) {
         connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_lwt_topic, 0, true, "offline");
       }
       else {
@@ -603,7 +604,7 @@ bool setupMQTTClient() {
     mqttClient.disconnect();
     return false;
   }
-
+  return false;
 }
 
 boolean reconnect() {
@@ -736,17 +737,17 @@ void webServerInit() {
 
 #if defined (__HW_VERSION_ONE__)
   if (systemConfig.syssec_edit) {
-    server.addHandler(new SPIFFSEditor(systemConfig.sys_username, systemConfig.sys_password));
+    server.addHandler(new SPIFFSEditor(systemConfig.sys_username, systemConfig.sys_password, ACTIVE_FS));
   }
   else {
-    server.addHandler(new SPIFFSEditor("", ""));
+    server.addHandler(new SPIFFSEditor("", "", ACTIVE_FS));
   }
 #elif defined (__HW_VERSION_TWO__)
   if (systemConfig.syssec_edit) {
-    server.addHandler(new SPIFFSEditor(SPIFFS, systemConfig.sys_username, systemConfig.sys_password));
+    server.addHandler(new SPIFFSEditor(ACTIVE_FS, systemConfig.sys_username, systemConfig.sys_password));
   }
   else {
-    server.addHandler(new SPIFFSEditor(SPIFFS, "", ""));
+    server.addHandler(new SPIFFSEditor(ACTIVE_FS, "", ""));
   }
 #endif
 

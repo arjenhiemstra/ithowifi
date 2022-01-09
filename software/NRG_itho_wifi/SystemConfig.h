@@ -1,5 +1,4 @@
-#ifndef SystemConfig_h
-#define SystemConfig_h
+#pragma once
 
 #define CONFIG_VERSION "004" //Change when SystemConfig struc changes
 
@@ -64,6 +63,3 @@ class SystemConfig {
 
 
 }; //SystemConfig
-
-
-#endif //SystemConfig_h

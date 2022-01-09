@@ -1,9 +1,8 @@
 /*
  * Author: Klusjesman, supersjimmie, modified and reworked by arjenhiemstra 
  */
-
-#ifndef __ITHOCC1101_H__
-#define __ITHOCC1101_H__
+ 
+#pragma once
 
 #include <stdio.h>
 #include "CC1101.h"
@@ -111,5 +110,3 @@ class IthoCC1101 : protected CC1101
     
 
 }; //IthoCC1101
-
-#endif //__ITHOCC1101_H__

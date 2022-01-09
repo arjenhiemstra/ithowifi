@@ -1,7 +1,7 @@
 
 
 bool loadWifiConfig() {
-  if (!SPIFFS.exists("/wifi.json")) {
+  if (!ACTIVE_FS.exists("/wifi.json")) {
     #if defined (INFORMATIVE_LOGGING)
     logInput("Setup: writing initial wifi config");
     #endif
@@ -15,7 +15,7 @@ bool loadWifiConfig() {
     }
   }
 
-  File configFile = SPIFFS.open("/wifi.json", "r");
+  File configFile = ACTIVE_FS.open("/wifi.json", "r");
   if (!configFile) {
     #if defined (INFORMATIVE_LOGGING)
     logInput("Setup: failed to open wifi config file");
@@ -23,7 +23,7 @@ bool loadWifiConfig() {
     //Serial.println("Failed to open wifi config file");
     return false;
   }
-  //SPIFFS.exists(path)
+  //ACTIVE_FS.exists(path)
 
   size_t size = configFile.size();
   if (size > 1024) {
@@ -70,7 +70,7 @@ bool saveWifiConfig() {
   JsonObject root = doc.to<JsonObject>(); // Fill the object
   wifiConfig.get(root);
 
-  File configFile = SPIFFS.open("/wifi.json", "w");
+  File configFile = ACTIVE_FS.open("/wifi.json", "w");
   if (!configFile) {
     //Serial.println("Failed to open default config file for writing");
     return false;
@@ -84,25 +84,26 @@ bool saveWifiConfig() {
 }
 
 bool resetWifiConfig() {
-  if (!SPIFFS.remove("/wifi.json")) {
+  if (!ACTIVE_FS.remove("/wifi.json")) {
     return false;
   }
-  if (!SPIFFS.exists("/wifi.json")) {
+  if (!ACTIVE_FS.exists("/wifi.json")) {
     dontSaveConfig = true;
     return true;
   }
+  return false;
 }
 
 bool loadSystemConfig() {
 
-  if (!SPIFFS.exists("/config.json")) {
+  if (!ACTIVE_FS.exists("/config.json")) {
     //Serial.println("Writing initial default config");
     if (!saveSystemConfig()) {
       //Serial.println("Failed writing initial default config");
       return false;
     }
   }
-  File configFile = SPIFFS.open("/config.json", "r");
+  File configFile = ACTIVE_FS.open("/config.json", "r");
   if (!configFile) {
     //Serial.println("Failed to open system config file");
     return false;
@@ -139,7 +140,7 @@ bool saveSystemConfig() {
   JsonObject root = doc.to<JsonObject>(); // Fill the object
   systemConfig.get(root);
 
-  File configFile = SPIFFS.open("/config.json", "w");
+  File configFile = ACTIVE_FS.open("/config.json", "w");
   if (!configFile) {
     //Serial.println("Failed to open default config file for writing");
     return false;
@@ -151,13 +152,14 @@ bool saveSystemConfig() {
 }
 
 bool resetSystemConfig() {
-  if (!SPIFFS.remove("/config.json")) {
+  if (!ACTIVE_FS.remove("/config.json")) {
     return false;
   }
-  if (!SPIFFS.exists("/config.json")) {
+  if (!ACTIVE_FS.exists("/config.json")) {
     dontSaveConfig = true;
     return true;
   }
+  return false;
 }
 #if defined (__HW_VERSION_TWO__)
 
@@ -178,7 +180,7 @@ bool saveRemotesConfig() {
 }
 
 bool saveFileRemotes(const char *filename, const IthoRemote &remotes) { // Open file for writing
-  File file = SPIFFS.open(filename, "w");
+  File file = ACTIVE_FS.open(filename, "w");
   if (!file) {
     //Serial.println(F("Failed to create remotes file"));
     return false;
@@ -238,7 +240,7 @@ bool loadRemotesConfig() {
 }
 
 bool loadFileRemotes(const char *filename, IthoRemote &remotes) { // Open file for reading
-  File file = SPIFFS.open(filename, "r");
+  File file = ACTIVE_FS.open(filename, "r");
   // This may fail if the file is missing
   if (!file) {
     //Serial.println(F("Failed to open config file")); return false;

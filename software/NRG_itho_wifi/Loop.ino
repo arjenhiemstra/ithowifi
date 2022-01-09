@@ -263,7 +263,7 @@ void execLogAndConfigTasks() {
     StaticJsonDocument<128> root;
     JsonObject systemstat = root.createNestedObject("systemstat");
     
-    if (SPIFFS.format()) {
+    if (ACTIVE_FS.format()) {
       systemstat["format"] = 1;
       strcpy(logBuff, "Filesystem format = success");
       dontSaveConfig = true;

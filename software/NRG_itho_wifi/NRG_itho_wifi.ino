@@ -1,4 +1,4 @@
-#define FWVERSION "2.2.1"
+#define FWVERSION "2.2.2"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -26,9 +26,9 @@
  */
  
 #include "hardware.h"
-#include <ArduinoJson.h>  // https://github.com/bblanchon/ArduinoJson [6.17.3]
-#include <ESPAsyncWebServer.h>  // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
-#include <SPIFFSEditor.h>       // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
+#include <ArduinoJson.h>  // https://github.com/bblanchon/ArduinoJson [6.18.5]
+#include <ESPAsyncWebServer.h>  // https://github.com/arjenhiemstra/ESPAsyncWeb
+#include <SPIFFSEditor.h>       // https://github.com/arjenhiemstra/ESPAsyncWeb
 #include <DNSServer.h>
 #include <PubSubClient.h>     // https://github.com/arjenhiemstra/PubSubClientStatic [latest], forked from https://github.com/knolleary/pubsubclient and https://github.com/mhmtsui/pubsubclient
 #include <Wire.h>
@@ -36,7 +36,7 @@
 #include <Ticker.h>
 
 #include <ArduinoLog.h>       // https://github.com/thijse/Arduino-Log [1.0.3]
-#include <SpiffsFilePrint.h>  // https://github.com/PRosenb/SPIFFS_FilePrint [1.0.0]
+#include <FSFilePrint.h>
 
 #include "IthoQueue.h"
 #include "System.h"
@@ -45,6 +45,8 @@
 
 #include <ArduinoOTA.h>
 #include <FS.h>
+//#include "SPIFFS.h"
+#include <LittleFS.h>
 #include "SHTSensor.h"        // https://github.com/Sensirion/arduino-sht [latest]
 
 #if defined (ESP8266)
@@ -59,7 +61,6 @@
 #include "esp_wifi.h"
 #include <ESPmDNS.h>
 #include <AsyncTCP.h>
-#include "SPIFFS.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_task_wdt.h"
@@ -83,7 +84,7 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 AsyncEventSource events("/events");
 
-SpiffsFilePrint filePrint("/logfile", 2, 10000);
+FSFilePrint filePrint(ACTIVE_FS, "/logfile", 2, 10000);
 
 Ticker IthoCMD;
 Ticker DelayedReq;

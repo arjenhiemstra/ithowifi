@@ -1,14 +1,15 @@
-#ifndef IthoRemote_h
-#define IthoRemote_h
+#pragma once
 
 #define MAX_NUMBER_OF_REMOTES 10
-#define REMOTE_CONFIG_VERSION "001"
+#define REMOTE_CONFIG_VERSION "002"
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <string>
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <Ticker.h>
+
 #include "IthoPacket.h"
 
 class IthoRemote {
@@ -16,14 +17,7 @@ class IthoRemote {
     struct Remote {
       uint8_t ID[3] { 0, 0, 0 };
       char name[32];
-      uint8_t button1{ IthoLow };
-      uint8_t button2{ IthoMedium };
-      uint8_t button3{ IthoHigh };
-      uint8_t button4{ IthoTimer1 };
-      uint8_t button5{ IthoTimer2 };
-      uint8_t button6{ IthoTimer3 };
-      uint8_t button7{ IthoJoin };
-      uint8_t button8{ IthoLeave };      
+      StaticJsonDocument<128> capabilities;
       void set(JsonObjectConst);
       void get(JsonObject, int index) const;
     };
@@ -46,24 +40,26 @@ class IthoRemote {
     uint8_t getllModeTime() {
       return llModeTime;
     };
-    void setllModeTime(int timeVal) {
+    void setllModeTime(const int timeVal) {
       llModeTime = timeVal;
     };
-    int registerNewRemote(int* id);
-    int removeRemote(int* id);
-    void updateRemoteName(uint8_t index, char* remoteName);
-    int remoteIndex(int* id);
-    int * getRemoteIDbyIndex(int index);
-    char * getRemoteNamebyIndex(int index);
-    bool checkID(int* id);
+    int registerNewRemote(const int* id);
+    int removeRemote(const int* id);
+    int removeRemote(const uint8_t index);
+    void addCapabilities(const uint8_t remoteIndex, const char* name, int32_t value);
+    void updateRemoteName(const uint8_t index, const char* remoteName);
+    int remoteIndex(const int32_t id);
+    int remoteIndex(const int* id);
+    const int * getRemoteIDbyIndex(const int index);
+    const char * getRemoteNamebyIndex(const int index);
+    const char * lastRemoteName;
+    bool checkID(const int* id);
     bool configLoaded;
     char config_struct_version[4];
     bool set(JsonObjectConst);
     void get(JsonObject) const;
+    void getCapabilities(JsonObject obj) const;
   protected:
 
 
 }; //IthoRemote
-
-
-#endif //IthoRemote_h

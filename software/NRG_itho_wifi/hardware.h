@@ -1,5 +1,6 @@
-#ifndef __HARDWARE_H__
-#define __HARDWARE_H__
+#pragma once
+
+#define ACTIVE_FS LittleFS
 
 #if defined (ESP8266)
   #define __HW_VERSION_ONE__
@@ -30,5 +31,3 @@
 #else
 #error "Unsupported hardware"
 #endif
-
-#endif //__HARDWARE_H__
