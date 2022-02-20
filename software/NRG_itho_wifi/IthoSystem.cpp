@@ -46,6 +46,7 @@ bool sendI2CStatusFormat = false;
 bool sendI2CStatus = false;
 bool send31DA = false;
 bool send31D9 = false;
+bool send10D0 = false;
 bool get2410 = false;
 bool set2410 = false;
 bool buttonResult = false;
@@ -62,6 +63,44 @@ float ithoTemp = 0;
 
 Ticker getSettingsHack;
 SemaphoreHandle_t mutexI2Ctask;
+
+
+
+//                                        { IthoUnknown,  IthoJoin,                           IthoLeave,                            IthoStandby,  IthoLow,                            IthoMedium,                           IthoHigh,                           IthoFull, IthoTimer1,                           IthoTimer2,                           IthoTimer3,                           IthoAuto,                           IthoAutoNight,                            IthoCook30,                       IthoCook60 }
+const uint8_t *RFTCVE_Remote_Map[]      = { nullptr,      ithoMessageCVERFTJoinCommandBytes,  ithoMessageLeaveCommandBytes,         nullptr,      ithoMessageLowCommandBytes,         ithoMessageMediumCommandBytes,        ithoMessageHighCommandBytes,        nullptr,  ithoMessageTimer1CommandBytes,        ithoMessageTimer2CommandBytes,        ithoMessageTimer3CommandBytes,        nullptr,                            nullptr,                                  nullptr,                          nullptr };
+const uint8_t *RFTAUTO_Remote_Map[]     = { nullptr,      ithoMessageAUTORFTJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes,  nullptr,      ithoMessageAUTORFTLowCommandBytes,  nullptr,                              ithoMessageAUTORFTHighCommandBytes, nullptr,  ithoMessageAUTORFTTimer1CommandBytes, ithoMessageAUTORFTTimer2CommandBytes, ithoMessageAUTORFTTimer3CommandBytes, ithoMessageAUTORFTAutoCommandBytes, ithoMessageAUTORFTAutoNightCommandBytes,  nullptr,                          nullptr };
+const uint8_t *DEMANDFLOW_Remote_Map[]  = { nullptr,      ithoMessageDFJoinCommandBytes,      ithoMessageLeaveCommandBytes,         nullptr,      ithoMessageDFLowCommandBytes,       nullptr,                              ithoMessageDFHighCommandBytes,      nullptr,  ithoMessageDFTimer1CommandBytes,      ithoMessageDFTimer2CommandBytes,      ithoMessageDFTimer3CommandBytes,      nullptr,                            nullptr,                                  ithoMessageDFCook30CommandBytes,  ithoMessageDFCook60CommandBytes };
+const uint8_t *RFTRV_Remote_Map[]       = { nullptr,      ithoMessageRVJoinCommandBytes,      ithoMessageLeaveCommandBytes,         nullptr,      ithoMessageLowCommandBytes,         ithoMessageRV_CO2MediumCommandBytes,  ithoMessageHighCommandBytes,        nullptr,  ithoMessageRV_CO2Timer1CommandBytes,  ithoMessageRV_CO2Timer2CommandBytes,  ithoMessageRV_CO2Timer3CommandBytes,  ithoMessageRV_CO2AutoCommandBytes,  ithoMessageRV_CO2AutoNightCommandBytes,   nullptr,                          nullptr };
+const uint8_t *RFTCO2_Remote_Map[]      = { nullptr,      ithoMessageCO2JoinCommandBytes,     ithoMessageLeaveCommandBytes,         nullptr,      ithoMessageLowCommandBytes,         ithoMessageRV_CO2MediumCommandBytes,  ithoMessageHighCommandBytes,        nullptr,  ithoMessageRV_CO2Timer1CommandBytes,  ithoMessageRV_CO2Timer2CommandBytes,  ithoMessageRV_CO2Timer3CommandBytes,  ithoMessageRV_CO2AutoCommandBytes,  ithoMessageRV_CO2AutoNightCommandBytes,   nullptr,                          nullptr };
+
+
+
+struct ihtoRemoteCmdMap {
+  RemoteTypes type;
+  const uint8_t **cammandMapping;
+};
+
+const struct ihtoRemoteCmdMap ihtoRemoteCmdMapping[] {
+  { RFTCVE,     RFTCVE_Remote_Map },
+  { RFTAUTO,    RFTAUTO_Remote_Map },
+  { DEMANDFLOW, DEMANDFLOW_Remote_Map },
+  { RFTRV,      RFTRV_Remote_Map },
+  { RFTCO2,     RFTCO2_Remote_Map }
+};
+
+const uint8_t* getRemoteCmd(const RemoteTypes type, const IthoCommand command) {
+
+  const struct ihtoRemoteCmdMap* ihtoRemoteCmdMapPtr = ihtoRemoteCmdMapping;
+  const struct ihtoRemoteCmdMap* ihtoRemoteCmdMapEndPtr = ihtoRemoteCmdMapping + sizeof(ihtoRemoteCmdMapping) / sizeof(ihtoRemoteCmdMapping[0]);
+  while ( ihtoRemoteCmdMapPtr < ihtoRemoteCmdMapEndPtr ) {
+    if (ihtoRemoteCmdMapPtr->type == type) {
+      return *(ihtoRemoteCmdMapPtr->cammandMapping + command);
+    }
+    ihtoRemoteCmdMapPtr++;
+  }
+  return nullptr;
+}
+
 
 struct ihtoDeviceType {
   uint8_t ID;
@@ -269,7 +308,7 @@ const char* getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPt
     }
     else {
       return ithoLabelErrors[0].labelNormalized;
-    }    
+    }
   }
   else if (ithoStatusLabelLength == -2) {
     if (systemConfig.api_normalize == 0) {
@@ -285,7 +324,7 @@ const char* getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPt
     }
     else {
       return ithoLabelErrors[2].labelNormalized;
-    }        
+    }
   }
   else if (!(i < ithoStatusLabelLength)) {
     if (systemConfig.api_normalize == 0) {
@@ -293,7 +332,7 @@ const char* getSatusLabel(const uint8_t i, const struct ihtoDeviceType* statusPt
     }
     else {
       return ithoLabelErrors[3].labelNormalized;
-    }    
+    }
   }
   else {
     if (systemConfig.api_normalize == 0) {
@@ -358,6 +397,143 @@ void sendI2CPWMinit() {
 
 uint8_t cmdCounter = 0;
 
+void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRemote &remotes) {
+
+  if (remoteIndex > remotes.getMaxRemotes()) return;
+
+  const RemoteTypes remoteType = remotes.getRemoteType(remoteIndex);
+  if (remoteType == RemoteTypes::UNSETTYPE) return;
+  
+  //Get the corresponding command / remote type combination
+  const uint8_t *remote_command = getRemoteCmd(remoteType, command);
+  if (remote_command == nullptr) return;
+
+  uint8_t i2c_command[64] = {};
+  uint8_t i2c_command_len = 0;
+
+  /*
+     First build the i2c header / wrapper for the remote command
+
+  */
+  //                       [I2C addr ][  I2C command   ][len ][    timestamp         ][fmt ][    remote ID   ][cntr]
+  uint8_t i2c_header[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x09, 0xFF, 0xFF, 0xFF, 0xFF, 0x16, 0xFF, 0xFF, 0xFF, 0xFF };
+
+  unsigned long curtime = millis();
+  i2c_header[6] = (curtime >> 24) & 0xFF;
+  i2c_header[7] = (curtime >> 16) & 0xFF;
+  i2c_header[8] = (curtime >> 8) & 0xFF;
+  i2c_header[9] = curtime & 0xFF;
+
+  const int * id = remotes.getRemoteIDbyIndex(remoteIndex);
+  i2c_header[11] = *id;
+  i2c_header[12] = *(id + 1);
+  i2c_header[13] = *(id + 2);
+
+  i2c_header[14] = cmdCounter;
+  cmdCounter++;
+
+  for (; i2c_command_len < sizeof(i2c_header) / sizeof(i2c_header[0]); i2c_command_len++) {
+    i2c_command[i2c_command_len] = i2c_header[i2c_command_len];
+  }
+
+  //determine command length
+  const int command_len = remote_command[2];
+
+  //copy to i2c_command
+  for (int i = 0; i < 2 + command_len + 1; i++) {
+    i2c_command[i2c_command_len] = remote_command[i];
+    i2c_command_len++;
+  }
+
+  //if join or leave, add remote ID fields
+  if (command == IthoJoin || command == IthoLeave) {
+    //set command ID's
+    if (command_len > 0x05) {
+      //add 1st ID
+      i2c_command[21] = *id;
+      i2c_command[22] = *(id + 1);
+      i2c_command[23] = *(id + 2);
+    }
+    if (command_len > 0x0B) {
+      //add 2nd ID
+      i2c_command[27] = *id;
+      i2c_command[28] = *(id + 1);
+      i2c_command[29] = *(id + 2);
+    }
+    if (command_len > 0x12) {
+      //add 3rd ID
+      i2c_command[33] = *id;
+      i2c_command[34] = *(id + 1);
+      i2c_command[35] = *(id + 2);
+    }
+    if (command_len > 0x17) {
+      //add 4th ID
+      i2c_command[39] = *id;
+      i2c_command[40] = *(id + 1);
+      i2c_command[41] = *(id + 2);
+    }
+    if (command_len > 0x1D) {
+      //add 5th ID
+      i2c_command[45] = *id;
+      i2c_command[46] = *(id + 1);
+      i2c_command[47] = *(id + 2);
+    }
+  }
+  /*
+     built the footer of the i2c wrapper
+     chk2 = checksum of [fmt]+[remote ID]+[cntr]+[remote command]
+     chk = checksum of the whole command
+
+  */
+  //                        [chk2][cntr][chk ]
+  //uint8_t i2c_footer[] = { 0x00, 0x00, 0xFF };
+
+  //calculate chk2 val
+  uint8_t i2c_command_tmp[64] = {};
+  for (int i = 10; i < i2c_command_len; i++) {
+    i2c_command_tmp[(i - 10)] = i2c_command[i];
+  }
+
+  i2c_command[i2c_command_len] = checksum(i2c_command_tmp, i2c_command_len - 11);
+  i2c_command_len++;
+
+  //[cntr]
+  i2c_command[i2c_command_len] = 0x00;
+  i2c_command_len++;
+
+  //set i2c_command length value
+  i2c_command[5] = i2c_command_len - 6;
+  
+  //calculate chk val
+  i2c_command[i2c_command_len] = checksum(i2c_command, i2c_command_len - 1);
+  i2c_command_len++;
+
+
+
+#if defined (ENABLE_SERIAL)
+  String str;
+  char buf[250] {};
+  for (int i = 0; i < i2c_command_len; i++) {
+    sprintf(buf, " 0x%02X", i2c_command[i]);
+    str += String(buf);
+    if (i < i2c_command_len - 1) {
+      str += ",";
+    }
+  }
+  str += "\n";
+  Serial.print(str);
+#endif
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+  i2c_sendBytes(i2c_command, i2c_command_len);
+
+
+}
+
 void sendButton(const uint8_t number, bool & updateweb) {
 
   uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x11, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x22, 0xF1, 0x03, 0x00, 0x01, 0x04, 0x00, 0x00, 0xFF };
@@ -411,7 +587,6 @@ void sendTimer(const uint8_t timer, bool & updateweb) {
 void sendJoinI2C(bool & updateweb) {
 
   uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x1F, 0xC9, 0x0C, 0x00, 0x22, 0xF1, 0xFF, 0xFF, 0xFF, 0x01, 0x10, 0xE0, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF };
-
   command[11] = id0;
   command[12] = id1;
   command[13] = id2;
@@ -530,10 +705,10 @@ void sendQueryStatusFormat(bool & updateweb) {
     for (uint8_t i = 0; i < endPos; i++) {
       ithoStatus.push_back(ithoDeviceStatus());
 
-//      char fStringBuf[32];
-//      getSatusLabel(i, ithoDeviceptr, itho_fwversion, fStringBuf);
+      //      char fStringBuf[32];
+      //      getSatusLabel(i, ithoDeviceptr, itho_fwversion, fStringBuf);
 
-      
+
 
       ithoStatus.back().divider = 0;
       if ((i2cbuf[6 + i] & 0x07) == 0) { //integer value
@@ -676,7 +851,7 @@ void sendQueryStatus(bool & updateweb) {
           }
         }
 
-      labelPos++;
+        labelPos++;
       }
     }
 
@@ -1325,6 +1500,38 @@ void setSetting2410(bool & updateweb) {
       }
     }
   }
+
+}
+
+
+void filterReset() {
+
+  //[I2C addr ][  I2C command   ][len ][    timestamp         ][fmt ][    remote ID   ][cntr][cmd opcode][len ][  command ][  counter ][chk]
+  uint8_t command[] = { 0x82, 0x62, 0xC1, 0x01, 0x01, 0x10, 0xFF, 0xFF, 0xFF, 0xFF, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x10, 0xD0, 0x02, 0x63, 0xFF, 0x00, 0x00, 0xFF };
+
+  unsigned long curtime = millis();
+
+  command[6] = (curtime >> 24) & 0xFF;
+  command[7] = (curtime >> 16) & 0xFF;
+  command[8] = (curtime >> 8) & 0xFF;
+  command[9] = curtime & 0xFF;
+
+  command[11] = id0;
+  command[12] = id1;
+  command[13] = id2;
+
+  command[14] = cmdCounter;
+  cmdCounter++;
+
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+  while (digitalRead(SCLPIN) == LOW ) {
+    yield();
+    delay(1);
+  }
+
+  i2c_sendBytes(command, sizeof(command));
+
 
 }
 

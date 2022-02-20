@@ -23,6 +23,11 @@ enum IthoCommand
   IthoTimer2 = 9,
   IthoTimer3 = 10,
 
+  IthoAuto = 11,
+  IthoAutoNight = 12,
+
+  IthoCook30 = 13,
+  IthoCook60 = 14,
   //  //duco c system remote
   //  DucoStandby = 11,
   //  DucoLow = 12,
@@ -71,7 +76,67 @@ enum message_state {
 #define MAX_PAYLOAD 64
 #define MAX_DECODED MAX_PAYLOAD+18
 
-static char const * const MsgType[4] = { "RQ", " W", " I", "RP" };
+static char const * const MsgType[4] = { "RQ", "_W", "_I", "RP" };
+
+
+//message command bytes for CVE/HRU remote (536-0124)
+//                                                         < opcode  ><len ><    command     >
+const uint8_t ithoMessageLowCommandBytes[] =              {0x22, 0xF1, 0x03, 0x00, 0x02, 0x04};
+const uint8_t ithoMessageMediumCommandBytes[] =           {0x22, 0xF1, 0x03, 0x00, 0x03, 0x04};
+const uint8_t ithoMessageHighCommandBytes[] =             {0x22, 0xF1, 0x03, 0x00, 0x04, 0x04};
+const uint8_t ithoMessageFullCommandBytes[] =             {0x22, 0xF1, 0x03, 0x00, 0x04, 0x04};
+const uint8_t ithoMessageTimer1CommandBytes[] =           {0x22, 0xF3, 0x03, 0x00, 0x00, 0x0A}; //10 minutes full speed
+const uint8_t ithoMessageTimer2CommandBytes[] =           {0x22, 0xF3, 0x03, 0x00, 0x00, 0x14}; //20 minutes full speed
+const uint8_t ithoMessageTimer3CommandBytes[] =           {0x22, 0xF3, 0x03, 0x00, 0x00, 0x1E}; //30 minutes full speed
+
+//message command bytes specific for AUTO RFT (536-0150)
+//                                                         < opcode  ><len ><    command     >
+const uint8_t ithoMessageAUTORFTLowCommandBytes[] =       {0x22, 0xF1, 0x03, 0x63, 0x02, 0x04};
+const uint8_t ithoMessageAUTORFTAutoCommandBytes[] =      {0x22, 0xF1, 0x03, 0x63, 0x03, 0x04};
+const uint8_t ithoMessageAUTORFTAutoNightCommandBytes[] = {0x22, 0xF8, 0x03, 0x63, 0x02, 0x03};
+const uint8_t ithoMessageAUTORFTHighCommandBytes[] =      {0x22, 0xF1, 0x03, 0x63, 0x04, 0x04};
+const uint8_t ithoMessageAUTORFTTimer1CommandBytes[] =    {0x22, 0xF3, 0x03, 0x63, 0x00, 0x0A};
+const uint8_t ithoMessageAUTORFTTimer2CommandBytes[] =    {0x22, 0xF3, 0x03, 0x63, 0x00, 0x14};
+const uint8_t ithoMessageAUTORFTTimer3CommandBytes[] =    {0x22, 0xF3, 0x03, 0x63, 0x00, 0x1E};
+
+//message command bytes specific for RFT-RV (04-00046) and RFT-CO2  (04-00045)
+//                                                         < opcode  ><len ><    command     >
+const uint8_t ithoMessageRV_CO2MediumCommandBytes[] =     {0x22, 0xF1, 0x03, 0x00, 0x03, 0x07};
+const uint8_t ithoMessageRV_CO2AutoCommandBytes[] =       {0x22, 0xF1, 0x03, 0x00, 0x05, 0x07};
+const uint8_t ithoMessageRV_CO2AutoNightCommandBytes[] =  {0x22, 0xF1, 0x03, 0x00, 0x0B, 0x0B};
+//                                                         < opcode  ><len ><              command                   >
+const uint8_t ithoMessageRV_CO2Timer1CommandBytes[] =     {0x22, 0xF3, 0x07, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x00};
+const uint8_t ithoMessageRV_CO2Timer2CommandBytes[] =     {0x22, 0xF3, 0x07, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00};
+const uint8_t ithoMessageRV_CO2Timer3CommandBytes[] =     {0x22, 0xF3, 0x07, 0x00, 0x00, 0x1E, 0x00, 0x00, 0x00, 0x00};
+
+//message command bytes specific for DemandFlow remote (536-0146)
+//                                                         < opcode  ><len ><    command     >
+const uint8_t ithoMessageDFLowCommandBytes[] =            {0x22, 0xF8, 0x03, 0x00, 0x01, 0x02};
+const uint8_t ithoMessageDFHighCommandBytes[] =           {0x22, 0xF8, 0x03, 0x00, 0x02, 0x02};
+//                                                         < opcode  ><len ><         command            >
+const uint8_t ithoMessageDFTimer1CommandBytes[] =         {0x22, 0xF3, 0x05, 0x00, 0x42, 0x03, 0x03, 0x03};
+const uint8_t ithoMessageDFTimer2CommandBytes[] =         {0x22, 0xF3, 0x05, 0x00, 0x42, 0x06, 0x03, 0x03};
+const uint8_t ithoMessageDFTimer3CommandBytes[] =         {0x22, 0xF3, 0x05, 0x00, 0x42, 0x09, 0x03, 0x03};
+const uint8_t ithoMessageDFCook30CommandBytes[] =         {0x22, 0xF3, 0x05, 0x00, 0x02, 0x1E, 0x02, 0x03};
+const uint8_t ithoMessageDFCook60CommandBytes[] =         {0x22, 0xF3, 0x05, 0x00, 0x02, 0x3C, 0x02, 0x03};
+
+////unkown, tbd. Command was present incomplete encoded in the original lib.
+//                                                         < opcode  ><len ><    command     >
+const uint8_t ithoMessageStandByCommandBytes[] =          {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};    
+
+//Join/Leave commands:                                     < opcode  ><len ><    command    ><    device ID    ><    command    ><    device ID    >
+const uint8_t ithoMessageCVERFTJoinCommandBytes[] =       {0x1F, 0xC9, 0x0C, 0x00, 0x22, 0xF1, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00}; //join command of CVE/HRU remote (536-0124)
+const uint8_t ithoMessageAUTORFTJoinCommandBytes[] =      {0x1F, 0xC9, 0x0C, 0x63, 0x22, 0xF8, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00}; //join command of AUTO RFT (536-0150)
+const uint8_t ithoMessageDFJoinCommandBytes[] =           {0x1F, 0xC9, 0x0C, 0x00, 0x22, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x10, 0xE0, 0x00, 0x00, 0x00}; //join command of DemandFlow remote (536-0146)
+//                                                         < opcode  ><len ><    command    ><    device ID    ><    command    ><    device ID    ><    command    ><    device ID    ><    command    ><    device ID    >
+const uint8_t ithoMessageRVJoinCommandBytes[] =           {0x1F, 0xC9, 0x18, 0x00, 0x31, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x12, 0xA0, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00}; //join command of RFT-RV (04-00046)
+//                                                         < opcode  ><len ><    command    ><    device ID    ><    command    ><    device ID    ><    command    ><    device ID    ><    command    ><    device ID    ><    command    ><    device ID    >
+const uint8_t ithoMessageCO2JoinCommandBytes[] =          {0x1F, 0xC9, 0x1E, 0x00, 0x31, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x12, 0x98, 0x00, 0x00, 0x00, 0x00, 0x2E, 0x10, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00 }; //join command of RFT-CO2  (04-00045)
+//                                                         < opcode  ><len ><    command    ><    device ID    >
+const uint8_t ithoMessageLeaveCommandBytes[] =            {0x1F, 0xC9, 0x06, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00}; //standard leave command
+const uint8_t ithoMessageAUTORFTLeaveCommandBytes[] =     {0x1F, 0xC9, 0x06, 0x63, 0x1F, 0xC9, 0x00, 0x00, 0x00}; //leave command of AUTO RFT (536-0150)
+
+
 
 class IthoPacket
 {

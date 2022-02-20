@@ -9,6 +9,7 @@ var itho_high = 254;
 var sensor = -1;
 
 sessionStorage.setItem("statustimer", 0);
+var settingIndex = -1;
 
 var websocketServerLocation = 'ws://' + window.location.hostname + ':8000/ws';
 
@@ -44,9 +45,16 @@ function startWebsock(websocketServerLocation){
           }
           else if (f.remotes) {
             let x = f.remotes;
+            let remfunc = f.remfunc;
             $('#RemotesTable').empty();
-            buildHtmlTable('#RemotesTable', x);
+            buildHtmlTable('#RemotesTable', remfunc, x);
           }
+          else if (f.vremotes) {
+            let x = f.vremotes;
+            let remfunc = f.remfunc;
+            $('#vremotesTable').empty();
+            buildHtmlTable('#vremotesTable', remfunc, x);
+          }          
           else if (f.ithosatusinfo) {
             let x = f.ithosatusinfo;
             $('#StatusTable').empty();
@@ -78,14 +86,16 @@ function startWebsock(websocketServerLocation){
             else {
               updateRowTableIthoSettings(x);
             }
-            if(x.Index < sessionStorage.getItem("itho_setlen")-1 && x.loop === true) {
+            if(x.Index < sessionStorage.getItem("itho_setlen")-1 && x.loop === true && settingIndex == x.Index) {
+              settingIndex++;
               websock.send(JSON.stringify({
                 ithogetsetting: true,
-                index: (x.Index + 1),
+                index: settingIndex,
                 update: x.update
               }));
             }
             if(x.Index === sessionStorage.getItem("itho_setlen")-1 && x.update === false && x.loop === true) {
+              settingIndex = 0;
               websock.send(JSON.stringify({
                 ithogetsetting: true,
                 index: 0,
@@ -146,6 +156,16 @@ function startWebsock(websocketServerLocation){
               $('#itho_llm').addClass("pure-button button-secondary");
               $('#itho_llm').text("Off");   
             }
+            if(x.copy_id > 0) {
+              $('#itho_copyid_vremote').removeClass();
+              $('#itho_copyid_vremote').addClass("pure-button button-success");
+              $('#itho_copyid_vremote').text(`Press join. Time remaining: ${x.copy_id}`);
+            }
+            else {
+              $('#itho_copyid_vremote').removeClass();
+              $('#itho_copyid_vremote').addClass("pure-button");
+              $('#itho_copyid_vremote').text("Copy ID");
+            }            
             if('format' in x) {
               if(x.format) {
                 $('#format').text('Format filesystem'); 
@@ -294,6 +314,7 @@ $(document).ready(function() {
           itho_timer2:      $('#itho_timer2').val(),
           itho_timer3:      $('#itho_timer3').val(),
           itho_updatefreq:  $('#itho_updatefreq').val(),
+          itho_numvrem:     $('#itho_numvrem').val(),
           itho_sendjoin:    $('input[name=\'option-itho_sendjoin\']:checked').val(),
           itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
           itho_vremoteapi:  $('input[name=\'option-itho_vremoteapi\']:checked').val()
@@ -326,34 +347,36 @@ $(document).ready(function() {
       }));
       update_page('mqtt');
     }
-    else if ($(this).attr('id') == 'ithosubmit') {
-      websock.send(JSON.stringify({
-        systemsettings: {
-
-        }
-      }));
-      update_page('itho');
-    }
     else if ($(this).attr('id') == 'itho_llm') {
       websock.send('{\"itho_llm\":true}');
     }
-    else if ($(this).attr('id') == 'itho_remove_remote') {
+    else if ($(this).attr('id') == 'itho_remove_remote' || $(this).attr('id') == 'itho_remove_vremote') {
       var selected = $('input[name=\'optionsRemotes\']:checked').val();
       if (selected == null) {
         alert("Please select a remote.")
       }
       else {
         var val = parseInt(selected, 10) + 1;
-        websock.send('{\"itho_remove_remote\":' + val + '}');
+        websock.send('{\"'+ $(this).attr('id') +'\":' + val + '}');
       }
     }
-    else if ($(this).attr('id') == 'itho_update_remote') {
+    else if ($(this).attr('id') == 'itho_update_remote' || $(this).attr('id') == 'itho_update_vremote') {
       var i = $('input[name=\'optionsRemotes\']:checked').val();
       if (i == null) {
         alert("Please select a remote.");
       }
       else {
-        websock.send('{\"itho_update_remote\":'+i+', \"value\":\"' + $('#name_remote-'+i).val() + '\"}');
+        websock.send(`{"${$(this).attr('id')}":${i},"value":"${$('#name_remote-'+i).val()}","remtype":${$('#type_remote-'+i).val()}}`);
+      }
+    }
+    else if ($(this).attr('id') == 'itho_copyid_vremote') {
+      var i = $('input[name=\'optionsRemotes\']:checked').val();
+      if (i == null) {
+        alert("Please select a remote.");
+      }
+      else {
+        var val = parseInt(i, 10) + 1;
+        websock.send(`{"copy_id":true, "index":${val}}`);
       }
     }
     else if ($(this).attr('id').substr(0, 15) == 'ithosetrefresh-') {
@@ -437,6 +460,10 @@ $(document).ready(function() {
       $('.hidden').removeClass('hidden');
       websock.send('{\"wifiscan\":true}');
     }
+    else if ($(this).attr('id').startsWith('button_remote-')) {
+      const items = $(this).attr('id').split('-');
+      websock.send(`{"vremote":${items[1]}, "command":"${items[2]}"}`)
+    }
     else if ($(this).attr('id') == 'button1') {
       websock.send('{\"ithobutton\":\"low\"}');
     }
@@ -480,7 +507,11 @@ $(document).ready(function() {
     else if ($(this).attr('id') == 'button31D9') {
       websock.send('{\"ithobutton\":\"31D9\"}');
     }
+    else if ($(this).attr('id') == 'button10D0') {
+      websock.send('{\"ithobutton\":\"10D0\"}');
+    }    
     else if ($(this).attr('id') == 'ithogetsettings') {
+      settingIndex = 0;
       websock.send(JSON.stringify({
         ithogetsetting: true,
         index: 0,
@@ -629,6 +660,12 @@ function radio(origin, state) {
         $(`#name_${origin}-${index}`).prop('readonly', false);
       }
     });
+    $(`[id^=type_${origin}-]`).each(function(index, item){
+      $(`#type_${origin}-${index}`).prop('disabled', true); 
+      if (index == state) {
+        $(`#type_${origin}-${index}`).prop('disabled', false);
+      }
+    });
     if(origin == "ithoset") {
       $('[id^=ithosetrefresh-]').each(function(index, item){
         $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).removeClass('pure-button-primary');
@@ -711,6 +748,7 @@ function update_page(page) {
     if (page == 'itho') { $('#main').append(html_ithosettings); }
     if (page == 'status') { $('#main').append(html_ithostatus); }
     if (page == 'remotes') { $('#main').append(html_remotessetup); }    
+    if (page == 'vremotes') { $('#main').append(html_vremotessetup); }    
     if (page == 'mqtt') { $('#main').append(html_mqttsetup); }
     if (page == 'api') { $('#main').append(html_api); }      
     if (page == 'help') { $('#main').append(html_help); }
@@ -846,32 +884,86 @@ function returnWifiSecSVG(secVal) {
 }
 
 var remotesCount;
+var remtypes = [
+                ["RFT CVE",0x22F1,['low','medium','high','timer1','timer2','timer3','join','leave']],
+                ["RFT AUTO",0x22F3,['auto','autonight','low','high','timer1','timer2','timer3','join','leave']], 
+                ["RFT DF/QF",0x22F8,['low','high','cook30','cook60','timer1','timer2','timer3','join','leave']]
+               ];
 
-function buildHtmlTable(selector, jsonVar) {
+function buildHtmlTable(selector, remfunc, jsonVar) {
   var columns = addAllColumnHeaders(jsonVar, selector, true);
   var headerTbody$ = $('<tbody>');
   remotesCount = jsonVar.length;
   for (var i = 0; i < remotesCount; i++) {
+    var remtype = 0;
     var row$ = $('<tr>');
     row$.append($('<td>').html(`<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}'/>`));
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
       if (colIndex == 3) {
-        var str = '';
-        var JSONObj = jsonVar[i][columns[colIndex]];
-        if (JSONObj != null) {
-          for (let value in JSONObj) {
-            if (JSONObj.hasOwnProperty(value)) {
-              str += value + ':' + JSONObj[value];
-              if(value != Object.keys(JSONObj).pop()) str += ', ';
-            }
-          }             
+        var cellValue = jsonVar[i][columns[colIndex]];
+        if (remfunc == 1) {
+          var checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.id = 'car';
+          checkbox.name = 'interest';
+          if(cellValue == 2) checkbox.checked = true;
+          row$.append($('<td>').html(checkbox));    
         }
-        row$.append($('<td>').html(str));
+        else if (remfunc == 2) {
+          var select = document.createElement('select');
+          select.name = cellValue;
+          select.id = `type_remote-${i}`;
+          select.disabled = true;
+          for (const item of remtypes) {
+              var option = document.createElement('option');
+              option.value = item[1];
+              option.text = item[0];
+              if(item[1] == cellValue) {
+                option.selected = true;
+                remtype = cellValue;
+              }
+              select.appendChild(option);
+          }
+          row$.append($('<td>').html(select));
+        }
+        else {
+          row$.append($('<td>').html(cellValue));
+        }
       }
-      else {     
+      else if (colIndex == 4) {
+        
+        if (remfunc == 1) {
+          var str = '';
+          var JSONObj = jsonVar[i][columns[colIndex]];
+          if (JSONObj != null) {
+            for (let value in JSONObj) {
+              if (JSONObj.hasOwnProperty(value)) {
+                str += value + ':' + JSONObj[value];
+                if(value != Object.keys(JSONObj).pop()) str += ', ';
+              }
+            }             
+          }
+          row$.append($('<td>').html(str));
+        }
+        else if (remfunc == 2) {
+          var td$ = $('<td>');
+          for (const item of remtypes) {
+            if(remtype == item[1]) {              
+              for (const remfunc of item[2]) {
+                td$.append(`<button value='${remfunc}_remote-${i}' id='button_remote-${i}-${remfunc}' class='pure-button pure-button-primary'>${remfunc.charAt(0).toUpperCase() + remfunc.slice(1)}</button>\u00A0`);
+              }        
+            }
+          }
+          row$.append(td$);
+        }
+      }
+      else { 
         var cellValue = jsonVar[i][columns[colIndex]].toString();
         if (cellValue == null) cellValue = '';
-        if (cellValue == "0,0,0") cellValue = "empty slot";
+        if (colIndex == 1) {
+          cellValue = `${jsonVar[i][columns[colIndex]][0].toString(16).toUpperCase()},${jsonVar[i][columns[colIndex]][1].toString(16).toUpperCase()},${jsonVar[i][columns[colIndex]][2].toString(16).toUpperCase()}`;
+          if (cellValue == "0,0,0") cellValue = "empty slot";
+        }
         if (colIndex == 2) {
           row$.append($('<td>').html(`<input type='text' id='name_remote-${i}' value='${cellValue}' readonly=''/>`));
         }
@@ -1181,12 +1273,16 @@ var html_systemsettings_start = `
             <div class="pure-control-group">
               <label for="itho_updatefreq">Update frequency</label>
                 <input id="itho_updatefreq" type="number" min="0" max="65535" size="6">
-            </div>          
+            </div>
             <legend><br>Virtual remote settings:</legend>
             <p>The add-on can present itself as a virtual remote that can be joined to the itho unit.</p>
             <p>This virtual remote can be used to force the itho unit in medium mode before sending a command from the add-on. This way the add-on can overrule the current speed settings of the itho (ie. due to active input from a built in humidity sensor or another remote)</p>
             <p>A join command will only be accepted by the itho unit after a power cycle.</p>
             <p>Received commands from RF remotes can be translated to matching virtual remote commands for non-CVE devices. The 0-254 speed control does not work for these devices, the timer settings do work as expected.
+            <div class="pure-control-group">
+              <label for="itho_numvrem">Number of virtual remotes</label>
+                <input id="itho_numvrem" type="number" min="1" max="12" size="6">
+            </div>
             <div class="pure-control-group">
               <label for="option-vremotejoin" class="pure-radio">Send join command</label>
               <input id="option-vremotejoin-2" type="radio" name="option-itho_sendjoin" value="2"> every power on
@@ -1303,36 +1399,34 @@ var html_remotessetup = `
                 <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote" class="pure-button">Remove</button>
               </div>
           </fieldset>
+      </form>
+<script>
+$(document).ready(function() {
+  getSettings('ithoremotes');
+});
+</script>
+`;
+
+
+var html_vremotessetup = `
+<div class="header"><h1>Virtual Remotes setup</h1></div>
+<style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
+      <form class="pure-form pure-form-aligned">
           <fieldset>
               <br>
-                <legend><br>RF calibration:</legend>
+                <legend><br>Virtual remotes:</legend>
               <br>
-              <div class="pure-u-1 pure-u-md-1-5"></div>
-              <div class="pure-u-1 pure-u-md-3-5">
-              <div>
-                <div style="text-align: center">
-                  <div style="float: left;">868.0 MHz</div>
-                  <div style="float: right;">868.6 MHz</div>
-                  <div id="curfreq"></div>
-                </div>
-                <input id="currentF" type="range" min="2187894" max="2189406" value="0" class="slider" style="width: 100%; margin: 0 0 1em 0;">
-                <div style="text-align: center;">
-                  <div id="nextFstep"></div>
-                  <div id="calfin"></div>
-                </div>
-              </div>              
-              <div class="pure-control-group" style="margin: 1em 0 0 0;">
-                <label for="itho_ccc_toggle">RF Calibration</label>
-                  <button id="itho_ccc_toggle" class="pure-button">Unknown</button>&nbsp;<button id="itho_ccc_reset" class="pure-button">Reset</button>
-              </div>
+              <table id="vremotesTable" class="pure-table pure-table-bordered"></table>
+              <div class="pure-control-group">
+                <button id="itho_update_vremote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_vremote" class="pure-button">Reset</button>&nbsp;<button id="itho_copyid_vremote" class="pure-button">Copy ID</button>
               </div>
               <br><br>
           </fieldset>
       </form>
 <script>
 $(document).ready(function() {
-  getSettings('ithoremotes');
-  getSettings('ithoccc');
+  $('#main').css('max-width', '1400px')
+  getSettings('ithovremotes');
 });
 </script>
 `;
@@ -1478,7 +1572,8 @@ var html_edit = `
 <iframe id="editor" src="/edit" width="100%" height="100%" style="border:none;padding:5px"></iframe>
 <script>
 $(document).ready(function() {
-  $('#main').css('max-width', '1200px')
+  $('#main').css('max-width', '1200px');
+  $('#editor').height( 500 );
 });
 </script>
 `;

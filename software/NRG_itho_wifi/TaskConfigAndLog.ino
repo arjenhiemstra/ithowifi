@@ -4,7 +4,7 @@ void startTaskConfigAndLog() {
   xTaskConfigAndLogHandle = xTaskCreateStaticPinnedToCore(
                               TaskConfigAndLog,
                               "TaskConfigAndLog",
-                              STACK_SIZE_LARGE,
+                              STACK_SIZE,
                               ( void * ) 1,
                               TASK_CONFIG_AND_LOG_PRIO,
                               xTaskConfigAndLog,
@@ -18,7 +18,7 @@ void TaskConfigAndLog( void * pvParameters ) {
   initFileSystem();
   logInit();
   loadSystemConfig();
-
+  
   startTaskSysControl();
 
   esp_task_wdt_add(NULL);
@@ -67,10 +67,16 @@ void execLogAndConfigTasks() {
     saveRemotesflag = false;
     DelayedSave.once_ms(150, []() {
       saveRemotesConfig();
-      jsonWsSend("ithoremotes");
+      jsonWsSend("remotes");
     } );
   }
-
+  if (saveVremotesflag) {
+    saveVremotesflag = false;
+    DelayedSave.once_ms(150, []() {
+      saveVirtualRemotesConfig();
+      jsonWsSend("vremotes");
+    } );
+  }  
   if (resetWifiConfigflag) {
     resetWifiConfigflag = false;
     if (resetWifiConfig()) {

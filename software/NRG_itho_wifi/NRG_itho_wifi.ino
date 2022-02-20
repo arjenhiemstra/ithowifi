@@ -1,4 +1,4 @@
-#define FWVERSION "2.3.5"
+#define FWVERSION "2.4.0-alpha1"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -24,12 +24,18 @@
 
 /*
  Backlog:
- * (todo) i2c always slave unless master
- * (todo) Restructure MQTT topics
- * (todo) recheck status format if failed on boot
+ * (done) recheck status format if failed on boot
  * (todo) After timer, go back to fallback or last value
- * (todo) Prevent crash when multiple webbroser tabs open to the add-on and retreiving settings
+ * (done) Prevent crash when multiple webbroser tabs open to the add-on and retreiving settings
  * (todo) add option to monitor remotes only (ignore button presses)
+ * (todo) Make flash write atomic
+ * (todo) Set command on bedug page does not give confirmation of changed setting
+ * (todo) add support for 536-0106 remote, https://github.com/arjenhiemstra/ithowifi/issues/78
+ * (todo) add support for 536-0020 remote, https://github.com/arjenhiemstra/ithowifi/issues/76
+ * (todo) make status parameters selectable to include in update or not
+ * (todo) make NTP server configurable
+ * (todo) restructure code and add PlatformIO support
+ * 
  */
 
 
@@ -95,6 +101,7 @@ Ticker timerCCcal;
 IthoCC1101 rf;
 IthoPacket packet;
 IthoRemote remotes;
+IthoRemote virtualRemotes;
 
 #define STACK_SIZE_SMALL          2048
 #define STACK_SIZE                4096
@@ -131,8 +138,8 @@ StackType_t xTaskInitStack[ STACK_SIZE ];
 StackType_t xTaskCC1101Stack[ STACK_SIZE ];
 StackType_t xTaskMQTTStack[ STACK_SIZE_LARGE ];
 StackType_t xTaskWebStack[ STACK_SIZE_LARGE ];
-StackType_t xTaskConfigAndLog[ STACK_SIZE_LARGE ];
-StackType_t xTaskSysControlStack[ STACK_SIZE_LARGE ];
+StackType_t xTaskConfigAndLog[ STACK_SIZE ];
+StackType_t xTaskSysControlStack[ STACK_SIZE ];
 void TaskInit( void * parameter );
 void TaskCC1101( void * parameter );
 void TaskMQTT( void * parameter );
@@ -140,9 +147,6 @@ void TaskWeb( void * parameter );
 void TaskConfigAndLog( void * parameter );
 void TaskSysControl( void * parameter );
 
-IthoQueue ithoQueue;
-System sys;
-WifiConfig wifiConfig;
 
 SHTSensor sht_org(SHTSensor::SHT3X);
 SHTSensor sht_alt(SHTSensor::SHT3X_ALT);
@@ -169,6 +173,7 @@ unsigned long previousUpdate = 0;
 unsigned long wifiLedUpdate = 0;
 unsigned long SHT3x_readout = 0;
 unsigned long query2401tim = 0;
+unsigned long mqttUpdatetim = 0;
 unsigned long lastLog = 0;
 unsigned long lastVersionCheck;
 
@@ -196,6 +201,7 @@ bool updateMQTTihtoStatus = false;
 bool sendHomeAssistantDiscovery = false;
 volatile bool ithoCheck = false;
 volatile bool saveRemotesflag = false;
+volatile bool saveVremotesflag = false;
 bool SHT3x_original = false;
 bool SHT3x_alternative = false;
 bool rfInitOK = false;
