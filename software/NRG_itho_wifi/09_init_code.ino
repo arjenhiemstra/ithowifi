@@ -10,7 +10,7 @@ void failSafeBoot() {
     yield();
 
     if (digitalRead(FAILSAVE_PIN) == HIGH) {
-      
+
       ACTIVE_FS.begin(true);
       ACTIVE_FS.format();
 
@@ -133,12 +133,12 @@ void i2cInit() {
 }
 
 bool ithoInitCheck() {
-#if defined (CVE)  
+#if defined (CVE)
   if (digitalRead(STATUSPIN) == LOW) {
     return false;
   }
   sendI2CPWMinit();
-#endif  
+#endif
   return false;
 }
 
@@ -268,7 +268,7 @@ const char* hostName() {
   static char hostName[32];
 
   if (strcmp(wifiConfig.hostname, "") == 0) {
-    sprintf(hostName, "%s%02x%02x", espName, getMac(6 - 2), getMac(6 - 1));
+    sprintf(hostName, "%s%02x%02x", espName, sys.getMac(6 - 2), sys.getMac(6 - 1));
   }
   else {
     strlcpy(hostName, wifiConfig.hostname, sizeof(hostName));
@@ -278,13 +278,7 @@ const char* hostName() {
   return hostName;
 }
 
-uint8_t getMac(uint8_t i) {
-  static uint8_t mac[6];
 
-  esp_read_mac(mac, ESP_MAC_WIFI_STA);
-
-  return mac[i];
-}
 
 void wifiInit() {
   if (!loadWifiConfig()) {
@@ -349,13 +343,13 @@ bool connectWiFiSTA()
 {
   wifiModeAP = false;
   D_LOG("Connecting to wireless network...\n");
-  
+
   WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   WiFi.disconnect(true);
 
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
-  WiFi.setHostname(hostName());  
+  WiFi.setHostname(hostName());
 
   WiFi.setAutoReconnect(false);
   delay(200);
@@ -445,47 +439,103 @@ void mqttInit() {
 
 void init_vRemote() {
   //setup virtual remote
-  id0 = getMac(6 - 3);
-  id1 = getMac(6 - 2);
-  id2 = getMac(6 - 1);
+  
+  id0 = sys.getMac(6 - 3);
+  id1 = sys.getMac(6 - 2);
+  id2 = sys.getMac(6 - 1);
   char buff[128];
   sprintf(buff, "Setup: Virtual remote ID: %d,%d,%d", id0, id1, id2);
   logInput(buff);
+
+  virtualRemotes.setMaxRemotes(systemConfig.itho_numvrem);
+  loadVirtualRemotesConfig();
+
 }
 
 void ArduinoOTAinit() {
 
-  events.onConnect([](AsyncEventSourceClient * client) {
-    client->send("hello!", NULL, millis(), 1000);
-  });
-  server.addHandler(&events);
+  //  events.onConnect([](AsyncEventSourceClient * client) {
+  //    client->send("hello!", NULL, millis(), 1000);
+  //  });
+  //  server.addHandler(&events);
 
   // Send OTA events to the browser
-  ArduinoOTA.onStart([]() {
-    Serial.end();
-    events.send("Update Start", "ota");
-  });
-  ArduinoOTA.onEnd([]() {
-    events.send("Update End", "ota");
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    char p[32];
-    sprintf(p, "Progress: %u%%\n", (progress / (total / 100)));
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    if (error == OTA_AUTH_ERROR)
-      events.send("Auth Failed", "ota");
-    else if (error == OTA_BEGIN_ERROR)
-      events.send("Begin Failed", "ota");
-    else if (error == OTA_CONNECT_ERROR)
-      events.send("Connect Failed", "ota");
-    else if (error == OTA_RECEIVE_ERROR)
-      events.send("Recieve Failed", "ota");
-    else if (error == OTA_END_ERROR)
-      events.send("End Failed", "ota");
-  });
   ArduinoOTA.setHostname(hostName());
+  ArduinoOTA
+  .onStart([]() {
+
+    static char buf[128] = "";
+    strcat(buf, "Firmware update: ");
+    
+    if (ArduinoOTA.getCommand() == U_FLASH)
+      strncat(buf, "sketch", sizeof(buf) - strlen(buf) - 1);
+    else // U_SPIFFS
+      strncat(buf, "filesystem", sizeof(buf) - strlen(buf) - 1);
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+    logInput(buf);
+    delay(250);
+    
+    ACTIVE_FS.end();
+    onOTA = true;
+    dontSaveConfig = true;
+    dontReconnectMQTT = true;
+    mqttClient.disconnect();
+
+    detachInterrupt(ITHO_IRQ_PIN);
+
+    TaskCC1101Timeout.detach();
+    TaskConfigAndLogTimeout.detach();
+    TaskMQTTTimeout.detach();
+
+    vTaskSuspend( xTaskCC1101Handle );
+    vTaskSuspend( xTaskMQTTHandle );
+    vTaskSuspend( xTaskConfigAndLogHandle );
+
+    esp_task_wdt_delete( xTaskCC1101Handle );
+    esp_task_wdt_delete( xTaskMQTTHandle );
+    esp_task_wdt_delete( xTaskConfigAndLogHandle );    
+  })
+  .onEnd([]() {
+    Serial.println("\nEnd");
+  })
+  .onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  })
+  .onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+  });
   ArduinoOTA.begin();
+  //
+  //  ArduinoOTA.onStart([]() {
+  //    Serial.end();
+  //    events.send("Update Start", "ota");
+  //  });
+  //  ArduinoOTA.onEnd([]() {
+  //    events.send("Update End", "ota");
+  //  });
+  //  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+  //    char p[32];
+  //    sprintf(p, "Progress: %u%%\n", (progress / (total / 100)));
+  //  });
+  //  ArduinoOTA.onError([](ota_error_t error) {
+  //    if (error == OTA_AUTH_ERROR)
+  //      events.send("Auth Failed", "ota");
+  //    else if (error == OTA_BEGIN_ERROR)
+  //      events.send("Begin Failed", "ota");
+  //    else if (error == OTA_CONNECT_ERROR)
+  //      events.send("Connect Failed", "ota");
+  //    else if (error == OTA_RECEIVE_ERROR)
+  //      events.send("Recieve Failed", "ota");
+  //    else if (error == OTA_END_ERROR)
+  //      events.send("End Failed", "ota");
+  //  });
+  //  ArduinoOTA.setHostname(hostName());
+  //  ArduinoOTA.begin();
 
 }
 
@@ -703,7 +753,7 @@ void webServerInit() {
 void MDNSinit() {
 
   MDNS.begin(hostName());
-  mdns_instance_name_set("NRG IthoWifi controller");
+  mdns_instance_name_set(hostName());
 
   MDNS.addService("http", "tcp", 80);
 

@@ -4,6 +4,7 @@
 
 #include "WifiConfig.h"
 
+WifiConfig wifiConfig;
 
 // default constructor
 WifiConfig::WifiConfig() {

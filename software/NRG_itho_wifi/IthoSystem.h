@@ -11,6 +11,9 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include "IthoPacket.h"
+#include "IthoRemote.h"
+
 extern uint8_t ithoDeviceID;
 extern uint8_t itho_fwversion;
 extern volatile uint16_t ithoCurrentVal;
@@ -27,6 +30,7 @@ extern bool sendI2CStatusFormat;
 extern bool sendI2CStatus;
 extern bool send31DA;
 extern bool send31D9;
+extern bool send10D0;
 extern bool get2410;
 extern bool set2410;
 extern bool buttonResult;
@@ -112,6 +116,7 @@ const struct ihtoDeviceType* getDevicePtr(const uint8_t deviceID);
 
 uint8_t checksum(const uint8_t* buf, size_t buflen);
 void sendI2CPWMinit();
+void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRemote &remotes);
 void sendButton(const uint8_t number, bool &updateweb);
 void sendTimer(const uint8_t timer, bool &updateweb);
 void sendJoinI2C(bool &updateweb);
@@ -123,5 +128,6 @@ void sendQuery31DA(bool &updateweb);
 void sendQuery31D9(bool &updateweb);
 int32_t * sendQuery2410(bool &updateweb);
 void setSetting2410(bool &updateweb);
+void filterReset();
 int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t* data, size_t len);

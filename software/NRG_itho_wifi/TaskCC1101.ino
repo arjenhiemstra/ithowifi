@@ -28,7 +28,7 @@ uint8_t findRFTlastCommand() {
 }
 
 void RFDebug(IthoCommand cmd) {
-  char debugLog[200];
+  char debugLog[200] {};
   strncat(debugLog, rf.LastMessageDecoded().c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
   //log command
   switch (cmd) {
@@ -50,6 +50,12 @@ void RFDebug(IthoCommand cmd) {
     case IthoFull:
       strncat(debugLog, " (cmd:full)", sizeof(debugLog) - strlen(debugLog) - 1);
       break;
+    case IthoAuto:
+      strncat(debugLog, " (cmd:auto)", sizeof(debugLog) - strlen(debugLog) - 1);
+      break;
+    case IthoAutoNight:
+      strncat(debugLog, " (cmd:autonight)", sizeof(debugLog) - strlen(debugLog) - 1);
+      break;
     case IthoTimer1:
       strncat(debugLog, " (cmd:timer1)", sizeof(debugLog) - strlen(debugLog) - 1);
       break;
@@ -58,6 +64,12 @@ void RFDebug(IthoCommand cmd) {
       break;
     case IthoTimer3:
       strncat(debugLog, " (cmd:timer3)", sizeof(debugLog) - strlen(debugLog) - 1);
+      break;
+    case IthoCook30:
+      strncat(debugLog, " (cmd:cook30)", sizeof(debugLog) - strlen(debugLog) - 1);
+      break;
+    case IthoCook60:
+      strncat(debugLog, " (cmd:cook60)", sizeof(debugLog) - strlen(debugLog) - 1);
       break;
     case IthoJoin:
       strncat(debugLog, " (cmd:join)", sizeof(debugLog) - strlen(debugLog) - 1);
@@ -73,24 +85,59 @@ void RFDebug(IthoCommand cmd) {
 
 }
 
-void toggleRemoteLLmode() {
-  if (remotes.toggleLearnLeaveMode()) {
-    rf.setBindAllowed(true);
-    timerLearnLeaveMode.attach(1, setllModeTimer);
+void toggleRemoteLLmode(const char * remotetype) {
+
+  if (strcmp(remotetype, "remote") == 0) {
+    if (virtualRemotes.remoteLearnLeaveStatus()) {
+      logMessagejson("disable virtual remote Copy ID mode first", WEBINTERFACE);
+      return;
+    }
+    if (remotes.toggleLearnLeaveMode()) {
+      rf.setBindAllowed(true);
+      timerLearnLeaveMode.attach(1, setllModeTimer);
+    }
+    else {
+      rf.setBindAllowed(false);
+      timerLearnLeaveMode.detach();
+      remotes.setllModeTime(0);
+      sysStatReq = true;
+    }
   }
-  else {
-    rf.setBindAllowed(false);
-    timerLearnLeaveMode.detach();
-    remotes.setllModeTime(0);
-    sysStatReq = true;
+  if (strcmp(remotetype, "vremote") == 0) {
+    if (remotes.remoteLearnLeaveStatus()) {
+      logMessagejson("disable remote learn/leave mode first", WEBINTERFACE);
+      return;
+    }
+    if (virtualRemotes.toggleLearnLeaveMode()) {
+      timerLearnLeaveMode.attach(1, setllModeTimer);
+    }
+    else {
+      timerLearnLeaveMode.detach();
+      virtualRemotes.setllModeTime(0);
+      virtualRemotes.activeRemote = -1;
+      sysStatReq = true;
+    }
   }
+
 }
 
 void setllModeTimer() {
-  remotes.updatellModeTimer();
-  sysStatReq = true;
-  if (remotes.getllModeTime() == 0) {
-    timerLearnLeaveMode.detach();
+
+  if (remotes.remoteLearnLeaveStatus()) {
+    remotes.updatellModeTimer();
+    sysStatReq = true;
+    if (remotes.getllModeTime() == 0) {
+      timerLearnLeaveMode.detach();
+    }
+    return;
+  }
+  if (virtualRemotes.remoteLearnLeaveStatus()) {
+    virtualRemotes.updatellModeTimer();
+    sysStatReq = true;
+    if (virtualRemotes.getllModeTime() == 0) {
+      timerLearnLeaveMode.detach();
+    }
+    return;
   }
 
 }
@@ -190,7 +237,7 @@ void TaskCC1101( void * pvParameters ) {
     esp_task_wdt_add(NULL);
     reboot.detach();
     logInput("Setup: init of CC1101 RF module successful");
-    rf.setDeviceID(getMac(6 - 3), getMac(6 - 2), getMac(6 - 1));
+    rf.setDeviceID(sys.getMac(6 - 3), sys.getMac(6 - 2), sys.getMac(6 - 1));
     systemConfig.itho_rf_support = 1;
     loadRemotesConfig();
     rf.setBindAllowed(true);
@@ -265,6 +312,31 @@ void TaskCC1101( void * pvParameters ) {
                     //default:
                 }
               }
+              if (virtualRemotes.remoteLearnLeaveStatus()) {
+                int result = virtualRemotes.registerNewRemote(id);
+                switch (result) {
+                  case -1: // failed! - remote already registered
+                    break;
+                  case -2: //failed! - max number of remotes reached"
+                    break;
+                  case 1:
+                    std::string rfmsg = rf.LastMessageDecoded().c_str();
+                    if (rfmsg.find("00,22,F1") != std::string::npos) { //CVE RFT
+                      virtualRemotes.updateRemoteType(virtualRemotes.activeRemote, RemoteTypes::RFTCVE);
+                    }
+                    else if (rfmsg.find("63,22,F8") != std::string::npos) { //AUTO RFT
+                      virtualRemotes.updateRemoteType(virtualRemotes.activeRemote, RemoteTypes::RFTAUTO);
+                    }
+                    else if (rfmsg.find("00,22,F8") != std::string::npos) { //DM RFT
+                      virtualRemotes.updateRemoteType(virtualRemotes.activeRemote, RemoteTypes::DEMANDFLOW);
+                    }
+                    saveVremotesflag = true;
+                    delay(200);
+                    toggleRemoteLLmode("vremote");
+                    break;
+                    //default:
+                }
+              }
             }
             if (chk) {
               remotes.lastRemoteName = remotes.getRemoteNamebyIndex(remotes.remoteIndex(id));
@@ -286,6 +358,18 @@ void TaskCC1101( void * pvParameters ) {
               if (cmd == IthoTimer3) {
                 ithoExecCommand("timer3", REMOTE);
               }
+              if (cmd == IthoCook30) {
+                ithoExecCommand("cook30", REMOTE);
+              }
+              if (cmd == IthoCook60) {
+                ithoExecCommand("cook60", REMOTE);
+              }
+              if (cmd == IthoAuto) {
+                ithoExecCommand("auto", REMOTE);
+              }
+              if (cmd == IthoAutoNight) {
+                ithoExecCommand("autonight", REMOTE);
+              }
               if (cmd == IthoJoin && !remotes.remoteLearnLeaveStatus()) {
               }
               if (cmd == IthoLeave && !remotes.remoteLearnLeaveStatus()) {
@@ -306,7 +390,7 @@ void TaskCC1101( void * pvParameters ) {
           const ithoRFDevices &rfDevices = rf.getRFdevices();
           for (auto& item : rfDevices.device) {
             if (item.deviceId == 0) continue;
-            int remIndex = remotes.remoteIndex(item.deviceId);            
+            int remIndex = remotes.remoteIndex(item.deviceId);
             if (remIndex != -1) {
               remotes.addCapabilities(remIndex, "lastcmd", item.lastCommand);
               if (item.co2 != 0xEFFF) {

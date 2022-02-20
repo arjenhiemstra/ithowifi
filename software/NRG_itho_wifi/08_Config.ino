@@ -112,7 +112,7 @@ bool loadSystemConfig() {
 
 bool saveSystemConfig() {
   DynamicJsonDocument doc(2048);
-  JsonObject root = doc.to<JsonObject>(); 
+  JsonObject root = doc.to<JsonObject>();
 
   systemConfig.get(root);
 
@@ -139,12 +139,16 @@ bool resetSystemConfig() {
 }
 
 
-uint16_t serializeRemotes(const IthoRemote &remotes, Print& dst) {
-  DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 300));
+uint16_t serializeRemotes(const char* filename, const IthoRemote &remotes, Print& dst) {
+  DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 400));
 
-  JsonObject root = doc.to<JsonObject>(); 
+  JsonObject root = doc.to<JsonObject>();
 
-  remotes.get(root);
+  std::string tempStr = filename;
+  if (tempStr.find(".json") == std::string::npos) return 0;
+  
+  std::string rootName = tempStr.substr(1, static_cast<char>(tempStr.find(".json")));
+  remotes.get(root, rootName.c_str());
 
   return serializeJson(doc, dst) > 0;
 }
@@ -156,6 +160,12 @@ bool saveRemotesConfig() {
 
 }
 
+bool saveVirtualRemotesConfig() {
+
+  return saveFileRemotes("/vremotes.json", virtualRemotes);
+
+}
+
 bool saveFileRemotes(const char *filename, const IthoRemote &remotes) { // Open file for writing
   File file = ACTIVE_FS.open(filename, "w");
   if (!file) {
@@ -163,7 +173,7 @@ bool saveFileRemotes(const char *filename, const IthoRemote &remotes) { // Open 
     return false;
   }
   // Serialize JSON to file
-  bool success = serializeRemotes(remotes, file);
+  bool success = serializeRemotes(filename, remotes, file);
   if (!success) {
     D_LOG("Failed to serialize remotes\n");
     return false;
@@ -172,39 +182,31 @@ bool saveFileRemotes(const char *filename, const IthoRemote &remotes) { // Open 
   return true;
 }
 
-bool deserializeRemotes(Stream &src, IthoRemote &remotes) {
+bool deserializeRemotes(const char* filename, Stream &src, IthoRemote &remotes) {
 
-  DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 300));
+  DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 400));
 
   DeserializationError err = deserializeJson(doc, src);
   if (err) {
-    logInput("Failed to deserialize remotes config json");
-    saveRemotesConfig();
-    if (!loadRemotesConfig()) {
-      logInput("Remote config load failed, reboot...");
-      delay(1000);
-      ESP.restart();
-    }
+    D_LOG("Failed to deserialize remotes config json\n");
     return false;
   }
 
   doc.shrinkToFit();
 
-  remotes.set(doc.as<JsonObject>());
-
-remotes.configLoaded = remotes.set(doc.as<JsonObject>());
+  std::string tempStr = filename;
+  if (tempStr.find(".json") == std::string::npos) return false;
+  
+  std::string rootName = tempStr.substr(1, static_cast<char>(tempStr.find(".json")));
+    
+  remotes.configLoaded = remotes.set(doc.as<JsonObject>(), rootName.c_str());
   if (!remotes.configLoaded) {
-    logInput("Remote config version mismatch, resetting config...");
-    saveRemotesConfig();
-    delay(0);
-    if (!loadRemotesConfig()) {
-      logInput("Remote config load failed, reboot...");
-      delay(1000);
-      ESP.restart();
-    }
-
+    D_LOG("Remotes config version mismatch, resetting config...\n");
+    logInput("Remotes config version mismatch, resetting config...");
+    saveFileRemotes(filename, remotes);
+    delay(1000);
+    ESP.restart();
   }
-
 
   return true;
 }
@@ -215,19 +217,36 @@ bool loadRemotesConfig() {
 
 }
 
+bool loadVirtualRemotesConfig() {
+
+  return loadFileRemotes("/vremotes.json", virtualRemotes);
+
+}
+
 bool loadFileRemotes(const char *filename, IthoRemote &remotes) { // Open file for reading
+
+  if (!ACTIVE_FS.exists(filename)) {
+    D_LOG("Setup: writing initial remotes config\n");
+    logInput("Setup: writing initial remotes config");
+    if (!saveFileRemotes(filename, remotes)) {
+      D_LOG("Setup: failed writing initial wifi config\n");
+      return false;
+    }
+  }
+  
   File file = ACTIVE_FS.open(filename, "r");
 
   if (!file) {
-    D_LOG("Failed to open config file\n"); 
+    D_LOG("Failed to open config file\n");
     return false;
   }
-
-  bool success = deserializeRemotes(file, remotes);
+  
+  bool success = deserializeRemotes(filename, file, remotes);
 
   if (!success) {
     D_LOG("Failed to deserialize configuration\n");
     return false;
   }
+  logInput("Setup: remotes configfile loaded");
   return true;
 }

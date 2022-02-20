@@ -18,6 +18,7 @@ class System {
     */
     const char * uptime();
 
+    uint8_t getMac(uint8_t i);
     /**
       Returns the free RAM
       @return int: free RAM
@@ -45,3 +46,5 @@ class System {
     uint32_t memMaxBlock;
     char retval[25];
 };
+
+extern System sys;

@@ -43,3 +43,5 @@ class IthoQueue {
 
 
 }; //IthoQueue
+
+extern IthoQueue ithoQueue;

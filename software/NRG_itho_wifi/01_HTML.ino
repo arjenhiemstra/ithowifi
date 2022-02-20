@@ -32,6 +32,7 @@ const char* html_mainpage = R"=====(
                 <li class="pure-menu-item"><a href="itho" class="pure-menu-link">Itho settings</a></li>
                 <li class="pure-menu-item"><a href="status" class="pure-menu-link">Itho status</a></li>                
                 <li id="remotemenu" class="pure-menu-item hidden"><a href="remotes" class="pure-menu-link">RF remotes</a></li>
+                <li class="pure-menu-item"><a href="vremotes" class="pure-menu-link">Virtual remotes</a></li>
                 <li class="pure-menu-item"><a href="mqtt" class="pure-menu-link">MQTT</a></li>
                 <li class="pure-menu-item"><a href="api" class="pure-menu-link">API</a></li>
                 <li class="pure-menu-item"><a href="help" class="pure-menu-link">Help</a></li>
@@ -311,7 +312,8 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print("<button id=\"button2410set\" class=\"pure-button pure-button-primary\">Set 2410</button>setting index: <input id=\"itho_setting_id_set\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"> setting value: <input id=\"itho_setting_value_set\" type=\"number\" min=\"-2147483647\" max=\"2147483647\" size=\"10\" value=\"0\"><br><span>Sent command:&nbsp;</span><span id=\'itho2410set\'></span><br><span>Result:&nbsp;</span><span id=\'itho2410setres\'></span><br>");
   response->print("<span style=\"color:red\">Warning!!</span><br><br>");
   response->print("<button id=\"button31DA\" class=\"pure-button pure-button-primary\">Query 31DA</button><br><span>Result:&nbsp;</span><span id=\'itho31DA\'></span><br><br>");
-  response->print("<button id=\"button31D9\" class=\"pure-button pure-button-primary\">Query 31D9</button><br><span>Result:&nbsp;</span><span id=\'itho31D9\'></span></fieldset></form><br>");
+  response->print("<button id=\"button31D9\" class=\"pure-button pure-button-primary\">Query 31D9</button><br><span>Result:&nbsp;</span><span id=\'itho31D9\'></span><br><br>");
+  response->print("<button id=\"button10D0\" class=\"pure-button pure-button-primary\">Filter reset</button><br><span>Result:&nbsp;</span><span id=\'itho10D0\'></span></fieldset></form><br>");  
 
   response->print("<br><br>");
   
