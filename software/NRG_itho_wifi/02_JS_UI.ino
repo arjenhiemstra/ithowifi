@@ -289,7 +289,8 @@ $(document).ready(function() {
           dns1:     $('#dns1').val(),
           dns2:     $('#dns2').val(),
           port:     $('#port').val(),
-          hostname: $('#hostname').val()
+          hostname: $('#hostname').val(),
+          nptserver:$('#ntpserver').val()
         }
       }));
       update_page('wifisetup');
@@ -1179,6 +1180,10 @@ var html_wifisetup = `
             <div class="pure-control-group">
               <label for="dns1">DNS server 2</label>
                 <input id="dns2" type="text">
+            </div>
+            <div class="pure-control-group">
+              <label for="ntpserver">NTP server</label>
+                <input id="ntpserver" type="text">
             </div>
           </fieldset>
       </form>
