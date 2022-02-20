@@ -274,10 +274,22 @@ const char* hostName() {
     strlcpy(hostName, wifiConfig.hostname, sizeof(hostName));
   }
 
-
   return hostName;
 }
 
+
+const char* ntpServer() {
+  static char ntpServer[128];
+
+  if (strcmp(wifiConfig.ntpserver, "") == 0) {
+    sprintf(ntpServer, "pool.ntp.org");
+  }
+  else {
+    strlcpy(ntpServer, wifiConfig.ntpserver, sizeof(ntpServer));
+  }
+
+  return ntpServer;
+}
 
 
 void wifiInit() {
@@ -289,7 +301,7 @@ void wifiInit() {
     logInput("Setup: Wifi connect STA failed");
     setupWiFiAP();
   }
-  configTime(0, 0, "pool.ntp.org");
+  configTime(0, 0, ntpServer());
 
   WiFi.scanDelete();
   if (WiFi.scanComplete() == -2) {
@@ -303,6 +315,8 @@ void wifiInit() {
   }
 
 }
+
+
 void setupWiFiAP() {
 
   /* Soft AP network parameters */

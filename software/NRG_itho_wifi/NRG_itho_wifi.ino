@@ -33,7 +33,6 @@
  * (todo) add support for 536-0106 remote, https://github.com/arjenhiemstra/ithowifi/issues/78
  * (todo) add support for 536-0020 remote, https://github.com/arjenhiemstra/ithowifi/issues/76
  * (todo) make status parameters selectable to include in update or not
- * (todo) make NTP server configurable
  * (todo) restructure code and add PlatformIO support
  * 
  */
