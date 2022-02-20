@@ -118,6 +118,18 @@ bool ithoExecCommand(const char* command, cmdOrigin origin) {
     else if (strcmp(command, "timer3") == 0) {
       ithoSetTimer(systemConfig.itho_timer3, origin);
     }
+    else if (strcmp(command, "cook30") == 0) {
+      ithoSetTimer(30, origin);
+    }
+    else if (strcmp(command, "cook60") == 0) {
+      ithoSetTimer(60, origin);
+    }
+    else if (strcmp(command, "auto") == 0) {
+      ithoSetSpeed(systemConfig.itho_medium, origin);
+    }
+    else if (strcmp(command, "autonight") == 0) {
+      ithoSetSpeed(systemConfig.itho_medium, origin);
+    }        
     else if (strcmp(command, "clearqueue") == 0) {
       clearQueue = true;
     }
@@ -130,7 +142,67 @@ bool ithoExecCommand(const char* command, cmdOrigin origin) {
 
 }
 
+bool ithoI2CButtonCommand(uint8_t remoteIndex, const char* command) {
+  D_LOG("EXEC VREMOTE BUTTON COMMAND\n");
 
+  if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
+  }
+  else {
+    return false;
+  }
+  if (strcmp(command, "low") == 0) {
+    sendRemoteCmd(remoteIndex, IthoLow, virtualRemotes);
+  }
+  
+  else if (strcmp(command, "medium") == 0) {
+    sendRemoteCmd(remoteIndex, IthoMedium, virtualRemotes);
+  }
+  else if (strcmp(command, "high") == 0) {
+    sendRemoteCmd(remoteIndex, IthoHigh, virtualRemotes);
+  }
+  else if (strcmp(command, "timer1") == 0) {
+    sendRemoteCmd(remoteIndex, IthoTimer1, virtualRemotes);
+  }
+  else if (strcmp(command, "timer2") == 0) {
+    sendRemoteCmd(remoteIndex, IthoTimer2, virtualRemotes);
+  }
+  else if (strcmp(command, "timer3") == 0) {
+    sendRemoteCmd(remoteIndex, IthoTimer3, virtualRemotes);
+  }
+  else if (strcmp(command, "cook30") == 0) {
+    sendRemoteCmd(remoteIndex, IthoCook30, virtualRemotes);
+  }
+  else if (strcmp(command, "cook60") == 0) {
+    sendRemoteCmd(remoteIndex, IthoCook60, virtualRemotes);
+  }    
+  else if (strcmp(command, "auto") == 0) {
+    sendRemoteCmd(remoteIndex, IthoAuto, virtualRemotes);
+  }
+  else if (strcmp(command, "autonight") == 0) {
+    sendRemoteCmd(remoteIndex, IthoAutoNight, virtualRemotes);
+  }    
+  else if (strcmp(command, "join") == 0) {
+    sendRemoteCmd(remoteIndex, IthoJoin, virtualRemotes);
+  }
+  else if (strcmp(command, "leave") == 0) {
+    sendRemoteCmd(remoteIndex, IthoLeave, virtualRemotes);
+  }
+  else {
+
+    xSemaphoreGive(mutexI2Ctask);
+
+    return false;
+  }
+  char origin[15] {};
+  sprintf(origin, "vremote-%d", remoteIndex);
+  
+  logLastCommand(command, origin);
+  
+  xSemaphoreGive(mutexI2Ctask);
+  
+  return true;
+  
+}
 bool ithoI2CCommand(const char* command, cmdOrigin origin) {
 
   D_LOG("EXEC VREMOTE COMMAND\n");
@@ -166,6 +238,18 @@ bool ithoI2CCommand(const char* command, cmdOrigin origin) {
     timerValue = systemConfig.itho_timer3;
     sendI2CTimer = true;
   }
+  else if (strcmp(command, "cook30") == 0) {
+    //tbi
+  }
+  else if (strcmp(command, "cook60") == 0) {
+    //tbi
+  }    
+  else if (strcmp(command, "auto") == 0) {
+    //tbi
+  }
+  else if (strcmp(command, "autonight") == 0) {
+    //tbi
+  }    
   else if (strcmp(command, "join") == 0) {
     sendI2CJoin = true;
   }
@@ -187,6 +271,9 @@ bool ithoI2CCommand(const char* command, cmdOrigin origin) {
   else if (strcmp(command, "31D9") == 0) {
     send31D9 = true;
   }
+  else if (strcmp(command, "10D0") == 0) {
+    send10D0 = true;
+  }  
   else {
 
     xSemaphoreGive(mutexI2Ctask);

@@ -47,6 +47,7 @@ class SystemConfig {
     uint16_t itho_timer2;
     uint16_t itho_timer3;
     uint16_t itho_updatefreq;
+    uint8_t itho_numvrem;
     uint8_t itho_sendjoin;
     uint8_t itho_forcemedium;
     uint8_t itho_vremoteapi;

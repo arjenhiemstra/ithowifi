@@ -20,6 +20,6 @@ extern FSFilePrint filePrint;
 
 extern SemaphoreHandle_t mutexLogTask;
 
-void printTimestamp(Print * _logOutput);
-void printNewline(Print * _logOutput);
+void printTimestamp(Print *_logOutput, int logLevel);
+void printNewline(Print *_logOutput, int logLevel);
 void logInput(const char * inputString);

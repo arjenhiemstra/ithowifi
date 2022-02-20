@@ -43,10 +43,15 @@ void jsonWsSend(const char* rootName) {
     JsonObject nested = root.createNestedObject(rootName);
     getIthoStatusJSON(nested);
   }
-  else if (strcmp(rootName, "ithoremotes") == 0) {
+  else if (strcmp(rootName, "remotes") == 0) {
     // Create an object at the root
     JsonObject obj = root.to<JsonObject>(); // Fill the object
-    remotes.get(obj);
+    remotes.get(obj, rootName);
+  }
+  else if (strcmp(rootName, "vremotes") == 0) {
+    // Create an object at the root
+    JsonObject obj = root.to<JsonObject>(); // Fill the object
+    virtualRemotes.get(obj, rootName);
   }
   notifyClients(root.as<JsonObjectConst>());
 }
@@ -70,6 +75,7 @@ void jsonSystemstat() {
     systemstat["sensor"] = 1;
   }
   systemstat["itho_llm"] = remotes.getllModeTime();
+  systemstat["copy_id"] = virtualRemotes.getllModeTime();
   systemstat["ithoinit"] = ithoInitResult;
 
   notifyClients(root.as<JsonObjectConst>());
@@ -219,11 +225,42 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       }
     }
     else if (msg.find("{\"ithoremotes\"") != std::string::npos) {
-      jsonWsSend("ithoremotes");
+      jsonWsSend("remotes");
       sysStatReq = true;
     }
+    else if (msg.find("{\"ithovremotes\"") != std::string::npos) {
+      jsonWsSend("vremotes");
+      sysStatReq = true;
+    }
+    else if (msg.find("{\"vremote\"") != std::string::npos) {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        if (!(const char*)root["vremote"].isNull() && !(const char*)root["command"].isNull()) {
+          ithoI2CButtonCommand(root["vremote"].as<uint8_t>(), root["command"].as<const char*>());
+        }
+      }
+
+    }
     else if (msg.find("{\"itho_llm\"") != std::string::npos) {
-      toggleRemoteLLmode();
+      toggleRemoteLLmode("remote");
+    }
+    else if (msg.find("{\"copy_id\"") != std::string::npos) {
+      bool parseOK = false;
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        int number = root["index"];
+        if (number > 0 && number < virtualRemotes.getMaxRemotes() + 1) {
+          number--; //+1 was added earlier to offset index from 0
+          parseOK = true;
+        }
+        if (parseOK) {
+          virtualRemotes.activeRemote = number;
+          toggleRemoteLLmode("vremote");
+        }
+      }
+
     }
     else if (msg.find("{\"itho_ccc_toggle\"") != std::string::npos) {
       toggleCCcal();
@@ -241,12 +278,12 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error) {
         int number = root["itho_remove_remote"];
-        if (number > 0 && number < MAX_NUMBER_OF_REMOTES + 1) {
+        if (number > 0 && number < remotes.getMaxRemotes() + 1) {
           parseOK = true;
           number--; //+1 was added earlier to offset index from 0
         }
         if (parseOK) {
-          remotes.removeRemote(number);
+          remotes.removeRemote(number, "remote");
           const int* id = remotes.getRemoteIDbyIndex(number);
           rf.setBindAllowed(true);
           rf.removeRFDevice(*id, *(id + 1), *(id + 2));
@@ -261,7 +298,34 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       if (!error) {
         uint8_t index = root["itho_update_remote"].as<unsigned int>();
         remotes.updateRemoteName(index, root["value"] | "");
+        remotes.updateRemoteType(index, root["remtype"] | 0);
         saveRemotesflag = true;
+      }
+    }
+    else if (msg.find("{\"itho_remove_vremote\"") != std::string::npos) {
+      bool parseOK = false;
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        int number = root["itho_remove_vremote"];
+        if (number > 0 && number < virtualRemotes.getMaxRemotes() + 1) {
+          parseOK = true;
+          number--; //+1 was added earlier to offset index from 0
+        }
+        if (parseOK) {
+          virtualRemotes.removeRemote(number, "vremote");
+          saveVremotesflag = true;
+        }
+      }
+    }
+    else if (msg.find("{\"itho_update_vremote\"") != std::string::npos) {
+      StaticJsonDocument<512> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        uint8_t index = root["itho_update_vremote"].as<unsigned int>();
+        virtualRemotes.updateRemoteName(index, root["value"] | "");
+        virtualRemotes.updateRemoteType(index, root["remtype"] | 0);
+        saveVremotesflag = true;
       }
     }
     else if (msg.find("{\"reboot\"") != std::string::npos) {

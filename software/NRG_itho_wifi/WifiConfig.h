@@ -35,3 +35,5 @@ class WifiConfig {
 
 
 }; //WifiConfig
+
+extern WifiConfig wifiConfig;

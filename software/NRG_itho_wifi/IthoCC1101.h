@@ -14,22 +14,7 @@
 
 
 
-#define MAX_NUMBER_OF_REMOTES 10
-
-//struct ithoRFCapab {
-//  std::string name;
-//  int32_t value;
-//};
-//
-//struct ithoRFDevices {
-//  uint32_t deviceId;
-//  std::vector<ithoRFCapab> Capabilities;
-//
-//  ithoRFDevices(): deviceId(0), Capabilities()
-//  {
-//  }
-//
-//};
+#define MAX_NUM_OF_REMOTES 10
 
 struct ithoRFDevice {
   uint32_t deviceId {0};
@@ -44,41 +29,12 @@ struct ithoRFDevice {
 
 struct ithoRFDevices {
   uint8_t count {0};
-  ithoRFDevice device[MAX_NUMBER_OF_REMOTES];
+  ithoRFDevice device[MAX_NUM_OF_REMOTES];
 };
 
 //pa table settings
 const uint8_t ithoPaTableSend[8] = {0x6F, 0x26, 0x2E, 0x8C, 0x87, 0xCD, 0xC7, 0xC0};
 const uint8_t ithoPaTableReceive[8] = {0x6F, 0x26, 0x2E, 0x7F, 0x8A, 0x84, 0xCA, 0xC4};
-
-//message command bytes
-const uint8_t ithoMessageRVHighCommandBytes[] =   {49, 224, 4, 0, 0, 200, 0};
-const uint8_t ithoMessageHighCommandBytes[] =     {34, 241, 3, 0, 4, 4};
-const uint8_t ithoMessageFullCommandBytes[] =     {34, 241, 3, 0, 4, 4};
-const uint8_t ithoMessageMediumCommandBytes[] =   {34, 241, 3, 0, 3, 4};
-const uint8_t ithoMessageRVMediumCommandBytes[] = {34, 241, 3, 0, 3, 7};
-const uint8_t ithoMessageLowCommandBytes[] =      {34, 241, 3, 0, 2, 4};
-const uint8_t ithoMessageRVLowCommandBytes[] =    {49, 224, 4, 0, 0, 1, 0};
-const uint8_t ithoMessageRVAutoCommandBytes[] =   {34, 241, 3, 0, 5, 7};
-const uint8_t ithoMessageStandByCommandBytes[] =  {0, 0, 0, 0, 0, 0};    //unkown, tbd
-const uint8_t ithoMessageTimer1CommandBytes[] =   {34, 243, 3, 0, 0, 10}; //10 minutes full speed
-const uint8_t ithoMessageTimer2CommandBytes[] =   {34, 243, 3, 0, 0, 20}; //20 minutes full speed
-const uint8_t ithoMessageTimer3CommandBytes[] =   {34, 243, 3, 0, 0, 30}; //30 minutes full speed
-const uint8_t ithoMessageJoinCommandBytes[] =     {31, 201, 12, 0, 34, 241};
-const uint8_t ithoMessageJoin2CommandBytes[] =    {31, 201, 12, 99, 34, 248}; //join command of RFT AUTO Co2 remote
-const uint8_t ithoMessageRVJoinCommandBytes[] =   {31, 201, 24, 0, 49, 224}; //join command of RFT-RV
-const uint8_t ithoMessageLeaveCommandBytes[] =    {31, 201, 6, 0, 31, 201};
-//itho rft-rv
-//unknown, high
-//148,216,43,49,224,4,0,0,200,0,3,127,244,78,11,155,154,225,11,96,138
-//148,216,43,49,224,4,0,0,200,0,3,127,51,80,47,233,94,6,189,114,73
-
-//low
-//148,216,43,49,224,4,0,0,1,0,202,127,242,212,160,123,15,64,7,129,33
-//148,216,43,34,241,3,0,4,4,194,127,255,189,90,107,88,72,115,49,192,105
-
-//join
-//151,149,65,31,201,24,0,49,224,151,149,65,0,18,160,151,149,65,1,16,224
 
 class IthoPacket;
 

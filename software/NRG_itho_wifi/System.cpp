@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include "System.h"
 
+System sys;
+
 const char* System::uptime()
 {
   char buffer[65];
@@ -56,6 +58,14 @@ const char* System::uptime()
   strcat(retval, buffer);
 
   return retval;
+}
+
+uint8_t System::getMac(uint8_t i) {
+  static uint8_t mac[6];
+
+  esp_read_mac(mac, ESP_MAC_WIFI_STA);
+
+  return mac[i];
 }
 
 int System::ramFree() {

@@ -449,6 +449,7 @@ bool IthoCC1101::parseMessageCommand() {
       handleLevel();
       break;
     case IthoPacket::Type::SETPOINT :
+      handleLevel();
       break;
     case IthoPacket::Type::TIMER :
       handleTimer();
@@ -475,16 +476,23 @@ bool IthoCC1101::parseMessageCommand() {
 }
 
 bool IthoCC1101::checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]) {
-  uint8_t offset = 0;
-  if (itho->deviceType == 28 || itho->deviceType == 24) offset = 2;
-  for (int i = 4; i < 6; i++)
-  {
-    //if (i == 2 || i == 3) continue; //skip byte3 and byte4, rft-rv and co2-auto remote device seem to sometimes have a different number there
-    if ( (itho->dataDecoded[i + 5 + offset] != commandBytes[i]) && (itho->dataDecodedChk[i + 5 + offset] != commandBytes[i]) ) {
-      return false;
-    }
+
+
+  for (int i = 0; i < 6; i++) {
+    if (itho->dataDecoded[i + (itho->payloadPos - 3)] != commandBytes[i]) return false;
   }
   return true;
+
+  //  uint8_t offset = 0;
+  //  if (itho->deviceType == 28 || itho->deviceType == 24) offset = 2;
+  //  for (int i = 4; i < 6; i++)
+  //  {
+  //    //if (i == 2 || i == 3) continue; //skip byte3 and byte4, rft-rv and co2-auto remote device seem to sometimes have a different number there
+  //    if ( (itho->dataDecoded[i + 5 + offset] != commandBytes[i]) && (itho->dataDecodedChk[i + 5 + offset] != commandBytes[i]) ) {
+  //      return false;
+  //    }
+  //  }
+  //  return true;
 }
 
 void IthoCC1101::sendCommand(IthoCommand command)
@@ -719,7 +727,7 @@ uint8_t* IthoCC1101::getMessageCommandBytes(IthoCommand command)
     case IthoTimer3:
       return (uint8_t*)&ithoMessageTimer3CommandBytes[0];
     case IthoJoin:
-      return (uint8_t*)&ithoMessageJoinCommandBytes[0];
+      return (uint8_t*)&ithoMessageCVERFTJoinCommandBytes[0];
     case IthoLeave:
       return (uint8_t*)&ithoMessageLeaveCommandBytes[0];
     default:
@@ -995,12 +1003,6 @@ String IthoCC1101::LastMessageDecoded() {
       }
     }
     str += "\n";
-    //    for (int i = 0; i < inIthoPacket.length; i++) {
-    //      sprintf(buf, "%02X", inIthoPacket.dataDecoded[i]);
-    //      str += String(buf);
-    //      if (i < inIthoPacket.length - 1) str += ",";
-    //    }
-
   }
   else {
     for (uint8_t i = 0; i < inIthoPacket.length; i++) {
@@ -1266,17 +1268,24 @@ void IthoCC1101::handleBind() {
   else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;
   else return;
 
-  if ( checkIthoCommand(&inIthoPacket, ithoMessageLeaveCommandBytes) ) {
+  if ( checkIthoCommand(&inIthoPacket, ithoMessageLeaveCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTLeaveCommandBytes) ) {
     inIthoPacket.command = IthoLeave;
     if (bindAllowed) {
       removeRFDevice(tempID);
     }
   }
-  else if ( checkIthoCommand(&inIthoPacket, ithoMessageJoinCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageJoin2CommandBytes) ) {
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageCVERFTJoinCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTJoinCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFJoinCommandBytes) ) {
     inIthoPacket.command = IthoJoin;
     if (bindAllowed) {
       addRFDevice(tempID);
     }
+  }
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageCO2JoinCommandBytes) ) {
+    inIthoPacket.command = IthoJoin;
+    if (bindAllowed) {
+      addRFDevice(tempID);
+    }
+    //TODO: handle join handshake
   }
   else if ( checkIthoCommand(&inIthoPacket, ithoMessageRVJoinCommandBytes) ) {
     inIthoPacket.command = IthoJoin;
@@ -1285,13 +1294,12 @@ void IthoCC1101::handleBind() {
     }
     //TODO: handle join handshake
   }
-
   for (auto& item : ithoRF.device) {
     if (item.deviceId == tempID) {
       item.lastCommand = inIthoPacket.command;
     }
   }
-  
+
 }
 
 void IthoCC1101::handleLevel() {
@@ -1303,25 +1311,30 @@ void IthoCC1101::handleLevel() {
   if (!allowAll) {
     if (!checkRFDevice( tempID )) return;
   }
-  if ( checkIthoCommand(&inIthoPacket, ithoMessageHighCommandBytes) ) {
-    inIthoPacket.command = IthoHigh;
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFLowCommandBytes) ) {
+    inIthoPacket.command = IthoLow;
   }
-  else if ( checkIthoCommand(&inIthoPacket, ithoMessageMediumCommandBytes) ) {
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageMediumCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2MediumCommandBytes) ) {
     inIthoPacket.command = IthoMedium;
   }
-  else if ( checkIthoCommand(&inIthoPacket, ithoMessageLowCommandBytes) ) {
-    inIthoPacket.command = IthoLow;
+  if ( checkIthoCommand(&inIthoPacket, ithoMessageHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFHighCommandBytes) ) {
+    inIthoPacket.command = IthoHigh;
   }
   else if ( checkIthoCommand(&inIthoPacket, ithoMessageStandByCommandBytes) ) {
     inIthoPacket.command = IthoStandby;
   }
-
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2AutoCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTAutoCommandBytes)) {
+    inIthoPacket.command = IthoAuto;
+  }
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2AutoNightCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTAutoNightCommandBytes)) {
+    inIthoPacket.command = IthoAutoNight;
+  }
   for (auto& item : ithoRF.device) {
     if (item.deviceId == tempID) {
       item.lastCommand = inIthoPacket.command;
     }
   }
-  
+
 }
 
 void IthoCC1101::handleTimer() {
@@ -1333,16 +1346,21 @@ void IthoCC1101::handleTimer() {
   if (!allowAll) {
     if (!checkRFDevice( tempID )) return;
   }
-  if ( checkIthoCommand(&inIthoPacket, ithoMessageTimer1CommandBytes) ) {
+  if ( checkIthoCommand(&inIthoPacket, ithoMessageTimer1CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTTimer1CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2Timer1CommandBytes)  || checkIthoCommand(&inIthoPacket, ithoMessageDFTimer1CommandBytes) ) {
     inIthoPacket.command = IthoTimer1;
   }
-  else if ( checkIthoCommand(&inIthoPacket, ithoMessageTimer2CommandBytes) ) {
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageTimer2CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTTimer2CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2Timer2CommandBytes)  || checkIthoCommand(&inIthoPacket, ithoMessageDFTimer2CommandBytes) ) {
     inIthoPacket.command = IthoTimer2;
   }
-  else if ( checkIthoCommand(&inIthoPacket, ithoMessageTimer3CommandBytes) ) {
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageTimer3CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTTimer3CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2Timer3CommandBytes)  || checkIthoCommand(&inIthoPacket, ithoMessageDFTimer3CommandBytes) ) {
     inIthoPacket.command = IthoTimer3;
   }
-
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageDFCook30CommandBytes) ) {
+    inIthoPacket.command = IthoCook30;
+  }
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageDFCook60CommandBytes) ) {
+    inIthoPacket.command = IthoCook60;
+  }
   for (auto& item : ithoRF.device) {
     if (item.deviceId == tempID) {
       item.lastCommand = inIthoPacket.command;
@@ -1389,7 +1407,7 @@ void IthoCC1101::handleTemphum() {
      bytes[4:5] : dewpoint temperature
 
   */
-  if(inIthoPacket.error > 0) return;
+  if (inIthoPacket.error > 0) return;
   uint32_t tempID = 0;
   if (inIthoPacket.deviceId0 != 0) tempID = inIthoPacket.deviceId0;
   else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;
@@ -1419,7 +1437,7 @@ void IthoCC1101::handleCo2() {
      bytes[1:2] : CO2 level
 
   */
-  if(inIthoPacket.error > 0) return;
+  if (inIthoPacket.error > 0) return;
   uint32_t tempID = 0;
   if (inIthoPacket.deviceId0 != 0) tempID = inIthoPacket.deviceId0;
   else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;
@@ -1444,7 +1462,7 @@ void IthoCC1101::handleBattery() {
      byte[2]  : battery state (0x01 OK, 0x00 LOW)
 
   */
-  if(inIthoPacket.error > 0) return;
+  if (inIthoPacket.error > 0) return;
   uint32_t tempID = 0;
   if (inIthoPacket.deviceId0 != 0) tempID = inIthoPacket.deviceId0;
   else if (inIthoPacket.deviceId2 != 0) tempID = inIthoPacket.deviceId2;

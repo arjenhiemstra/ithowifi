@@ -45,6 +45,7 @@ SystemConfig::SystemConfig() {
   itho_timer1 = 10;
   itho_timer2 = 20;
   itho_timer3 = 30;
+  itho_numvrem = 1;
   itho_updatefreq = 5;
   itho_sendjoin = 0;
   itho_forcemedium = 0;
@@ -211,6 +212,10 @@ bool SystemConfig::set(JsonObjectConst obj) {
   if (!(const char*)obj["itho_updatefreq"].isNull()) {
     updated = true;
     itho_updatefreq = obj["itho_updatefreq"];
+  }
+  if (!(const char*)obj["itho_numvrem"].isNull()) {
+    updated = true;
+    itho_numvrem = obj["itho_numvrem"];
   }  
   if (!(const char*)obj["itho_sendjoin"].isNull()) {
     updated = true;
@@ -264,6 +269,7 @@ void SystemConfig::get(JsonObject obj) const {
     obj["itho_timer2"] = itho_timer2;
     obj["itho_timer3"] = itho_timer3;
     obj["itho_updatefreq"] = itho_updatefreq;
+    obj["itho_numvrem"] = itho_numvrem;
     obj["itho_sendjoin"] = itho_sendjoin;
     obj["itho_forcemedium"] = itho_forcemedium;
     obj["itho_vremoteapi"] = itho_vremoteapi;

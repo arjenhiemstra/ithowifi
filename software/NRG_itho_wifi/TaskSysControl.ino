@@ -1,11 +1,12 @@
 
 unsigned long lastI2CinitRequest = 0;
+bool ithoInitResultLogEntry = true;
 
 void startTaskSysControl() {
   xTaskSysControlHandle = xTaskCreateStaticPinnedToCore(
                             TaskSysControl,
                             "TaskSysControl",
-                            STACK_SIZE_LARGE,
+                            STACK_SIZE,
                             ( void * ) 1,
                             TASK_SYS_CONTROL_PRIO,
                             xTaskSysControlStack,
@@ -69,12 +70,13 @@ void execSystemControlTasks() {
     lastI2CinitRequest = millis();
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 1000 / portTICK_PERIOD_MS) == pdTRUE) {
       sendQueryDevicetype(i2c_result_updateweb);
-      char logBuff[LOG_BUF_SIZE] = "";
-      sprintf(logBuff, "I2C init: QueryDevicetype - fw:%d hw:%d", itho_fwversion, ithoDeviceID);
-      logInput(logBuff);
       xSemaphoreGive(mutexI2Ctask);
     }
     if (itho_fwversion > 0) {
+      char logBuff[LOG_BUF_SIZE] = "";
+      sprintf(logBuff, "I2C init: QueryDevicetype - fw:%d hw:%d", itho_fwversion, ithoDeviceID);
+      logInput(logBuff);
+            
       ithoInitResult = 1;
       i2cStartCommands = true;
 #if defined (CVE)
@@ -144,6 +146,10 @@ void execSystemControlTasks() {
     }
     else {
       ithoInitResult = -1;
+      if(ithoInitResultLogEntry) {
+        ithoInitResultLogEntry = false;
+        logInput("I2C init: QueryDevicetype - failed");
+      }
     }
   }
 
@@ -232,6 +238,12 @@ void execSystemControlTasks() {
     }
     updateMQTTihtoStatus = true;
   }
+  if (ithoInitResult == -1) {
+    if (millis() - mqttUpdatetim >= systemConfig.itho_updatefreq * 1000UL) {
+       mqttUpdatetim = millis();
+       updateMQTTihtoStatus = true;
+    }
+  }
   if (sendI2CButton) {
     sendI2CButton = false;
     sendButton(buttonValue, i2c_result_updateweb);
@@ -289,6 +301,12 @@ void execSystemControlTasks() {
 
     xSemaphoreGive(mutexI2Ctask);
   }
+  if (send10D0) {
+    send10D0 = false;
+    filterReset();
+
+    xSemaphoreGive(mutexI2Ctask);
+  }  
   if (get2410) {
     get2410 = false;
     resultPtr2410 = sendQuery2410(i2c_result_updateweb);

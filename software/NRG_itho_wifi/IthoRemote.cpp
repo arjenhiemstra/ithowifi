@@ -43,7 +43,13 @@ int IthoRemote::registerNewRemote(const int* id) {
   if (this->checkID(id)) {
     return -1; //remote already registered
   }
-  if (this->remoteCount >= MAX_NUMBER_OF_REMOTES - 1) {
+  if (activeRemote != -1 && activeRemote < maxRemotes) {
+    for (uint8_t i = 0; i < 3; i++) {
+      remotes[activeRemote].ID[i] = id[i];
+    }
+    return 1;
+  }  
+  if (this->remoteCount >= maxRemotes - 1) {
     return -2;
   }
   int zeroID[] = {0, 0, 0};
@@ -84,18 +90,26 @@ int IthoRemote::removeRemote(const int* id) {
   return 1;
 }
 
-int IthoRemote::removeRemote(const uint8_t index) {
+int IthoRemote::removeRemote(const uint8_t index, const char * type) {
 
-  if (!(index < MAX_NUMBER_OF_REMOTES)) return -1;
+  if (!(index < maxRemotes )) return -1;
 
   if (remotes[index].ID[0] != 0 && remotes[index].ID[1] != 0 && remotes[index].ID[2] != 0) {
     for (uint8_t i = 0; i < 3; i++) {
       remotes[index].ID[i] = 0;
     }
-    this->remoteCount--;    
+    this->remoteCount--;
+    if (strcmp(type, "vremote") == 0) {
+      remotes[index].ID[0] = sys.getMac(6 - 3);
+      remotes[index].ID[1] = sys.getMac(6 - 2);
+      remotes[index].ID[2] = sys.getMac(6 - 1) + index;
+    }
   }
 
   sprintf(remotes[index].name, "remote%d", index);
+  remotes[index].remtype = UNSETTYPE;
+  if (strcmp(type, "remote") == 0) remotes[index].remtype = NORMAL;
+  if (strcmp(type, "vremote") == 0) remotes[index].remtype = RFTCVE;
   remotes[index].capabilities = nullptr;
 
   return 1;
@@ -103,6 +117,10 @@ int IthoRemote::removeRemote(const uint8_t index) {
 
 void IthoRemote::updateRemoteName(const uint8_t index, const char* remoteName) {
   strlcpy(remotes[index].name, remoteName, sizeof(remotes[index].name));
+}
+
+void IthoRemote::updateRemoteType(const uint8_t index, const uint16_t type) {
+  remotes[index].remtype = static_cast<RemoteTypes>(type);
 }
 
 void IthoRemote::addCapabilities(uint8_t remoteIndex, const char* name, int32_t value) {
@@ -127,7 +145,7 @@ int IthoRemote::remoteIndex(const int32_t id) {
 
 int IthoRemote::remoteIndex(const int* id) {
   int noKnown = 0;
-  for (uint8_t i = 0; i < MAX_NUMBER_OF_REMOTES; i++) {
+  for (uint8_t i = 0; i < maxRemotes; i++) {
     for (uint8_t y = 0; y < 3; y++) {
       if (id[y] == remotes[i].ID[y]) {
         noKnown++;
@@ -158,7 +176,7 @@ const char * IthoRemote::getRemoteNamebyIndex(const int index) {
 bool IthoRemote::checkID(const int* id)
 {
   int noKnown = 0;
-  for (uint8_t i = 0; i < MAX_NUMBER_OF_REMOTES; i++) {
+  for (uint8_t i = 0; i < maxRemotes; i++) {
     for (uint8_t y = 0; y < 3; y++) {
       if (id[y] == remotes[i].ID[y]) {
         noKnown++;
@@ -182,15 +200,32 @@ void IthoRemote::Remote::set(JsonObjectConst obj) {
   if (!(const char*)obj["id"].isNull()) {
     copyArray(obj["id"].as<JsonArrayConst>(), ID);
   }
+  if (!(const char*)obj["remtype"].isNull()) {
+    remtype = obj["remtype"];
+  }
 }
 
-void IthoRemote::Remote::get(JsonObject obj, int index) const {
+void IthoRemote::Remote::get(JsonObject obj, const char* root, int index) const {
   obj["index"] = index;
+
+  if (remtype == RemoteTypes::UNSETTYPE) {
+    if (strcmp(root, "remotes") == 0) {
+      remtype = RemoteTypes::RFTCVE;
+    }
+    else if (strcmp(root, "vremotes") == 0) {
+      remtype = RemoteTypes::RFTCVE;
+      ID[0] = sys.getMac(6 - 3);
+      ID[1] = sys.getMac(6 - 2);
+      ID[2] = sys.getMac(6 - 1) + index;
+    }
+  }
+
   JsonArray id = obj.createNestedArray("id");
   for (uint8_t y = 0; y < 3; y++) {
     id.add(ID[y]);
   }
   obj["name"] = name;
+  obj["remtype"] = remtype;
   if (capabilities.isNull()) {
     obj["capabilities"] = nullptr;
   }
@@ -200,7 +235,7 @@ void IthoRemote::Remote::get(JsonObject obj, int index) const {
 
 }
 
-bool IthoRemote::set(JsonObjectConst obj) {
+bool IthoRemote::set(JsonObjectConst obj, const char* root) {
   if (!configLoaded) {
     if ((const char*)obj["version_of_program"].isNull()) {
       return false;
@@ -209,14 +244,16 @@ bool IthoRemote::set(JsonObjectConst obj) {
       return false;
     }
   }
-
-  if (!(const char*)obj["remotes"].isNull()) {
-    JsonArrayConst remotesArray = obj["remotes"];
+  if (!(const char*)obj["remfunc"].isNull()) {
+    remfunc = static_cast<RemoteFunctions>(obj["remfunc"]);
+  }
+  if (!(const char*)obj[root].isNull()) {
+    JsonArrayConst remotesArray = obj[root];
     remoteCount = 0;
     for (JsonObjectConst remote : remotesArray) {
       if (!(const char*)remote["index"].isNull()) {
         uint8_t index = remote["index"].as<uint8_t>();
-        if (index < MAX_NUMBER_OF_REMOTES) {
+        if (index < maxRemotes) {
           remotes[index].set(remote);
 
           uint8_t noZero = 0;
@@ -230,22 +267,34 @@ bool IthoRemote::set(JsonObjectConst obj) {
           }
         }
       }
-      if (remoteCount >= MAX_NUMBER_OF_REMOTES) break;
+      if (remoteCount >= maxRemotes) break;
     }
   }
   else {
+    D_LOG("IthoRemote::set root not present \n");
     return false;
   }
   return true;
 }
 
-void IthoRemote::get(JsonObject obj) const {
-  // Add "remotes" object
-  JsonArray rem = obj.createNestedArray("remotes");
-  // Add each remote in the array
-  for (int i = 0; i < MAX_NUMBER_OF_REMOTES; i++) {
-    remotes[i].get(rem.createNestedObject(), i);
+void IthoRemote::get(JsonObject obj, const char* root) const {
+
+  if (remfunc == RemoteFunctions::UNSETFUNC) {
+    if (strcmp(root, "remotes") == 0) {
+      remfunc = RemoteFunctions::RECEIVE;
+    }
+    else if (strcmp(root, "vremotes") == 0) {
+      remfunc = RemoteFunctions::SEND;
+    }
   }
+
+  // Add "remotes" object
+  JsonArray rem = obj.createNestedArray(root);
+  // Add each remote in the array
+  for (int i = 0; i < maxRemotes; i++) {
+    remotes[i].get(rem.createNestedObject(), root, i);
+  }
+  obj["remfunc"] = remfunc;
   obj["version_of_program"] = config_struct_version;
 
 }

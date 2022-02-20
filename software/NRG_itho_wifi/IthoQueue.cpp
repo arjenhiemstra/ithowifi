@@ -2,7 +2,7 @@
 
 #include "IthoQueue.h"
 
-
+IthoQueue ithoQueue;
 
 // default constructor
 IthoQueue::IthoQueue() {
