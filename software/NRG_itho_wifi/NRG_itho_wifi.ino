@@ -1,4 +1,4 @@
-#define FWVERSION "2.4.0-alpha1"
+#define FWVERSION "2.4.0-alpha2"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -25,16 +25,19 @@
 /*
  Backlog:
  * (done) recheck status format if failed on boot
- * (todo) After timer, go back to fallback or last value
+ * (done) add RF debug button to debug page
+ * (done) add option to monitor remotes only (ignore button presses)
  * (done) Prevent crash when multiple webbroser tabs open to the add-on and retreiving settings
- * (todo) add option to monitor remotes only (ignore button presses)
+ * (todo) make NTP server configurable
+ * (todo) check load of remotes config file between 2.3.5 and 2.4.0
+ * (todo) add new vremote options to API and documentation
+ * (todo) After timer, go back to fallback or last value
  * (todo) Make flash write atomic
+ * (todo) restructure code and add PlatformIO support
  * (todo) Set command on bedug page does not give confirmation of changed setting
  * (todo) add support for 536-0106 remote, https://github.com/arjenhiemstra/ithowifi/issues/78
  * (todo) add support for 536-0020 remote, https://github.com/arjenhiemstra/ithowifi/issues/76
  * (todo) make status parameters selectable to include in update or not
- * (todo) make NTP server configurable
- * (todo) restructure code and add PlatformIO support
  * 
  */
 

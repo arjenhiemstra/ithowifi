@@ -5,7 +5,7 @@ void getIthoStatusJSON(JsonObject root) {
 
     auto b = 611.21 * pow(2.7183, ((18.678 - ithoTemp / 234.5) * ithoTemp) / (257.14 + ithoTemp));
     auto ppmw = b / (101325 - b) * ithoHum / 100 * 0.62145 * 1000000;
-    root["ppmw"] = static_cast<int>(ppmw+0.5);
+    root["ppmw"] = static_cast<int>(ppmw + 0.5);
   }
 
   if (!ithoInternalMeasurements.empty()) {
@@ -95,7 +95,7 @@ void getIthoSettingsBackupJSON(JsonObject root) {
 }
 
 bool ithoExecCommand(const char* command, cmdOrigin origin) {
-  D_LOG("EXEC COMMAND\n");
+  D_LOG("EXEC COMMAND:%s\n", command);
   if (systemConfig.itho_vremoteapi) {
     return ithoI2CCommand(command, origin);
   }
@@ -129,7 +129,7 @@ bool ithoExecCommand(const char* command, cmdOrigin origin) {
     }
     else if (strcmp(command, "autonight") == 0) {
       ithoSetSpeed(systemConfig.itho_medium, origin);
-    }        
+    }
     else if (strcmp(command, "clearqueue") == 0) {
       clearQueue = true;
     }
@@ -143,7 +143,7 @@ bool ithoExecCommand(const char* command, cmdOrigin origin) {
 }
 
 bool ithoI2CButtonCommand(uint8_t remoteIndex, const char* command) {
-  D_LOG("EXEC VREMOTE BUTTON COMMAND\n");
+  D_LOG("EXEC VREMOTE BUTTON COMMAND:%s remote:%d\n", command, remoteIndex);
 
   if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
   }
@@ -153,7 +153,7 @@ bool ithoI2CButtonCommand(uint8_t remoteIndex, const char* command) {
   if (strcmp(command, "low") == 0) {
     sendRemoteCmd(remoteIndex, IthoLow, virtualRemotes);
   }
-  
+
   else if (strcmp(command, "medium") == 0) {
     sendRemoteCmd(remoteIndex, IthoMedium, virtualRemotes);
   }
@@ -174,13 +174,13 @@ bool ithoI2CButtonCommand(uint8_t remoteIndex, const char* command) {
   }
   else if (strcmp(command, "cook60") == 0) {
     sendRemoteCmd(remoteIndex, IthoCook60, virtualRemotes);
-  }    
+  }
   else if (strcmp(command, "auto") == 0) {
     sendRemoteCmd(remoteIndex, IthoAuto, virtualRemotes);
   }
   else if (strcmp(command, "autonight") == 0) {
     sendRemoteCmd(remoteIndex, IthoAutoNight, virtualRemotes);
-  }    
+  }
   else if (strcmp(command, "join") == 0) {
     sendRemoteCmd(remoteIndex, IthoJoin, virtualRemotes);
   }
@@ -195,17 +195,17 @@ bool ithoI2CButtonCommand(uint8_t remoteIndex, const char* command) {
   }
   char origin[15] {};
   sprintf(origin, "vremote-%d", remoteIndex);
-  
+
   logLastCommand(command, origin);
-  
+
   xSemaphoreGive(mutexI2Ctask);
-  
+
   return true;
-  
+
 }
 bool ithoI2CCommand(const char* command, cmdOrigin origin) {
 
-  D_LOG("EXEC VREMOTE COMMAND\n");
+  D_LOG("EXEC VREMOTE COMMAND:%s\n", command);
 
   if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
   }
@@ -243,13 +243,13 @@ bool ithoI2CCommand(const char* command, cmdOrigin origin) {
   }
   else if (strcmp(command, "cook60") == 0) {
     //tbi
-  }    
+  }
   else if (strcmp(command, "auto") == 0) {
     //tbi
   }
   else if (strcmp(command, "autonight") == 0) {
     //tbi
-  }    
+  }
   else if (strcmp(command, "join") == 0) {
     sendI2CJoin = true;
   }
@@ -273,7 +273,7 @@ bool ithoI2CCommand(const char* command, cmdOrigin origin) {
   }
   else if (strcmp(command, "10D0") == 0) {
     send10D0 = true;
-  }  
+  }
   else {
 
     xSemaphoreGive(mutexI2Ctask);
@@ -292,7 +292,7 @@ bool ithoSetSpeed(const char* speed, cmdOrigin origin) {
 }
 
 bool ithoSetSpeed(uint16_t speed, cmdOrigin origin) {
-  D_LOG("SET SPEED\n");
+  D_LOG("SET SPEED:%d\n", speed);
   if (speed < 255) {
     nextIthoVal = speed;
     nextIthoTimer = 0;
@@ -314,7 +314,7 @@ bool ithoSetTimer(const char* timer, cmdOrigin origin) {
 }
 
 bool ithoSetTimer(uint16_t timer, cmdOrigin origin) {
-  D_LOG("SET TIMER\n");
+  D_LOG("SET TIMER:%dmin\n", timer);
   if (timer > 0 && timer < 65535) {
     nextIthoTimer = timer;
     nextIthoVal = systemConfig.itho_high;
@@ -499,4 +499,14 @@ void logWifiInfo() {
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
 
+}
+
+void setRFdebugLevel(uint8_t level) {
+  char logBuff[LOG_BUF_SIZE]{};
+  debugLevel = level;
+  rf.setAllowAll(false);
+  sprintf(logBuff, "Debug level = %d", debugLevel);
+  logMessagejson(logBuff, WEBINTERFACE);
+  strcpy(logBuff, "");
+  
 }

@@ -471,28 +471,16 @@ bool IthoCC1101::parseMessageCommand() {
       break;
   }
 
-
   return true;
 }
 
 bool IthoCC1101::checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]) {
-
-
   for (int i = 0; i < 6; i++) {
-    if (itho->dataDecoded[i + (itho->payloadPos - 3)] != commandBytes[i]) return false;
+    if (itho->dataDecoded[i + (itho->payloadPos - 3)] != commandBytes[i]) {
+      return false;
+    }
   }
   return true;
-
-  //  uint8_t offset = 0;
-  //  if (itho->deviceType == 28 || itho->deviceType == 24) offset = 2;
-  //  for (int i = 4; i < 6; i++)
-  //  {
-  //    //if (i == 2 || i == 3) continue; //skip byte3 and byte4, rft-rv and co2-auto remote device seem to sometimes have a different number there
-  //    if ( (itho->dataDecoded[i + 5 + offset] != commandBytes[i]) && (itho->dataDecodedChk[i + 5 + offset] != commandBytes[i]) ) {
-  //      return false;
-  //    }
-  //  }
-  //  return true;
 }
 
 void IthoCC1101::sendCommand(IthoCommand command)
@@ -1294,6 +1282,7 @@ void IthoCC1101::handleBind() {
     }
     //TODO: handle join handshake
   }
+  
   for (auto& item : ithoRF.device) {
     if (item.deviceId == tempID) {
       item.lastCommand = inIthoPacket.command;
@@ -1301,6 +1290,8 @@ void IthoCC1101::handleBind() {
   }
 
 }
+
+
 
 void IthoCC1101::handleLevel() {
   uint32_t tempID = 0;
@@ -1311,13 +1302,14 @@ void IthoCC1101::handleLevel() {
   if (!allowAll) {
     if (!checkRFDevice( tempID )) return;
   }
-  else if ( checkIthoCommand(&inIthoPacket, ithoMessageLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFLowCommandBytes) ) {
+  
+  if ( checkIthoCommand(&inIthoPacket, ithoMessageLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFLowCommandBytes) ) {
     inIthoPacket.command = IthoLow;
   }
   else if ( checkIthoCommand(&inIthoPacket, ithoMessageMediumCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2MediumCommandBytes) ) {
     inIthoPacket.command = IthoMedium;
   }
-  if ( checkIthoCommand(&inIthoPacket, ithoMessageHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFHighCommandBytes) ) {
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFHighCommandBytes) ) {
     inIthoPacket.command = IthoHigh;
   }
   else if ( checkIthoCommand(&inIthoPacket, ithoMessageStandByCommandBytes) ) {
@@ -1326,9 +1318,10 @@ void IthoCC1101::handleLevel() {
   else if ( checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2AutoCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTAutoCommandBytes)) {
     inIthoPacket.command = IthoAuto;
   }
-  else if ( checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2AutoNightCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTAutoNightCommandBytes)) {
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2AutoNightCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTAutoNightCommandBytes) ) {
     inIthoPacket.command = IthoAutoNight;
   }
+  
   for (auto& item : ithoRF.device) {
     if (item.deviceId == tempID) {
       item.lastCommand = inIthoPacket.command;
@@ -1346,6 +1339,7 @@ void IthoCC1101::handleTimer() {
   if (!allowAll) {
     if (!checkRFDevice( tempID )) return;
   }
+  
   if ( checkIthoCommand(&inIthoPacket, ithoMessageTimer1CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTTimer1CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2Timer1CommandBytes)  || checkIthoCommand(&inIthoPacket, ithoMessageDFTimer1CommandBytes) ) {
     inIthoPacket.command = IthoTimer1;
   }
@@ -1361,6 +1355,7 @@ void IthoCC1101::handleTimer() {
   else if ( checkIthoCommand(&inIthoPacket, ithoMessageDFCook60CommandBytes) ) {
     inIthoPacket.command = IthoCook60;
   }
+  
   for (auto& item : ithoRF.device) {
     if (item.deviceId == tempID) {
       item.lastCommand = inIthoPacket.command;

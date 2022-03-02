@@ -125,8 +125,7 @@ void IthoRemote::updateRemoteType(const uint8_t index, const uint16_t type) {
 
 void IthoRemote::addCapabilities(uint8_t remoteIndex, const char* name, int32_t value) {
   if (strcmp(name, "temp") == 0 || strcmp(name, "dewpoint") == 0) {
-    float tempVal = value / 100.0f;
-    remotes[remoteIndex].capabilities[name] = tempVal;
+    remotes[remoteIndex].capabilities[name] = static_cast<int>((value / 100.0f) * 10 + 0.5) / 10.0;
   }
   else {
     remotes[remoteIndex].capabilities[name] = value;

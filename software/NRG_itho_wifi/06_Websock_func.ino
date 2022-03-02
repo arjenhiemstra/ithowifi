@@ -142,21 +142,23 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
             getSetting(root["index"].as<int8_t>(), false, true, false);
           }
           else if (val == 24109) {
-            uint8_t index = root["ithosetupdate"].as<uint8_t>();
-            if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
-              updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 2), false);
-            }
-            else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
-              updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 10), false);
-            }
-            else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
-              updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 100), false);
-            }
-            else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
-              updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 1000), false);
-            }
-            else {
-              updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);
+            if (ithoSettingsArray != nullptr) {
+              uint8_t index = root["ithosetupdate"].as<uint8_t>();
+              if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 2), false);
+              }
+              else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 10), false);
+              }
+              else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 100), false);
+              }
+              else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 1000), false);
+              }
+              else {
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);
+              }
             }
           }
         }
@@ -204,24 +206,24 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       StaticJsonDocument<128> root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error) {
-        uint8_t index = root["ithosetupdate"].as<uint8_t>();
-        if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
-          updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 2), false);
+        if (ithoSettingsArray != nullptr) {
+          uint8_t index = root["ithosetupdate"].as<uint8_t>();
+          if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 2), false);
+          }
+          else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 10), false);
+          }
+          else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 100), false);
+          }
+          else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 1000), false);
+          }
+          else {
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);
+          }
         }
-        else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
-          updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 10), false);
-        }
-        else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
-          updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 100), false);
-        }
-        else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
-          updateSetting(root["ithosetupdate"].as<uint8_t>(), (int32_t)(root["value"].as<float>() * 1000), false);
-        }
-        else {
-          updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);
-        }
-
-
       }
     }
     else if (msg.find("{\"ithoremotes\"") != std::string::npos) {
@@ -242,6 +244,18 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       }
 
     }
+    else if (msg.find("{\"command\"") != std::string::npos) {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        if (!(const char*)root["command"].isNull()) {
+          ithoExecCommand( root["command"].as<const char*>(), WEB);
+        }
+      }
+
+    }    
+
+    
     else if (msg.find("{\"itho_llm\"") != std::string::npos) {
       toggleRemoteLLmode("remote");
     }
@@ -350,6 +364,13 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       DeserializationError error = deserializeJson(root, msg);
       if (!error) {
         ithoSetSpeed(root["itho"].as<uint16_t>(), WEB);
+      }
+    }
+    else if (msg.find("{\"rfdebug\"") != std::string::npos) {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error) {
+        setRFdebugLevel(root["rfdebug"].as<uint8_t>());
       }
     }
 
