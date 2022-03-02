@@ -278,20 +278,6 @@ const char* hostName() {
 }
 
 
-const char* ntpServer() {
-  static char ntpServer[128];
-
-  if (strcmp(wifiConfig.ntpserver, "") == 0) {
-    sprintf(ntpServer, "pool.ntp.org");
-  }
-  else {
-    strlcpy(ntpServer, wifiConfig.ntpserver, sizeof(ntpServer));
-  }
-
-  return ntpServer;
-}
-
-
 void wifiInit() {
   if (!loadWifiConfig()) {
     logInput("Setup: Wifi config load failed");
@@ -301,7 +287,7 @@ void wifiInit() {
     logInput("Setup: Wifi connect STA failed");
     setupWiFiAP();
   }
-  configTime(0, 0, ntpServer());
+  configTime(0, 0, wifiConfig.ntpserver);
 
   WiFi.scanDelete();
   if (WiFi.scanComplete() == -2) {
@@ -315,7 +301,6 @@ void wifiInit() {
   }
 
 }
-
 
 void setupWiFiAP() {
 
