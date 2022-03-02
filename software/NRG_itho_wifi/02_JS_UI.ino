@@ -267,16 +267,11 @@ $(document).ready(function() {
   });
   //handle submit buttons
   $(document).on('click', 'button', function(e) {
-    if ($(this).attr('id') == 'itho_low') {
-      updateSlider(itho_low);
+    if ($(this).attr('id').startsWith('command-')) {
+      const items = $(this).attr('id').split('-');
+      websock.send(`{"command":"${items[1]}"}`);
     }
-    if ($(this).attr('id') == 'itho_medium') {
-      updateSlider(itho_medium);
-    }
-    if ($(this).attr('id') == 'itho_high') {
-      updateSlider(itho_high);
-    }
-    if ($(this).attr('id') == 'wifisubmit') {
+    else if ($(this).attr('id') == 'wifisubmit') {
       websock.send(JSON.stringify({
         wifisettings: {
           ssid:     $('#ssid').val(),
@@ -366,7 +361,16 @@ $(document).ready(function() {
         alert("Please select a remote.");
       }
       else {
-        websock.send(`{"${$(this).attr('id')}":${i},"value":"${$('#name_remote-'+i).val()}","remtype":${$('#type_remote-'+i).val()}}`);
+        var remtype = 1;
+        if($('#type_remote-'+i).val() < 3) {
+          if($('#type_remote-'+i).prop('checked')) {
+            remtype = 2;
+          }
+        }
+        else {
+          remtype = $('#type_remote-'+i).val();
+        }
+        websock.send(`{"${$(this).attr('id')}":${i},"value":"${$('#name_remote-'+i).val()}","remtype":${remtype}}`);
       }
     }
     else if ($(this).attr('id') == 'itho_copyid_vremote') {
@@ -460,33 +464,17 @@ $(document).ready(function() {
       $('.hidden').removeClass('hidden');
       websock.send('{\"wifiscan\":true}');
     }
-    else if ($(this).attr('id').startsWith('button_remote-')) {
+    else if ($(this).attr('id').startsWith('button_vremote-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"vremote":${items[1]}, "command":"${items[2]}"}`)
+      websock.send(`{"vremote":${items[1]}, "command":"${items[2]}"}`);
     }
-    else if ($(this).attr('id') == 'button1') {
-      websock.send('{\"ithobutton\":\"low\"}');
+    else if ($(this).attr('id').startsWith('ithobutton-')) {
+      const items = $(this).attr('id').split('-');
+      websock.send(`{"ithobutton":"${items[1]}"}`);
     }
-    else if ($(this).attr('id') == 'button2') {
-      websock.send('{\"ithobutton\":\"medium\"}');
-    }
-    else if ($(this).attr('id') == 'button3') {
-      websock.send('{\"ithobutton\":\"high\"}');
-    }
-    else if ($(this).attr('id') == 'buttonjoin') {
-      websock.send('{\"ithobutton\":\"join\"}');
-    }
-    else if ($(this).attr('id') == 'buttonleave') {
-      websock.send('{\"ithobutton\":\"leave\"}');
-    }
-    else if ($(this).attr('id') == 'buttontype') {
-      websock.send('{\"ithobutton\":\"type\"}');
-    }
-    else if ($(this).attr('id') == 'buttonstatus') {
-      websock.send('{\"ithobutton\":\"status\"}');
-    }
-    else if ($(this).attr('id') == 'buttonstatusformat') {
-      websock.send('{\"ithobutton\":\"statusformat\"}');
+    else if ($(this).attr('id').startsWith('rfdebug-')) {
+      const items = $(this).attr('id').split('-');
+      websock.send(`{"rfdebug":${items[1]}}`);
     }
     else if ($(this).attr('id') == 'button2410') {
       websock.send(JSON.stringify({
@@ -494,22 +482,13 @@ $(document).ready(function() {
         index: parseInt($('#itho_setting_id').val())
       }));
     }
-    else if ($(this).attr('id') == 'button2410set') {
+    else if ($(this).attr('id') == 'button2410set') { 
       websock.send(JSON.stringify({
         ithobutton: 24109,
         index: $('#itho_setting_id_set').val(),
         value: parseInt($('#itho_setting_value_set').val())
       }));
-    }
-    else if ($(this).attr('id') == 'button31DA') {
-      websock.send('{\"ithobutton\":\"31DA\"}');
-    }
-    else if ($(this).attr('id') == 'button31D9') {
-      websock.send('{\"ithobutton\":\"31D9\"}');
-    }
-    else if ($(this).attr('id') == 'button10D0') {
-      websock.send('{\"ithobutton\":\"10D0\"}');
-    }    
+    } 
     else if ($(this).attr('id') == 'ithogetsettings') {
       settingIndex = 0;
       websock.send(JSON.stringify({
@@ -754,7 +733,7 @@ function update_page(page) {
     if (page == 'help') { $('#main').append(html_help); }
     if (page == 'reset') { $('#main').append(html_reset); }
     if (page == 'update') { $('#main').append(html_update); }
-    if (page == 'debug') { $('#main').load( 'debug' ); }
+    if (page == 'debug') { $('#main').load( 'debug' ); $('#main').css('max-width', '1600px') }
 }
 
 //handle menu collapse on smaller screens
@@ -891,7 +870,7 @@ var remtypes = [
                ];
 
 function buildHtmlTable(selector, remfunc, jsonVar) {
-  var columns = addAllColumnHeaders(jsonVar, selector, true);
+  var columns = addAllColumnHeaders(jsonVar, selector, true, remfunc);
   var headerTbody$ = $('<tbody>');
   remotesCount = jsonVar.length;
   for (var i = 0; i < remotesCount; i++) {
@@ -904,8 +883,9 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
         if (remfunc == 1) {
           var checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
-          checkbox.id = 'car';
-          checkbox.name = 'interest';
+          checkbox.id = `type_remote-${i}`;
+          checkbox.value = cellValue;
+          checkbox.disabled = true;
           if(cellValue == 2) checkbox.checked = true;
           row$.append($('<td>').html(checkbox));    
         }
@@ -950,7 +930,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
           for (const item of remtypes) {
             if(remtype == item[1]) {              
               for (const remfunc of item[2]) {
-                td$.append(`<button value='${remfunc}_remote-${i}' id='button_remote-${i}-${remfunc}' class='pure-button pure-button-primary'>${remfunc.charAt(0).toUpperCase() + remfunc.slice(1)}</button>\u00A0`);
+                td$.append(`<button value='${remfunc}_remote-${i}' id='button_vremote-${i}-${remfunc}' class='pure-button pure-button-primary'>${remfunc.charAt(0).toUpperCase() + remfunc.slice(1)}</button>\u00A0`);
               }        
             }
           }
@@ -975,6 +955,9 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
     headerTbody$.append(row$);
   }
   $(selector).append(headerTbody$);
+  if(remfunc==1) {
+    $('#remtype').html("monitor only");
+  }  
 }
 
 function buildHtmlStatusTable(selector, jsonVar) {
@@ -1059,17 +1042,23 @@ function addAllColumnHeaders(jsonVar, selector, appendRow) {
   var columnSet = [];
   var headerThead$ = $('<thead>');
   var headerTr$ = $('<tr>');
-  headerTr$.append($('<th>').html('Select'));
+  headerTr$.append($('<th>').html('select'));
   
   for (var i = 0; i < jsonVar.length; i++) {
     var rowHash = jsonVar[i];
     for (var key in rowHash) {
       if ($.inArray(key, columnSet) == -1) {
         columnSet.push(key);
-        headerTr$.append($('<th>').html(key));
+        if (key == "remtype") {
+          headerTr$.append($('<th id="remtype">').html(key));
+        }
+        else {
+          headerTr$.append($('<th>').html(key));     
+        }
+        
       }
     }
-  }
+  }  
   headerThead$.append(headerTr$);
   if(appendRow) {
     $(selector).append(headerThead$);
@@ -1104,8 +1093,11 @@ var html_index = `
         </div>  
       </div>
       <input id="ithoslider" type="range" min="0" max="254" value="0" class="slider" style="width: 100%; margin: 0 0 2em 0;">
-      <div style="text-align: center">
-        <button id="itho_low" class="pure-button" style="float: left;">Low</button><button id="itho_medium" class="pure-button">Medium</button><button id="itho_high" class="pure-button" style="float: right;">High</button>
+      <div style="text-align: center;margin: 2em 0 0 0;">
+        <button id="command-low" class="pure-button" style="float: left;">Low</button><button id="command-medium" class="pure-button">Medium</button><button id="command-high" class="pure-button" style="float: right;">High</button>
+      </div>
+      <div style="text-align: center;margin: 2em 0 0 0;">
+        <button id="command-timer1" class="pure-button" style="float: left;">Timer1</button><button id="command-timer2" class="pure-button">Timer2</button><button id="command-timer3" class="pure-button" style="float: right;">Timer3</button>
       </div>
       <div style="text-align: center;margin: 2em 0 0 0;">
         <div id="sensor_temp"></div>
@@ -1394,7 +1386,7 @@ var html_remotessetup = `
               <br>
                 <legend><br>RF remotes:</legend>
               <br>
-              <table id="RemotesTable" class="pure-table pure-table-bordered"></table>
+              <table id="RemotesTable" class="pure-table pure-table-bordered" style="text-align: center; white-space:nowrap;"></table>
               <div class="pure-control-group">
                 <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote" class="pure-button">Remove</button>
               </div>
@@ -1416,7 +1408,7 @@ var html_vremotessetup = `
               <br>
                 <legend><br>Virtual remotes:</legend>
               <br>
-              <table id="vremotesTable" class="pure-table pure-table-bordered"></table>
+              <table id="vremotesTable" class="pure-table pure-table-bordered" style="text-align: center;"></table>
               <div class="pure-control-group">
                 <button id="itho_update_vremote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_vremote" class="pure-button">Reset</button>&nbsp;<button id="itho_copyid_vremote" class="pure-button">Copy ID</button>
               </div>

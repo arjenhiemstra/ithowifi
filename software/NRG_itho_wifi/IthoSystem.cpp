@@ -217,7 +217,7 @@ void getSetting(const uint8_t i, const bool updateState, const bool updateweb, c
     }
     root["update"] = true;
     root["loop"] = loop;
-    if (resultPtr2410 != nullptr) {
+    if (resultPtr2410 != nullptr && ithoSettingsArray != nullptr) {
       if (ithoSettingsArray[index2410].type == ithoSettings::is_int8) {
         root["Current"] = *(reinterpret_cast<int8_t*>(resultPtr2410 + 0));
         root["Minimum"] = *(reinterpret_cast<int8_t*>(resultPtr2410 + 1));
@@ -1291,6 +1291,7 @@ int32_t * sendQuery2410(bool & updateweb) {
     uint8_t tempBuf3[] = { i2cbuf[17], i2cbuf[16], i2cbuf[15], i2cbuf[14] };
     std::memcpy(&values[2], tempBuf3, 4);
 
+    if(ithoSettingsArray == nullptr) return nullptr;
 
     ithoSettingsArray[index2410].value = values[0];
 
@@ -1444,6 +1445,8 @@ void setSetting2410(bool & updateweb) {
     logMessagejson("<br>!!Warning!! Command ignored!<br>Setting index 7 to value 1 will switch off I2C!", WEBINTERFACE);
     return;
   }
+  
+  if(ithoSettingsArray == nullptr) return;
 
   uint8_t command[] = { 0x82, 0x80, 0x24, 0x10, 0x06, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF };
 

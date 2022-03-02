@@ -89,7 +89,6 @@ void handleAPI(AsyncWebServerRequest *request) {
   const char * timer = nullptr;
   
   for(int i=0;i<params;i++){
-    char logBuff[LOG_BUF_SIZE] = "";
     AsyncWebParameter* p = request->getParam(i);
     
     if(strcmp(p->name().c_str(), "get") == 0) {
@@ -170,43 +169,19 @@ void handleAPI(AsyncWebServerRequest *request) {
     }
     else if(strcmp(p->name().c_str(), "debug") == 0) {
       if (strcmp(p->value().c_str(), "level0") == 0 ) {
-        
-        debugLevel = 0;
-        rf.setAllowAll(false);
-        sprintf(logBuff, "Debug level = %d", debugLevel);
-        logMessagejson(logBuff, WEBINTERFACE);
-        strcpy(logBuff, "");
+        setRFdebugLevel(0);
         parseOK = true;
       }
       if (strcmp(p->value().c_str(), "level1") == 0 ) {
-        
-        debugLevel = 1;
-        rf.setAllowAll(true);
-        sprintf(logBuff, "Debug level = %d", debugLevel);
-        logMessagejson(logBuff, WEBINTERFACE);
-        strcpy(logBuff, "");
+        setRFdebugLevel(1);
         parseOK = true;
       }        
       if (strcmp(p->value().c_str(), "level2") == 0 ) {
-        
-        debugLevel = 2;
-        rf.setAllowAll(false);
-        sprintf(logBuff, "Debug level = %d", debugLevel);
-        logMessagejson(logBuff, WEBINTERFACE);
-        strcpy(logBuff, "");
+        setRFdebugLevel(2);
         parseOK = true;
       }
       if (strcmp(p->value().c_str(), "level3") == 0 ) {
-        
-        debugLevel = 3;
-        rf.setAllowAll(true);
-        sprintf(logBuff, "Debug level = %d", debugLevel);
-        logMessagejson(logBuff, WEBINTERFACE);
-        strcpy(logBuff, "");
-        parseOK = true;
-      }      
-      if (strcmp(p->value().c_str(), "format") == 0 ) {
-        formatFileSystem = true;
+        setRFdebugLevel(3);
         parseOK = true;
       }
       if (strcmp(p->value().c_str(), "reboot") == 0 ) {
@@ -301,19 +276,19 @@ void handleDebug(AsyncWebServerRequest *request) {
   response->print("</div></div><br><br><div id='rflog_outer' class='hidden'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>RF Log:</div>");
   response->print("<div id='rflog' style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto'>");
   response->print("</div><div style='padding-top:5px;'><a href='#' class='pure-button' onclick=\"$('#rflog').empty()\">Clear</a></div></div></div>");
-
-  response->print("<form class=\"pure-form pure-form-aligned\"><fieldset><legend><br>Low level itho I2C commands:</legend><br><span>I2C virtual remote commands:</span><br><button id=\"button1\" class=\"pure-button pure-button-primary\">Low</button>&nbsp;<button id=\"button2\" class=\"pure-button pure-button-primary\">Medium</button>&nbsp;<button id=\"button3\" class=\"pure-button pure-button-primary\">High</button><br><br>");
-  response->print("<button id=\"buttonjoin\" class=\"pure-button pure-button-primary\">Join</button>&nbsp;<button id=\"buttonleave\" class=\"pure-button pure-button-primary\">Leave</button><br><br>");
-  response->print("<button id=\"buttontype\" class=\"pure-button pure-button-primary\">Query Devicetype</button><br><span>Result:&nbsp;</span><span id=\'ithotype\'></span><br><br>");
-  response->print("<button id=\"buttonstatusformat\" class=\"pure-button pure-button-primary\">Query Status Format</button><br><span>Result:&nbsp;</span><span id=\'ithostatusformat\'></span><br><br>");
-  response->print("<button id=\"buttonstatus\" class=\"pure-button pure-button-primary\">Query Status</button><br><span>Result:&nbsp;</span><span id=\'ithostatus\'></span><br><br>");
+  response->print("<form class=\"pure-form pure-form-aligned\"><fieldset><legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id=\"rfdebug-0\" class=\"pure-button pure-button-primary\">Off</button>&nbsp;<button id=\"rfdebug-1\" class=\"pure-button pure-button-primary\">Level1</button>&nbsp;<button id=\"rfdebug-2\" class=\"pure-button pure-button-primary\">Level2</button>&nbsp;<button id=\"rfdebug-3\" class=\"pure-button pure-button-primary\">Level3</button>&nbsp;<br><br>");
+  response->print("<form class=\"pure-form pure-form-aligned\"><fieldset><legend><br>Low level itho I2C commands:</legend><br><span>I2C virtual remote commands:</span><br><button id=\"ithobutton-low\" class=\"pure-button pure-button-primary\">Low</button>&nbsp;<button id=\"ithobutton-medium\" class=\"pure-button pure-button-primary\">Medium</button>&nbsp;<button id=\"ithobutton-high\" class=\"pure-button pure-button-primary\">High</button><br><br>");
+  response->print("<button id=\"ithobutton-join\" class=\"pure-button pure-button-primary\">Join</button>&nbsp;<button id=\"ithobutton-leave\" class=\"pure-button pure-button-primary\">Leave</button><br><br>");
+  response->print("<button id=\"ithobutton-type\" class=\"pure-button pure-button-primary\">Query Devicetype</button><br><span>Result:&nbsp;</span><span id=\'ithotype\'></span><br><br>");
+  response->print("<button id=\"ithobutton-statusformat\" class=\"pure-button pure-button-primary\">Query Status Format</button><br><span>Result:&nbsp;</span><span id=\'ithostatusformat\'></span><br><br>");
+  response->print("<button id=\"ithobutton-status\" class=\"pure-button pure-button-primary\">Query Status</button><br><span>Result:&nbsp;</span><span id=\'ithostatus\'></span><br><br>");
   response->print("<button id=\"button2410\" class=\"pure-button pure-button-primary\">Query 2410</button>setting index: <input id=\"itho_setting_id\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"><br><span>Result:&nbsp;</span><span id=\'itho2410\'></span><br><span>Current:&nbsp;</span><span id=\'itho2410cur\'></span><br><span>Minimum value:&nbsp;</span><span id=\'itho2410min\'></span><br><span>Maximum value:&nbsp;</span><span id=\'itho2410max\'></span><br><br>");
   response->print("<span style=\"color:red\">Warning!!<br> \"Set 2410\" changes the settings of your itho unit<br>Use with care and use only if you know what you are doing!</span><br>");
   response->print("<button id=\"button2410set\" class=\"pure-button pure-button-primary\">Set 2410</button>setting index: <input id=\"itho_setting_id_set\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"> setting value: <input id=\"itho_setting_value_set\" type=\"number\" min=\"-2147483647\" max=\"2147483647\" size=\"10\" value=\"0\"><br><span>Sent command:&nbsp;</span><span id=\'itho2410set\'></span><br><span>Result:&nbsp;</span><span id=\'itho2410setres\'></span><br>");
   response->print("<span style=\"color:red\">Warning!!</span><br><br>");
-  response->print("<button id=\"button31DA\" class=\"pure-button pure-button-primary\">Query 31DA</button><br><span>Result:&nbsp;</span><span id=\'itho31DA\'></span><br><br>");
-  response->print("<button id=\"button31D9\" class=\"pure-button pure-button-primary\">Query 31D9</button><br><span>Result:&nbsp;</span><span id=\'itho31D9\'></span><br><br>");
-  response->print("<button id=\"button10D0\" class=\"pure-button pure-button-primary\">Filter reset</button><br><span>Result:&nbsp;</span><span id=\'itho10D0\'></span></fieldset></form><br>");  
+  response->print("<button id=\"ithobutton-31DA\" class=\"pure-button pure-button-primary\">Query 31DA</button><br><span>Result:&nbsp;</span><span id=\'itho31DA\'></span><br><br>");
+  response->print("<button id=\"ithobutton-31D9\" class=\"pure-button pure-button-primary\">Query 31D9</button><br><span>Result:&nbsp;</span><span id=\'itho31D9\'></span><br><br>");
+  response->print("<button id=\"ithobutton-10D0\" class=\"pure-button pure-button-primary\">Filter reset</button></fieldset></form><br>");  
 
   response->print("<br><br>");
   

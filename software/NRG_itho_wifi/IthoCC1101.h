@@ -75,8 +75,6 @@ class IthoCC1101 : protected CC1101
     IthoCC1101(uint8_t counter = 0, uint8_t sendTries = 3);   //set initial counter value
     ~IthoCC1101();
 
-
-
     //init
     void init() {
       CC1101::init();  //init,reset CC1101

@@ -260,7 +260,6 @@ void TaskCC1101( void * pvParameters ) {
       if (ithoCheck) {
         ithoCheck = false;
         if (rf.checkForNewPacket()) {
-
           int *lastID = rf.getLastID();
           int id[3];
           for (uint8_t i = 0; i < 3; i++) {
@@ -340,47 +339,47 @@ void TaskCC1101( void * pvParameters ) {
             }
             if (chk) {
               remotes.lastRemoteName = remotes.getRemoteNamebyIndex(remotes.remoteIndex(id));
-              if (cmd == IthoLow) {
-                ithoExecCommand("low", REMOTE);
+              if (remotes.getRemoteType(remotes.remoteIndex(id)) != RemoteTypes::MONITOR) {
+                if (cmd == IthoLow) {
+                  ithoExecCommand("low", REMOTE);
+                }
+                if (cmd == IthoMedium) {
+                  ithoExecCommand("medium", REMOTE);
+                }
+                if (cmd == IthoHigh) {
+                  ithoExecCommand("high", REMOTE);
+                }
+                if (cmd == IthoTimer1) {
+                  ithoExecCommand("timer1", REMOTE);
+                }
+                if (cmd == IthoTimer2) {
+                  ithoExecCommand("timer2", REMOTE);
+                }
+                if (cmd == IthoTimer3) {
+                  ithoExecCommand("timer3", REMOTE);
+                }
+                if (cmd == IthoCook30) {
+                  ithoExecCommand("cook30", REMOTE);
+                }
+                if (cmd == IthoCook60) {
+                  ithoExecCommand("cook60", REMOTE);
+                }
+                if (cmd == IthoAuto) {
+                  ithoExecCommand("auto", REMOTE);
+                }
+                if (cmd == IthoAutoNight) {
+                  ithoExecCommand("autonight", REMOTE);
+                }
+                if (cmd == IthoJoin && !remotes.remoteLearnLeaveStatus()) {
+                }
+                if (cmd == IthoLeave && !remotes.remoteLearnLeaveStatus()) {
+                  ithoQueue.clear_queue();
+                }
               }
-              if (cmd == IthoMedium) {
-                ithoExecCommand("medium", REMOTE);
-              }
-              if (cmd == IthoHigh) {
-                ithoExecCommand("high", REMOTE);
-              }
-              if (cmd == IthoTimer1) {
-                ithoExecCommand("timer1", REMOTE);
-              }
-              if (cmd == IthoTimer2) {
-                ithoExecCommand("timer2", REMOTE);
-              }
-              if (cmd == IthoTimer3) {
-                ithoExecCommand("timer3", REMOTE);
-              }
-              if (cmd == IthoCook30) {
-                ithoExecCommand("cook30", REMOTE);
-              }
-              if (cmd == IthoCook60) {
-                ithoExecCommand("cook60", REMOTE);
-              }
-              if (cmd == IthoAuto) {
-                ithoExecCommand("auto", REMOTE);
-              }
-              if (cmd == IthoAutoNight) {
-                ithoExecCommand("autonight", REMOTE);
-              }
-              if (cmd == IthoJoin && !remotes.remoteLearnLeaveStatus()) {
-              }
-              if (cmd == IthoLeave && !remotes.remoteLearnLeaveStatus()) {
-                ithoQueue.clear_queue();
-              }
-
             }
             else {
               //Unknown remote
             }
-            D_LOG("Number of know remotes: %d\n", remotes.getRemoteCount());
           }
           else {
             //("--- RF CMD reveiced but of unknown type ---");
