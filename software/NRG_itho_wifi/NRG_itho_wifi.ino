@@ -28,7 +28,7 @@
  * (done) add RF debug button to debug page
  * (done) add option to monitor remotes only (ignore button presses)
  * (done) Prevent crash when multiple webbroser tabs open to the add-on and retreiving settings
- * (todo) make NTP server configurable
+ * (done) make NTP server configurable
  * (todo) check load of remotes config file between 2.3.5 and 2.4.0
  * (todo) add new vremote options to API and documentation
  * (todo) After timer, go back to fallback or last value
