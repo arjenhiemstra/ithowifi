@@ -24,6 +24,7 @@ class WifiConfig {
     char dns2[16];
     uint8_t port;
     char hostname[32];
+    char ntpserver[128];
     char config_struct_version[4];
 
     WifiConfig();

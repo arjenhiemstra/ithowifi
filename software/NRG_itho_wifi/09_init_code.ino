@@ -274,10 +274,8 @@ const char* hostName() {
     strlcpy(hostName, wifiConfig.hostname, sizeof(hostName));
   }
 
-
   return hostName;
 }
-
 
 
 void wifiInit() {
@@ -289,7 +287,7 @@ void wifiInit() {
     logInput("Setup: Wifi connect STA failed");
     setupWiFiAP();
   }
-  configTime(0, 0, "pool.ntp.org");
+  configTime(0, 0, wifiConfig.ntpserver);
 
   WiFi.scanDelete();
   if (WiFi.scanComplete() == -2) {
@@ -303,6 +301,7 @@ void wifiInit() {
   }
 
 }
+
 void setupWiFiAP() {
 
   /* Soft AP network parameters */
