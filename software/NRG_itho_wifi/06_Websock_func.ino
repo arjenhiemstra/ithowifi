@@ -25,7 +25,7 @@ void jsonWsSend(const char* rootName) {
     }
     nested["port"] = wifiConfig.port;
     nested["hostname"] = hostName();
-    nested["ntpserver"] = ntpServer();
+    nested["ntpserver"] = wifiConfig.ntpserver;
   }
   else if (strcmp(rootName, "systemsettings")  == 0) {
     // Create an object at the root
