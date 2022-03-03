@@ -69,14 +69,14 @@ void execSystemControlTasks() {
   if (!i2cStartCommands && millis() > 15000 && (millis() - lastI2CinitRequest > 5000) ) {
     lastI2CinitRequest = millis();
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 1000 / portTICK_PERIOD_MS) == pdTRUE) {
-      sendQueryDevicetype(i2c_result_updateweb);
+      sendQueryDevicetype(false);
       xSemaphoreGive(mutexI2Ctask);
     }
     if (itho_fwversion > 0) {
       char logBuff[LOG_BUF_SIZE] = "";
       sprintf(logBuff, "I2C init: QueryDevicetype - fw:%d hw:%d", itho_fwversion, ithoDeviceID);
       logInput(logBuff);
-            
+
       ithoInitResult = 1;
       i2cStartCommands = true;
 #if defined (CVE)
@@ -130,14 +130,14 @@ void execSystemControlTasks() {
         }
       }
       if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 1000 / portTICK_PERIOD_MS) == pdTRUE) {
-        sendQueryStatusFormat(i2c_result_updateweb);
+        sendQueryStatusFormat(false);
         char logBuff[LOG_BUF_SIZE] = "";
         sprintf(logBuff, "I2C init: QueryStatusFormat - items:%d", ithoStatus.size() );
         logInput(logBuff);
         xSemaphoreGive(mutexI2Ctask);
       }
       if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 1000 / portTICK_PERIOD_MS) == pdTRUE) {
-        sendQueryStatus(i2c_result_updateweb);
+        sendQueryStatus(false);
         logInput("I2C init: QueryStatus");
         xSemaphoreGive(mutexI2Ctask);
       }
@@ -146,7 +146,7 @@ void execSystemControlTasks() {
     }
     else {
       ithoInitResult = -1;
-      if(ithoInitResultLogEntry) {
+      if (ithoInitResultLogEntry) {
         ithoInitResultLogEntry = false;
         logInput("I2C init: QueryDevicetype - failed");
       }
@@ -154,17 +154,19 @@ void execSystemControlTasks() {
   }
 
   if (systemConfig.itho_sendjoin > 0 && !joinSend && ithoInitResult == 1) {
-    joinSend = true;
 
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
-      sendJoinI2C(i2c_result_updateweb);
+      joinSend = true;
+      sendRemoteCmd(0, IthoJoin, virtualRemotes);
       xSemaphoreGive(mutexI2Ctask);
       logInput("I2C init: Virtual remote join command send");
+      
+      if (systemConfig.itho_sendjoin == 1) {
+        systemConfig.itho_sendjoin = 0;
+        saveSystemConfig();
+      }
     }
-    if (systemConfig.itho_sendjoin == 1) {
-      systemConfig.itho_sendjoin = 0;
-      saveSystemConfig();
-    }
+
   }
   //Itho queue
   if (clearQueue) {
@@ -217,96 +219,33 @@ void execSystemControlTasks() {
   if (!(itho_fwversion > 0) && millis() - lastVersionCheck > 60000) {
     lastVersionCheck = millis();
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 1000 / portTICK_PERIOD_MS) == pdTRUE) {
-      sendQueryDevicetype(i2c_result_updateweb);
+      sendQueryDevicetype(false);
       xSemaphoreGive(mutexI2Ctask);
     }
   }
-  //request itho status every 5 sec.
+  //request itho status every systemConfig.itho_updatefreq sec.
   if (millis() - query2401tim >= systemConfig.itho_updatefreq * 1000UL && i2cStartCommands) {
     query2401tim = millis();
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
-      sendQueryStatus(i2c_result_updateweb);
+      sendQueryStatus(false);
       xSemaphoreGive(mutexI2Ctask);
     }
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
-      sendQuery31DA(i2c_result_updateweb);
+      sendQuery31DA(false);
       xSemaphoreGive(mutexI2Ctask);
     }
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
-      sendQuery31D9(i2c_result_updateweb);
+      sendQuery31D9(false);
       xSemaphoreGive(mutexI2Ctask);
     }
     updateMQTTihtoStatus = true;
   }
   if (ithoInitResult == -1) {
     if (millis() - mqttUpdatetim >= systemConfig.itho_updatefreq * 1000UL) {
-       mqttUpdatetim = millis();
-       updateMQTTihtoStatus = true;
+      mqttUpdatetim = millis();
+      updateMQTTihtoStatus = true;
     }
   }
-  if (sendI2CButton) {
-    sendI2CButton = false;
-    sendButton(buttonValue, i2c_result_updateweb);
-    i2c_result_updateweb = false;
-
-    xSemaphoreGive(mutexI2Ctask);
-  }
-  if (sendI2CTimer) {
-    sendI2CTimer = false;
-    sendTimer(timerValue, i2c_result_updateweb);
-    i2c_result_updateweb = false;
-
-    xSemaphoreGive(mutexI2Ctask);
-  }
-  if (sendI2CJoin) {
-    sendI2CJoin = false;
-    sendJoinI2C(i2c_result_updateweb);
-
-    xSemaphoreGive(mutexI2Ctask);
-  }
-  if (sendI2CLeave) {
-    sendI2CLeave = false;
-    sendLeaveI2C(i2c_result_updateweb);
-    i2c_result_updateweb = false;
-
-    xSemaphoreGive(mutexI2Ctask);
-  }
-  if (sendI2CDevicetype) {
-    sendI2CDevicetype = false;
-    sendQueryDevicetype(i2c_result_updateweb);
-
-    xSemaphoreGive(mutexI2Ctask);
-  }
-  if (sendI2CStatusFormat) {
-    sendI2CStatusFormat = false;
-    sendQueryStatusFormat(i2c_result_updateweb);
-
-    xSemaphoreGive(mutexI2Ctask);
-  }
-  if (sendI2CStatus) {
-    sendI2CStatus = false;
-    sendQueryStatus(i2c_result_updateweb);
-
-    xSemaphoreGive(mutexI2Ctask);
-  }
-  if (send31DA) {
-    send31DA = false;
-    sendQuery31DA(i2c_result_updateweb);
-
-    xSemaphoreGive(mutexI2Ctask);
-  }
-  if (send31D9) {
-    send31D9 = false;
-    sendQuery31D9(i2c_result_updateweb);
-
-    xSemaphoreGive(mutexI2Ctask);
-  }
-  if (send10D0) {
-    send10D0 = false;
-    filterReset();
-
-    xSemaphoreGive(mutexI2Ctask);
-  }  
   if (get2410) {
     get2410 = false;
     resultPtr2410 = sendQuery2410(i2c_result_updateweb);

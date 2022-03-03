@@ -74,6 +74,7 @@ class IthoRemote {
     int remoteIndex(const int* id);
     const int * getRemoteIDbyIndex(const int index);
     const char * getRemoteNamebyIndex(const int index);
+    int getRemoteIndexbyName(const char* name);
     RemoteTypes getRemoteType(const int index) { return remotes[index].remtype; };
     const char * lastRemoteName;
     bool checkID(const int* id);

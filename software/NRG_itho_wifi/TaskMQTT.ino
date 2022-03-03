@@ -265,10 +265,27 @@ void mqttCallback(const char* topic, const byte* payload, unsigned int length) {
           const char* value = root["command"] | "";
           ithoExecCommand(value, MQTTAPI);
         }
-        if (!(const char*)root["vremote"].isNull()) {
-          jsonCmd = true;
-          const char* value = root["vremote"] | "";
-          ithoI2CCommand(value, MQTTAPI);
+        if (!(const char*)root["vremote"].isNull() || !(const char*)root["vremotecmd"].isNull()) {
+          const char* command = root["vremote"] | "";
+          if(strcmp(command, "") == 0) command = root["vremotecmd"] | "";
+          
+          if (!(const char*)root["vremoteindex"].isNull() && !(const char*)root["vremotename"].isNull()) {
+            jsonCmd = true;
+            ithoI2CCommand(0, command, MQTTAPI);
+          }
+          else {
+            int index = -1;
+            if(!(const char*)root["vremotename"].isNull()) {
+              index = virtualRemotes.getRemoteIndexbyName((const char*)root["vremotename"]);
+            }
+            else {
+              index = root["vremoteindex"];
+            }
+            if(index != -1) { 
+              jsonCmd = true;
+              ithoI2CCommand(index, command, MQTTAPI);
+            }
+          }
         }
         if (!(const char*)root["speed"].isNull()) {
           jsonCmd = true;

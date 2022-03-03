@@ -41,23 +41,6 @@
 //#define SYNC0 42
 //#define MDMCFG2 0x02 //16bit sync word / 16bit specific
 
-//calibration
-#define STEP0 0x10
-#define CAL_TIMEOUT ( 1UL * 15 * 1000 )
-
-enum cc_cal_state {
-  CAL_IDLE,
-  CAL_START,
-  CAL_BEGIN,
-  CAL_WAIT,
-  CAL_CHOP,
-  CAL_ABORT,
-  CAL_STOP
-};
-
-cc_cal_state calState = CAL_IDLE;
-
-
 // default constructor
 IthoCC1101::IthoCC1101(uint8_t counter, uint8_t sendTries) : CC1101()
 {
@@ -70,15 +53,9 @@ IthoCC1101::IthoCC1101(uint8_t counter, uint8_t sendTries) : CC1101()
 
   this->outIthoPacket.deviceType = 22;
 
-  calEnabled = 0;
-  calFinised = 0;
-  timeoutCCcal = CAL_TIMEOUT;
   cc_freq[0] = 0x6A;
   cc_freq[1] = 0x65;
   cc_freq[2] = 0x21;
-  f0 = 0;
-  lastValid = 0;
-  lastF = 0;
 
   bindAllowed = false;
   allowAll = true;
@@ -319,16 +296,9 @@ uint8_t IthoCC1101::receivePacket() {
 bool IthoCC1101::checkForNewPacket() {
   bool result = false;
   if (parseMessageCommand()) {
-    if (calEnabled && inIthoPacket.error == 0) {
-      cc_cal_update( inIthoPacket.error, false );
-    }
     initReceiveMessage();
     result = true;
   }
-  if (calEnabled && inIthoPacket.error > 1) {
-    //printf("packet error: %d\n", inIthoPacket.error);
-  }
-
   return result;
 }
 
@@ -698,8 +668,8 @@ uint8_t* IthoCC1101::getMessageCommandBytes(IthoCommand command)
 {
   switch (command)
   {
-    case IthoStandby:
-      return (uint8_t*)&ithoMessageStandByCommandBytes[0];
+    case IthoAway:
+      return (uint8_t*)&ithoMessageAwayCommandBytes[0];
     case IthoHigh:
       return (uint8_t*)&ithoMessageHighCommandBytes[0];
     case IthoFull:
@@ -1006,191 +976,6 @@ String IthoCC1101::LastMessageDecoded() {
 
 }
 
-void IthoCC1101::setCCcalEnable( uint8_t enable ) {
-  if ( calEnabled != enable ) {
-    //printf("calEnabled (%d) != enable (%d)\n", calEnabled, enable);
-    if ( enable ) { // Start calibration process
-      // Grab the current frequency in case we abort
-      uint8_t startFreq[1 + 3] = { CC1101_FREQ2, 0, 0, 0 };
-      readBurstRegister( startFreq + 1, startFreq[0], sizeof(startFreq) - 1);
-
-      f0 = ( (uint32_t)startFreq[1] << 16 )
-           | ( (uint32_t)startFreq[2] <<  8 )
-           | ( (uint32_t)startFreq[3] <<  0 );
-
-      calEnabled = 1;
-      calState = CAL_START;
-      calibrationTask.attach(1, +[](IthoCC1101 * IthoCC1101Instance) {
-        IthoCC1101Instance->cc_cal_task();
-      }, this);
-    }
-    else {
-      // Stop calibration process
-      calState = CAL_STOP;
-
-    }
-  }
-  else {
-
-  }
-
-}
-
-void IthoCC1101::abortCCcal() {
-  setCCcalEnable(0);
-  setCCcal(f0);
-  calibrationTask.detach();
-}
-
-void IthoCC1101::cc_cal_task() {
-  //check cal timeout
-  unsigned long now = millis();
-
-  unsigned long interval = now - lastValid;
-  //printf("cal_task timeout: %lu\n", timeoutCCcal - interval);
-
-  if ( interval > timeoutCCcal ) {
-    cc_cal_update( 0xFF, true );
-
-  }
-
-}
-
-uint32_t IthoCC1101::cc_cal( uint8_t validMsg, bool timeout ) {
-  // Store the search control values in 16 bits
-  // to avoid excessive 32 bit arithmetic
-  static int16_t x, y;
-  static int16_t step;
-  static int16_t low, high;
-
-  static uint32_t f;
-
-  switch ( calState ) {
-    case CAL_IDLE:
-      //Serial.println("CAL_IDLE");
-      break;
-
-    case CAL_STOP:
-    case CAL_ABORT:
-      //Serial.println("CAL_STOP");
-      calState = CAL_IDLE;
-      calEnabled = 0;
-      calibrationTask.detach();
-      break;
-
-    case CAL_START:
-      //Serial.println("CAL_START");
-      step = -STEP0;  // Initial search is for low limit
-      f = f0;
-      calState = CAL_BEGIN;
-      break;
-
-    case CAL_BEGIN:  // Begin initial search for extreme limit in direction of step
-      //Serial.println("CAL_BEGIN");
-      y = 0;
-      x = step;
-      f = f0 + x;
-      calState = CAL_WAIT;
-      break;
-
-    case CAL_WAIT:
-      //Serial.println("CAL_WAIT");
-      if ( validMsg == 0 ) {
-        // Move the initial search window out a step
-        x += step;
-        y += step;
-        f += step;
-      } else if ( timeout ) {
-        f -= step / 2;
-        calState = CAL_CHOP;
-      }
-      break;
-
-    case CAL_CHOP:
-      //Serial.println("CAL_CHOP");
-      // Update appropriate boundary
-      if ( validMsg == 0 ) {
-        y  = ( x + y ) / 2;
-        f += ( x - y ) / 2;
-      } else if ( timeout ) {
-        x  = ( x + y ) / 2;
-        f -= ( x - y ) / 2;
-      }
-
-      if ( abs(x - y) <= 1  ) {
-        if ( step < 0 ) {
-          // Low limit found
-          low = y;
-          f = f0;
-          step = -step; // Search in opposite direction
-          calState = CAL_BEGIN;
-        } else {
-          // High limit found
-          high = y;
-          f = f0 + ( low + high ) / 2;
-          calState = CAL_STOP;
-        }
-      }
-  }
-
-  return f;
-}
-
-
-void IthoCC1101::cc_cal_update( uint8_t msgError, bool timeout ) {
-
-  if (calEnabled == 0) {
-    return;
-  }
-
-  unsigned long now = millis();
-
-  uint8_t isValid = msgError;
-
-
-  if ( isValid || timeout )
-    lastValid = now;
-
-  uint32_t F = cc_cal( isValid, timeout );
-
-  if ( lastF != F ) {
-    if (calState == CAL_STOP) {
-
-      calFinised = 1;
-    }
-
-    setCCcal(F);
-    lastF = F;
-
-    lastValid = now;
-  }
-
-}
-
-void IthoCC1101::setCCcal(uint32_t F) {
-  //double freq = (F * 26) / (double)65536;
-
-  uint8_t param[3];
-  param[0] = (uint8_t)( ( F >> 16 ) & 0xFF ); //FREQ2
-  param[1] = (uint8_t)( ( F >> 8 ) & 0xFF );  //FREQ1
-  param[2] = (uint8_t)( ( F >> 0 ) & 0xFF );  //FREQ0
-
-
-  cc_freq[0] = param[2];
-  cc_freq[1] = param[1];
-  cc_freq[2] = param[0];
-
-  writeBurstRegister(CC1101_FREQ2, param, 3);
-
-
-}
-void IthoCC1101::resetCCcal() {
-  //reset to default values
-  setCCcal(2188650); //828.299Mhz
-}
-
-
-
 bool IthoCC1101::addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2) {
   uint32_t tempID = byte0 << 16 | byte1 << 8 | byte2;
   return addRFDevice(tempID);
@@ -1312,8 +1097,8 @@ void IthoCC1101::handleLevel() {
   else if ( checkIthoCommand(&inIthoPacket, ithoMessageHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFHighCommandBytes) ) {
     inIthoPacket.command = IthoHigh;
   }
-  else if ( checkIthoCommand(&inIthoPacket, ithoMessageStandByCommandBytes) ) {
-    inIthoPacket.command = IthoStandby;
+  else if ( checkIthoCommand(&inIthoPacket, ithoMessageAwayCommandBytes) ) {
+    inIthoPacket.command = IthoAway;
   }
   else if ( checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2AutoCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTAutoCommandBytes)) {
     inIthoPacket.command = IthoAuto;

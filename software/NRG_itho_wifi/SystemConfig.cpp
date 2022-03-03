@@ -46,7 +46,7 @@ SystemConfig::SystemConfig() {
   itho_timer2 = 20;
   itho_timer3 = 30;
   itho_numvrem = 1;
-  itho_updatefreq = 5;
+  itho_updatefreq = 10;
   itho_sendjoin = 0;
   itho_forcemedium = 0;
   itho_vremoteapi = 0;

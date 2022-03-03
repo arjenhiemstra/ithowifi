@@ -35,8 +35,8 @@ void RFDebug(IthoCommand cmd) {
     case IthoUnknown:
       strncat(debugLog, " (cmd:unknown)", sizeof(debugLog) - strlen(debugLog) - 1);
       break;
-    case IthoStandby:
-      strncat(debugLog, " (cmd:standby)", sizeof(debugLog) - strlen(debugLog) - 1);
+    case IthoAway:
+      strncat(debugLog, " (cmd:away)", sizeof(debugLog) - strlen(debugLog) - 1);
       break;
     case IthoLow:
       strncat(debugLog, " (cmd:low)", sizeof(debugLog) - strlen(debugLog) - 1);
@@ -140,56 +140,6 @@ void setllModeTimer() {
     return;
   }
 
-}
-
-void toggleCCcal() {
-  if (rf.getCCcalEnabled()) {
-    abortCCcal();
-    timerCCcal.detach();
-    ithoCCstatReq = true;
-  }
-  else {
-    rf.setCCcalEnable(1);
-    timerCCcal.attach(1, setCCcalTimer);
-  }
-}
-
-void setCCcalTimer() {
-  updateCCcalData();
-  if (!rf.getCCcalEnabled()) {
-    timerCCcal.detach();
-  }
-
-}
-
-void updateCCcalData() {
-  uint32_t currentF = rf.getCCcal();
-  uint16_t curTimeoutSetting = rf.getCCcalTimeout();
-  uint32_t stepTimeout = rf.getCCcalTimer();
-  uint8_t calEnabled = rf.getCCcalEnabled();
-  uint8_t calFinished = rf.getCCcalFinised();
-
-  StaticJsonDocument<500> root;
-
-  JsonObject systemstat = root.createNestedObject("ccstatus");
-  systemstat["currentF"] = currentF;
-  systemstat["curTSet"] = curTimeoutSetting;
-  systemstat["stepT"] = stepTimeout;
-  systemstat["calEnabled"] = calEnabled;
-  systemstat["calFin"] = calFinished;
-
-  notifyClients(root.as<JsonObjectConst>());
-
-}
-
-
-
-void abortCCcal() {
-  rf.abortCCcal();
-}
-
-void resetCCcal() {
-  rf.resetCCcal();
 }
 
 void startTaskCC1101() {
@@ -411,10 +361,6 @@ void TaskCC1101( void * pvParameters ) {
           }
 
         }
-      }
-      if (ithoCCstatReq) {
-        ithoCCstatReq = false;
-        updateCCcalData();
       }
       TaskCC1101HWmark = uxTaskGetStackHighWaterMark( NULL );
       vTaskDelay(25 / portTICK_PERIOD_MS);

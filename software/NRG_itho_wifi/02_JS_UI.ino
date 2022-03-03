@@ -199,25 +199,6 @@ function startWebsock(websocketServerLocation){
             let x = f.sysmessage;
             $(`#${x.id}`).text(x.message);
           }
-          else if(f.ccstatus) {
-            let x = f.ccstatus;
-            if(x.calEnabled == 1) {
-              $('#itho_ccc_toggle').text("Abort");
-            }
-            else {
-              $('#itho_ccc_toggle').text("Start");
-            }
-            $('#currentF').val(x.currentF);
-            var f = round(((x.currentF * 26) / 65536), 3);
-            $('#curfreq').html(`${f.toFixed(3)} MHz`);
-            $('#nextFstep').html(`Next frequency step in: ${round(x.stepT/1000, 0)} seconds`);
-            if(x.calFin == 1) {
-              $('#calfin').html(`Calibration status: Finished`);
-            }
-            else if (x.calEnabled == 1) {
-              $('#calfin').html(`Calibration status: Running...`);
-            }
-          }
   };
   websock.onopen = function(a) {
       console.log('websock open');
@@ -431,12 +412,6 @@ $(document).ready(function() {
         });
         $(`#Current-${i}, #Minimum-${i}, #Maximum-${i}`).html(`<div style='margin: auto;' class='dot-elastic'></div>`);    
       }
-    }    
-    else if ($(this).attr('id') == 'itho_ccc_toggle') {
-      websock.send('{\"itho_ccc_toggle\":true}');
-    }
-    else if ($(this).attr('id') == 'itho_ccc_reset') {
-      websock.send('{\"itho_ccc_reset\":true}');
     }
     else if ($(this).attr('id') == 'resetwificonf') {
       if (confirm("This will reset the wifi config to factory default, are you sure?")) {
@@ -865,7 +840,7 @@ function returnWifiSecSVG(secVal) {
 
 var remotesCount;
 var remtypes = [
-                ["RFT CVE",0x22F1,['low','medium','high','timer1','timer2','timer3','join','leave']],
+                ["RFT CVE",0x22F1,['away','low','medium','high','timer1','timer2','timer3','join','leave']],
                 ["RFT AUTO",0x22F3,['auto','autonight','low','high','timer1','timer2','timer3','join','leave']], 
                 ["RFT DF/QF",0x22F8,['low','high','cook30','cook60','timer1','timer2','timer3','join','leave']]
                ];
@@ -1272,14 +1247,15 @@ var html_systemsettings_start = `
                 <input id="itho_updatefreq" type="number" min="0" max="65535" size="6">
             </div>
             <legend><br>Virtual remote settings:</legend>
-            <p>The add-on can present itself as a virtual remote that can be joined to the itho unit.</p>
-            <p>This virtual remote can be used to force the itho unit in medium mode before sending a command from the add-on. This way the add-on can overrule the current speed settings of the itho (ie. due to active input from a built in humidity sensor or another remote)</p>
-            <p>A join command will only be accepted by the itho unit after a power cycle.</p>
-            <p>Received commands from RF remotes can be translated to matching virtual remote commands for non-CVE devices. The 0-254 speed control does not work for these devices, the timer settings do work as expected.
+            <p>The add-on can present itself as a virtual remote. A virtual remote emulates a physical remote through software. A virtual remote must be joined to the itho unit before it can be used.</p>
+            <p>A join command will only be accepted by the itho unit within the first 2 minutes after a power cycle.</p>
             <div class="pure-control-group">
               <label for="itho_numvrem">Number of virtual remotes</label>
                 <input id="itho_numvrem" type="number" min="1" max="12" size="6">
-            </div>
+            </div>            
+            <p>A virtual remote can be used to force the itho unit in medium mode before sending a command from the add-on. This way the add-on can overrule the current speed settings of the itho (ie. due to active input from a built in humidity sensor or another remote)</p>
+            <p>Received commands from RF remotes can be translated to matching virtual remote commands with the 'Map RF remotes to virtual remote' option for non-CVE devices. The 0-254 speed control does not work for these devices, the timer settings do work as expected.</p>
+            <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
             <div class="pure-control-group">
               <label for="option-vremotejoin" class="pure-radio">Send join command</label>
               <input id="option-vremotejoin-2" type="radio" name="option-itho_sendjoin" value="2"> every power on
@@ -1408,11 +1384,13 @@ $(document).ready(function() {
 var html_vremotessetup = `
 <div class="header"><h1>Virtual Remotes setup</h1></div>
 <style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
+      <br><p>The add-on can present itself as one or more virtual remote(s). A virtual remote emulates a physical remote through software.<br>A virtual remote must be joined to the itho unit before it can be used. A join command will only be accepted by the itho unit within the first 2 minutes after a power cycle.</p>
+      <p>With the 'Copy ID' function the ID from an existing physical remote can be copied. If the remote type is supported, the type will be detected automatically. If this physical remote is already joined to the itho unit a new join is not necessary.</p>
+      <p>There are multiple types of remotes that can be emulated; The RFT CVE (536-0020, 536-0024, 536-0124), RFT AUTO (536-0150), RFT DemandFlow/QualityFlow (536-0146).<br>Pictures of these remotes can be found here: <a href='https://github.com/arjenhiemstra/ithowifi/tree/master/remotes' target='_blank'>https://github.com/arjenhiemstra/ithowifi/tree/master/remotes</a></p>
       <form class="pure-form pure-form-aligned">
           <fieldset>
               <br>
                 <legend><br>Virtual remotes:</legend>
-              <br>
               <table id="vremotesTable" class="pure-table pure-table-bordered" style="text-align: center;"></table>
               <div class="pure-control-group">
                 <button id="itho_update_vremote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_vremote" class="pure-button">Reset</button>&nbsp;<button id="itho_copyid_vremote" class="pure-button">Copy ID</button>
@@ -1546,7 +1524,7 @@ Unless specified otherwise:<br><ul>
 <li>String values must be supplied with quote marks in accordance with JSON standards</li>
 </ul>
 <br>
-<strong>API table:</strong><table class="pure-table pure-table-bordered" style="font-size:.85em"> <thead> <tr> <th>key or param</th> <th>datatype</th> <th style="width:160px">value</th> <th>datatype</th> <th style="text-align:center">MQTT<br>(JSON)</th> <th style="text-align:center">Web<br>(URL params)</th> </tr> </thead> <tbody> <tr> <td>dtype</td> <td>string</td> <td>ithofan</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>If Domoticz MQTT support is on and commands originate from other than configured IDX, this key/value pair needs to be present for commands to get processed.</em></td> </tr> <tr> <td>username</td> <td>string</td> <td>max 20 chars long</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td>password</td> <td>string</td> <td>max 20 chars long</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td>command</td> <td>string</td> <td>low, medium, high, timer1, timer2, timer3, clearqueue</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Resulting speed/timer settings are configurable. Value without timer sets the base/fallback speed of the fan. Timers will be queued on highest speed setting first for the duration of the timer.<br> For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em> </td> </tr> <tr> <td>vremote</td> <td>string</td> <td>low, medium, high, timer1, timer2, timer3, join, leave</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>These commands work as a normal physical remote. For these commands to work the virtual remote needs to be activated and joined with the itho unit first</em></td> </tr> <tr> <td>speed</td> <td>string</td> <td>0-254</td> <td>number</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Speed without a timer will reset the queue (different behaviour configurable) and set a new base/fallback speed.<br> For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em> </td> </tr> <tr> <td>timer</td> <td>string</td> <td>0-65535</td> <td>number</td> <td style="text-align:center">●</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>only effective with "command" or "speed" key/param present, could overrule timer value of timer1, timer2, timer3. Highest speed setting on the queue will be active for the duration of the timer.</em></td> </tr> <tr> <td>clearqueue</td> <td>string</td> <td>true</td> <td>string</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Clear all timers on the queue, scheduled to run after all other commands have been processed. Speed will fallback to last value before items got enqueued</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>currentspeed</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns current active itho speed setting in range 0-254</em></td> </tr> <tr> <td></td> <td></td> <td>0-254</td> <td>number</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>ithostatus</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns JSON with all available sensor data, status data and system information. Available keys depend on itho device and firmware version</em></td> </tr> <tr> <td></td> <td></td> <td>Variable keys</td> <td>JSON</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "Itho status topic", see for more info the comments on ithostatus of the Web API</em></td> </tr> <tr> <td>get</td> <td>string</td> <td>remotesinfo</td> <td>string</td> <td style="text-align:center">◌</td> <td style="text-align:center">●</td> </tr> <tr> <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key = remote name, value is JSON with all received capabilities of the remote. Depending on make and model this can be the last command, temperature, humidity, battery and/or co2 levels.</em></td> </tr> <tr> <td></td> <td></td> <td>Variable keys</td> <td>JSON</td> <td style="text-align:center">●</td> <td style="text-align:center">◌</td> </tr> <tr> <td colspan="6">Comments:<br><em>Return type present on MQTT "Remotes info topic", see for more info the comments on remotesinfo of the Web API</em></td> </tr> </tbody></table><p><br><br></p>
+<strong>API table:</strong><table class="pure-table pure-table-bordered" style="font-size:.85em"><thead><tr><th>key or param</th><th>datatype</th><th style="width:160px">value</th><th>datatype</th><th style="text-align:center">MQTT<br>(JSON)</th><th style="text-align:center">WebAPI<br>(URL params)</th></tr></thead><tbody><tr><td colspan="6"><b>Commands below this line are expected to work on all itho devices and add-on versions.</b></td></tr><tr><td>dtype</td><td>string</td><td>ithofan</td><td>string</td><td style="text-align:center">●</td><td style="text-align:center">◌</td></tr><tr><td colspan="6">Comments:<br><em>If Domoticz MQTT support is on and commands originate from other than configured IDX, this key/value pair needs to be present for commands to get processed.</em></td></tr><tr><td>vremotecmd</td><td>string</td><td>away, low, medium, high, timer1, timer2, timer3, join, leave, auto, autonight, cook30, cook60</td><td>string</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>These commands emulate a normal physical remote, available commands depend on type of remote configured to emulate. For these commands to work, the virtual remote needs to be activated and joined with the itho unit first. If the "vremoteindex" or "vremotename" key is not present, the first virtual remote will be used.</em></td></tr><tr><td>vremoteindex</td><td>string</td><td>0-11</td><td>number</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>The vremoteindex key/value enables the selection of a specific virtual remote if more than 1 virtual remote is configured. The index can be found on the "Virtual remotes" page. If both "vremoteindex" and "vremotename" are provided, "vremotename" will be used.</em></td></tr><tr><td>vremotename</td><td>string</td><td>name</td><td>string</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>The vremotename key/value selects a specific virtual remote based on the name configured. The name can be configured through the "Virtual remotes" page. If more than one remote exists with the same name, the name match with the lowest index number will be used.</em></td></tr><tr><td>vremote</td><td colspan="5">see "vremotecmd"</td></tr><tr><td>username</td><td>string</td><td>max 20 chars long</td><td>string</td><td style="text-align:center">◌</td><td style="text-align:center">●</td></tr><tr><td>password</td><td>string</td><td>max 20 chars long</td><td>string</td><td style="text-align:center">◌</td><td style="text-align:center">●</td></tr><tr><td>clearqueue</td><td>string</td><td>true</td><td>string</td><td style="text-align:center">●</td><td style="text-align:center">◌</td></tr><tr><td colspan="6">Comments:<br><em>Clear all timers on the queue, scheduled to run after all other commands have been processed. Speed will fallback to last value before items got enqueued</em></td></tr><tr><td>get</td><td>string</td><td>ithostatus</td><td>string</td><td style="text-align:center">◌</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>Returns JSON with all available sensor data, status data and system information. Available keys depend on itho device and firmware version</em></td></tr><tr><td></td><td></td><td>Variable keys</td><td>JSON</td><td style="text-align:center">●</td><td style="text-align:center">◌</td></tr><tr><td colspan="6">Comments:<br><em>Return type present on MQTT "Itho status topic", see for more info the comments on ithostatus of the Web API</em></td></tr><tr><td>get</td><td>string</td><td>remotesinfo</td><td>string</td><td style="text-align:center">◌</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key=remote name, value is JSON with all received capabilities of the remote. Depending on make and model this can be the last command, temperature, humidity, battery and/or co2 levels.</em></td></tr><tr><td></td><td></td><td>Variable keys</td><td>JSON</td><td style="text-align:center">●</td><td style="text-align:center">◌</td></tr><tr><td colspan="6">Comments:<br><em>Return type present on MQTT "Remotes info topic", see for more info the comments on remotesinfo of the Web API</em></td></tr><tr><td colspan="6"><b>Commands below this line work on itho devices that support the PWM2IC2 protocol. Devices supported are at least the HRU200 and all CVE models. Devices known not to support these commands are the HRU350, WPU, DemandFlow/QualityFlow.</b></td></tr><tr><td>speed</td><td>string</td><td>0-254</td><td>number</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>Speed without a timer will reset the queue (different behaviour configurable) and set a new base/fallback speed.<br>For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em></td></tr><tr><td>command</td><td>string</td><td>low, medium, high, timer1, timer2, timer3, clearqueue</td><td>string</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>Resulting speed/timer settings are configurable. Value without timer sets the base/fallback speed of the fan. Timers will be queued on highest speed setting first for the duration of the timer.<br>For MQTT; sending only the value instead of a JSON key/value pair also works for single commands</em></td></tr><tr><td>timer</td><td>string</td><td>0-65535</td><td>number</td><td style="text-align:center">●</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>only effective with "command" or "speed" key/param present, could overrule timer value of timer1, timer2, timer3. Highest speed setting on the queue will be active for the duration of the timer.</em></td></tr><tr><td>get</td><td>string</td><td>currentspeed</td><td>string</td><td style="text-align:center">◌</td><td style="text-align:center">●</td></tr><tr><td colspan="6">Comments:<br><em>Returns current active itho speed setting in range 0-254</em></td></tr><tr><td></td><td></td><td>0-254</td><td>number</td><td style="text-align:center">●</td><td style="text-align:center">◌</td></tr><tr><td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td></tr></tbody></table><p><br><br></p>
 `;
 
 var html_help = `
