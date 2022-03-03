@@ -50,22 +50,9 @@ class IthoCC1101 : protected CC1101
 
     //settings
     uint8_t sendTries;                            //number of times a command is send at one button press
-    uint8_t calEnabled;
-    uint8_t calFinised;
-    uint16_t timeoutCCcal;
     uint8_t cc_freq[3]; //FREQ0, FREQ1, FREQ2
-    uint32_t f0;
-    unsigned long lastValid;
-    uint32_t lastF;
-
-    //CC1101 calibration
-    Ticker calibrationTask;
-    void cc_cal_task();
-    uint32_t cc_cal( uint8_t validMsg, bool timeout );
-    void cc_cal_update( uint8_t msgError, bool timeout );
 
     //Itho remotes
-//    std::vector<ithoRFDevices> IthoRFDevices;
     bool bindAllowed;
     bool allowAll;
     ithoRFDevices ithoRF;
@@ -126,6 +113,10 @@ class IthoCC1101 : protected CC1101
     uint8_t getLastInCounter() {
       return inIthoPacket.counter;  //retrieve last received/parsed command from remote
     }
+    uint32_t getFrequency() {
+      return ( (uint32_t)cc_freq[2] << 16 ) | ( (uint32_t)cc_freq[1] <<  8 ) | ( (uint32_t)cc_freq[0] <<  0 );
+    }
+        
     uint8_t ReadRSSI();
     bool checkID(const uint8_t *id);
     int * getLastID();
@@ -136,30 +127,7 @@ class IthoCC1101 : protected CC1101
     //send
     void sendCommand(IthoCommand command);
 
-    //calibration
-    uint8_t getCCcalEnabled() {
-      return calEnabled;
-    }
-    uint8_t getCCcalFinised() {
-      return calFinised;
-    }
 
-    void setCCcalEnable( uint8_t enable );
-    void abortCCcal();
-    void resetCCcal();
-
-    void setCCcal(uint32_t F);
-    uint32_t getCCcal() {
-      return ( (uint32_t)cc_freq[2] << 16 ) | ( (uint32_t)cc_freq[1] <<  8 ) | ( (uint32_t)cc_freq[0] <<  0 );
-    }
-
-    void setCCcalTimeout( uint16_t timeoutCCcal );
-    uint16_t getCCcalTimeout() {
-      return timeoutCCcal;
-    }
-    uint32_t getCCcalTimer() {
-      return (millis() - lastValid) > timeoutCCcal ? 0 : timeoutCCcal - (millis() - lastValid);
-    }
     void handleBind();
     void handleLevel();
     void handleTimer();

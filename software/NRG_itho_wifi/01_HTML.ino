@@ -87,6 +87,9 @@ void handleAPI(AsyncWebServerRequest *request) {
 
   const char * speed = nullptr;
   const char * timer = nullptr;
+  const char * vremotecmd = nullptr;
+  const char * vremoteidx = nullptr;
+  const char * vremotename = nullptr;
   
   for(int i=0;i<params;i++){
     AsyncWebParameter* p = request->getParam(i);
@@ -159,8 +162,17 @@ void handleAPI(AsyncWebServerRequest *request) {
       parseOK = ithoExecCommand(p->value().c_str(), HTMLAPI);
     }
     else if(strcmp(p->name().c_str(), "vremote") == 0) {
-      parseOK = ithoI2CCommand(p->value().c_str(), HTMLAPI);
+      vremotecmd = p->value().c_str();
     }
+    else if(strcmp(p->name().c_str(), "vremotecmd") == 0) {
+      vremotecmd = p->value().c_str();
+    }    
+    else if(strcmp(p->name().c_str(), "vremoteindex") == 0) {
+      vremoteidx = p->value().c_str();
+    }
+    else if(strcmp(p->name().c_str(), "vremotename") == 0) {
+      vremotename = p->value().c_str();
+    }        
     else if(strcmp(p->name().c_str(), "speed") == 0) {
       speed = p->value().c_str();
     }
@@ -189,6 +201,29 @@ void handleAPI(AsyncWebServerRequest *request) {
         logMessagejson("Reboot requested", WEBINTERFACE);
         parseOK = true;
       }
+    }
+  }
+  if( vremotecmd != nullptr && (vremoteidx == nullptr && vremotename == nullptr) ) {
+    parseOK = ithoI2CCommand(0, vremotecmd, HTMLAPI);
+  }
+  else {
+    //exec command for specific vremote
+    int index = -1;
+    if(vremotename != nullptr) {
+      index = virtualRemotes.getRemoteIndexbyName(vremotename);
+    }
+    else {
+      if(strcmp(vremoteidx, "0") == 0) {
+        index = 0;
+      }
+      else {
+        index = atoi(vremoteidx);
+        if (index == 0) index = -1;
+      }
+    }
+    if (index == -1) parseOK = false;
+    else {
+      parseOK = ithoI2CCommand(index, vremotecmd, HTMLAPI);
     }
   }
   //check speed & timer

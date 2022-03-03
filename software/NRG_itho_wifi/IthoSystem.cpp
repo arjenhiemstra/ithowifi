@@ -37,21 +37,8 @@ const std::map<cmdOrigin, const char*> cmdOriginMap = {
   {cmdOrigin::UNKNOWN, "unknown"}
 };
 
-bool sendI2CButton = false;
-bool sendI2CTimer = false;
-bool sendI2CJoin = false;
-bool sendI2CLeave = false;
-bool sendI2CDevicetype = false;
-bool sendI2CStatusFormat = false;
-bool sendI2CStatus = false;
-bool send31DA = false;
-bool send31D9 = false;
-bool send10D0 = false;
 bool get2410 = false;
 bool set2410 = false;
-bool buttonResult = false;
-uint8_t buttonValue = 0;
-uint8_t timerValue = 0;
 uint8_t index2410 = 0;
 int32_t value2410 = 0;
 int32_t * resultPtr2410 = nullptr;
@@ -66,12 +53,12 @@ SemaphoreHandle_t mutexI2Ctask;
 
 
 
-//                                        { IthoUnknown,  IthoJoin,                           IthoLeave,                            IthoStandby,  IthoLow,                            IthoMedium,                           IthoHigh,                           IthoFull, IthoTimer1,                           IthoTimer2,                           IthoTimer3,                           IthoAuto,                           IthoAutoNight,                            IthoCook30,                       IthoCook60 }
-const uint8_t *RFTCVE_Remote_Map[]      = { nullptr,      ithoMessageCVERFTJoinCommandBytes,  ithoMessageLeaveCommandBytes,         nullptr,      ithoMessageLowCommandBytes,         ithoMessageMediumCommandBytes,        ithoMessageHighCommandBytes,        nullptr,  ithoMessageTimer1CommandBytes,        ithoMessageTimer2CommandBytes,        ithoMessageTimer3CommandBytes,        nullptr,                            nullptr,                                  nullptr,                          nullptr };
-const uint8_t *RFTAUTO_Remote_Map[]     = { nullptr,      ithoMessageAUTORFTJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes,  nullptr,      ithoMessageAUTORFTLowCommandBytes,  nullptr,                              ithoMessageAUTORFTHighCommandBytes, nullptr,  ithoMessageAUTORFTTimer1CommandBytes, ithoMessageAUTORFTTimer2CommandBytes, ithoMessageAUTORFTTimer3CommandBytes, ithoMessageAUTORFTAutoCommandBytes, ithoMessageAUTORFTAutoNightCommandBytes,  nullptr,                          nullptr };
-const uint8_t *DEMANDFLOW_Remote_Map[]  = { nullptr,      ithoMessageDFJoinCommandBytes,      ithoMessageLeaveCommandBytes,         nullptr,      ithoMessageDFLowCommandBytes,       nullptr,                              ithoMessageDFHighCommandBytes,      nullptr,  ithoMessageDFTimer1CommandBytes,      ithoMessageDFTimer2CommandBytes,      ithoMessageDFTimer3CommandBytes,      nullptr,                            nullptr,                                  ithoMessageDFCook30CommandBytes,  ithoMessageDFCook60CommandBytes };
-const uint8_t *RFTRV_Remote_Map[]       = { nullptr,      ithoMessageRVJoinCommandBytes,      ithoMessageLeaveCommandBytes,         nullptr,      ithoMessageLowCommandBytes,         ithoMessageRV_CO2MediumCommandBytes,  ithoMessageHighCommandBytes,        nullptr,  ithoMessageRV_CO2Timer1CommandBytes,  ithoMessageRV_CO2Timer2CommandBytes,  ithoMessageRV_CO2Timer3CommandBytes,  ithoMessageRV_CO2AutoCommandBytes,  ithoMessageRV_CO2AutoNightCommandBytes,   nullptr,                          nullptr };
-const uint8_t *RFTCO2_Remote_Map[]      = { nullptr,      ithoMessageCO2JoinCommandBytes,     ithoMessageLeaveCommandBytes,         nullptr,      ithoMessageLowCommandBytes,         ithoMessageRV_CO2MediumCommandBytes,  ithoMessageHighCommandBytes,        nullptr,  ithoMessageRV_CO2Timer1CommandBytes,  ithoMessageRV_CO2Timer2CommandBytes,  ithoMessageRV_CO2Timer3CommandBytes,  ithoMessageRV_CO2AutoCommandBytes,  ithoMessageRV_CO2AutoNightCommandBytes,   nullptr,                          nullptr };
+//                                        { IthoUnknown,  IthoJoin,                           IthoLeave,                            IthoAway,                    IthoLow,                            IthoMedium,                           IthoHigh,                           IthoFull, IthoTimer1,                           IthoTimer2,                           IthoTimer3,                           IthoAuto,                           IthoAutoNight,                            IthoCook30,                       IthoCook60 }
+const uint8_t *RFTCVE_Remote_Map[]      = { nullptr,      ithoMessageCVERFTJoinCommandBytes,  ithoMessageLeaveCommandBytes,         ithoMessageAwayCommandBytes, ithoMessageLowCommandBytes,         ithoMessageMediumCommandBytes,        ithoMessageHighCommandBytes,        nullptr,  ithoMessageTimer1CommandBytes,        ithoMessageTimer2CommandBytes,        ithoMessageTimer3CommandBytes,        nullptr,                            nullptr,                                  nullptr,                          nullptr };
+const uint8_t *RFTAUTO_Remote_Map[]     = { nullptr,      ithoMessageAUTORFTJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes,  nullptr,                     ithoMessageAUTORFTLowCommandBytes,  nullptr,                              ithoMessageAUTORFTHighCommandBytes, nullptr,  ithoMessageAUTORFTTimer1CommandBytes, ithoMessageAUTORFTTimer2CommandBytes, ithoMessageAUTORFTTimer3CommandBytes, ithoMessageAUTORFTAutoCommandBytes, ithoMessageAUTORFTAutoNightCommandBytes,  nullptr,                          nullptr };
+const uint8_t *DEMANDFLOW_Remote_Map[]  = { nullptr,      ithoMessageDFJoinCommandBytes,      ithoMessageLeaveCommandBytes,         nullptr,                     ithoMessageDFLowCommandBytes,       nullptr,                              ithoMessageDFHighCommandBytes,      nullptr,  ithoMessageDFTimer1CommandBytes,      ithoMessageDFTimer2CommandBytes,      ithoMessageDFTimer3CommandBytes,      nullptr,                            nullptr,                                  ithoMessageDFCook30CommandBytes,  ithoMessageDFCook60CommandBytes };
+const uint8_t *RFTRV_Remote_Map[]       = { nullptr,      ithoMessageRVJoinCommandBytes,      ithoMessageLeaveCommandBytes,         nullptr,                     ithoMessageLowCommandBytes,         ithoMessageRV_CO2MediumCommandBytes,  ithoMessageHighCommandBytes,        nullptr,  ithoMessageRV_CO2Timer1CommandBytes,  ithoMessageRV_CO2Timer2CommandBytes,  ithoMessageRV_CO2Timer3CommandBytes,  ithoMessageRV_CO2AutoCommandBytes,  ithoMessageRV_CO2AutoNightCommandBytes,   nullptr,                          nullptr };
+const uint8_t *RFTCO2_Remote_Map[]      = { nullptr,      ithoMessageCO2JoinCommandBytes,     ithoMessageLeaveCommandBytes,         nullptr,                     ithoMessageLowCommandBytes,         ithoMessageRV_CO2MediumCommandBytes,  ithoMessageHighCommandBytes,        nullptr,  ithoMessageRV_CO2Timer1CommandBytes,  ithoMessageRV_CO2Timer2CommandBytes,  ithoMessageRV_CO2Timer3CommandBytes,  ithoMessageRV_CO2AutoCommandBytes,  ithoMessageRV_CO2AutoNightCommandBytes,   nullptr,                          nullptr };
 
 
 
@@ -398,7 +385,9 @@ void sendI2CPWMinit() {
 uint8_t cmdCounter = 0;
 
 void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRemote &remotes) {
-
+  //command structure: 
+  // [I2C addr ][  I2C command   ][len ][    timestamp         ][fmt ][    remote ID   ][cntr]<  opcode  ><len2><   len2 length command      >[chk2][cntr][chk ]
+  // 0x82, 0x60, 0xC1, 0x01, 0x01, 0x09, 0xFF, 0xFF, 0xFF, 0xFF, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
   if (remoteIndex > remotes.getMaxRemotes()) return;
 
   const RemoteTypes remoteType = remotes.getRemoteType(remoteIndex);
@@ -479,6 +468,19 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRem
       i2c_command[47] = *(id + 2);
     }
   }
+
+  //if timer1-3 command use timer config of systemConfig.itho_timer1-3
+  //example timer command: {0x22, 0xF3, 0x06, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00} 0xFF is timer value on pos 20 of i2c_command[]
+  if (command == IthoTimer1) {
+    i2c_command[20] = systemConfig.itho_timer1;
+  }
+  else if (command == IthoTimer2) {
+    i2c_command[20] = systemConfig.itho_timer2;
+  }
+  else if (command == IthoTimer3) {
+    i2c_command[20] = systemConfig.itho_timer3;
+  }
+    
   /*
      built the footer of the i2c wrapper
      chk2 = checksum of [fmt]+[remote ID]+[cntr]+[remote command]
@@ -534,113 +536,7 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRem
 
 }
 
-void sendButton(const uint8_t number, bool & updateweb) {
-
-  uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x11, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x22, 0xF1, 0x03, 0x00, 0x01, 0x04, 0x00, 0x00, 0xFF };
-
-  command[11] = id0;
-  command[12] = id1;
-  command[13] = id2;
-
-  command[14] = cmdCounter;
-  cmdCounter++;
-
-  command[19] += number;
-
-  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
-
-  while (digitalRead(SCLPIN) == LOW ) {
-    yield();
-    delay(1);
-  }
-
-  i2c_sendBytes(command, sizeof(command));
-
-  buttonResult = true;
-
-}
-
-void sendTimer(const uint8_t timer, bool & updateweb) {
-
-  uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x11, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x22, 0xF3, 0x03, 0x00, 0x00, 0xFF, 0x00, 0x00, 0xFF };
-
-  command[11] = id0;
-  command[12] = id1;
-  command[13] = id2;
-
-  command[14] = cmdCounter;
-  cmdCounter++;
-
-  command[20] = timer;
-
-  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
-
-  while (digitalRead(SCLPIN) == LOW ) {
-    yield();
-    delay(1);
-  }
-
-  i2c_sendBytes(command, sizeof(command));
-
-}
-
-void sendJoinI2C(bool & updateweb) {
-
-  uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x1F, 0xC9, 0x0C, 0x00, 0x22, 0xF1, 0xFF, 0xFF, 0xFF, 0x01, 0x10, 0xE0, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF };
-  command[11] = id0;
-  command[12] = id1;
-  command[13] = id2;
-
-  command[14] = cmdCounter;
-  cmdCounter++;
-
-  command[21] = id0;
-  command[22] = id1;
-  command[23] = id2;
-
-  command[27] = id0;
-  command[28] = id1;
-  command[29] = id2;
-
-  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
-
-  while (digitalRead(SCLPIN) == LOW ) {
-    yield();
-    delay(1);
-  }
-
-  i2c_sendBytes(command, sizeof(command));
-
-}
-
-void sendLeaveI2C(bool & updateweb) {
-
-  uint8_t command[] = { 0x82, 0x60, 0xC1, 0x01, 0x01, 0x14, 0x00, 0x00, 0x00, 0x00, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0x1F, 0xC9, 0x06, 0x00, 0x1F, 0xC9, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF };
-
-
-  command[11] = id0;
-  command[12] = id1;
-  command[13] = id2;
-
-  command[14] = cmdCounter;
-  cmdCounter++;
-
-  command[21] = id0;
-  command[22] = id1;
-  command[23] = id2;
-
-  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
-
-  while (digitalRead(SCLPIN) == LOW ) {
-    yield();
-    delay(1);
-  }
-
-  i2c_sendBytes(command, sizeof(command));
-
-}
-
-void sendQueryDevicetype(bool & updateweb) {
+void sendQueryDevicetype(bool updateweb) {
 
   uint8_t command[] = { 0x82, 0x80, 0x90, 0xE0, 0x04, 0x00, 0x8A };
 
@@ -677,7 +573,7 @@ void sendQueryDevicetype(bool & updateweb) {
 
 }
 
-void sendQueryStatusFormat(bool & updateweb) {
+void sendQueryStatusFormat(bool updateweb) {
 
   uint8_t command[] = { 0x82, 0x80, 0x24, 0x00, 0x04, 0x00, 0xD6 };
 
@@ -758,7 +654,7 @@ void sendQueryStatusFormat(bool & updateweb) {
 
 }
 
-void sendQueryStatus(bool & updateweb) {
+void sendQueryStatus(bool updateweb) {
 
 
   uint8_t command[] = { 0x82, 0x80, 0x24, 0x01, 0x04, 0x00, 0xD5 };
@@ -866,7 +762,7 @@ void sendQueryStatus(bool & updateweb) {
 
 }
 
-void sendQuery31DA(bool & updateweb) {
+void sendQuery31DA(bool updateweb) {
 
   uint8_t command[] = { 0x82, 0x80, 0x31, 0xDA, 0x04, 0x00, 0xEF };
 
@@ -1169,7 +1065,7 @@ void sendQuery31DA(bool & updateweb) {
 
 }
 
-void sendQuery31D9(bool & updateweb) {
+void sendQuery31D9(bool updateweb) {
 
   uint8_t command[] = { 0x82, 0x80, 0x31, 0xD9, 0x04, 0x00, 0xF0 };
 

@@ -97,10 +97,13 @@ void getIthoSettingsBackupJSON(JsonObject root) {
 bool ithoExecCommand(const char* command, cmdOrigin origin) {
   D_LOG("EXEC COMMAND:%s\n", command);
   if (systemConfig.itho_vremoteapi) {
-    return ithoI2CCommand(command, origin);
+    return ithoI2CCommand(0, command, origin);
   }
   else {
-    if (strcmp(command, "low") == 0) {
+    if (strcmp(command, "away") == 0) {
+      ithoSetSpeed(systemConfig.itho_low, origin);
+    }
+    else if (strcmp(command, "low") == 0) {
       ithoSetSpeed(systemConfig.itho_low, origin);
     }
     else if (strcmp(command, "medium") == 0) {
@@ -142,7 +145,7 @@ bool ithoExecCommand(const char* command, cmdOrigin origin) {
 
 }
 
-bool ithoI2CButtonCommand(uint8_t remoteIndex, const char* command) {
+bool ithoI2CCommand(uint8_t remoteIndex, const char* command, cmdOrigin origin) {
   D_LOG("EXEC VREMOTE BUTTON COMMAND:%s remote:%d\n", command, remoteIndex);
 
   if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
@@ -150,10 +153,16 @@ bool ithoI2CButtonCommand(uint8_t remoteIndex, const char* command) {
   else {
     return false;
   }
-  if (strcmp(command, "low") == 0) {
-    sendRemoteCmd(remoteIndex, IthoLow, virtualRemotes);
-  }
 
+  bool updateweb = false;
+  if(origin == WEB) updateweb = true;
+  
+  if (strcmp(command, "away") == 0) {
+    sendRemoteCmd(remoteIndex, IthoAway, virtualRemotes);
+  }
+  else if (strcmp(command, "low") == 0) {
+    sendRemoteCmd(remoteIndex, IthoLow, virtualRemotes);
+  }  
   else if (strcmp(command, "medium") == 0) {
     sendRemoteCmd(remoteIndex, IthoMedium, virtualRemotes);
   }
@@ -187,101 +196,43 @@ bool ithoI2CButtonCommand(uint8_t remoteIndex, const char* command) {
   else if (strcmp(command, "leave") == 0) {
     sendRemoteCmd(remoteIndex, IthoLeave, virtualRemotes);
   }
+  else if (strcmp(command, "type") == 0) {
+    sendQueryDevicetype(updateweb);
+  }
+  else if (strcmp(command, "status") == 0) {
+    sendQueryStatus(updateweb);
+  }
+  else if (strcmp(command, "statusformat") == 0) {
+    sendQueryStatusFormat(updateweb);
+  }
+  else if (strcmp(command, "31DA") == 0) {
+    sendQuery31DA(updateweb);
+  }
+  else if (strcmp(command, "31D9") == 0) {
+    sendQuery31D9(updateweb);
+  }
+  else if (strcmp(command, "10D0") == 0) {
+    filterReset();
+  }
   else {
 
     xSemaphoreGive(mutexI2Ctask);
 
     return false;
   }
-  char origin[15] {};
-  sprintf(origin, "vremote-%d", remoteIndex);
 
-  logLastCommand(command, origin);
+  const char* source;
+  auto it = cmdOriginMap.find(origin);
+  if (it != cmdOriginMap.end()) source = it->second;
+  else source = cmdOriginMap.rbegin()->second;
+
+  char originchar[30] {};
+  sprintf(originchar, "%s-vremote-%d", source, remoteIndex);
+
+  logLastCommand(command, originchar);
 
   xSemaphoreGive(mutexI2Ctask);
 
-  return true;
-
-}
-bool ithoI2CCommand(const char* command, cmdOrigin origin) {
-
-  D_LOG("EXEC VREMOTE COMMAND:%s\n", command);
-
-  if (xSemaphoreTake(mutexI2Ctask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
-  }
-  else {
-    return false;
-  }
-
-
-  if (strcmp(command, "low") == 0) {
-    buttonValue = 1;
-    sendI2CButton = true;
-  }
-  else if (strcmp(command, "medium") == 0) {
-    buttonValue = 2;
-    sendI2CButton = true;
-  }
-  else if (strcmp(command, "high") == 0) {
-    buttonValue = 3;
-    sendI2CButton = true;
-  }
-  else if (strcmp(command, "timer1") == 0) {
-    timerValue = systemConfig.itho_timer1;
-    sendI2CTimer = true;
-  }
-  else if (strcmp(command, "timer2") == 0) {
-    timerValue = systemConfig.itho_timer2;
-    sendI2CTimer = true;
-  }
-  else if (strcmp(command, "timer3") == 0) {
-    timerValue = systemConfig.itho_timer3;
-    sendI2CTimer = true;
-  }
-  else if (strcmp(command, "cook30") == 0) {
-    //tbi
-  }
-  else if (strcmp(command, "cook60") == 0) {
-    //tbi
-  }
-  else if (strcmp(command, "auto") == 0) {
-    //tbi
-  }
-  else if (strcmp(command, "autonight") == 0) {
-    //tbi
-  }
-  else if (strcmp(command, "join") == 0) {
-    sendI2CJoin = true;
-  }
-  else if (strcmp(command, "leave") == 0) {
-    sendI2CLeave = true;
-  }
-  else if (strcmp(command, "type") == 0) {
-    sendI2CDevicetype = true;
-  }
-  else if (strcmp(command, "status") == 0) {
-    sendI2CStatus = true;
-  }
-  else if (strcmp(command, "statusformat") == 0) {
-    sendI2CStatusFormat = true;
-  }
-  else if (strcmp(command, "31DA") == 0) {
-    send31DA = true;
-  }
-  else if (strcmp(command, "31D9") == 0) {
-    send31D9 = true;
-  }
-  else if (strcmp(command, "10D0") == 0) {
-    send10D0 = true;
-  }
-  else {
-
-    xSemaphoreGive(mutexI2Ctask);
-
-    return false;
-  }
-
-  logLastCommand(command, origin);
   return true;
 
 }
@@ -436,13 +387,14 @@ bool writeIthoVal(uint16_t value) {
     if (timeout != 1000) {
 
       if (systemConfig.itho_forcemedium) {
-        buttonValue = 2;
-        buttonResult = false;
-        sendI2CButton = true;
-        auto timeoutmillis = millis() + 400;
-        while (!buttonResult && millis() < timeoutmillis) {
-          //wait for result
-        }
+        sendRemoteCmd(0, IthoMedium, virtualRemotes);
+        //        buttonValue = 2;
+        //        buttonResult = false;
+        //        sendI2CButton = true;
+        //        auto timeoutmillis = millis() + 400;
+        //        while (!buttonResult && millis() < timeoutmillis) {
+        //          //wait for result
+        //        }
       }
       updateIthoMQTT = true;
 
@@ -502,11 +454,11 @@ void logWifiInfo() {
 }
 
 void setRFdebugLevel(uint8_t level) {
-  char logBuff[LOG_BUF_SIZE]{};
+  char logBuff[LOG_BUF_SIZE] {};
   debugLevel = level;
   rf.setAllowAll(false);
   sprintf(logBuff, "Debug level = %d", debugLevel);
   logMessagejson(logBuff, WEBINTERFACE);
   strcpy(logBuff, "");
-  
+
 }

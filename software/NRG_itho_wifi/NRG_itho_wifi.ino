@@ -1,4 +1,4 @@
-#define FWVERSION "2.4.0-alpha2"
+#define FWVERSION "2.4.0-alpha3"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -24,19 +24,13 @@
 
 /*
  Backlog:
- * (done) recheck status format if failed on boot
- * (done) add RF debug button to debug page
- * (done) add option to monitor remotes only (ignore button presses)
- * (done) Prevent crash when multiple webbroser tabs open to the add-on and retreiving settings
- * (done) make NTP server configurable
+ * (todo) make front end buttons dependent on vremote0 type
  * (todo) check load of remotes config file between 2.3.5 and 2.4.0
- * (todo) add new vremote options to API and documentation
  * (todo) After timer, go back to fallback or last value
- * (todo) Make flash write atomic
+ * (todo) Prevent flash write during interrupt to prevent crashes
  * (todo) restructure code and add PlatformIO support
  * (todo) Set command on bedug page does not give confirmation of changed setting
  * (todo) add support for 536-0106 remote, https://github.com/arjenhiemstra/ithowifi/issues/78
- * (todo) add support for 536-0020 remote, https://github.com/arjenhiemstra/ithowifi/issues/76
  * (todo) make status parameters selectable to include in update or not
  * 
  */
@@ -59,7 +53,6 @@
 #include <time.h>
 #include <Ticker.h>
 #include <string>
-#include <cstring>
 
 #include "IthoQueue.h"
 #include "System.h"
@@ -94,13 +87,12 @@ AsyncWebServer server(80);
 AsyncEventSource events("/events");
 
 
-
 Ticker IthoCMD;
 Ticker DelayedReq;
 Ticker DelayedSave;
 Ticker scan;
 Ticker timerLearnLeaveMode;
-Ticker timerCCcal;
+
 IthoCC1101 rf;
 IthoPacket packet;
 IthoRemote remotes;

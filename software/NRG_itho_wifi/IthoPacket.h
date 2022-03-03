@@ -13,7 +13,7 @@ enum IthoCommand
   IthoJoin = 1,
   IthoLeave = 2,
 
-  IthoStandby = 3,
+  IthoAway = 3,
   IthoLow = 4,
   IthoMedium = 5,
   IthoHigh = 6,
@@ -28,11 +28,7 @@ enum IthoCommand
 
   IthoCook30 = 13,
   IthoCook60 = 14,
-  //  //duco c system remote
-  //  DucoStandby = 11,
-  //  DucoLow = 12,
-  //  DucoMedium = 13,
-  //  DucoHigh = 14
+
 };
 
 enum message_state {
@@ -79,8 +75,10 @@ enum message_state {
 static char const * const MsgType[4] = { "RQ", "_W", "_I", "RP" };
 
 
+
 //message command bytes for CVE/HRU remote (536-0124)
 //                                                         < opcode  ><len ><    command     >
+const uint8_t ithoMessageAwayCommandBytes[] =          {0x22, 0xF1, 0x03, 0x00, 0x01, 0x04};
 const uint8_t ithoMessageLowCommandBytes[] =              {0x22, 0xF1, 0x03, 0x00, 0x02, 0x04};
 const uint8_t ithoMessageMediumCommandBytes[] =           {0x22, 0xF1, 0x03, 0x00, 0x03, 0x04};
 const uint8_t ithoMessageHighCommandBytes[] =             {0x22, 0xF1, 0x03, 0x00, 0x04, 0x04};
@@ -119,10 +117,6 @@ const uint8_t ithoMessageDFTimer2CommandBytes[] =         {0x22, 0xF3, 0x05, 0x0
 const uint8_t ithoMessageDFTimer3CommandBytes[] =         {0x22, 0xF3, 0x05, 0x00, 0x42, 0x09, 0x03, 0x03};
 const uint8_t ithoMessageDFCook30CommandBytes[] =         {0x22, 0xF3, 0x05, 0x00, 0x02, 0x1E, 0x02, 0x03};
 const uint8_t ithoMessageDFCook60CommandBytes[] =         {0x22, 0xF3, 0x05, 0x00, 0x02, 0x3C, 0x02, 0x03};
-
-////unkown, tbd. Command was present incomplete encoded in the original lib.
-//                                                         < opcode  ><len ><    command     >
-const uint8_t ithoMessageStandByCommandBytes[] =          {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};    
 
 //Join/Leave commands:                                     < opcode  ><len ><    command    ><    device ID    ><    command    ><    device ID    >
 const uint8_t ithoMessageCVERFTJoinCommandBytes[] =       {0x1F, 0xC9, 0x0C, 0x00, 0x22, 0xF1, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00}; //join command of CVE/HRU remote (536-0124)

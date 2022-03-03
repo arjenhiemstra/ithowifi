@@ -165,7 +165,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         }
         else {
           i2c_result_updateweb = true;
-          ithoI2CCommand(root["ithobutton"], WEB);
+          ithoI2CCommand(0, root["ithobutton"], WEB);
         }
       }
     }
@@ -240,7 +240,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error) {
         if (!(const char*)root["vremote"].isNull() && !(const char*)root["command"].isNull()) {
-          ithoI2CButtonCommand(root["vremote"].as<uint8_t>(), root["command"].as<const char*>());
+          ithoI2CCommand(root["vremote"].as<uint8_t>(), root["command"].as<const char*>(), WEB);
         }
       }
 
@@ -276,16 +276,6 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         }
       }
 
-    }
-    else if (msg.find("{\"itho_ccc_toggle\"") != std::string::npos) {
-      toggleCCcal();
-    }
-    if (msg.find("{\"itho_ccc_reset\"") != std::string::npos) {
-      resetCCcal();
-      ithoCCstatReq = true;
-    }
-    if (msg.find("{\"ithoccc\"") != std::string::npos) {
-      ithoCCstatReq = true;
     }
     else if (msg.find("{\"itho_remove_remote\"") != std::string::npos) {
       bool parseOK = false;

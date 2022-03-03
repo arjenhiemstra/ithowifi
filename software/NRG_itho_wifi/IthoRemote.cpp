@@ -172,6 +172,16 @@ const char * IthoRemote::getRemoteNamebyIndex(const int index) {
   return remotes[index].name;
 }
 
+int IthoRemote::getRemoteIndexbyName(const char* name) {
+  if(name == nullptr) return -1;
+  if(strcmp(name, "") == 0) return -1;
+  
+  for (uint8_t i = 0; i < maxRemotes; i++) {
+    if(strcmp(name, remotes[i].name) == 0) return i;
+  }
+  return -1;
+}
+
 bool IthoRemote::checkID(const int* id)
 {
   int noKnown = 0;
