@@ -203,39 +203,46 @@ void handleAPI(AsyncWebServerRequest *request) {
       }
     }
   }
-  if( vremotecmd != nullptr && (vremoteidx == nullptr && vremotename == nullptr) ) {
-    parseOK = ithoI2CCommand(0, vremotecmd, HTMLAPI);
-  }
-  else {
-    //exec command for specific vremote
-    int index = -1;
-    if(vremotename != nullptr) {
-      index = virtualRemotes.getRemoteIndexbyName(vremotename);
+  
+  if( vremotecmd != nullptr || vremoteidx != nullptr || vremotename != nullptr ) {
+    if( vremotecmd != nullptr && (vremoteidx == nullptr && vremotename == nullptr) ) {
+      parseOK = ithoI2CCommand(0, vremotecmd, HTMLAPI);
     }
     else {
-      if(strcmp(vremoteidx, "0") == 0) {
-        index = 0;
+      //exec command for specific vremote
+      int index = -1;
+      if(vremoteidx != nullptr) {
+        if(strcmp(vremoteidx, "0") == 0) {
+          index = 0;
+        }
+        else {
+          index = atoi(vremoteidx);
+          if (index == 0) index = -1;
+        }      
       }
+      if(vremotename != nullptr) {
+        index = virtualRemotes.getRemoteIndexbyName(vremotename);
+      }      
+      if (index == -1) parseOK = false;
       else {
-        index = atoi(vremoteidx);
-        if (index == 0) index = -1;
+        parseOK = ithoI2CCommand(index, vremotecmd, HTMLAPI);
       }
+    }    
+  }
+  else if (speed != nullptr || timer != nullptr) {
+    //check speed & timer
+    if(speed != nullptr && timer != nullptr) {
+      parseOK = ithoSetSpeedTimer(speed, timer, HTMLAPI);
     }
-    if (index == -1) parseOK = false;
-    else {
-      parseOK = ithoI2CCommand(index, vremotecmd, HTMLAPI);
+    else if(speed != nullptr && timer == nullptr) {
+      parseOK = ithoSetSpeed(speed, HTMLAPI);
     }
+    else if(timer != nullptr && speed == nullptr) {  
+      parseOK = ithoSetTimer(timer, HTMLAPI);
+    }    
   }
-  //check speed & timer
-  if(speed != nullptr && timer != nullptr) {
-    parseOK = ithoSetSpeedTimer(speed, timer, HTMLAPI);
-  }
-  else if(speed != nullptr && timer == nullptr) {
-    parseOK = ithoSetSpeed(speed, HTMLAPI);
-  }
-  else if(timer != nullptr && speed == nullptr) {  
-    parseOK = ithoSetTimer(timer, HTMLAPI);
-  }
+
+  
   if(parseOK) {
     request->send(200, "text/html", "OK");
   }
