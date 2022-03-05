@@ -1,4 +1,4 @@
-#define FWVERSION "2.4.0-alpha3"
+#define FWVERSION "2.4.0-alpha4"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -29,7 +29,6 @@
  * (todo) After timer, go back to fallback or last value
  * (todo) Prevent flash write during interrupt to prevent crashes
  * (todo) restructure code and add PlatformIO support
- * (todo) Set command on bedug page does not give confirmation of changed setting
  * (todo) add support for 536-0106 remote, https://github.com/arjenhiemstra/ithowifi/issues/78
  * (todo) make status parameters selectable to include in update or not
  * 
