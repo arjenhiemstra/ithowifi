@@ -2570,7 +2570,7 @@
     (uuid 00000000-0000-0000-0000-00005e6ce08c)
     (property "Reference" "Q1" (id 0) (at 258.445 109.1946 90))
     (property "Value" "BSS138" (id 1) (at 258.445 111.506 90))
-    (property "Footprint" "Package_TO_SOT_SMD:SOT-23" (id 2) (at 256.54 107.95 0)
+    (property "Footprint" "Package_TO_SOT_SMD:SOT-23W" (id 2) (at 256.54 107.95 0)
       (effects (font (size 1.27 1.27) italic) (justify left) hide)
     )
     (property "Datasheet" "https://www.fairchildsemi.com/datasheets/BS/BSS138.pdf" (id 3) (at 258.445 102.87 0)
@@ -2629,7 +2629,7 @@
     (uuid 00000000-0000-0000-0000-00005e6d9a33)
     (property "Reference" "Q2" (id 0) (at 272.415 104.1146 90))
     (property "Value" "BSS138" (id 1) (at 272.415 106.426 90))
-    (property "Footprint" "Package_TO_SOT_SMD:SOT-23" (id 2) (at 270.51 102.87 0)
+    (property "Footprint" "Package_TO_SOT_SMD:SOT-23W" (id 2) (at 270.51 102.87 0)
       (effects (font (size 1.27 1.27) italic) (justify left) hide)
     )
     (property "Datasheet" "https://www.fairchildsemi.com/datasheets/BS/BSS138.pdf" (id 3) (at 272.415 97.79 0)
@@ -3458,10 +3458,10 @@
       (reference "LED2") (unit 1) (value "itho status") (footprint "LED_SMD:LED_0805_2012Metric")
     )
     (path "/00000000-0000-0000-0000-00005e6ce08c"
-      (reference "Q1") (unit 1) (value "BSS138") (footprint "Package_TO_SOT_SMD:SOT-23")
+      (reference "Q1") (unit 1) (value "BSS138") (footprint "Package_TO_SOT_SMD:SOT-23W")
     )
     (path "/00000000-0000-0000-0000-00005e6d9a33"
-      (reference "Q2") (unit 1) (value "BSS138") (footprint "Package_TO_SOT_SMD:SOT-23")
+      (reference "Q2") (unit 1) (value "BSS138") (footprint "Package_TO_SOT_SMD:SOT-23W")
     )
     (path "/00000000-0000-0000-0000-00005e596dc0"
       (reference "R-78E3.3") (unit 1) (value "U2") (footprint "Converter_DCDC:Converter_DCDC_RECOM_R-78E-0.5_THT")
