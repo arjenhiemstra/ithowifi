@@ -1,7 +1,7 @@
 void getIthoStatusJSON(JsonObject root) {
   if (SHT3x_original || SHT3x_alternative || itho_internal_hum_temp) {
-    root["temp"] = static_cast<int>(ithoTemp * 10 + 0.5) / 10.0;
-    root["hum"] = static_cast<int>(ithoHum * 10 + 0.5) / 10.0;
+    root["temp"] = round(ithoTemp, 1);
+    root["hum"] = round(ithoHum, 1);
 
     auto b = 611.21 * pow(2.7183, ((18.678 - ithoTemp / 234.5) * ithoTemp) / (257.14 + ithoTemp));
     auto ppmw = b / (101325 - b) * ithoHum / 100 * 0.62145 * 1000000;
@@ -456,9 +456,17 @@ void logWifiInfo() {
 void setRFdebugLevel(uint8_t level) {
   char logBuff[LOG_BUF_SIZE] {};
   debugLevel = level;
-  rf.setAllowAll(false);
+  rf.setAllowAll(true);
+  if(level == 2) {
+    rf.setAllowAll(false);
+  }
   sprintf(logBuff, "Debug level = %d", debugLevel);
   logMessagejson(logBuff, WEBINTERFACE);
   strcpy(logBuff, "");
 
+}
+
+double round(double value, int precision) {
+  double pow10 = pow(10.0, precision);
+  return static_cast<int>(value * pow10 + 0.5) / pow10;
 }

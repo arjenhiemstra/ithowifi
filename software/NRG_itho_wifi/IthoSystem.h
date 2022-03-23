@@ -29,8 +29,8 @@ extern int32_t *resultPtr2410;
 extern bool i2c_result_updateweb;
 
 extern bool itho_internal_hum_temp;
-extern float ithoHum;
-extern float ithoTemp;
+extern double ithoHum;
+extern double ithoTemp;
 
 extern Ticker getSettingsHack;
 extern SemaphoreHandle_t mutexI2Ctask;
@@ -51,7 +51,7 @@ struct ithoDeviceStatus {
     byte byteval;
     int32_t intval;
     uint32_t uintval;
-    float floatval;
+    double floatval;
     const char* stringval;
   } value;
   uint32_t divider;
@@ -63,7 +63,7 @@ struct ithoDeviceMeasurements {
   enum : uint8_t { is_int, is_float, is_string } type;
   union {
     int32_t intval;
-    float floatval;
+    double floatval;
     const char* stringval;
   } value;
 };

@@ -13,7 +13,6 @@ WifiConfig::WifiConfig() {
   strlcpy(ssid, "", sizeof(ssid));
   strlcpy(passwd, "", sizeof(passwd));
   strlcpy(dhcp, "on", sizeof(dhcp));
-  renew = 60;
   strlcpy(ip, "192.168.4.1", sizeof(ip));
   strlcpy(subnet, "255.255.255.0", sizeof(subnet));
   strlcpy(gateway, "127.0.0.1", sizeof(gateway));
@@ -43,10 +42,6 @@ bool WifiConfig::set(JsonObjectConst obj) {
   if (!(const char*)obj["dhcp"].isNull()) {
     updated = true;
     strlcpy(dhcp, obj["dhcp"], sizeof(dhcp));
-  }
-  if (!(const char*)obj["renew"].isNull()) {
-    updated = true;
-    renew = obj["renew"];
   }
   if (!(const char*)obj["ip"].isNull()) {
     updated = true;
@@ -87,7 +82,6 @@ void WifiConfig::get(JsonObject obj) const {
   obj["ssid"] = ssid;
   obj["passwd"] = passwd;
   obj["dhcp"] = dhcp;
-  obj["renew"] = renew;
   obj["ip"] = ip;
   obj["subnet"] = subnet;
   obj["gateway"] = gateway;

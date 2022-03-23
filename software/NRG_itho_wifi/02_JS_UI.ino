@@ -258,7 +258,6 @@ $(document).ready(function() {
           ssid:     $('#ssid').val(),
           passwd:   $('#passwd').val(),
           dhcp:     $('input[name=\'option-dhcp\']:checked').val(),
-          renew:    $('#renew').val(),
           ip:       $('#ip').val(),
           subnet:   $('#subnet').val(),
           gateway:  $('#gateway').val(),
@@ -562,12 +561,11 @@ function radio(origin, state) {
   if (origin == "dhcp") {
     if (state == 'on') {
       $('#ip, #subnet, #gateway, #dns1, #dns2').prop('readonly', true);
-      $('#renew, #port').prop('readonly', false);
+      $('#port').prop('readonly', false);
       $('#option-dhcp-on, #option-dhcp-off').prop('disabled', false);
     }
     else {
       $('#ip, #subnet, #gateway, #dns1, #dns2, #port').prop('readonly', false);
-      $('#renew').prop('readonly', true);
       $('#option-dhcp-on, #option-dhcp-off').prop('disabled', false);
     }
   }
@@ -1119,10 +1117,6 @@ var html_wifisetup = `
               <label for="option-dhcp" class="pure-radio">Use DHCP</label> 
               <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
               <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off"> off
-            </div>
-            <div class="pure-control-group">
-              <label for="renew">DHCP Renew interval</label>
-                <input id="renew" type="text">
             </div>
             <div class="pure-control-group">
               <label for="hostname">Hostname</label>

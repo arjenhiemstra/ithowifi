@@ -8,7 +8,6 @@ void jsonWsSend(const char* rootName) {
     nested["ssid"] = wifiConfig.ssid;
     nested["passwd"] = wifiConfig.passwd;
     nested["dhcp"] = wifiConfig.dhcp;
-    nested["renew"] = wifiConfig.renew;
     if (strcmp(wifiConfig.dhcp, "off") == 0) {
       nested["ip"] = wifiConfig.ip;
       nested["subnet"] = wifiConfig.subnet;
@@ -146,16 +145,16 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
             if (ithoSettingsArray != nullptr) {
               uint8_t index = root["ithosetupdate"].as<uint8_t>();
               if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<float>() * 2), true);
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 2), true);
               }
               else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<float>() * 10), true);
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 10), true);
               }
               else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<float>() * 100), true);
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 100), true);
               }
               else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<float>() * 1000), true);
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 1000), true);
               }
               else {
                 updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), true);
@@ -210,16 +209,16 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         if (ithoSettingsArray != nullptr) {
           uint8_t index = root["ithosetupdate"].as<uint8_t>();
           if (ithoSettingsArray[index].type == ithoSettings::is_float2) {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<float>() * 2), false);
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 2), false);
           }
           else if (ithoSettingsArray[index].type == ithoSettings::is_float10) {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<float>() * 10), false);
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 10), false);
           }
           else if (ithoSettingsArray[index].type == ithoSettings::is_float100) {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<float>() * 100), false);
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 100), false);
           }
           else if (ithoSettingsArray[index].type == ithoSettings::is_float1000) {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<float>() * 1000), false);
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 1000), false);
           }
           else {
             updateSetting(root["ithosetupdate"].as<uint8_t>(), root["value"].as<int32_t>(), false);

@@ -16,7 +16,6 @@ class WifiConfig {
     char ssid[33];
     char passwd[65];
     char dhcp[5];
-    uint8_t renew;
     char ip[16];
     char subnet[16];
     char gateway[16];
