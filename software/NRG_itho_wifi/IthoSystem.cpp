@@ -45,8 +45,8 @@ int32_t * resultPtr2410 = nullptr;
 bool i2c_result_updateweb = false;
 
 bool itho_internal_hum_temp = false;
-float ithoHum = 0;
-float ithoTemp = 0;
+double ithoHum = 0;
+double ithoTemp = 0;
 
 Ticker getSettingsHack;
 SemaphoreHandle_t mutexI2Ctask;
@@ -705,7 +705,7 @@ void sendQueryStatus(bool updateweb) {
           ithoStat.value.intval = tempVal;
         }
         if (ithoStat.type == ithoDeviceStatus::is_float) {
-          ithoStat.value.floatval = (float)tempVal / ithoStat.divider;
+          ithoStat.value.floatval = static_cast<double>(tempVal) / ithoStat.divider;
         }
 
         statusPos += ithoStat.length;
@@ -1101,7 +1101,7 @@ void sendQuery31D9(bool updateweb) {
       }
     }
 
-    float tempVal = i2cbuf[1 + dataStart] / 2.0;
+    double tempVal = i2cbuf[1 + dataStart] / 2.0;
     ithoDeviceMeasurements sTemp = {labels31D9[0], ithoDeviceMeasurements::is_float, {.floatval = tempVal} } ;
     ithoInternalMeasurements.push_back(sTemp);
 
@@ -1284,7 +1284,7 @@ int32_t * sendQuery2410(bool & updateweb) {
         sprintf(tempbuffer2, "%d", values[2]);
       }
       else if (ithoSettingsArray[index2410].type == ithoSettings::is_float10) {
-        float val[3];
+        double val[3];
         val[0] = values[0] / 10.0f;
         val[1] = values[1] / 10.0f;
         val[2] = values[2] / 10.0f;
@@ -1293,7 +1293,7 @@ int32_t * sendQuery2410(bool & updateweb) {
         sprintf(tempbuffer2, "%.1f", val[2]);
       }
       else if (ithoSettingsArray[index2410].type == ithoSettings::is_float100) {
-        float val[3];
+        double val[3];
         val[0] = values[0] / 100.0f;
         val[1] = values[1] / 100.0f;
         val[2] = values[2] / 100.0f;
@@ -1302,7 +1302,7 @@ int32_t * sendQuery2410(bool & updateweb) {
         sprintf(tempbuffer2, "%.2f", val[2]);
       }
       else if (ithoSettingsArray[index2410].type == ithoSettings::is_float1000) {
-        float val[3];
+        double val[3];
         val[0] = values[0] / 1000.0f;
         val[1] = values[1] / 1000.0f;
         val[2] = values[2] / 1000.0f;
@@ -1439,6 +1439,7 @@ int quick_pow10(int n) {
     1, 10, 100, 1000, 10000,
     100000, 1000000, 10000000, 100000000, 1000000000
   };
+  if(n>(sizeof(pow10)/sizeof(pow10[0])-1)) return 1;
   return pow10[n];
 }
 

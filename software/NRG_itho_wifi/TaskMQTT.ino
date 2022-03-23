@@ -337,12 +337,15 @@ void updateState(uint16_t newState) {
 
     if (systemConfig.mqtt_domoticz_active) {
       int nvalue = 1;
-      double state = 1.0;
-      if (newState > 0) {
-        state  = newState / 2.54;
+      double state = 0.0;
+      if (newState > 0.5) {
+        state  = (newState / 2.54) + 0.5;
       }
-
-      newState = uint16_t(state + 0.5);
+      else {
+        state = 0.0;
+        nvalue = 0;
+      }
+      newState = uint16_t(state);
       char buf[10];
       sprintf(buf, "%d", newState);
 

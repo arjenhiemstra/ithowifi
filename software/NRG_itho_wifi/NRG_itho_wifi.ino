@@ -1,4 +1,4 @@
-#define FWVERSION "2.4.0-alpha4"
+#define FWVERSION "2.4.0-alpha5"
 
 #define LOGGING_INTERVAL 21600000  //Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
@@ -43,7 +43,7 @@
 #include "IthoSystem.h"
 #include "notifyClients.h"
 #include "IthoCC1101.h"
-#include <ArduinoJson.h>  // https://github.com/bblanchon/ArduinoJson [6.18.5]
+#include <ArduinoJson.h>  // https://github.com/bblanchon/ArduinoJson [6.19.3]
 #include <ESPAsyncWebServer.h>  // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
 #include <SPIFFSEditor.h>       // https://github.com/me-no-dev/ESPAsyncWebServer [latest]
 #include <DNSServer.h>
