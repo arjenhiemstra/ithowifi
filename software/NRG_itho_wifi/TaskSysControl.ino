@@ -160,7 +160,7 @@ void execSystemControlTasks() {
       sendRemoteCmd(0, IthoJoin, virtualRemotes);
       xSemaphoreGive(mutexI2Ctask);
       logInput("I2C init: Virtual remote join command send");
-      
+
       if (systemConfig.itho_sendjoin == 1) {
         systemConfig.itho_sendjoin = 0;
         saveSystemConfig();
@@ -175,9 +175,19 @@ void execSystemControlTasks() {
   }
   if (ithoQueue.ithoSpeedUpdated) {
     ithoQueue.ithoSpeedUpdated = false;
-#if defined (CVE)
-    sysStatReq = writeIthoVal(ithoQueue.get_itho_speed());
-#endif
+    uint16_t speed = ithoQueue.get_itho_speed();
+    char buf[32] {};
+    sprintf(buf, "speed:%d", speed);
+    
+    //#if defined (CVE)
+    if (writeIthoVal( speed )) {
+      if (lastCmd.source == nullptr) logLastCommand(buf, "ithoQueue");
+      sysStatReq = true;
+    }
+    else {
+      logLastCommand(buf, "ithoQueue_error");
+    }
+    //#endif
   }
   //System control tasks
   if ((WiFi.status() != WL_CONNECTED) && !wifiModeAP) {

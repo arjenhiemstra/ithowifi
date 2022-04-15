@@ -449,6 +449,8 @@ $(document).ready(function() {
     }
     else if ($(this).attr('id').startsWith('rfdebug-')) {
       const items = $(this).attr('id').split('-');
+      if(items[1] == 0) $('#rflog_outer').addClass('hidden');
+      if(items[1] > 0) $('#rflog_outer').removeClass('hidden');
       websock.send(`{"rfdebug":${items[1]}}`);
     }
     else if ($(this).attr('id') == 'button2410') {

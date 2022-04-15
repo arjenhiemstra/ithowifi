@@ -207,7 +207,13 @@ void IthoRemote::Remote::set(JsonObjectConst obj) {
     strlcpy(name, obj["name"], sizeof(name));
   }
   if (!(const char*)obj["id"].isNull()) {
-    copyArray(obj["id"].as<JsonArrayConst>(), ID);
+    if(obj["id"].is<const char*>()) {
+      //parse hex
+    }
+    else {
+      copyArray(obj["id"].as<JsonArrayConst>(), ID);
+    }
+    
   }
   if (!(const char*)obj["remtype"].isNull()) {
     remtype = obj["remtype"];
