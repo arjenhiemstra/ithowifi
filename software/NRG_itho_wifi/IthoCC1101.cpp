@@ -31,7 +31,7 @@
 
 //alternative sync byte pattern (filter much more non-itho messages out. Maybe too strict? Testing needed.
 #define STARTBYTE 0 //relevant data starts 0 bytes after the sync pattern bytes 179/42/171/42
-#define SYNC1 187 //byte11 = 179, byte13 = 171 with SYNC1 = 163, 179 and 171 differ only by 1 bit
+#define SYNC1 187 //byte11 = 179, byte13 = 171 with SYNC1 = 187, 179 and 171 differ only by 1 bit
 #define SYNC0 42
 #define MDMCFG2 0x03 //32bit sync word / 30bit specific
 
@@ -40,6 +40,12 @@
 //#define SYNC1 179
 //#define SYNC0 42
 //#define MDMCFG2 0x02 //16bit sync word / 16bit specific
+
+//alternative sync byte pattern
+//#define STARTBYTE 1 //relevant data starts 1 byte after the sync pattern bytes 89/149/85/149
+//#define SYNC1 93 //byte11 = 89, byte13 = 85 with SYNC1 = 94, 89 and 85 differ only by 1 bit and line up with the start bit
+//#define SYNC0 149
+//#define MDMCFG2 0x03 //32bit sync word / 30bit specific
 
 // default constructor
 IthoCC1101::IthoCC1101(uint8_t counter, uint8_t sendTries) : CC1101()

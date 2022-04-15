@@ -6,12 +6,17 @@ IthoQueue ithoQueue;
 
 // default constructor
 IthoQueue::IthoQueue() {
-
+  
+  ithoSpeed = 0;
+  ithoOldSpeed = 0;
+  fallBackSpeed = 42;
+  
   queueUpdater.attach_ms(QUEUE_UPDATE_MS, +[](IthoQueue * queueInstance) {
     queueInstance->update_queue();
   }, this);
 
-
+  ithoSpeedUpdated = false;
+  
 } //IthoQueue
 
 // default destructor

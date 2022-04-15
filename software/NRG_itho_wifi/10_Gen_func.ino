@@ -363,9 +363,7 @@ void add2queue() {
 // Update itho Value
 bool writeIthoVal(uint16_t value) {
 
-  if (value > 254) {
-    value = 254;
-  }
+  if (value > 254) return false;
 
   if (ithoCurrentVal != value) {
 

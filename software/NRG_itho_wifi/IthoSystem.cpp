@@ -3,6 +3,7 @@
 #include "IthoSystem.h"
 #include "devices/cve14.h"
 #include "devices/cve1B.h"
+#include "devices/hru200.h"
 #include "devices/hru350.h"
 #include "devices/hrueco.h"
 #include "devices/demandflow.h"
@@ -119,7 +120,7 @@ const struct ihtoDeviceType ithoDevices[] {
   { 0x1A, "AreaFlow",           nullptr, 0, nullptr, nullptr, 0, nullptr },
   { 0x1B, "CVE-Silent",         itho1BSettingsMap, sizeof(itho1BSettingsMap) / sizeof(itho1BSettingsMap[0]), ithoCVE1BSettingsLabels, itho1BStatusMap, sizeof(itho1BStatusMap) / sizeof(itho1BStatusMap[0]), ithoCVE1BStatusLabels  },
   { 0x1C, "CVE-SilentExt",      nullptr, 0, nullptr, nullptr, 0, nullptr },
-  { 0x1D, "CVE-SilentExtPlus",  nullptr, 0, nullptr, nullptr, 0, nullptr },
+  { 0x1D, "CVE-SilentExtPlus",  ithoHRU200SettingsMap, sizeof(ithoHRU200SettingsMap) / sizeof(ithoHRU200SettingsMap[0]), ithoHRU200SettingsLabels, ithoHRU200StatusMap, sizeof(ithoHRU200StatusMap) / sizeof(ithoHRU200StatusMap[0]), ithoHRU200StatusLabels },
   { 0x20, "RF_CO2",             nullptr, 0, nullptr, nullptr, 0, nullptr },
   { 0x2B, "HRU 350",            ithoHRU350SettingsMap, sizeof(ithoHRU350SettingsMap) / sizeof(ithoHRU350SettingsMap[0]), ithoHRU350SettingsLabels, ithoHRU350StatusMap, sizeof(ithoHRU350StatusMap) / sizeof(ithoHRU350StatusMap[0]), ithoHRU350StatusLabels  }
 };
@@ -1337,7 +1338,7 @@ int32_t * sendQuery2410(bool & updateweb) {
 
 void setSetting2410(bool & updateweb) {
 
-  if (index2410 == 7 && value2410 == 1 && (ithoDeviceID == 0x14 || ithoDeviceID == 0x1B)) {
+  if (index2410 == 7 && value2410 == 1 && (ithoDeviceID == 0x14 || ithoDeviceID == 0x1B || ithoDeviceID == 0x1D)) {
     logMessagejson("<br>!!Warning!! Command ignored!<br>Setting index 7 to value 1 will switch off I2C!", WEBINTERFACE);
     return;
   }
