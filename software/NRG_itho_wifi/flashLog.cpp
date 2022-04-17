@@ -1,7 +1,14 @@
 #include "flashLog.h"
 #include "hardware.h"
 
+#if defined (ENABLE_CMDLOG)
+Logging LogCommand = Logging();
+FSFilePrint cmdLog(ACTIVE_FS, "/cmdlog", 2, 40000);
+bool cmdLogInitialised = false;
+#endif
+
 FSFilePrint filePrint(ACTIVE_FS, "/logfile", 2, 10000);
+
 SemaphoreHandle_t mutexLogTask;
 
 void printTimestamp(Print *_logOutput, int logLevel)
@@ -44,3 +51,26 @@ void logInput(const char * inputString) {
   }
 
 }
+
+#if defined (ENABLE_CMDLOG)
+void logCmd(const char * inputString) {
+  if(!cmdLogInitialised) return;
+  
+  yield();
+  if (xSemaphoreTake(mutexLogTask, (TickType_t) 500 / portTICK_PERIOD_MS) == pdTRUE) {
+
+    cmdLog.open();
+
+    LogCommand.notice(inputString);
+
+    cmdLog.close();
+
+#if defined (ENABLE_SERIAL)
+    D_LOG("%s\n", inputString);
+#endif
+
+    xSemaphoreGive(mutexLogTask);
+  }
+
+}
+#endif

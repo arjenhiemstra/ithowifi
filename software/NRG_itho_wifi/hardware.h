@@ -4,7 +4,7 @@
 //#define NON_CVE
 
 #define ACTIVE_FS LITTLEFS
-
+#define ENABLE_CMDLOG
 #if defined (ESP32)
 #else
 #error "Usupported hardware"

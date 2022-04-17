@@ -1,7 +1,7 @@
 #pragma once
 
 #define MAX_QUEUE 10
-#define QUEUE_UPDATE_MS 100
+#define QUEUE_UPDATE_MS 1000
 
 #include <algorithm>
 #include <cstdio>
@@ -10,6 +10,12 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <Ticker.h>
+
+#include "hardware.h"
+#if defined (ENABLE_CMDLOG)
+#include "flashLog.h"
+#include "IthoSystem.h"
+#endif
 
 class IthoQueue {
 
@@ -34,7 +40,14 @@ class IthoQueue {
       return ithoSpeed;
     };
     mutable bool ithoSpeedUpdated;
-    void set_itho_fallback_speed(uint16_t speedVal) { fallBackSpeed = speedVal;};
+    void set_itho_fallback_speed(uint16_t speedVal) {
+#if defined (ENABLE_CMDLOG)      
+      char output[128]{};
+      sprintf(output, "set_itho_fallback_speed - ithoSpeed:%d fallBackSpeed:%d", ithoSpeed, fallBackSpeed);
+      logCmd(output);  
+#endif
+      fallBackSpeed = speedVal;
+    };
     void get(JsonObject);
     IthoQueue();
     ~IthoQueue();

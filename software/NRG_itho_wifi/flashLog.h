@@ -16,10 +16,20 @@
 
 //#include <SpiffsFilePrint.h>  // https://github.com/PRosenb/SPIFFS_FilePrint [1.0.0]
 
+#if defined (ENABLE_CMDLOG)
+extern Logging LogCommand;
+extern FSFilePrint cmdLog;
+extern bool cmdLogInitialised;
+#endif
+
 extern FSFilePrint filePrint;
+
 
 extern SemaphoreHandle_t mutexLogTask;
 
 void printTimestamp(Print *_logOutput, int logLevel);
 void printNewline(Print *_logOutput, int logLevel);
 void logInput(const char * inputString);
+#if defined (ENABLE_CMDLOG)
+void logCmd(const char * inputString);
+#endif

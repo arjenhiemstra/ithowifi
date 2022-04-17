@@ -335,6 +335,15 @@ void logLastCommand(const char* command, const char* source) {
     lastCmd.timestamp = (time_t)millis();
   }
 
+#if defined (ENABLE_CMDLOG)
+  DynamicJsonDocument doc(1024);
+  JsonObject root = doc.to<JsonObject>();
+  getLastCMDinfoJSON(root);
+  char output[512]{};
+  serializeJson(doc, output);
+  logCmd(output);
+#endif
+
 }
 
 void getLastCMDinfoJSON(JsonObject root) {
@@ -363,6 +372,12 @@ void add2queue() {
 // Update itho Value
 bool writeIthoVal(uint16_t value) {
 
+#if defined (ENABLE_CMDLOG)
+  char output[32]{};
+  sprintf(output, "writeIthoVal:%u", value);
+  logCmd(output);  
+#endif
+      
   if (value > 254) return false;
 
   if (ithoCurrentVal != value) {

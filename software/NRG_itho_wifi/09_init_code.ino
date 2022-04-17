@@ -122,7 +122,7 @@ void hardwareInit() {
   pinMode(FAILSAVE_PIN, INPUT);
   failSafeBoot();
 #endif
-
+  
   i2cInit();
 
   IthoInit = true;
@@ -151,6 +151,15 @@ void logInit() {
 
   filePrint.close();
 
+#if defined (ENABLE_CMDLOG)
+  cmdLog.open();
+  LogCommand.begin(LOG_LEVEL_NOTICE, &cmdLog);
+  LogCommand.setPrefix(printTimestamp);
+  LogCommand.setSuffix(printNewline);  
+  cmdLog.close();
+  cmdLogInitialised = true;
+#endif
+    
   delay(100);
   char logBuff[LOG_BUF_SIZE] = "";
 

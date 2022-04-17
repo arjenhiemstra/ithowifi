@@ -104,7 +104,7 @@ void handleAPI(AsyncWebServerRequest *request) {
       }
       else if (strcmp(p->value().c_str(), "queue") == 0 ) {
         AsyncResponseStream *response = request->beginResponseStream("text/html");        
-        StaticJsonDocument<1000> root;
+        DynamicJsonDocument root(1024);
         JsonObject obj = root.to<JsonObject>(); // Fill the object
         ithoQueue.get(obj);
         obj["ithoSpeed"] = ithoQueue.ithoSpeed;
