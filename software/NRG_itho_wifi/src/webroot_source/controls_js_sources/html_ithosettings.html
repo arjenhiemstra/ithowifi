@@ -1,0 +1,26 @@
+<div class="header">
+  <h1>Itho settings</h1>
+</div>
+<p>Configuration of the Itho unit</p>
+<style>
+  .pure-form-aligned .pure-control-group label {
+    width: 15em;
+  }
+</style>
+<form class="pure-form pure-form-aligned">
+  <fieldset>
+    <span>Itho device type: </span><span id="itho_devtype">retreiving...</span>
+    <br>
+    <span>Itho fw version: </span><span id="itho_fwversion">retreiving...</span>
+    <br><br>
+    <button id="ithogetsettings" class="pure-button pure-button-primary">Retrieve settings</button><br><br>
+    <span style="color:red">Warning!!<br>This controls low level settings of your itho unit, possibly damaging the
+      unit.<br>Use with care and use only if you know what you are doing!</span><br><br>
+    <table id="SettingsTable" class="pure-table pure-table-bordered" style="font-size:.85em"></table><br><br>
+  </fieldset>
+</form>
+<script>
+  $(document).ready(function () {
+    getSettings('ithosetup');
+  });
+</script>

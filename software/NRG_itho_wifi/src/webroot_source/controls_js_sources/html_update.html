@@ -1,0 +1,82 @@
+<div class="header">
+  <h1>Update firmware</h1>
+</div>
+<br>
+<div class="pure-control-group">
+  <label>Current firmware version:</label>
+  <label id="firmware_ver">unknown</label>
+</div>
+<br>
+<div class="pure-control-group">
+  <label for="hardware_rev">Hardware revision:</label>
+  <label id="hardware_rev">unknown</label>
+</div>
+<br>
+<div class="pure-control-group">
+  <label for="latest_fw">Latest firmware version:</label>
+  <label id="latest_fw">unknown</label><br>
+  <a href="" id="latest_fw_button" class="pure-button pure-button-primary hidden">Download firmware file</a>
+</div>
+<form class="pure-form pure-form-stacked" method='POST' action='#' enctype='multipart/form-data' id='updateform'>
+  <fieldset>
+    <p>Update the firmware of your device</p>
+    <input type='file' name='update'><br>
+    <button id="updatesubmit" class="pure-button pure-button-primary">Update</button>
+  </fieldset>
+  <p id="uploadprg" style="display: none;">File upload progress: 0%</p>
+  <div id="uploadProgress" style="border-radius: 20px;max-width: 300px;background-color: #ccc;display: none;">
+    <div id="uploadBar" style="border-radius: 20px;width: 10%;height: 20px;background-color: #999;"></div>
+  </div>
+  <p id="updateprg" style="display: none;">Firmware update progress: 0%</p>
+  <div id="updateProgress" style="border-radius: 20px;max-width: 300px;background-color: #ccc;display: none;">
+    <div id="updateBar" style="border-radius: 20px;width: 10%;height: 20px;background-color: #999;"></div>
+  </div>
+  <p id="time" style="display: none;">This page will reload to the start page in... </p>
+</form>
+<script>
+  $('#firmware_ver').text(fw_version);
+  $('#hardware_rev').text(hw_revision);
+  function process(key, value) {
+    if (key == hw_revision) {
+      let latest_fw = value.latest_fw;
+      let download_link = value.link;
+      if (latest_fw == fw_version) {
+        $('#latest_fw').text(' firmware is up-to-date');
+      }
+      else {
+        $('#latest_fw').text(latest_fw);
+        $('#latest_fw_button').removeClass('hidden');
+        $('#latest_fw_button').attr("href", download_link);
+      }
+    }
+  }
+
+  function traverse(o, func) {
+    for (var i in o) {
+      func.apply(this, [i, o[i]]);
+      if (o[i] !== null && typeof (o[i]) == 'object') {
+        traverse(o[i], func);
+      }
+    }
+  }
+
+  $.ajax({
+    type: 'GET',
+    url: 'https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json',
+    dataType: 'json',
+    timeout: 3000,
+    success: function (data) {
+      traverse(data, process);
+    },
+    error: function (xhr, type) {
+      if (on_ap) {
+        $('#latest_fw').text(' firmware check not possible on Access Point mode');
+      }
+      else {
+        $('#latest_fw').text(' firmware check failed, no internet connection?');
+      }
+
+    }
+  })
+
+</script>
