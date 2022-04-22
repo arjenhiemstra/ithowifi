@@ -1,0 +1,33 @@
+<div class="header">
+  <h1>RF Remotes setup</h1>
+</div>
+<style>
+  .pure-form-aligned .pure-control-group label {
+    width: 15em;
+  }
+</style>
+<form class="pure-form pure-form-aligned">
+  <fieldset>
+    <br><br>
+    <div class="pure-control-group">
+      <label for="itho_llm">Learn/Leave mode</label>
+      <button id="itho_llm" class="pure-button">Unknown</button>
+    </div>
+  </fieldset>
+  <fieldset>
+    <br>
+    <legend><br>RF remotes:</legend>
+    <br>
+    <table id="RemotesTable" class="pure-table pure-table-bordered" style="text-align: center; white-space:nowrap;">
+    </table>
+    <div class="pure-control-group">
+      <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote"
+        class="pure-button">Remove</button>
+    </div>
+  </fieldset>
+</form>
+<script>
+  $(document).ready(function () {
+    getSettings('ithoremotes');
+  });
+</script>
