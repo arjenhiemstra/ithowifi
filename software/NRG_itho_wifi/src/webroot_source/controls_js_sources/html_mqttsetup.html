@@ -1,0 +1,103 @@
+<div class="header">
+  <h1>MQTT setup</h1>
+</div>
+<p>Configuration of the MQTT server to publish the status to and subscribe topic to receive commands</p>
+<style>
+  .pure-form-aligned .pure-control-group label {
+    width: 15em;
+  }
+</style>
+<form class="pure-form pure-form-aligned">
+  <fieldset>
+    <div class="pure-control-group">
+      <label>MQTT Status</label>
+      <button id="mqtt_conn" class="pure-button" style="pointer-events:none;">Unknown</button>
+    </div>
+    <br>
+    <div class="pure-control-group">
+      <label for="option-mqtt_active" class="pure-radio">MQTT Active</label>
+      <input id="option-mqtt_active-1" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 1)'
+        value="1"> on
+      <input id="option-mqtt_active-0" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 0)'
+        value="0"> off
+    </div>
+    <br>
+    <div class="pure-control-group">
+      <label for="mqtt_serverName">Server</label>
+      <input id="mqtt_serverName" maxlength="63" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label for="mqtt_username">Username</label>
+      <input id="mqtt_username" maxlength="30" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label for="mqtt_password">Password</label>
+      <input id="mqtt_password" maxlength="30" type="Password">
+    </div>
+    <div class="pure-control-group">
+      <label for="mqtt_port">Port</label>
+      <input id="mqtt_port" maxlength="5" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label for="mqtt_state_topic">State topic</label>
+      <input id="mqtt_state_topic" maxlength="120" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_ithostatus" for="mqtt_ithostatus_topic">Itho status topic</label>
+      <input id="mqtt_ithostatus_topic" maxlength="120" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_remotesinfo" for="mqtt_remotesinfo_topic">Remotes info topic</label>
+      <input id="mqtt_remotesinfo_topic" maxlength="120" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_lastcmd" for="mqtt_lastcmd_topic">Last command info topic</label>
+      <input id="mqtt_lastcmd_topic" maxlength="120" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label for="mqtt_cmd_topic">Command topic</label>
+      <input id="mqtt_cmd_topic" maxlength="120" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-lwt_topic" for="mqtt_lwt_topic">Last will topic</label>
+      <input id="mqtt_lwt_topic" maxlength="120" type="text">
+    </div>
+    <br>
+    <div class="pure-control-group">
+      <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
+      <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active"
+        onchange='radio("mqtt_ha_active", 1)' value="1"> on
+      <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active"
+        onchange='radio("mqtt_ha_active", 0)' value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_ha" for="mqtt_ha_topic">Home Assistant Discovery topic prefix</label>
+      <input id="mqtt_ha_topic" maxlength="120" type="text">
+    </div>
+    <br>
+    <div class="pure-control-group">
+      <label for="option-mqtt_domoticz_active" class="pure-radio">Domoticz MQTT</label>
+      <input id="option-mqtt_domoticz_active-1" type="radio" name="option-mqtt_domoticz_active"
+        onchange='radio("mqtt_domoticz_active", 1)' value="1"> on
+      <input id="option-mqtt_domoticz_active-0" type="radio" name="option-mqtt_domoticz_active"
+        onchange='radio("mqtt_domoticz_active", 0)' value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_idx" for="mqtt_idx" style="display: none;">Device IDX</label>
+      <input id="mqtt_idx" maxlength="5" type="text" style="display: none;">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-sensor_idx" for="sensor_idx" style="display: none;">Sensor IDX</label>
+      <input id="sensor_idx" maxlength="5" type="text" style="display: none;">
+    </div>
+    <br>
+    <div class="pure-controls">
+      <button id="mqttsubmit" class="pure-button pure-button-primary">Save</button>
+    </div>
+  </fieldset>
+</form>
+<script>
+  $(document).ready(function () {
+    getSettings('mqttsetup');
+  });
+</script>
