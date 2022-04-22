@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="A layout example with a side menu that hides on mobile, just like the Pure website.">
+    <title>Itho WiFi controller &ndash; System setup</title>
+    <script src="/js/zepto.min.js"></script>
+    <script src="/js/controls.js"></script>
+    <link rel="stylesheet" href="pure-min.css">
+</head>
+
+<body>
+    <div id="layout">
+        <div id="message_box"></div>
+        <a href="#menu" id="menuLink" class="menu-link">
+            <span></span>
+        </a>
+        <div id="menu">
+            <div class="pure-menu">
+                <a class="pure-menu-heading" id="headingindex" href="index">Itho WiFi controller</a>
+                <ul class="pure-menu-list">
+                    <li class="pure-menu-item"><a href="wifisetup" class="pure-menu-link">Wifi setup</a></li>
+                    <li class="pure-menu-item"><a href="system" class="pure-menu-link">System settings</a></li>
+                    <li class="pure-menu-item"><a href="itho" class="pure-menu-link">Itho settings</a></li>
+                    <li class="pure-menu-item"><a href="status" class="pure-menu-link">Itho status</a></li>
+                    <li id="remotemenu" class="pure-menu-item hidden"><a href="remotes" class="pure-menu-link">RF
+                            remotes</a></li>
+                    <li class="pure-menu-item"><a href="vremotes" class="pure-menu-link">Virtual remotes</a></li>
+                    <li class="pure-menu-item"><a href="mqtt" class="pure-menu-link">MQTT</a></li>
+                    <li class="pure-menu-item"><a href="api" class="pure-menu-link">API</a></li>
+                    <li class="pure-menu-item"><a href="help" class="pure-menu-link">Help</a></li>
+                    <li class="pure-menu-item"><a href="update" class="pure-menu-link">Update</a></li>
+                    <li class="pure-menu-item"><a href="reset" class="pure-menu-link">Reset</a></li>
+                    <li class="pure-menu-item"><a href="debug" class="pure-menu-link">Debug</a></li>
+                </ul>
+                <div id="memory_box"></div>
+            </div>
+        </div>
+        <div id="main">
+        </div>
+    </div>
+    <div id="loader">
+        <div style="width: 100px;position: absolute;top: calc(50% - 7px);left: calc(50% - 50px);text-align: center;">
+            Connecting...</div>
+        <div id="spinner"></div>
+    </div>
+</body>
+<script src="/js/general.js"></script>
+
+</html>
