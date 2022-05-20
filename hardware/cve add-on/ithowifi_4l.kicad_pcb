@@ -64,7 +64,7 @@
       (mirror false)
       (drillshape 0)
       (scaleselection 1)
-      (outputdirectory "gerbers 2.14 4layer/")
+      (outputdirectory "gerbers 2.15 4layer/")
     )
   )
 
@@ -593,7 +593,7 @@
   )
 
   (footprint "MountingHole:MountingHole_2.5mm" (layer "F.Cu")
-    (tedit 56D1B4CB) (tstamp 00000000-0000-0000-0000-00006012ef97)
+    (tedit 62868D2A) (tstamp 00000000-0000-0000-0000-00006012ef97)
     (at 94.488 113.538)
     (descr "Mounting Hole 2.5mm, no annular")
     (tags "mounting hole 2.5mm no annular")
@@ -615,7 +615,7 @@
     )
     (fp_circle (center 0 0) (end 2.5 0) (layer "Cmts.User") (width 0.15) (fill none) (tstamp e062cd99-01ee-4f06-bd56-93736b0a6b9e))
     (fp_circle (center 0 0) (end 2.75 0) (layer "F.CrtYd") (width 0.05) (fill none) (tstamp e4d6e574-a00e-4ba3-b717-298c0f1a7e38))
-    (pad "" np_thru_hole circle (at 0 0) (size 2.5 2.5) (drill 2.5) (layers *.Cu *.Mask) (tstamp 8f47f7a5-5aff-48fe-8e9f-ec4603d3b5e0))
+    (pad "" np_thru_hole circle (at 0 0) (size 3.5 3.5) (drill 3.2) (layers F&B.Cu *.Mask) (tstamp 8f47f7a5-5aff-48fe-8e9f-ec4603d3b5e0))
   )
 
   (footprint "LED_SMD:LED_0805_2012Metric" (layer "F.Cu")
@@ -1504,7 +1504,7 @@
   )
 
   (footprint "MountingHole:MountingHole_2.5mm" (layer "F.Cu")
-    (tedit 56D1B4CB) (tstamp 00000000-0000-0000-0000-000061c2f454)
+    (tedit 62868D2D) (tstamp 00000000-0000-0000-0000-000061c2f454)
     (at 121.63 108.12)
     (descr "Mounting Hole 2.5mm, no annular")
     (tags "mounting hole 2.5mm no annular")
@@ -1526,7 +1526,7 @@
     )
     (fp_circle (center 0 0) (end 2.5 0) (layer "Cmts.User") (width 0.15) (fill none) (tstamp 230c1ab5-b643-41a8-9963-ed8697c1f121))
     (fp_circle (center 0 0) (end 2.75 0) (layer "F.CrtYd") (width 0.05) (fill none) (tstamp 9c924212-ea74-403b-b44e-ece4d25436ae))
-    (pad "" np_thru_hole circle (at 0 0) (size 2.5 2.5) (drill 2.5) (layers *.Cu *.Mask) (tstamp c81981a4-a48e-45e4-b2e5-c162efe7209e))
+    (pad "" np_thru_hole circle (at 0 0) (size 3.5 3.5) (drill 3.2) (layers F&B.Cu *.Mask) (tstamp c81981a4-a48e-45e4-b2e5-c162efe7209e))
   )
 
   (footprint "Connector_PinSocket_2.54mm:PinSocket_2x04_P2.54mm_Vertical" (layer "B.Cu")
@@ -1945,7 +1945,7 @@
   (gr_text "Itho CVE WiFi Controller\nArjen Hiemstra - GNU GPL 3.0\nhttps://github.com/arjenhiemstra/ithowifi" (at 88.392 148.844 90) (layer "B.SilkS") (tstamp 00000000-0000-0000-0000-0000616da49b)
     (effects (font (size 1.246 1.246) (thickness 0.2)) (justify right mirror))
   )
-  (gr_text "HW rev.: 2\nBatch: 14-1222" (at 103.378 148.971 90) (layer "B.SilkS") (tstamp 00000000-0000-0000-0000-000061e51e96)
+  (gr_text "HW rev.: 2\nBatch: 15-1722" (at 103.378 148.971 90) (layer "B.SilkS") (tstamp 00000000-0000-0000-0000-000061e51e96)
     (effects (font (size 1.246 1.246) (thickness 0.2)) (justify right mirror))
   )
   (gr_text "SCL" (at 116.84 130.175) (layer "F.SilkS") (tstamp 00000000-0000-0000-0000-00005e6ce570)
