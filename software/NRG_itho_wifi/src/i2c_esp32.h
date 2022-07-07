@@ -1,7 +1,18 @@
 #pragma once
 
+#include <string>
+
+#include <Arduino.h>
+#include <driver/i2c.h>
+#include <esp_log.h>
+#include <esp_system.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <freertos/task.h>
+
 #include "hardware.h"
 #include "Dbglog.h"
+#include "IthoSystem.h"
 
 #define WRITE_BIT I2C_MASTER_WRITE /*!< I2C master write */
 #define READ_BIT I2C_MASTER_READ   /*!< I2C master read */

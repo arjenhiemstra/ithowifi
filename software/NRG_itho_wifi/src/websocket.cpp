@@ -49,9 +49,9 @@ void jsonWsSend(const char *rootName)
   {
     // Create an object at the root
     JsonObject nested = root.createNestedObject(rootName);
-    nested["itho_devtype"] = getIthoType(ithoDeviceID);
-    nested["itho_fwversion"] = itho_fwversion;
-    nested["itho_setlen"] = ithoSettingsLength;
+    nested["itho_devtype"] = getIthoType();
+    nested["itho_fwversion"] = currentItho_fwversion();
+    nested["itho_setlen"] = currentIthoSettingsLength();
   }
   else if (strcmp(rootName, "ithosatusinfo") == 0)
   {

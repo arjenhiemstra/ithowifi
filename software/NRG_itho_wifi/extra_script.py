@@ -10,7 +10,7 @@ from sys import platform
 fwversion = 'undefined'
 hwversion = 'undefined'
 my_flags = env.ParseFlags(env['BUILD_FLAGS'])
-print(my_flags)
+#print(my_flags)
 
 defines = my_flags.get("CPPDEFINES")
 for i in defines:

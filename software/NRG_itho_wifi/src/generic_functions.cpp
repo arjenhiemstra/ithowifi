@@ -110,7 +110,7 @@ void getIthoSettingsBackupJSON(JsonObject root)
 
   if (ithoSettingsArray != nullptr)
   {
-    for (int i = 0; i < ithoSettingsLength; i++)
+    for (int i = 0; i < currentIthoSettingsLength(); i++)
     {
       char buf[12];
       itoa(i, buf, 10);
@@ -297,7 +297,7 @@ bool ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
   }
   else if (strcmp(command, "10D0") == 0)
   {
-    filterReset();
+    filterReset(0, virtualRemotes);
   }
   else
   {
