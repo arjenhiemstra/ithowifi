@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "globals.h"
+#include "hardware.h"
 
 #define TASK_MAIN_PRIO 5
 

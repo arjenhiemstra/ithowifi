@@ -8,8 +8,8 @@
 
 #define TASK_WEB_PRIO 5
 
-    // globals
-    TaskHandle_t xTaskWebHandle;
+// globals
+TaskHandle_t xTaskWebHandle;
 uint32_t TaskWebHWmark = 0;
 bool sysStatReq = false;
 int MQTT_conn_state = -5;
@@ -701,7 +701,7 @@ void handleDebug(AsyncWebServerRequest *request)
   response->print(" bytes free</span></div>");
   response->print("<br><br><div id='syslog_outer'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>System Log:</div>");
 
-  response->print("<div style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto'>");
+  response->print("<div style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa'>");
   char link[24] = "";
   char linkcur[24] = "";
 
@@ -733,7 +733,7 @@ void handleDebug(AsyncWebServerRequest *request)
   }
 
   response->print("</div></div><br><br><div id='rflog_outer' class='hidden'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>RF Log:</div>");
-  response->print("<div id='rflog' style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto'>");
+  response->print("<div id='rflog' style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa'>");
   response->print("</div><div style='padding-top:5px;'><a href='#' class='pure-button' onclick=\"$('#rflog').empty()\">Clear</a></div></div></div>");
   response->print("<form class=\"pure-form pure-form-aligned\"><fieldset><legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id=\"rfdebug-0\" class=\"pure-button pure-button-primary\">Off</button><br><br><button id=\"rfdebug-1\" class=\"pure-button pure-button-primary\">Level1</button>&nbsp;Level1 will show only known itho commands from all devices<br><br><button id=\"rfdebug-2\" class=\"pure-button pure-button-primary\">Level2</button>&nbsp;Level2 will show all received RF messages from devices joined to the add-on<br><br><button id=\"rfdebug-3\" class=\"pure-button pure-button-primary\">Level3</button>&nbsp;Level3 will show all received RF messages from all devices<br><br>");
   response->print("<form class=\"pure-form pure-form-aligned\"><fieldset><legend><br>Low level itho I2C commands:</legend><br><span>I2C virtual remote commands:</span><br><button id=\"ithobutton-low\" class=\"pure-button pure-button-primary\">Low</button>&nbsp;<button id=\"ithobutton-medium\" class=\"pure-button pure-button-primary\">Medium</button>&nbsp;<button id=\"ithobutton-high\" class=\"pure-button pure-button-primary\">High</button><br><br>");

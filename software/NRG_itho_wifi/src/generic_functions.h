@@ -9,6 +9,7 @@
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 
+#include "IthoQueue.h"
 #include "SystemConfig.h"
 #include "WifiConfig.h"
 #include "hardware.h"

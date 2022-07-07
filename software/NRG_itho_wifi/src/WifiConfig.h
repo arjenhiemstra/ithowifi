@@ -8,6 +8,11 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
+#include "esp_wifi.h"
+#include "WiFiClient.h"
+#include "WiFi.h"
+
+#include "notifyClients.h"
 #include "hardware.h"
 
 class WifiConfig

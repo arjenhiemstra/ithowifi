@@ -1,15 +1,4 @@
-#include <string>
-
-#include <Arduino.h>
-#include <driver/i2c.h>
-#include <esp_log.h>
-#include <esp_system.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
-#include <freertos/task.h>
-
 #include "i2c_esp32.h"
-#include "IthoSystem.h"
 
 char toHex(uint8_t c)
 {

@@ -20,12 +20,8 @@
 #include "i2c_esp32.h"
 
 // globals
-extern uint8_t ithoDeviceID;
-extern uint8_t itho_fwversion;
 extern volatile uint16_t ithoCurrentVal;
-extern uint8_t id0, id1, id2;
 extern const struct ihtoDeviceType *ithoDeviceptr;
-extern int16_t ithoSettingsLength;
 
 extern bool get2410;
 extern bool set2410;
@@ -127,14 +123,19 @@ struct ithoSettings
 
 extern ithoSettings *ithoSettingsArray;
 
-const char *getIthoType(const uint8_t deviceID);
-int getSettingsLength(const uint8_t deviceID, const uint8_t version);
+const char *getIthoType();
+const int currentIthoDeviceGroup();
+const int currentIthoDeviceID();
+const uint8_t currentItho_fwversion();
+const uint16_t currentIthoSettingsLength();
+const uint16_t currentIthoStatusLabelLength();
+int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop = false);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop, const struct ihtoDeviceType *settingsPtr, const uint8_t deviceID, const uint8_t version);
-int getStatusLabelLength(const uint8_t deviceID, const uint8_t version);
+int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
 const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr, const uint8_t version);
 void updateSetting(const uint8_t i, const int32_t value, bool webupdate);
-const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceID);
+const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID);
 
 uint8_t checksum(const uint8_t *buf, size_t buflen);
 void sendI2CPWMinit();
@@ -146,6 +147,6 @@ void sendQuery31DA(bool updateweb);
 void sendQuery31D9(bool updateweb);
 int32_t *sendQuery2410(bool &updateweb);
 void setSetting2410(bool &updateweb);
-void filterReset();
+void filterReset(const int remoteIndex, IthoRemote &remotes);
 int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);

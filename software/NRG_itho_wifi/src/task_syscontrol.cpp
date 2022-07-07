@@ -119,10 +119,10 @@ void execSystemControlTasks()
       sendQueryDevicetype(false);
       xSemaphoreGive(mutexI2Ctask);
     }
-    if (itho_fwversion > 0)
+    if (currentItho_fwversion() > 0)
     {
       char logBuff[LOG_BUF_SIZE] = "";
-      sprintf(logBuff, "I2C init: QueryDevicetype - fw:%d hw:%d", itho_fwversion, ithoDeviceID);
+      sprintf(logBuff, "I2C init: QueryDevicetype - fw:%d hw:%d", currentItho_fwversion(), currentIthoDeviceID());
       logInput(logBuff);
 
       ithoInitResult = 1;
@@ -135,7 +135,7 @@ void execSystemControlTasks()
 
       if (systemConfig.syssht30 > 0)
       {
-        if (ithoDeviceID == 0x1B)
+        if (currentIthoDeviceID() == 0x1B)
         {
 
           if (xSemaphoreTake(mutexI2Ctask, (TickType_t)1000 / portTICK_PERIOD_MS) == pdTRUE)
@@ -161,11 +161,11 @@ void execSystemControlTasks()
               */
               value2410 = 1;
             }
-            if (itho_fwversion == 25)
+            if (currentItho_fwversion() == 25)
             {
               index2410 = 63;
             }
-            else if (itho_fwversion == 26 || itho_fwversion == 27)
+            else if (currentItho_fwversion() == 26 || currentItho_fwversion() == 27)
             {
               index2410 = 71;
             }
@@ -303,7 +303,7 @@ void execSystemControlTasks()
       }
     }
   }
-  if (!(itho_fwversion > 0) && millis() - lastVersionCheck > 60000)
+  if (!(currentItho_fwversion() > 0) && millis() - lastVersionCheck > 60000)
   {
     lastVersionCheck = millis();
     if (xSemaphoreTake(mutexI2Ctask, (TickType_t)1000 / portTICK_PERIOD_MS) == pdTRUE)
@@ -602,12 +602,8 @@ void initSensor()
 void init_vRemote()
 {
   // setup virtual remote
-
-  id0 = sys.getMac(6 - 3);
-  id1 = sys.getMac(6 - 2);
-  id2 = sys.getMac(6 - 1);
   char buff[128];
-  sprintf(buff, "Setup: Virtual remote ID: %d,%d,%d", id0, id1, id2);
+  sprintf(buff, "Setup: Virtual remotes, start ID: %d,%d,%d", sys.getMac(6 - 3), sys.getMac(6 - 2), sys.getMac(6 - 2));
   logInput(buff);
 
   virtualRemotes.setMaxRemotes(systemConfig.itho_numvrem);

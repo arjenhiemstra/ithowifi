@@ -13,9 +13,11 @@
 #include "WifiConfig.h"
 #include "hardware.h"
 #include "globals.h"
+#include "generic_functions.h"
 #include "Dbglog.h"
 #include "flashLog.h"
 #include "notifyClients.h"
+#include "IthoSystem.h"
 
 #include "IthoPacket.h"
 
