@@ -232,7 +232,7 @@ void TaskCC1101(void *pvParameters)
     for (int i = 0; i < remotes.getRemoteCount(); i++)
     {
       const int *id = remotes.getRemoteIDbyIndex(i);
-      rf.addRFDevice(*id, *(id + 1), *(id + 2));
+      rf.addRFDevice(*id, *(id + 1), *(id + 2), remotes.getRemoteType(i));
     }
     rf.setBindAllowed(false);
     rf.setAllowAll(false);
@@ -245,7 +245,7 @@ void TaskCC1101(void *pvParameters)
       esp_task_wdt_reset();
 
       TaskCC1101Timeout.once_ms(1000, []()
-                                { logInput("Error: CC1101 Task timed out!"); });
+                                { logInput("Warning: CC1101 Task timed out!"); });
       if (ithoCheck)
       {
         ithoCheck = false;
@@ -258,6 +258,7 @@ void TaskCC1101(void *pvParameters)
             id[i] = lastID[i];
           }
           IthoCommand cmd = rf.getLastCommand();
+          RemoteTypes remtype = rf.getLastRemType();
           if (++RFTcommandpos > 2)
             RFTcommandpos = 0; // store information in next entry of ringbuffers
           RFTcommand[RFTcommandpos] = cmd;
@@ -300,7 +301,7 @@ void TaskCC1101(void *pvParameters)
               if (remotes.remoteLearnLeaveStatus())
               {
                 // char logBuff[LOG_BUF_SIZE] = "";
-                int result = remotes.registerNewRemote(id);
+                int result = remotes.registerNewRemote(id, remtype);
                 switch (result)
                 {
                 case -1: // failed! - remote already registered
@@ -315,7 +316,7 @@ void TaskCC1101(void *pvParameters)
               }
               if (virtualRemotes.remoteLearnLeaveStatus())
               {
-                int result = virtualRemotes.registerNewRemote(id);
+                int result = virtualRemotes.registerNewRemote(id, remtype);
                 switch (result)
                 {
                 case -1: // failed! - remote already registered
@@ -323,19 +324,6 @@ void TaskCC1101(void *pvParameters)
                 case -2: // failed! - max number of remotes reached"
                   break;
                 case 1:
-                  std::string rfmsg = rf.LastMessageDecoded().c_str();
-                  if (rfmsg.find("00,22,F1") != std::string::npos)
-                  { // CVE RFT
-                    virtualRemotes.updateRemoteType(virtualRemotes.activeRemote, RemoteTypes::RFTCVE);
-                  }
-                  else if (rfmsg.find("63,22,F8") != std::string::npos)
-                  { // AUTO RFT
-                    virtualRemotes.updateRemoteType(virtualRemotes.activeRemote, RemoteTypes::RFTAUTO);
-                  }
-                  else if (rfmsg.find("00,22,F8") != std::string::npos)
-                  { // DM RFT
-                    virtualRemotes.updateRemoteType(virtualRemotes.activeRemote, RemoteTypes::DEMANDFLOW);
-                  }
                   saveVremotesflag = true;
                   delay(200);
                   toggleRemoteLLmode("vremote");
@@ -347,7 +335,7 @@ void TaskCC1101(void *pvParameters)
             if (chk)
             {
               remotes.lastRemoteName = remotes.getRemoteNamebyIndex(remotes.remoteIndex(id));
-              if (remotes.getRemoteType(remotes.remoteIndex(id)) != RemoteTypes::MONITOR)
+              if (remotes.getRemoteFunction(remotes.remoteIndex(id)) != RemoteFunctions::MONITOR)
               {
                 if (cmd == IthoLow)
                 {

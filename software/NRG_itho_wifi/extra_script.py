@@ -119,6 +119,7 @@ def build_webUI(*args, **kwargs):
    make_c_header("controls_temp.js", "controls_js_gz")
    os.remove(WEBROOT_SRC_DIR + "controls_temp.js")
    make_c_header("index.html", "index_html_gz")
+   make_c_header("edit.html", "edit_html_gz")
    make_c_header("pure-min.css", "pure_min_css_gz")
    make_c_header("zepto.min.js", "zepto_min_js_gz")
    make_c_header("favicon.png", "favicon_png_gz")

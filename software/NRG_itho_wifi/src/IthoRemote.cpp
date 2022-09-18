@@ -3,9 +3,17 @@
 #include <string>
 #include <Arduino.h>
 
+IthoRemote remotes(RemoteFunctions::RECEIVE);
+IthoRemote virtualRemotes(RemoteFunctions::VREMOTE);
+
 // default constructor
 IthoRemote::IthoRemote()
 {
+  IthoRemote(RemoteFunctions::UNSETFUNC);
+}
+IthoRemote::IthoRemote(RemoteFunctions initFunc)
+{
+  instanceFunc = initFunc;
   strlcpy(config_struct_version, REMOTE_CONFIG_VERSION, sizeof(config_struct_version));
 
   for (uint8_t i = 0; i < MAX_NUMBER_OF_REMOTES; i++)
@@ -45,7 +53,7 @@ void IthoRemote::updatellModeTimer()
   }
 }
 
-int IthoRemote::registerNewRemote(const int *id)
+int IthoRemote::registerNewRemote(const int *id, const RemoteTypes remtype)
 {
   if (this->checkID(id))
   {
@@ -57,6 +65,7 @@ int IthoRemote::registerNewRemote(const int *id)
     {
       remotes[activeRemote].ID[i] = id[i];
     }
+    remotes[activeRemote].remtype = remtype;
     return 1;
   }
   if (this->remoteCount >= maxRemotes - 1)
@@ -73,6 +82,7 @@ int IthoRemote::registerNewRemote(const int *id)
   {
     remotes[index].ID[i] = id[i];
   }
+  //remotes[index].remtype = remtype;
 
   this->remoteCount++;
 
@@ -101,6 +111,8 @@ int IthoRemote::removeRemote(const int *id)
   }
   sprintf(remotes[index].name, "remote%d", index);
   // strlcpy(remotes[index].name, remName, sizeof(remotes[index].name));
+  remotes[index].remtype = RemoteTypes::UNSETTYPE;
+  remotes[index].remfunc = RemoteFunctions::UNSETFUNC;
   remotes[index].capabilities = nullptr;
 
   this->remoteCount--;
@@ -108,7 +120,7 @@ int IthoRemote::removeRemote(const int *id)
   return 1;
 }
 
-int IthoRemote::removeRemote(const uint8_t index, const char *type)
+int IthoRemote::removeRemote(const uint8_t index)
 {
 
   if (!(index < maxRemotes))
@@ -121,7 +133,7 @@ int IthoRemote::removeRemote(const uint8_t index, const char *type)
       remotes[index].ID[i] = 0;
     }
     this->remoteCount--;
-    if (strcmp(type, "vremote") == 0)
+    if (this->instanceFunc == RemoteFunctions::VREMOTE)
     {
       remotes[index].ID[0] = sys.getMac(6 - 3);
       remotes[index].ID[1] = sys.getMac(6 - 2);
@@ -130,11 +142,18 @@ int IthoRemote::removeRemote(const uint8_t index, const char *type)
   }
 
   sprintf(remotes[index].name, "remote%d", index);
-  remotes[index].remtype = UNSETTYPE;
-  if (strcmp(type, "remote") == 0)
-    remotes[index].remtype = NORMAL;
-  if (strcmp(type, "vremote") == 0)
-    remotes[index].remtype = RFTCVE;
+  remotes[index].remtype = RemoteTypes::UNSETTYPE;
+  remotes[index].remfunc = RemoteFunctions::UNSETFUNC;
+  if (instanceFunc == RemoteFunctions::RECEIVE)
+  {
+    // remotes[index].remtype = RemoteTypes::NORMAL;
+    remotes[index].remfunc = RemoteFunctions::RECEIVE;
+  }
+  if (instanceFunc == RemoteFunctions::VREMOTE)
+  {
+    remotes[index].remtype = RemoteTypes::RFTCVE;
+    remotes[index].remfunc = RemoteFunctions::VREMOTE;
+  }
   remotes[index].capabilities = nullptr;
 
   return 1;
@@ -148,6 +167,11 @@ void IthoRemote::updateRemoteName(const uint8_t index, const char *remoteName)
 void IthoRemote::updateRemoteType(const uint8_t index, const uint16_t type)
 {
   remotes[index].remtype = static_cast<RemoteTypes>(type);
+}
+
+void IthoRemote::updateRemoteFunction(const uint8_t index, const uint8_t remfunc)
+{
+  remotes[index].remfunc = static_cast<RemoteFunctions>(remfunc);
 }
 
 void IthoRemote::addCapabilities(uint8_t remoteIndex, const char *name, int32_t value)
@@ -267,24 +291,39 @@ void IthoRemote::Remote::set(JsonObjectConst obj)
   {
     remtype = obj["remtype"];
   }
+  if (!(const char *)obj["remfunc"].isNull())
+  {
+    remfunc = static_cast<RemoteFunctions>(obj["remfunc"]);
+  }
 }
 
-void IthoRemote::Remote::get(JsonObject obj, const char *root, int index) const
+void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index) const
 {
   obj["index"] = index;
 
   if (remtype == RemoteTypes::UNSETTYPE)
   {
-    if (strcmp(root, "remotes") == 0)
+    if (instanceFunc == RemoteFunctions::RECEIVE)
     {
       remtype = RemoteTypes::RFTCVE;
     }
-    else if (strcmp(root, "vremotes") == 0)
+    else if (instanceFunc == RemoteFunctions::VREMOTE)
     {
       remtype = RemoteTypes::RFTCVE;
       ID[0] = sys.getMac(6 - 3);
       ID[1] = sys.getMac(6 - 2);
       ID[2] = sys.getMac(6 - 1) + index;
+    }
+  }
+  if (remfunc == RemoteFunctions::UNSETFUNC)
+  {
+    if (instanceFunc == RemoteFunctions::RECEIVE)
+    {
+      remfunc = RemoteFunctions::RECEIVE;
+    }
+    else if (instanceFunc == RemoteFunctions::VREMOTE)
+    {
+      remfunc = RemoteFunctions::VREMOTE;
     }
   }
 
@@ -294,6 +333,7 @@ void IthoRemote::Remote::get(JsonObject obj, const char *root, int index) const
     id.add(ID[y]);
   }
   obj["name"] = name;
+  obj["remfunc"] = remfunc;
   obj["remtype"] = remtype;
   if (capabilities.isNull())
   {
@@ -317,10 +357,6 @@ bool IthoRemote::set(JsonObjectConst obj, const char *root)
     {
       return false;
     }
-  }
-  if (!(const char *)obj["remfunc"].isNull())
-  {
-    remfunc = static_cast<RemoteFunctions>(obj["remfunc"]);
   }
   if (!(const char *)obj[root].isNull())
   {
@@ -363,27 +399,14 @@ bool IthoRemote::set(JsonObjectConst obj, const char *root)
 
 void IthoRemote::get(JsonObject obj, const char *root) const
 {
-
-  if (remfunc == RemoteFunctions::UNSETFUNC)
-  {
-    if (strcmp(root, "remotes") == 0)
-    {
-      remfunc = RemoteFunctions::RECEIVE;
-    }
-    else if (strcmp(root, "vremotes") == 0)
-    {
-      remfunc = RemoteFunctions::SEND;
-    }
-  }
-
   // Add "remotes" object
   JsonArray rem = obj.createNestedArray(root);
   // Add each remote in the array
   for (int i = 0; i < maxRemotes; i++)
   {
-    remotes[i].get(rem.createNestedObject(), root, i);
+    remotes[i].get(rem.createNestedObject(), this->instanceFunc, i);
   }
-  obj["remfunc"] = remfunc;
+  obj["remfunc"] = this->instanceFunc;
   obj["version_of_program"] = config_struct_version;
 }
 

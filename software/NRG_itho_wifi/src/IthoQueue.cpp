@@ -8,17 +8,17 @@ IthoQueue ithoQueue;
 IthoQueue::IthoQueue()
 {
 
-  queueUpdater.attach_ms(
-      QUEUE_UPDATE_MS, +[](IthoQueue *queueInstance)
-                       { queueInstance->update_queue(); },
-      this);
+  // queueUpdater.attach_ms(
+  //     QUEUE_UPDATE_MS, +[](IthoQueue *queueInstance)
+  //                      { queueInstance->update_queue(); },
+  //     this);
 
 } // IthoQueue
 
 // default destructor
 IthoQueue::~IthoQueue()
 {
-  queueUpdater.detach();
+  //queueUpdater.detach();
 } //~IthoQueue
 
 bool IthoQueue::add2queue(int speedVal, unsigned long validVal, uint8_t nonQ_cmd_clearsQ)

@@ -33,7 +33,7 @@ function startWebsock(websocketServerLocation) {
           $('#main').empty();
           $('#main').append("<br><br><br><br>");
           $('#main').append(html_reboot_script);
-          websock.send('{\"reboot\":true}');
+          websock.send('{"reboot":true}');
         }
       }
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
@@ -52,8 +52,8 @@ function startWebsock(websocketServerLocation) {
       $('#vremotesTable').empty();
       buildHtmlTable('#vremotesTable', remfunc, x);
     }
-    else if (f.ithosatusinfo) {
-      let x = f.ithosatusinfo;
+    else if (f.ithostatusinfo) {
+      let x = f.ithostatusinfo;
       $('#StatusTable').empty();
       buildHtmlStatusTable('#StatusTable', x);
     }
@@ -250,6 +250,7 @@ $(document).ready(function () {
       websock.send(`{"command":"${items[1]}"}`);
     }
     else if ($(this).attr('id') == 'wifisubmit') {
+      hostname = $('#hostname').val();
       websock.send(JSON.stringify({
         wifisettings: {
           ssid: $('#ssid').val(),
@@ -321,7 +322,7 @@ $(document).ready(function () {
       update_page('mqtt');
     }
     else if ($(this).attr('id') == 'itho_llm') {
-      websock.send('{\"itho_llm\":true}');
+      websock.send('{"itho_llm":true}');
     }
     else if ($(this).attr('id') == 'itho_remove_remote' || $(this).attr('id') == 'itho_remove_vremote') {
       var selected = $('input[name=\'optionsRemotes\']:checked').val();
@@ -330,7 +331,7 @@ $(document).ready(function () {
       }
       else {
         var val = parseInt(selected, 10) + 1;
-        websock.send('{\"' + $(this).attr('id') + '\":' + val + '}');
+        websock.send('{"' + $(this).attr('id') + '":' + val + '}');
       }
     }
     else if ($(this).attr('id') == 'itho_update_remote' || $(this).attr('id') == 'itho_update_vremote') {
@@ -340,9 +341,9 @@ $(document).ready(function () {
       }
       else {
         var remtype = 1;
-        if ($('#type_remote-' + i).val() < 3) {
+        if ($('#type_remote-' + i).val() < 4) {
           if ($('#type_remote-' + i).prop('checked')) {
-            remtype = 2;
+            remtype = 3;
           }
         }
         else {
@@ -372,11 +373,11 @@ $(document).ready(function () {
       }
       else {
         $('input[name=\'options-ithoset\']:checked').prop('checked', false);
-        $('[id^=ithosetrefresh-]').each(function (index, item) {
+        $('[id^=ithosetrefresh-]').each(function (index) {
           $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).removeClass('pure-button-primary');
         });
         $(`#Current-${i}, #Minimum-${i}, #Maximum-${i}`).html(`<div style='margin: auto;' class='dot-elastic'></div>`);
-        websock.send('{\"ithosetrefresh\":' + i + '}');
+        websock.send('{"ithosetrefresh":' + i + '}');
       }
     }
     else if ($(this).attr('id').substr(0, 14) == 'ithosetupdate-') {
@@ -403,7 +404,7 @@ $(document).ready(function () {
         }
 
         $('input[name=\'options-ithoset\']:checked').prop('checked', false);
-        $('[id^=ithosetrefresh-]').each(function (index, item) {
+        $('[id^=ithosetrefresh-]').each(function (index) {
           $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).removeClass('pure-button-primary');
         });
         $(`#Current-${i}, #Minimum-${i}, #Maximum-${i}`).html(`<div style='margin: auto;' class='dot-elastic'></div>`);
@@ -411,30 +412,30 @@ $(document).ready(function () {
     }
     else if ($(this).attr('id') == 'resetwificonf') {
       if (confirm("This will reset the wifi config to factory default, are you sure?")) {
-        websock.send('{\"resetwificonf\":true}');
+        websock.send('{"resetwificonf":true}');
       }
     }
     else if ($(this).attr('id') == 'resetsysconf') {
       if (confirm("This will reset the system config to factory default, are you sure?")) {
-        websock.send('{\"resetsysconf\":true}');
+        websock.send('{"resetsysconf":true}');
       }
     }
     else if ($(this).attr('id') == 'reboot') {
       if (confirm("This will reboot the device, are you sure?")) {
         $('#rebootscript').append(html_reboot_script);
-        websock.send('{\"reboot\":true,\"dontsaveconf\":' + document.getElementById("dontsaveconf").checked + '}');
+        websock.send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
       }
     }
     else if ($(this).attr('id') == 'format') {
       if (confirm("This will erase all settings, are you sure?")) {
-        websock.send('{\"format\":true}');
+        websock.send('{"format":true}');
         $('#format').text('Formatting...');
       }
     }
     else if ($(this).attr('id') == 'wifiscan') {
       $('.ScanResults').remove();
       $('.hidden').removeClass('hidden');
-      websock.send('{\"wifiscan\":true}');
+      websock.send('{"wifiscan":true}');
     }
     else if ($(this).attr('id').startsWith('button_vremote-')) {
       const items = $(this).attr('id').split('-');
@@ -459,7 +460,7 @@ $(document).ready(function () {
     else if ($(this).attr('id') == 'button2410set') {
       websock.send(JSON.stringify({
         ithobutton: 24109,
-        index: $('#itho_setting_id_set').val(),
+        ithosetupdate: $('#itho_setting_id_set').val(),
         value: parseFloat($('#itho_setting_value_set').val())
       }));
     }
@@ -541,7 +542,6 @@ function processElements(x) {
 }
 
 function removeAfter5secs(count) {
-  //await timeoutPromise(200);
   new Promise(resolve => {
     setTimeout(() => {
       removeID('mbox_p' + count);
@@ -607,20 +607,20 @@ function radio(origin, state) {
     }
   }
   else if (origin == "remote" || origin == "ithoset") {
-    $(`[id^=name_${origin}-]`).each(function (index, item) {
+    $(`[id^=name_${origin}-]`).each(function (index) {
       $(`#name_${origin}-${index}`).prop('readonly', true);
       if (index == state) {
         $(`#name_${origin}-${index}`).prop('readonly', false);
       }
     });
-    $(`[id^=type_${origin}-]`).each(function (index, item) {
+    $(`[id^=type_${origin}-]`).each(function (index) {
       $(`#type_${origin}-${index}`).prop('disabled', true);
       if (index == state) {
         $(`#type_${origin}-${index}`).prop('disabled', false);
       }
     });
     if (origin == "ithoset") {
-      $('[id^=ithosetrefresh-]').each(function (index, item) {
+      $('[id^=ithosetrefresh-]').each(function (index) {
         $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).removeClass('pure-button-primary');
         if (index == state) {
           $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).addClass('pure-button-primary');
@@ -630,13 +630,9 @@ function radio(origin, state) {
   }
 }
 
-function timeoutPromise(timer) {
-  return new Promise(resolve => setTimeout(resolve, timer));
-}
-
 function getSettings(pagevalue) {
   if (websock.readyState === 1) {
-    websock.send('{\"' + pagevalue + '\":1}');
+    websock.send('{"' + pagevalue + '":1}');
   }
   else {
     console.log("websock not open");
@@ -757,10 +753,6 @@ function ValidateIPaddress(ipaddress) {
   }
   return false;
 }
-function ValidateBetween(min, max) {
-  if (x < min || x > max) { return false; }
-  return true;
-}
 
 function returnMqttState(state) {
   state = state + 5;
@@ -852,21 +844,31 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
   remotesCount = jsonVar.length;
   for (var i = 0; i < remotesCount; i++) {
     var remtype = 0;
+    var remfunction = 0;
     var row$ = $('<tr>');
     row$.append($('<td>').html(`<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}'/>`));
+    //colIndex 0 = index
+    //colIndex 1 = id
+    //colIndex 2 = name
+    //colIndex 3 = remfunc
+    //colIndex 4 = remtype
+    //colIndex 5 = capabilities
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
       if (colIndex == 3) {
+        remfunction = jsonVar[i][columns[colIndex]];
+      }
+      else if (colIndex == 4) {
         var cellValue = jsonVar[i][columns[colIndex]];
-        if (remfunc == 1) {
+        if (remfunction == 1 || remfunction == 3) {
           var checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
           checkbox.id = `type_remote-${i}`;
-          checkbox.value = cellValue;
+          checkbox.value = remfunction;
           checkbox.disabled = true;
-          if (cellValue == 2) checkbox.checked = true;
+          if (remfunction == 3) checkbox.checked = true;
           row$.append($('<td>').html(checkbox));
         }
-        else if (remfunc == 2) {
+        else if (remfunction == 2) {
           var select = document.createElement('select');
           select.name = cellValue;
           select.id = `type_remote-${i}`;
@@ -887,9 +889,9 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
           row$.append($('<td>').html(cellValue));
         }
       }
-      else if (colIndex == 4) {
+      else if (colIndex == 5) {
 
-        if (remfunc == 1) {
+        if (remfunction == 1 || remfunction == 3) {
           var str = '';
           var JSONObj = jsonVar[i][columns[colIndex]];
           if (JSONObj != null) {
@@ -902,12 +904,12 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
           }
           row$.append($('<td>').html(str));
         }
-        else if (remfunc == 2) {
+        else if (remfunction == 2) {
           var td$ = $('<td>');
           for (const item of remtypes) {
             if (remtype == item[1]) {
-              for (const remfunc of item[2]) {
-                td$.append(`<button value='${remfunc}_remote-${i}' id='button_vremote-${i}-${remfunc}' class='pure-button pure-button-primary'>${remfunc.charAt(0).toUpperCase() + remfunc.slice(1)}</button>\u00A0`);
+              for (const remitem of item[2]) {
+                td$.append(`<button value='${remitem}_remote-${i}' id='button_vremote-${i}-${remitem}' class='pure-button pure-button-primary'>${remitem.charAt(0).toUpperCase() + remitem.slice(1)}</button>\u00A0`);
               }
             }
           }
@@ -1029,10 +1031,9 @@ function addAllColumnHeaders(jsonVar, selector, appendRow) {
         if (key == "remtype") {
           headerTr$.append($('<th id="remtype">').html(key));
         }
-        else {
+        else if (key != "remfunc") {
           headerTr$.append($('<th>').html(key));
         }
-
       }
     }
   }

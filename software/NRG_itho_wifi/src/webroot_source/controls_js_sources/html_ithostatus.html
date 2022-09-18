@@ -1,19 +1,27 @@
-<div class="header"><h1>Itho status</h1></div>
-<p>System values of the itho unit<br><br>Also available on MQTT topics where the label is the last part of the topic name: itho/ithostatus/[label] .<br>The list of available labels depends on the itho model/version and is generated automatically.</p>
-<style>.pure-form-aligned .pure-control-group label {width: 15em;}</style>
-      <form class="pure-form pure-form-aligned">
-          <fieldset>
-            <table id="StatusTable" class="pure-table pure-table-bordered"></table><br><br>
-          </fieldset>
-      </form>
-<script>
-$(document).ready(function() {
-  sessionStorage.setItem("statustimer", 1);
-  function repeat() {
-    if(sessionStorage.getItem("statustimer") != 1) return;
-    getSettings('ithostatus');
-    setTimeout(repeat, 5000);
+<div class="header">
+  <h1>Itho status</h1>
+</div>
+<p>System values of the itho unit<br><br>Also available on MQTT topics where the label is the last part of the topic
+  name: itho/ithostatus/[label] .<br>The list of available labels depends on the itho model/version and is generated
+  automatically.</p>
+<style>
+  .pure-form-aligned .pure-control-group label {
+    width: 15em;
   }
-  repeat();
-});
+</style>
+<form class="pure-form pure-form-aligned">
+  <fieldset>
+    <table id="StatusTable" class="pure-table pure-table-bordered"></table><br><br>
+  </fieldset>
+</form>
+<script>
+  $(document).ready(function () {
+    sessionStorage.setItem("statustimer", 1);
+    function repeat() {
+      if (sessionStorage.getItem("statustimer") != 1) return;
+      getSettings('ithostatus');
+      setTimeout(repeat, 5000);
+    }
+    repeat();
+  });
 </script>

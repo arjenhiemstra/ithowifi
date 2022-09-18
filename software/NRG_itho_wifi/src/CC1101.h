@@ -176,8 +176,8 @@ public:
 
 	uint8_t readRegister(uint8_t address, uint8_t registerType);
 
-	void writeBurstRegister(uint8_t address, uint8_t *data, uint8_t length);
-	void readBurstRegister(uint8_t *buffer, uint8_t address, uint8_t length);
+	void writeBurstRegister(const uint8_t address, const uint8_t *data, const uint8_t length);
+	void readBurstRegister(uint8_t *buffer, const uint8_t address, const uint8_t length);
 
 	void sendData(CC1101Packet *packet);
 	size_t readData(CC1101Packet *packet, size_t len);

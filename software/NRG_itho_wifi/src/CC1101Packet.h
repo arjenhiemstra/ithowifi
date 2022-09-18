@@ -14,6 +14,6 @@
 class CC1101Packet
 {
 public:
-	uint8_t length;
-	uint8_t data[MAX_RAW];
+	uint8_t length = 0;
+	uint8_t data[MAX_RAW]{};
 };

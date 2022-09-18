@@ -28,7 +28,6 @@
 
 #include <cinttypes>
 
-#include <Wire.h>
 #include <Arduino.h>
 
 #include "SHTSensor.h"

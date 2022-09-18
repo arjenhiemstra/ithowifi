@@ -1,6 +1,7 @@
 #include "task_web.h"
 
 #include "webroot/index_html_gz.h"
+#include "webroot/edit_html_gz.h"
 #include "webroot/controls_js_gz.h"
 #include "webroot/pure_min_css_gz.h"
 #include "webroot/zepto_min_js_gz.h"
@@ -201,14 +202,35 @@ void webServerInit()
         // Handle upload
       });
 
-  if (systemConfig.syssec_edit)
-  {
-    server.addHandler(new SPIFFSEditor(ACTIVE_FS, systemConfig.sys_username, systemConfig.sys_password));
-  }
-  else
-  {
-    server.addHandler(new SPIFFSEditor(ACTIVE_FS, "", ""));
-  }
+  // if (systemConfig.syssec_edit)
+  // {
+  //   server.addHandler(new SPIFFSEditor(ACTIVE_FS, systemConfig.sys_username, systemConfig.sys_password));
+  // }
+  // else
+  // {
+  //   server.addHandler(new SPIFFSEditor(ACTIVE_FS, "", ""));
+  // }
+  server.on("/edit", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+    if (systemConfig.syssec_edit) {
+      if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+      return request->requestAuthentication();
+    }
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", edit_html_gz, edit_html_gz_len);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response); });
+
+  server.on("/edit", HTTP_PUT, handleFileCreate);
+  server.on("/edit", HTTP_DELETE, handleFileDelete);
+
+  // run handleUpload function when any file is uploaded
+  server.on(
+      "/edit", HTTP_POST, [](AsyncWebServerRequest *request)
+      { request->send(200); },
+      handleUpload);
+
+  server.on("/list", HTTP_GET, handleFileList);
+  server.on("/status", HTTP_GET, handleStatus);
 
   // css_code
   server.on("/pure-min.css", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -405,8 +427,12 @@ void webServerInit()
   // ends in the callbacks below.
   server.onNotFound([](AsyncWebServerRequest *request)
                     {
+    //--> download or not
+    //--> Handle request    
+    //if not known file            
     //Handle Unknown Request
-    request->send(404); });
+    if (!handleFileRead(request))
+      request->send(404); });
 
   server.begin();
 
@@ -736,8 +762,7 @@ void handleDebug(AsyncWebServerRequest *request)
   response->print("<div id='rflog' style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa'>");
   response->print("</div><div style='padding-top:5px;'><a href='#' class='pure-button' onclick=\"$('#rflog').empty()\">Clear</a></div></div></div>");
   response->print("<form class=\"pure-form pure-form-aligned\"><fieldset><legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id=\"rfdebug-0\" class=\"pure-button pure-button-primary\">Off</button><br><br><button id=\"rfdebug-1\" class=\"pure-button pure-button-primary\">Level1</button>&nbsp;Level1 will show only known itho commands from all devices<br><br><button id=\"rfdebug-2\" class=\"pure-button pure-button-primary\">Level2</button>&nbsp;Level2 will show all received RF messages from devices joined to the add-on<br><br><button id=\"rfdebug-3\" class=\"pure-button pure-button-primary\">Level3</button>&nbsp;Level3 will show all received RF messages from all devices<br><br>");
-  response->print("<form class=\"pure-form pure-form-aligned\"><fieldset><legend><br>Low level itho I2C commands:</legend><br><span>I2C virtual remote commands:</span><br><button id=\"ithobutton-low\" class=\"pure-button pure-button-primary\">Low</button>&nbsp;<button id=\"ithobutton-medium\" class=\"pure-button pure-button-primary\">Medium</button>&nbsp;<button id=\"ithobutton-high\" class=\"pure-button pure-button-primary\">High</button><br><br>");
-  response->print("<button id=\"ithobutton-join\" class=\"pure-button pure-button-primary\">Join</button>&nbsp;<button id=\"ithobutton-leave\" class=\"pure-button pure-button-primary\">Leave</button><br><br>");
+  response->print("<form class=\"pure-form pure-form-aligned\"><fieldset><legend><br>Low level itho I2C commands:</legend><br>");
   response->print("<button id=\"ithobutton-type\" class=\"pure-button pure-button-primary\">Query Devicetype</button><br><span>Result:&nbsp;</span><span id=\'ithotype\'></span><br><br>");
   response->print("<button id=\"ithobutton-statusformat\" class=\"pure-button pure-button-primary\">Query Status Format</button><br><span>Result:&nbsp;</span><span id=\'ithostatusformat\'></span><br><br>");
   response->print("<button id=\"ithobutton-status\" class=\"pure-button pure-button-primary\">Query Status</button><br><span>Result:&nbsp;</span><span id=\'ithostatus\'></span><br><br>");
@@ -747,7 +772,7 @@ void handleDebug(AsyncWebServerRequest *request)
   response->print("<span style=\"color:red\">Warning!!</span><br><br>");
   response->print("<button id=\"ithobutton-31DA\" class=\"pure-button pure-button-primary\">Query 31DA</button><br><span>Result:&nbsp;</span><span id=\'itho31DA\'></span><br><br>");
   response->print("<button id=\"ithobutton-31D9\" class=\"pure-button pure-button-primary\">Query 31D9</button><br><span>Result:&nbsp;</span><span id=\'itho31D9\'></span><br><br>");
-  response->print("<button id=\"ithobutton-10D0\" class=\"pure-button pure-button-primary\">Filter reset</button></fieldset></form><br>");
+  response->print("<button id=\"ithobutton-10D0\" class=\"pure-button pure-button-primary\">Filter reset</button><br><span>Filter reset function uses virtual remote 0, this remote needs to be paired with your itho for this command to work</span></fieldset></form><br>");
 
   response->print("<br><br>");
 
@@ -793,6 +818,351 @@ void handlePrevLogDownload(AsyncWebServerRequest *request)
     strlcpy(link, "/logfile0.log", sizeof(link));
   }
   request->send(ACTIVE_FS, link, "", true);
+}
+
+void handleFileCreate(AsyncWebServerRequest *request)
+{
+  if (systemConfig.syssec_edit)
+  {
+    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+    {
+      request->send(401);
+      return;
+    }
+  }
+  D_LOG("handleFileCreate called\n");
+
+  String path;
+  String src;
+  int params = request->params();
+  for (int i = 0; i < params; i++)
+  {
+    AsyncWebParameter *p = request->getParam(i);
+
+    if (strcmp(p->name().c_str(), "path") == 0)
+    {
+      D_LOG("handleFileCreate path found ('%s')\n", p->value().c_str());
+      path = p->value().c_str();
+    }
+    if (strcmp(p->name().c_str(), "src") == 0)
+    {
+      D_LOG("handleFileCreate src found ('%s')\n", p->value().c_str());
+      src = p->value().c_str();
+    }
+    // D_LOG("Param[%d] (name:'%s', value:'%s'\n", i, p->name().c_str(), p->value().c_str());
+  }
+
+  if (path.isEmpty())
+  {
+    request->send(400, "text/plain", "PATH ARG MISSING");
+    return;
+  }
+  if (path == "/")
+  {
+    request->send(400, "text/plain", "BAD PATH");
+    return;
+  }
+
+  if (src.isEmpty())
+  {
+    // No source specified: creation
+    D_LOG("handleFileCreate: %s\n", path.c_str());
+    if (path.endsWith("/"))
+    {
+      // Create a folder
+      path.remove(path.length() - 1);
+      if (!ACTIVE_FS.mkdir(path))
+      {
+        request->send(500, "text/plain", "MKDIR FAILED");
+        return;
+      }
+    }
+    else
+    {
+      // Create a file
+      File file = ACTIVE_FS.open(path, "w");
+      if (file)
+      {
+        file.write(0);
+        file.close();
+      }
+      else
+      {
+        request->send(500, "text/plain", "CREATE FAILED");
+        return;
+      }
+    }
+    request->send(200, "text/plain", path.c_str());
+  }
+  else
+  {
+    // Source specified: rename
+    if (src == "/")
+    {
+      request->send(400, "text/plain", "BAD SRC");
+      return;
+    }
+    if (!ACTIVE_FS.exists(src))
+    {
+      request->send(400, "text/plain", "BSRC FILE NOT FOUND");
+      return;
+    }
+
+    D_LOG("handleFileCreate: %s from %s\n", path.c_str(), src.c_str());
+    if (path.endsWith("/"))
+    {
+      path.remove(path.length() - 1);
+    }
+    if (src.endsWith("/"))
+    {
+      src.remove(src.length() - 1);
+    }
+    if (!ACTIVE_FS.rename(src, path))
+    {
+      request->send(500, "text/plain", "RENAME FAILED");
+      return;
+    }
+    request->send(200);
+  }
+}
+
+void handleFileDelete(AsyncWebServerRequest *request)
+{
+  if (systemConfig.syssec_edit)
+  {
+    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+    {
+      request->send(401);
+      return;
+    }
+  }
+  String path;
+
+  D_LOG("handleFileDelete called\n");
+
+  int params = request->params();
+  for (int i = 0; i < params; i++)
+  {
+    AsyncWebParameter *p = request->getParam(i);
+
+    if (strcmp(p->name().c_str(), "path") == 0)
+    {
+      path = p->value().c_str();
+      D_LOG("handleFileDelete path found ('%s')\n", p->value().c_str());
+    }
+  }
+
+  if (path.isEmpty() || path == "/")
+  {
+    request->send(500, "text/plain", "BAD PATH");
+    return;
+  }
+  if (!ACTIVE_FS.exists(path))
+  {
+    request->send(500, "text/plain", "FILE NOT FOUND");
+    return;
+  }
+
+  File root = ACTIVE_FS.open(path, "r");
+  // If it's a plain file, delete it
+  if (!root.isDirectory())
+  {
+    root.close();
+    ACTIVE_FS.remove(path);
+  }
+  else
+  {
+    ACTIVE_FS.rmdir(path);
+  }
+  request->send(200);
+}
+
+void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+{
+  if (systemConfig.syssec_edit)
+  {
+    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+      return request->requestAuthentication();
+  }
+  String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url() + "\n";
+  D_LOG(logmessage.c_str());
+
+  if (!index)
+  {
+    logmessage = "Upload Start: " + String(filename) + "\n";
+    // open the file on first call and store the file handle in the request object
+    request->_tempFile = ACTIVE_FS.open("/" + filename, "w");
+    D_LOG(logmessage.c_str());
+  }
+
+  if (len)
+  {
+    // stream the incoming chunk to the opened file
+    request->_tempFile.write(data, len);
+    logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len) + "\n";
+    D_LOG(logmessage.c_str());
+  }
+
+  if (final)
+  {
+    logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len) + "\n";
+    // close the file handle as the upload is now done
+    request->_tempFile.close();
+    D_LOG(logmessage.c_str());
+    request->redirect("/");
+  }
+}
+
+/*
+    Read the given file from the filesystem and stream it back to the client
+*/
+bool handleFileRead(AsyncWebServerRequest *request)
+{
+  if (systemConfig.syssec_edit)
+  {
+    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password)) {
+      request->send(401);
+      return false;
+    }
+  }
+  String path = request->url();
+
+  if (path.endsWith("/"))
+  {
+    path += "index.htm";
+  }
+  String pathWithGz = path + ".gz";
+  if (ACTIVE_FS.exists(pathWithGz) || ACTIVE_FS.exists(path))
+  {
+    D_LOG("file found ('%s')\n", path.c_str());
+
+    if (ACTIVE_FS.exists(pathWithGz))
+    {
+      path += ".gz";
+    }
+    request->send(ACTIVE_FS, path.c_str(), getContentType(request, path.c_str()), request->hasParam("download"));
+
+    pathWithGz = String();
+    path = String();
+    return true;
+  }
+  pathWithGz = String();
+  path = String();
+  return false;
+}
+
+void handleStatus(AsyncWebServerRequest *request)
+{
+  if (systemConfig.syssec_edit)
+  {
+    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+    {
+      request->send(401);
+      return;
+    }
+  }
+  size_t totalBytes = ACTIVE_FS.totalBytes();
+  size_t usedBytes = ACTIVE_FS.usedBytes();
+
+  String json;
+  json.reserve(128);
+  json = "{\"type\":\"Filesystem\", \"isOk\":";
+
+  json += "\"true\", \"totalBytes\":\"";
+  json += totalBytes;
+  json += "\", \"usedBytes\":\"";
+  json += usedBytes;
+  json += "\"";
+
+  json += ",\"unsupportedFiles\":\"\"}";
+
+  request->send(200, "application/json", json);
+  json = String();
+}
+
+void handleFileList(AsyncWebServerRequest *request)
+{
+  if (systemConfig.syssec_edit)
+  {
+    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+    {
+      request->send(401);
+      return;
+    }
+  }
+  if (!request->hasParam("dir"))
+  {
+    request->send(500, "text/plain", "BAD ARGS");
+    return;
+  }
+
+  String path = request->getParam("dir")->value();
+  File root = ACTIVE_FS.open(path);
+  path = String();
+
+  String output = "[";
+  if (root.isDirectory())
+  {
+    File file = root.openNextFile();
+    while (file)
+    {
+      if (output != "[")
+      {
+        output += ',';
+      }
+      output += "{\"type\":\"";
+      output += (file.isDirectory()) ? "dir" : "file";
+      output += "\",\"name\":\"";
+      output += String(file.path()).substring(1);
+      output += "\",\"size\":\"";
+      output += String(file.size());
+      output += "\"}";
+      file = root.openNextFile();
+    }
+  }
+  output += "]";
+
+  root.close();
+
+  request->send(200, "application/json", output);
+  output = String();
+}
+
+const char *getContentType(AsyncWebServerRequest *request, const char *filename)
+{
+  if (request->hasParam("download"))
+    return "application/octet-stream";
+  else if (strstr(filename, ".htm"))
+    return "text/html";
+  else if (strstr(filename, ".html"))
+    return "text/html";
+  else if (strstr(filename, ".log"))
+    return "text/plain";
+  else if (strstr(filename, ".css"))
+    return "text/css";
+  else if (strstr(filename, ".sass"))
+    return "text/css";
+  else if (strstr(filename, ".js"))
+    return "application/javascript";
+  else if (strstr(filename, ".png"))
+    return "image/png";
+  else if (strstr(filename, ".svg"))
+    return "image/svg+xml";
+  else if (strstr(filename, ".gif"))
+    return "image/gif";
+  else if (strstr(filename, ".jpg"))
+    return "image/jpeg";
+  else if (strstr(filename, ".ico"))
+    return "image/x-icon";
+  else if (strstr(filename, ".xml"))
+    return "text/xml";
+  else if (strstr(filename, ".pdf"))
+    return "application/x-pdf";
+  else if (strstr(filename, ".zip"))
+    return "application/x-zip";
+  else if (strstr(filename, ".gz"))
+    return "application/x-gzip";
+  return "text/plain";
 }
 
 void jsonSystemstat()

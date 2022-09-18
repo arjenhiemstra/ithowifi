@@ -17,6 +17,7 @@
 struct ithoRFDevice
 {
   uint32_t deviceId{0};
+  RemoteTypes remType;
   //  char name[16];
   IthoCommand lastCommand{IthoUnknown};
   int32_t co2{0xEFFF};
@@ -84,8 +85,8 @@ public:
     this->outIthoPacket.deviceId[2] = byte2;
   }
 
-  bool addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2);
-  bool addRFDevice(uint32_t ID);
+  bool addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2, RemoteTypes deviceType);
+  bool addRFDevice(uint32_t ID, RemoteTypes deviceType);
   bool removeRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2);
   bool removeRFDevice(uint32_t ID);
   bool checkRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2);
@@ -120,6 +121,10 @@ public:
   IthoCommand getLastCommand()
   {
     return inIthoPacket.command; // retrieve last received/parsed command from remote
+  }
+  RemoteTypes getLastRemType()
+  {
+    return inIthoPacket.remType; // retrieve last received/parsed rf device type
   }
   uint8_t getLastInCounter()
   {
@@ -170,7 +175,7 @@ private:
   void createMessageCommand(IthoPacket *itho, CC1101Packet *packet);
   void createMessageJoin(IthoPacket *itho, CC1101Packet *packet);
   void createMessageLeave(IthoPacket *itho, CC1101Packet *packet);
-  uint8_t *getMessageCommandBytes(IthoCommand command);
+  const uint8_t *getMessageCommandBytes(IthoCommand command);
   uint8_t getCounter2(IthoPacket *itho, uint8_t len);
 
   uint8_t messageEncode(IthoPacket *itho, CC1101Packet *packet);
