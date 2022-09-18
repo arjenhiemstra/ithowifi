@@ -6,10 +6,8 @@
 
 #include "task_mqtt.h"
 #include "task_web.h"
-#include "task_syscontrol.h"
 #include "task_init.h"
 #include "task_cc1101.h"
-#include "task_configandlog.h"
 
 #include "esp_wifi.h"
 #include "WiFiClient.h"
@@ -24,5 +22,4 @@ extern WiFiClient client;
 
 extern IthoCC1101 rf;
 extern IthoPacket packet;
-extern IthoRemote remotes;
-extern IthoRemote virtualRemotes;
+

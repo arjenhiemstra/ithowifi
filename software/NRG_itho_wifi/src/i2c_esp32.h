@@ -3,6 +3,7 @@
 #include <string>
 
 #include <Arduino.h>
+#include <stdio.h>
 #include <driver/i2c.h>
 #include <esp_log.h>
 #include <esp_system.h>
@@ -14,12 +15,14 @@
 #include "Dbglog.h"
 #include "IthoSystem.h"
 
-#define WRITE_BIT I2C_MASTER_WRITE /*!< I2C master write */
-#define READ_BIT I2C_MASTER_READ   /*!< I2C master read */
-#define ACK_CHECK_EN 0x1           /*!< I2C master will check ack from slave*/
-#define ACK_CHECK_DIS 0x0          /*!< I2C master will not check ack from slave */
-#define ACK_VAL 0x0                /*!< I2C ack value */
-#define NACK_VAL 0x1               /*!< I2C nack value */
+#define WRITE_BIT I2C_MASTER_WRITE  /*!< I2C master write */
+#define READ_BIT I2C_MASTER_READ    /*!< I2C master read */
+#define ACK_CHECK_EN 0x1            /*!< I2C master will check ack from slave*/
+#define ACK_CHECK_DIS 0x0           /*!< I2C master will not check ack from slave */
+#define ACK_VAL 0x0                 /*!< I2C ack value */
+#define NACK_VAL 0x1                /*!< I2C nack value */
+#define I2C_MASTER_TX_BUF_DISABLE 0 /*!< I2C master doesn't need buffer */
+#define I2C_MASTER_RX_BUF_DISABLE 0 /*!< I2C master doesn't need buffer */
 
 #if defined(CVE)
 #define I2C_MASTER_SDA_IO GPIO_NUM_21
@@ -45,6 +48,7 @@
 #define I2C_SLAVE_SCL_PULLUP GPIO_PULLUP_DISABLE
 #define I2C_SLAVE_NUM I2C_NUM_0
 #define I2C_SLAVE_RX_BUF_LEN 512
+#define I2C_SLAVE_TX_BUF_LEN 512
 #define I2C_SLAVE_ADDRESS 0x40
 
 #include <driver/gpio.h>

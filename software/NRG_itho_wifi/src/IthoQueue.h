@@ -24,7 +24,7 @@ private:
 
   mutable bool firstQueueItem{true};
   struct Queue items[MAX_QUEUE];
-  Ticker queueUpdater;
+  //Ticker queueUpdater;
 
 public:
   uint16_t ithoSpeed = 0;

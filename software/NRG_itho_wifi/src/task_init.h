@@ -15,6 +15,7 @@
 #include "Dbglog.h"
 #include "flashLog.h"
 #include "notifyClients.h"
+#include "task_configandlog.h"
 
 // globals
 extern bool TaskInitReady;

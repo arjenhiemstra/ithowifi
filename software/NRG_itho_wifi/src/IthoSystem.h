@@ -18,6 +18,10 @@
 #include "flashLog.h"
 #include "notifyClients.h"
 #include "i2c_esp32.h"
+#include "task_mqtt.h"
+#include "IthoQueue.h"
+#include "enum.h"
+#include "task_syscontrol.h"
 
 // globals
 extern volatile uint16_t ithoCurrentVal;
@@ -33,18 +37,6 @@ extern bool i2c_result_updateweb;
 extern bool itho_internal_hum_temp;
 extern double ithoHum;
 extern double ithoTemp;
-
-extern Ticker getSettingsHack;
-extern SemaphoreHandle_t mutexI2Ctask;
-
-enum cmdOrigin
-{
-  UNKNOWN,
-  HTMLAPI,
-  MQTTAPI,
-  REMOTE,
-  WEB
-};
 
 struct ithoDeviceStatus
 {
@@ -148,5 +140,7 @@ void sendQuery31D9(bool updateweb);
 int32_t *sendQuery2410(bool &updateweb);
 void setSetting2410(bool &updateweb);
 void filterReset(const int remoteIndex, IthoRemote &remotes);
+void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
+bool checkI2Cbus();
 int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);

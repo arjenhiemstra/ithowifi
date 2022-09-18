@@ -6,7 +6,6 @@
 
 #include <Arduino.h>
 #include <DNSServer.h>
-#include <Wire.h>
 
 #include "SystemConfig.h"
 #include "WifiConfig.h"
@@ -16,9 +15,8 @@
 #include "flashLog.h"
 #include "notifyClients.h"
 #include "SHTSensor.h"
-
 #include "task_mqtt.h"
-#include "task_syscontrol.h"
+#include "enum.h"
 
 // globals
 extern uint32_t TaskSysControlHWmark;
@@ -45,3 +43,6 @@ bool connectWiFiSTA();
 void initSensor();
 void init_vRemote();
 bool ithoInitCheck();
+void update_queue();
+bool writeIthoVal(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
+bool ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin);

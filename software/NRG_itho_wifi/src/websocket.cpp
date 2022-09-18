@@ -53,11 +53,15 @@ void jsonWsSend(const char *rootName)
     nested["itho_fwversion"] = currentItho_fwversion();
     nested["itho_setlen"] = currentIthoSettingsLength();
   }
-  else if (strcmp(rootName, "ithosatusinfo") == 0)
+  else if (strcmp(rootName, "ithostatusinfo") == 0)
   {
     // Create an object at the root
     JsonObject nested = root.createNestedObject(rootName);
     getIthoStatusJSON(nested);
+  }
+  else if (strcmp(rootName, "debuginfo") == 0)
+  {
+    return;
   }
   else if (strcmp(rootName, "remotes") == 0)
   {
@@ -209,7 +213,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"ithostatus\"") != std::string::npos)
     {
-      jsonWsSend("ithosatusinfo");
+      jsonWsSend("ithostatusinfo");
+      jsonWsSend("debuginfo");
       sysStatReq = true;
     }
     else if (msg.find("{\"ithogetsetting\"") != std::string::npos)
@@ -336,7 +341,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         }
         if (parseOK)
         {
-          remotes.removeRemote(number, "remote");
+          remotes.removeRemote(number);
           const int *id = remotes.getRemoteIDbyIndex(number);
           rf.setBindAllowed(true);
           rf.removeRFDevice(*id, *(id + 1), *(id + 2));
@@ -353,7 +358,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       {
         uint8_t index = root["itho_update_remote"].as<unsigned int>();
         remotes.updateRemoteName(index, root["value"] | "");
-        remotes.updateRemoteType(index, root["remtype"] | 0);
+        remotes.updateRemoteFunction(index, root["remtype"] | 0);
         saveRemotesflag = true;
       }
     }
@@ -372,7 +377,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         }
         if (parseOK)
         {
-          virtualRemotes.removeRemote(number, "vremote");
+          virtualRemotes.removeRemote(number);
           saveVremotesflag = true;
         }
       }

@@ -43,8 +43,7 @@ bool itho_internal_hum_temp = false;
 double ithoHum = 0;
 double ithoTemp = 0;
 
-Ticker getSettingsHack;
-SemaphoreHandle_t mutexI2Ctask;
+
 
 //                                  { IthoUnknown,  IthoJoin, IthoLeave,  IthoAway, IthoLow, IthoMedium,  IthoHigh,  IthoFull, IthoTimer1,  IthoTimer2,  IthoTimer3,  IthoAuto,  IthoAutoNight, IthoCook30,  IthoCook60 }
 const uint8_t *RFTCVE_Remote_Map[] = {nullptr, ithoMessageCVERFTJoinCommandBytes, ithoMessageLeaveCommandBytes, ithoMessageAwayCommandBytes, ithoMessageLowCommandBytes, ithoMessageMediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageTimer1CommandBytes, ithoMessageTimer2CommandBytes, ithoMessageTimer3CommandBytes, nullptr, nullptr, nullptr, nullptr};
@@ -75,7 +74,6 @@ const int currentIthoDeviceID() { return ithoDeviceID; }
 const uint8_t currentItho_fwversion() { return itho_fwversion; }
 const uint16_t currentIthoSettingsLength() { return ithoSettingsLength; }
 const uint16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
-
 const uint8_t *getRemoteCmd(const RemoteTypes type, const IthoCommand command)
 {
 
@@ -128,7 +126,7 @@ const struct ihtoDeviceType ithoDevices[]
       {0x00, 0x20, "RF_CO2", nullptr, 0, nullptr, nullptr, 0, nullptr},
       {0x00, 0x2B, "HRU 350", ithoHRU350SettingsMap, sizeof(ithoHRU350SettingsMap) / sizeof(ithoHRU350SettingsMap[0]), ithoHRU350SettingsLabels, ithoHRU350StatusMap, sizeof(ithoHRU350StatusMap) / sizeof(ithoHRU350StatusMap[0]), ithoHRU350StatusLabels},
   {
-    0x07, 0x01, "HRU 200-250", ithoHRU250_300SettingsMap, sizeof(ithoHRU250_300SettingsMap) / sizeof(ithoHRU250_300SettingsMap[0]), ithoHRU250_300SettingsLabels, ithoHRU250_300StatusMap, sizeof(ithoHRU250_300StatusMap) / sizeof(ithoHRU250_300StatusMap[0]), ithoHRU250_300StatusLabels
+    0x07, 0x01, "HRU 250-300", ithoHRU250_300SettingsMap, sizeof(ithoHRU250_300SettingsMap) / sizeof(ithoHRU250_300SettingsMap[0]), ithoHRU250_300SettingsLabels, ithoHRU250_300StatusMap, sizeof(ithoHRU250_300StatusMap) / sizeof(ithoHRU250_300StatusMap[0]), ithoHRU250_300StatusLabels
   }
 };
 
@@ -389,15 +387,10 @@ const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPt
 
 void updateSetting(const uint8_t i, const int32_t value, bool webupdate)
 {
-
-  if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
-  {
-
     i2c_result_updateweb = webupdate;
     index2410 = i;
     value2410 = value;
     set2410 = true;
-  }
 }
 
 const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID)
@@ -433,11 +426,7 @@ void sendI2CPWMinit()
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  while (digitalRead(SCLPIN) == LOW)
-  {
-    yield();
-    delay(1);
-  }
+  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
 }
@@ -602,28 +591,18 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRem
   Serial.print(str);
 #endif
 
-  while (digitalRead(SCLPIN) == LOW)
-  {
-    yield();
-    delay(1);
-  }
+  checkI2Cbus();
 
   i2c_sendBytes(i2c_command, i2c_command_len);
 }
 
 void sendQueryDevicetype(bool updateweb)
 {
-
   uint8_t command[] = {0x82, 0x80, 0x90, 0xE0, 0x04, 0x00, 0x8A};
 
-  while (digitalRead(SCLPIN) == LOW)
-  {
-    yield();
-    delay(1);
-  }
+  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
-
   uint8_t i2cbuf[512]{};
 
   size_t len = i2c_slave_receive(i2cbuf);
@@ -659,11 +638,7 @@ void sendQueryStatusFormat(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x00, 0x04, 0x00, 0xD6};
 
-  while (digitalRead(SCLPIN) == LOW)
-  {
-    yield();
-    delay(1);
-  }
+  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
 
@@ -685,6 +660,7 @@ void sendQueryStatusFormat(bool updateweb)
       return;
     ithoStatusLabelLength = getStatusLabelLength(currentIthoDeviceID(), currentItho_fwversion());
     const uint8_t endPos = i2cbuf[5];
+
     for (uint8_t i = 0; i < endPos; i++)
     {
       ithoStatus.push_back(ithoDeviceStatus());
@@ -752,11 +728,7 @@ void sendQueryStatus(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x01, 0x04, 0x00, 0xD5};
 
-  while (digitalRead(SCLPIN) == LOW)
-  {
-    yield();
-    delay(1);
-  }
+  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
 
@@ -884,11 +856,7 @@ void sendQuery31DA(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x31, 0xDA, 0x04, 0x00, 0xEF};
 
-  while (digitalRead(SCLPIN) == LOW)
-  {
-    yield();
-    delay(1);
-  }
+  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
 
@@ -1274,11 +1242,7 @@ void sendQuery31D9(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x31, 0xD9, 0x04, 0x00, 0xF0};
 
-  while (digitalRead(SCLPIN) == LOW)
-  {
-    yield();
-    delay(1);
-  }
+  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
 
@@ -1384,11 +1348,7 @@ int32_t *sendQuery2410(bool &updateweb)
   command[23] = index2410;
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  while (digitalRead(SCLPIN) == LOW)
-  {
-    yield();
-    delay(1);
-  }
+  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
 
@@ -1623,11 +1583,7 @@ void setSetting2410(bool &updateweb)
 
   jsonSysmessage("itho2410set", i2cbuf2string(command, sizeof(command)).c_str());
 
-  while (digitalRead(SCLPIN) == LOW)
-  {
-    yield();
-    delay(1);
-  }
+  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
 
@@ -1680,13 +1636,72 @@ void filterReset(const int remoteIndex, IthoRemote &remotes)
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  while (digitalRead(SCLPIN) == LOW)
+  checkI2Cbus();
+
+  i2c_sendBytes(command, sizeof(command));
+}
+
+
+
+void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT)
+{
+
+    uint16_t valTemp = *ithoCurrentVal;
+    *ithoCurrentVal = value;
+
+    if (systemConfig.itho_forcemedium)
+    {
+      IthoCommand precmd = IthoCommand::IthoMedium;
+      const RemoteTypes remoteType = remotes.getRemoteType(0);
+      if (remoteType == RemoteTypes::RFTAUTO) // RFT AUTO remote has no meduim button
+        precmd = IthoCommand::IthoAuto;
+      if (remoteType == RemoteTypes::RFTCVE || remoteType == RemoteTypes::RFTCO2 || remoteType == RemoteTypes::RFTRV) // only handle remotes with mediom command support
+        sendRemoteCmd(0, precmd, virtualRemotes);
+    }
+
+    uint8_t command[] = {0x00, 0x60, 0xC0, 0x20, 0x01, 0x02, 0xFF, 0x00, 0xFF};
+
+    uint8_t b = static_cast<uint8_t>(value);
+
+    command[6] = b;
+    // command[8] = 0 - (67 + b);
+    command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+    if (checkI2Cbus())
+    {
+      i2c_sendBytes(command, sizeof(command));
+      *updateIthoMQTT = true;
+    }
+    else
+    {
+      *ithoCurrentVal = valTemp;
+      ithoQueue.add2queue(valTemp, 0, systemConfig.nonQ_cmd_clearsQ);
+    }
+}
+
+bool checkI2Cbus() {
+
+  unsigned int timeout = 1000;
+  unsigned int startread = millis();
+  unsigned int cntr = 0;
+
+  while (digitalRead(SCLPIN) == LOW && cntr < 10)
   {
+    if (millis() - startread > timeout)
+    {
+      cntr++;
+      startread = millis();
+    }
     yield();
     delay(1);
   }
-
-  i2c_sendBytes(command, sizeof(command));
+  if (cntr > 9) {
+    logInput("Warning: I2C timeout");
+    return false;
+  }
+  else {
+    return true;
+  }
 }
 
 int quick_pow10(int n)

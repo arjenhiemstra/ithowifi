@@ -11,7 +11,7 @@ void TaskInit(void *pvParameters)
   mutexLogTask = xSemaphoreCreateMutex();
   mutexJSONLog = xSemaphoreCreateMutex();
   mutexWSsend = xSemaphoreCreateMutex();
-  mutexI2Ctask = xSemaphoreCreateMutex();
+  
 
   hardwareInit();
 

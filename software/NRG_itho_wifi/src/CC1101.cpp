@@ -163,7 +163,7 @@ uint8_t CC1101::readRegister(uint8_t address, uint8_t registerType)
   }
 }
 
-void CC1101::writeBurstRegister(uint8_t address, uint8_t *data, uint8_t length)
+void CC1101::writeBurstRegister(const uint8_t address, const uint8_t *data, const uint8_t length)
 {
   uint8_t i;
 
@@ -177,7 +177,7 @@ void CC1101::writeBurstRegister(uint8_t address, uint8_t *data, uint8_t length)
   deselect();
 }
 
-void CC1101::readBurstRegister(uint8_t *buffer, uint8_t address, uint8_t length)
+void CC1101::readBurstRegister(uint8_t *buffer, const uint8_t address, const uint8_t length)
 {
   uint8_t i;
 

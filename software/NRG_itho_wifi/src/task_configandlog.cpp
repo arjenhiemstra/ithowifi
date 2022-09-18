@@ -49,7 +49,7 @@ void TaskConfigAndLog(void *pvParameters)
     esp_task_wdt_reset();
 
     TaskConfigAndLogTimeout.once_ms(3000, []()
-                                    { logInput("Error: Task ConfigAndLog timed out!"); });
+                                    { logInput("Warning: Task ConfigAndLog timed out!"); });
 
     execLogAndConfigTasks();
 

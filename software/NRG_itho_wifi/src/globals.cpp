@@ -6,5 +6,4 @@ WiFiClient client;
 
 IthoCC1101 rf;
 IthoPacket packet;
-IthoRemote remotes;
-IthoRemote virtualRemotes;
+

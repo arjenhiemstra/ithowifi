@@ -13,6 +13,10 @@
           <label for="passwd">Password</label>
           <input id="passwd" type="Password">
         </div>
+        <div class="pure-control-group">
+          <label>Show Password</label>
+          <input type="checkbox" onclick="togglePwd()">
+        </div>
         <div class="pure-controls">
           <button id="wifisubmit" class="pure-button pure-button-primary">Save</button>
         </div>
@@ -67,6 +71,11 @@
   </div>
 </div>
 <script>
+  function togglePwd() {
+    var x = document.getElementById('passwd'); 
+    if (x.type === 'password') { x.type = 'text'; } 
+    else { x.type = 'password'; } 
+  }
   $(document).ready(function () {
     getSettings('wifisetup');
   });

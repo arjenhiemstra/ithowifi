@@ -24,9 +24,11 @@ bool IthoInit = false;
 StaticTask_t xTaskSysControlBuffer;
 StackType_t xTaskSysControlStack[STACK_SIZE];
 TaskHandle_t xTaskSysControlHandle = NULL;
+SemaphoreHandle_t mutexI2Ctask;
 unsigned long lastI2CinitRequest = 0;
 bool ithoInitResultLogEntry = true;
 Ticker scan;
+Ticker getSettingsHack;
 unsigned long lastWIFIReconnectAttempt = 0;
 unsigned long APmodeTimeout = 0;
 unsigned long wifiLedUpdate = 0;
@@ -58,6 +60,9 @@ void TaskSysControl(void *pvParameters)
 {
   configASSERT((uint32_t)pvParameters == 1UL);
   Ticker TaskTimeout;
+  Ticker queueUpdater;
+
+  mutexI2Ctask = xSemaphoreCreateMutex();
 
   wifiInit();
 
@@ -69,13 +74,15 @@ void TaskSysControl(void *pvParameters)
 
   esp_task_wdt_add(NULL);
 
+  queueUpdater.attach_ms(QUEUE_UPDATE_MS, update_queue);
+
   for (;;)
   {
     yield();
     esp_task_wdt_reset();
 
     TaskTimeout.once_ms(35000, []()
-                        { logInput("Error: Task SysControl timed out!"); });
+                        { logInput("Warning: Task SysControl timed out!"); });
 
     execSystemControlTasks();
 
@@ -231,6 +238,7 @@ void execSystemControlTasks()
       }
     }
   }
+
   // Itho queue
   if (clearQueue)
   {
@@ -245,7 +253,7 @@ void execSystemControlTasks()
     sprintf(buf, "speed:%d", speed);
 
     //#if defined (CVE)
-    if (writeIthoVal(speed))
+    if (writeIthoVal(speed, &ithoCurrentVal, &updateIthoMQTT))
     {
       if (lastCmd.source == nullptr)
         logLastCommand(buf, "ithoQueue");
@@ -303,6 +311,7 @@ void execSystemControlTasks()
       }
     }
   }
+
   if (!(currentItho_fwversion() > 0) && millis() - lastVersionCheck > 60000)
   {
     lastVersionCheck = millis();
@@ -343,18 +352,23 @@ void execSystemControlTasks()
   }
   if (get2410)
   {
-    get2410 = false;
-    resultPtr2410 = sendQuery2410(i2c_result_updateweb);
+    if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
+    {
+      get2410 = false;
+      resultPtr2410 = sendQuery2410(i2c_result_updateweb);
 
-    xSemaphoreGive(mutexI2Ctask);
+      xSemaphoreGive(mutexI2Ctask);
+    }
   }
   if (set2410)
   {
-    setSetting2410(i2c_result_updateweb);
-    set2410 = false;
+    if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
+    {
+      setSetting2410(i2c_result_updateweb);
+      set2410 = false;
 
-    xSemaphoreGive(mutexI2Ctask);
-
+      xSemaphoreGive(mutexI2Ctask);
+    }
     getSettingsHack.once_ms(1, []()
                             { getSetting(index2410, true, false, false); });
   }
@@ -367,23 +381,25 @@ void execSystemControlTasks()
 
       if (SHT3x_original || SHT3x_alternative)
       {
-        if (SHT3x_original)
+        if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
         {
-          if (sht_org.readSample())
+          if (SHT3x_original)
           {
-            Wire.endTransmission(true);
-            ithoHum = sht_org.getHumidity();
-            ithoTemp = sht_org.getTemperature();
+            if (sht_org.readSample())
+            {
+              ithoHum = sht_org.getHumidity();
+              ithoTemp = sht_org.getTemperature();
+            }
           }
-        }
-        if (SHT3x_alternative)
-        {
-          if (sht_alt.readSample())
+          if (SHT3x_alternative)
           {
-            Wire.endTransmission(true);
-            ithoHum = sht_alt.getHumidity();
-            ithoTemp = sht_alt.getTemperature();
+            if (sht_alt.readSample())
+            {
+              ithoHum = sht_alt.getHumidity();
+              ithoTemp = sht_alt.getTemperature();
+            }
           }
+          xSemaphoreGive(mutexI2Ctask);
         }
       }
     }
@@ -458,17 +474,21 @@ bool connectWiFiSTA()
   wifiModeAP = false;
   D_LOG("Connecting to wireless network...\n");
 
-  WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
+  WiFi.persistent(false);
+  if (!WiFi.setAutoReconnect(false))
+    D_LOG("Unable to set auto reconnect\n");
+  if (!WiFi.mode(WIFI_MODE_NULL))
+    D_LOG("Unable to set WiFi mode\n");
+  if (!WiFi.setHostname(hostName()))
+    D_LOG("Unable to set host name ('%s')\n", hostName());
+  if (!WiFi.mode(WIFI_STA))
+    D_LOG("Unable to set WiFi mode\n");
+  if (!WiFi.disconnect(true))
+    D_LOG("WiFi disconnect failed\n");
+  // ESP32 doesn't reliably set the status to WL_DISCONNECTED despite disconnect() call.
+  WiFiSTAClass::_setStatus(WL_DISCONNECTED);
+
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  WiFi.disconnect(true);
-
-  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
-  WiFi.setHostname(hostName());
-
-  WiFi.setAutoReconnect(false);
-  delay(200);
-  WiFi.mode(WIFI_STA);
-
   esp_wifi_set_ps(WIFI_PS_NONE);
 
   if (strcmp(wifiConfig.dhcp, "off") == 0)
@@ -542,7 +562,9 @@ bool connectWiFiSTA()
 
     delay(100);
   }
+
   digitalWrite(WIFILED, HIGH);
+
   return false;
 }
 
@@ -551,14 +573,21 @@ void initSensor()
 
   if (systemConfig.syssht30 == 1)
   {
+    if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
+    {
+    }
+    else
+    {
+      logInput("Error: SHT i2c semaphore not available");
+      return;
+    }
+
     if (sht_org.init() && sht_org.readSample())
     {
-      Wire.endTransmission(true);
       SHT3x_original = true;
     }
     else if (sht_alt.init() && sht_alt.readSample())
     {
-      Wire.endTransmission(true);
       SHT3x_alternative = true;
     }
     if (SHT3x_original)
@@ -570,18 +599,19 @@ void initSensor()
       logInput("Setup: Alternative SHT30 sensor found");
     }
     if (SHT3x_original || SHT3x_alternative)
+    {
+      xSemaphoreGive(mutexI2Ctask);
       return;
+    }
 
     delay(200);
 
     if (sht_org.init() && sht_org.readSample())
     {
-      Wire.endTransmission(true);
       SHT3x_original = true;
     }
     else if (sht_alt.init() && sht_alt.readSample())
     {
-      Wire.endTransmission(true);
       SHT3x_alternative = true;
     }
     if (SHT3x_original)
@@ -597,8 +627,10 @@ void initSensor()
       systemConfig.syssht30 = 0;
       logInput("Setup: SHT30 sensor not present");
     }
+    xSemaphoreGive(mutexI2Ctask);
   }
 }
+
 void init_vRemote()
 {
   // setup virtual remote
@@ -620,4 +652,152 @@ bool ithoInitCheck()
   sendI2CPWMinit();
 #endif
   return false;
+}
+
+void update_queue()
+{
+  ithoQueue.update_queue();
+}
+
+// Update itho Value
+bool writeIthoVal(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT)
+{
+  if (value > 254)
+    return false;
+
+  if (*ithoCurrentVal != value)
+  {
+
+    if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
+    {
+    }
+    else
+    {
+      return false;
+    }
+
+    IthoPWMcommand(value, ithoCurrentVal, updateIthoMQTT);
+
+    xSemaphoreGive(mutexI2Ctask);
+
+    return true;
+  }
+  return false;
+}
+
+bool ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
+{
+  D_LOG("EXEC VREMOTE BUTTON COMMAND:%s remote:%d\n", command, remoteIndex);
+
+  if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
+  {
+  }
+  else
+  {
+    return false;
+  }
+
+  bool updateweb = false;
+  if (origin == WEB)
+    updateweb = true;
+
+  if (strcmp(command, "away") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoAway, virtualRemotes);
+  }
+  else if (strcmp(command, "low") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoLow, virtualRemotes);
+  }
+  else if (strcmp(command, "medium") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoMedium, virtualRemotes);
+  }
+  else if (strcmp(command, "high") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoHigh, virtualRemotes);
+  }
+  else if (strcmp(command, "timer1") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoTimer1, virtualRemotes);
+  }
+  else if (strcmp(command, "timer2") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoTimer2, virtualRemotes);
+  }
+  else if (strcmp(command, "timer3") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoTimer3, virtualRemotes);
+  }
+  else if (strcmp(command, "cook30") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoCook30, virtualRemotes);
+  }
+  else if (strcmp(command, "cook60") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoCook60, virtualRemotes);
+  }
+  else if (strcmp(command, "auto") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoAuto, virtualRemotes);
+  }
+  else if (strcmp(command, "autonight") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoAutoNight, virtualRemotes);
+  }
+  else if (strcmp(command, "join") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoJoin, virtualRemotes);
+  }
+  else if (strcmp(command, "leave") == 0)
+  {
+    sendRemoteCmd(remoteIndex, IthoLeave, virtualRemotes);
+  }
+  else if (strcmp(command, "type") == 0)
+  {
+    sendQueryDevicetype(updateweb);
+  }
+  else if (strcmp(command, "status") == 0)
+  {
+    sendQueryStatus(updateweb);
+  }
+  else if (strcmp(command, "statusformat") == 0)
+  {
+    sendQueryStatusFormat(updateweb);
+  }
+  else if (strcmp(command, "31DA") == 0)
+  {
+    sendQuery31DA(updateweb);
+  }
+  else if (strcmp(command, "31D9") == 0)
+  {
+    sendQuery31D9(updateweb);
+  }
+  else if (strcmp(command, "10D0") == 0)
+  {
+    filterReset(0, virtualRemotes);
+  }
+  else
+  {
+
+    xSemaphoreGive(mutexI2Ctask);
+
+    return false;
+  }
+
+  const char *source;
+  auto it = cmdOriginMap.find(origin);
+  if (it != cmdOriginMap.end())
+    source = it->second;
+  else
+    source = cmdOriginMap.rbegin()->second;
+
+  char originchar[30]{};
+  sprintf(originchar, "%s-vremote-%d", source, remoteIndex);
+
+  logLastCommand(command, originchar);
+
+  xSemaphoreGive(mutexI2Ctask);
+
+  return true;
 }

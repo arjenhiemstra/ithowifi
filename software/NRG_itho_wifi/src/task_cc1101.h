@@ -20,6 +20,7 @@
 #include "IthoSystem.h"
 
 #include "IthoPacket.h"
+#include "task_configandlog.h"
 
 // globals
 extern Ticker TaskCC1101Timeout;

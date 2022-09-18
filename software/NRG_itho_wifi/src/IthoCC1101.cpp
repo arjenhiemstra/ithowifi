@@ -1,19 +1,6 @@
 /*
    Author: Klusjesman, supersjimmie, modified and reworked by arjenhiemstra
 */
-#define DEBUG 0
-
-// printf("Leading text "BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(byte));
-#define BYTE_TO_BINARY_PATTERN "%c,%c,%c,%c,%c,%c,%c,%c,"
-#define BYTE_TO_BINARY(byte)     \
-  (byte & 0x80 ? '1' : '0'),     \
-      (byte & 0x40 ? '1' : '0'), \
-      (byte & 0x20 ? '1' : '0'), \
-      (byte & 0x10 ? '1' : '0'), \
-      (byte & 0x08 ? '1' : '0'), \
-      (byte & 0x04 ? '1' : '0'), \
-      (byte & 0x02 ? '1' : '0'), \
-      (byte & 0x01 ? '1' : '0')
 
 #include "IthoCC1101.h"
 #include "IthoPacket.h"
@@ -129,7 +116,7 @@ void IthoCC1101::initSendMessage(uint8_t len)
   writeRegister(CC1101_PKTLEN, 0xFF);      // 11111111  //Not used, no hardware packet handling
 
   // 0x6F,0x26,0x2E,0x8C,0x87,0xCD,0xC7,0xC0
-  writeBurstRegister(CC1101_PATABLE | CC1101_WRITE_BURST, (uint8_t *)ithoPaTableSend, 8);
+  writeBurstRegister(CC1101_PATABLE | CC1101_WRITE_BURST, ithoPaTableSend, 8);
 
   // difference, message1 sends a STX here
   writeCommand(CC1101_SIDLE);
@@ -196,7 +183,7 @@ void IthoCC1101::initReceive()
   writeRegister(CC1101_FSCAL2, 0x00);
 
   // 0x6F,0x26,0x2E,0x7F,0x8A,0x84,0xCA,0xC4
-  writeBurstRegister(CC1101_PATABLE | CC1101_WRITE_BURST, (uint8_t *)ithoPaTableReceive, 8);
+  writeBurstRegister(CC1101_PATABLE | CC1101_WRITE_BURST, ithoPaTableReceive, 8);
 
   writeCommand(CC1101_SCAL);
 
@@ -317,6 +304,7 @@ bool IthoCC1101::parseMessageCommand()
 
   uint8_t dataPos = 0;
   inIthoPacket.error = 0;
+  inIthoPacket.remType = RemoteTypes::UNSETTYPE;
   inIthoPacket.command = IthoUnknown;
 
   // first byte is the header of the message, this determines the structure of the rest of the message
@@ -544,28 +532,29 @@ void IthoCC1101::createMessageCommand(IthoPacket *itho, CC1101Packet *packet)
   // set start message structure
   createMessageStart(itho, packet);
 
+  int messagePos = 0;
   // set deviceType? (or messageType?), not sure what this is
-  itho->dataDecoded[0] = itho->deviceType;
+  itho->dataDecoded[messagePos] = itho->deviceType;
 
   // set deviceID
-  itho->dataDecoded[1] = itho->deviceId[0];
-  itho->dataDecoded[2] = itho->deviceId[1];
-  itho->dataDecoded[3] = itho->deviceId[2];
+  itho->dataDecoded[++messagePos] = itho->deviceId[0];
+  itho->dataDecoded[++messagePos] = itho->deviceId[1];
+  itho->dataDecoded[++messagePos] = itho->deviceId[2];
 
   // set counter1
-  itho->dataDecoded[4] = itho->counter;
+  itho->dataDecoded[++messagePos] = itho->counter;
 
   // set command bytes on dataDecoded[5 - 10]
-  uint8_t *commandBytes = getMessageCommandBytes(itho->command);
+  const uint8_t *commandBytes = getMessageCommandBytes(itho->command);
   for (uint8_t i = 0; i < 6; i++)
   {
-    itho->dataDecoded[i + 5] = commandBytes[i];
+    itho->dataDecoded[++messagePos] = commandBytes[i];
   }
 
   // set counter2
-  itho->dataDecoded[11] = getCounter2(itho, 11);
+  itho->dataDecoded[++messagePos] = getCounter2(itho, 11);
 
-  itho->length = 12;
+  itho->length = messagePos + 1;
 
   packet->length = messageEncode(itho, packet);
   packet->length += 1;
@@ -600,7 +589,7 @@ void IthoCC1101::createMessageJoin(IthoPacket *itho, CC1101Packet *packet)
   itho->dataDecoded[4] = itho->counter;
 
   // set command bytes on dataDecoded[5 - ?]
-  uint8_t *commandBytes = getMessageCommandBytes(itho->command);
+  const uint8_t *commandBytes = getMessageCommandBytes(itho->command);
   for (uint8_t i = 0; i < 6; i++)
   {
     itho->dataDecoded[i + 5] = commandBytes[i];
@@ -658,7 +647,7 @@ void IthoCC1101::createMessageLeave(IthoPacket *itho, CC1101Packet *packet)
   itho->dataDecoded[4] = itho->counter;
 
   // set command bytes on dataDecoded[5 - 10]
-  uint8_t *commandBytes = getMessageCommandBytes(itho->command);
+  const uint8_t *commandBytes = getMessageCommandBytes(itho->command);
   for (uint8_t i = 0; i < 6; i++)
   {
     itho->dataDecoded[i + 5] = commandBytes[i];
@@ -689,32 +678,32 @@ void IthoCC1101::createMessageLeave(IthoPacket *itho, CC1101Packet *packet)
   packet->length += 7;
 }
 
-uint8_t *IthoCC1101::getMessageCommandBytes(IthoCommand command)
+const uint8_t *IthoCC1101::getMessageCommandBytes(IthoCommand command)
 {
   switch (command)
   {
   case IthoAway:
-    return (uint8_t *)&ithoMessageAwayCommandBytes[0];
+    return &ithoMessageAwayCommandBytes[0];
   case IthoHigh:
-    return (uint8_t *)&ithoMessageHighCommandBytes[0];
+    return &ithoMessageHighCommandBytes[0];
   case IthoFull:
-    return (uint8_t *)&ithoMessageFullCommandBytes[0];
+    return &ithoMessageFullCommandBytes[0];
   case IthoMedium:
-    return (uint8_t *)&ithoMessageMediumCommandBytes[0];
+    return &ithoMessageMediumCommandBytes[0];
   case IthoLow:
-    return (uint8_t *)&ithoMessageLowCommandBytes[0];
+    return &ithoMessageLowCommandBytes[0];
   case IthoTimer1:
-    return (uint8_t *)&ithoMessageTimer1CommandBytes[0];
+    return &ithoMessageTimer1CommandBytes[0];
   case IthoTimer2:
-    return (uint8_t *)&ithoMessageTimer2CommandBytes[0];
+    return &ithoMessageTimer2CommandBytes[0];
   case IthoTimer3:
-    return (uint8_t *)&ithoMessageTimer3CommandBytes[0];
+    return &ithoMessageTimer3CommandBytes[0];
   case IthoJoin:
-    return (uint8_t *)&ithoMessageCVERFTJoinCommandBytes[0];
+    return &ithoMessageCVERFTJoinCommandBytes[0];
   case IthoLeave:
-    return (uint8_t *)&ithoMessageLeaveCommandBytes[0];
+    return &ithoMessageLeaveCommandBytes[0];
   default:
-    return (uint8_t *)&ithoMessageLowCommandBytes[0];
+    return &ithoMessageLowCommandBytes[0];
   }
 }
 
@@ -746,7 +735,7 @@ uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet)
   uint8_t out_shift = 7;          // bit shift inData bit in position of outbuf byte
 
   // we need to zero the out buffer first cause we are using bitshifts
-  for (int i = out_bytecounter; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
+  for (unsigned int i = out_bytecounter; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
   {
     packet->data[i] = 0;
   }
@@ -835,11 +824,11 @@ void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *itho)
     itho->length++;
   }
 
-  for (int i = 0; i < sizeof(itho->dataDecoded) / sizeof(itho->dataDecoded[0]); i++)
+  for (unsigned int i = 0; i < sizeof(itho->dataDecoded) / sizeof(itho->dataDecoded[0]); i++)
   {
     itho->dataDecoded[i] = 0;
   }
-  for (int i = 0; i < sizeof(itho->dataDecodedChk) / sizeof(itho->dataDecodedChk[0]); i++)
+  for (unsigned int i = 0; i < sizeof(itho->dataDecodedChk) / sizeof(itho->dataDecodedChk[0]); i++)
   {
     itho->dataDecodedChk[i] = 0;
   }
@@ -968,6 +957,9 @@ String IthoCC1101::LastMessageDecoded()
   if (inIthoPacket.length > 11)
   {
 
+    char bufhead[10];
+    snprintf(bufhead, sizeof(bufhead), "Header: %02X", inIthoPacket.header);
+
     str += String(MsgType[inIthoPacket.type]);
 
     if (inIthoPacket.param0 == 0)
@@ -1050,12 +1042,12 @@ String IthoCC1101::LastMessageDecoded()
   return str;
 }
 
-bool IthoCC1101::addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2)
+bool IthoCC1101::addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2, RemoteTypes remType)
 {
   uint32_t tempID = byte0 << 16 | byte1 << 8 | byte2;
-  return addRFDevice(tempID);
+  return addRFDevice(tempID, remType);
 }
-bool IthoCC1101::addRFDevice(uint32_t ID)
+bool IthoCC1101::addRFDevice(uint32_t ID, RemoteTypes remType)
 {
   if (!bindAllowed)
     return false;
@@ -1067,6 +1059,7 @@ bool IthoCC1101::addRFDevice(uint32_t ID)
     if (item.deviceId == 0)
     { // pick the first available slot
       item.deviceId = ID;
+      item.remType = remType;
       ithoRF.count++;
       return true;
     }
@@ -1093,6 +1086,7 @@ bool IthoCC1101::removeRFDevice(uint32_t ID)
     {
       item.deviceId = 0;
       //      strcpy(item.name, "");
+      item.remType = RemoteTypes::UNSETTYPE;
       item.lastCommand = IthoUnknown;
       item.co2 = 0xEFFF;
       item.temp = 0xEFFF;
@@ -1143,29 +1137,60 @@ void IthoCC1101::handleBind()
       removeRFDevice(tempID);
     }
   }
-  else if (checkIthoCommand(&inIthoPacket, ithoMessageCVERFTJoinCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTJoinCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFJoinCommandBytes))
+  else if (checkIthoCommand(&inIthoPacket, ithoMessageCVERFTJoinCommandBytes))
   {
     inIthoPacket.command = IthoJoin;
+    inIthoPacket.remType = RemoteTypes::RFTCVE;
     if (bindAllowed)
     {
-      addRFDevice(tempID);
+      addRFDevice(tempID, RemoteTypes::RFTCVE);
+    }
+  }
+  else if (checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTJoinCommandBytes))
+  {
+    inIthoPacket.command = IthoJoin;
+    inIthoPacket.remType = RemoteTypes::RFTAUTO;
+    if (bindAllowed)
+    {
+      addRFDevice(tempID, RemoteTypes::RFTAUTO);
+    }
+  }
+  else if (checkIthoCommand(&inIthoPacket, ithoMessageDFJoinCommandBytes))
+  {
+    inIthoPacket.command = IthoJoin;
+    inIthoPacket.remType = RemoteTypes::DEMANDFLOW;
+    if (bindAllowed)
+    {
+      addRFDevice(tempID, RemoteTypes::DEMANDFLOW);
     }
   }
   else if (checkIthoCommand(&inIthoPacket, ithoMessageCO2JoinCommandBytes))
   {
     inIthoPacket.command = IthoJoin;
+    inIthoPacket.remType = RemoteTypes::RFTCO2;
     if (bindAllowed)
     {
-      addRFDevice(tempID);
+      addRFDevice(tempID, RemoteTypes::RFTCO2);
     }
     // TODO: handle join handshake
   }
   else if (checkIthoCommand(&inIthoPacket, ithoMessageRVJoinCommandBytes))
   {
     inIthoPacket.command = IthoJoin;
+    inIthoPacket.remType = RemoteTypes::RFTRV;
     if (bindAllowed)
     {
-      addRFDevice(tempID);
+      addRFDevice(tempID, RemoteTypes::RFTRV);
+    }
+    // TODO: handle join handshake
+  }
+  else if (checkIthoCommand(&inIthoPacket, orconMessageJoinCommandBytes))
+  {
+    inIthoPacket.command = IthoJoin;
+    inIthoPacket.remType = RemoteTypes::ORCON15LF01;
+    if (bindAllowed)
+    {
+      addRFDevice(tempID, RemoteTypes::ORCON15LF01);
     }
     // TODO: handle join handshake
   }
@@ -1181,6 +1206,7 @@ void IthoCC1101::handleBind()
 
 void IthoCC1101::handleLevel()
 {
+  RemoteTypes remtype = RemoteTypes::UNSETTYPE;
   uint32_t tempID = 0;
   if (inIthoPacket.deviceId0 != 0)
     tempID = inIthoPacket.deviceId0;
@@ -1194,32 +1220,64 @@ void IthoCC1101::handleLevel()
     if (!checkRFDevice(tempID))
       return;
   }
-
-  if (checkIthoCommand(&inIthoPacket, ithoMessageLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFLowCommandBytes))
+  for (auto &item : ithoRF.device)
   {
-    inIthoPacket.command = IthoLow;
-  }
-  else if (checkIthoCommand(&inIthoPacket, ithoMessageMediumCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2MediumCommandBytes))
-  {
-    inIthoPacket.command = IthoMedium;
-  }
-  else if (checkIthoCommand(&inIthoPacket, ithoMessageHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFHighCommandBytes))
-  {
-    inIthoPacket.command = IthoHigh;
-  }
-  else if (checkIthoCommand(&inIthoPacket, ithoMessageAwayCommandBytes))
-  {
-    inIthoPacket.command = IthoAway;
-  }
-  else if (checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2AutoCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTAutoCommandBytes))
-  {
-    inIthoPacket.command = IthoAuto;
-  }
-  else if (checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2AutoNightCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTAutoNightCommandBytes))
-  {
-    inIthoPacket.command = IthoAutoNight;
+    if (item.deviceId == tempID)
+    {
+      remtype = item.remType;
+    }
   }
 
+  if (remtype == RemoteTypes::ORCON15LF01)
+  {
+    if (checkIthoCommand(&inIthoPacket, orconMessageAwayCommandBytes))
+    {
+      inIthoPacket.command = IthoAway;
+    }
+    else if (checkIthoCommand(&inIthoPacket, orconMessageAutoCommandBytes))
+    {
+      inIthoPacket.command = IthoAuto;
+    }
+    else if (checkIthoCommand(&inIthoPacket, orconMessageButton1CommandBytes))
+    {
+      inIthoPacket.command = IthoLow;
+    }
+    else if (checkIthoCommand(&inIthoPacket, orconMessageButton2CommandBytes))
+    {
+      inIthoPacket.command = IthoMedium;
+    }
+    else if (checkIthoCommand(&inIthoPacket, orconMessageButton3CommandBytes))
+    {
+      inIthoPacket.command = IthoHigh;
+    }
+  }
+  else {
+    if (checkIthoCommand(&inIthoPacket, ithoMessageLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFLowCommandBytes))
+    {
+      inIthoPacket.command = IthoLow;
+    }
+    else if (checkIthoCommand(&inIthoPacket, ithoMessageMediumCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2MediumCommandBytes))
+    {
+      inIthoPacket.command = IthoMedium;
+    }
+    else if (checkIthoCommand(&inIthoPacket, ithoMessageHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTHighCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFHighCommandBytes))
+    {
+      inIthoPacket.command = IthoHigh;
+    }
+    else if (checkIthoCommand(&inIthoPacket, ithoMessageAwayCommandBytes))
+    {
+      inIthoPacket.command = IthoAway;
+    }
+    else if (checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2AutoCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTAutoCommandBytes))
+    {
+      inIthoPacket.command = IthoAuto;
+    }
+    else if (checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2AutoNightCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTAutoNightCommandBytes))
+    {
+      inIthoPacket.command = IthoAutoNight;
+    }
+  }
+  
   for (auto &item : ithoRF.device)
   {
     if (item.deviceId == tempID)
@@ -1231,6 +1289,7 @@ void IthoCC1101::handleLevel()
 
 void IthoCC1101::handleTimer()
 {
+  RemoteTypes remtype = RemoteTypes::UNSETTYPE;
   uint32_t tempID = 0;
   if (inIthoPacket.deviceId0 != 0)
     tempID = inIthoPacket.deviceId0;
@@ -1244,36 +1303,60 @@ void IthoCC1101::handleTimer()
     if (!checkRFDevice(tempID))
       return;
   }
-
-  if (checkIthoCommand(&inIthoPacket, ithoMessageTimer1CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTTimer1CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2Timer1CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFTimer1CommandBytes))
-  {
-    inIthoPacket.command = IthoTimer1;
-  }
-  else if (checkIthoCommand(&inIthoPacket, ithoMessageTimer2CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTTimer2CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2Timer2CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFTimer2CommandBytes))
-  {
-    inIthoPacket.command = IthoTimer2;
-  }
-  else if (checkIthoCommand(&inIthoPacket, ithoMessageTimer3CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTTimer3CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2Timer3CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFTimer3CommandBytes))
-  {
-    inIthoPacket.command = IthoTimer3;
-  }
-  else if (checkIthoCommand(&inIthoPacket, ithoMessageDFCook30CommandBytes))
-  {
-    inIthoPacket.command = IthoCook30;
-  }
-  else if (checkIthoCommand(&inIthoPacket, ithoMessageDFCook60CommandBytes))
-  {
-    inIthoPacket.command = IthoCook60;
-  }
-
   for (auto &item : ithoRF.device)
   {
     if (item.deviceId == tempID)
     {
-      item.lastCommand = inIthoPacket.command;
+      remtype = item.remType;
     }
   }
-}
+  if (remtype == RemoteTypes::ORCON15LF01)
+  {
+    if (checkIthoCommand(&inIthoPacket, orconMessageTimer1CommandBytes))
+    {
+      inIthoPacket.command = IthoTimer1;
+    }
+    else if (checkIthoCommand(&inIthoPacket, orconMessageTimer2CommandBytes))
+    {
+      inIthoPacket.command = IthoTimer2;
+    }
+    else if (checkIthoCommand(&inIthoPacket, orconMessageTimer3CommandBytes))
+    {
+      inIthoPacket.command = IthoTimer3;
+    }
+  }
+  else
+  {
+    if (checkIthoCommand(&inIthoPacket, ithoMessageTimer1CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTTimer1CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2Timer1CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFTimer1CommandBytes))
+    {
+      inIthoPacket.command = IthoTimer1;
+    }
+    else if (checkIthoCommand(&inIthoPacket, ithoMessageTimer2CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTTimer2CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2Timer2CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFTimer2CommandBytes))
+    {
+      inIthoPacket.command = IthoTimer2;
+    }
+    else if (checkIthoCommand(&inIthoPacket, ithoMessageTimer3CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTTimer3CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageRV_CO2Timer3CommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFTimer3CommandBytes))
+    {
+      inIthoPacket.command = IthoTimer3;
+    }
+    else if (checkIthoCommand(&inIthoPacket, ithoMessageDFCook30CommandBytes))
+    {
+      inIthoPacket.command = IthoCook30;
+    }
+    else if (checkIthoCommand(&inIthoPacket, ithoMessageDFCook60CommandBytes))
+    {
+      inIthoPacket.command = IthoCook60;
+    }
+  }
+
+    for (auto &item : ithoRF.device)
+    {
+      if (item.deviceId == tempID)
+      {
+        item.lastCommand = inIthoPacket.command;
+      }
+    }
+  }
 void IthoCC1101::handleStatus()
 {
   uint32_t tempID = 0;

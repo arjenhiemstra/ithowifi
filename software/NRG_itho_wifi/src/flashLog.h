@@ -10,7 +10,10 @@
 #include <ArduinoLog.h> // https://github.com/thijse/Arduino-Log [1.0.3]
 #include <FSFilePrint.h>
 #include <FS.h>
-#include <LITTLEFS.h>
+
+//#include <LITTLEFS.h>
+#include <LittleFS.h>
+
 #include "hardware.h"
 #include "Dbglog.h"
 
