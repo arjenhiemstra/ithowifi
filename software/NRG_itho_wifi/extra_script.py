@@ -9,6 +9,9 @@ from sys import platform
 
 fwversion = 'undefined'
 hwversion = 'undefined'
+release   = 'undefined'
+hwrev     = 'undefined'
+
 my_flags = env.ParseFlags(env['BUILD_FLAGS'])
 #print(my_flags)
 
@@ -21,6 +24,10 @@ for i in defines:
       hwversion = 'NON_CVE'
    if (i == 'CVE'):
       hwversion = 'CVE'
+   if (i == 'BETA'):
+      release = 'beta'
+   if (i == 'STABLE'):
+      release = 'stable'      
 
 print ('Hardware version: ' + hwversion)
 print ("\n")
@@ -57,6 +64,20 @@ CONTROLS_JS_SRC_DIR = WEBROOT_SRC_DIR + 'controls_js_sources' + DIR_SEPERATOR
 WEBROOT_OUT_DIR = PROJECT_SRC_DIR + DIR_SEPERATOR + 'webroot' + DIR_SEPERATOR
 PROJECT_BIN_DIR = PROJECT_BUILD_DIR + DIR_SEPERATOR + PIOENV + DIR_SEPERATOR
 PROJECT_COMPILED_DIR = PROJECT_DIR + DIR_SEPERATOR + '..' + DIR_SEPERATOR + '..' + DIR_SEPERATOR + 'compiled_firmware_files' + DIR_SEPERATOR
+HW_BIN_DIR = ''
+
+if (PIOENV == 'release_cve' or PIOENV == 'beta_cve') :
+   hwrev = '-hw2'
+   HW_BIN_DIR = 'hardware_rev_2' + DIR_SEPERATOR
+elif (PIOENV == 'release_noncve' or PIOENV == 'beta_noncve') :
+   hwrev = '-noncve'
+   HW_BIN_DIR = 'non-cve_rev_1' + DIR_SEPERATOR
+elif (PIOENV == 'debug') :
+   hwrev = '-debug'
+   HW_BIN_DIR = 'debug' + DIR_SEPERATOR
+else :
+   hwrev = '-dev'
+   HW_BIN_DIR = 'dev' + DIR_SEPERATOR
 
 def export_version():
    outfile = open(PROJECT_SRC_DIR + DIR_SEPERATOR + "version.h","w", encoding='utf-8')
@@ -127,33 +148,48 @@ def build_webUI(*args, **kwargs):
 
 def copy_firmware():
    if os.path.isfile(PROJECT_BIN_DIR + firmware_bin):
-      if (PIOENV == 'release_cve') :
-         hwrev = '-hw2'
-         HW_BIN_DIR = 'hardware_rev_2' + DIR_SEPERATOR
-      elif (PIOENV == 'release_noncve') :
-         hwrev = '-noncve'
-         HW_BIN_DIR = 'non-cve_rev_1' + DIR_SEPERATOR
-      elif (PIOENV == 'debug') :
-         hwrev = '-debug'
-         HW_BIN_DIR = 'debug' + DIR_SEPERATOR
-      else :
-         hwrev = '-dev'
-         HW_BIN_DIR = 'dev' + DIR_SEPERATOR
-      
       print('Coping firmware file to: ' + PROJECT_COMPILED_DIR + HW_BIN_DIR + 'nrgitho' + hwrev + '-v' + fwversion + '.bin\n')      
       shutil.copy(PROJECT_BIN_DIR + firmware_bin, PROJECT_COMPILED_DIR + HW_BIN_DIR + 'nrgitho' + hwrev + '-v' + fwversion + '.bin')
       #check_sha1(name)
    else :
       print('Copy error! firmware file not found')
 
+def update_releaseinfo():
+   if(release != 'undefined' and hwversion != 'undefined'):
+      print('\n### Updating releaseinfo for the '+ release +' release\n')
+
+      latest_fw_key = "latest_fw" if release == 'stable' else "latest_beta_fw"
+      latest_link_key = "link" if release == 'stable' else "link_beta"
+      latest_fw_file = 'nrgitho' + hwrev + '-v' + fwversion + '.bin'
+      
+      releasefile = PROJECT_COMPILED_DIR + "firmware.json"
+      f = open(releasefile)
+      data = json.load(f)
+      f.close()
+
+      if(hwversion == 'CVE'):
+         data['hw_rev']['2'][latest_link_key] = 'https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_2/' + latest_fw_file
+         data['hw_rev']['2'][latest_fw_key] = fwversion
+      elif(hwversion == 'NON_CVE'):
+         data['hw_rev']['NON-CVE 1'][latest_link_key] = 'https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/non-cve_rev_1/' + latest_fw_file
+         data['hw_rev']['NON-CVE 1'][latest_fw_key] = fwversion
+
+      json_object = json.dumps(data, indent = 4)
+
+      with open(PROJECT_COMPILED_DIR + "firmware.json", "w", encoding='utf-8') as outfile:
+         outfile.write(json_object)      
+
 def build_before(*args, **kwargs):
    print('\n### running pre build commands...\n')
    export_version()
    build_webUI(*args, **kwargs)
+   
 
 def build_after(*args, **kwargs):
    print('\n### running post build commands...\n')
    copy_firmware()
+   update_releaseinfo()
+   
 
 env.Execute(build_before)
 
