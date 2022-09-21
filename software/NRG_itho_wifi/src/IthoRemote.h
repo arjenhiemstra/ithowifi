@@ -72,6 +72,7 @@ public:
   void addCapabilities(const uint8_t remoteIndex, const char *name, int32_t value);
   void updateRemoteName(const uint8_t index, const char *remoteName);
   void updateRemoteType(const uint8_t index, const uint16_t type);
+  void updateRemoteID(const uint8_t index, const uint8_t *id);
   void updateRemoteFunction(const uint8_t index, const uint8_t remfunc);
   int remoteIndex(const int32_t id);
   int remoteIndex(const int *id);

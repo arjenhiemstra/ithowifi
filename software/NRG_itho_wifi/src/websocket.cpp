@@ -359,6 +359,11 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         uint8_t index = root["itho_update_remote"].as<unsigned int>();
         remotes.updateRemoteName(index, root["value"] | "");
         remotes.updateRemoteFunction(index, root["remtype"] | 0);
+        uint8_t ID[3] = {0, 0, 0};
+        ID[0] = root["id"][0].as<uint8_t>();
+        ID[1] = root["id"][1].as<uint8_t>();
+        ID[2] = root["id"][2].as<uint8_t>();
+        remotes.updateRemoteID(index, ID);
         saveRemotesflag = true;
       }
     }
@@ -391,6 +396,11 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         uint8_t index = root["itho_update_vremote"].as<unsigned int>();
         virtualRemotes.updateRemoteName(index, root["value"] | "");
         virtualRemotes.updateRemoteType(index, root["remtype"] | 0);
+        uint8_t ID[3] = {0, 0, 0};
+        ID[0] = root["id"][0].as<uint8_t>();
+        ID[1] = root["id"][1].as<uint8_t>();
+        ID[2] = root["id"][2].as<uint8_t>();
+        virtualRemotes.updateRemoteID(index, ID);
         saveVremotesflag = true;
       }
     }

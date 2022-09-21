@@ -349,7 +349,14 @@ $(document).ready(function () {
         else {
           remtype = $('#type_remote-' + i).val();
         }
-        websock.send(`{"${$(this).attr('id')}":${i},"value":"${$('#name_remote-' + i).val()}","remtype":${remtype}}`);
+        var id = $('#id_remote-' + i).val();
+        if (id == 'empty slot') id = "0,0,0";
+        if (isNaN(parseInt(id.split(",")[0], 16)) || isNaN(parseInt(id.split(",")[1], 16)) || isNaN(parseInt(id.split(",")[2], 16))) {
+          alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
+        }
+        else {
+          websock.send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype}}`);
+        }
       }
     }
     else if ($(this).attr('id') == 'itho_copyid_vremote') {
@@ -617,6 +624,12 @@ function radio(origin, state) {
       $(`#type_${origin}-${index}`).prop('disabled', true);
       if (index == state) {
         $(`#type_${origin}-${index}`).prop('disabled', false);
+      }
+    });
+    $(`[id^=id_${origin}-]`).each(function (index) {
+      $(`#id_${origin}-${index}`).prop('readonly', true);
+      if (index == state) {
+        $(`#id_${origin}-${index}`).prop('readonly', false);
       }
     });
     if (origin == "ithoset") {
@@ -923,8 +936,12 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
           cellValue = `${jsonVar[i][columns[colIndex]][0].toString(16).toUpperCase()},${jsonVar[i][columns[colIndex]][1].toString(16).toUpperCase()},${jsonVar[i][columns[colIndex]][2].toString(16).toUpperCase()}`;
           if (cellValue == "0,0,0") cellValue = "empty slot";
         }
-        if (colIndex == 2) {
-          row$.append($('<td>').html(`<input type='text' id='name_remote-${i}' value='${cellValue}' readonly=''/>`));
+        if (colIndex == 1 || colIndex == 2) {
+          var idval = `name_remote-${i}`;
+          if (colIndex == 1) {
+            idval = `id_remote-${i}`;
+          }
+          row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly=''/>`));
         }
         else {
           row$.append($('<td>').html(cellValue));

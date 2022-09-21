@@ -350,7 +350,14 @@ $(document).ready(function () {
         else {
           remtype = $('#type_remote-' + i).val();
         }
-        websock.send(`{"${$(this).attr('id')}":${i},"value":"${$('#name_remote-' + i).val()}","remtype":${remtype}}`);
+        var id = $('#id_remote-' + i).val();
+        if (id == 'empty slot') id = "0,0,0";
+        if (isNaN(parseInt(id.split(",")[0], 16)) || isNaN(parseInt(id.split(",")[1], 16)) || isNaN(parseInt(id.split(",")[2], 16))) {
+          alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
+        }
+        else {
+          websock.send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype}}`);
+        }
       }
     }
     else if ($(this).attr('id') == 'itho_copyid_vremote') {
@@ -618,6 +625,12 @@ function radio(origin, state) {
       $(`#type_${origin}-${index}`).prop('disabled', true);
       if (index == state) {
         $(`#type_${origin}-${index}`).prop('disabled', false);
+      }
+    });
+    $(`[id^=id_${origin}-]`).each(function (index) {
+      $(`#id_${origin}-${index}`).prop('readonly', true);
+      if (index == state) {
+        $(`#id_${origin}-${index}`).prop('readonly', false);
       }
     });
     if (origin == "ithoset") {
@@ -924,8 +937,12 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
           cellValue = `${jsonVar[i][columns[colIndex]][0].toString(16).toUpperCase()},${jsonVar[i][columns[colIndex]][1].toString(16).toUpperCase()},${jsonVar[i][columns[colIndex]][2].toString(16).toUpperCase()}`;
           if (cellValue == "0,0,0") cellValue = "empty slot";
         }
-        if (colIndex == 2) {
-          row$.append($('<td>').html(`<input type='text' id='name_remote-${i}' value='${cellValue}' readonly=''/>`));
+        if (colIndex == 1 || colIndex == 2) {
+          var idval = `name_remote-${i}`;
+          if (colIndex == 1) {
+            idval = `id_remote-${i}`;
+          }
+          row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly=''/>`));
         }
         else {
           row$.append($('<td>').html(cellValue));
@@ -1454,12 +1471,30 @@ var html_update = `
 <br>
 <div class="pure-control-group">
   <label for="latest_fw">Latest firmware version:</label>
-  <label id="latest_fw">unknown</label><br>
+  <label id="latest_fw">unknown</label>&nbsp;&nbsp;<a  target="_blank" href="" id="release_notes" class="pure-button pure-button hidden">Release notes</a><br>
   <a href="" id="latest_fw_button" class="pure-button pure-button-primary hidden">Download firmware file</a>
 </div>
+<br>
+<div id="beta_fw" class="pure-control-group hidden">
+  <label for="latest_beta_fw">Latest beta firmware version:</label>
+  <label id="latest_beta_fw">unknown</label>&nbsp;&nbsp;<a  target="_blank" href="" id="release_beta_notes" class="pure-button pure-button hidden">Release notes</a><br>
+  <a href="" id="latest_beta_fw_button" class="pure-button pure-button-primary hidden">Download beta firmware file</a><br><br>
+</div>
+<div class="pure-control-group">
+  <label for="show_beta_fw">Show beta firmware version:</label>
+  <input id="show_beta_fw" type="checkbox" onclick="toggleBetaFW()">
+</div>
+<br>
+<span>Other firmware versions can be found here:</span>
+<span id="other_firmware"></span>
 <form class="pure-form pure-form-stacked" method='POST' action='#' enctype='multipart/form-data' id='updateform'>
   <fieldset>
-    <p>Update the firmware of your device</p>
+    <legend><br>Update the firmware of your device</legend>
+    <ol>
+      <li>Download a firmware file</li>
+      <li>Select the downloaded firmware file with "Choose file" button</li>
+      <li>Click update and wait for the process to finish</li>
+    </ol>
     <input type='file' name='update'><br>
     <button id="updatesubmit" class="pure-button pure-button-primary">Update</button>
   </fieldset>
@@ -1476,6 +1511,12 @@ var html_update = `
 <script>
   $('#firmware_ver').text(fw_version);
   $('#hardware_rev').text(hw_revision);
+  if(hw_revision.startsWith('NON-CVE ')) { 
+    $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/non-cve_rev_1">link</a>');
+  }
+  else if(hw_revision == '2') { 
+    $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/hardware_rev_2">link</a>');
+  }  
   function process(key, value) {
     if (key == hw_revision) {
       let latest_fw = value.latest_fw;
@@ -1485,8 +1526,20 @@ var html_update = `
       }
       else {
         $('#latest_fw').text(latest_fw);
-        $('#latest_fw_button').removeClass('hidden');
+        $('#latest_fw_button, #release_notes').removeClass('hidden');
         $('#latest_fw_button').attr("href", download_link);
+        $('#release_notes').attr("href", "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_fw);
+      }
+      let latest_beta_fw = value.latest_beta_fw;
+      let download_beta_link = value.link_beta;
+      if (latest_beta_fw == fw_version) {
+        $('#latest_beta_fw').text(' firmware is up-to-date');
+      }
+      else {
+        $('#latest_beta_fw').text(latest_beta_fw);
+        $('#latest_beta_fw_button, #release_beta_notes').removeClass('hidden');
+        $('#latest_beta_fw_button').attr("href", download_beta_link);
+        $('#release_beta_notes').attr("href", "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_beta_fw);
       }
     }
   }
@@ -1510,14 +1563,21 @@ var html_update = `
     },
     error: function (xhr, type) {
       if (on_ap) {
-        $('#latest_fw').text(' firmware check not possible on Access Point mode');
+        $('#latest_fw, #latest_beta_fw').text(' firmware check not possible on Access Point mode');
       }
       else {
-        $('#latest_fw').text(' firmware check failed, no internet connection?');
+        $('#latest_fw, #latest_beta_fw').text(' firmware check failed, no internet connection?');
       }
 
     }
   })
+
+  function toggleBetaFW() {
+    var x = document.getElementById('beta_fw');
+    if (x.classList.contains('hidden')) { x.classList.remove('hidden'); }
+    else { x.classList.add('hidden'); }
+  }
+
 
 </script>
 `;

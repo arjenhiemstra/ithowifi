@@ -168,7 +168,13 @@ void IthoRemote::updateRemoteType(const uint8_t index, const uint16_t type)
 {
   remotes[index].remtype = static_cast<RemoteTypes>(type);
 }
-
+void IthoRemote::updateRemoteID(const uint8_t index, const uint8_t *id)
+{
+  for (uint8_t i = 0; i < 3; i++)
+  {
+    remotes[index].ID[i] = id[i];
+  }
+}
 void IthoRemote::updateRemoteFunction(const uint8_t index, const uint8_t remfunc)
 {
   remotes[index].remfunc = static_cast<RemoteFunctions>(remfunc);
