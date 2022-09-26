@@ -1,4 +1,5 @@
-#include <string.h>
+#include "base64.h"
+#include "arch.h"
 
 static int mg_b64idx(int c) {
   if (c < 26) {

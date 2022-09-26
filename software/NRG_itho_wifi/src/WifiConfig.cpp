@@ -117,7 +117,7 @@ void wifiScan()
   }
   else if (n)
   {
-    char logBuff[LOG_BUF_SIZE] = "";
+    char logBuff[LOG_BUF_SIZE]{};
     sprintf(logBuff, "Wifi scan found %d networks", n);
     logMessagejson(logBuff, WEBINTERFACE);
 
@@ -189,7 +189,7 @@ void wifiScan()
         signalStrengthResult = 0;
       }
 
-      char ssid[33]; // ssid can be up to 32chars, => plus null term
+      char ssid[33]{}; // ssid can be up to 32chars, => plus null term
       strcpy(ssid, WiFi.SSID(indices[i]).c_str());
 
       StaticJsonDocument<512> root;
@@ -214,7 +214,7 @@ void wifiScan()
 void logWifiInfo()
 {
 
-  char wifiBuff[128];
+  char wifiBuff[128]{};
 
   logInput("WiFi: connection successful");
 
@@ -227,7 +227,7 @@ void logWifiInfo()
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
 
-  sprintf(wifiBuff, "Status:%d", WiFi.status());
+  sprintf(wifiBuff, "Status:%s", wl_status_to_name(WiFi.status()));
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
 
@@ -235,4 +235,36 @@ void logWifiInfo()
   sprintf(wifiBuff, "IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
   logInput(wifiBuff);
   strcpy(wifiBuff, "");
+}
+
+typedef struct
+{
+  wl_status_t code;
+  const char *msg;
+} wl_status_msg;
+
+static const wl_status_msg wl_status_msg_table[]{
+    {WL_NO_SHIELD, "WL_NO_SHIELD"},
+    {WL_IDLE_STATUS, "WL_IDLE_STATUS"},
+    {WL_NO_SSID_AVAIL, "WL_NO_SSID_AVAIL"},
+    {WL_SCAN_COMPLETED, "WL_SCAN_COMPLETED"},
+    {WL_CONNECTED, "WL_CONNECTED"},
+    {WL_CONNECT_FAILED, "WL_CONNECT_FAILED"},
+    {WL_CONNECTION_LOST, "WL_CONNECTION_LOST"},
+    {WL_DISCONNECTED, "WL_DISCONNECTED"}};
+
+static const char wl_unknown_msg[] = "UNKNOWN ERROR";
+
+const char *wl_status_to_name(wl_status_t code)
+{
+  size_t i;
+
+  for (i = 0; i < sizeof(wl_status_msg_table) / sizeof(wl_status_msg_table[0]); ++i)
+  {
+    if (wl_status_msg_table[i].code == code)
+    {
+      return wl_status_msg_table[i].msg;
+    }
+  }
+  return wl_unknown_msg;
 }

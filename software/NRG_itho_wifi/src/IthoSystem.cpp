@@ -1444,9 +1444,9 @@ int32_t *sendQuery2410(bool &updateweb)
       updateweb = false;
       jsonSysmessage("itho2410", i2cbuf2string(i2cbuf, len).c_str());
 
-      char tempbuffer0[256];
-      char tempbuffer1[256];
-      char tempbuffer2[256];
+      char tempbuffer0[256]{};
+      char tempbuffer1[256]{};
+      char tempbuffer2[256]{};
 
       if (ithoSettingsArray[index2410].type == ithoSettings::is_uint8 || ithoSettingsArray[index2410].type == ithoSettings::is_uint16 || ithoSettingsArray[index2410].type == ithoSettings::is_uint32)
       { // unsigned value

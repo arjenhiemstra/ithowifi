@@ -4,7 +4,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
 
 void websocketInit()
 {
-  mg_log_set("0");
+  mg_log_set(0);
   mg_mgr_init(&mgr);                                   // Initialise event manager
   mg_http_listen(&mgr, s_listen_on_ws, wsEvent, NULL); // Create WS listener
 }
@@ -359,11 +359,16 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         uint8_t index = root["itho_update_remote"].as<unsigned int>();
         remotes.updateRemoteName(index, root["value"] | "");
         remotes.updateRemoteFunction(index, root["remtype"] | 0);
-        uint8_t ID[3] = {0, 0, 0};
-        ID[0] = root["id"][0].as<uint8_t>();
-        ID[1] = root["id"][1].as<uint8_t>();
-        ID[2] = root["id"][2].as<uint8_t>();
-        remotes.updateRemoteID(index, ID);
+        uint8_t id[3] = {0, 0, 0};
+        id[0] = root["id"][0].as<uint8_t>();
+        id[1] = root["id"][1].as<uint8_t>();
+        id[2] = root["id"][2].as<uint8_t>();
+        rf.setBindAllowed(true);
+        const int *current_id = remotes.getRemoteIDbyIndex(index);
+        rf.removeRFDevice(*current_id, *(current_id + 1), *(current_id + 2));
+        remotes.updateRemoteID(index, id);
+        rf.addRFDevice(*id, *(id + 1), *(id + 2), remotes.getRemoteType(index));
+        rf.setBindAllowed(false);
         saveRemotesflag = true;
       }
     }

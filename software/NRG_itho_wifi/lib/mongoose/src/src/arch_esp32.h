@@ -17,12 +17,8 @@
 #include <sys/types.h>
 #include <time.h>
 
-#define MG_DIRSEP '/'
-#define MG_INT64_FMT "%lld"
-#ifndef MG_PATH_MAX
+#include <esp_timer.h>
+
 #define MG_PATH_MAX 128
-#endif
-#undef MG_ENABLE_DIRLIST
-#define MG_ENABLE_DIRLIST 1
 
 #endif

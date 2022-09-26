@@ -2,19 +2,21 @@
 
 #if MG_ARCH == MG_ARCH_FREERTOS_LWIP
 
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #if defined(__GNUC__)
 #include <sys/stat.h>
 #include <sys/time.h>
 #else
-typedef long suseconds_t;
 struct timeval {
   time_t tv_sec;
-  suseconds_t tv_usec;
+  long tv_usec;
 };
 #endif
 
@@ -28,26 +30,20 @@ struct timeval {
 #error Set LWIP_SOCKET variable to 1 (in lwipopts.h)
 #endif
 
-#if LWIP_POSIX_SOCKETS_IO_NAMES != 0
-// LWIP_POSIX_SOCKETS_IO_NAMES must be disabled in posix-compatible OS
-// enviroment (freertos mimics to one) otherwise names like `read` and `write`
-// conflict
-#error LWIP_POSIX_SOCKETS_IO_NAMES must be set to 0 (in lwipopts.h) for FreeRTOS
-#endif
-
-#define MG_INT64_FMT "%lld"
-#define MG_DIRSEP '/'
-
 // Re-route calloc/free to the FreeRTOS's functions, don't use stdlib
 static inline void *mg_calloc(int cnt, size_t size) {
   void *p = pvPortMalloc(cnt * size);
-  if (p != NULL) memset(p, 0, size);
+  if (p != NULL) memset(p, 0, size * cnt);
   return p;
 }
 #define calloc(a, b) mg_calloc((a), (b))
 #define free(a) vPortFree(a)
 #define malloc(a) pvPortMalloc(a)
+#define strdup(s) ((char *) mg_strdup(mg_str(s)).ptr)
+#define mkdir(a, b) (-1)
 
-#define gmtime_r(a, b) gmtime(a)
+#ifndef MG_IO_SIZE
+#define MG_IO_SIZE 512
+#endif
 
 #endif  // MG_ARCH == MG_ARCH_FREERTOS_LWIP

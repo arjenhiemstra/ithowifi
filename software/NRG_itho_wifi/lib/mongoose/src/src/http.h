@@ -1,5 +1,6 @@
 #pragma once
 
+#include "arch.h"
 #include "config.h"
 #include "fs.h"
 #include "net.h"
@@ -25,6 +26,7 @@ struct mg_http_serve_opts {
   const char *ssi_pattern;    // SSI file name pattern, e.g. #.shtml
   const char *extra_headers;  // Extra HTTP headers to add in responses
   const char *mime_types;     // Extra mime types, ext1=type1,ext2=type2,..
+  const char *page404;        // Path to the 404 page, or NULL by default
   struct mg_fs *fs;           // Filesystem implementation. Use NULL for POSIX
 };
 
@@ -45,19 +47,21 @@ struct mg_connection *mg_http_listen(struct mg_mgr *, const char *url,
 struct mg_connection *mg_http_connect(struct mg_mgr *, const char *url,
                                       mg_event_handler_t fn, void *fn_data);
 void mg_http_serve_dir(struct mg_connection *, struct mg_http_message *hm,
-                       struct mg_http_serve_opts *opts);
+                       const struct mg_http_serve_opts *);
 void mg_http_serve_file(struct mg_connection *, struct mg_http_message *hm,
-                        const char *path, struct mg_http_serve_opts *opts);
+                        const char *path, const struct mg_http_serve_opts *);
 void mg_http_reply(struct mg_connection *, int status_code, const char *headers,
                    const char *body_fmt, ...);
 struct mg_str *mg_http_get_header(struct mg_http_message *, const char *name);
+struct mg_str mg_http_var(struct mg_str buf, struct mg_str name);
 int mg_http_get_var(const struct mg_str *, const char *name, char *, size_t);
 int mg_url_decode(const char *s, size_t n, char *to, size_t to_len, int form);
 size_t mg_url_encode(const char *s, size_t n, char *buf, size_t len);
 void mg_http_creds(struct mg_http_message *, char *, size_t, char *, size_t);
 bool mg_http_match_uri(const struct mg_http_message *, const char *glob);
-int mg_http_upload(struct mg_connection *, struct mg_http_message *hm,
-                   const char *dir);
+long mg_http_upload(struct mg_connection *c, struct mg_http_message *hm,
+                    struct mg_fs *fs, const char *path, size_t max_size);
 void mg_http_bauth(struct mg_connection *, const char *user, const char *pass);
 struct mg_str mg_http_get_header_var(struct mg_str s, struct mg_str v);
 size_t mg_http_next_multipart(struct mg_str, size_t, struct mg_http_part *);
+int mg_http_status(const struct mg_http_message *hm);

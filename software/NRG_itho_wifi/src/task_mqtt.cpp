@@ -100,7 +100,7 @@ void execMQTTTasks()
 
         if (systemConfig.mqtt_domoticz_active)
         {
-          char buffer[512];
+          char buffer[512]{};
           auto humstat = 0;
           // Humidity Status
           if (ithoHum < 31)
@@ -116,7 +116,7 @@ void execMQTTTasks()
             humstat = 1;
           }
 
-          char svalue[32];
+          char svalue[32]{};
           sprintf(svalue, "%1.1f;%1.1f;%d", ithoTemp, ithoHum, humstat);
 
           StaticJsonDocument<512> root;
@@ -157,7 +157,7 @@ void execMQTTTasks()
 
 void mqttInit()
 {
-  char logBuff[LOG_BUF_SIZE] = "";
+  char logBuff[LOG_BUF_SIZE]{};
 
   if (systemConfig.mqtt_active)
   {
@@ -431,7 +431,7 @@ void updateState(uint16_t newState)
 
   if (mqttClient.connected())
   {
-    char buffer[512];
+    char buffer[512]{};
 
     if (systemConfig.mqtt_domoticz_active)
     {
@@ -447,7 +447,7 @@ void updateState(uint16_t newState)
         nvalue = 0;
       }
       newState = uint16_t(state);
-      char buf[10];
+      char buf[10]{};
       sprintf(buf, "%d", newState);
 
       StaticJsonDocument<512> root;
@@ -485,7 +485,7 @@ void HADiscoveryFan()
 {
   DynamicJsonDocument doc(2048);
   JsonObject root = doc.to<JsonObject>(); // Fill the object
-  char s[160];
+  char s[160]{};
 
   addHADevInfo(root);
   root["avty_t"] = (const char *)systemConfig.mqtt_lwt_topic;
@@ -511,7 +511,7 @@ void HADiscoveryTemperature()
 {
   DynamicJsonDocument doc(2048);
   JsonObject root = doc.to<JsonObject>(); // Fill the object
-  char s[160];
+  char s[160]{};
 
   addHADevInfo(root);
   root["avty_t"] = (const char *)systemConfig.mqtt_lwt_topic;
@@ -533,7 +533,7 @@ void HADiscoveryHumidity()
 {
   DynamicJsonDocument doc(2048);
   JsonObject root = doc.to<JsonObject>(); // Fill the object
-  char s[160];
+  char s[160]{};
 
   addHADevInfo(root);
   root["avty_t"] = (const char *)systemConfig.mqtt_lwt_topic;
@@ -553,7 +553,7 @@ void HADiscoveryHumidity()
 
 void addHADevInfo(JsonObject obj)
 {
-  char s[64];
+  char s[64]{};
   JsonObject dev = obj.createNestedObject("dev");
   dev["identifiers"] = hostName();
   dev["manufacturer"] = "Arjen Hiemstra";

@@ -225,7 +225,7 @@ void TaskCC1101(void *pvParameters)
     esp_task_wdt_add(NULL);
     reboot.detach();
     logInput("Setup: init of CC1101 RF module successful");
-    rf.setDeviceID(sys.getMac(6 - 3), sys.getMac(6 - 2), sys.getMac(6 - 1));
+    rf.setDeviceID(sys.getMac(3), sys.getMac(4), sys.getMac(5));
     systemConfig.itho_rf_support = 1;
     loadRemotesConfig();
     rf.setBindAllowed(true);

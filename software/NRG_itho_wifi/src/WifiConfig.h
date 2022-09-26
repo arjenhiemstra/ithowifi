@@ -43,5 +43,6 @@ protected:
 
 void wifiScan();
 void logWifiInfo();
+const char *wl_status_to_name(wl_status_t code);
 
 extern WifiConfig wifiConfig;

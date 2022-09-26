@@ -5,7 +5,7 @@ System sys;
 
 const char* System::uptime()
 {
-  char buffer[65];
+  char buffer[65]{};
 
   long days = 0;
   long hours = 0;

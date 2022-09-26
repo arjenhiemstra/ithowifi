@@ -44,7 +44,7 @@ private:
   int memHigh;
   int memLow{1000000};
   uint32_t memMaxBlock;
-  char retval[25];
+  char retval[25]{};
 };
 
 extern System sys;

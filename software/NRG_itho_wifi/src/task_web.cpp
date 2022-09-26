@@ -114,7 +114,7 @@ void ArduinoOTAinit()
       .onStart([]()
                {
 
-    static char buf[128] = "";
+    static char buf[128]{};
     strcat(buf, "Firmware update: ");
     
     if (ArduinoOTA.getCommand() == U_FLASH)
@@ -354,7 +354,7 @@ void webServerInit()
           mqttClient.disconnect();
 
           content_len = request->contentLength();
-          static char buf[128] = "";
+          static char buf[128]{};
           strcat(buf, "Firmware update: ");
           strncat(buf, filename.c_str(), sizeof(buf) - strlen(buf) - 1);
           logInput(buf);
@@ -447,7 +447,7 @@ void MDNSinit()
 
   MDNS.addService("http", "tcp", 80);
 
-  char logBuff[LOG_BUF_SIZE] = "";
+  char logBuff[LOG_BUF_SIZE]{};
   logInput("mDNS: started");
 
   sprintf(logBuff, "Hostname: %s", hostName());
@@ -504,7 +504,7 @@ void handleAPI(AsyncWebServerRequest *request)
       AsyncWebParameter *p = request->getParam("get");
       if (strcmp(p->value().c_str(), "currentspeed") == 0)
       {
-        char ithoval[5];
+        char ithoval[5]{};
         sprintf(ithoval, "%d", ithoCurrentVal);
         request->send(200, "text/html", ithoval);
         return;
@@ -728,8 +728,8 @@ void handleDebug(AsyncWebServerRequest *request)
   response->print("<br><br><div id='syslog_outer'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>System Log:</div>");
 
   response->print("<div style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa'>");
-  char link[24] = "";
-  char linkcur[24] = "";
+  char link[24]{};
+  char linkcur[24]{};
 
   if (ACTIVE_FS.exists("/logfile0.current.log"))
   {
@@ -789,7 +789,7 @@ void handleCurLogDownload(AsyncWebServerRequest *request)
     if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
       return request->requestAuthentication();
   }
-  char link[24] = "";
+  char link[24]{};
   if (ACTIVE_FS.exists("/logfile0.current.log"))
   {
     strlcpy(link, "/logfile0.current.log", sizeof(link));
@@ -808,7 +808,7 @@ void handlePrevLogDownload(AsyncWebServerRequest *request)
     if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
       return request->requestAuthentication();
   }
-  char link[24] = "";
+  char link[24]{};
   if (ACTIVE_FS.exists("/logfile0.current.log"))
   {
     strlcpy(link, "/logfile1.log", sizeof(link));
@@ -1027,10 +1027,6 @@ bool handleFileRead(AsyncWebServerRequest *request)
   }
   String path = request->url();
 
-  if (path.endsWith("/"))
-  {
-    path += "index.htm";
-  }
   String pathWithGz = path + ".gz";
   if (ACTIVE_FS.exists(pathWithGz) || ACTIVE_FS.exists(path))
   {

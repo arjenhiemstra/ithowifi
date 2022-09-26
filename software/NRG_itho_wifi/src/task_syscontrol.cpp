@@ -128,7 +128,7 @@ void execSystemControlTasks()
     }
     if (currentItho_fwversion() > 0)
     {
-      char logBuff[LOG_BUF_SIZE] = "";
+      char logBuff[LOG_BUF_SIZE]{};
       sprintf(logBuff, "I2C init: QueryDevicetype - fw:%d hw:%d", currentItho_fwversion(), currentIthoDeviceID());
       logInput(logBuff);
 
@@ -180,7 +180,7 @@ void execSystemControlTasks()
             {
               sendQuery2410(i2c_result_updateweb);
               setSetting2410(i2c_result_updateweb);
-              char logBuff[LOG_BUF_SIZE] = "";
+              char logBuff[LOG_BUF_SIZE]{};
               sprintf(logBuff, "I2C init: set hum sensor in itho firmware to: %s", value2410 ? "on" : "off");
               logInput(logBuff);
             }
@@ -196,7 +196,7 @@ void execSystemControlTasks()
       if (xSemaphoreTake(mutexI2Ctask, (TickType_t)1000 / portTICK_PERIOD_MS) == pdTRUE)
       {
         sendQueryStatusFormat(false);
-        char logBuff[LOG_BUF_SIZE] = "";
+        char logBuff[LOG_BUF_SIZE]{};
         sprintf(logBuff, "I2C init: QueryStatusFormat - items:%d", ithoStatus.size());
         logInput(logBuff);
         xSemaphoreGive(mutexI2Ctask);
@@ -471,25 +471,31 @@ void setupWiFiAP()
 
 bool connectWiFiSTA()
 {
+
   wifiModeAP = false;
   D_LOG("Connecting to wireless network...\n");
 
-  WiFi.persistent(false);
+  WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
+
+  if (!WiFi.disconnect(true))
+    D_LOG("Unable to set wifi disconnect\n");
+
+  bool setHostname_result = WiFi.setHostname(hostName());
+  D_LOG("WiFi.setHostname: %s\n", setHostname_result ? "OK" : "NOK");
+
   if (!WiFi.setAutoReconnect(false))
     D_LOG("Unable to set auto reconnect\n");
-  if (!WiFi.mode(WIFI_MODE_NULL))
-    D_LOG("Unable to set WiFi mode\n");
-  if (!WiFi.setHostname(hostName()))
-    D_LOG("Unable to set host name ('%s')\n", hostName());
+
+  delay(200);
+
   if (!WiFi.mode(WIFI_STA))
     D_LOG("Unable to set WiFi mode\n");
-  if (!WiFi.disconnect(true))
-    D_LOG("WiFi disconnect failed\n");
-  // ESP32 doesn't reliably set the status to WL_DISCONNECTED despite disconnect() call.
-  WiFiSTAClass::_setStatus(WL_DISCONNECTED);
 
-  esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  esp_wifi_set_ps(WIFI_PS_NONE);
+  esp_err_t wifi_set_storage = esp_wifi_set_storage(WIFI_STORAGE_RAM);
+  D_LOG("esp_wifi_set_storage: %s\n", esp_err_to_name(wifi_set_storage));
+
+  esp_err_t wifi_set_ps = esp_wifi_set_ps(WIFI_PS_NONE);
+  D_LOG("esp_wifi_set_ps: %s\n", esp_err_to_name(wifi_set_ps));
 
   if (strcmp(wifiConfig.dhcp, "off") == 0)
   {
@@ -535,11 +541,19 @@ bool connectWiFiSTA()
 
   delay(200);
 
-  WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
+  wl_status_t wifi_begin = WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 
   auto timeoutmillis = millis() + 30000;
-  auto status = WiFi.status();
-
+  wl_status_t status = WiFi.status();
+  // wl_status_t values:
+  //  WL_NO_SHIELD = 255, // for compatibility with WiFi Shield library
+  //  WL_IDLE_STATUS = 0,
+  //  WL_NO_SSID_AVAIL = 1,
+  //  WL_SCAN_COMPLETED = 2,
+  //  WL_CONNECTED = 3,
+  //  WL_CONNECT_FAILED = 4,
+  //  WL_CONNECTION_LOST = 5,
+  //  WL_DISCONNECTED = 6
   while (millis() < timeoutmillis)
   {
 
@@ -564,6 +578,10 @@ bool connectWiFiSTA()
   }
 
   digitalWrite(WIFILED, HIGH);
+
+  char buf[64]{};
+  sprintf(buf, "Setup: wifi not connected - %s", wl_status_to_name(status));
+  logInput(buf);
 
   return false;
 }
@@ -634,8 +652,8 @@ void initSensor()
 void init_vRemote()
 {
   // setup virtual remote
-  char buff[128];
-  sprintf(buff, "Setup: Virtual remotes, start ID: %d,%d,%d", sys.getMac(6 - 3), sys.getMac(6 - 2), sys.getMac(6 - 2));
+  char buff[128]{};
+  sprintf(buff, "Setup: Virtual remotes, start ID: %02X,%02X,%02X - No.: %d", sys.getMac(3), sys.getMac(4), sys.getMac(5), systemConfig.itho_numvrem);
   logInput(buff);
 
   virtualRemotes.setMaxRemotes(systemConfig.itho_numvrem);
@@ -801,3 +819,4 @@ bool ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
 
   return true;
 }
+

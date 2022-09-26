@@ -1,7 +1,9 @@
 <div class="header">
   <h1>Update firmware</h1>
 </div>
-<br>
+<br><br>
+<span style="color: #333">Current system firmware:</span>
+<hr style="border-top: 1px solid #eee">
 <div class="pure-control-group">
   <label>Current firmware version:</label>
   <label id="firmware_ver">unknown</label>
@@ -11,17 +13,22 @@
   <label for="hardware_rev">Hardware revision:</label>
   <label id="hardware_rev">unknown</label>
 </div>
-<br>
+<br><br>
+<span style="color: #333">Available firmwares:</span>
+<hr style="border-top: 1px solid #eee">
 <div class="pure-control-group">
   <label for="latest_fw">Latest firmware version:</label>
-  <label id="latest_fw">unknown</label>&nbsp;&nbsp;<a  target="_blank" href="" id="release_notes" class="pure-button pure-button hidden">Release notes</a><br>
+  <label id="latest_fw">unknown</label>&nbsp;&nbsp;<a target="_blank" href="" id="release_notes"
+    class="pure-button pure-button hidden">Release notes</a><br>
   <a href="" id="latest_fw_button" class="pure-button pure-button-primary hidden">Download firmware file</a>
 </div>
 <br>
 <div id="beta_fw" class="pure-control-group hidden">
   <label for="latest_beta_fw">Latest beta firmware version:</label>
-  <label id="latest_beta_fw">unknown</label>&nbsp;&nbsp;<a  target="_blank" href="" id="release_beta_notes" class="pure-button pure-button hidden">Release notes</a><br>
-  <a href="" id="latest_beta_fw_button" class="pure-button pure-button-primary hidden">Download beta firmware file</a><br><br>
+  <label id="latest_beta_fw">unknown</label>&nbsp;&nbsp;<a target="_blank" href="" id="release_beta_notes"
+    class="pure-button pure-button hidden">Release notes</a><br>
+  <a href="" id="latest_beta_fw_button" class="pure-button pure-button-primary hidden">Download beta firmware
+    file</a><br><br>
 </div>
 <div class="pure-control-group">
   <label for="show_beta_fw">Show beta firmware version:</label>
@@ -30,9 +37,10 @@
 <br>
 <span>Other firmware versions can be found here:</span>
 <span id="other_firmware"></span>
+<br>
 <form class="pure-form pure-form-stacked" method='POST' action='#' enctype='multipart/form-data' id='updateform'>
   <fieldset>
-    <legend><br>Update the firmware of your device</legend>
+    <legend><br>Update the firmware of your device:</legend>
     <ol>
       <li>Download a firmware file</li>
       <li>Select the downloaded firmware file with "Choose file" button</li>
@@ -54,12 +62,12 @@
 <script>
   $('#firmware_ver').text(fw_version);
   $('#hardware_rev').text(hw_revision);
-  if(hw_revision.startsWith('NON-CVE ')) { 
+  if (hw_revision.startsWith('NON-CVE ')) {
     $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/non-cve_rev_1">link</a>');
   }
-  else if(hw_revision == '2') { 
+  else if (hw_revision == '2') {
     $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/hardware_rev_2">link</a>');
-  }  
+  }
   function process(key, value) {
     if (key == hw_revision) {
       let latest_fw = value.latest_fw;
