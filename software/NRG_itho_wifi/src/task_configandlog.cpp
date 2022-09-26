@@ -132,7 +132,7 @@ void execLogAndConfigTasks()
 
   if (millis() - lastLog > LOGGING_INTERVAL)
   {
-    char logBuff[LOG_BUF_SIZE] = "";
+    char logBuff[LOG_BUF_SIZE]{};
     sprintf(logBuff, "Mem free: %d, Mem low: %d, Mem block: %d", sys.getMemHigh(), sys.getMemLow(), sys.getMaxFreeBlockSize());
     logInput(logBuff);
 
@@ -142,7 +142,7 @@ void execLogAndConfigTasks()
   if (formatFileSystem)
   {
     formatFileSystem = false;
-    char logBuff[LOG_BUF_SIZE] = "";
+    char logBuff[LOG_BUF_SIZE]{};
     StaticJsonDocument<128> root;
     JsonObject systemstat = root.createNestedObject("systemstat");
 
@@ -191,10 +191,10 @@ void logInit()
   filePrint.close();
 
   delay(100);
-  char logBuff[LOG_BUF_SIZE] = "";
+  char logBuff[LOG_BUF_SIZE]{};
 
   uint8_t reason = esp_reset_reason();
-  char buf[32] = "";
+  char buf[32]{};
 
   switch (reason)
   {

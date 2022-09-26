@@ -4,7 +4,6 @@
 [![Build Status]( https://github.com/cesanta/mongoose/workflows/build/badge.svg)](https://github.com/cesanta/mongoose/actions)
 [![Code Coverage](https://codecov.io/gh/cesanta/mongoose/branch/master/graph/badge.svg)](https://codecov.io/gh/cesanta/mongoose)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/mongoose.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:mongoose)
-[![Gitter Chat](https://badges.gitter.im/cesanta/mongoose.png)](https://gitter.im/cesanta/mongoose)
 
 Mongoose is a networking library for C/C++. It implements event-driven
 non-blocking APIs for TCP, UDP, HTTP, WebSocket, MQTT.  It is designed for
@@ -21,6 +20,7 @@ robust, and easy. Features include:
 - Tiny static and run-time footprint
 - Source code is both ISO C and ISO C++ compliant
 - Works with any network stack with socket API, like LwIP or FreeRTOS-Plus-TCP
+- Optional [built-in IP stack](mip) for bare metal or RTOS-enabled applications
 - Very easy to integrate: just copy `mongoose.c` and `mongoose.h` files to your build tree
 - Detailed [documentation](https://mongoose.ws/documentation/) and
   [tutorials](https://mongoose.ws/tutorials/)
@@ -33,15 +33,11 @@ robust, and easy. Features include:
   interface on devices, RESTful API services, telemetry data exchange, remote
   control for a product, remote software updates, remote monitoring, and others
 - Deployed to hundreds of millions devices in production environment worldwide
-- See [Case Studies](https://cesanta.com/case-studies.html) from our respected
-  customers like Schneider Electric (industrial automation), Broadcom (semiconductors), Schenck Process
-  (industrial engineering), and others
-- See [Testimonials](https://cesanta.com/testimonials.html) from engineers that
-  integrated Mongoose in their commercial products
-- We provide [commercial licensing](https://cesanta.com/licensing.html),
-  [support](https://cesanta.com/support.html), consultancy and integration
-  assistance - don't hesitate to
-  [contact us](https://www.cesanta.com/contact.html)
+- See [Case Studies](https://mongoose.ws/case-studies/) from our respected
+  customers like [Schneider Electric](https://mongoose.ws/case-studies/schneider-electric/) (industrial automation), [Broadcom](https://mongoose.ws/case-studies/broadcom/) (semiconductors), [Pilz](https://mongoose.ws/case-studies/pilz/) (industrial automation), and others
+- See [Testimonials](https://mongoose.ws/testimonials/) from engineers that integrated Mongoose in their commercial products
+- We provide [Evaluation and Commercial licensing](https://mongoose.ws/licensing/), [support](https://mongoose.ws/support/), consultancy and integration
+  assistance - don't hesitate to [contact us](https://mongoose.ws/contact/)
 
 
 # Security
@@ -69,30 +65,6 @@ We take security seriously:
   have specific security requirements and run independent security audits,
   of which we get notified and in case of any issue, act similar to (3).
 
-# Supplement software
-
-This software is often used together with Mongoose:
-- [mjson](https://github.com/cesanta/mjson) - a JSON parser, emitter and
-  JSON-RPC engine. Used to implement
-  RESTful APIs that use JSON, or implement data exchange (e.g. over MQTT
-  or Websocket) that use JSON for data encapsulation
-- [elk](https://github.com/cesanta/elk) - a tiny JavaScript engine.
-  Used to implement scripting support
-
-
-# Precompiled web server binary
-
-We have built a ready-to-go, precompiled web server executable application for
-Windows and Mac. It requires no installation and no configuration to start.
-Simply copy `mongoose.exe` to any directory you want to serve, and double-click
-on `mongoose.exe` to start it.  Mongoose will iconify to a system tray and
-start serving your directory to a local network. 
-
-It is a great tool for sharing your files, or for local web or game
-development. It has a unique feature - an ability to share your local files via
-a global URL.
-
-Visit [download page](https://mongoose.ws/) to try it out.
 
 # Contributions
 

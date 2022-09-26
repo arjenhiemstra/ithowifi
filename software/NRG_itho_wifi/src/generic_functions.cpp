@@ -9,11 +9,11 @@ volatile unsigned long nextIthoTimer = 0;
 
 const char *hostName()
 {
-  static char hostName[32];
+  static char hostName[32]{};
 
   if (strcmp(wifiConfig.hostname, "") == 0)
   {
-    sprintf(hostName, "%s%02x%02x", espName, sys.getMac(6 - 2), sys.getMac(6 - 1));
+    sprintf(hostName, "%s%02x%02x", espName, sys.getMac(4), sys.getMac(5));
   }
   else
   {

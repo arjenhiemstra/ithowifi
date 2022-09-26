@@ -15,12 +15,11 @@
 #include <time.h>
 
 #include <FreeRTOS.h>
-#include <FreeRTOS_IP.h>
-#include <FreeRTOS_Sockets.h>
+#include <list.h>
 #include <task.h>
 
-#define MG_INT64_FMT "%lld"
-#define MG_DIRSEP '/'
+#include <FreeRTOS_IP.h>
+#include <FreeRTOS_Sockets.h>
 
 // Why FreeRTOS-TCP did not implement a clean BSD API, but its own thing
 // with FreeRTOS_ prefix, is beyond me
@@ -49,25 +48,24 @@
 #define closesocket(x) FreeRTOS_closesocket(x)
 #define gethostbyname(x) FreeRTOS_gethostbyname(x)
 #define getsockname(a, b, c) (-1)
+#define getpeername(a, b, c) 0
 
 // Re-route calloc/free to the FreeRTOS's functions, don't use stdlib
 static inline void *mg_calloc(int cnt, size_t size) {
   void *p = pvPortMalloc(cnt * size);
-  if (p != NULL) memset(p, 0, size);
+  if (p != NULL) memset(p, 0, size * cnt);
   return p;
 }
 #define calloc(a, b) mg_calloc((a), (b))
 #define free(a) vPortFree(a)
 #define malloc(a) pvPortMalloc(a)
-
-#define gmtime_r(a, b) gmtime(a)
+#define mkdir(a, b) (-1)
 
 #if !defined(__GNUC__)
 // copied from GCC on ARM; for some reason useconds are signed
-typedef long suseconds_t;
 struct timeval {
   time_t tv_sec;
-  suseconds_t tv_usec;
+  long tv_usec;
 };
 #endif
 

@@ -1,4 +1,6 @@
+#include "fmt.h"
 #include "fs.h"
+#include "str.h"
 
 struct packed_file {
   const char *data;
@@ -8,21 +10,23 @@ struct packed_file {
 
 const char *mg_unpack(const char *path, size_t *size, time_t *mtime);
 const char *mg_unlist(size_t no);
-// #if MG_ENABLE_PACKED_FS
-// #else
-// const char *mg_unpack(const char *path, size_t *size, time_t *mtime) {
-//   (void) path, (void) size, (void) mtime;
-//   return NULL;
-// }
-// const char *mg_unlist(size_t no) {
-//   (void) no;
-//   return NULL;
-// }
-// #endif
+
+#if MG_ENABLE_PACKED_FS
+#else
+const char *mg_unpack(const char *path, size_t *size, time_t *mtime) {
+  (void) path, (void) size, (void) mtime;
+  return NULL;
+}
+const char *mg_unlist(size_t no) {
+  (void) no;
+  return NULL;
+}
+#endif
 
 static int is_dir_prefix(const char *prefix, size_t n, const char *path) {
-  return n < strlen(path) && memcmp(prefix, path, n) == 0 && path[n] == '/';
-  //(n == 0 || path[n] == MG_DIRSEP);
+  // MG_INFO(("[%.*s] [%s] %c", (int) n, prefix, path, path[n]));
+  return n < strlen(path) && strncmp(prefix, path, n) == 0 &&
+         (n == 0 || path[n] == '/' || path[n - 1] == '/');
 }
 
 static int packed_stat(const char *path, size_t *size, time_t *mtime) {
@@ -38,7 +42,7 @@ static int packed_stat(const char *path, size_t *size, time_t *mtime) {
 
 static void packed_list(const char *dir, void (*fn)(const char *, void *),
                         void *userdata) {
-  char buf[256], tmp[sizeof(buf)];
+  char buf[MG_PATH_MAX], tmp[sizeof(buf)];
   const char *path, *begin, *end;
   size_t i, n = strlen(dir);
   tmp[0] = '\0';  // Previously listed entry
@@ -47,7 +51,7 @@ static void packed_list(const char *dir, void (*fn)(const char *, void *),
     begin = &path[n + 1];
     end = strchr(begin, '/');
     if (end == NULL) end = begin + strlen(begin);
-    snprintf(buf, sizeof(buf), "%.*s", (int) (end - begin), begin);
+    mg_snprintf(buf, sizeof(buf), "%.*s", (int) (end - begin), begin);
     buf[sizeof(buf) - 1] = '\0';
     // If this entry has been already listed, skip
     // NOTE: we're assuming that file list is sorted alphabetically
@@ -57,24 +61,20 @@ static void packed_list(const char *dir, void (*fn)(const char *, void *),
   }
 }
 
-static struct mg_fd *packed_open(const char *path, int flags) {
+static void *packed_open(const char *path, int flags) {
   size_t size = 0;
   const char *data = mg_unpack(path, &size, NULL);
   struct packed_file *fp = NULL;
-  struct mg_fd *fd = NULL;
   if (data == NULL) return NULL;
   if (flags & MG_FS_WRITE) return NULL;
   fp = (struct packed_file *) calloc(1, sizeof(*fp));
-  fd = (struct mg_fd *) calloc(1, sizeof(*fd));
   fp->size = size;
   fp->data = data;
-  fd->fd = fp;
-  fd->fs = &mg_fs_packed;
-  return fd;
+  return (void *) fp;
 }
 
-static void packed_close(struct mg_fd *fd) {
-  if (fd) free(fd->fd), free(fd);
+static void packed_close(void *fp) {
+  if (fp != NULL) free(fp);
 }
 
 static size_t packed_read(void *fd, void *buf, size_t len) {
@@ -97,6 +97,21 @@ static size_t packed_seek(void *fd, size_t offset) {
   return fp->pos;
 }
 
-struct mg_fs mg_fs_packed = {packed_stat,  packed_list, packed_open,
-                             packed_close, packed_read, packed_write,
-                             packed_seek};
+static bool packed_rename(const char *from, const char *to) {
+  (void) from, (void) to;
+  return false;
+}
+
+static bool packed_remove(const char *path) {
+  (void) path;
+  return false;
+}
+
+static bool packed_mkdir(const char *path) {
+  (void) path;
+  return false;
+}
+
+struct mg_fs mg_fs_packed = {
+    packed_stat,  packed_list, packed_open,   packed_close,  packed_read,
+    packed_write, packed_seek, packed_rename, packed_remove, packed_mkdir};

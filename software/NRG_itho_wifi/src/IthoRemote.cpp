@@ -135,9 +135,9 @@ int IthoRemote::removeRemote(const uint8_t index)
     this->remoteCount--;
     if (this->instanceFunc == RemoteFunctions::VREMOTE)
     {
-      remotes[index].ID[0] = sys.getMac(6 - 3);
-      remotes[index].ID[1] = sys.getMac(6 - 2);
-      remotes[index].ID[2] = sys.getMac(6 - 1) + index;
+      remotes[index].ID[0] = sys.getMac(3);
+      remotes[index].ID[1] = sys.getMac(4);
+      remotes[index].ID[2] = sys.getMac(5) + index;
     }
   }
 
@@ -316,9 +316,9 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
     else if (instanceFunc == RemoteFunctions::VREMOTE)
     {
       remtype = RemoteTypes::RFTCVE;
-      ID[0] = sys.getMac(6 - 3);
-      ID[1] = sys.getMac(6 - 2);
-      ID[2] = sys.getMac(6 - 1) + index;
+      ID[0] = sys.getMac(3);
+      ID[1] = sys.getMac(4);
+      ID[2] = sys.getMac(5) + index;
     }
   }
   if (remfunc == RemoteFunctions::UNSETFUNC)

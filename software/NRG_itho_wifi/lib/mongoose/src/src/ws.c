@@ -1,9 +1,9 @@
 #include "ws.h"
 
 #include "base64.h"
+#include "fmt.h"
 #include "http.h"
 #include "log.h"
-#include "private.h"
 #include "sha1.h"
 #include "url.h"
 #include "util.h"
@@ -14,12 +14,28 @@ struct ws_msg {
   size_t data_len;
 };
 
+size_t mg_ws_vprintf(struct mg_connection *c, int op, const char *fmt,
+                     va_list *ap) {
+  size_t len = c->send.len;
+  size_t n = mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, ap);
+  mg_ws_wrap(c, c->send.len - len, op);
+  return n;
+}
+
+size_t mg_ws_printf(struct mg_connection *c, int op, const char *fmt, ...) {
+  size_t len = 0;
+  va_list ap;
+  va_start(ap, fmt);
+  len = mg_ws_vprintf(c, op, fmt, &ap);
+  va_end(ap);
+  return len;
+}
+
 static void ws_handshake(struct mg_connection *c, const struct mg_str *wskey,
                          const struct mg_str *wsproto, const char *fmt,
-                         va_list ap) {
+                         va_list *ap) {
   const char *magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
   unsigned char sha[20], b64_sha[30];
-  char mem[128], *buf = mem;
 
   mg_sha1_ctx sha_ctx;
   mg_sha1_init(&sha_ctx);
@@ -27,21 +43,23 @@ static void ws_handshake(struct mg_connection *c, const struct mg_str *wskey,
   mg_sha1_update(&sha_ctx, (unsigned char *) magic, 36);
   mg_sha1_final(sha, &sha_ctx);
   mg_base64_encode(sha, sizeof(sha), (char *) b64_sha);
-  buf[0] = '\0';
-  if (fmt != NULL) mg_vasprintf(&buf, sizeof(mem), fmt, ap);
-  mg_printf(c,
-            "HTTP/1.1 101 Switching Protocols\r\n"
-            "Upgrade: websocket\r\n"
-            "Connection: Upgrade\r\n"
-            "Sec-WebSocket-Accept: %s\r\n"
-            "%s",
-            b64_sha, buf);
-  if (buf != mem) free(buf);
+  mg_xprintf(mg_pfn_iobuf, &c->send,
+             "HTTP/1.1 101 Switching Protocols\r\n"
+             "Upgrade: websocket\r\n"
+             "Connection: Upgrade\r\n"
+             "Sec-WebSocket-Accept: %s\r\n",
+             b64_sha);
+  if (fmt != NULL) mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, ap);
   if (wsproto != NULL) {
     mg_printf(c, "Sec-WebSocket-Protocol: %.*s\r\n", (int) wsproto->len,
               wsproto->ptr);
   }
   mg_send(c, "\r\n", 2);
+}
+
+static uint32_t be32(const uint8_t *p) {
+  return (((uint32_t) p[3]) << 0) | (((uint32_t) p[2]) << 8) |
+         (((uint32_t) p[1]) << 16) | (((uint32_t) p[0]) << 24);
 }
 
 static size_t ws_process(uint8_t *buf, size_t len, struct ws_msg *msg) {
@@ -56,12 +74,11 @@ static size_t ws_process(uint8_t *buf, size_t len, struct ws_msg *msg) {
       msg->header_len = 2 + mask_len;
     } else if (n == 126 && len >= 4 + mask_len) {
       msg->header_len = 4 + mask_len;
-      msg->data_len = mg_ntohs(*(uint16_t *) &buf[2]);
+      msg->data_len = (((size_t) buf[2]) << 8) | buf[3];
     } else if (len >= 10 + mask_len) {
       msg->header_len = 10 + mask_len;
       msg->data_len =
-          (size_t) (((uint64_t) mg_ntohl(*(uint32_t *) &buf[2])) << 32) +
-          mg_ntohl(*(uint32_t *) &buf[6]);
+          (size_t) (((uint64_t) be32(buf + 2) << 32) + be32(buf + 6));
     }
   }
   // Sanity check, and integer overflow protection for the boundary check below
@@ -89,9 +106,9 @@ static size_t mkhdr(size_t len, int op, bool is_client, uint8_t *buf) {
   } else {
     uint32_t tmp;
     buf[1] = 127;
-    tmp = mg_htonl((uint32_t) ((uint64_t) len >> 32));
+    tmp = mg_htonl((uint32_t) (((uint64_t) len) >> 32));
     memcpy(&buf[2], &tmp, sizeof(tmp));
-    tmp = mg_htonl((uint32_t) (len & 0xffffffff));
+    tmp = mg_htonl((uint32_t) (len & 0xffffffffU));
     memcpy(&buf[6], &tmp, sizeof(tmp));
     n = 10;
   }
@@ -111,15 +128,35 @@ static void mg_ws_mask(struct mg_connection *c, size_t len) {
   }
 }
 
-size_t mg_ws_send(struct mg_connection *c, const char *buf, size_t len,
+size_t mg_ws_send(struct mg_connection *c, const void *buf, size_t len,
                   int op) {
   uint8_t header[14];
   size_t header_len = mkhdr(len, op, c->is_client, header);
   mg_send(c, header, header_len);
-  LOG(LL_VERBOSE_DEBUG, ("WS out: %d [%.*s]", (int) len, (int) len, buf));
+  MG_VERBOSE(("WS out: %d [%.*s]", (int) len, (int) len, buf));
   mg_send(c, buf, len);
   mg_ws_mask(c, len);
   return header_len + len;
+}
+
+static bool mg_ws_client_handshake(struct mg_connection *c) {
+  int n = mg_http_get_request_len(c->recv.buf, c->recv.len);
+  if (n < 0) {
+    mg_error(c, "not http");  // Some just, not an HTTP request
+  } else if (n > 0) {
+    if (n < 15 || memcmp(c->recv.buf + 9, "101", 3) != 0) {
+      mg_error(c, "handshake error");
+    } else {
+      struct mg_http_message hm;
+      mg_http_parse((char *) c->recv.buf, c->recv.len, &hm);
+      c->is_websocket = 1;
+      mg_call(c, MG_EV_WS_OPEN, &hm);
+    }
+    mg_iobuf_del(&c->recv, 0, (size_t) n);
+  } else {
+    return true;  // Request is not yet received, quit event handler
+  }
+  return false;  // Continue event handler
 }
 
 static void mg_ws_cb(struct mg_connection *c, int ev, void *ev_data,
@@ -129,40 +166,21 @@ static void mg_ws_cb(struct mg_connection *c, int ev, void *ev_data,
 
   // assert(ofs < c->recv.len);
   if (ev == MG_EV_READ) {
-    if (!c->is_websocket && c->is_client) {
-      int n = mg_http_get_request_len(c->recv.buf, c->recv.len);
-      if (n < 0) {
-        c->is_closing = 1;  // Some just, not an HTTP request
-      } else if (n > 0) {
-        if (n < 15 || memcmp(c->recv.buf + 9, "101", 3) != 0) {
-          LOG(LL_ERROR,
-              ("%lu WS handshake error: %.*s", c->id, 15, c->recv.buf));
-          c->is_closing = 1;
-        } else {
-          struct mg_http_message hm;
-          mg_http_parse((char *) c->recv.buf, c->recv.len, &hm);
-          c->is_websocket = 1;
-          mg_call(c, MG_EV_WS_OPEN, &hm);
-        }
-        mg_iobuf_del(&c->recv, 0, (size_t) n);
-      } else {
-        return;  // A request is not yet received
-      }
-    }
+    if (c->is_client && !c->is_websocket && mg_ws_client_handshake(c)) return;
 
     while (ws_process(c->recv.buf + ofs, c->recv.len - ofs, &msg) > 0) {
       char *s = (char *) c->recv.buf + ofs + msg.header_len;
       struct mg_ws_message m = {{s, msg.data_len}, msg.flags};
       size_t len = msg.header_len + msg.data_len;
       uint8_t final = msg.flags & 128, op = msg.flags & 15;
-      // LOG(LL_VERBOSE_DEBUG, ("fin %d op %d len %d [%.*s]", final, op,
+      // MG_VERBOSE ("fin %d op %d len %d [%.*s]", final, op,
       //                       (int) m.data.len, (int) m.data.len, m.data.ptr));
       switch (op) {
         case WEBSOCKET_OP_CONTINUE:
           mg_call(c, MG_EV_WS_CTL, &m);
           break;
         case WEBSOCKET_OP_PING:
-          LOG(LL_DEBUG, ("%s", "WS PONG"));
+          MG_DEBUG(("%s", "WS PONG"));
           mg_ws_send(c, s, msg.data_len, WEBSOCKET_OP_PONG);
           mg_call(c, MG_EV_WS_CTL, &m);
           break;
@@ -174,9 +192,10 @@ static void mg_ws_cb(struct mg_connection *c, int ev, void *ev_data,
           if (final) mg_call(c, MG_EV_WS_MSG, &m);
           break;
         case WEBSOCKET_OP_CLOSE:
-          LOG(LL_ERROR, ("%lu Got WS CLOSE", c->id));
+          MG_DEBUG(("%lu Got WS CLOSE", c->id));
           mg_call(c, MG_EV_WS_CTL, &m);
-          c->is_closing = 1;
+          mg_ws_send(c, "", 0, WEBSOCKET_OP_CLOSE);
+          c->is_draining = 1;
           break;
         default:
           // Per RFC6455, close conn when an unknown op is recvd
@@ -191,7 +210,7 @@ static void mg_ws_cb(struct mg_connection *c, int ev, void *ev_data,
         len -= msg.header_len;
         ofs += len;
         c->pfn_data = (void *) ofs;
-        // LOG(LL_INFO, ("FRAG %d [%.*s]", (int) ofs, (int) ofs, c->recv.buf));
+        // MG_INFO(("FRAG %d [%.*s]", (int) ofs, (int) ofs, c->recv.buf));
       }
       // Remove non-fragmented frame
       if (final && op) mg_iobuf_del(&c->recv, ofs, len);
@@ -215,33 +234,25 @@ struct mg_connection *mg_ws_connect(struct mg_mgr *mgr, const char *url,
                                     const char *fmt, ...) {
   struct mg_connection *c = mg_connect(mgr, url, fn, fn_data);
   if (c != NULL) {
-    char nonce[16], key[30], mem1[128], mem2[256], *buf1 = mem1, *buf2 = mem2;
+    char nonce[16], key[30];
     struct mg_str host = mg_url_host(url);
-    int n1 = 0, n2 = 0;
+    mg_random(nonce, sizeof(nonce));
+    mg_base64_encode((unsigned char *) nonce, sizeof(nonce), key);
+    mg_xprintf(mg_pfn_iobuf, &c->send,
+               "GET %s HTTP/1.1\r\n"
+               "Upgrade: websocket\r\n"
+               "Host: %.*s\r\n"
+               "Connection: Upgrade\r\n"
+               "Sec-WebSocket-Version: 13\r\n"
+               "Sec-WebSocket-Key: %s\r\n",
+               mg_url_uri(url), (int) host.len, host.ptr, key);
     if (fmt != NULL) {
       va_list ap;
       va_start(ap, fmt);
-      n1 = mg_vasprintf(&buf1, sizeof(mem1), fmt, ap);
+      mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, &ap);
       va_end(ap);
     }
-    // Send handshake request
-    // mg_url_host(url, host, sizeof(host));
-    mg_random(nonce, sizeof(nonce));
-    mg_base64_encode((unsigned char *) nonce, sizeof(nonce), key);
-    // LOG(LL_DEBUG, "%p [%s]", uri, uri == NULL ? "???" : uri);
-    n2 = mg_asprintf(&buf2, sizeof(mem2),
-                     "GET %s HTTP/1.1\r\n"
-                     "Upgrade: websocket\r\n"
-                     "Host: %.*s\r\n"
-                     "Connection: Upgrade\r\n"
-                     "%.*s"
-                     "Sec-WebSocket-Version: 13\r\n"
-                     "Sec-WebSocket-Key: %s\r\n"
-                     "\r\n",
-                     mg_url_uri(url), (int) host.len, host.ptr, n1, buf1, key);
-    mg_send(c, buf2, n2 > 0 ? (size_t) n2 : 0);
-    if (buf1 != mem1) free(buf1);
-    if (buf2 != mem2) free(buf2);
+    mg_xprintf(mg_pfn_iobuf, &c->send, "\r\n");
     c->pfn = mg_ws_cb;
     c->pfn_data = NULL;
   }
@@ -260,9 +271,10 @@ void mg_ws_upgrade(struct mg_connection *c, struct mg_http_message *hm,
     struct mg_str *wsproto = mg_http_get_header(hm, "Sec-WebSocket-Protocol");
     va_list ap;
     va_start(ap, fmt);
-    ws_handshake(c, wskey, wsproto, fmt, ap);
+    ws_handshake(c, wskey, wsproto, fmt, &ap);
     va_end(ap);
     c->is_websocket = 1;
+    c->is_resp = 0;
     mg_call(c, MG_EV_WS_OPEN, hm);
   }
 }
@@ -272,7 +284,7 @@ size_t mg_ws_wrap(struct mg_connection *c, size_t len, int op) {
   size_t header_len = mkhdr(len, op, c->is_client, header);
 
   // NOTE: order of operations is important!
-  mg_iobuf_add(&c->send, c->send.len, NULL, header_len, MG_IO_SIZE);
+  mg_iobuf_add(&c->send, c->send.len, NULL, header_len);
   p = &c->send.buf[c->send.len - len];         // p points to data
   memmove(p, p - header_len, len);             // Shift data
   memcpy(p - header_len, header, header_len);  // Prepend header

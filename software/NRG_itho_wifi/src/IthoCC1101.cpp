@@ -957,7 +957,7 @@ String IthoCC1101::LastMessageDecoded()
   if (inIthoPacket.length > 11)
   {
 
-    char bufhead[10];
+    char bufhead[10]{};
     snprintf(bufhead, sizeof(bufhead), "Header: %02X", inIthoPacket.header);
 
     str += String(MsgType[inIthoPacket.type]);
@@ -979,7 +979,7 @@ String IthoCC1101::LastMessageDecoded()
     else
     {
       str += " ";
-      char buf[10];
+      char buf[10]{};
       snprintf(buf, sizeof(buf), "%02X,%02X,%02X", inIthoPacket.deviceId0 >> 16 & 0xFF, inIthoPacket.deviceId0 >> 8 & 0xFF, inIthoPacket.deviceId0 & 0xFF);
       str += String(buf);
     }
@@ -990,7 +990,7 @@ String IthoCC1101::LastMessageDecoded()
     else
     {
       str += " ";
-      char buf[10];
+      char buf[10]{};
       sprintf(buf, "%02X,%02X,%02X", inIthoPacket.deviceId1 >> 16 & 0xFF, inIthoPacket.deviceId1 >> 8 & 0xFF, inIthoPacket.deviceId1 & 0xFF);
       str += String(buf);
     }
@@ -1001,14 +1001,14 @@ String IthoCC1101::LastMessageDecoded()
     else
     {
       str += " ";
-      char buf[10];
+      char buf[10]{};
       sprintf(buf, "%02X,%02X,%02X", inIthoPacket.deviceId2 >> 16 & 0xFF, inIthoPacket.deviceId2 >> 8 & 0xFF, inIthoPacket.deviceId2 & 0xFF);
       str += String(buf);
     }
 
     str += " ";
 
-    char buf[10];
+    char buf[10]{};
     sprintf(buf, "%04X", inIthoPacket.opcode);
     str += String(buf);
 
@@ -1031,7 +1031,7 @@ String IthoCC1101::LastMessageDecoded()
   {
     for (uint8_t i = 0; i < inIthoPacket.length; i++)
     {
-      char buf[10];
+      char buf[10]{};
       sprintf(buf, "%02X", inIthoPacket.dataDecoded[i]);
       str += String(buf);
       if (i < inIthoPacket.length - 1)
