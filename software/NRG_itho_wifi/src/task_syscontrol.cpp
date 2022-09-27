@@ -413,7 +413,7 @@ void wifiInit()
     logInput("Setup: Wifi config load failed");
     setupWiFiAP();
   }
-  else if (!connectWiFiSTA())
+  else if (!connectWiFiSTA(true))
   {
     logInput("Setup: Wifi connect STA failed");
     setupWiFiAP();
@@ -469,31 +469,54 @@ void setupWiFiAP()
   logInput("wifi AP mode started");
 }
 
-bool connectWiFiSTA()
+bool connectWiFiSTA(bool restore)
 {
 
   wifiModeAP = false;
   D_LOG("Connecting to wireless network...\n");
 
-  WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
+  // Do not use SDK storage of SSID/WPA parameters
+  WiFi.persistent(false);
 
-  if (!WiFi.disconnect(true))
+  // Set wifi mode to STA for next step (clear config)
+  if (!WiFi.mode(WIFI_STA))
+    D_LOG("Unable to set WiFi mode to STA\n");
+
+  // Clear any saved wifi config
+  if (restore)
+  {
+    esp_err_t wifi_restore = esp_wifi_restore();
+    D_LOG("esp_wifi_restore: %s\n", esp_err_to_name(wifi_restore));
+  }
+  // Disconnect any existing connections and clear
+  if (!WiFi.disconnect(true, true))
     D_LOG("Unable to set wifi disconnect\n");
 
+  // Reset wifi mode to NULL
+  if (!WiFi.mode(WIFI_MODE_NULL))
+    D_LOG("Unable to set WiFi mode to NULL\n");
+
+  // Set hostname
   bool setHostname_result = WiFi.setHostname(hostName());
   D_LOG("WiFi.setHostname: %s\n", setHostname_result ? "OK" : "NOK");
 
+  // No AutoReconnect
   if (!WiFi.setAutoReconnect(false))
     D_LOG("Unable to set auto reconnect\n");
 
   delay(200);
 
+  // Begin init of actual wifi connection
+
+  // Set correct mode
   if (!WiFi.mode(WIFI_STA))
     D_LOG("Unable to set WiFi mode\n");
 
+  // Do not use flash storage for wifi settings
   esp_err_t wifi_set_storage = esp_wifi_set_storage(WIFI_STORAGE_RAM);
   D_LOG("esp_wifi_set_storage: %s\n", esp_err_to_name(wifi_set_storage));
 
+  // No power saving
   esp_err_t wifi_set_ps = esp_wifi_set_ps(WIFI_PS_NONE);
   D_LOG("esp_wifi_set_ps: %s\n", esp_err_to_name(wifi_set_ps));
 
@@ -819,4 +842,3 @@ bool ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
 
   return true;
 }
-
