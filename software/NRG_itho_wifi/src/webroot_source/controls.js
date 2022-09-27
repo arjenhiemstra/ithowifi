@@ -264,7 +264,7 @@ $(document).ready(function () {
           dns2: $('#dns2').val(),
           port: $('#port').val(),
           hostname: $('#hostname').val(),
-          nptserver: $('#ntpserver').val()
+          ntpserver: $('#ntpserver').val()
         }
       }));
       update_page('wifisetup');
