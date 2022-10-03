@@ -190,7 +190,7 @@ void wifiScan()
       }
 
       char ssid[33]{}; // ssid can be up to 32chars, => plus null term
-      strcpy(ssid, WiFi.SSID(indices[i]).c_str());
+      strlcpy(ssid, WiFi.SSID(indices[i]).c_str(), sizeof(ssid));
 
       StaticJsonDocument<512> root;
       JsonObject wifiscanresult = root.createNestedObject("wifiscanresult");
@@ -225,16 +225,16 @@ void logWifiInfo()
 
   sprintf(wifiBuff, "Mode:%s", modes[WiFi.getMode()]);
   logInput(wifiBuff);
-  strcpy(wifiBuff, "");
+  strlcpy(wifiBuff, "", sizeof(wifiBuff));
 
   sprintf(wifiBuff, "Status:%s", wl_status_to_name(WiFi.status()));
   logInput(wifiBuff);
-  strcpy(wifiBuff, "");
+  strlcpy(wifiBuff, "", sizeof(wifiBuff));
 
   IPAddress ip = WiFi.localIP();
   sprintf(wifiBuff, "IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
   logInput(wifiBuff);
-  strcpy(wifiBuff, "");
+  strlcpy(wifiBuff, "", sizeof(wifiBuff));
 }
 
 typedef struct

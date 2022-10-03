@@ -21,10 +21,10 @@ const char* System::uptime()
   hours = hours - (days * 24); //subtract the coverted hours to days in order to display 23 hours max
 
   if (days < 10) {
-    strcpy(retval, "0");
+    strlcpy(retval, "0", sizeof(retval));
   }
   else {
-    strcpy(retval, "");
+    strlcpy(retval, "", sizeof(retval));
   }
   ltoa(days, buffer, 10);
   strcat(retval, buffer);

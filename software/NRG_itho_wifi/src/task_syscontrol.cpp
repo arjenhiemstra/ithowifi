@@ -19,6 +19,7 @@ bool clearQueue = false;
 bool shouldReboot = false;
 int8_t ithoInitResult = 0;
 bool IthoInit = false;
+bool wifiModeAP = false;
 
 // locals
 StaticTask_t xTaskSysControlBuffer;
@@ -36,7 +37,6 @@ unsigned long SHT3x_readout = 0;
 unsigned long query2401tim = 0;
 unsigned long mqttUpdatetim = 0;
 unsigned long lastVersionCheck = 0;
-bool wifiModeAP = false;
 bool i2cStartCommands = false;
 bool joinSend = false;
 
@@ -478,6 +478,33 @@ bool connectWiFiSTA(bool restore)
   // Do not use SDK storage of SSID/WPA parameters
   WiFi.persistent(false);
 
+#ifdef ESPRESSIF32_3_5_0
+  //
+  // Do not use flash storage for wifi settings
+  esp_err_t wifi_set_storage = esp_wifi_set_storage(WIFI_STORAGE_RAM);
+  D_LOG("esp_wifi_set_storage: %s\n", esp_err_to_name(wifi_set_storage));
+  // Disconnect any existing connections and clear
+  if (!WiFi.disconnect(true))
+    D_LOG("Unable to set wifi disconnect\n");
+
+  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
+  // Set hostname
+  bool setHostname_result = WiFi.setHostname(hostName());
+  D_LOG("WiFi.setHostname: %s\n", setHostname_result ? "OK" : "NOK");
+
+  // No AutoReconnect
+  if (!WiFi.setAutoReconnect(false))
+    D_LOG("Unable to set auto reconnect\n");
+  delay(200);
+  // Set correct mode
+  if (!WiFi.mode(WIFI_STA))
+    D_LOG("Unable to set WiFi mode\n");
+
+  // No power saving
+  esp_err_t wifi_set_ps = esp_wifi_set_ps(WIFI_PS_NONE);
+  D_LOG("esp_wifi_set_ps: %s\n", esp_err_to_name(wifi_set_ps));
+  //
+#else
   // Set wifi mode to STA for next step (clear config)
   if (!WiFi.mode(WIFI_STA))
     D_LOG("Unable to set WiFi mode to STA\n");
@@ -512,6 +539,14 @@ bool connectWiFiSTA(bool restore)
   if (!WiFi.mode(WIFI_STA))
     D_LOG("Unable to set WiFi mode\n");
 
+  esp_err_t esp_wifi_set_max_tx_power(int8_t power);
+  esp_err_t wifi_set_max_tx_power = esp_wifi_set_max_tx_power(78);
+  D_LOG("esp_wifi_set_max_tx_power: %s\n", esp_err_to_name(wifi_set_max_tx_power));
+
+  int8_t wifi_power_level = -1;
+  esp_err_t wifi_get_max_tx_power = esp_wifi_get_max_tx_power(&wifi_power_level);
+  D_LOG("esp_wifi_get_max_tx_power: %s - level:%d\n", esp_err_to_name(wifi_get_max_tx_power), wifi_power_level);
+
   // Do not use flash storage for wifi settings
   esp_err_t wifi_set_storage = esp_wifi_set_storage(WIFI_STORAGE_RAM);
   D_LOG("esp_wifi_set_storage: %s\n", esp_err_to_name(wifi_set_storage));
@@ -519,64 +554,20 @@ bool connectWiFiSTA(bool restore)
   // No power saving
   esp_err_t wifi_set_ps = esp_wifi_set_ps(WIFI_PS_NONE);
   D_LOG("esp_wifi_set_ps: %s\n", esp_err_to_name(wifi_set_ps));
+#endif
 
   if (strcmp(wifiConfig.dhcp, "off") == 0)
   {
-    bool configOK = true;
-    IPAddress staticIP;
-    IPAddress gateway;
-    IPAddress subnet;
-    IPAddress dns1;
-    IPAddress dns2;
-
-    if (!staticIP.fromString(wifiConfig.ip))
-    {
-      configOK = false;
-    }
-    if (!gateway.fromString(wifiConfig.gateway))
-    {
-      configOK = false;
-    }
-    if (!subnet.fromString(wifiConfig.subnet))
-    {
-      configOK = false;
-    }
-    if (!dns1.fromString(wifiConfig.dns1))
-    {
-      configOK = false;
-    }
-    if (!dns2.fromString(wifiConfig.dns2))
-    {
-      configOK = false;
-    }
-    if (configOK)
-    {
-      if (!WiFi.config(staticIP, gateway, subnet, dns1, dns2))
-      {
-        logInput("Static IP config NOK");
-      }
-      else
-      {
-        logInput("Static IP config OK");
-      }
-    }
+    set_static_ip_config();
   }
 
-  delay(200);
+  delay(2000);
 
   wl_status_t wifi_begin = WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 
   auto timeoutmillis = millis() + 30000;
   wl_status_t status = WiFi.status();
-  // wl_status_t values:
-  //  WL_NO_SHIELD = 255, // for compatibility with WiFi Shield library
-  //  WL_IDLE_STATUS = 0,
-  //  WL_NO_SSID_AVAIL = 1,
-  //  WL_SCAN_COMPLETED = 2,
-  //  WL_CONNECTED = 3,
-  //  WL_CONNECT_FAILED = 4,
-  //  WL_CONNECTION_LOST = 5,
-  //  WL_DISCONNECTED = 6
+
   while (millis() < timeoutmillis)
   {
 
@@ -587,6 +578,22 @@ bool connectWiFiSTA(bool restore)
     {
       digitalWrite(WIFILED, LOW);
       return true;
+    }
+    else if (status != WL_DISCONNECTED) // fix for issue #108
+    {
+      logInput("WiFi: status != WL_DISCONNECTED, reinit setup");
+      WiFi.disconnect();
+      WiFi.mode(WIFI_OFF);
+      if (strcmp(wifiConfig.dhcp, "off") == 0)
+      {
+        set_static_ip_config();
+      }
+      WiFi.mode(WIFI_STA);
+
+      delay(1000);
+
+      wifi_begin = WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
+      delay(2000);
     }
     if (digitalRead(WIFILED) == LOW)
     {
@@ -609,6 +616,47 @@ bool connectWiFiSTA(bool restore)
   return false;
 }
 
+void set_static_ip_config()
+{
+  bool configOK = true;
+  IPAddress staticIP;
+  IPAddress gateway;
+  IPAddress subnet;
+  IPAddress dns1;
+  IPAddress dns2;
+
+  if (!staticIP.fromString(wifiConfig.ip))
+  {
+    configOK = false;
+  }
+  if (!gateway.fromString(wifiConfig.gateway))
+  {
+    configOK = false;
+  }
+  if (!subnet.fromString(wifiConfig.subnet))
+  {
+    configOK = false;
+  }
+  if (!dns1.fromString(wifiConfig.dns1))
+  {
+    configOK = false;
+  }
+  if (!dns2.fromString(wifiConfig.dns2))
+  {
+    configOK = false;
+  }
+  if (configOK)
+  {
+    if (!WiFi.config(staticIP, gateway, subnet, dns1, dns2))
+    {
+      logInput("Static IP config NOK");
+    }
+    else
+    {
+      logInput("Static IP config OK");
+    }
+  }
+}
 void initSensor()
 {
 

@@ -3,6 +3,9 @@
 
 struct mg_mgr mgr;
 const char *s_listen_on_ws = "ws://0.0.0.0:8000";
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
+const char *s_listen_on_http = "http://0.0.0.0:8080";
+#endif
 
 SemaphoreHandle_t mutexJSONLog;
 SemaphoreHandle_t mutexWSsend;
@@ -58,7 +61,7 @@ void jsonSysmessage(const char *id, const char *message)
   systemstat["id"] = id;
   systemstat["message"] = message;
 
-  strcpy(logBuff, "");
+  strlcpy(logBuff, "", sizeof(logBuff));
 
   notifyClients(root.as<JsonObjectConst>());
 }

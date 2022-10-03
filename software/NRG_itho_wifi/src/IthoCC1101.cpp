@@ -1085,7 +1085,7 @@ bool IthoCC1101::removeRFDevice(uint32_t ID)
     if (item.deviceId == ID)
     {
       item.deviceId = 0;
-      //      strcpy(item.name, "");
+      //      strlcpy(item.name, "", sizeof(item.name));
       item.remType = RemoteTypes::UNSETTYPE;
       item.lastCommand = IthoUnknown;
       item.co2 = 0xEFFF;

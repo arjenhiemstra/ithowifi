@@ -311,7 +311,7 @@ void logLastCommand(const char *command, const char *source)
 {
 
   lastCmd.source = source;
-  strcpy(lastCmd.command, command);
+  strlcpy(lastCmd.command, command, sizeof(lastCmd.command));
 
   if (time(nullptr))
   {
@@ -363,7 +363,7 @@ void setRFdebugLevel(uint8_t level)
   }
   sprintf(logBuff, "Debug level = %d", debugLevel);
   logMessagejson(logBuff, WEBINTERFACE);
-  strcpy(logBuff, "");
+  strlcpy(logBuff, "", sizeof(logBuff));
 }
 
 double round(double value, int precision)

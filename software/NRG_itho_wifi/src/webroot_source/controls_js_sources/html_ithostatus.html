@@ -1,9 +1,14 @@
 <div class="header">
   <h1>Itho status</h1>
 </div>
-<p>System values of the itho unit<br><br>Also available on MQTT topics where the label is the last part of the topic
-  name: itho/ithostatus/[label] .<br>The list of available labels depends on the itho model/version and is generated
-  automatically.</p>
+<p>System values of the itho unit<br><br>Also available on the MQTT API topic 'itho/ithostatus' and WebAPI using
+  '/api.html?get=ithostatus'.</p>
+<p>The list of available labels depends on the itho model/firmware version and is
+  generated
+  automatically using this itho model/firmware version information.</p>
+<p>A working I2C connection is needed for these
+  status labels to get populated and updated.</p>
+<span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span><br><br>
 <style>
   .pure-form-aligned .pure-control-group label {
     width: 15em;

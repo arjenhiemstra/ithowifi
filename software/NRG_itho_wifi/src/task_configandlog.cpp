@@ -150,9 +150,9 @@ void execLogAndConfigTasks()
     {
       systemstat["format"] = 1;
       notifyClients(root.as<JsonObjectConst>());
-      strcpy(logBuff, "Filesystem format done");
+      strlcpy(logBuff, "Filesystem format done", sizeof(logBuff));
       logMessagejson(logBuff, WEBINTERFACE);
-      strcpy(logBuff, "Device rebooting, connect to accesspoint to setup the device");
+      strlcpy(logBuff, "Device rebooting, connect to accesspoint to setup the device", sizeof(logBuff));
       logMessagejson(logBuff, WEBINTERFACE);
       esp_task_wdt_init(1, true);
       esp_task_wdt_add(NULL);
@@ -162,11 +162,11 @@ void execLogAndConfigTasks()
     else
     {
       systemstat["format"] = 0;
-      strcpy(logBuff, "Unable to format");
+      strlcpy(logBuff, "Unable to format", sizeof(logBuff));
       logMessagejson(logBuff, WEBINTERFACE);
       notifyClients(root.as<JsonObjectConst>());
     }
-    strcpy(logBuff, "");
+    strlcpy(logBuff, "", sizeof(logBuff));
   }
 }
 
@@ -199,58 +199,58 @@ void logInit()
   switch (reason)
   {
   case 1:
-    strcpy(buf, "POWERON_RESET");
+    strlcpy(buf, "POWERON_RESET", sizeof(buf));
     break; /**<1,  Vbat power on reset*/
   case 3:
-    strcpy(buf, "SW_RESET");
+    strlcpy(buf, "SW_RESET", sizeof(buf));
     break; /**<3,  Software reset digital core*/
   case 4:
-    strcpy(buf, "OWDT_RESET");
+    strlcpy(buf, "OWDT_RESET", sizeof(buf));
     break; /**<4,  Legacy watch dog reset digital core*/
   case 5:
-    strcpy(buf, "DEEPSLEEP_RESET");
+    strlcpy(buf, "DEEPSLEEP_RESET", sizeof(buf));
     break; /**<5,  Deep Sleep reset digital core*/
   case 6:
-    strcpy(buf, "SDIO_RESET");
+    strlcpy(buf, "SDIO_RESET", sizeof(buf));
     break; /**<6,  Reset by SLC module, reset digital core*/
   case 7:
-    strcpy(buf, "TG0WDT_SYS_RESET");
+    strlcpy(buf, "TG0WDT_SYS_RESET", sizeof(buf));
     break; /**<7,  Timer Group0 Watch dog reset digital core*/
   case 8:
-    strcpy(buf, "TG1WDT_SYS_RESET");
+    strlcpy(buf, "TG1WDT_SYS_RESET", sizeof(buf));
     break; /**<8,  Timer Group1 Watch dog reset digital core*/
   case 9:
-    strcpy(buf, "RTCWDT_SYS_RESET");
+    strlcpy(buf, "RTCWDT_SYS_RESET", sizeof(buf));
     break; /**<9,  RTC Watch dog Reset digital core*/
   case 10:
-    strcpy(buf, "INTRUSION_RESET");
+    strlcpy(buf, "INTRUSION_RESET", sizeof(buf));
     break; /**<10, Instrusion tested to reset CPU*/
   case 11:
-    strcpy(buf, "TGWDT_CPU_RESET");
+    strlcpy(buf, "TGWDT_CPU_RESET", sizeof(buf));
     break; /**<11, Time Group reset CPU*/
   case 12:
-    strcpy(buf, "SW_CPU_RESET");
+    strlcpy(buf, "SW_CPU_RESET", sizeof(buf));
     break; /**<12, Software reset CPU*/
   case 13:
-    strcpy(buf, "RTCWDT_CPU_RESET");
+    strlcpy(buf, "RTCWDT_CPU_RESET", sizeof(buf));
     break; /**<13, RTC Watch dog Reset CPU*/
   case 14:
-    strcpy(buf, "EXT_CPU_RESET");
+    strlcpy(buf, "EXT_CPU_RESET", sizeof(buf));
     break; /**<14, for APP CPU, reseted by PRO CPU*/
   case 15:
-    strcpy(buf, "RTCWDT_BROWN_OUT_RESET");
+    strlcpy(buf, "RTCWDT_BROWN_OUT_RESET", sizeof(buf));
     break; /**<15, Reset when the vdd voltage is not stable*/
   case 16:
-    strcpy(buf, "RTCWDT_RTC_RESET");
+    strlcpy(buf, "RTCWDT_RTC_RESET", sizeof(buf));
     break; /**<16, RTC Watch dog reset digital core and rtc module*/
   default:
-    strcpy(buf, "NO_MEAN");
+    strlcpy(buf, "NO_MEAN", sizeof(buf));
   }
   sprintf(logBuff, "System boot, last reset reason: %s", buf);
 
   logInput(logBuff);
 
-  strcpy(logBuff, "");
+  strlcpy(logBuff, "", sizeof(logBuff));
   sprintf(logBuff, "HW rev: %s, FW ver.: %s", HWREVISION, FWVERSION);
   logInput(logBuff);
 }

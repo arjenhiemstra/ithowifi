@@ -140,7 +140,7 @@ const char *getIthoType()
   {
     if (ithoDevicesptr->DG == ithoDeviceGroup && ithoDevicesptr->ID == currentIthoDeviceID())
     {
-      strcpy(ithoDeviceType, ithoDevicesptr->name);
+      strlcpy(ithoDeviceType, ithoDevicesptr->name, sizeof(ithoDeviceType));
     }
     ithoDevicesptr++;
   }

@@ -33,6 +33,7 @@ extern bool clearQueue;
 extern bool shouldReboot;
 extern int8_t ithoInitResult;
 extern bool IthoInit;
+extern bool wifiModeAP;
 
 void startTaskSysControl();
 void TaskSysControl(void *pvParameters);
@@ -40,6 +41,7 @@ void execSystemControlTasks();
 void wifiInit();
 void setupWiFiAP();
 bool connectWiFiSTA(bool restore = false);
+void set_static_ip_config();
 void initSensor();
 void initSensor();
 void init_vRemote();

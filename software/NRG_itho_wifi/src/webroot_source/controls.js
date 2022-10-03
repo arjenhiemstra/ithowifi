@@ -1328,9 +1328,14 @@ var html_ithostatus = `
 <div class="header">
   <h1>Itho status</h1>
 </div>
-<p>System values of the itho unit<br><br>Also available on MQTT topics where the label is the last part of the topic
-  name: itho/ithostatus/[label] .<br>The list of available labels depends on the itho model/version and is generated
-  automatically.</p>
+<p>System values of the itho unit<br><br>Also available on the MQTT API topic 'itho/ithostatus' and WebAPI using
+  '/api.html?get=ithostatus'.</p>
+<p>The list of available labels depends on the itho model/firmware version and is
+  generated
+  automatically using this itho model/firmware version information.</p>
+<p>A working I2C connection is needed for these
+  status labels to get populated and updated.</p>
+<span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span><br><br>
 <style>
   .pure-form-aligned .pure-control-group label {
     width: 15em;
@@ -1968,13 +1973,23 @@ var html_reset = `
 
 var html_remotessetup = `
 <div class="header">
-  <h1>RF Remotes setup</h1>
+  <h1>RF Devices setup</h1>
 </div>
 <style>
   .pure-form-aligned .pure-control-group label {
     width: 15em;
   }
 </style>
+<br>
+<p>A range of RF devices (ie. remotes, co2 and rv sensors) can be joined to the add-on using a CC1101 RF module.<br> The
+  add-on will translate commands from a RF device to speed/timer commands towards the itho.<br>This way the speed status
+  of a
+  RF device is always correctly represented on the add-on and within your domotica software.</p>
+<p>There is also an option
+  to monitor only. With this option checked, a RF device still paired with an itho can be monitored without influencing
+  the commands using the add-on.</p>
+<p>Last received commands (and if applicable data) received from paired RF devices is available through the MQTT API and
+  WebAPI</p>
 <form class="pure-form pure-form-aligned">
   <fieldset>
     <br><br>

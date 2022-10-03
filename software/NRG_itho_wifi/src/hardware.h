@@ -1,8 +1,12 @@
 #pragma once
 
 #include "version.h"
-//#define ACTIVE_FS LITTLEFS
+
+#ifdef ESPRESSIF32_3_5_0
+#define ACTIVE_FS LITTLEFS
+#else
 #define ACTIVE_FS LittleFS
+#endif
 
 #define STACK_SIZE_SMALL 2048
 #define STACK_SIZE 4096
