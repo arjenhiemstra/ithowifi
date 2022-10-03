@@ -5,8 +5,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
 void websocketInit()
 {
   mg_log_set(0);
-  mg_mgr_init(&mgr);                                   // Initialise event manager
-  mg_http_listen(&mgr, s_listen_on_ws, wsEvent, NULL); // Create WS listener
+  mg_mgr_init(&mgr);                                       // Initialise event manager
+  mg_http_listen(&mgr, s_listen_on_ws, wsEvent, NULL);     // Create WS listener
 }
 
 void jsonWsSend(const char *rootName)
@@ -452,3 +452,4 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
   }
   (void)fn_data;
 }
+

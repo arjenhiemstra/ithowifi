@@ -15,9 +15,10 @@
 
 extern struct mg_mgr mgr;
 extern const char *s_listen_on_ws;
+extern const char *s_listen_on_http;
 
-// extern AsyncWebSocket ws;
-extern SemaphoreHandle_t mutexJSONLog;
+    // extern AsyncWebSocket ws;
+    extern SemaphoreHandle_t mutexJSONLog;
 extern SemaphoreHandle_t mutexWSsend;
 
 typedef enum

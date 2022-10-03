@@ -32,6 +32,30 @@ unsigned long previousUpdate = 0;
 String debugVal = "";
 bool onOTA = false;
 bool TaskWebStarted = false;
+static const char *s_root_dir = ".";
+
+static const struct packed_files_lst
+{
+  const char *name;
+} packed_files_list[] = {
+    "/",
+    "/index.html",
+    "/controls.js",
+    "/edit.html",
+    "/favicon.png",
+    "/pure-min.css",
+    "/zepto.min.js",
+    ""};
+
+// const char packed_files_list[] = {
+//     "/index.html",
+//     "/controls.js",
+//     "/edit.html",
+//     "/favicon.png",
+//     "/pure-min.css",
+//     "/zepto.min.js",
+//     NULL,
+// };
 
 void startTaskWeb()
 {
@@ -84,8 +108,8 @@ void TaskWeb(void *pvParameters)
 void execWebTasks()
 {
   ArduinoOTA.handle();
-  // ws.cleanupClients();
-  mg_mgr_poll(&mgr, 1000);
+
+  mg_mgr_poll(&mgr, 500);
   if (millis() - previousUpdate >= 5000 || sysStatReq)
   {
     if (millis() - lastSysMessage >= 1000 && !onOTA)
@@ -188,6 +212,9 @@ void ArduinoOTAinit()
 void webServerInit()
 {
 
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
+  mg_http_listen(&mgr, s_listen_on_http, httpEvent, NULL); // Create HTTP listener
+#endif
   // upload a file to /upload
   server.on(
       "/upload", HTTP_POST, [](AsyncWebServerRequest *request)
@@ -202,14 +229,6 @@ void webServerInit()
         // Handle upload
       });
 
-  // if (systemConfig.syssec_edit)
-  // {
-  //   server.addHandler(new SPIFFSEditor(ACTIVE_FS, systemConfig.sys_username, systemConfig.sys_password));
-  // }
-  // else
-  // {
-  //   server.addHandler(new SPIFFSEditor(ACTIVE_FS, "", ""));
-  // }
   server.on("/edit", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     if (systemConfig.syssec_edit) {
@@ -240,20 +259,20 @@ void webServerInit()
     request->send(response); });
 
   // javascript files
-  server.on("/js/zepto.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/zepto.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", zepto_min_js_gz, zepto_min_js_gz_len);
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); });
 
-  server.on("/js/controls.js", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/controls.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", controls_js_gz, controls_js_gz_len);
     response->addHeader("Server", "Itho WiFi Web Server");
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); });
 
-  server.on("/js/general.js", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/general.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     AsyncResponseStream *response = request->beginResponseStream("application/javascript");
     response->addHeader("Server", "Itho WiFi Web Server");
@@ -269,7 +288,7 @@ void webServerInit()
     request->send(response); })
       .setFilter(ON_STA_FILTER);
 
-  server.on("/js/general.js", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/general.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     AsyncResponseStream *response = request->beginResponseStream("application/javascript");
     response->addHeader("Server", "Itho WiFi Web Server");
@@ -292,8 +311,8 @@ void webServerInit()
     request->send(response); });
 
   // HTML pages
-  server.rewrite("/", "/index.htm");
-  server.on("/index.htm", HTTP_ANY, [](AsyncWebServerRequest *request)
+  server.rewrite("/", "/index.html");
+  server.on("/index.html", HTTP_ANY, [](AsyncWebServerRequest *request)
             {
     if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
@@ -1020,7 +1039,8 @@ bool handleFileRead(AsyncWebServerRequest *request)
 {
   if (systemConfig.syssec_edit)
   {
-    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password)) {
+    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+    {
       request->send(401);
       return false;
     }
@@ -1036,7 +1056,7 @@ bool handleFileRead(AsyncWebServerRequest *request)
     {
       path += ".gz";
     }
-    request->send(ACTIVE_FS, path.c_str(), getContentType(request, path.c_str()), request->hasParam("download"));
+    request->send(ACTIVE_FS, path.c_str(), getContentType(request->hasParam("download"), path.c_str()), request->hasParam("download"));
 
     pathWithGz = String();
     path = String();
@@ -1109,7 +1129,12 @@ void handleFileList(AsyncWebServerRequest *request)
       output += "{\"type\":\"";
       output += (file.isDirectory()) ? "dir" : "file";
       output += "\",\"name\":\"";
+#ifdef ESPRESSIF32_3_5_0
+      output += String(file.name());
+#else
       output += String(file.path()).substring(1);
+#endif
+
       output += "\",\"size\":\"";
       output += String(file.size());
       output += "\"}";
@@ -1124,9 +1149,9 @@ void handleFileList(AsyncWebServerRequest *request)
   output = String();
 }
 
-const char *getContentType(AsyncWebServerRequest *request, const char *filename)
+const char *getContentType(bool download, const char *filename)
 {
-  if (request->hasParam("download"))
+  if (download)
     return "application/octet-stream";
   else if (strstr(filename, ".htm"))
     return "text/html";
@@ -1186,3 +1211,460 @@ void jsonSystemstat()
 
   notifyClients(root.as<JsonObjectConst>());
 }
+
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
+void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+{
+  if (ev == MG_EV_HTTP_MSG)
+  {
+    struct mg_http_message *hm = (struct mg_http_message *)ev_data;
+    if (mg_http_match_uri(hm, "/general.js"))
+    {
+      mg_http_reply(c, 200, "Content-Type: application/javascript\r\n",
+                    "var on_ap = %s; var hostname = '%s'; var fw_version = '%s'; var hw_revision = '%s'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });\n",
+                    wifiModeAP ? "true" : "false", hostName(), FWVERSION, HWREVISION);
+    }
+    else if (mg_http_match_uri(hm, "/list"))
+    {
+      mg_handleFileList(c, ev, ev_data, fn_data);
+    }
+    else if (mg_http_match_uri(hm, "/status"))
+    {
+      mg_handleStatus(c, ev, ev_data, fn_data);
+    }
+    else if (mg_http_match_uri(hm, "/api.html"))
+    {
+      // handleAPI
+    }
+    else if (mg_http_match_uri(hm, "/debug"))
+    {
+      // handleDebug
+    }
+    else if (mg_http_match_uri(hm, "/curlog"))
+    {
+      // handleCurLogDownload
+    }
+    else if (mg_http_match_uri(hm, "/prevlog"))
+    {
+      // handlePrevLogDownload
+    }
+    else if (mg_http_match_uri(hm, "/reset"))
+    {
+      // add handle auth
+      logMessagejson("Reset requested. Device will reboot in a few seconds...", WEBINTERFACE);
+      mg_http_reply(c, 200, "", "HTTP OK");
+      delay(200);
+      shouldReboot = true;
+    }
+    else if (mg_http_match_uri(hm, "/edit"))
+    {
+      if (strncmp(hm->method.ptr, "GET", hm->method.len) == 0)
+      {
+        const char url[] = "/edit.html";
+        const size_t len = sizeof(url) / sizeof(url[0]);
+        struct mg_http_message mg = {.uri{.ptr = &url[0], .len = len}};
+
+        mg_serve_fs(c, (void *)&mg);
+      }
+      else if (strncmp(hm->method.ptr, "PUT", hm->method.len) == 0)
+      {
+        mg_handleFileCreate(c, ev, ev_data, fn_data);
+      }
+      else if (strncmp(hm->method.ptr, "DELETE", hm->method.len) == 0)
+      {
+        mg_handleFileDelete(c, ev, ev_data, fn_data);
+      }
+    }
+    else
+    {
+      mg_serve_fs(c, ev_data);
+    }
+
+    (void)fn_data;
+  }
+}
+
+bool mg_packed_file_exists(void *ev_data)
+{
+  struct mg_http_message *hm = (struct mg_http_message *)ev_data;
+  const struct packed_files_lst *ptr = packed_files_list;
+  while (strcmp(ptr->name, "") != 0)
+  {
+    if (strncmp(ptr->name, hm->uri.ptr, hm->uri.len) == 0)
+    {
+      return true;
+    }
+    ptr++;
+  }
+  return false;
+}
+
+void mg_serve_fs(struct mg_connection *c, void *ev_data)
+{
+  struct mg_http_message *hm = (struct mg_http_message *)ev_data;
+  if (hm->uri.ptr == NULL)
+    return;
+
+  if (mg_packed_file_exists(ev_data))
+  {
+    struct mg_http_serve_opts opts = {
+        .root_dir = "/web_root",
+        .fs = &mg_fs_packed};
+    mg_http_serve_dir(c, (struct mg_http_message *)ev_data, &opts);
+  }
+  else if (mg_handleFileRead(c, ev_data))
+  {
+    // char buf[64]{};
+    // strlcpy(buf, hm->uri.ptr, hm->uri.len + 1);
+    // D_LOG("File '%s' found on LittleFS file system\n", buf);
+  }
+  else
+  {
+
+    char buf[64]{};
+    int len = hm->uri.len + 1;
+    if (len > sizeof(buf))
+      len = sizeof(buf);
+    strlcpy(buf, hm->uri.ptr, len);
+    D_LOG("File '%s' not found on any file system\n", buf);
+  }
+}
+
+void mg_handleFileList(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+{
+  // add handle auth
+
+  struct mg_http_message *hm = (struct mg_http_message *)ev_data;
+
+  char dir[64]{};
+  int get_var_res = mg_http_get_var(&hm->query, "dir", dir, sizeof(dir));
+
+  if (get_var_res < 1)
+  {
+    mg_http_reply(c, 500, "", "%s", "BAD ARGS\n");
+    return;
+  }
+
+  File root = ACTIVE_FS.open(dir);
+
+  String output = "[";
+  if (root.isDirectory())
+  {
+    File file = root.openNextFile();
+    while (file)
+    {
+      if (output != "[")
+      {
+        output += ',';
+      }
+      output += "{\"type\":\"";
+      output += (file.isDirectory()) ? "dir" : "file";
+      output += "\",\"name\":\"";
+#ifdef ESPRESSIF32_3_5_0
+      output += String(file.name());
+#else
+      output += String(file.path()).substring(1);
+#endif
+
+      output += "\",\"size\":\"";
+      output += String(file.size());
+      output += "\"}";
+      file = root.openNextFile();
+    }
+  }
+  output += "]";
+
+  root.close();
+
+  mg_http_reply(c, 200, "Content-Type: application/json\r\n", "%s\n", output.c_str());
+  output = String();
+}
+
+bool mg_handleFileRead(struct mg_connection *c, void *ev_data)
+{
+  // handle authentication
+  D_LOG("mg_handleFileRead called\n");
+  struct mg_http_message *hm = (struct mg_http_message *)ev_data;
+
+  // if (hm->query.ptr != NULL)
+  // {
+  //   char buf[128]{};
+  //   strlcpy(buf, hm->query.ptr, sizeof(buf));
+  //   D_LOG("hm->query: %s, len: %d\n", buf, hm->query.len);
+  // }
+
+  // if (hm->body.ptr != NULL)
+  // {
+  //   char body[265]{};
+  //   strlcpy(body, hm->body.ptr, sizeof(body));
+  //   D_LOG("hm->body: %s, len: %d\n", body, hm->body.len);
+  // }
+
+  // if (hm->uri.ptr != NULL)
+  // {
+  //   char uri[128]{};
+  //   strlcpy(uri, hm->uri.ptr, sizeof(uri));
+  //   D_LOG("hm->uri: %s, len: %d\n", uri, hm->uri.len);
+  // }
+  // mg_http_reply(c, 200, "", "HTTP OK");
+  // return false;
+
+  char buf[64]{};
+  strlcpy(buf, hm->uri.ptr, hm->uri.len + 1);
+  String path = buf;
+
+  String pathWithGz = path + ".gz";
+  if (ACTIVE_FS.exists(pathWithGz) || ACTIVE_FS.exists(path))
+  {
+    D_LOG("file found ('%s')\n", path.c_str());
+
+    if (ACTIVE_FS.exists(pathWithGz))
+    {
+      path += ".gz";
+    }
+
+    String contents;
+    File file = ACTIVE_FS.open(path.c_str(), "r");
+    if (!file)
+    {
+      D_LOG("mg_handleFileRead: file read error ('%s')\n", path.c_str());
+      return false;
+    }
+    else
+    {
+      contents = file.readString();
+      file.close();
+      String contect_type = getContentType(false, path.c_str());
+      contect_type += "\r\n";
+      mg_http_reply(c, 200, contect_type.c_str(), "%s\n", contents.c_str());
+
+      pathWithGz = String();
+      path = String();
+      return true;
+    }
+    pathWithGz = String();
+    path = String();
+    return false;
+  }
+}
+
+void mg_handleStatus(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+{
+  // handle auth
+  D_LOG("mg_handleStatus called\n");
+
+  size_t totalBytes = ACTIVE_FS.totalBytes();
+  size_t usedBytes = ACTIVE_FS.usedBytes();
+
+  String json;
+  json.reserve(128);
+  json = "{\"type\":\"Filesystem\", \"isOk\":";
+
+  json += "\"true\", \"totalBytes\":\"";
+  json += totalBytes;
+  json += "\", \"usedBytes\":\"";
+  json += usedBytes;
+  json += "\"";
+
+  json += ",\"unsupportedFiles\":\"\"}";
+
+  mg_http_reply(c, 200, "Content-Type: application/json\r\n", "%s\n", json.c_str());
+  json = String();
+}
+
+void mg_handleFileDelete(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+{
+}
+
+void mg_handleFileCreate(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+{
+
+  // handle auth
+  D_LOG("handleFileCreate called\n");
+
+  struct mg_http_message *hm = (struct mg_http_message *)ev_data;
+
+  if (hm->query.ptr != NULL)
+  {
+    char buf[128]{};
+    strlcpy(buf, hm->query.ptr, sizeof(buf));
+    D_LOG("hm->query: %s, len: %d\n", buf, hm->query.len);
+  }
+
+  if (hm->body.ptr != NULL)
+  {
+    char body[265]{};
+    strlcpy(body, hm->body.ptr, sizeof(body));
+    D_LOG("hm->body: %s, len: %d\n", body, hm->body.len);
+  }
+
+  if (hm->uri.ptr != NULL)
+  {
+    char uri[128]{};
+    strlcpy(uri, hm->uri.ptr, sizeof(uri));
+    D_LOG("hm->uri: %s, len: %d\n", uri, hm->uri.len);
+  }
+
+  if (hm->head.ptr != NULL)
+  {
+    char head[128]{};
+    strlcpy(head, hm->head.ptr, sizeof(head));
+    D_LOG("hm->head: %s, len: %d\n", head, hm->head.len);
+  }
+  char path[64]{};
+  char src[64]{};
+  const char pathname[] = "path";
+  const char srcname[] = "src";
+
+  struct mg_http_part part;
+  size_t pos = 0;
+
+  while ((pos = mg_http_next_multipart(hm->body, pos, &part)) > 0)
+  {
+    D_LOG("POS:%d\n", pos);
+    if (part.name.ptr != NULL)
+    {
+      D_LOG("Chunk name:%s len:%d\n", part.name.ptr, (int)part.name.len);
+    }
+    if (part.filename.ptr != NULL)
+    {
+      D_LOG("filename:%s len:%d\n", part.filename.ptr, (int)part.filename.len);
+    }
+    if (part.body.ptr != NULL)
+    {
+      D_LOG("body:%s len:%d\n", part.body.ptr, (int)part.body.len);
+    }
+    if (part.name.ptr != NULL || part.filename.ptr != NULL || part.body.ptr != NULL)
+    {
+      D_LOG("\n");
+    }
+    if (part.name.ptr != NULL && part.body.ptr != NULL)
+    {
+      if (String(part.name.ptr).startsWith("path"))
+      {
+        strlcpy(path, part.body.ptr, part.body.len + 1);
+        D_LOG("Path name found:[%s]\n", path);
+      }
+      if (String(part.name.ptr).startsWith("src"))
+      {
+        strlcpy(src, part.body.ptr, part.body.len + 1);
+        D_LOG("Src name found:[%s]\n", src);
+      }
+    }
+  }
+
+  if (strncmp(path, "", sizeof(path)) == 0)
+  {
+    mg_http_reply(c, 400, "", "%s", "PATH ARG MISSING\n");
+    return;
+  }
+  if (strncmp(path, "/", sizeof(path)) == 0)
+  {
+    mg_http_reply(c, 400, "", "%s", "BAD PATH\n");
+    return;
+  }
+
+  String path_str = path;
+  String src_str = src;
+
+  if (src_str.isEmpty())
+  {
+    // No source specified: creation
+    D_LOG("handleFileCreate: %s\n", path_str.c_str());
+    if (path_str.endsWith("/"))
+    {
+      // Create a folder
+      path_str.remove(path_str.length() - 1);
+      if (!ACTIVE_FS.mkdir(path_str))
+      {
+        mg_http_reply(c, 500, "", "MKDIR FAILED");
+        return;
+      }
+    }
+    else
+    {
+      // Create a file
+      File file = ACTIVE_FS.open(path_str, "w");
+      if (file)
+      {
+        file.write(0);
+        file.close();
+      }
+      else
+      {
+        mg_http_reply(c, 500, "", "CREATE FAILED");
+        return;
+      }
+    }
+    mg_http_reply(c, 200, "Content-Type: text/plain\r\n", path_str.c_str());
+  }
+  else
+  {
+    // Source specified: rename
+    if (src_str == "/")
+    {
+      mg_http_reply(c, 400, "", "BAD SRC");
+      return;
+    }
+    if (!ACTIVE_FS.exists(src_str))
+    {
+      mg_http_reply(c, 400, "", "SRC FILE NOT FOUND");
+      return;
+    }
+
+    D_LOG("handleFileCreate: %s from %s\n", path_str.c_str(), src_str.c_str());
+    if (path_str.endsWith("/"))
+    {
+      path_str.remove(path_str.length() - 1);
+    }
+    if (src_str.endsWith("/"))
+    {
+      src_str.remove(src_str.length() - 1);
+    }
+    if (!ACTIVE_FS.rename(src_str, path_str))
+    {
+      mg_http_reply(c, 500, "", "RENAME FAILED");
+      return;
+    }
+    mg_http_reply(c, 200, "", "HTTP OK");
+  }
+}
+
+// const char *mg_getContentType(bool download, const char *filename)
+// {
+//   if (download)
+//     return "application/octet-stream\r\n";
+//   else if (strstr(filename, ".htm"))
+//     return "text/html\r\n";
+//   else if (strstr(filename, ".html"))
+//     return "text/html\r\n";
+//   else if (strstr(filename, ".log"))
+//     return "text/plain\r\n";
+//   else if (strstr(filename, ".css"))
+//     return "text/css\r\n";
+//   else if (strstr(filename, ".sass"))
+//     return "text/css\r\n";
+//   else if (strstr(filename, ".js"))
+//     return "application/javascript\r\n";
+//   else if (strstr(filename, ".png"))
+//     return "image/png\r\n";
+//   else if (strstr(filename, ".svg"))
+//     return "image/svg+xml\r\n";
+//   else if (strstr(filename, ".gif"))
+//     return "image/gif\r\n";
+//   else if (strstr(filename, ".jpg"))
+//     return "image/jpeg\r\n";
+//   else if (strstr(filename, ".ico"))
+//     return "image/x-icon\r\n";
+//   else if (strstr(filename, ".xml"))
+//     return "text/xml\r\n";
+//   else if (strstr(filename, ".pdf"))
+//     return "application/x-pdf\r\n";
+//   else if (strstr(filename, ".zip"))
+//     return "application/x-zip\r\n";
+//   else if (strstr(filename, ".gz"))
+//     return "application/x-gzip\r\n";
+//   return "text/plain\r\n";
+// }
+
+#endif

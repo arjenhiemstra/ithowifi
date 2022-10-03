@@ -11,8 +11,11 @@
 #include <FSFilePrint.h>
 #include <FS.h>
 
-//#include <LITTLEFS.h>
+#ifdef ESPRESSIF32_3_5_0
+#include <LITTLEFS.h>
+#else
 #include <LittleFS.h>
+#endif
 
 #include "hardware.h"
 #include "Dbglog.h"
