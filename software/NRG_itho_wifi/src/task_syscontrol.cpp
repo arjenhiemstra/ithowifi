@@ -478,7 +478,7 @@ bool connectWiFiSTA(bool restore)
   // Do not use SDK storage of SSID/WPA parameters
   WiFi.persistent(false);
 
-#ifdef ESPRESSIF32_3_5_0
+#ifdef ESPRESSIF32_3_5_0_WIFI
   //
   // Do not use flash storage for wifi settings
   esp_err_t wifi_set_storage = esp_wifi_set_storage(WIFI_STORAGE_RAM);
@@ -487,8 +487,8 @@ bool connectWiFiSTA(bool restore)
   if (!WiFi.disconnect(true))
     D_LOG("Unable to set wifi disconnect\n");
 
-  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
-  // Set hostname
+  // WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
+  //  Set hostname
   bool setHostname_result = WiFi.setHostname(hostName());
   D_LOG("WiFi.setHostname: %s\n", setHostname_result ? "OK" : "NOK");
 
@@ -554,6 +554,12 @@ bool connectWiFiSTA(bool restore)
   // No power saving
   esp_err_t wifi_set_ps = esp_wifi_set_ps(WIFI_PS_NONE);
   D_LOG("esp_wifi_set_ps: %s\n", esp_err_to_name(wifi_set_ps));
+
+  // Switch from defualt WIFI_FAST_SCAN ScanMethod to WIFI_ALL_CHANNEL_SCAN. Also set sortMethod to WIFI_CONNECT_AP_BY_SIGNAL just to be sure.
+  // WIFI_FAST_SCAN will connect to the first SSID match found causing connection issues when multiple AP active with the same SSID name
+  WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
+  WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
+
 #endif
 
   if (strcmp(wifiConfig.dhcp, "off") == 0)
@@ -579,9 +585,13 @@ bool connectWiFiSTA(bool restore)
       digitalWrite(WIFILED, LOW);
       return true;
     }
-    else if (status != WL_DISCONNECTED) // fix for issue #108
+    else if (status != WL_DISCONNECTED && status != WL_IDLE_STATUS) // fix for issue #108
     {
-      logInput("WiFi: status != WL_DISCONNECTED, reinit setup");
+      char wifiBuff[64]{};
+      sprintf(wifiBuff, "WiFi: status NOK [%s], reinitializing...", wl_status_to_name(status));
+      logInput(wifiBuff);
+      strlcpy(wifiBuff, "", sizeof(wifiBuff));
+
       WiFi.disconnect();
       WiFi.mode(WIFI_OFF);
       if (strcmp(wifiConfig.dhcp, "off") == 0)
