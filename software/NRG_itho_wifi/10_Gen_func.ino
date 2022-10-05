@@ -501,7 +501,7 @@ void sendQueryStatus() {
 
 }
 
-void printTimestamp(Print* _logOutput) {
+void printTimestamp(Print *_logOutput, int logLevel) {
 #if defined (__HW_VERSION_ONE__)
   if (time(nullptr)) {
     time_t now;
@@ -528,7 +528,7 @@ void printTimestamp(Print* _logOutput) {
   }
 }
 
-void printNewline(Print* _logOutput) {
+void printNewline(Print *_logOutput, int logLevel) {
   _logOutput->print("\n");
 }
 

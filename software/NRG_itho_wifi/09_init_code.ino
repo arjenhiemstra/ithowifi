@@ -346,6 +346,8 @@ void setupWiFiAP() {
 
 bool connectWiFiSTA()
 {
+  digitalWrite(WIFILED, LOW);
+
   wifiModeAP = false;
 #if defined (INFORMATIVE_LOGGING)
   logInput("Connecting to wireless network...");
@@ -399,16 +401,31 @@ bool connectWiFiSTA()
   }
 
   delay(200);
+  uint8_t* bssid = nullptr;
+  uint32_t wifi_channel = 0;
+  
+  get_wifi_bssid(wifiConfig.ssid, bssid, &wifi_channel);
+  delay(200);
 
-
-
+  if(bssid != nullptr) {
 #if defined (__HW_VERSION_ONE__)
-  WiFi.hostname(hostName());
-  WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
+    WiFi.hostname(hostName());
+    WiFi.begin(wifiConfig.ssid, wifiConfig.passwd, wifi_channel, bssid);
 #elif defined (__HW_VERSION_TWO__)
-  WiFi.setHostname(hostName());
-  WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
-#endif
+    WiFi.setHostname(hostName());
+    WiFi.begin(wifiConfig.ssid, wifiConfig.passwd, wifi_channel, bssid);
+#endif        
+  }
+  else {
+#if defined (__HW_VERSION_ONE__)
+    WiFi.hostname(hostName());
+    WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
+#elif defined (__HW_VERSION_TWO__)
+    WiFi.setHostname(hostName());
+    WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
+#endif    
+  }
+
 
   unsigned long timeoutmillis = millis() + 30000;
   uint8_t status = WiFi.status();
@@ -960,5 +977,59 @@ void MDNSinit() {
   sprintf(logBuff, "Hostname: %s", hostName());
   logInput(logBuff);
 
+
+}
+
+void get_wifi_bssid(const char* ssid, uint8_t* bssid, uint32_t* wifi_channel) {
+  bssid = nullptr;
+
+  int n = WiFi.scanNetworks(false, true);
+
+  digitalWrite(WIFILED, HIGH);
+    
+  if (n < 1) {
+    //no networks found
+    logInput("WiFi: get_wifi_bssid - no networks found");
+    return;
+  }
+
+  //sort networks on RSSI value
+  int indices[n];
+  for (int i = 0; i < n; i++) {
+    indices[i] = i;
+  }
+
+  for (int i = 0; i < n; i++) {
+    for (int j = i + 1; j < n; j++) {
+      if (WiFi.RSSI(indices[j]) > WiFi.RSSI(indices[i])) {
+        std::swap(indices[i], indices[j]);
+      }
+    }
+  }
+
+  //loop through result and match highest RSSI SSID
+  for (int i = 0; i < n; i++) {
+    char scan_ssid[33]; //ssid can be up to 32chars, => plus null term
+    strlcpy(scan_ssid, WiFi.SSID(indices[i]).c_str(), sizeof(scan_ssid));
+
+    if(strcmp(ssid, scan_ssid) == 0) {
+      if (WiFi.BSSID(indices[i]) != 0) {
+        logInput("WiFi: BSSID selected");
+        delay(10);
+        char buf[128]{};
+        sprintf(buf, "WiFi: [SSID:%s] [BSSID:%s] [RSSI:%ddBm]", scan_ssid,  WiFi.BSSIDstr(indices[i]).c_str(), WiFi.RSSI(indices[i]));
+        logInput(buf);
+        bssid = WiFi.BSSID(indices[i]);
+        *wifi_channel = WiFi.channel();
+        return;
+      }
+      else {
+        logInput("WiFi: get_wifi_bssid - BSSID == 0");
+        return;
+      }
+    }
+
+  }
+  logInput("WiFi: get_wifi_bssid - no SSID match");
 
 }
