@@ -16,7 +16,7 @@
 #include "notifyClients.h"
 
 #include "task_syscontrol.h"
-#include "config.h"
+#include "Config.h"
 
 // globals
 extern Ticker TaskConfigAndLogTimeout;
