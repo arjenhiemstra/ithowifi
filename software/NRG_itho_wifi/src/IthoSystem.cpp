@@ -1696,7 +1696,30 @@ bool checkI2Cbus() {
     delay(1);
   }
   if (cntr > 9) {
-    logInput("Warning: I2C timeout");
+    logInput("Warning: I2C timeout, trying I2C bus reset...");
+    int result = I2C_ClearBus();
+    if (result != 0)
+    {
+      if (result == 1)
+      {
+        logInput("I2C bus could not clear: SCL clock line held low");
+      }
+      else if (result == 2)
+      {
+        logInput("I2C bus could not clear: SCL clock line held low by slave clock stretch");
+      }
+      else if (result == 3)
+      {
+        logInput("I2C bus could not clear: SDA data line held low");
+      }
+    }
+    else
+    { // bus clear
+      // re-enable Wire
+      // now can start Wire Arduino master
+      logInput("I2C bus cleared");
+      return true;
+    }
     return false;
   }
   else {
