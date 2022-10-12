@@ -84,7 +84,7 @@ extern std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 
 struct lastCommand
 {
-  const char *source;
+  char source[30];
   char command[20];
   time_t timestamp;
 };
