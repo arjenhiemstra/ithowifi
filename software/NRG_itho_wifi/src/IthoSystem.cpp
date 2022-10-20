@@ -1684,9 +1684,14 @@ bool checkI2Cbus() {
   unsigned int timeout = 1000;
   unsigned int startread = millis();
   unsigned int cntr = 0;
+  bool log_i2cbus_busy = true;
 
-  while (digitalRead(SCLPIN) == LOW && cntr < 10)
+  while ((digitalRead(SCLPIN) == LOW || digitalRead(SDAPIN) == LOW) && cntr < 10)
   {
+    if(log_i2cbus_busy) {
+      log_i2cbus_busy = false;
+      logInput("Info: I2C bus busy");
+    }
     if (millis() - startread > timeout)
     {
       cntr++;
