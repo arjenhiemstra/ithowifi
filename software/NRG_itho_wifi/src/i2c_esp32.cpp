@@ -8,8 +8,13 @@ char toHex(uint8_t c)
 uint8_t i2cbuf[I2C_SLAVE_RX_BUF_LEN];
 static size_t buflen;
 
-void i2c_master_init()
+esp_err_t i2c_master_init()
 {
+
+  esp_err_t result;
+
+  if (!checkI2Cbus())
+    result = ESP_FAIL;
 
 #ifdef ESPRESSIF32_3_5_0
   i2c_config_t conf = {I2C_MODE_MASTER, I2C_MASTER_SDA_IO, I2C_MASTER_SDA_PULLUP, I2C_MASTER_SCL_IO, I2C_MASTER_SCL_PULLUP, {.master = {I2C_MASTER_FREQ_HZ}}};
@@ -28,11 +33,13 @@ void i2c_master_init()
 
   i2c_param_config(I2C_MASTER_NUM, &conf);
 
-  esp_err_t result = i2c_driver_install(I2C_MASTER_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
+  result = i2c_driver_install(I2C_MASTER_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
   if (result != ESP_OK)
   {
     D_LOG("i2c_master_init error: %s\n", esp_err_to_name(result));
   }
+
+  return result;
 }
 
 void i2c_master_deinit()
@@ -42,9 +49,11 @@ void i2c_master_deinit()
 
 esp_err_t i2c_master_send(const char *buf, uint32_t len)
 {
-  i2c_master_init();
+  esp_err_t rc = i2c_master_init();
 
-  esp_err_t rc;
+  if (rc != ESP_OK)
+    return rc;
+
   i2c_set_timeout(I2C_MASTER_NUM, 0xFFFFF);
 
   i2c_cmd_handle_t link = i2c_cmd_link_create();
@@ -62,9 +71,11 @@ esp_err_t i2c_master_send(const char *buf, uint32_t len)
 esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len)
 {
 
-  i2c_master_init();
+  esp_err_t rc = i2c_master_init();
 
-  esp_err_t rc;
+  if (rc != ESP_OK)
+    return rc;
+
   i2c_set_timeout(I2C_MASTER_NUM, 0xFFFFF);
 
   i2c_cmd_handle_t link = i2c_cmd_link_create();
@@ -83,9 +94,11 @@ esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len
 esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size)
 {
 
-  i2c_master_init();
+  esp_err_t rc = i2c_master_init();
 
-  esp_err_t rc;
+  if (rc != ESP_OK)
+    return rc;
+
   i2c_set_timeout(I2C_MASTER_NUM, 0xFFFFF);
 
   i2c_cmd_handle_t link = i2c_cmd_link_create();
@@ -209,6 +222,77 @@ size_t i2c_slave_receive(uint8_t i2c_receive_buf[])
 void i2c_slave_deinit()
 {
   i2c_driver_delete(I2C_SLAVE_NUM);
+}
+
+bool checkI2Cbus()
+{
+
+  // read I2C pin state as fast as possible and return if both are HIGH for 100uS (about 10 I2C clock periods at 100kHz)
+  // Using GPIO.in directly seems to be 3x faster compared to DigitalRead
+  // source: https://www.reddit.com/r/esp32/comments/f529hf/results_comparing_the_speeds_of_different_gpio/
+  // As I2C_MASTER_SCL_IO and I2C_MASTER_SDA_IO are within the range GPIO0~31, GPIO.in can be used
+  unsigned long pin_check_timout = micros();
+  while (((GPIO.in >> I2C_MASTER_SCL_IO) & 0x1) && ((GPIO.in >> I2C_MASTER_SDA_IO) & 0x1))
+  {
+    if (micros() - pin_check_timout < 100)
+      return true;
+  }
+
+  unsigned int timeout = 1000;
+  unsigned int startread = millis();
+  // unsigned int startbusy = millis();
+
+  unsigned int cntr = 0;
+  // bool log_i2cbus_busy = false;
+
+  while ((digitalRead(I2C_MASTER_SDA_IO) == LOW || digitalRead(I2C_MASTER_SDA_IO) == LOW) && cntr < 10)
+  {
+    // log_i2cbus_busy = true;
+
+    if (millis() - startread > timeout)
+    {
+      cntr++;
+      startread = millis();
+    }
+    yield();
+    delay(1);
+  }
+  if (cntr > 9)
+  {
+    logInput("Warning: I2C timeout, trying I2C bus reset...");
+    int result = I2C_ClearBus();
+    if (result != 0)
+    {
+      if (result == 1)
+      {
+        logInput("I2C bus could not clear: SCL clock line held low");
+      }
+      else if (result == 2)
+      {
+        logInput("I2C bus could not clear: SCL clock line held low by slave clock stretch");
+      }
+      else if (result == 3)
+      {
+        logInput("I2C bus could not clear: SDA data line held low");
+      }
+    }
+    else
+    {
+      logInput("I2C bus cleared");
+      return true;
+    }
+    return false;
+  }
+  else
+  {
+    // if (log_i2cbus_busy)
+    // {
+    //   char buf[64]{};
+    //   snprintf(buf, sizeof(buf), "Info: I2C bus busy, cleared after %dms", millis() - startbusy);
+    //   logInput(buf);
+    // }
+    return true;
+  }
 }
 
 /**

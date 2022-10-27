@@ -426,8 +426,6 @@ void sendI2CPWMinit()
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  checkI2Cbus();
-
   i2c_sendBytes(command, sizeof(command));
 }
 
@@ -591,16 +589,12 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRem
   Serial.print(str);
 #endif
 
-  checkI2Cbus();
-
   i2c_sendBytes(i2c_command, i2c_command_len);
 }
 
 void sendQueryDevicetype(bool updateweb)
 {
   uint8_t command[] = {0x82, 0x80, 0x90, 0xE0, 0x04, 0x00, 0x8A};
-
-  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
   uint8_t i2cbuf[512]{};
@@ -637,8 +631,6 @@ void sendQueryStatusFormat(bool updateweb)
 {
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x00, 0x04, 0x00, 0xD6};
-
-  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
 
@@ -728,8 +720,6 @@ void sendQueryStatus(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x01, 0x04, 0x00, 0xD5};
 
-  checkI2Cbus();
-
   i2c_sendBytes(command, sizeof(command));
 
   uint8_t i2cbuf[512]{};
@@ -759,31 +749,56 @@ void sendQueryStatus(bool updateweb)
 
         if (ithoStat.type == ithoDeviceStatus::is_byte)
         {
-          ithoStat.value.byteval = (byte)tempVal;
+          if(ithoStat.value.byteval == (byte)tempVal) {
+            ithoStat.updated = 0;
+          }
+          else {
+            ithoStat.updated = 1;
+            ithoStat.value.byteval = (byte)tempVal;
+          }
         }
         if (ithoStat.type == ithoDeviceStatus::is_uint)
         {
-          ithoStat.value.uintval = tempVal;
+          if(ithoStat.value.uintval == tempVal) {
+            ithoStat.updated = 0;
+          }
+          else {
+            ithoStat.updated = 1;
+            ithoStat.value.uintval = tempVal;
+          }          
+          
         }
         if (ithoStat.type == ithoDeviceStatus::is_int)
         {
           if (ithoStat.length == 4)
           {
-            tempVal = (int32_t)tempVal;
+            tempVal = static_cast<int32_t>(tempVal);
           }
           if (ithoStat.length == 2)
           {
-            tempVal = (int16_t)tempVal;
+            tempVal = static_cast<int16_t>(tempVal);
           }
           if (ithoStat.length == 1)
           {
-            tempVal = (int8_t)tempVal;
+            tempVal = static_cast<int8_t>(tempVal);
           }
-          ithoStat.value.intval = tempVal;
+          if(ithoStat.value.intval == tempVal) {
+            ithoStat.updated = 0;
+          }
+          else {
+            ithoStat.updated = 1;
+            ithoStat.value.intval = tempVal;
+          }
         }
         if (ithoStat.type == ithoDeviceStatus::is_float)
         {
-          ithoStat.value.floatval = static_cast<double>(tempVal) / ithoStat.divider;
+          if(static_cast<uint32_t>(ithoStat.value.floatval*ithoStat.divider) == tempVal) {
+            ithoStat.updated = 0;
+          }
+          else {
+            ithoStat.updated = 1;
+            ithoStat.value.floatval = static_cast<double>(tempVal) / ithoStat.divider;
+          }          
         }
 
         statusPos += ithoStat.length;
@@ -855,8 +870,6 @@ void sendQuery31DA(bool updateweb)
 {
 
   uint8_t command[] = {0x82, 0x80, 0x31, 0xDA, 0x04, 0x00, 0xEF};
-
-  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
 
@@ -1242,8 +1255,6 @@ void sendQuery31D9(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x31, 0xD9, 0x04, 0x00, 0xF0};
 
-  checkI2Cbus();
-
   i2c_sendBytes(command, sizeof(command));
 
   uint8_t i2cbuf[512]{};
@@ -1347,8 +1358,6 @@ int32_t *sendQuery2410(bool &updateweb)
 
   command[23] = index2410;
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
-
-  checkI2Cbus();
 
   i2c_sendBytes(command, sizeof(command));
 
@@ -1583,8 +1592,6 @@ void setSetting2410(bool &updateweb)
 
   jsonSysmessage("itho2410set", i2cbuf2string(command, sizeof(command)).c_str());
 
-  checkI2Cbus();
-
   i2c_sendBytes(command, sizeof(command));
 
   uint8_t i2cbuf[512]{};
@@ -1636,8 +1643,6 @@ void filterReset(const int remoteIndex, IthoRemote &remotes)
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  checkI2Cbus();
-
   i2c_sendBytes(command, sizeof(command));
 }
 
@@ -1667,9 +1672,8 @@ void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *upd
     // command[8] = 0 - (67 + b);
     command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-    if (checkI2Cbus())
+    if (i2c_sendBytes(command, sizeof(command)))
     {
-      i2c_sendBytes(command, sizeof(command));
       *updateIthoMQTT = true;
     }
     else
@@ -1679,58 +1683,7 @@ void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *upd
     }
 }
 
-bool checkI2Cbus() {
 
-  unsigned int timeout = 1000;
-  unsigned int startread = millis();
-  unsigned int cntr = 0;
-  bool log_i2cbus_busy = true;
-
-  while ((digitalRead(SCLPIN) == LOW || digitalRead(SDAPIN) == LOW) && cntr < 10)
-  {
-    if(log_i2cbus_busy) {
-      log_i2cbus_busy = false;
-      logInput("Info: I2C bus busy");
-    }
-    if (millis() - startread > timeout)
-    {
-      cntr++;
-      startread = millis();
-    }
-    yield();
-    delay(1);
-  }
-  if (cntr > 9) {
-    logInput("Warning: I2C timeout, trying I2C bus reset...");
-    int result = I2C_ClearBus();
-    if (result != 0)
-    {
-      if (result == 1)
-      {
-        logInput("I2C bus could not clear: SCL clock line held low");
-      }
-      else if (result == 2)
-      {
-        logInput("I2C bus could not clear: SCL clock line held low by slave clock stretch");
-      }
-      else if (result == 3)
-      {
-        logInput("I2C bus could not clear: SDA data line held low");
-      }
-    }
-    else
-    { // bus clear
-      // re-enable Wire
-      // now can start Wire Arduino master
-      logInput("I2C bus cleared");
-      return true;
-    }
-    return false;
-  }
-  else {
-    return true;
-  }
-}
 
 int quick_pow10(int n)
 {

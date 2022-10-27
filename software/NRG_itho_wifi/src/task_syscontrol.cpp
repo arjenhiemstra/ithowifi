@@ -23,7 +23,7 @@ bool wifiModeAP = false;
 
 // locals
 StaticTask_t xTaskSysControlBuffer;
-StackType_t xTaskSysControlStack[STACK_SIZE];
+StackType_t xTaskSysControlStack[STACK_SIZE + STACK_SIZE_SMALL];
 TaskHandle_t xTaskSysControlHandle = NULL;
 SemaphoreHandle_t mutexI2Ctask;
 unsigned long lastI2CinitRequest = 0;
@@ -48,7 +48,7 @@ void startTaskSysControl()
   xTaskSysControlHandle = xTaskCreateStaticPinnedToCore(
       TaskSysControl,
       "TaskSysControl",
-      STACK_SIZE,
+      STACK_SIZE + STACK_SIZE_SMALL,
       (void *)1,
       TASK_SYS_CONTROL_PRIO,
       xTaskSysControlStack,
@@ -585,26 +585,26 @@ bool connectWiFiSTA(bool restore)
       digitalWrite(WIFILED, LOW);
       return true;
     }
-    else if (status != WL_DISCONNECTED && status != WL_IDLE_STATUS) // fix for issue #108
-    {
-      char wifiBuff[64]{};
-      sprintf(wifiBuff, "WiFi: status NOK [%s], reinitializing...", wl_status_to_name(status));
-      logInput(wifiBuff);
-      strlcpy(wifiBuff, "", sizeof(wifiBuff));
+    // else if (status != WL_DISCONNECTED && status != WL_IDLE_STATUS) // fix for issue #108
+    // {
+    //   char wifiBuff[64]{};
+    //   sprintf(wifiBuff, "WiFi: status NOK [%s], reinitializing...", wl_status_to_name(status));
+    //   logInput(wifiBuff);
+    //   strlcpy(wifiBuff, "", sizeof(wifiBuff));
 
-      WiFi.disconnect();
-      WiFi.mode(WIFI_OFF);
-      if (strcmp(wifiConfig.dhcp, "off") == 0)
-      {
-        set_static_ip_config();
-      }
-      WiFi.mode(WIFI_STA);
+    //   WiFi.disconnect();
+    //   WiFi.mode(WIFI_OFF);
+    //   if (strcmp(wifiConfig.dhcp, "off") == 0)
+    //   {
+    //     set_static_ip_config();
+    //   }
+    //   WiFi.mode(WIFI_STA);
 
-      delay(1000);
+    //   delay(1000);
 
-      wifi_begin = WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
-      delay(2000);
-    }
+    //   wifi_begin = WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
+    //   delay(2000);
+    // }
     if (digitalRead(WIFILED) == LOW)
     {
       digitalWrite(WIFILED, HIGH);
@@ -748,7 +748,10 @@ bool ithoInitCheck()
   {
     return false;
   }
-  sendI2CPWMinit();
+  if (systemConfig.itho_pwminit_en)
+  {
+    sendI2CPWMinit();
+  }
 #endif
   return false;
 }

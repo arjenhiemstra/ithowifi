@@ -50,6 +50,7 @@ public:
   uint16_t itho_updatefreq;
   uint8_t itho_numvrem;
   uint8_t itho_sendjoin;
+  uint8_t itho_pwminit_en;
   uint8_t itho_forcemedium;
   uint8_t itho_vremoteapi;
   uint8_t itho_rf_support;
