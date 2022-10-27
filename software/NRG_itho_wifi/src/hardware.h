@@ -31,8 +31,6 @@
 
 #if defined(CVE)
 #define HWREVISION "2"
-#define SDAPIN 21
-#define SCLPIN 22
 #define WIFILED 17 // 17 / 2
 #define STATUSPIN 16
 #define BOOTSTATE 27
@@ -42,8 +40,6 @@
 
 #elif defined(NON_CVE)
 #define HWREVISION "NON-CVE 1"
-#define SDAPIN 27
-#define SCLPIN 26
 #define WIFILED 17 // 17 / 2
 #define STATUSPIN 16
 #define ITHO_IRQ_PIN 4

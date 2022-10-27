@@ -11,7 +11,6 @@ void TaskInit(void *pvParameters)
   mutexLogTask = xSemaphoreCreateMutex();
   mutexJSONLog = xSemaphoreCreateMutex();
   mutexWSsend = xSemaphoreCreateMutex();
-  
 
   hardwareInit();
 
@@ -169,13 +168,8 @@ void hardwareInit()
   pinMode(FAILSAVE_PIN, INPUT);
   failSafeBoot();
 #endif
-
-  i2cInit();
+  pinMode(I2C_MASTER_SDA_IO, INPUT);
+  pinMode(I2C_MASTER_SCL_IO, INPUT);
 
   IthoInit = true;
-}
-
-void i2cInit()
-{
-  i2c_master_init();
 }

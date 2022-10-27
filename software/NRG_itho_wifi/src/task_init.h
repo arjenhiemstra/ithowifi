@@ -27,4 +27,3 @@ void failSafeBoot();
 #endif
 
 void hardwareInit();
-void i2cInit();

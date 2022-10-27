@@ -58,7 +58,7 @@ extern uint8_t i2cbuf[I2C_SLAVE_RX_BUF_LEN];
 
 char toHex(uint8_t c);
 
-void i2c_master_init();
+esp_err_t i2c_master_init();
 void i2c_master_deinit();
 esp_err_t i2c_master_send(const char *buf, uint32_t len);
 esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len);
@@ -68,5 +68,5 @@ bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len);
 
 size_t i2c_slave_receive(uint8_t i2c_receive_buf[]);
 void i2c_slave_deinit();
-
+bool checkI2Cbus();
 int I2C_ClearBus();

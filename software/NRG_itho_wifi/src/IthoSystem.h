@@ -59,6 +59,8 @@ struct ithoDeviceStatus
     const char *stringval;
   } value;
   uint32_t divider;
+  uint8_t updated;
+  ithoDeviceStatus():updated(0) {};
 };
 
 struct ithoDeviceMeasurements
@@ -76,6 +78,7 @@ struct ithoDeviceMeasurements
     double floatval;
     const char *stringval;
   } value;
+  uint8_t updated;
 };
 
 extern std::vector<ithoDeviceStatus> ithoStatus;
@@ -141,6 +144,5 @@ int32_t *sendQuery2410(bool &updateweb);
 void setSetting2410(bool &updateweb);
 void filterReset(const int remoteIndex, IthoRemote &remotes);
 void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
-bool checkI2Cbus();
 int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);

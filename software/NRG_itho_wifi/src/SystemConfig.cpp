@@ -45,6 +45,7 @@ SystemConfig::SystemConfig()
   itho_numvrem = 1;
   itho_updatefreq = 10;
   itho_sendjoin = 0;
+  itho_pwminit_en = 1;
   itho_forcemedium = 0;
   itho_vremoteapi = 0;
   itho_rf_support = 0;
@@ -257,6 +258,11 @@ bool SystemConfig::set(JsonObjectConst obj)
     updated = true;
     itho_sendjoin = obj["itho_sendjoin"];
   }
+  if (!(const char *)obj["itho_pwminit_en"].isNull())
+  {
+    updated = true;
+    itho_pwminit_en = obj["itho_pwminit_en"];
+  }
   if (!(const char *)obj["itho_forcemedium"].isNull())
   {
     updated = true;
@@ -315,6 +321,7 @@ void SystemConfig::get(JsonObject obj) const
     obj["itho_updatefreq"] = itho_updatefreq;
     obj["itho_numvrem"] = itho_numvrem;
     obj["itho_sendjoin"] = itho_sendjoin;
+    obj["itho_pwminit_en"] = itho_pwminit_en;
     obj["itho_forcemedium"] = itho_forcemedium;
     obj["itho_vremoteapi"] = itho_vremoteapi;
     obj["nonQ_cmd_clearsQ"] = nonQ_cmd_clearsQ;
