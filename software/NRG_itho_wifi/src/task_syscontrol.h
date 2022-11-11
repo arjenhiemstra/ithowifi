@@ -34,6 +34,7 @@ extern bool shouldReboot;
 extern int8_t ithoInitResult;
 extern bool IthoInit;
 extern bool wifiModeAP;
+extern bool reset_sht_sensor;
 
 void startTaskSysControl();
 void TaskSysControl(void *pvParameters);

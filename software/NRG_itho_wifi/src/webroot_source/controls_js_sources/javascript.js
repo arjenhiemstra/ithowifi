@@ -39,6 +39,15 @@ function startWebsock(websocketServerLocation) {
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
         $('#remotemenu').removeClass('hidden');
       }
+      else {
+        $('#remotemenu').addClass('hidden');
+      }
+      if (x.i2cmenu == 1) {
+        $('#i2cmenu').removeClass('hidden');
+      }
+      else {
+        $('#i2cmenu').addClass('hidden');
+      }
     }
     else if (f.remotes) {
       let x = f.remotes;
@@ -56,6 +65,11 @@ function startWebsock(websocketServerLocation) {
       let x = f.ithostatusinfo;
       $('#StatusTable').empty();
       buildHtmlStatusTable('#StatusTable', x);
+    }
+    else if (f.i2cdebuglog) {
+      let x = f.i2cdebuglog;
+      $('#I2CLogTable').empty();
+      buildHtmlTablePlain('#I2CLogTable', x);
     }
     else if (f.ithodevinfo) {
       let x = f.ithodevinfo;
@@ -133,8 +147,14 @@ function startWebsock(websocketServerLocation) {
       if (x.ithoinit == -1) {
         initstatus = '<span style="color:#ca3c3c;">init failed - please power cycle the itho unit -</span>';
       }
+      else if (x.ithoinit == -2) {
+        initstatus = '<span style="color:#ca3c3c;">i2c bus stuck - please power cycle the itho unit -</span>';
+      }
       else if (x.ithoinit == 1) {
         initstatus = '<span style="color:#1cb841;">connected</span>';
+      }
+      else if (x.ithoinit == 0) {
+        initstatus = '<span style="color:#777;">setting up i2c connection</span>';
       }
       else {
         initstatus = 'unknown status';
@@ -171,6 +191,12 @@ function startWebsock(websocketServerLocation) {
           $('#format').text('Format failed');
         }
 
+      }
+    }
+    else if (f.remtypeconf) {
+      let x = f.remtypeconf;
+      if (hw_revision.startsWith('NON-CVE ')) {
+        addvRemoteInterface(x.remtype);
       }
     }
     else if (f.messagebox) {
@@ -291,7 +317,8 @@ $(document).ready(function () {
           itho_numvrem: $('#itho_numvrem').val(),
           itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
           itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
-          itho_vremoteapi: $('input[name=\'option-itho_vremoteapi\']:checked').val()
+          itho_vremoteapi: $('input[name=\'option-itho_vremoteapi\']:checked').val(),
+          i2cmenu: $('input[name=\'option-i2cmenu\']:checked').val()
         }
       }));
       update_page('system');
@@ -451,6 +478,7 @@ $(document).ready(function () {
     else if ($(this).attr('id').startsWith('ithobutton-')) {
       const items = $(this).attr('id').split('-');
       websock.send(`{"ithobutton":"${items[1]}"}`);
+      if (items[1] == 'shtreset') $(`#i2c_sht_reset`).text("Processing...");
     }
     else if ($(this).attr('id').startsWith('rfdebug-')) {
       const items = $(this).attr('id').split('-');
@@ -649,7 +677,7 @@ function getSettings(pagevalue) {
   }
   else {
     console.log("websock not open");
-    setTimeout(getSettings, 1000, pagevalue);
+    setTimeout(getSettings, 100, pagevalue);
   }
 }
 
@@ -718,6 +746,9 @@ function update_page(page) {
   if (page == 'reset') { $('#main').append(html_reset); }
   if (page == 'update') { $('#main').append(html_update); }
   if (page == 'debug') { $('#main').load('debug'); $('#main').css('max-width', '1600px') }
+  if (page == 'i2cdebug') { $('#main').append(html_i2cdebug); }
+
+
 }
 
 //handle menu collapse on smaller screens
@@ -851,6 +882,56 @@ var remtypes = [
   ["RFT CO2", 0x1298, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
 ];
 
+function addRemoteButtons(selector, remtype, vremotenum, seperator) {
+  for (const item of remtypes) {
+    if (remtype == item[1]) {
+      var newinner = '';
+      for (var i = 0; i < item[2].length; ++i) {
+        if (seperator) {
+          if (i == 0 || item[2][i] == 'cook30' || item[2][i] == 'timer1' || (item[2].length == 10 && item[2][i] == 'low') || item[2][i] == 'join') { newinner += `<div style="text-align: center;margin: 2em 0 0 0;">`; }
+        }
+
+        newinner += `<button value='${item[2][i]}_remote-${vremotenum}' id='button_vremote-${vremotenum}-${item[2][i]}' class='pure-button pure-button-primary'>${item[2][i].charAt(0).toUpperCase() + item[2][i].slice(1)}</button>\u00A0`;
+        
+        if (seperator) {
+          if (item[2][i] == 'high' || item[2][i] == 'cook60' || item[2][i] == 'timer3' || (item[2].length == 10 && item[2][i] == 'autonight') || item[2][i] == 'leave') {
+            newinner += '</div>';
+            $(selector).append(newinner);
+            newinner = '';
+          }
+        }
+        else {
+          $(selector).append(newinner);
+          newinner = '';
+        }
+
+      }
+    }
+  }
+}
+
+function addvRemoteInterface(remtype) {
+
+  var elem = $('#reminterface');
+  elem.empty();
+  addRemoteButtons(elem, remtype, 0, true);
+
+}
+
+function buildHtmlTablePlain(selector, jsonVar) {
+  var columns = addAllColumnHeadersPlain(jsonVar, selector);
+
+  for (var i = 0; i < jsonVar.length; i++) {
+    var row$ = $('<tr/>');
+    for (var colIndex = 0; colIndex < columns.length; colIndex++) {
+      var cellValue = jsonVar[i][columns[colIndex]];
+      if (cellValue == null) cellValue = "";
+      row$.append($('<td/>').html(cellValue));
+    }
+    $(selector).append(row$);
+  }
+}
+
 function buildHtmlTable(selector, remfunc, jsonVar) {
   var columns = addAllColumnHeaders(jsonVar, selector, true, remfunc);
   var headerTbody$ = $('<tbody>');
@@ -919,13 +1000,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
         }
         else if (remfunction == 2) {
           var td$ = $('<td>');
-          for (const item of remtypes) {
-            if (remtype == item[1]) {
-              for (const remitem of item[2]) {
-                td$.append(`<button value='${remitem}_remote-${i}' id='button_vremote-${i}-${remitem}' class='pure-button pure-button-primary'>${remitem.charAt(0).toUpperCase() + remitem.slice(1)}</button>\u00A0`);
-              }
-            }
-          }
+          addRemoteButtons(td$, remtype, i, false);
           row$.append(td$);
         }
       }
@@ -976,7 +1051,6 @@ function buildHtmlStatusTable(selector, jsonVar) {
   $(selector).append(headerTbody$);
 
 }
-
 
 function addRowTableIthoSettings(selector, jsonVar) {
   var i = jsonVar.Index;
@@ -1031,6 +1105,26 @@ function addColumnHeader(jsonVar, selector, appendRow) {
   if (appendRow) {
     $(selector).append(headerThead$);
   }
+  return columnSet;
+}
+
+function addAllColumnHeadersPlain(jsonVar, selector) {
+  var columnSet = [];
+  var headerThead$ = $('<thead>');
+  var headerTr$ = $('<tr/>');
+
+  for (var i = 0; i < jsonVar.length; i++) {
+    var rowHash = jsonVar[i];
+    for (var key in rowHash) {
+      if ($.inArray(key, columnSet) == -1) {
+        columnSet.push(key);
+        headerTr$.append($('<th/>').html(key));
+      }
+    }
+  }
+  headerThead$.append(headerTr$);
+  $(selector).append(headerThead$);
+
   return columnSet;
 }
 

@@ -18,6 +18,24 @@
 class WifiConfig
 {
 private:
+  typedef struct
+  {
+    wl_status_t code;
+    const char *msg;
+  } wl_status_msg;
+
+  const wl_status_msg wl_status_msg_table[8]{
+      {WL_NO_SHIELD, "WL_NO_SHIELD"},
+      {WL_IDLE_STATUS, "WL_IDLE_STATUS"},
+      {WL_NO_SSID_AVAIL, "WL_NO_SSID_AVAIL"},
+      {WL_SCAN_COMPLETED, "WL_SCAN_COMPLETED"},
+      {WL_CONNECTED, "WL_CONNECTED"},
+      {WL_CONNECT_FAILED, "WL_CONNECT_FAILED"},
+      {WL_CONNECTION_LOST, "WL_CONNECTION_LOST"},
+      {WL_DISCONNECTED, "WL_DISCONNECTED"}};
+
+  const char *wl_unknown_msg = "UNKNOWN ERROR";
+
 public:
   char ssid[33];
   char passwd[65];
@@ -38,11 +56,12 @@ public:
   bool set(JsonObjectConst);
   void get(JsonObject) const;
 
-protected:
+  const char *wl_status_to_name(wl_status_t code) const;
+
+      protected:
 }; // WifiConfig
 
 void wifiScan();
 void logWifiInfo();
-const char *wl_status_to_name(wl_status_t code);
 
 extern WifiConfig wifiConfig;

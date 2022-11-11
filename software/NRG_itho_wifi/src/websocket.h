@@ -12,5 +12,4 @@
 #include "WifiConfig.h"
 
 void websocketInit();
-void jsonSystemstat();
 void jsonWsSend(const char *rootName);

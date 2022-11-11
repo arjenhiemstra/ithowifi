@@ -26,7 +26,7 @@
 extern TaskHandle_t xTaskWebHandle;
 extern uint32_t TaskWebHWmark;
 extern bool sysStatReq;
-
+extern bool webauth_ok;
 extern AsyncWebServer server;
 
 #define MQTT_BUFFER_SIZE 5120

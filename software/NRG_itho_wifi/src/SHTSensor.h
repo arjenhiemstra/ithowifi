@@ -30,6 +30,10 @@
 
 #include <cinttypes>
 
+#include <Arduino.h>
+#include "hardware.h"
+#include "i2c_esp32.h"
+
 // Forward declaration
 class SHTSensorDriver;
 
@@ -117,6 +121,8 @@ public:
    */
   bool readSample();
 
+  bool softReset();
+
   /**
    * Get the relative humidity in percent read from the last sample
    * Use readSample() to trigger a new sensor reading
@@ -141,6 +147,8 @@ public:
    */
   bool setAccuracy(SHTAccuracy newAccuracy);
 
+  // bool softReset();
+
 private:
   void cleanup();
 
@@ -161,6 +169,15 @@ public:
    * Returns false if the sensor does not support changing the accuracy
    */
   virtual bool setAccuracy(SHTSensor::SHTAccuracy newAccuracy)
+  {
+    return false;
+  }
+
+  /**
+   * Soft reset the sensor
+   * Returns false if the sensor does not support soft reset
+   */
+  virtual bool softReset()
   {
     return false;
   }
@@ -224,6 +241,7 @@ public:
   }
 
   virtual bool readSample();
+  // virtual bool softReset();
 
   uint8_t mI2cAddress;
   uint16_t mI2cCommand;

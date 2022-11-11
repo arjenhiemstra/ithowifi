@@ -5,8 +5,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
 void websocketInit()
 {
   mg_log_set(0);
-  mg_mgr_init(&mgr);                                       // Initialise event manager
-  mg_http_listen(&mgr, s_listen_on_ws, wsEvent, NULL);     // Create WS listener
+  mg_mgr_init(&mgr);                                   // Initialise event manager
+  mg_http_listen(&mgr, s_listen_on_ws, wsEvent, NULL); // Create WS listener
 }
 
 void jsonWsSend(const char *rootName)
@@ -59,9 +59,18 @@ void jsonWsSend(const char *rootName)
     JsonObject nested = root.createNestedObject(rootName);
     getIthoStatusJSON(nested);
   }
+  else if (strcmp(rootName, "i2cdebuglog") == 0) // i2cdebuglog
+  {
+    i2cLogger.get(root.to<JsonObject>(), rootName);
+  }
   else if (strcmp(rootName, "debuginfo") == 0)
   {
-    return;
+    
+  }
+  else if (strcmp(rootName, "remtypeconf") == 0)
+  {
+    JsonObject nested = root.createNestedObject(rootName);
+    nested["remtype"] = static_cast<uint16_t>(virtualRemotes.getRemoteType(0));
   }
   else if (strcmp(rootName, "remotes") == 0)
   {
@@ -85,6 +94,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     struct mg_http_message *hm = (struct mg_http_message *)ev_data;
     if (mg_http_match_uri(hm, "/ws"))
     {
+      if (systemConfig.syssec_web && !webauth_ok)
+      {
+        return;
+      }
       // Upgrade to websocket. From now on, a connection is a full-duplex
       // Websocket connection, which will receive MG_EV_WS_MSG events.
       mg_ws_upgrade(c, hm, NULL);
@@ -92,6 +105,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
   }
   else if (ev == MG_EV_WS_MSG)
   {
+    if (systemConfig.syssec_web && !webauth_ok)
+    {
+      return;
+    }
     // Got websocket frame. Received data is wm->data.
     struct mg_ws_message *wm = (struct mg_ws_message *)ev_data;
     std::string msg = wm->data.ptr;
@@ -106,6 +123,14 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     if (msg.find("{\"sysstat\"") != std::string::npos)
     {
       sysStatReq = true;
+    }
+    if (msg.find("{\"remtype\"") != std::string::npos)
+    {
+      jsonWsSend("remtypeconf");
+    }
+    else if (msg.find("{\"i2cdebuglog\"") != std::string::npos)
+    {
+      jsonWsSend("i2cdebuglog");
     }
     else if (msg.find("{\"wifisettings\"") != std::string::npos || msg.find("{\"systemsettings\"") != std::string::npos)
     {
@@ -214,7 +239,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     else if (msg.find("{\"ithostatus\"") != std::string::npos)
     {
       jsonWsSend("ithostatusinfo");
-      jsonWsSend("debuginfo");
+      //jsonWsSend("debuginfo");
       sysStatReq = true;
     }
     else if (msg.find("{\"ithogetsetting\"") != std::string::npos)
@@ -449,7 +474,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         setRFdebugLevel(root["rfdebug"].as<uint8_t>());
       }
     }
+    wm = nullptr;
+    msg = std::string();
   }
   (void)fn_data;
 }
-

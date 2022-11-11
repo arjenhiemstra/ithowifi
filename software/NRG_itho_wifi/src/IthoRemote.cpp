@@ -82,7 +82,7 @@ int IthoRemote::registerNewRemote(const int *id, const RemoteTypes remtype)
   {
     remotes[index].ID[i] = id[i];
   }
-  //remotes[index].remtype = remtype;
+  // remotes[index].remtype = remtype;
 
   this->remoteCount++;
 
@@ -189,6 +189,10 @@ void IthoRemote::addCapabilities(uint8_t remoteIndex, const char *name, int32_t 
   else
   {
     remotes[remoteIndex].capabilities[name] = value;
+  }
+  if (strcmp(name, "lastcmd") == 0)
+  {
+    remotes[remoteIndex].capabilities["lastcmdmsg"] = rem_cmd_to_name(value);
   }
 }
 
@@ -423,4 +427,18 @@ void IthoRemote::getCapabilities(JsonObject obj) const
   {
     obj[remotes[i].name] = remotes[i].capabilities;
   }
+}
+
+const char *IthoRemote::rem_cmd_to_name(uint8_t code)
+{
+  size_t i;
+
+  for (i = 0; i < sizeof(remote_command_msg_table) / sizeof(remote_command_msg_table[0]); ++i)
+  {
+    if (remote_command_msg_table[i].code == code)
+    {
+      return remote_command_msg_table[i].msg;
+    }
+  }
+  return remote_unknown_msg;
 }

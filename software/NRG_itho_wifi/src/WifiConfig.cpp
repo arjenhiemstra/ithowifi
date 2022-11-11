@@ -238,7 +238,7 @@ void logWifiInfo()
   logInput(wifiBuff);
   strlcpy(wifiBuff, "", sizeof(wifiBuff));
 
-  sprintf(wifiBuff, "  Status:%s", wl_status_to_name(WiFi.status()));
+  sprintf(wifiBuff, "  Status:%s", wifiConfig.wl_status_to_name(WiFi.status()));
   logInput(wifiBuff);
   strlcpy(wifiBuff, "", sizeof(wifiBuff));
 
@@ -248,25 +248,9 @@ void logWifiInfo()
   strlcpy(wifiBuff, "", sizeof(wifiBuff));
 }
 
-typedef struct
-{
-  wl_status_t code;
-  const char *msg;
-} wl_status_msg;
 
-static const wl_status_msg wl_status_msg_table[]{
-    {WL_NO_SHIELD, "WL_NO_SHIELD"},
-    {WL_IDLE_STATUS, "WL_IDLE_STATUS"},
-    {WL_NO_SSID_AVAIL, "WL_NO_SSID_AVAIL"},
-    {WL_SCAN_COMPLETED, "WL_SCAN_COMPLETED"},
-    {WL_CONNECTED, "WL_CONNECTED"},
-    {WL_CONNECT_FAILED, "WL_CONNECT_FAILED"},
-    {WL_CONNECTION_LOST, "WL_CONNECTION_LOST"},
-    {WL_DISCONNECTED, "WL_DISCONNECTED"}};
 
-static const char wl_unknown_msg[] = "UNKNOWN ERROR";
-
-const char *wl_status_to_name(wl_status_t code)
+const char *WifiConfig::wl_status_to_name(wl_status_t code) const
 {
   size_t i;
 

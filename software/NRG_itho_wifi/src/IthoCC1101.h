@@ -58,6 +58,30 @@ private:
   bool allowAll;
   ithoRFDevices ithoRF;
 
+  typedef struct
+  {
+    IthoCommand code;
+    const char *msg;
+  } remote_command_char;
+
+  const remote_command_char remote_command_msg_table[15]{
+      {IthoUnknown, "IthoUnknown"},
+      {IthoJoin, "IthoJoin"},
+      {IthoLeave, "IthoLeave"},
+      {IthoAway, "IthoAway"},
+      {IthoLow, "IthoLow"},
+      {IthoMedium, "IthoMedium"},
+      {IthoHigh, "IthoHigh"},
+      {IthoFull, "IthoFull"},
+      {IthoTimer1, "IthoTimer1"},
+      {IthoTimer2, "IthoTimer2"},
+      {IthoTimer3, "IthoTimer3"},
+      {IthoAuto, "IthoAuto"},
+      {IthoAutoNight, "IthoAutoNight"},
+      {IthoCook30, "IthoCook30"},
+      {IthoCook60, "IthoCook60"}};
+
+  const char *remote_unknown_msg = "CMD UNKNOWN ERROR";
   // functions
 public:
   IthoCC1101(uint8_t counter = 0, uint8_t sendTries = 3); // set initial counter value
@@ -153,6 +177,8 @@ public:
   void handleTemphum();
   void handleCo2();
   void handleBattery();
+
+  const char *rem_cmd_to_name(IthoCommand code);
 
 protected:
 private:
