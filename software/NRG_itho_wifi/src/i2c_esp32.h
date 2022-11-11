@@ -14,6 +14,7 @@
 #include "hardware.h"
 #include "Dbglog.h"
 #include "IthoSystem.h"
+#include "i2c_logger.h"
 
 #define WRITE_BIT I2C_MASTER_WRITE  /*!< I2C master write */
 #define READ_BIT I2C_MASTER_READ    /*!< I2C master read */
@@ -60,13 +61,18 @@ char toHex(uint8_t c);
 
 esp_err_t i2c_master_init();
 void i2c_master_deinit();
-esp_err_t i2c_master_send(const char *buf, uint32_t len);
-esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len);
+esp_err_t i2c_master_send(const char *buf, uint32_t len, int log_entry_idx);
+esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len, int log_entry_idx);
+
+esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size, I2CLogger::i2c_cmdref_t origin);
 esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size);
+bool i2c_sendBytes(const uint8_t *buf, size_t len, I2CLogger::i2c_cmdref_t origin);
 bool i2c_sendBytes(const uint8_t *buf, size_t len);
+bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len, I2CLogger::i2c_cmdref_t origin);
 bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len);
 
 size_t i2c_slave_receive(uint8_t i2c_receive_buf[]);
 void i2c_slave_deinit();
-bool checkI2Cbus();
+bool checkI2Cbus(int log_entry_idx);
 int I2C_ClearBus();
+void trigger_sht_sensor_reset();

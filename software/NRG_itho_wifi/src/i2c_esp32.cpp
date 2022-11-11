@@ -8,12 +8,12 @@ char toHex(uint8_t c)
 uint8_t i2cbuf[I2C_SLAVE_RX_BUF_LEN];
 static size_t buflen;
 
-esp_err_t i2c_master_init()
+esp_err_t i2c_master_init(int log_entry_idx)
 {
 
   esp_err_t result;
 
-  if (!checkI2Cbus())
+  if (!checkI2Cbus(log_entry_idx))
     result = ESP_FAIL;
 
 #ifdef ESPRESSIF32_3_5_0
@@ -47,9 +47,9 @@ void i2c_master_deinit()
   i2c_driver_delete(I2C_MASTER_NUM);
 }
 
-esp_err_t i2c_master_send(const char *buf, uint32_t len)
+esp_err_t i2c_master_send(const char *buf, uint32_t len, int log_entry_idx)
 {
-  esp_err_t rc = i2c_master_init();
+  esp_err_t rc = i2c_master_init(log_entry_idx);
 
   if (rc != ESP_OK)
     return rc;
@@ -68,10 +68,10 @@ esp_err_t i2c_master_send(const char *buf, uint32_t len)
   return rc;
 }
 
-esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len)
+esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len, int log_entry_idx)
 {
 
-  esp_err_t rc = i2c_master_init();
+  esp_err_t rc = i2c_master_init(log_entry_idx);
 
   if (rc != ESP_OK)
     return rc;
@@ -91,13 +91,23 @@ esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len
   return rc;
 }
 
-esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size)
+esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size, I2CLogger::i2c_cmdref_t origin)
 {
 
-  esp_err_t rc = i2c_master_init();
+  if (ithoInitResult == -2)
+  {
+    return ESP_FAIL;
+  }
+
+  int log_entry_idx = i2cLogger.i2c_log_start(origin);
+
+  esp_err_t rc = i2c_master_init(log_entry_idx);
 
   if (rc != ESP_OK)
+  {
+    i2cLogger.i2c_log_final(log_entry_idx, I2CLogger::I2C_ERROR_MASTER_INIT_FAIL);
     return rc;
+  }
 
   i2c_set_timeout(I2C_MASTER_NUM, 0xFFFFF);
 
@@ -115,38 +125,73 @@ esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size)
 
   i2c_master_deinit();
 
+  i2cLogger.i2c_log_final(log_entry_idx, I2CLogger::I2C_OK);
   return rc;
+}
+
+esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size)
+{
+  return i2c_master_read_slave(addr, data_rd, size, I2CLogger::I2C_CMD_UNKOWN);
+}
+
+bool i2c_sendBytes(const uint8_t *buf, size_t len, I2CLogger::i2c_cmdref_t origin)
+{
+  if (ithoInitResult == -2)
+  {
+    return false;
+  }
+
+  int log_entry_idx = i2cLogger.i2c_log_start(origin);
+
+  if (len)
+  {
+    esp_err_t rc = i2c_master_send((const char *)buf, len, log_entry_idx);
+    if (rc)
+    {
+      // D_LOG("Master send: %d\n", rc);
+      i2cLogger.i2c_log_final(log_entry_idx, I2CLogger::I2C_NOK);
+      return false;
+    }
+    i2cLogger.i2c_log_final(log_entry_idx, I2CLogger::I2C_OK);
+    return true;
+  }
+  i2cLogger.i2c_log_final(log_entry_idx, I2CLogger::I2C_ERROR_LEN);
+  return false;
 }
 
 bool i2c_sendBytes(const uint8_t *buf, size_t len)
 {
+  return i2c_sendBytes(buf, len, I2CLogger::I2C_CMD_UNKOWN);
+}
+
+bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len, I2CLogger::i2c_cmdref_t origin)
+{
+  if (ithoInitResult == -2)
+  {
+    return false;
+  }
+
+  int log_entry_idx = i2cLogger.i2c_log_start(origin);
 
   if (len)
   {
-    esp_err_t rc = i2c_master_send((const char *)buf, len);
+    esp_err_t rc = i2c_master_send_command(addr, cmd, len, log_entry_idx);
     if (rc)
     {
       // D_LOG("Master send: %d\n", rc);
+      i2cLogger.i2c_log_final(log_entry_idx, I2CLogger::I2C_NOK);
       return false;
     }
+    i2cLogger.i2c_log_final(log_entry_idx, I2CLogger::I2C_OK);
     return true;
   }
+  i2cLogger.i2c_log_final(log_entry_idx, I2CLogger::I2C_ERROR_LEN);
   return false;
 }
 
 bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len)
 {
-  if (len)
-  {
-    esp_err_t rc = i2c_master_send_command(addr, cmd, len);
-    if (rc)
-    {
-      // D_LOG("Master send: %d\n", rc);
-      return false;
-    }
-    return true;
-  }
-  return false;
+  return i2c_sendCmd(addr, cmd, len, I2CLogger::I2C_CMD_UNKOWN);
 }
 
 size_t i2c_slave_receive(uint8_t i2c_receive_buf[])
@@ -224,28 +269,52 @@ void i2c_slave_deinit()
   i2c_driver_delete(I2C_SLAVE_NUM);
 }
 
-bool checkI2Cbus()
+bool checkI2Cbus(int log_entry_idx)
 {
+
+  bool scl_high = digitalRead(I2C_MASTER_SCL_IO) == HIGH;
+  bool sda_high = digitalRead(I2C_MASTER_SDA_IO) == HIGH;
+
+  if (scl_high && sda_high)
+  {
+    return true;
+  }
+  // else
+  // {
+  //   if (!scl_high && !sda_high)
+  //   {
+  //     i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_SCL_SDA_LOW);
+  //   }
+  //   else if (!scl_high)
+  //   {
+  //     i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_SCL_LOW);
+  //   }
+  //   else
+  //   {
+  //     i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_SDA_LOW);
+  //   }
+
+  // }
 
   // read I2C pin state as fast as possible and return if both are HIGH for 100uS (about 10 I2C clock periods at 100kHz)
   // Using GPIO.in directly seems to be 3x faster compared to DigitalRead
   // source: https://www.reddit.com/r/esp32/comments/f529hf/results_comparing_the_speeds_of_different_gpio/
   // As I2C_MASTER_SCL_IO and I2C_MASTER_SDA_IO are within the range GPIO0~31, GPIO.in can be used
   unsigned long pin_check_timout = micros();
-  while (((GPIO.in >> I2C_MASTER_SCL_IO) & 0x1) && ((GPIO.in >> I2C_MASTER_SDA_IO) & 0x1))
+  while (digitalRead(I2C_MASTER_SCL_IO) == HIGH && digitalRead(I2C_MASTER_SDA_IO) == HIGH)
   {
     if (micros() - pin_check_timout < 100)
       return true;
   }
 
-  unsigned int timeout = 1000;
+  unsigned int timeout = 200;
   unsigned int startread = millis();
   // unsigned int startbusy = millis();
 
   unsigned int cntr = 0;
   // bool log_i2cbus_busy = false;
 
-  while ((digitalRead(I2C_MASTER_SDA_IO) == LOW || digitalRead(I2C_MASTER_SDA_IO) == LOW) && cntr < 10)
+  while ((digitalRead(I2C_MASTER_SCL_IO) == LOW || digitalRead(I2C_MASTER_SDA_IO) == LOW) && cntr < 10)
   {
     // log_i2cbus_busy = true;
 
@@ -259,26 +328,28 @@ bool checkI2Cbus()
   }
   if (cntr > 9)
   {
-    logInput("Warning: I2C timeout, trying I2C bus reset...");
+    // logInput("Warning: I2C timeout, trying I2C bus reset...");
     int result = I2C_ClearBus();
     if (result != 0)
     {
       if (result == 1)
       {
-        logInput("I2C bus could not clear: SCL clock line held low");
+        i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_SCL_LOW);
       }
       else if (result == 2)
       {
-        logInput("I2C bus could not clear: SCL clock line held low by slave clock stretch");
+        i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_SLAVE_CLOCKSTRETCH);
       }
       else if (result == 3)
       {
-        logInput("I2C bus could not clear: SDA data line held low");
+        i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_SDA_LOW);
       }
+      logInput("Error: I2C bus could not be cleared!");
+      ithoInitResult = -2; // stop I2C
     }
     else
     {
-      logInput("I2C bus cleared");
+      i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_CLEARED_BUS);
       return true;
     }
     return false;
@@ -291,6 +362,7 @@ bool checkI2Cbus()
     //   snprintf(buf, sizeof(buf), "Info: I2C bus busy, cleared after %dms", millis() - startbusy);
     //   logInput(buf);
     // }
+    i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_CLEARED_OK);
     return true;
   }
 }
@@ -376,4 +448,41 @@ int I2C_ClearBus()
   pinMode(I2C_MASTER_SDA_IO, INPUT);        // and reset pins as tri-state inputs which is the default state on reset
   pinMode(I2C_MASTER_SCL_IO, INPUT);
   return 0; // all ok
+}
+
+void trigger_sht_sensor_reset()
+{
+
+  /*
+  from: Sensirion_Humidity_Sensors_SHT3x_Datasheet_digital.pdf
+  Interface Reset
+    If communication with the device is lost, the following
+    signal sequence will reset the serial interface: While
+    leaving SDA high, toggle SCL nine or more times. This
+    must be followed by a Transmission Start sequence
+    preceding the next command. This sequence resets the
+    interface only. The status register preserves its content.
+  */
+  // Remove any existing I2C drivers
+  i2c_master_deinit();
+  i2c_slave_deinit();
+
+  pinMode(I2C_MASTER_SDA_IO, OUTPUT); // Make SDA (data) and SCL (clock) pins outputs
+  pinMode(I2C_MASTER_SCL_IO, OUTPUT);
+
+  digitalWrite(I2C_MASTER_SDA_IO, HIGH);
+  digitalWrite(I2C_MASTER_SCL_IO, HIGH);
+
+  for (uint i = 0; i < 10; i++)
+  {
+    digitalWrite(I2C_MASTER_SCL_IO, LOW);
+    delayMicroseconds(10);
+    digitalWrite(I2C_MASTER_SCL_IO, HIGH);
+    delayMicroseconds(10);
+  }
+
+  pinMode(I2C_MASTER_SDA_IO, INPUT); // and reset pins as tri-state inputs which is the default state on reset
+  pinMode(I2C_MASTER_SCL_IO, INPUT);
+
+  delayMicroseconds(20);
 }

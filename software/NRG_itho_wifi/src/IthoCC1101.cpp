@@ -957,7 +957,7 @@ String IthoCC1101::LastMessageDecoded()
   if (inIthoPacket.length > 11)
   {
 
-    char bufhead[10]{};
+    char bufhead[12]{};
     snprintf(bufhead, sizeof(bufhead), "Header: %02X", inIthoPacket.header);
 
     str += String(MsgType[inIthoPacket.type]);
@@ -1251,7 +1251,8 @@ void IthoCC1101::handleLevel()
       inIthoPacket.command = IthoHigh;
     }
   }
-  else {
+  else
+  {
     if (checkIthoCommand(&inIthoPacket, ithoMessageLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTLowCommandBytes) || checkIthoCommand(&inIthoPacket, ithoMessageDFLowCommandBytes))
     {
       inIthoPacket.command = IthoLow;
@@ -1277,7 +1278,7 @@ void IthoCC1101::handleLevel()
       inIthoPacket.command = IthoAutoNight;
     }
   }
-  
+
   for (auto &item : ithoRF.device)
   {
     if (item.deviceId == tempID)
@@ -1349,14 +1350,14 @@ void IthoCC1101::handleTimer()
     }
   }
 
-    for (auto &item : ithoRF.device)
+  for (auto &item : ithoRF.device)
+  {
+    if (item.deviceId == tempID)
     {
-      if (item.deviceId == tempID)
-      {
-        item.lastCommand = inIthoPacket.command;
-      }
+      item.lastCommand = inIthoPacket.command;
     }
   }
+}
 void IthoCC1101::handleStatus()
 {
   uint32_t tempID = 0;
@@ -1507,4 +1508,18 @@ void IthoCC1101::handleBattery()
       item.battery = tempVal;
     }
   }
+}
+
+const char *IthoCC1101::rem_cmd_to_name(IthoCommand code)
+{
+  size_t i;
+
+  for (i = 0; i < sizeof(remote_command_msg_table) / sizeof(remote_command_msg_table[0]); ++i)
+  {
+    if (remote_command_msg_table[i].code == code)
+    {
+      return remote_command_msg_table[i].msg;
+    }
+  }
+  return remote_unknown_msg;
 }

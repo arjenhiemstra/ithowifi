@@ -26,7 +26,7 @@
       </div>
       <input id="ithoslider" type="range" min="0" max="254" value="0" class="slider" style="width: 100%; margin: 0 0 2em 0;">
     </div>
-    <div>
+    <div id="reminterface">
       <div style="text-align: center;margin: 2em 0 0 0;">
         <button id="command-low" class="pure-button" style="float: left;">Low</button><button id="command-medium"
           class="pure-button">Medium</button><button id="command-high" class="pure-button"
@@ -49,6 +49,7 @@
   $(document).ready(function () {
     if (hw_revision.startsWith('NON-CVE ')) {
       $('#sliderdiv').addClass('hidden');
+      $('#reminterface').empty();
     }
     else {
       var slide = document.getElementById("ithoslider");
@@ -59,5 +60,6 @@
     }
 
     getSettings('sysstat');
+    getSettings('remtype');
   });
 </script>

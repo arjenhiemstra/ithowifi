@@ -69,11 +69,11 @@ const struct ihtoRemoteCmdMap ihtoRemoteCmdMapping[]
   }
 };
 
-const int currentIthoDeviceGroup() { return ithoDeviceGroup; }
-const int currentIthoDeviceID() { return ithoDeviceID; }
-const uint8_t currentItho_fwversion() { return itho_fwversion; }
-const uint16_t currentIthoSettingsLength() { return ithoSettingsLength; }
-const uint16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
+int currentIthoDeviceGroup() { return ithoDeviceGroup; }
+int currentIthoDeviceID() { return ithoDeviceID; }
+uint8_t currentItho_fwversion() { return itho_fwversion; }
+uint16_t currentIthoSettingsLength() { return ithoSettingsLength; }
+int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
 const uint8_t *getRemoteCmd(const RemoteTypes type, const IthoCommand command)
 {
 
@@ -426,7 +426,7 @@ void sendI2CPWMinit()
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  i2c_sendBytes(command, sizeof(command));
+  i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_PWM_INIT);
 }
 
 uint8_t cmdCounter = 0;
@@ -589,16 +589,24 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRem
   Serial.print(str);
 #endif
 
-  i2c_sendBytes(i2c_command, i2c_command_len);
+  i2c_sendBytes(i2c_command, i2c_command_len, I2CLogger::I2C_CMD_REMOTE_CMD);
 }
 
 void sendQueryDevicetype(bool updateweb)
 {
   uint8_t command[] = {0x82, 0x80, 0x90, 0xE0, 0x04, 0x00, 0x8A};
 
-  i2c_sendBytes(command, sizeof(command));
-  uint8_t i2cbuf[512]{};
+  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_DEVICE_TYPE))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("ithotype", "failed");
+    }
+    return;
+  }
 
+  uint8_t i2cbuf[512]{};
   size_t len = i2c_slave_receive(i2cbuf);
 
   // if (len > 2) {
@@ -632,7 +640,16 @@ void sendQueryStatusFormat(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x00, 0x04, 0x00, 0xD6};
 
-  i2c_sendBytes(command, sizeof(command));
+  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_STATUS_FORMAT))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("ithostatusformat", "failed");
+    }
+    return;
+  }
+  
 
   uint8_t i2cbuf[512]{};
   uint8_t len = i2c_slave_receive(i2cbuf);
@@ -720,7 +737,15 @@ void sendQueryStatus(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x01, 0x04, 0x00, 0xD5};
 
-  i2c_sendBytes(command, sizeof(command));
+  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_STATUS))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("ithostatus", "failed");
+    }
+    return;
+  }
 
   uint8_t i2cbuf[512]{};
   size_t len = i2c_slave_receive(i2cbuf);
@@ -871,7 +896,15 @@ void sendQuery31DA(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x31, 0xDA, 0x04, 0x00, 0xEF};
 
-  i2c_sendBytes(command, sizeof(command));
+  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_31DA))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("itho31DA", "failed");
+    }
+    return;
+  }
 
   uint8_t i2cbuf[512]{};
   size_t len = i2c_slave_receive(i2cbuf);
@@ -1255,7 +1288,15 @@ void sendQuery31D9(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x31, 0xD9, 0x04, 0x00, 0xF0};
 
-  i2c_sendBytes(command, sizeof(command));
+  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_31D9))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("itho31D9", "failed");
+    }
+    return;
+  }
 
   uint8_t i2cbuf[512]{};
   size_t len = i2c_slave_receive(i2cbuf);
@@ -1359,7 +1400,15 @@ int32_t *sendQuery2410(bool &updateweb)
   command[23] = index2410;
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  i2c_sendBytes(command, sizeof(command));
+  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_2410))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("itho2410", "failed");
+    }
+    return nullptr;
+  }
 
   uint8_t i2cbuf[512]{};
   size_t len = i2c_slave_receive(i2cbuf);
@@ -1592,7 +1641,15 @@ void setSetting2410(bool &updateweb)
 
   jsonSysmessage("itho2410set", i2cbuf2string(command, sizeof(command)).c_str());
 
-  i2c_sendBytes(command, sizeof(command));
+  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_SET_2410))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("itho2410setres", "failed");
+    }
+    return;
+  }
 
   uint8_t i2cbuf[512]{};
   size_t len = i2c_slave_receive(i2cbuf);
@@ -1643,7 +1700,7 @@ void filterReset(const int remoteIndex, IthoRemote &remotes)
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  i2c_sendBytes(command, sizeof(command));
+  i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_FILTER_RESET);
 }
 
 
@@ -1672,7 +1729,7 @@ void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *upd
     // command[8] = 0 - (67 + b);
     command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-    if (i2c_sendBytes(command, sizeof(command)))
+    if (i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_PWM_CMD))
     {
       *updateIthoMQTT = true;
     }

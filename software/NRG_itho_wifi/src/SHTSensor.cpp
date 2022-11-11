@@ -26,13 +26,7 @@
  *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <cinttypes>
-
-#include <Arduino.h>
-
 #include "SHTSensor.h"
-#include "hardware.h"
-#include "i2c_esp32.h"
 
 //
 // class SHTSensorDriver
@@ -61,14 +55,14 @@ bool SHTI2cSensor::readFromI2c(uint8_t i2cAddress,
                                uint8_t duration)
 {
 
-  if (!i2c_sendCmd(i2cAddress, i2cCommand, commandLength))
+  if (!i2c_sendCmd(i2cAddress, i2cCommand, commandLength, I2CLogger::I2C_CMD_TEMP_READ_CMD))
   {
     return false;
   }
 
   delay(duration);
 
-  i2c_master_read_slave(i2cAddress, data, dataLength);
+  i2c_master_read_slave(i2cAddress, data, dataLength, I2CLogger::I2C_CMD_TEMP_READ_SLAVE);
 
   return true;
 }
@@ -131,6 +125,7 @@ bool SHTI2cSensor::readSample()
   return true;
 }
 
+
 //
 // class SHTC1Sensor
 //
@@ -190,6 +185,47 @@ public:
     default:
       return false;
     }
+    return true;
+  }
+
+  virtual bool softReset()
+  {
+    /*
+    from: Sensirion_Humidity_Sensors_SHT3x_Datasheet_digital.pdf
+    Interface Reset
+      If communication with the device is lost, the following
+      signal sequence will reset the serial interface: While
+      leaving SDA high, toggle SCL nine or more times. This
+      must be followed by a Transmission Start sequence
+      preceding the next command. This sequence resets the
+      interface only. The status register preserves its content.
+    */
+    // Remove any existing I2C drivers
+    i2c_master_deinit();
+    i2c_slave_deinit();
+
+    pinMode(I2C_MASTER_SDA_IO, OUTPUT); // Make SDA (data) and SCL (clock) pins outputs
+    pinMode(I2C_MASTER_SCL_IO, OUTPUT);
+
+    digitalWrite(I2C_MASTER_SDA_IO, HIGH);
+    digitalWrite(I2C_MASTER_SCL_IO, HIGH);
+
+    for (uint i = 0; i < 9; i++)
+    {
+      digitalWrite(I2C_MASTER_SCL_IO, LOW);
+      delayMicroseconds(10);
+      digitalWrite(I2C_MASTER_SCL_IO, HIGH);
+      delayMicroseconds(10);
+    }
+
+    pinMode(I2C_MASTER_SDA_IO, INPUT); // and reset pins as tri-state inputs which is the default state on reset
+    pinMode(I2C_MASTER_SCL_IO, INPUT);
+
+    delayMicroseconds(20);
+
+    if (!readSample())
+      return false;
+
     return true;
   }
 };
@@ -282,6 +318,13 @@ bool SHTSensor::setAccuracy(SHTAccuracy newAccuracy)
   if (!mSensor)
     return false;
   return mSensor->setAccuracy(newAccuracy);
+}
+
+bool SHTSensor::softReset()
+{
+  if (!mSensor)
+    return false;
+  return mSensor->softReset();
 }
 
 void SHTSensor::cleanup()

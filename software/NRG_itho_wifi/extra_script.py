@@ -17,7 +17,7 @@ my_flags = env.ParseFlags(env['BUILD_FLAGS'])
 
 defines = my_flags.get("CPPDEFINES")
 for i in defines:
-   if (i[0] == 'FWVERSION'):
+   if (i[0] == 'VERSION'):
       fwversion = i[1]
       print ('\nFirmware version: ' + i[1])
    if (i == 'NON_CVE'):

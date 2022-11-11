@@ -1,0 +1,35 @@
+<div class="header">
+  <h1>I2C debug</h1>
+</div><br><br>
+<p></p>
+<span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span><br><br>
+<span>If the I2C bus is stuck. Please copy the log below and send it to <a
+    href="mailto: info@nrg.watch">info@nrg.watch</a> or add it to the issue on
+  Github.<br>Also try to reset the Temp/Hum sensor below and see if this releases the I2C bus. If succesful then the I2C
+  connection status should return to 'connected'.</span>
+<style>
+  .pure-form-aligned .pure-control-group label {
+    width: 15em;
+  }
+</style>
+<form class="pure-form pure-form-aligned">
+  <fieldset>
+    <br>
+    <legend><br>Last I2C commands:</legend>
+    <br>
+    <table id="I2CLogTable" class="pure-table pure-table-bordered"></table><br><br>
+    <fieldset>
+      <legend><br>I2C debug commands and settings:</legend><br>
+      <button id=\"ithobutton-shtreset\" class=\"pure-button pure-button-primary\">Reset Temp/Hum
+        sensor</button><br><span>Result:&nbsp;</span><span id=\'i2c_sht_reset\'></span><br><br>
+    </fieldset>
+  </fieldset>
+</form>
+<br><br>
+<script>
+  $(document).ready(function () {
+    getSettings('sysstat');
+    getSettings('i2cdebuglog');
+    getSettings('i2cdebugsettings');
+  });
+</script>

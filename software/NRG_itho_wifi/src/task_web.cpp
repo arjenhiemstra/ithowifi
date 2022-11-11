@@ -18,6 +18,7 @@ int MQTT_conn_state_new = 0;
 unsigned long lastMQTTReconnectAttempt = 0;
 bool dontReconnectMQTT = false;
 bool updateMQTTihtoStatus = false;
+bool webauth_ok = false;
 
 AsyncWebServer server(80);
 
@@ -315,8 +316,13 @@ void webServerInit()
   server.on("/index.html", HTTP_ANY, [](AsyncWebServerRequest *request)
             {
     if (systemConfig.syssec_web) {
-      if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+      if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password)) {
+        webauth_ok = false; 
         return request->requestAuthentication();
+      }
+      else {
+        webauth_ok = true;
+      }
     }
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", index_html_gz, index_html_gz_len);
     response->addHeader("Server", "Itho WiFi Web Server");
@@ -523,7 +529,7 @@ void handleAPI(AsyncWebServerRequest *request)
       AsyncWebParameter *p = request->getParam("get");
       if (strcmp(p->value().c_str(), "currentspeed") == 0)
       {
-        char ithoval[5]{};
+        char ithoval[10]{};
         sprintf(ithoval, "%d", ithoCurrentVal);
         request->send(200, "text/html", ithoval);
         return;

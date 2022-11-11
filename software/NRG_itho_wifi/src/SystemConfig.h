@@ -54,6 +54,7 @@ public:
   uint8_t itho_forcemedium;
   uint8_t itho_vremoteapi;
   uint8_t itho_rf_support;
+  uint8_t i2cmenu;
   mutable bool rfInitOK;
   uint8_t nonQ_cmd_clearsQ;
   mutable bool itho_updated;

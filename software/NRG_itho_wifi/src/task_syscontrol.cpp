@@ -20,6 +20,7 @@ bool shouldReboot = false;
 int8_t ithoInitResult = 0;
 bool IthoInit = false;
 bool wifiModeAP = false;
+bool reset_sht_sensor = false;
 
 // locals
 StaticTask_t xTaskSysControlBuffer;
@@ -121,7 +122,7 @@ void execSystemControlTasks()
   if (!i2cStartCommands && millis() > 15000 && (millis() - lastI2CinitRequest > 5000))
   {
     lastI2CinitRequest = millis();
-    if (xSemaphoreTake(mutexI2Ctask, (TickType_t)1000 / portTICK_PERIOD_MS) == pdTRUE)
+    if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
     {
       sendQueryDevicetype(false);
       xSemaphoreGive(mutexI2Ctask);
@@ -145,7 +146,7 @@ void execSystemControlTasks()
         if (currentIthoDeviceID() == 0x1B)
         {
 
-          if (xSemaphoreTake(mutexI2Ctask, (TickType_t)1000 / portTICK_PERIOD_MS) == pdTRUE)
+          if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
           {
             i2c_result_updateweb = false;
 
@@ -193,7 +194,7 @@ void execSystemControlTasks()
           saveSystemConfig();
         }
       }
-      if (xSemaphoreTake(mutexI2Ctask, (TickType_t)1000 / portTICK_PERIOD_MS) == pdTRUE)
+      if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
       {
         sendQueryStatusFormat(false);
         char logBuff[LOG_BUF_SIZE]{};
@@ -201,7 +202,7 @@ void execSystemControlTasks()
         logInput(logBuff);
         xSemaphoreGive(mutexI2Ctask);
       }
-      if (xSemaphoreTake(mutexI2Ctask, (TickType_t)1000 / portTICK_PERIOD_MS) == pdTRUE)
+      if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
       {
         sendQueryStatus(false);
         logInput("I2C init: QueryStatus");
@@ -212,9 +213,9 @@ void execSystemControlTasks()
     }
     else
     {
-      ithoInitResult = -1;
       if (ithoInitResultLogEntry)
       {
+        ithoInitResult = -1;
         ithoInitResultLogEntry = false;
         logInput("I2C init: QueryDevicetype - failed");
       }
@@ -315,7 +316,7 @@ void execSystemControlTasks()
   if (!(currentItho_fwversion() > 0) && millis() - lastVersionCheck > 60000)
   {
     lastVersionCheck = millis();
-    if (xSemaphoreTake(mutexI2Ctask, (TickType_t)1000 / portTICK_PERIOD_MS) == pdTRUE)
+    if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
     {
       sendQueryDevicetype(false);
       xSemaphoreGive(mutexI2Ctask);
@@ -383,9 +384,26 @@ void execSystemControlTasks()
       {
         if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
         {
+
           if (SHT3x_original)
           {
-            if (sht_org.readSample())
+            if (reset_sht_sensor)
+            {
+              reset_sht_sensor = false;
+              bool reset_res = sht_org.softReset();
+              if (reset_res)
+              {
+                ithoInitResult = 0;
+                i2cStartCommands = false;
+                sysStatReq = true;
+              }
+              char buf[32]{};
+              sprintf(buf, "SHT3x sensor reset: %s", reset_res ? "Success" : "Failed");
+              logInput(buf);
+              sprintf(buf, "%s", reset_res ? "OK" : "NOK");
+              jsonSysmessage("i2c_sht_reset", buf);
+            }
+            else if (sht_org.readSample())
             {
               ithoHum = sht_org.getHumidity();
               ithoTemp = sht_org.getTemperature();
@@ -393,7 +411,23 @@ void execSystemControlTasks()
           }
           if (SHT3x_alternative)
           {
-            if (sht_alt.readSample())
+            if (reset_sht_sensor)
+            {
+              reset_sht_sensor = false;
+              bool reset_res = sht_alt.softReset();
+              if (reset_res)
+              {
+                ithoInitResult = 0;
+                i2cStartCommands = false;
+                sysStatReq = true;
+              }
+              char buf[32]{};
+              sprintf(buf, "SHT3x sensor reset: %s", reset_res ? "Success" : "Failed");
+              logInput(buf);
+              sprintf(buf, "%s", reset_res ? "OK" : "NOK");
+              jsonSysmessage("i2c_sht_reset", buf);
+            }
+            else if (sht_alt.readSample())
             {
               ithoHum = sht_alt.getHumidity();
               ithoTemp = sht_alt.getTemperature();
@@ -402,6 +436,25 @@ void execSystemControlTasks()
           xSemaphoreGive(mutexI2Ctask);
         }
       }
+    }
+  }
+  if (reset_sht_sensor && (!SHT3x_alternative && !SHT3x_original))
+  {
+    if (xSemaphoreTake(mutexI2Ctask, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
+    {
+      reset_sht_sensor = false;
+      trigger_sht_sensor_reset();
+      ithoInitResult = 0;
+      i2cStartCommands = false;
+      sysStatReq = true;
+      logInput("SHT3x sensor reset: executed");
+      jsonSysmessage("i2c_sht_reset", "Done");
+      xSemaphoreGive(mutexI2Ctask);
+    }
+    else
+    {
+      logInput("SHT3x sensor reset: failed (mutex)");
+      jsonSysmessage("i2c_sht_reset", "Failed (mutex)");
     }
   }
 }
@@ -588,7 +641,7 @@ bool connectWiFiSTA(bool restore)
     // else if (status != WL_DISCONNECTED && status != WL_IDLE_STATUS) // fix for issue #108
     // {
     //   char wifiBuff[64]{};
-    //   sprintf(wifiBuff, "WiFi: status NOK [%s], reinitializing...", wl_status_to_name(status));
+    //   sprintf(wifiBuff, "WiFi: status NOK [%s], reinitializing...", wifiConfig.(status));
     //   logInput(wifiBuff);
     //   strlcpy(wifiBuff, "", sizeof(wifiBuff));
 
@@ -620,7 +673,7 @@ bool connectWiFiSTA(bool restore)
   digitalWrite(WIFILED, HIGH);
 
   char buf[64]{};
-  sprintf(buf, "Setup: wifi not connected - %s", wl_status_to_name(status));
+  sprintf(buf, "Setup: wifi not connected - %s", wifiConfig.wl_status_to_name(status));
   logInput(buf);
 
   return false;
@@ -878,6 +931,10 @@ bool ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
   else if (strcmp(command, "10D0") == 0)
   {
     filterReset(0, virtualRemotes);
+  }
+  else if (strcmp(command, "shtreset") == 0)
+  {
+    reset_sht_sensor = true;
   }
   else
   {
