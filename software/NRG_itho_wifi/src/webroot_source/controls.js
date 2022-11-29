@@ -3,7 +3,7 @@
 var count = 0;
 var itho_low = 0;
 var itho_medium = 127;
-var itho_high = 254;
+var itho_high = 255;
 var sensor = -1;
 
 sessionStorage.setItem("statustimer", 0);
@@ -15,39 +15,58 @@ var websocketServerLocation = 'ws://' + window.location.hostname + ':8000/ws';
 function startWebsock(websocketServerLocation) {
   websock = new WebSocket(websocketServerLocation);
   websock.onmessage = function (b) {
-    console.log(b);
-    var f = JSON.parse(b.data);
+    var f;
+    try {
+      f = JSON.parse(decodeURIComponent(b.data)); 
+    } catch (error) {
+      f = JSON.parse(b.data);
+    }
+    console.log(f);
     var g = document.body;
     if (f.wifisettings) {
       let x = f.wifisettings;
       processElements(x);
     }
+    else if (f.logsettings) {
+      let x = f.logsettings;
+      processElements(x);
+    }
+    else if (f.debuginfo) {
+      let x = f.debuginfo;
+      processElements(x);
+    }
     else if (f.systemsettings) {
       let x = f.systemsettings;
-      $('#mqtt_idx, #label-mqtt_idx').hide();
-      $('#sensor_idx, #label-sensor_idx').hide();
-      mqtt_state_topic_tmp = x.mqtt_state_topic;
-      mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
+      if ('itho_rf_support' in x) {
+        $('#mqtt_idx, #label-mqtt_idx').hide();
+        $('#sensor_idx, #label-sensor_idx').hide();
+        mqtt_state_topic_tmp = x.mqtt_state_topic;
+        mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
+      }
       processElements(x);
-      if (x.itho_rf_support == 1 && x.rfInitOK == false) {
-        if (confirm("For changes to take effect click 'Ok' to reboot")) {
-          $('#main').empty();
-          $('#main').append("<br><br><br><br>");
-          $('#main').append(html_reboot_script);
-          websock.send('{"reboot":true}');
+      if ("itho_rf_support" in x) {
+        if (x.itho_rf_support == 1 && x.rfInitOK == false) {
+          if (confirm("For changes to take effect click 'Ok' to reboot")) {
+            $('#main').empty();
+            $('#main').append("<br><br><br><br>");
+            $('#main').append(html_reboot_script);
+            websock.send('{"reboot":true}');
+          }
+        }        
+        if (x.itho_rf_support == 1 && x.rfInitOK == true) {
+          $('#remotemenu').removeClass('hidden');
+        }
+        else {
+          $('#remotemenu').addClass('hidden');
         }
       }
-      if (x.itho_rf_support == 1 && x.rfInitOK == true) {
-        $('#remotemenu').removeClass('hidden');
-      }
-      else {
-        $('#remotemenu').addClass('hidden');
-      }
-      if (x.i2cmenu == 1) {
-        $('#i2cmenu').removeClass('hidden');
-      }
-      else {
-        $('#i2cmenu').addClass('hidden');
+      if ("i2cmenu" in x) {
+        if (x.i2cmenu == 1) {
+          $('#i2cmenu').removeClass('hidden');
+        }
+        else {
+          $('#i2cmenu').addClass('hidden');
+        }
       }
     }
     else if (f.remotes) {
@@ -72,13 +91,15 @@ function startWebsock(websocketServerLocation) {
       $('#I2CLogTable').empty();
       buildHtmlTablePlain('#I2CLogTable', x);
     }
+    else if (f.i2csniffer) {
+      let x = f.i2csniffer;
+      $('#i2clog_outer').removeClass('hidden');
+      var d = new Date();
+      $('#i2clog').prepend(`${d.toLocaleString('nl-NL')}: ${x}<br>`);
+    }
     else if (f.ithodevinfo) {
       let x = f.ithodevinfo;
-      for (key in x) {
-        if (x.hasOwnProperty(key)) {
-          $(`#${key}`).text(x[key]);
-        }
-      }
+      processElements(x);
       if (x.itho_setlen) {
         sessionStorage.setItem("itho_setlen", x.itho_setlen);
       }
@@ -208,6 +229,10 @@ function startWebsock(websocketServerLocation) {
       $('#message_box').append(`<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
       removeAfter5secs(count);
     }
+    else if (f.dblog) {
+      let x = f.dblog;
+      $('#dblog').prepend(`${x}<br>`);
+    }
     else if (f.rflog) {
       let x = f.rflog;
       $('#rflog_outer').removeClass('hidden');
@@ -222,6 +247,9 @@ function startWebsock(websocketServerLocation) {
     else if (f.sysmessage) {
       let x = f.sysmessage;
       $(`#${x.id}`).text(x.message);
+    }
+    else {
+      processElements(f);
     }
   };
   websock.onopen = function (a) {
@@ -242,7 +270,11 @@ function startWebsock(websocketServerLocation) {
     setTimeout(function () { startWebsock(websocketServerLocation) }, 2000);
   };
   websock.onerror = function (a) {
-    console.log(a);
+    try {
+      console.log(a);
+    } catch (error) {
+      console.warn(error);
+    }
   };
 }
 
@@ -319,10 +351,24 @@ $(document).ready(function () {
           itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
           itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
           itho_vremoteapi: $('input[name=\'option-itho_vremoteapi\']:checked').val(),
-          i2cmenu: $('input[name=\'option-i2cmenu\']:checked').val()
+          i2cmenu: $('input[name=\'option-i2cmenu\']:checked').val(),
+          i2c_safe_guard: $('input[name=\'option-i2c_safe_guard\']:checked').val(),
+          i2c_sniffer: $('input[name=\'option-i2c_sniffer\']:checked').val()
         }
       }));
       update_page('system');
+    }
+    else if ($(this).attr('id') == 'syslogsumbit') {
+      websock.send(JSON.stringify({
+        logsettings: {
+          loglevel: $('#loglevel').val(),
+          syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
+          logserver: $('#logserver').val(),
+          logport: $('#logport').val(),
+          logref: $('#logref').val()
+        }
+      }));
+      update_page('syslog');
     }
     //mqttsubmit
     else if ($(this).attr('id') == 'mqttsubmit') {
@@ -487,6 +533,12 @@ $(document).ready(function () {
       if (items[1] > 0) $('#rflog_outer').removeClass('hidden');
       websock.send(`{"rfdebug":${items[1]}}`);
     }
+    else if ($(this).attr('id').startsWith('i2csniffer-')) {
+      const items = $(this).attr('id').split('-');
+      if (items[1] == 0) $('#i2clog_outer').addClass('hidden');
+      if (items[1] > 0) $('#i2clog_outer').removeClass('hidden');
+      websock.send(`{"i2csniffer":${items[1]}}`);
+    }
     else if ($(this).attr('id') == 'button2410') {
       websock.send(JSON.stringify({
         ithobutton: 2410,
@@ -542,6 +594,7 @@ $(document).ready(function () {
   });
 });
 
+
 var timerHandle = setTimeout(function () {
   $('#message_box').hide();
 }, 5000);
@@ -561,8 +614,14 @@ function processElements(x) {
   for (var key in x) {
     if (x.hasOwnProperty(key)) {
       var el = $(`#${key}`);
-      if (el.is('input')) {
+      if (el.is('input') || el.is('select')) {
         $(`#${key}`).val(x[key]);
+      }
+      else if (el.is('span')) {
+        $(`#${key}`).text(x[key]);
+      }
+      else if (el.is('a')) {
+        $(`#${key}`).attr("href", x[key]);
       }
       else {
         var radios = $(`input[name='option-${key}']`);
@@ -732,6 +791,7 @@ function update_page(page) {
   $('#main').css('max-width', '768px')
   if (page == 'index') { $('#main').append(html_index); }
   if (page == 'wifisetup') { $('#main').append(html_wifisetup); }
+  if (page == 'syslog') { $('#main').append(html_syslog); }
   if (page == 'system') {
     $('#main').append(html_systemsettings_start);
     if (hw_revision == "2" || hw_revision == "NON-CVE 1") { $('#sys_fieldset').append(html_systemsettings_cc1101); }
@@ -746,7 +806,7 @@ function update_page(page) {
   if (page == 'help') { $('#main').append(html_help); }
   if (page == 'reset') { $('#main').append(html_reset); }
   if (page == 'update') { $('#main').append(html_update); }
-  if (page == 'debug') { $('#main').load('debug'); $('#main').css('max-width', '1600px') }
+  if (page == 'debug') { $('#main').append(html_debug); $('#main').css('max-width', '1600px') }
   if (page == 'i2cdebug') { $('#main').append(html_i2cdebug); }
 
 
@@ -893,7 +953,7 @@ function addRemoteButtons(selector, remtype, vremotenum, seperator) {
         }
 
         newinner += `<button value='${item[2][i]}_remote-${vremotenum}' id='button_vremote-${vremotenum}-${item[2][i]}' class='pure-button pure-button-primary'>${item[2][i].charAt(0).toUpperCase() + item[2][i].slice(1)}</button>\u00A0`;
-        
+
         if (seperator) {
           if (item[2][i] == 'high' || item[2][i] == 'cook60' || item[2][i] == 'timer3' || (item[2].length == 10 && item[2][i] == 'autonight') || item[2][i] == 'leave') {
             newinner += '</div>';
@@ -1161,6 +1221,90 @@ function addAllColumnHeaders(jsonVar, selector, appendRow) {
 //
 // HTML string literals
 //
+var html_debug = `
+<div id="main" style="max-width: 1600px;">
+    <div class="header">
+        <h1>Debug page</h1>
+    </div><br><br>
+    <div>
+        <span>Config version: </span><span id='configversion'>unknown</span><br><br>
+        <span>Itho I2C connection status: </span><span id='ithoinit'>unknown</span>
+    </div>
+    <br>
+    <span>File system: </span><span id='bfree'></span><span> bytes used / </span><span id='btotal'></span><span> bytes
+        total</span><br>
+    <a href="#" class="pure-button" onclick="$('#main').empty();$('#main').append( html_edit );">Edit
+        filesystem</a><br><br>
+    <span>CC1101 task memory: </span><span id='cc1101taskmem'></span><span> bytes free</span><br>
+    <span>MQTT task memory: </span><span id='mqtttaskmem'></span><span> bytes free</span><br>
+    <span>Web task memory: </span><span id='webtaskmem'></span><span> bytes free</span><br>
+    <span>Config and Log task memory: </span><span id='cltaskmem'></span><span> bytes free</span><br>
+    <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br><br>
+    <br><br>
+    <div id="rflog_outer" class="hidden">
+        <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
+        <div id="rflog"
+            style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+        </div>
+        <div style="padding-top:5px;">
+            <a href="#" class="pure-button" onclick="$('#rflog').empty()">Clear</a>
+        </div>
+    </div>
+    <form class="pure-form pure-form-aligned">
+        <fieldset>
+            <legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id="rfdebug-0"
+                class="pure-button pure-button-primary">Off</button><br><br><button id="rfdebug-1"
+                class="pure-button pure-button-primary">Level1</button>&nbsp;Level1 will show only known itho commands
+            from all devices<br><br><button id="rfdebug-2"
+                class="pure-button pure-button-primary">Level2</button>&nbsp;Level2 will show all received RF messages
+            from devices joined to the add-on<br><br><button id="rfdebug-3"
+                class="pure-button pure-button-primary">Level3</button>&nbsp;Level3 will show all received RF messages
+            from all devices<br><br>
+            <fieldset>
+                <legend><br>Low level itho I2C commands:</legend><br>
+                <button id="ithobutton-type" class="pure-button pure-button-primary">Query Devicetype</button><br>
+                <span>Result:&nbsp;</span><span id="ithotype"></span><br><br>
+                <button id="ithobutton-statusformat" class="pure-button pure-button-primary">Query Status
+                    Format</button><br><span>Result:&nbsp;</span><span id="ithostatusformat"></span><br><br>
+                <button id="ithobutton-status" class="pure-button pure-button-primary">Query
+                    Status</button><br><span>Result:&nbsp;</span><span id="ithostatus"></span><br><br>
+                <button id="button2410" class="pure-button pure-button-primary">Query 2410</button>setting index: <input
+                    id="itho_setting_id" type="number" min="0" max="255" size="6"
+                    value="0"><br><span>Result:&nbsp;</span><span id="itho2410"></span><br>
+                <span>Current:&nbsp;</span><span id="itho2410cur"></span><br>
+                <span>Minimum value:&nbsp;</span><span id="itho2410min"></span><br>
+                <span>Maximum value:&nbsp;</span><span id="itho2410max"></span><br><br>
+                <span style="color:red">Warning!!<br> "Set 2410" changes the settings of your itho unit<br>Use with care
+                    and
+                    use only if you know what you are doing!</span><br>
+                <button id="button2410set" class="pure-button pure-button-primary">Set 2410</button>setting index:
+                <input id="itho_setting_id_set" type="number" min="0" max="255" size="6" value="0"> setting value:
+                <input id="itho_setting_value_set" type="number" min="-2147483647" max="2147483647" size="10"
+                    value="0"><br>
+                <span>Sent command:&nbsp;</span><span id="itho2410set"></span><br><span>Result:&nbsp;</span><span
+                    id="itho2410setres"></span><br>
+                <span style="color:red">Warning!!</span><br><br><button id="ithobutton-31DA"
+                    class="pure-button pure-button-primary">Query 31DA</button><br><span>Result:&nbsp;</span>
+                <span id="itho31DA"></span><br><br><button id="ithobutton-31D9"
+                    class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
+                    id="itho31D9"></span><br><br>
+                <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
+                    reset</button><br><span>Filter
+                    reset function uses virtual remote 0, this remote needs to be paired with your itho for this command
+                    to
+                    work</span>
+            </fieldset><br><br><br>
+        </fieldset>
+    </form>
+</div>
+<script>
+    $(document).ready(function () {
+        getSettings('debugvalues');
+        getSettings('sysstat');
+    });
+</script>
+`;
+
 var html_i2cdebug = `
 <div class="header">
   <h1>I2C debug</h1>
@@ -1187,16 +1331,32 @@ var html_i2cdebug = `
       <button id=\"ithobutton-shtreset\" class=\"pure-button pure-button-primary\">Reset Temp/Hum
         sensor</button><br><span>Result:&nbsp;</span><span id=\'i2c_sht_reset\'></span><br><br>
     </fieldset>
-  </fieldset>
-</form>
-<br><br>
-<script>
-  $(document).ready(function () {
-    getSettings('sysstat');
-    getSettings('i2cdebuglog');
-    getSettings('i2cdebugsettings');
-  });
-</script>
+    <div id="i2clog_outer" class="hidden">
+      <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">I2C sniffer Log:</div>
+      <div id="i2clog"
+        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+      </div>
+      <div style="padding-top:5px;">
+        <a href="#" class="pure-button" onclick="$('#i2clog').empty()">Clear</a>
+      </div>
+    </div>
+    <form class="pure-form pure-form-aligned">
+      <fieldset>
+        <legend><br>I2C sniffer mode (works on I2C sniffer capable hardware only, see system log):</legend><br>
+        <button id="i2csniffer-1" class="pure-button pure-button-primary">On</button>
+        <button id="i2csniffer-0" class="pure-button pure-button-primary">Off</button>
+        <br><br>
+
+      </fieldset>
+    </form>
+    <br><br>
+    <script>
+      $(document).ready(function () {
+        getSettings('sysstat');
+        getSettings('i2cdebuglog');
+        getSettings('i2cdebugsettings');
+      });
+    </script>
 `;
 
 var html_api = `
@@ -1386,7 +1546,7 @@ Unless specified otherwise:<br>
         <tr>
             <td>speed</td>
             <td>string</td>
-            <td>0-254</td>
+            <td>0-255</td>
             <td>number</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">●</td>
@@ -1432,12 +1592,12 @@ Unless specified otherwise:<br>
             <td style="text-align:center">●</td>
         </tr>
         <tr>
-            <td colspan="6">Comments:<br><em>Returns current active itho speed setting in range 0-254</em></td>
+            <td colspan="6">Comments:<br><em>Returns current active itho speed setting in range 0-255</em></td>
         </tr>
         <tr>
             <td></td>
             <td></td>
-            <td>0-254</td>
+            <td>0-255</td>
             <td>number</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">◌</td>
@@ -1771,35 +1931,35 @@ var html_systemsettings_start = `
       <input id="option-api_normalize-1" type="radio" name="option-api_normalize" value="1"> on
       <input id="option-api_normalize-0" type="radio" name="option-api_normalize" value="0"> off
     </div>
-    <legend><br>Speed settings (CVE only) (0-254):</legend>
+    <legend><br>Speed settings (CVE only) (0-255):</legend>
     <div class="pure-control-group">
       <label for="itho_fallback">Start/fallback speed</label>
-      <input id="itho_fallback" type="number" min="0" max="254" size="6">
+      <input id="itho_fallback" type="number" min="0" max="255" size="6">
     </div>
     <div class="pure-control-group">
       <label for="itho_low">Low</label>
-      <input id="itho_low" type="number" min="0" max="254" size="6">
+      <input id="itho_low" type="number" min="0" max="255" size="6">
     </div>
     <div class="pure-control-group">
       <label for="itho_medium">Medium</label>
-      <input id="itho_medium" type="number" min="0" max="254" size="6">
+      <input id="itho_medium" type="number" min="0" max="255" size="6">
     </div>
     <div class="pure-control-group">
       <label for="itho_high">High</label>
-      <input id="itho_high" type="number" min="0" max="254" size="6">
+      <input id="itho_high" type="number" min="0" max="255" size="6">
     </div>
-    <legend><br>Timer settings (0-254 minutes):</legend>
+    <legend><br>Timer settings (0-255 minutes):</legend>
     <div class="pure-control-group">
       <label for="itho_timer1">Timer1</label>
-      <input id="itho_timer1" type="number" min="0" max="254" size="6">
+      <input id="itho_timer1" type="number" min="0" max="255" size="6">
     </div>
     <div class="pure-control-group">
       <label for="itho_timer2">Timer2</label>
-      <input id="itho_timer2" type="number" min="0" max="254" size="6">
+      <input id="itho_timer2" type="number" min="0" max="255" size="6">
     </div>
     <div class="pure-control-group">
       <label for="itho_timer3">Timer3</label>
-      <input id="itho_timer3" type="number" min="0" max="254" size="6">
+      <input id="itho_timer3" type="number" min="0" max="255" size="6">
     </div>
     <legend><br>Itho status update frequency (0-65535 seconds):</legend>
     <p>Controls the rate at which sensor data, status data and system information is requested and updated on the API
@@ -1820,7 +1980,7 @@ var html_systemsettings_start = `
       way the add-on can overrule the current speed settings of the itho (ie. due to active input from a built in
       humidity sensor or another remote)</p>
     <p>Received commands from RF remotes can be translated to matching virtual remote commands with the 'Map RF remotes
-      to virtual remote' option for non-CVE devices. The 0-254 speed control does not work for these devices, the timer
+      to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
       settings do work as expected.</p>
     <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
     <div class="pure-control-group">
@@ -1851,12 +2011,26 @@ var html_systemsettings_start = `
       <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
     </div>
     <legend><br>Activate I2C extra debug functionality:</legend>
-    <p>Some CVE users experience issues with crashing I2C communication. This option enables an extra menu where more I2C options and logging is available.</p>
+    <p>Some CVE users experience issues with crashing I2C communication. This option enables an extra menu where more
+      I2C options and logging is available.</p>
     <br>
     <div class="pure-control-group">
       <label for="option-i2cmenu" class="pure-radio">I2C debug menu</label>
       <input id="option-i2cmenu-1" type="radio" name="option-i2cmenu" value="1"> on
       <input id="option-i2cmenu-0" type="radio" name="option-i2cmenu" value="0"> off
+    </div>
+    <p>The i2c safe guard is a protection mechanism for CVE fans with built-in humidity sensor (models with light grey lid)</p><p>(Reboot needed, does not work in conjunction with the i2c sniffer)</p>
+    <div class="pure-control-group">
+      <label for="option-i2c_safe_guard" class="pure-radio">I2C safe guard</label>
+      <input id="option-i2c_safe_guard-1" type="radio" name="option-i2c_safe_guard" value="1"> on
+      <input id="option-i2c_safe_guard-0" type="radio" name="option-i2c_safe_guard" value="0"> off
+    </div>
+    <p>The i2c sniffer works only on sniffer capable devices (non-cve; all versions, cve; as of hw rev. 2.5). See system
+      log for confirmation.</p><p>(Reboot needed)</p>
+    <div class="pure-control-group">
+      <label for="option-i2c_sniffer" class="pure-radio">I2C sniffer</label>
+      <input id="option-i2c_sniffer-1" type="radio" name="option-i2c_sniffer" value="1"> on
+      <input id="option-i2c_sniffer-0" type="radio" name="option-i2c_sniffer" value="0"> off
     </div>
   </fieldset>
 </form>
@@ -2027,7 +2201,7 @@ var html_index = `
           -
         </div>
       </div>
-      <input id="ithoslider" type="range" min="0" max="254" value="0" class="slider" style="width: 100%; margin: 0 0 2em 0;">
+      <input id="ithoslider" type="range" min="0" max="255" value="0" class="slider" style="width: 100%; margin: 0 0 2em 0;">
     </div>
     <div id="reminterface">
       <div style="text-align: center;margin: 2em 0 0 0;">
@@ -2196,5 +2370,75 @@ var html_vremotessetup = `
     $('#main').css('max-width', '1400px')
     getSettings('ithovremotes');
   });
+</script>
+`;
+
+var html_syslog = `
+<div class="header">
+    <h1>System log and log settings</h1>
+</div>
+<p>System log and configuration of log level and syslog target</p>
+<style>
+    .pure-form-aligned .pure-control-group label {
+        width: 15em;
+    }
+</style>
+<div id="sdblog_outer">
+    <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">System Log:</div>
+    <div id='dblog'
+        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+    </div>
+    <div style="padding-top:5px;">
+        <a class="pure-button" href="/curlog">Download current logfile</a>&nbsp;
+        <a id='prevlog' class="pure-button" href="javascript:alert('Not avaiable!');">Download previous logfile</a>
+    </div>
+</div><br><br>
+<form class="pure-form pure-form-aligned">
+    <fieldset>
+        <legend><br>Log Settings:</legend>
+        <div class="pure-control-group">
+            <label for="loglevel">Log level:</label>
+            <select id="loglevel" name="loglevel">
+                <option value="0">Emergency</option>
+                <option value="1">Alert</option>
+                <option value="2">Critical</option>
+                <option value="3">Error</option>
+                <option value="4">Warning</option>
+                <option value="5">Notice</option>
+                <option value="6">Info</option>
+                <option value="7">Debug</option>
+            </select>
+        </div>
+        <legend><br>Syslog Settings:</legend>
+        <div class="pure-control-group">
+            <label for="option-syslog_active" class="pure-radio">Syslog Active</label>
+            <input id="option-syslog_active-1" type="radio" name="option-syslog_active" onchange='radio("syslog_active", 1)'
+                value="1"> on
+            <input id="option-syslog_active-0" type="radio" name="option-syslog_active" onchange='radio("syslog_active", 0)'
+                value="0"> off
+        </div>
+        <div class="pure-control-group">
+            <label for="logserver">Syslog server</label>
+            <input id="logserver" maxlength="63" type="text">
+        </div>
+        <div class="pure-control-group">
+            <label for="logport">Port</label>
+            <input id="logport" maxlength="5" type="text">
+        </div>
+        <div class="pure-control-group">
+            <label for="logref">Syslog Reference</label>
+            <input id="logref" maxlength="63" type="text">
+        </div>
+        <div class="pure-controls">
+            <button id="syslogsumbit" class="pure-button pure-button-primary">Save</button>
+        </div>
+    </fieldset>
+
+</form>
+<script>
+    $(document).ready(function () {
+        getSettings('systemlog');
+        getSettings('logsetup');
+    });
 </script>
 `;

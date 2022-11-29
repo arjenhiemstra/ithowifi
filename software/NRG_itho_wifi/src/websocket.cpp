@@ -41,13 +41,16 @@ void jsonWsSend(const char *rootName)
   }
   else if (strcmp(rootName, "systemsettings") == 0)
   {
-    // Create an object at the root
     JsonObject nested = root.createNestedObject(rootName);
     systemConfig.get(nested);
   }
+  else if (strcmp(rootName, "logsettings") == 0)
+  {
+    JsonObject nested = root.createNestedObject(rootName);
+    logConfig.get(nested);
+  }
   else if (strcmp(rootName, "ithodevinfo") == 0)
   {
-    // Create an object at the root
     JsonObject nested = root.createNestedObject(rootName);
     nested["itho_devtype"] = getIthoType();
     nested["itho_fwversion"] = currentItho_fwversion();
@@ -55,17 +58,62 @@ void jsonWsSend(const char *rootName)
   }
   else if (strcmp(rootName, "ithostatusinfo") == 0)
   {
-    // Create an object at the root
     JsonObject nested = root.createNestedObject(rootName);
     getIthoStatusJSON(nested);
+  }
+  else if (strcmp(rootName, "debuginfo") == 0)
+  {
+    JsonObject nested = root.createNestedObject(rootName);
+    nested["configversion"] = CONFIG_VERSION;
+    nested["bfree"] = ACTIVE_FS.usedBytes();
+    nested["btotal"] = ACTIVE_FS.totalBytes();
+    nested["bfree"] = ACTIVE_FS.usedBytes();
+    nested["cc1101taskmem"] = TaskCC1101HWmark;
+    nested["mqtttaskmem"] = TaskMQTTHWmark;
+    nested["webtaskmem"] = TaskWebHWmark;
+    nested["cltaskmem"] = TaskConfigAndLogHWmark;
+    nested["syscontaskmem"] = TaskSysControlHWmark;
+  }
+  else if (strcmp(rootName, "syslog") == 0)
+  {
+    char link[24]{};
+    char linkcur[24]{};
+
+    if (ACTIVE_FS.exists("/logfile0.current.log"))
+    {
+      strlcpy(linkcur, "/logfile0.current.log", sizeof(linkcur));
+      strlcpy(link, "/logfile1.log", sizeof(link));
+    }
+    else
+    {
+      strlcpy(linkcur, "/logfile1.current.log", sizeof(linkcur));
+      strlcpy(link, "/logfile0.log", sizeof(link));
+    }
+    File file = ACTIVE_FS.open(linkcur, FILE_READ);
+    String buf;
+    while (file.available())
+    {
+      if (char(file.peek()) == '\n')
+      {
+        StaticJsonDocument<250> entry;
+        entry["dblog"] = buf.c_str();
+        notifyClients(entry.as<JsonObjectConst>());
+        buf = String();
+      }
+      buf += char(file.read());
+    }
+    file.close();
+    if (ACTIVE_FS.exists(link))
+    {
+      StaticJsonDocument<250> entry;
+      entry["prevlog"] = "/prevlog";
+      notifyClients(entry.as<JsonObjectConst>());
+    }
+    return;
   }
   else if (strcmp(rootName, "i2cdebuglog") == 0) // i2cdebuglog
   {
     i2cLogger.get(root.to<JsonObject>(), rootName);
-  }
-  else if (strcmp(rootName, "debuginfo") == 0)
-  {
-    
   }
   else if (strcmp(rootName, "remtypeconf") == 0)
   {
@@ -74,13 +122,11 @@ void jsonWsSend(const char *rootName)
   }
   else if (strcmp(rootName, "remotes") == 0)
   {
-    // Create an object at the root
     JsonObject obj = root.to<JsonObject>(); // Fill the object
     remotes.get(obj, rootName);
   }
   else if (strcmp(rootName, "vremotes") == 0)
   {
-    // Create an object at the root
     JsonObject obj = root.to<JsonObject>(); // Fill the object
     virtualRemotes.get(obj, rootName);
   }
@@ -111,13 +157,14 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     // Got websocket frame. Received data is wm->data.
     struct mg_ws_message *wm = (struct mg_ws_message *)ev_data;
-    std::string msg = wm->data.ptr;
+    std::string msg;
+    msg.assign(wm->data.ptr, wm->data.len);
 
-    D_LOG("%s\n", msg.c_str());
+    D_LOG("%s", msg.c_str());
 
     if (msg.find("{\"wifiscan\"") != std::string::npos)
     {
-      D_LOG("Start wifi scan\n");
+      D_LOG("Start wifi scan");
       runscan = true;
     }
     if (msg.find("{\"sysstat\"") != std::string::npos)
@@ -128,11 +175,19 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     {
       jsonWsSend("remtypeconf");
     }
+    if (msg.find("{\"debugvalues\"") != std::string::npos)
+    {
+      jsonWsSend("debuginfo");
+    }
+    if (msg.find("{\"systemlog\"") != std::string::npos)
+    {
+      jsonWsSend("syslog");
+    }
     else if (msg.find("{\"i2cdebuglog\"") != std::string::npos)
     {
       jsonWsSend("i2cdebuglog");
     }
-    else if (msg.find("{\"wifisettings\"") != std::string::npos || msg.find("{\"systemsettings\"") != std::string::npos)
+    else if (msg.find("{\"wifisettings\"") != std::string::npos || msg.find("{\"systemsettings\"") != std::string::npos || msg.find("{\"logsettings\"") != std::string::npos)
     {
       DynamicJsonDocument root(2048);
       DeserializationError error = deserializeJson(root, msg.c_str());
@@ -146,10 +201,22 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
             if (p.value().is<JsonObject>())
             {
 
-              JsonObject obj = p.value();
-              if (systemConfig.set(obj))
+              JsonObject value = p.value();
+              if (systemConfig.set(value))
               {
                 saveSystemConfigflag = true;
+              }
+            }
+          }
+          if (strcmp(p.key().c_str(), "logsettings") == 0)
+          {
+            if (p.value().is<JsonObject>())
+            {
+
+              JsonObject value = p.value();
+              if (logConfig.set(value))
+              {
+                saveLogConfigflag = true;
               }
             }
           }
@@ -158,8 +225,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
             if (p.value().is<JsonObject>())
             {
 
-              JsonObject obj = p.value();
-              if (wifiConfig.set(obj))
+              JsonObject value = p.value();
+              if (wifiConfig.set(value))
               {
                 saveWifiConfigflag = true;
               }
@@ -179,7 +246,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           uint16_t val = root["ithobutton"].as<uint16_t>();
           if (val == 2410)
           {
-            getSetting(root["index"].as<int8_t>(), false, true, false);
+            i2c_cmd_queue.push_back([root]()
+                                    { getSetting(root["index"].as<int8_t>(), false, true, false); });
           }
           else if (val == 24109)
           {
@@ -225,6 +293,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       systemConfig.get_sys_settings = true;
       jsonWsSend("systemsettings");
     }
+    else if (msg.find("{\"logsetup\"") != std::string::npos)
+    {
+      jsonWsSend("logsettings");
+    }
     else if (msg.find("{\"mqttsetup\"") != std::string::npos)
     {
       systemConfig.get_mqtt_settings = true;
@@ -239,7 +311,6 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     else if (msg.find("{\"ithostatus\"") != std::string::npos)
     {
       jsonWsSend("ithostatusinfo");
-      //jsonWsSend("debuginfo");
       sysStatReq = true;
     }
     else if (msg.find("{\"ithogetsetting\"") != std::string::npos)
@@ -248,7 +319,9 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
-        getSetting(root["index"].as<uint8_t>(), root["update"].as<bool>(), false, true);
+        // step1: index=0, update=false, loop=true -> reply with settings labels but null for values
+        i2c_cmd_queue.push_back([root]()
+                                { getSetting(root["index"].as<uint8_t>(), root["update"].as<bool>(), false, true); });
       }
     }
     else if (msg.find("{\"ithosetrefresh\"") != std::string::npos)
@@ -257,7 +330,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
-        getSetting(root["ithosetrefresh"].as<uint8_t>(), true, false, false);
+        i2c_cmd_queue.push_back([root]()
+                                { getSetting(root["ithosetrefresh"].as<uint8_t>(), true, false, false); });
       }
     }
     else if (msg.find("{\"ithosetupdate\"") != std::string::npos)
@@ -333,11 +407,11 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"copy_id\"") != std::string::npos)
     {
-      bool parseOK = false;
       StaticJsonDocument<128> root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
+        bool parseOK = false;
         int number = root["index"];
         if (number > 0 && number < virtualRemotes.getMaxRemotes() + 1)
         {
@@ -353,11 +427,11 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"itho_remove_remote\"") != std::string::npos)
     {
-      bool parseOK = false;
       StaticJsonDocument<128> root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
+        bool parseOK = false;
         int number = root["itho_remove_remote"];
         if (number > 0 && number < remotes.getMaxRemotes() + 1)
         {
@@ -399,11 +473,11 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"itho_remove_vremote\"") != std::string::npos)
     {
-      bool parseOK = false;
       StaticJsonDocument<128> root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
+        bool parseOK = false;
         int number = root["itho_remove_vremote"];
         if (number > 0 && number < virtualRemotes.getMaxRemotes() + 1)
         {
@@ -474,6 +548,25 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         setRFdebugLevel(root["rfdebug"].as<uint8_t>());
       }
     }
+    else if (msg.find("{\"i2csniffer\"") != std::string::npos)
+    {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error)
+      {
+        if (root["i2csniffer"].as<uint8_t>() == 1)
+        {
+          i2c_safe_guard.sniffer_enabled = true;
+          i2c_sniffer_enable();
+        }
+        else
+        {
+          i2c_safe_guard.sniffer_enabled = false;
+          i2c_sniffer_disable();
+        }
+      }
+    }
+
     wm = nullptr;
     msg = std::string();
   }

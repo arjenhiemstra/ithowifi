@@ -11,7 +11,7 @@
 #include <Ticker.h>
 
 #include "IthoPacket.h"
-#include "Dbglog.h"
+#include "sys_log.h"
 #include "System.h"
 
 enum RemoteFunctions : uint8_t
@@ -40,7 +40,7 @@ private:
   int remoteCount{0};
   int maxRemotes{10};
   mutable bool llMode = false;
-  // Ticker timer;
+
   volatile uint8_t llModeTime{0};
 
   typedef struct

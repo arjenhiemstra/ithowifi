@@ -13,7 +13,6 @@
 #include "WiFi.h"
 
 #include "notifyClients.h"
-#include "hardware.h"
 
 class WifiConfig
 {

@@ -10,10 +10,8 @@
 
 #include "SystemConfig.h"
 #include "WifiConfig.h"
-#include "hardware.h"
 #include "globals.h"
-#include "Dbglog.h"
-#include "flashLog.h"
+#include "sys_log.h"
 
 #include "task_web.h"
 

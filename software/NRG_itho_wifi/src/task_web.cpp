@@ -33,7 +33,6 @@ unsigned long previousUpdate = 0;
 String debugVal = "";
 bool onOTA = false;
 bool TaskWebStarted = false;
-static const char *s_root_dir = ".";
 
 static const struct packed_files_lst
 {
@@ -94,7 +93,7 @@ void TaskWeb(void *pvParameters)
     esp_task_wdt_reset();
 
     TaskTimeout.once_ms(3000, []()
-                        { logInput("Warning: Task Web timed out!"); });
+                        { W_LOG("Warning: Task Web timed out!"); });
 
     execWebTasks();
 
@@ -147,7 +146,7 @@ void ArduinoOTAinit()
     else // U_SPIFFS
       strncat(buf, "filesystem", sizeof(buf) - strlen(buf) - 1);
     // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    logInput(buf);
+    N_LOG(buf);
     delay(250);
     
     ACTIVE_FS.end();
@@ -156,7 +155,7 @@ void ArduinoOTAinit()
     dontReconnectMQTT = true;
     mqttClient.disconnect();
 
-    detachInterrupt(ITHO_IRQ_PIN);
+    detachInterrupt(itho_irq_pin);
 
     TaskCC1101Timeout.detach();
     TaskConfigAndLogTimeout.detach();
@@ -170,17 +169,18 @@ void ArduinoOTAinit()
     esp_task_wdt_delete( xTaskMQTTHandle );
     esp_task_wdt_delete( xTaskConfigAndLogHandle ); })
       .onEnd([]()
-             { Serial.println("\nEnd"); })
+             { D_LOG("\nEnd"); })
       .onProgress([](unsigned int progress, unsigned int total)
-                  { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); })
+                  { D_LOG("Progress: %u%%\r", (progress / (total / 100))); })
       .onError([](ota_error_t error)
                {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-    else if (error == OTA_END_ERROR) Serial.println("End Failed"); });
+    D_LOG("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) D_LOG("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) D_LOG("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) D_LOG("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) D_LOG("Receive Failed");
+    else if (error == OTA_END_ERROR)
+      D_LOG("End Failed"); });
   ArduinoOTA.begin();
   //
   //  ArduinoOTA.onStart([]() {
@@ -283,7 +283,7 @@ void webServerInit()
     response->print("'; var fw_version = '");
     response->print(FWVERSION);
     response->print("'; var hw_revision = '");
-    response->print(HWREVISION);
+    response->print(hw_revision);
     response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });");
 
     request->send(response); })
@@ -299,7 +299,7 @@ void webServerInit()
     response->print("'; var fw_version = '");
     response->print(FWVERSION);
     response->print("'; var hw_revision = '");
-    response->print(HWREVISION);
+    response->print(hw_revision);
     response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_wifisetup); });");
 
     request->send(response); })
@@ -329,7 +329,6 @@ void webServerInit()
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); });
   server.on("/api.html", HTTP_GET, handleAPI);
-  server.on("/debug", HTTP_GET, handleDebug);
 
   // Log file download
   server.on("/curlog", HTTP_GET, handleCurLogDownload);
@@ -370,21 +369,18 @@ void webServerInit()
       {
         if (!index)
         {
-#if defined(ENABLE_SERIAL)
-          D_LOG("Begin OTA update\n");
-#endif
+          D_LOG("Begin OTA update");
           onOTA = true;
           dontSaveConfig = true;
           dontReconnectMQTT = true;
           mqttClient.disconnect();
+          i2c_sniffer_unload();
 
           content_len = request->contentLength();
-          static char buf[128]{};
-          strcat(buf, "Firmware update: ");
-          strncat(buf, filename.c_str(), sizeof(buf) - strlen(buf) - 1);
-          logInput(buf);
 
-          detachInterrupt(ITHO_IRQ_PIN);
+          N_LOG("Firmware update: %s", filename.c_str());
+
+          detachInterrupt(itho_irq_pin);
 
           TaskCC1101Timeout.detach();
           TaskConfigAndLogTimeout.detach();
@@ -397,10 +393,6 @@ void webServerInit()
           esp_task_wdt_delete(xTaskCC1101Handle);
           esp_task_wdt_delete(xTaskMQTTHandle);
           esp_task_wdt_delete(xTaskConfigAndLogHandle);
-
-#if defined(ENABLE_SERIAL)
-          D_LOG("Tasks detached\n");
-#endif
 
           if (!Update.begin(UPDATE_SIZE_UNKNOWN))
           {
@@ -422,9 +414,7 @@ void webServerInit()
         {
           if (Update.end(true))
           {
-#if defined(ENABLE_SERIAL)
-            D_LOG("Update Success: %uB\n", index + len);
-#endif
+            D_LOG("Update Success: %uB", index + len);
           }
           else
           {
@@ -461,7 +451,7 @@ void webServerInit()
 
   server.begin();
 
-  logInput("Webserver: started");
+  N_LOG("Webserver: started");
 }
 
 void MDNSinit()
@@ -472,11 +462,9 @@ void MDNSinit()
 
   MDNS.addService("http", "tcp", 80);
 
-  char logBuff[LOG_BUF_SIZE]{};
-  logInput("mDNS: started");
+  N_LOG("mDNS: started");
 
-  sprintf(logBuff, "Hostname: %s", hostName());
-  logInput(logBuff);
+  N_LOG("Hostname: %s", hostName());
 }
 void handleAPI(AsyncWebServerRequest *request)
 {
@@ -526,15 +514,15 @@ void handleAPI(AsyncWebServerRequest *request)
 
     if (strcmp(p->name().c_str(), "get") == 0)
     {
-      AsyncWebParameter *p = request->getParam("get");
-      if (strcmp(p->value().c_str(), "currentspeed") == 0)
+      AsyncWebParameter *q = request->getParam("get");
+      if (strcmp(q->value().c_str(), "currentspeed") == 0)
       {
         char ithoval[10]{};
         sprintf(ithoval, "%d", ithoCurrentVal);
         request->send(200, "text/html", ithoval);
         return;
       }
-      else if (strcmp(p->value().c_str(), "queue") == 0)
+      else if (strcmp(q->value().c_str(), "queue") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
         StaticJsonDocument<1000> root;
@@ -548,14 +536,14 @@ void handleAPI(AsyncWebServerRequest *request)
 
         return;
       }
-      else if (strcmp(p->value().c_str(), "ithostatus") == 0)
+      else if (strcmp(q->value().c_str(), "ithostatus") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
         DynamicJsonDocument doc(6000);
 
         if (doc.capacity() == 0)
         {
-          logInput("MQTT: JsonDocument memory allocation failed (html api)");
+          E_LOG("MQTT: JsonDocument memory allocation failed (html api)");
           return;
         }
 
@@ -567,7 +555,7 @@ void handleAPI(AsyncWebServerRequest *request)
 
         return;
       }
-      else if (strcmp(p->value().c_str(), "lastcmd") == 0)
+      else if (strcmp(q->value().c_str(), "lastcmd") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
         DynamicJsonDocument doc(1000);
@@ -580,7 +568,7 @@ void handleAPI(AsyncWebServerRequest *request)
 
         return;
       }
-      else if (strcmp(p->value().c_str(), "remotesinfo") == 0)
+      else if (strcmp(q->value().c_str(), "remotesinfo") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
         DynamicJsonDocument doc(2000);
@@ -623,6 +611,21 @@ void handleAPI(AsyncWebServerRequest *request)
     {
       timer = p->value().c_str();
     }
+    else if (strcmp(p->name().c_str(), "i2csniffer") == 0)
+    {
+      if (strcmp(p->value().c_str(), "on") == 0)
+      {
+        i2c_sniffer_enable();
+        i2c_safe_guard.sniffer_enabled = true;
+        parseOK = true;
+      }
+      else if (strcmp(p->value().c_str(), "off") == 0)
+      {
+        i2c_sniffer_disable();
+        i2c_safe_guard.sniffer_enabled = false;
+        parseOK = true;
+      }
+    }
     else if (strcmp(p->name().c_str(), "debug") == 0)
     {
       if (strcmp(p->value().c_str(), "level0") == 0)
@@ -658,7 +661,9 @@ void handleAPI(AsyncWebServerRequest *request)
   {
     if (vremotecmd != nullptr && (vremoteidx == nullptr && vremotename == nullptr))
     {
-      parseOK = ithoI2CCommand(0, vremotecmd, HTMLAPI);
+      ithoI2CCommand(0, vremotecmd, HTMLAPI);
+
+      parseOK = true;
     }
     else
     {
@@ -685,7 +690,9 @@ void handleAPI(AsyncWebServerRequest *request)
         parseOK = false;
       else
       {
-        parseOK = ithoI2CCommand(index, vremotecmd, HTMLAPI);
+        ithoI2CCommand(index, vremotecmd, HTMLAPI);
+
+        parseOK = true;
       }
     }
   }
@@ -714,97 +721,6 @@ void handleAPI(AsyncWebServerRequest *request)
   {
     request->send(200, "text/html", "NOK");
   }
-}
-void handleDebug(AsyncWebServerRequest *request)
-{
-  if (systemConfig.syssec_web)
-  {
-    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
-      return request->requestAuthentication();
-  }
-  AsyncResponseStream *response = request->beginResponseStream("text/html");
-
-  response->print("<div class=\"header\"><h1>Debug page</h1></div><br><br>");
-  response->print("<div>Config version: ");
-  response->print(CONFIG_VERSION);
-  response->print("<br><br><span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span></div>");
-
-  response->print("<br><span>File system: </span><span>");
-
-  response->print(ACTIVE_FS.usedBytes());
-  response->print(" bytes used / ");
-  response->print(ACTIVE_FS.totalBytes());
-  response->print(" bytes total</span><br><a href='#' class='pure-button' onclick=\"$('#main').empty();$('#main').append( html_edit );\">Edit filesystem</a>");
-  response->print("<br><br><span>CC1101 task memory: </span><span>");
-  response->print(TaskCC1101HWmark);
-  response->print(" bytes free</span>");
-  response->print("<br><span>MQTT task memory: </span><span>");
-  response->print(TaskMQTTHWmark);
-  response->print(" bytes free</span>");
-  response->print("<br><span>Web task memory: </span><span>");
-  response->print(TaskWebHWmark);
-  response->print(" bytes free</span>");
-  response->print("<br><span>Config and Log task memory: </span><span>");
-  response->print(TaskConfigAndLogHWmark);
-  response->print(" bytes free</span>");
-  response->print("<br><span>SysControl task memory: </span><span>");
-  response->print(TaskSysControlHWmark);
-  response->print(" bytes free</span></div>");
-  response->print("<br><br><div id='syslog_outer'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>System Log:</div>");
-
-  response->print("<div style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa'>");
-  char link[24]{};
-  char linkcur[24]{};
-
-  if (ACTIVE_FS.exists("/logfile0.current.log"))
-  {
-    strlcpy(linkcur, "/logfile0.current.log", sizeof(linkcur));
-    strlcpy(link, "/logfile1.log", sizeof(link));
-  }
-  else
-  {
-    strlcpy(linkcur, "/logfile1.current.log", sizeof(linkcur));
-    strlcpy(link, "/logfile0.log", sizeof(link));
-  }
-
-  File file = ACTIVE_FS.open(linkcur, FILE_READ);
-  while (file.available())
-  {
-    if (char(file.peek()) == '\n')
-      response->print("<br>");
-    response->print(char(file.read()));
-  }
-  file.close();
-
-  response->print("</div><div style='padding-top:5px;'><a class='pure-button' href='/curlog'>Download current logfile</a>");
-
-  if (ACTIVE_FS.exists(link))
-  {
-    response->print("&nbsp;<a class='pure-button' href='/prevlog'>Download previous logfile</a>");
-  }
-
-  response->print("</div></div><br><br><div id='rflog_outer' class='hidden'><div style='display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;'>RF Log:</div>");
-  response->print("<div id='rflog' style='padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa'>");
-  response->print("</div><div style='padding-top:5px;'><a href='#' class='pure-button' onclick=\"$('#rflog').empty()\">Clear</a></div></div></div>");
-  response->print("<form class=\"pure-form pure-form-aligned\"><fieldset><legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id=\"rfdebug-0\" class=\"pure-button pure-button-primary\">Off</button><br><br><button id=\"rfdebug-1\" class=\"pure-button pure-button-primary\">Level1</button>&nbsp;Level1 will show only known itho commands from all devices<br><br><button id=\"rfdebug-2\" class=\"pure-button pure-button-primary\">Level2</button>&nbsp;Level2 will show all received RF messages from devices joined to the add-on<br><br><button id=\"rfdebug-3\" class=\"pure-button pure-button-primary\">Level3</button>&nbsp;Level3 will show all received RF messages from all devices<br><br>");
-  response->print("<form class=\"pure-form pure-form-aligned\"><fieldset><legend><br>Low level itho I2C commands:</legend><br>");
-  response->print("<button id=\"ithobutton-type\" class=\"pure-button pure-button-primary\">Query Devicetype</button><br><span>Result:&nbsp;</span><span id=\'ithotype\'></span><br><br>");
-  response->print("<button id=\"ithobutton-statusformat\" class=\"pure-button pure-button-primary\">Query Status Format</button><br><span>Result:&nbsp;</span><span id=\'ithostatusformat\'></span><br><br>");
-  response->print("<button id=\"ithobutton-status\" class=\"pure-button pure-button-primary\">Query Status</button><br><span>Result:&nbsp;</span><span id=\'ithostatus\'></span><br><br>");
-  response->print("<button id=\"button2410\" class=\"pure-button pure-button-primary\">Query 2410</button>setting index: <input id=\"itho_setting_id\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"><br><span>Result:&nbsp;</span><span id=\'itho2410\'></span><br><span>Current:&nbsp;</span><span id=\'itho2410cur\'></span><br><span>Minimum value:&nbsp;</span><span id=\'itho2410min\'></span><br><span>Maximum value:&nbsp;</span><span id=\'itho2410max\'></span><br><br>");
-  response->print("<span style=\"color:red\">Warning!!<br> \"Set 2410\" changes the settings of your itho unit<br>Use with care and use only if you know what you are doing!</span><br>");
-  response->print("<button id=\"button2410set\" class=\"pure-button pure-button-primary\">Set 2410</button>setting index: <input id=\"itho_setting_id_set\" type=\"number\" min=\"0\" max=\"254\" size=\"6\" value=\"0\"> setting value: <input id=\"itho_setting_value_set\" type=\"number\" min=\"-2147483647\" max=\"2147483647\" size=\"10\" value=\"0\"><br><span>Sent command:&nbsp;</span><span id=\'itho2410set\'></span><br><span>Result:&nbsp;</span><span id=\'itho2410setres\'></span><br>");
-  response->print("<span style=\"color:red\">Warning!!</span><br><br>");
-  response->print("<button id=\"ithobutton-31DA\" class=\"pure-button pure-button-primary\">Query 31DA</button><br><span>Result:&nbsp;</span><span id=\'itho31DA\'></span><br><br>");
-  response->print("<button id=\"ithobutton-31D9\" class=\"pure-button pure-button-primary\">Query 31D9</button><br><span>Result:&nbsp;</span><span id=\'itho31D9\'></span><br><br>");
-  response->print("<button id=\"ithobutton-10D0\" class=\"pure-button pure-button-primary\">Filter reset</button><br><span>Filter reset function uses virtual remote 0, this remote needs to be paired with your itho for this command to work</span></fieldset></form><br>");
-
-  response->print("<br><br>");
-
-  request->send(response);
-
-  DelayedReq.once(1, []()
-                  { sysStatReq = true; });
 }
 
 void handleCurLogDownload(AsyncWebServerRequest *request)
@@ -855,7 +771,7 @@ void handleFileCreate(AsyncWebServerRequest *request)
       return;
     }
   }
-  D_LOG("handleFileCreate called\n");
+  D_LOG("handleFileCreate called");
 
   String path;
   String src;
@@ -866,15 +782,15 @@ void handleFileCreate(AsyncWebServerRequest *request)
 
     if (strcmp(p->name().c_str(), "path") == 0)
     {
-      D_LOG("handleFileCreate path found ('%s')\n", p->value().c_str());
+      D_LOG("handleFileCreate path found ('%s')", p->value().c_str());
       path = p->value().c_str();
     }
     if (strcmp(p->name().c_str(), "src") == 0)
     {
-      D_LOG("handleFileCreate src found ('%s')\n", p->value().c_str());
+      D_LOG("handleFileCreate src found ('%s')", p->value().c_str());
       src = p->value().c_str();
     }
-    // D_LOG("Param[%d] (name:'%s', value:'%s'\n", i, p->name().c_str(), p->value().c_str());
+    // D_LOG("Param[%d] (name:'%s', value:'%s'", i, p->name().c_str(), p->value().c_str());
   }
 
   if (path.isEmpty())
@@ -891,7 +807,7 @@ void handleFileCreate(AsyncWebServerRequest *request)
   if (src.isEmpty())
   {
     // No source specified: creation
-    D_LOG("handleFileCreate: %s\n", path.c_str());
+    D_LOG("handleFileCreate: %s", path.c_str());
     if (path.endsWith("/"))
     {
       // Create a folder
@@ -933,7 +849,7 @@ void handleFileCreate(AsyncWebServerRequest *request)
       return;
     }
 
-    D_LOG("handleFileCreate: %s from %s\n", path.c_str(), src.c_str());
+    D_LOG("handleFileCreate: %s from %s", path.c_str(), src.c_str());
     if (path.endsWith("/"))
     {
       path.remove(path.length() - 1);
@@ -963,7 +879,7 @@ void handleFileDelete(AsyncWebServerRequest *request)
   }
   String path;
 
-  D_LOG("handleFileDelete called\n");
+  D_LOG("handleFileDelete called");
 
   int params = request->params();
   for (int i = 0; i < params; i++)
@@ -973,7 +889,7 @@ void handleFileDelete(AsyncWebServerRequest *request)
     if (strcmp(p->name().c_str(), "path") == 0)
     {
       path = p->value().c_str();
-      D_LOG("handleFileDelete path found ('%s')\n", p->value().c_str());
+      D_LOG("handleFileDelete path found ('%s')", p->value().c_str());
     }
   }
 
@@ -1056,7 +972,7 @@ bool handleFileRead(AsyncWebServerRequest *request)
   String pathWithGz = path + ".gz";
   if (ACTIVE_FS.exists(pathWithGz) || ACTIVE_FS.exists(path))
   {
-    D_LOG("file found ('%s')\n", path.c_str());
+    D_LOG("file found ('%s')", path.c_str());
 
     if (ACTIVE_FS.exists(pathWithGz))
     {
@@ -1114,7 +1030,7 @@ void handleFileList(AsyncWebServerRequest *request)
   }
   if (!request->hasParam("dir"))
   {
-    request->send(500, "text/plain", "BAD ARGS");
+    request->send(500, "text/plain", "BAD ARGS\n");
     return;
   }
 
@@ -1228,7 +1144,7 @@ void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
     {
       mg_http_reply(c, 200, "Content-Type: application/javascript\r\n",
                     "var on_ap = %s; var hostname = '%s'; var fw_version = '%s'; var hw_revision = '%s'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });\n",
-                    wifiModeAP ? "true" : "false", hostName(), FWVERSION, HWREVISION);
+                    wifiModeAP ? "true" : "false", hostName(), FWVERSION, hw_revision);
     }
     else if (mg_http_match_uri(hm, "/list"))
     {
@@ -1322,7 +1238,7 @@ void mg_serve_fs(struct mg_connection *c, void *ev_data)
   {
     // char buf[64]{};
     // strlcpy(buf, hm->uri.ptr, hm->uri.len + 1);
-    // D_LOG("File '%s' found on LittleFS file system\n", buf);
+    // D_LOG("File '%s' found on LittleFS file system", buf);
   }
   else
   {
@@ -1332,7 +1248,7 @@ void mg_serve_fs(struct mg_connection *c, void *ev_data)
     if (len > sizeof(buf))
       len = sizeof(buf);
     strlcpy(buf, hm->uri.ptr, len);
-    D_LOG("File '%s' not found on any file system\n", buf);
+    D_LOG("File '%s' not found on any file system", buf);
   }
 }
 
@@ -1347,7 +1263,7 @@ void mg_handleFileList(struct mg_connection *c, int ev, void *ev_data, void *fn_
 
   if (get_var_res < 1)
   {
-    mg_http_reply(c, 500, "", "%s", "BAD ARGS\n");
+    mg_http_reply(c, 500, "", "%s", "BAD ARGS");
     return;
   }
 
@@ -1389,28 +1305,28 @@ void mg_handleFileList(struct mg_connection *c, int ev, void *ev_data, void *fn_
 bool mg_handleFileRead(struct mg_connection *c, void *ev_data)
 {
   // handle authentication
-  D_LOG("mg_handleFileRead called\n");
+  D_LOG("mg_handleFileRead called");
   struct mg_http_message *hm = (struct mg_http_message *)ev_data;
 
   // if (hm->query.ptr != NULL)
   // {
   //   char buf[128]{};
   //   strlcpy(buf, hm->query.ptr, sizeof(buf));
-  //   D_LOG("hm->query: %s, len: %d\n", buf, hm->query.len);
+  //   D_LOG("hm->query: %s, len: %d", buf, hm->query.len);
   // }
 
   // if (hm->body.ptr != NULL)
   // {
   //   char body[265]{};
   //   strlcpy(body, hm->body.ptr, sizeof(body));
-  //   D_LOG("hm->body: %s, len: %d\n", body, hm->body.len);
+  //   D_LOG("hm->body: %s, len: %d", body, hm->body.len);
   // }
 
   // if (hm->uri.ptr != NULL)
   // {
   //   char uri[128]{};
   //   strlcpy(uri, hm->uri.ptr, sizeof(uri));
-  //   D_LOG("hm->uri: %s, len: %d\n", uri, hm->uri.len);
+  //   D_LOG("hm->uri: %s, len: %d", uri, hm->uri.len);
   // }
   // mg_http_reply(c, 200, "", "HTTP OK");
   // return false;
@@ -1422,7 +1338,7 @@ bool mg_handleFileRead(struct mg_connection *c, void *ev_data)
   String pathWithGz = path + ".gz";
   if (ACTIVE_FS.exists(pathWithGz) || ACTIVE_FS.exists(path))
   {
-    D_LOG("file found ('%s')\n", path.c_str());
+    D_LOG("file found ('%s')", path.c_str());
 
     if (ACTIVE_FS.exists(pathWithGz))
     {
@@ -1433,7 +1349,7 @@ bool mg_handleFileRead(struct mg_connection *c, void *ev_data)
     File file = ACTIVE_FS.open(path.c_str(), "r");
     if (!file)
     {
-      D_LOG("mg_handleFileRead: file read error ('%s')\n", path.c_str());
+      D_LOG("mg_handleFileRead: file read error ('%s')", path.c_str());
       return false;
     }
     else
@@ -1457,7 +1373,7 @@ bool mg_handleFileRead(struct mg_connection *c, void *ev_data)
 void mg_handleStatus(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
 {
   // handle auth
-  D_LOG("mg_handleStatus called\n");
+  D_LOG("mg_handleStatus called");
 
   size_t totalBytes = ACTIVE_FS.totalBytes();
   size_t usedBytes = ACTIVE_FS.usedBytes();
@@ -1486,7 +1402,7 @@ void mg_handleFileCreate(struct mg_connection *c, int ev, void *ev_data, void *f
 {
 
   // handle auth
-  D_LOG("handleFileCreate called\n");
+  D_LOG("handleFileCreate called");
 
   struct mg_http_message *hm = (struct mg_http_message *)ev_data;
 
@@ -1494,28 +1410,28 @@ void mg_handleFileCreate(struct mg_connection *c, int ev, void *ev_data, void *f
   {
     char buf[128]{};
     strlcpy(buf, hm->query.ptr, sizeof(buf));
-    D_LOG("hm->query: %s, len: %d\n", buf, hm->query.len);
+    D_LOG("hm->query: %s, len: %d", buf, hm->query.len);
   }
 
   if (hm->body.ptr != NULL)
   {
     char body[265]{};
     strlcpy(body, hm->body.ptr, sizeof(body));
-    D_LOG("hm->body: %s, len: %d\n", body, hm->body.len);
+    D_LOG("hm->body: %s, len: %d", body, hm->body.len);
   }
 
   if (hm->uri.ptr != NULL)
   {
     char uri[128]{};
     strlcpy(uri, hm->uri.ptr, sizeof(uri));
-    D_LOG("hm->uri: %s, len: %d\n", uri, hm->uri.len);
+    D_LOG("hm->uri: %s, len: %d", uri, hm->uri.len);
   }
 
   if (hm->head.ptr != NULL)
   {
     char head[128]{};
     strlcpy(head, hm->head.ptr, sizeof(head));
-    D_LOG("hm->head: %s, len: %d\n", head, hm->head.len);
+    D_LOG("hm->head: %s, len: %d", head, hm->head.len);
   }
   char path[64]{};
   char src[64]{};
@@ -1527,34 +1443,34 @@ void mg_handleFileCreate(struct mg_connection *c, int ev, void *ev_data, void *f
 
   while ((pos = mg_http_next_multipart(hm->body, pos, &part)) > 0)
   {
-    D_LOG("POS:%d\n", pos);
+    D_LOG("POS:%d", pos);
     if (part.name.ptr != NULL)
     {
-      D_LOG("Chunk name:%s len:%d\n", part.name.ptr, (int)part.name.len);
+      D_LOG("Chunk name:%s len:%d", part.name.ptr, (int)part.name.len);
     }
     if (part.filename.ptr != NULL)
     {
-      D_LOG("filename:%s len:%d\n", part.filename.ptr, (int)part.filename.len);
+      D_LOG("filename:%s len:%d", part.filename.ptr, (int)part.filename.len);
     }
     if (part.body.ptr != NULL)
     {
-      D_LOG("body:%s len:%d\n", part.body.ptr, (int)part.body.len);
+      D_LOG("body:%s len:%d", part.body.ptr, (int)part.body.len);
     }
     if (part.name.ptr != NULL || part.filename.ptr != NULL || part.body.ptr != NULL)
     {
-      D_LOG("\n");
+      D_LOG("");
     }
     if (part.name.ptr != NULL && part.body.ptr != NULL)
     {
       if (String(part.name.ptr).startsWith("path"))
       {
         strlcpy(path, part.body.ptr, part.body.len + 1);
-        D_LOG("Path name found:[%s]\n", path);
+        D_LOG("Path name found:[%s]", path);
       }
       if (String(part.name.ptr).startsWith("src"))
       {
         strlcpy(src, part.body.ptr, part.body.len + 1);
-        D_LOG("Src name found:[%s]\n", src);
+        D_LOG("Src name found:[%s]", src);
       }
     }
   }
@@ -1576,7 +1492,7 @@ void mg_handleFileCreate(struct mg_connection *c, int ev, void *ev_data, void *f
   if (src_str.isEmpty())
   {
     // No source specified: creation
-    D_LOG("handleFileCreate: %s\n", path_str.c_str());
+    D_LOG("handleFileCreate: %s", path_str.c_str());
     if (path_str.endsWith("/"))
     {
       // Create a folder

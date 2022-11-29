@@ -216,39 +216,18 @@ void wifiScan()
 
 void logWifiInfo()
 {
-
-  char wifiBuff[128]{};
-
-  logInput("WiFi: connection successful");
-
-  logInput("WiFi info:");
-
-  const char *const modes[] = {"NULL", "STA", "AP", "STA+AP"};
   // const char* const phymodes[] = { "", "B", "G", "N" };
-
-  sprintf(wifiBuff, "  SSID:%s | BSSID[%s]", WiFi.SSID().c_str(), WiFi.BSSIDstr().c_str());
-  logInput(wifiBuff);
-  strlcpy(wifiBuff, "", sizeof(wifiBuff));
-
-  sprintf(wifiBuff, "  RSSI:%ddBm", WiFi.RSSI());
-  logInput(wifiBuff);
-  strlcpy(wifiBuff, "", sizeof(wifiBuff));
-
-  sprintf(wifiBuff, "  Mode:%s", modes[WiFi.getMode()]);
-  logInput(wifiBuff);
-  strlcpy(wifiBuff, "", sizeof(wifiBuff));
-
-  sprintf(wifiBuff, "  Status:%s", wifiConfig.wl_status_to_name(WiFi.status()));
-  logInput(wifiBuff);
-  strlcpy(wifiBuff, "", sizeof(wifiBuff));
-
+  const char *const modes[] = {"NULL", "STA", "AP", "STA+AP"};
   IPAddress ip = WiFi.localIP();
-  sprintf(wifiBuff, "  IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-  logInput(wifiBuff);
-  strlcpy(wifiBuff, "", sizeof(wifiBuff));
+
+  N_LOG("WiFi: connection successful");
+  I_LOG("WiFi info:");
+  I_LOG("  SSID:%s | BSSID[%s]", WiFi.SSID().c_str(), WiFi.BSSIDstr().c_str());
+  I_LOG("  RSSI:%ddBm", WiFi.RSSI());
+  I_LOG("  Mode:%s", modes[WiFi.getMode()]);
+  I_LOG("  Status:%s", wifiConfig.wl_status_to_name(WiFi.status()));
+  I_LOG("  IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 }
-
-
 
 const char *WifiConfig::wl_status_to_name(wl_status_t code) const
 {

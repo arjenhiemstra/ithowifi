@@ -1,7 +1,7 @@
 #include "IthoRemote.h"
 
-#include <string>
-#include <Arduino.h>
+// #include <string>
+// #include <Arduino.h>
 
 IthoRemote remotes(RemoteFunctions::RECEIVE);
 IthoRemote virtualRemotes(RemoteFunctions::VREMOTE);
@@ -401,7 +401,7 @@ bool IthoRemote::set(JsonObjectConst obj, const char *root)
   }
   else
   {
-    D_LOG("IthoRemote::set root not present \n");
+    D_LOG("IthoRemote::set root not present ");
     return false;
   }
   return true;

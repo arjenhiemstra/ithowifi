@@ -23,13 +23,29 @@
       <button id=\"ithobutton-shtreset\" class=\"pure-button pure-button-primary\">Reset Temp/Hum
         sensor</button><br><span>Result:&nbsp;</span><span id=\'i2c_sht_reset\'></span><br><br>
     </fieldset>
-  </fieldset>
-</form>
-<br><br>
-<script>
-  $(document).ready(function () {
-    getSettings('sysstat');
-    getSettings('i2cdebuglog');
-    getSettings('i2cdebugsettings');
-  });
-</script>
+    <div id="i2clog_outer" class="hidden">
+      <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">I2C sniffer Log:</div>
+      <div id="i2clog"
+        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+      </div>
+      <div style="padding-top:5px;">
+        <a href="#" class="pure-button" onclick="$('#i2clog').empty()">Clear</a>
+      </div>
+    </div>
+    <form class="pure-form pure-form-aligned">
+      <fieldset>
+        <legend><br>I2C sniffer mode (works on I2C sniffer capable hardware only, see system log):</legend><br>
+        <button id="i2csniffer-1" class="pure-button pure-button-primary">On</button>
+        <button id="i2csniffer-0" class="pure-button pure-button-primary">Off</button>
+        <br><br>
+
+      </fieldset>
+    </form>
+    <br><br>
+    <script>
+      $(document).ready(function () {
+        getSettings('sysstat');
+        getSettings('i2cdebuglog');
+        getSettings('i2cdebugsettings');
+      });
+    </script>

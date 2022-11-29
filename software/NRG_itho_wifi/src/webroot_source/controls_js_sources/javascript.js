@@ -2,7 +2,7 @@
 var count = 0;
 var itho_low = 0;
 var itho_medium = 127;
-var itho_high = 254;
+var itho_high = 255;
 var sensor = -1;
 
 sessionStorage.setItem("statustimer", 0);
@@ -14,39 +14,58 @@ var websocketServerLocation = 'ws://' + window.location.hostname + ':8000/ws';
 function startWebsock(websocketServerLocation) {
   websock = new WebSocket(websocketServerLocation);
   websock.onmessage = function (b) {
-    console.log(b);
-    var f = JSON.parse(b.data);
+    var f;
+    try {
+      f = JSON.parse(decodeURIComponent(b.data)); 
+    } catch (error) {
+      f = JSON.parse(b.data);
+    }
+    console.log(f);
     var g = document.body;
     if (f.wifisettings) {
       let x = f.wifisettings;
       processElements(x);
     }
+    else if (f.logsettings) {
+      let x = f.logsettings;
+      processElements(x);
+    }
+    else if (f.debuginfo) {
+      let x = f.debuginfo;
+      processElements(x);
+    }
     else if (f.systemsettings) {
       let x = f.systemsettings;
-      $('#mqtt_idx, #label-mqtt_idx').hide();
-      $('#sensor_idx, #label-sensor_idx').hide();
-      mqtt_state_topic_tmp = x.mqtt_state_topic;
-      mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
+      if ('itho_rf_support' in x) {
+        $('#mqtt_idx, #label-mqtt_idx').hide();
+        $('#sensor_idx, #label-sensor_idx').hide();
+        mqtt_state_topic_tmp = x.mqtt_state_topic;
+        mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
+      }
       processElements(x);
-      if (x.itho_rf_support == 1 && x.rfInitOK == false) {
-        if (confirm("For changes to take effect click 'Ok' to reboot")) {
-          $('#main').empty();
-          $('#main').append("<br><br><br><br>");
-          $('#main').append(html_reboot_script);
-          websock.send('{"reboot":true}');
+      if ("itho_rf_support" in x) {
+        if (x.itho_rf_support == 1 && x.rfInitOK == false) {
+          if (confirm("For changes to take effect click 'Ok' to reboot")) {
+            $('#main').empty();
+            $('#main').append("<br><br><br><br>");
+            $('#main').append(html_reboot_script);
+            websock.send('{"reboot":true}');
+          }
+        }        
+        if (x.itho_rf_support == 1 && x.rfInitOK == true) {
+          $('#remotemenu').removeClass('hidden');
+        }
+        else {
+          $('#remotemenu').addClass('hidden');
         }
       }
-      if (x.itho_rf_support == 1 && x.rfInitOK == true) {
-        $('#remotemenu').removeClass('hidden');
-      }
-      else {
-        $('#remotemenu').addClass('hidden');
-      }
-      if (x.i2cmenu == 1) {
-        $('#i2cmenu').removeClass('hidden');
-      }
-      else {
-        $('#i2cmenu').addClass('hidden');
+      if ("i2cmenu" in x) {
+        if (x.i2cmenu == 1) {
+          $('#i2cmenu').removeClass('hidden');
+        }
+        else {
+          $('#i2cmenu').addClass('hidden');
+        }
       }
     }
     else if (f.remotes) {
@@ -71,13 +90,15 @@ function startWebsock(websocketServerLocation) {
       $('#I2CLogTable').empty();
       buildHtmlTablePlain('#I2CLogTable', x);
     }
+    else if (f.i2csniffer) {
+      let x = f.i2csniffer;
+      $('#i2clog_outer').removeClass('hidden');
+      var d = new Date();
+      $('#i2clog').prepend(`${d.toLocaleString('nl-NL')}: ${x}<br>`);
+    }
     else if (f.ithodevinfo) {
       let x = f.ithodevinfo;
-      for (key in x) {
-        if (x.hasOwnProperty(key)) {
-          $(`#${key}`).text(x[key]);
-        }
-      }
+      processElements(x);
       if (x.itho_setlen) {
         sessionStorage.setItem("itho_setlen", x.itho_setlen);
       }
@@ -207,6 +228,10 @@ function startWebsock(websocketServerLocation) {
       $('#message_box').append(`<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
       removeAfter5secs(count);
     }
+    else if (f.dblog) {
+      let x = f.dblog;
+      $('#dblog').prepend(`${x}<br>`);
+    }
     else if (f.rflog) {
       let x = f.rflog;
       $('#rflog_outer').removeClass('hidden');
@@ -221,6 +246,9 @@ function startWebsock(websocketServerLocation) {
     else if (f.sysmessage) {
       let x = f.sysmessage;
       $(`#${x.id}`).text(x.message);
+    }
+    else {
+      processElements(f);
     }
   };
   websock.onopen = function (a) {
@@ -241,7 +269,11 @@ function startWebsock(websocketServerLocation) {
     setTimeout(function () { startWebsock(websocketServerLocation) }, 2000);
   };
   websock.onerror = function (a) {
-    console.log(a);
+    try {
+      console.log(a);
+    } catch (error) {
+      console.warn(error);
+    }
   };
 }
 
@@ -318,10 +350,24 @@ $(document).ready(function () {
           itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
           itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
           itho_vremoteapi: $('input[name=\'option-itho_vremoteapi\']:checked').val(),
-          i2cmenu: $('input[name=\'option-i2cmenu\']:checked').val()
+          i2cmenu: $('input[name=\'option-i2cmenu\']:checked').val(),
+          i2c_safe_guard: $('input[name=\'option-i2c_safe_guard\']:checked').val(),
+          i2c_sniffer: $('input[name=\'option-i2c_sniffer\']:checked').val()
         }
       }));
       update_page('system');
+    }
+    else if ($(this).attr('id') == 'syslogsumbit') {
+      websock.send(JSON.stringify({
+        logsettings: {
+          loglevel: $('#loglevel').val(),
+          syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
+          logserver: $('#logserver').val(),
+          logport: $('#logport').val(),
+          logref: $('#logref').val()
+        }
+      }));
+      update_page('syslog');
     }
     //mqttsubmit
     else if ($(this).attr('id') == 'mqttsubmit') {
@@ -486,6 +532,12 @@ $(document).ready(function () {
       if (items[1] > 0) $('#rflog_outer').removeClass('hidden');
       websock.send(`{"rfdebug":${items[1]}}`);
     }
+    else if ($(this).attr('id').startsWith('i2csniffer-')) {
+      const items = $(this).attr('id').split('-');
+      if (items[1] == 0) $('#i2clog_outer').addClass('hidden');
+      if (items[1] > 0) $('#i2clog_outer').removeClass('hidden');
+      websock.send(`{"i2csniffer":${items[1]}}`);
+    }
     else if ($(this).attr('id') == 'button2410') {
       websock.send(JSON.stringify({
         ithobutton: 2410,
@@ -541,6 +593,7 @@ $(document).ready(function () {
   });
 });
 
+
 var timerHandle = setTimeout(function () {
   $('#message_box').hide();
 }, 5000);
@@ -560,8 +613,14 @@ function processElements(x) {
   for (var key in x) {
     if (x.hasOwnProperty(key)) {
       var el = $(`#${key}`);
-      if (el.is('input')) {
+      if (el.is('input') || el.is('select')) {
         $(`#${key}`).val(x[key]);
+      }
+      else if (el.is('span')) {
+        $(`#${key}`).text(x[key]);
+      }
+      else if (el.is('a')) {
+        $(`#${key}`).attr("href", x[key]);
       }
       else {
         var radios = $(`input[name='option-${key}']`);
@@ -731,6 +790,7 @@ function update_page(page) {
   $('#main').css('max-width', '768px')
   if (page == 'index') { $('#main').append(html_index); }
   if (page == 'wifisetup') { $('#main').append(html_wifisetup); }
+  if (page == 'syslog') { $('#main').append(html_syslog); }
   if (page == 'system') {
     $('#main').append(html_systemsettings_start);
     if (hw_revision == "2" || hw_revision == "NON-CVE 1") { $('#sys_fieldset').append(html_systemsettings_cc1101); }
@@ -745,7 +805,7 @@ function update_page(page) {
   if (page == 'help') { $('#main').append(html_help); }
   if (page == 'reset') { $('#main').append(html_reset); }
   if (page == 'update') { $('#main').append(html_update); }
-  if (page == 'debug') { $('#main').load('debug'); $('#main').css('max-width', '1600px') }
+  if (page == 'debug') { $('#main').append(html_debug); $('#main').css('max-width', '1600px') }
   if (page == 'i2cdebug') { $('#main').append(html_i2cdebug); }
 
 
@@ -892,7 +952,7 @@ function addRemoteButtons(selector, remtype, vremotenum, seperator) {
         }
 
         newinner += `<button value='${item[2][i]}_remote-${vremotenum}' id='button_vremote-${vremotenum}-${item[2][i]}' class='pure-button pure-button-primary'>${item[2][i].charAt(0).toUpperCase() + item[2][i].slice(1)}</button>\u00A0`;
-        
+
         if (seperator) {
           if (item[2][i] == 'high' || item[2][i] == 'cook60' || item[2][i] == 'timer3' || (item[2].length == 10 && item[2][i] == 'autonight') || item[2][i] == 'leave') {
             newinner += '</div>';

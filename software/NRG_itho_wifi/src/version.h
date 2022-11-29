@@ -1,3 +1,3 @@
 #pragma once
 
-#define FWVERSION "2.4.4-beta1"
+#define FWVERSION "2.4.4-beta2"

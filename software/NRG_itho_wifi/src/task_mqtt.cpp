@@ -46,7 +46,7 @@ void TaskMQTT(void *pvParameters)
     esp_task_wdt_reset();
 
     TaskMQTTTimeout.once_ms(35000UL, []()
-                            { logInput("Warning: Task MQTT timed out!"); });
+                            { W_LOG("Warning: Task MQTT timed out!"); });
 
     execMQTTTasks();
 
@@ -157,19 +157,16 @@ void execMQTTTasks()
 
 void mqttInit()
 {
-  char logBuff[LOG_BUF_SIZE]{};
-
   if (systemConfig.mqtt_active)
   {
     if (!setupMQTTClient())
     {
-      sprintf(logBuff, "MQTT: connection failed, System config: %d", systemConfig.mqtt_active);
+      E_LOG("MQTT: connection failed, System config: %d", systemConfig.mqtt_active);
     }
     else
     {
-      sprintf(logBuff, "MQTT: connected, System config: %d", systemConfig.mqtt_active);
+      N_LOG("MQTT: connected, System config: %d", systemConfig.mqtt_active);
     }
-    logInput(logBuff);
   }
 }
 
@@ -180,7 +177,7 @@ void mqttSendStatus()
 
   if (doc.capacity() == 0)
   {
-    logInput("MQTT: JsonDocument memory allocation failed (itho status)");
+    E_LOG("MQTT: JsonDocument memory allocation failed (itho status)");
     return;
   }
 
@@ -197,7 +194,7 @@ void mqttSendStatus()
   {
     serializeJson(root, mqttClient);
     if (!mqttClient.endPublish())
-      logInput("MQTT: Failed to send payload (itho status)");
+      E_LOG("MQTT: Failed to send payload (itho status)");
   }
   // reset buffer
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
@@ -208,7 +205,7 @@ void mqttSendRemotesInfo()
 
   if (doc.capacity() == 0)
   {
-    logInput("MQTT: JsonDocument memory allocation failed (itho remote info)");
+    E_LOG("MQTT: JsonDocument memory allocation failed (itho remote info)");
     return;
   }
 
@@ -226,7 +223,7 @@ void mqttSendRemotesInfo()
   {
     serializeJson(root, mqttClient);
     if (!mqttClient.endPublish())
-      logInput("MQTT: Failed to send payload (itho remote info))");
+      E_LOG("MQTT: Failed to send payload (itho remote info))");
   }
   // reset buffer
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
@@ -250,7 +247,7 @@ void mqttPublishLastcmd()
   {
     serializeJson(root, mqttClient);
     if (!mqttClient.endPublish())
-      logInput("MQTT: Failed to send payload (last cmd info))");
+      E_LOG("MQTT: Failed to send payload (last cmd info))");
   }
   // reset buffer
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
@@ -274,7 +271,7 @@ void mqttSendSettingsJSON()
   {
     serializeJson(root, mqttClient);
     if (!mqttClient.endPublish())
-      logInput("MQTT: Failed to send payload (itho remote info))");
+      E_LOG("MQTT: Failed to send payload (itho remote info))");
   }
   // reset buffer
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
@@ -311,7 +308,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
       if (!(const char *)root["idx"].isNull())
       {
         jsonCmd = true;
-        // printf("JSON parse -- idx match\n");
+        // printf("JSON parse -- idx match");
         uint16_t idx = root["idx"].as<uint16_t>();
         if (idx == systemConfig.mqtt_idx)
         {
@@ -370,7 +367,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
             if (index != -1)
             {
               jsonCmd = true;
-              ithoI2CCommand(index, command, MQTTAPI);
+              ithoI2CCommand(0, command, MQTTAPI);
             }
           }
         }
@@ -471,7 +468,7 @@ void mqttHomeAssistantDiscovery()
   if (!systemConfig.mqtt_active || !mqttClient.connected() || !systemConfig.mqtt_ha_active)
     return;
   sendHomeAssistantDiscovery = false;
-  logInput("HA DISCOVERY: Start publishing MQTT Home Assistant Discovery...");
+  I_LOG("HA DISCOVERY: Start publishing MQTT Home Assistant Discovery...");
 
   HADiscoveryFan();
 
@@ -514,17 +511,17 @@ void HADiscoveryTemperature()
   char s[160]{};
 
   addHADevInfo(root);
-  root["avty_t"] = (const char *)systemConfig.mqtt_lwt_topic;
+  root["avty_t"] = static_cast<const char *>(systemConfig.mqtt_lwt_topic);
   root["dev_cla"] = "temperature";
   sprintf(s, "%s_temperature", hostName());
   root["uniq_id"] = s;
   root["name"] = s;
-  root["stat_t"] = (const char *)systemConfig.mqtt_ithostatus_topic;
+  root["stat_t"] = static_cast<const char *>(systemConfig.mqtt_ithostatus_topic);
   root["stat_cla"] = "measurement";
   root["val_tpl"] = "{{ value_json.temp }}";
   root["unit_of_meas"] = "°C";
 
-  sprintf(s, "%s/sensor/%s/temp/config", (const char *)systemConfig.mqtt_ha_topic, hostName());
+  sprintf(s, "%s/sensor/%s/temp/config", static_cast<const char *>(systemConfig.mqtt_ha_topic), hostName());
 
   sendHADiscovery(root, s);
 }
@@ -536,17 +533,17 @@ void HADiscoveryHumidity()
   char s[160]{};
 
   addHADevInfo(root);
-  root["avty_t"] = (const char *)systemConfig.mqtt_lwt_topic;
+  root["avty_t"] = static_cast<const char *>(systemConfig.mqtt_lwt_topic);
   root["dev_cla"] = "humidity";
   sprintf(s, "%s_humidity", hostName());
   root["uniq_id"] = s;
   root["name"] = s;
-  root["stat_t"] = (const char *)systemConfig.mqtt_ithostatus_topic;
+  root["stat_t"] = static_cast<const char *>(systemConfig.mqtt_ithostatus_topic);
   root["stat_cla"] = "measurement";
   root["val_tpl"] = "{{ value_json.hum }}";
   root["unit_of_meas"] = "%";
 
-  sprintf(s, "%s/sensor/%s/hum/config", (const char *)systemConfig.mqtt_ha_topic, hostName());
+  sprintf(s, "%s/sensor/%s/hum/config", static_cast<const char *>(systemConfig.mqtt_ha_topic), hostName());
 
   sendHADiscovery(root, s);
 }
@@ -560,7 +557,7 @@ void addHADevInfo(JsonObject obj)
   dev["model"] = "ITHO Wifi Add-on";
   sprintf(s, "ITHO-WIFI(%s)", hostName());
   dev["name"] = s;
-  sprintf(s, "HW: v%s, FW: %s", HWREVISION, FWVERSION);
+  sprintf(s, "HW: v%s, FW: %s", hw_revision, FWVERSION);
   dev["sw_version"] = s;
 }
 
@@ -572,7 +569,7 @@ void sendHADiscovery(JsonObject obj, const char *topic)
 
   if (mqttClient.getBufferSize() < packetSize)
   {
-    logInput("MQTT: buffer too small, resizing... (HA discovery)");
+    E_LOG("MQTT: buffer too small, resizing... (HA discovery)");
     mqttClient.setBufferSize(packetSize);
   }
 
@@ -580,11 +577,11 @@ void sendHADiscovery(JsonObject obj, const char *topic)
   {
     serializeJson(obj, mqttClient);
     if (!mqttClient.endPublish())
-      logInput("MQTT: Failed to send payload (HA discovery)");
+      E_LOG("MQTT: Failed to send payload (HA discovery)");
   }
   else
   {
-    logInput("MQTT: Failed to start building message (HA discovery)");
+    E_LOG("MQTT: Failed to start building message (HA discovery)");
   }
 
   // reset buffer
@@ -593,13 +590,13 @@ void sendHADiscovery(JsonObject obj, const char *topic)
 
 bool setupMQTTClient()
 {
-  int connectResult;
 
   if (systemConfig.mqtt_active)
   {
 
     if (strcmp(systemConfig.mqtt_serverName, "") != 0)
     {
+      int connectResult;
 
       mqttClient.setServer(systemConfig.mqtt_serverName, systemConfig.mqtt_port);
       mqttClient.setCallback(mqttCallback);

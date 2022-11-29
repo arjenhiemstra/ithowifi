@@ -8,11 +8,17 @@ void TaskInit(void *pvParameters)
   configASSERT((uint32_t)pvParameters == 1UL);
   Ticker TaskTimeout;
 
-  mutexLogTask = xSemaphoreCreateMutex();
   mutexJSONLog = xSemaphoreCreateMutex();
   mutexWSsend = xSemaphoreCreateMutex();
 
   hardwareInit();
+
+  syslog_queue = xQueueCreate(20, sizeof(log_msg));
+
+  if (i2c_sniffer_capable)
+  {
+    i2c_sniffer_init(false);
+  }
 
   startTaskConfigAndLog();
 
@@ -22,7 +28,7 @@ void TaskInit(void *pvParameters)
   }
 
   esp_task_wdt_init(40, true);
-  logInput("Setup: done");
+  I_LOG("Setup: done");
 
   vTaskDelete(NULL);
 }
@@ -39,7 +45,7 @@ void failSafeBoot()
   {
     yield();
 
-    if (digitalRead(FAILSAVE_PIN) == HIGH)
+    if (digitalRead(fail_save_pin) == HIGH)
     {
 
       ACTIVE_FS.begin(true);
@@ -78,7 +84,7 @@ void failSafeBoot()
             if (!index)
             {
               content_len = request->contentLength();
-              D_LOG("Update Start: %s\n", filename.c_str());
+              D_LOG("Update Start: %s", filename.c_str());
               if (!Update.begin(UPDATE_SIZE_UNKNOWN))
               {
                 Update.printError(Serial);
@@ -121,13 +127,13 @@ void failSafeBoot()
         if (millis() - ledblink > 200)
         {
           ledblink = millis();
-          if (digitalRead(WIFILED) == LOW)
+          if (digitalRead(wifi_led_pin) == LOW)
           {
-            digitalWrite(WIFILED, HIGH);
+            digitalWrite(wifi_led_pin, HIGH);
           }
           else
           {
-            digitalWrite(WIFILED, LOW);
+            digitalWrite(wifi_led_pin, LOW);
           }
         }
       }
@@ -136,40 +142,103 @@ void failSafeBoot()
     if (millis() - ledblink > 50)
     {
       ledblink = millis();
-      if (digitalRead(WIFILED) == LOW)
+      if (digitalRead(wifi_led_pin) == LOW)
       {
-        digitalWrite(WIFILED, HIGH);
+        digitalWrite(wifi_led_pin, HIGH);
       }
       else
       {
-        digitalWrite(WIFILED, LOW);
+        digitalWrite(wifi_led_pin, LOW);
       }
     }
   }
-  digitalWrite(WIFILED, HIGH);
+  digitalWrite(wifi_led_pin, HIGH);
 }
 
 #endif
 
 void hardwareInit()
 {
+  delay(1000);
 
-  pinMode(WIFILED, OUTPUT);
-  digitalWrite(WIFILED, HIGH);
-#if defined(CVE)
-  pinMode(STATUSPIN, INPUT_PULLUP);
-  pinMode(ITHOSTATUS, OUTPUT);
-  digitalWrite(ITHOSTATUS, LOW);
-#elif defined(NON_CVE)
-  pinMode(STATUSPIN, OUTPUT);
-  digitalWrite(STATUSPIN, LOW);
-#endif
+  // test pin connections te determine which hardware (and revision if applicable) we are dealing with
+  pinMode(GPIO_NUM_25, INPUT_PULLDOWN);
+  pinMode(GPIO_NUM_26, INPUT_PULLDOWN);
+  pinMode(GPIO_NUM_32, INPUT_PULLDOWN);
+  pinMode(GPIO_NUM_33, INPUT_PULLDOWN);
+  pinMode(GPIO_NUM_21, INPUT_PULLDOWN);
+  pinMode(GPIO_NUM_22, INPUT_PULLDOWN);
+  hardware_rev_det = digitalRead(GPIO_NUM_25) << 5 | digitalRead(GPIO_NUM_26) << 4 | digitalRead(GPIO_NUM_32) << 3 | digitalRead(GPIO_NUM_33) << 2 | digitalRead(GPIO_NUM_21) << 1 | digitalRead(GPIO_NUM_22);
+
+  // /*
+  //  * 0x34 -> NON-CVE
+  //  * 0x3F -> CVE i2c sniffer capable
+  //  * 0x03 -> CVE not i2c sniffer capable
+  //  */
+
+  pinMode(GPIO_NUM_25, INPUT);
+  pinMode(GPIO_NUM_26, INPUT);
+  pinMode(GPIO_NUM_32, INPUT);
+  pinMode(GPIO_NUM_33, INPUT);
+  pinMode(GPIO_NUM_21, INPUT);
+  pinMode(GPIO_NUM_22, INPUT);
+
+  if (hardware_rev_det == 0x3F || hardware_rev_det == 0x34)
+  {
+    i2c_sniffer_capable = true;
+    if (hardware_rev_det == 0x3F) // CVE i2c sniffer capable
+    {
+      i2c_master_setpins(GPIO_NUM_26, GPIO_NUM_32);
+      i2c_slave_setpins(GPIO_NUM_26, GPIO_NUM_32);
+      i2c_sniffer_setpins(GPIO_NUM_21, GPIO_NUM_22);
+    }
+    else
+    { // NON-CVE
+      pinMode(GPIO_NUM_27, INPUT);
+      pinMode(GPIO_NUM_13, INPUT);
+      pinMode(GPIO_NUM_14, INPUT);
+      i2c_master_setpins(GPIO_NUM_27, GPIO_NUM_26);
+      i2c_slave_setpins(GPIO_NUM_27, GPIO_NUM_26);
+      i2c_sniffer_setpins(GPIO_NUM_14, GPIO_NUM_25);
+    }
+  }
+  else // CVE i2c not sniffer capable
+  {
+    i2c_master_setpins(GPIO_NUM_21, GPIO_NUM_22);
+  }
+
+  if (hardware_rev_det == 0x3F || hardware_rev_det == 0x03) // CVE
+  {
+    boot_state_pin = GPIO_NUM_27;
+    fail_save_pin = GPIO_NUM_14;
+    itho_status_pin = GPIO_NUM_13;
+    hw_revision = cve2;
+  }
+  else // NON-CVE
+  {
+    fail_save_pin = GPIO_NUM_32;
+    hw_revision = non_cve1;
+  }
+
+  pinMode(wifi_led_pin, OUTPUT);
+  digitalWrite(wifi_led_pin, HIGH);
+
+  if (hardware_rev_det == 0x3F || hardware_rev_det == 0x03) // CVE
+  {
+    pinMode(status_pin, INPUT_PULLUP);
+    pinMode(itho_status_pin, OUTPUT);
+    digitalWrite(itho_status_pin, LOW);
+  }
+  else // NON-CVE
+  {
+    pinMode(status_pin, OUTPUT);
+    digitalWrite(status_pin, LOW);
+  }
+
 #if defined(ENABLE_FAILSAVE_BOOT)
-  pinMode(FAILSAVE_PIN, INPUT);
-  failSafeBoot();
+  pinMode(fail_save_pin, INPUT);
+  // failSafeBoot();
 #endif
-  pinMode(I2C_MASTER_SDA_IO, INPUT);
-  pinMode(I2C_MASTER_SCL_IO, INPUT);
 
   IthoInit = true;
 }

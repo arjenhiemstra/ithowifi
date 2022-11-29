@@ -32,18 +32,16 @@ const std::map<cmdOrigin, const char *> cmdOriginMap = {
     {cmdOrigin::WEB, "web interface"},
     {cmdOrigin::UNKNOWN, "unknown"}};
 
-bool get2410 = false;
-bool set2410 = false;
-uint8_t index2410 = 0;
-int32_t value2410 = 0;
+// bool get2410 = false;
+//  bool set2410 = false;
+//  uint8_t index2410 = 0;
+//  int32_t value2410 = 0;
 int32_t *resultPtr2410 = nullptr;
 bool i2c_result_updateweb = false;
 
 bool itho_internal_hum_temp = false;
 double ithoHum = 0;
 double ithoTemp = 0;
-
-
 
 //                                  { IthoUnknown,  IthoJoin, IthoLeave,  IthoAway, IthoLow, IthoMedium,  IthoHigh,  IthoFull, IthoTimer1,  IthoTimer2,  IthoTimer3,  IthoAuto,  IthoAutoNight, IthoCook30,  IthoCook60 }
 const uint8_t *RFTCVE_Remote_Map[] = {nullptr, ithoMessageCVERFTJoinCommandBytes, ithoMessageLeaveCommandBytes, ithoMessageAwayCommandBytes, ithoMessageLowCommandBytes, ithoMessageMediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageTimer1CommandBytes, ithoMessageTimer2CommandBytes, ithoMessageTimer3CommandBytes, nullptr, nullptr, nullptr, nullptr};
@@ -181,28 +179,29 @@ int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const u
   return -1;
 }
 
-void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop)
-{
-  getSetting(i, updateState, updateweb, loop, ithoDeviceptr, currentIthoDeviceID(), currentItho_fwversion());
-}
-
-void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop, const struct ihtoDeviceType *settingsPtr, const uint8_t deviceID, const uint8_t version)
+void getSetting(const uint8_t index, const bool updateState, const bool updateweb, const bool loop)
 {
 
-  int settingsLen = getSettingsLength(ithoDeviceGroup, deviceID, version);
+  const uint8_t deviceID = currentIthoDeviceID();
+  const uint8_t version = currentItho_fwversion();
+  const uint8_t deviceGroup = currentIthoDeviceGroup();
+
+  int settingsLen = getSettingsLength(deviceGroup, deviceID, version);
   if (settingsLen < 0)
   {
     logMessagejson("Settings not available for this device or its firmware version", WEBINTERFACE);
     return;
   }
 
+  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+
   StaticJsonDocument<512> doc;
   JsonObject root = doc.to<JsonObject>();
 
-  root["Index"] = i;
-  root["Description"] = settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + i))];
+  root["Index"] = index;
+  root["Description"] = settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
 
-  if (!updateState && !updateweb)
+  if (!updateState && !updateweb) // -> first run, just send labels and null values
   {
     root["update"] = false;
     root["loop"] = loop;
@@ -211,86 +210,106 @@ void getSetting(const uint8_t i, const bool updateState, const bool updateweb, c
     root["Maximum"] = nullptr;
     logMessagejson(root, ITHOSETTINGS);
   }
-  else if (updateState && !updateweb)
+  else if (updateState && !updateweb) // -> 2nd run update setting values of settings page
   {
-    index2410 = i;
-    i2c_result_updateweb = false;
+    // index2410 = index;
+    // i2c_result_updateweb = false;
     resultPtr2410 = nullptr;
-    get2410 = true;
+    // get2410 = true;
+    i2c_cmd_queue.push_back([index]()
+                            { resultPtr2410 = sendQuery2410(index, false); });
+    i2c_cmd_queue.push_back([index, loop]()
+                            { processSettingResult(index, loop); });
+  }
+  else // -> update setting values from other source (ie. debug page)
+  {
+    // index2410 = i;
+    // i2c_result_updateweb = updateweb;
+    resultPtr2410 = nullptr;
+    // get2410 = true;
+    i2c_cmd_queue.push_back([index, updateweb]()
+                            { resultPtr2410 = sendQuery2410(index, updateweb); });
+  }
+}
 
-    auto timeoutmillis = millis() + 1000;
-    while (resultPtr2410 == nullptr && millis() < timeoutmillis)
+void processSettingResult(const uint8_t index, const bool loop)
+{
+
+  const uint8_t version = currentItho_fwversion();
+
+  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+
+  StaticJsonDocument<512> doc;
+  JsonObject root = doc.to<JsonObject>();
+
+  root["Index"] = index;
+  root["Description"] = settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
+
+  auto timeoutmillis = millis() + 3000; // about 1 sec. + 2 sec. for potential i2c queue pause
+  while (resultPtr2410 == nullptr && millis() < timeoutmillis)
+  {
+    // wait for result
+  }
+  root["update"] = true;
+  root["loop"] = loop;
+  if (resultPtr2410 != nullptr && ithoSettingsArray != nullptr)
+  {
+    if (ithoSettingsArray[index].type == ithoSettings::is_int8)
     {
-      // wait for result
+      root["Current"] = *(reinterpret_cast<int8_t *>(resultPtr2410 + 0));
+      root["Minimum"] = *(reinterpret_cast<int8_t *>(resultPtr2410 + 1));
+      root["Maximum"] = *(reinterpret_cast<int8_t *>(resultPtr2410 + 2));
     }
-    root["update"] = true;
-    root["loop"] = loop;
-    if (resultPtr2410 != nullptr && ithoSettingsArray != nullptr)
+    else if (ithoSettingsArray[index].type == ithoSettings::is_int16)
     {
-      if (ithoSettingsArray[index2410].type == ithoSettings::is_int8)
-      {
-        root["Current"] = *(reinterpret_cast<int8_t *>(resultPtr2410 + 0));
-        root["Minimum"] = *(reinterpret_cast<int8_t *>(resultPtr2410 + 1));
-        root["Maximum"] = *(reinterpret_cast<int8_t *>(resultPtr2410 + 2));
-      }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_int16)
-      {
-        root["Current"] = *(reinterpret_cast<int16_t *>(resultPtr2410 + 0));
-        root["Minimum"] = *(reinterpret_cast<int16_t *>(resultPtr2410 + 1));
-        root["Maximum"] = *(reinterpret_cast<int16_t *>(resultPtr2410 + 2));
-      }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_uint8 || ithoSettingsArray[index2410].type == ithoSettings::is_uint16 || ithoSettingsArray[index2410].type == ithoSettings::is_uint32)
-      {
-        root["Current"] = *(reinterpret_cast<uint32_t *>(resultPtr2410 + 0));
-        root["Minimum"] = *(reinterpret_cast<uint32_t *>(resultPtr2410 + 1));
-        root["Maximum"] = *(reinterpret_cast<uint32_t *>(resultPtr2410 + 2));
-      }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float2)
-      {
-        root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 2.0;
-        root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 2.0;
-        root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 2.0;
-      }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float10)
-      {
-        root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 10.0;
-        root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 10.0;
-        root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 10.0;
-      }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float100)
-      {
-        root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 100.0;
-        root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 100.0;
-        root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 100.0;
-      }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float1000)
-      {
-        root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 1000.0;
-        root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 1000.0;
-        root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 1000.0;
-      }
-      else
-      {
-        root["Current"] = *(resultPtr2410 + 0);
-        root["Minimum"] = *(resultPtr2410 + 1);
-        root["Maximum"] = *(resultPtr2410 + 2);
-      }
+      root["Current"] = *(reinterpret_cast<int16_t *>(resultPtr2410 + 0));
+      root["Minimum"] = *(reinterpret_cast<int16_t *>(resultPtr2410 + 1));
+      root["Maximum"] = *(reinterpret_cast<int16_t *>(resultPtr2410 + 2));
+    }
+    else if (ithoSettingsArray[index].type == ithoSettings::is_uint8 || ithoSettingsArray[index].type == ithoSettings::is_uint16 || ithoSettingsArray[index].type == ithoSettings::is_uint32)
+    {
+      root["Current"] = *(reinterpret_cast<uint32_t *>(resultPtr2410 + 0));
+      root["Minimum"] = *(reinterpret_cast<uint32_t *>(resultPtr2410 + 1));
+      root["Maximum"] = *(reinterpret_cast<uint32_t *>(resultPtr2410 + 2));
+    }
+    else if (ithoSettingsArray[index].type == ithoSettings::is_float2)
+    {
+      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 2.0;
+      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 2.0;
+      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 2.0;
+    }
+    else if (ithoSettingsArray[index].type == ithoSettings::is_float10)
+    {
+      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 10.0;
+      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 10.0;
+      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 10.0;
+    }
+    else if (ithoSettingsArray[index].type == ithoSettings::is_float100)
+    {
+      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 100.0;
+      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 100.0;
+      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 100.0;
+    }
+    else if (ithoSettingsArray[index].type == ithoSettings::is_float1000)
+    {
+      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 1000.0;
+      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 1000.0;
+      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 1000.0;
     }
     else
     {
-      root["Current"] = nullptr;
-      root["Minimum"] = nullptr;
-      root["Maximum"] = nullptr;
+      root["Current"] = *(resultPtr2410 + 0);
+      root["Minimum"] = *(resultPtr2410 + 1);
+      root["Maximum"] = *(resultPtr2410 + 2);
     }
-    logMessagejson(root, ITHOSETTINGS);
   }
   else
   {
-    index2410 = i;
-    i2c_result_updateweb = updateweb;
-    resultPtr2410 = nullptr;
-    get2410 = true;
+    root["Current"] = nullptr;
+    root["Minimum"] = nullptr;
+    root["Maximum"] = nullptr;
   }
+  logMessagejson(root, ITHOSETTINGS);
 }
 
 int getStatusLabelLength(const uint8_t deviceID, const uint8_t version)
@@ -385,12 +404,18 @@ const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPt
   }
 }
 
-void updateSetting(const uint8_t i, const int32_t value, bool webupdate)
+void updateSetting(const uint8_t index, const int32_t value, bool webupdate)
 {
-    i2c_result_updateweb = webupdate;
-    index2410 = i;
-    value2410 = value;
-    set2410 = true;
+  // i2c_result_updateweb = webupdate;
+  // index2410 = index;
+  // value2410 = value;
+  // set2410 = true;
+
+  i2c_cmd_queue.push_back([index, value, webupdate]()
+                          { setSetting2410(index, value, webupdate); });
+
+  i2c_cmd_queue.push_back([index]()
+                          { getSetting(index, true, false, false); });
 }
 
 const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID)
@@ -426,20 +451,20 @@ void sendI2CPWMinit()
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_PWM_INIT);
+  i2c_sendBytes(command, sizeof(command), I2C_CMD_PWM_INIT);
 }
 
 uint8_t cmdCounter = 0;
 
-void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRemote &remotes)
+void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command)
 {
   // command structure:
   //  [I2C addr ][  I2C command   ][len ][    timestamp         ][fmt ][    remote ID   ][cntr]<  opcode  ><len2><   len2 length command      >[chk2][cntr][chk ]
   //  0x82, 0x60, 0xC1, 0x01, 0x01, 0x09, 0xFF, 0xFF, 0xFF, 0xFF, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
-  if (remoteIndex > remotes.getMaxRemotes())
+  if (remoteIndex > virtualRemotes.getMaxRemotes())
     return;
 
-  const RemoteTypes remoteType = remotes.getRemoteType(remoteIndex);
+  const RemoteTypes remoteType = virtualRemotes.getRemoteType(remoteIndex);
   if (remoteType == RemoteTypes::UNSETTYPE)
     return;
 
@@ -464,7 +489,7 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRem
   i2c_header[8] = (curtime >> 8) & 0xFF;
   i2c_header[9] = curtime & 0xFF;
 
-  const int *id = remotes.getRemoteIDbyIndex(remoteIndex);
+  const int *id = virtualRemotes.getRemoteIDbyIndex(remoteIndex);
   i2c_header[11] = *id;
   i2c_header[12] = *(id + 1);
   i2c_header[13] = *(id + 2);
@@ -586,24 +611,22 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRem
     }
   }
   str += "\n";
-  Serial.print(str);
+  D_LOG(str.c_str());
 #endif
 
-  i2c_sendBytes(i2c_command, i2c_command_len, I2CLogger::I2C_CMD_REMOTE_CMD);
+  i2c_sendBytes(i2c_command, i2c_command_len, I2C_CMD_REMOTE_CMD);
 }
 
 void sendQueryDevicetype(bool updateweb)
 {
   uint8_t command[] = {0x82, 0x80, 0x90, 0xE0, 0x04, 0x00, 0x8A};
 
-  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_DEVICE_TYPE))
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_QUERY_DEVICE_TYPE))
   {
     if (updateweb)
     {
-      updateweb = false;
       jsonSysmessage("ithotype", "failed");
     }
-    return;
   }
 
   uint8_t i2cbuf[512]{};
@@ -614,8 +637,6 @@ void sendQueryDevicetype(bool updateweb)
   {
     if (updateweb)
     {
-      updateweb = false;
-
       jsonSysmessage("ithotype", i2cbuf2string(i2cbuf, len).c_str());
     }
 
@@ -624,12 +645,12 @@ void sendQueryDevicetype(bool updateweb)
     itho_fwversion = i2cbuf[11];
     ithoDeviceptr = getDevicePtr(currentIthoDeviceGroup(), currentIthoDeviceID());
     ithoSettingsLength = getSettingsLength(currentIthoDeviceGroup(), currentIthoDeviceID(), currentItho_fwversion());
+    restest = true;
   }
   else
   {
     if (updateweb)
     {
-      updateweb = false;
       jsonSysmessage("ithotype", "failed");
     }
   }
@@ -640,7 +661,7 @@ void sendQueryStatusFormat(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x00, 0x04, 0x00, 0xD6};
 
-  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_STATUS_FORMAT))
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_QUERY_STATUS_FORMAT))
   {
     if (updateweb)
     {
@@ -649,7 +670,6 @@ void sendQueryStatusFormat(bool updateweb)
     }
     return;
   }
-  
 
   uint8_t i2cbuf[512]{};
   uint8_t len = i2c_slave_receive(i2cbuf);
@@ -737,7 +757,7 @@ void sendQueryStatus(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x01, 0x04, 0x00, 0xD5};
 
-  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_STATUS))
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_QUERY_STATUS))
   {
     if (updateweb)
     {
@@ -774,24 +794,27 @@ void sendQueryStatus(bool updateweb)
 
         if (ithoStat.type == ithoDeviceStatus::is_byte)
         {
-          if(ithoStat.value.byteval == (byte)tempVal) {
+          if (ithoStat.value.byteval == (byte)tempVal)
+          {
             ithoStat.updated = 0;
           }
-          else {
+          else
+          {
             ithoStat.updated = 1;
             ithoStat.value.byteval = (byte)tempVal;
           }
         }
         if (ithoStat.type == ithoDeviceStatus::is_uint)
         {
-          if(ithoStat.value.uintval == tempVal) {
+          if (ithoStat.value.uintval == tempVal)
+          {
             ithoStat.updated = 0;
           }
-          else {
+          else
+          {
             ithoStat.updated = 1;
             ithoStat.value.uintval = tempVal;
-          }          
-          
+          }
         }
         if (ithoStat.type == ithoDeviceStatus::is_int)
         {
@@ -807,23 +830,28 @@ void sendQueryStatus(bool updateweb)
           {
             tempVal = static_cast<int8_t>(tempVal);
           }
-          if(ithoStat.value.intval == tempVal) {
+          if (ithoStat.value.intval == tempVal)
+          {
             ithoStat.updated = 0;
           }
-          else {
+          else
+          {
             ithoStat.updated = 1;
             ithoStat.value.intval = tempVal;
           }
         }
         if (ithoStat.type == ithoDeviceStatus::is_float)
         {
-          if(static_cast<uint32_t>(ithoStat.value.floatval*ithoStat.divider) == tempVal) {
+          double t = ithoStat.value.floatval * ithoStat.divider;
+          if (static_cast<uint32_t>(t) == tempVal) // better compare needed of float val, worst case this will result in an extra update of the value, so limited impact
+          {
             ithoStat.updated = 0;
           }
-          else {
+          else
+          {
             ithoStat.updated = 1;
             ithoStat.value.floatval = static_cast<double>(tempVal) / ithoStat.divider;
-          }          
+          }
         }
 
         statusPos += ithoStat.length;
@@ -896,7 +924,7 @@ void sendQuery31DA(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x31, 0xDA, 0x04, 0x00, 0xEF};
 
-  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_31DA))
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_QUERY_31DA))
   {
     if (updateweb)
     {
@@ -1288,7 +1316,7 @@ void sendQuery31D9(bool updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x31, 0xD9, 0x04, 0x00, 0xF0};
 
-  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_31D9))
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_QUERY_31D9))
   {
     if (updateweb)
     {
@@ -1330,7 +1358,7 @@ void sendQuery31D9(bool updateweb)
     }
 
     double tempVal = i2cbuf[1 + dataStart] / 2.0;
-    ithoDeviceMeasurements sTemp = {labels31D9[0], ithoDeviceMeasurements::is_float, {.floatval = tempVal}};
+    ithoDeviceMeasurements sTemp = {labels31D9[0], ithoDeviceMeasurements::is_float, {.floatval = tempVal}, 1};
     ithoInternalMeasurements.push_back(sTemp);
 
     int status = 0;
@@ -1342,7 +1370,7 @@ void sendQuery31D9(bool updateweb)
     {
       status = 0; // no fault
     }
-    ithoInternalMeasurements.push_back({labels31D9[1], ithoDeviceMeasurements::is_int, {.intval = status}});
+    ithoInternalMeasurements.push_back({labels31D9[1], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
     if (i2cbuf[0 + dataStart] == 0x40)
     {
       status = 1; // frost cycle active
@@ -1351,7 +1379,7 @@ void sendQuery31D9(bool updateweb)
     {
       status = 0; // frost cycle not active
     }
-    ithoInternalMeasurements.push_back({labels31D9[2], ithoDeviceMeasurements::is_int, {.intval = status}});
+    ithoInternalMeasurements.push_back({labels31D9[2], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
     if (i2cbuf[0 + dataStart] == 0x20)
     {
       status = 1; // filter dirty
@@ -1360,7 +1388,7 @@ void sendQuery31D9(bool updateweb)
     {
       status = 0; // filter clean
     }
-    ithoInternalMeasurements.push_back({labels31D9[3], ithoDeviceMeasurements::is_int, {.intval = status}});
+    ithoInternalMeasurements.push_back({labels31D9[3], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
     //    if (i2cbuf[0 + dataStart] == 0x10) {
     //      //unknown
     //    }
@@ -1387,7 +1415,7 @@ void sendQuery31D9(bool updateweb)
   }
 }
 
-int32_t *sendQuery2410(bool &updateweb)
+int32_t *sendQuery2410(uint8_t index, bool updateweb)
 {
 
   static int32_t values[3];
@@ -1397,14 +1425,13 @@ int32_t *sendQuery2410(bool &updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x10, 0x04, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF};
 
-  command[23] = index2410;
+  command[23] = index;
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_QUERY_2410))
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_QUERY_2410))
   {
     if (updateweb)
     {
-      updateweb = false;
       jsonSysmessage("itho2410", "failed");
     }
     return nullptr;
@@ -1427,47 +1454,47 @@ int32_t *sendQuery2410(bool &updateweb)
     if (ithoSettingsArray == nullptr)
       return nullptr;
 
-    ithoSettingsArray[index2410].value = values[0];
+    ithoSettingsArray[index].value = values[0];
 
     if (((i2cbuf[22] >> 3) & 0x07) == 0)
     {
-      ithoSettingsArray[index2410].length = 1;
+      ithoSettingsArray[index].length = 1;
     }
     else
     {
-      ithoSettingsArray[index2410].length = (i2cbuf[22] >> 3) & 0x07;
+      ithoSettingsArray[index].length = (i2cbuf[22] >> 3) & 0x07;
     }
 
     if ((i2cbuf[22] & 0x07) == 0)
     { // integer value
       if ((i2cbuf[22] & 0x80) == 0)
       { // unsigned value
-        if (ithoSettingsArray[index2410].length == 1)
+        if (ithoSettingsArray[index].length == 1)
         {
-          ithoSettingsArray[index2410].type = ithoSettings::is_uint8;
+          ithoSettingsArray[index].type = ithoSettings::is_uint8;
         }
-        else if (ithoSettingsArray[index2410].length == 2)
+        else if (ithoSettingsArray[index].length == 2)
         {
-          ithoSettingsArray[index2410].type = ithoSettings::is_uint16;
+          ithoSettingsArray[index].type = ithoSettings::is_uint16;
         }
         else
         {
-          ithoSettingsArray[index2410].type = ithoSettings::is_uint32;
+          ithoSettingsArray[index].type = ithoSettings::is_uint32;
         }
       }
       else
       {
-        if (ithoSettingsArray[index2410].length == 1)
+        if (ithoSettingsArray[index].length == 1)
         {
-          ithoSettingsArray[index2410].type = ithoSettings::is_int8;
+          ithoSettingsArray[index].type = ithoSettings::is_int8;
         }
-        else if (ithoSettingsArray[index2410].length == 2)
+        else if (ithoSettingsArray[index].length == 2)
         {
-          ithoSettingsArray[index2410].type = ithoSettings::is_int16;
+          ithoSettingsArray[index].type = ithoSettings::is_int16;
         }
         else
         {
-          ithoSettingsArray[index2410].type = ithoSettings::is_int32;
+          ithoSettingsArray[index].type = ithoSettings::is_int32;
         }
       }
     }
@@ -1476,37 +1503,36 @@ int32_t *sendQuery2410(bool &updateweb)
 
       if ((i2cbuf[22] & 0x04) != 0)
       {
-        ithoSettingsArray[index2410].type = ithoSettings::is_float1000;
+        ithoSettingsArray[index].type = ithoSettings::is_float1000;
       }
       else if ((i2cbuf[22] & 0x02) != 0)
       {
-        ithoSettingsArray[index2410].type = ithoSettings::is_float100;
+        ithoSettingsArray[index].type = ithoSettings::is_float100;
       }
       else if ((i2cbuf[22] & 0x01) != 0)
       {
-        ithoSettingsArray[index2410].type = ithoSettings::is_float10;
+        ithoSettingsArray[index].type = ithoSettings::is_float10;
       }
       else
       {
-        ithoSettingsArray[index2410].type = ithoSettings::is_unknown;
+        ithoSettingsArray[index].type = ithoSettings::is_unknown;
       }
     }
     // special cases
     if (i2cbuf[22] == 0x01)
     {
-      ithoSettingsArray[index2410].type = ithoSettings::is_uint8;
+      ithoSettingsArray[index].type = ithoSettings::is_uint8;
     }
 
     if (updateweb)
     {
-      updateweb = false;
       jsonSysmessage("itho2410", i2cbuf2string(i2cbuf, len).c_str());
 
       char tempbuffer0[256]{};
       char tempbuffer1[256]{};
       char tempbuffer2[256]{};
 
-      if (ithoSettingsArray[index2410].type == ithoSettings::is_uint8 || ithoSettingsArray[index2410].type == ithoSettings::is_uint16 || ithoSettingsArray[index2410].type == ithoSettings::is_uint32)
+      if (ithoSettingsArray[index].type == ithoSettings::is_uint8 || ithoSettingsArray[index].type == ithoSettings::is_uint16 || ithoSettingsArray[index].type == ithoSettings::is_uint32)
       { // unsigned value
         uint32_t val[3];
         std::memcpy(&val[0], &values[0], sizeof(val[0]));
@@ -1516,7 +1542,7 @@ int32_t *sendQuery2410(bool &updateweb)
         sprintf(tempbuffer1, "%u", val[1]);
         sprintf(tempbuffer2, "%u", val[2]);
       }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_int8)
+      else if (ithoSettingsArray[index].type == ithoSettings::is_int8)
       {
         int8_t val[3];
         std::memcpy(&val[0], &values[0], sizeof(val[0]));
@@ -1526,7 +1552,7 @@ int32_t *sendQuery2410(bool &updateweb)
         sprintf(tempbuffer1, "%d", val[1]);
         sprintf(tempbuffer2, "%d", val[2]);
       }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_int16)
+      else if (ithoSettingsArray[index].type == ithoSettings::is_int16)
       {
         int16_t val[3];
         std::memcpy(&val[0], &values[0], sizeof(val[0]));
@@ -1536,13 +1562,13 @@ int32_t *sendQuery2410(bool &updateweb)
         sprintf(tempbuffer1, "%d", val[1]);
         sprintf(tempbuffer2, "%d", val[2]);
       }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_int32)
+      else if (ithoSettingsArray[index].type == ithoSettings::is_int32)
       {
         sprintf(tempbuffer0, "%d", values[0]);
         sprintf(tempbuffer1, "%d", values[1]);
         sprintf(tempbuffer2, "%d", values[2]);
       }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float10)
+      else if (ithoSettingsArray[index].type == ithoSettings::is_float10)
       {
         double val[3];
         val[0] = values[0] / 10.0f;
@@ -1552,7 +1578,7 @@ int32_t *sendQuery2410(bool &updateweb)
         sprintf(tempbuffer1, "%.1f", val[1]);
         sprintf(tempbuffer2, "%.1f", val[2]);
       }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float100)
+      else if (ithoSettingsArray[index].type == ithoSettings::is_float100)
       {
         double val[3];
         val[0] = values[0] / 100.0f;
@@ -1562,7 +1588,7 @@ int32_t *sendQuery2410(bool &updateweb)
         sprintf(tempbuffer1, "%.2f", val[1]);
         sprintf(tempbuffer2, "%.2f", val[2]);
       }
-      else if (ithoSettingsArray[index2410].type == ithoSettings::is_float1000)
+      else if (ithoSettingsArray[index].type == ithoSettings::is_float1000)
       {
         double val[3];
         val[0] = values[0] / 1000.0f;
@@ -1587,7 +1613,6 @@ int32_t *sendQuery2410(bool &updateweb)
   {
     if (updateweb)
     {
-      updateweb = false;
       jsonSysmessage("itho2410", "failed");
     }
   }
@@ -1595,10 +1620,17 @@ int32_t *sendQuery2410(bool &updateweb)
   return values;
 }
 
-void setSetting2410(bool &updateweb)
+// void setSetting2410(bool updateweb)
+// {
+//   uint8_t index = index2410;
+//   int32_t value = value2410;
+//   setSetting2410(index, value, updateweb);
+// }
+
+void setSetting2410(uint8_t index, int32_t value, bool updateweb)
 {
 
-  if (index2410 == 7 && value2410 == 1 && (currentIthoDeviceID() == 0x14 || currentIthoDeviceID() == 0x1B || currentIthoDeviceID() == 0x1D))
+  if (index == 7 && value == 1 && (currentIthoDeviceID() == 0x14 || currentIthoDeviceID() == 0x1B || currentIthoDeviceID() == 0x1D))
   {
     logMessagejson("<br>!!Warning!! Command ignored!<br>Setting index 7 to value 1 will switch off I2C!", WEBINTERFACE);
     return;
@@ -1609,29 +1641,28 @@ void setSetting2410(bool &updateweb)
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x10, 0x06, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF};
 
-  command[23] = index2410;
+  command[23] = index;
 
-  if (ithoSettingsArray[index2410].type == ithoSettings::is_uint8 || ithoSettingsArray[index2410].type == ithoSettings::is_int8)
+  if (ithoSettingsArray[index].type == ithoSettings::is_uint8 || ithoSettingsArray[index].type == ithoSettings::is_int8)
   {
-    command[9] = value2410 & 0xFF;
+    command[9] = value & 0xFF;
   }
-  else if (ithoSettingsArray[index2410].type == ithoSettings::is_uint16 || ithoSettingsArray[index2410].type == ithoSettings::is_int16)
+  else if (ithoSettingsArray[index].type == ithoSettings::is_uint16 || ithoSettingsArray[index].type == ithoSettings::is_int16)
   {
-    command[9] = value2410 & 0xFF;
-    command[8] = (value2410 >> 8) & 0xFF;
+    command[9] = value & 0xFF;
+    command[8] = (value >> 8) & 0xFF;
   }
-  else if (ithoSettingsArray[index2410].type == ithoSettings::is_uint32 || ithoSettingsArray[index2410].type == ithoSettings::is_int32 || ithoSettingsArray[index2410].type == ithoSettings::is_float2 || ithoSettingsArray[index2410].type == ithoSettings::is_float10 || ithoSettingsArray[index2410].type == ithoSettings::is_float100 || ithoSettingsArray[index2410].type == ithoSettings::is_float1000)
+  else if (ithoSettingsArray[index].type == ithoSettings::is_uint32 || ithoSettingsArray[index].type == ithoSettings::is_int32 || ithoSettingsArray[index].type == ithoSettings::is_float2 || ithoSettingsArray[index].type == ithoSettings::is_float10 || ithoSettingsArray[index].type == ithoSettings::is_float100 || ithoSettingsArray[index].type == ithoSettings::is_float1000)
   {
-    command[9] = value2410 & 0xFF;
-    command[8] = (value2410 >> 8) & 0xFF;
-    command[7] = (value2410 >> 16) & 0xFF;
-    command[6] = (value2410 >> 24) & 0xFF;
+    command[9] = value & 0xFF;
+    command[8] = (value >> 8) & 0xFF;
+    command[7] = (value >> 16) & 0xFF;
+    command[6] = (value >> 24) & 0xFF;
   }
   else
   {
     if (updateweb)
     {
-      updateweb = false;
       jsonSysmessage("itho2410setres", "format error, first use query 2410");
     }
     return; // unsupported value format
@@ -1641,11 +1672,10 @@ void setSetting2410(bool &updateweb)
 
   jsonSysmessage("itho2410set", i2cbuf2string(command, sizeof(command)).c_str());
 
-  if (!i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_SET_2410))
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_SET_2410))
   {
     if (updateweb)
     {
-      updateweb = false;
       jsonSysmessage("itho2410setres", "failed");
     }
     return;
@@ -1657,7 +1687,6 @@ void setSetting2410(bool &updateweb)
   {
     if (updateweb)
     {
-      updateweb = false;
       if (len > 2)
       {
         if (command[6] == i2cbuf[6] && command[7] == i2cbuf[7] && command[8] == i2cbuf[8] && command[9] == i2cbuf[9] && command[23] == i2cbuf[23])
@@ -1677,7 +1706,7 @@ void setSetting2410(bool &updateweb)
   }
 }
 
-void filterReset(const int remoteIndex, IthoRemote &remotes)
+void filterReset()
 {
 
   //[I2C addr ][  I2C command   ][len ][    timestamp         ][fmt ][    remote ID   ][cntr][cmd opcode][len ][  command ][  counter ][chk]
@@ -1690,7 +1719,7 @@ void filterReset(const int remoteIndex, IthoRemote &remotes)
   command[8] = (curtime >> 8) & 0xFF;
   command[9] = curtime & 0xFF;
 
-  const int *id = remotes.getRemoteIDbyIndex(remoteIndex);
+  const int *id = virtualRemotes.getRemoteIDbyIndex(0);
   command[11] = *id;
   command[12] = *(id + 1);
   command[13] = *(id + 2);
@@ -1700,47 +1729,42 @@ void filterReset(const int remoteIndex, IthoRemote &remotes)
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_FILTER_RESET);
+  i2c_sendBytes(command, sizeof(command), I2C_CMD_FILTER_RESET);
 }
-
-
 
 void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT)
 {
+  uint16_t valTemp = *ithoCurrentVal;
+  *ithoCurrentVal = value;
 
-    uint16_t valTemp = *ithoCurrentVal;
-    *ithoCurrentVal = value;
+  if (systemConfig.itho_forcemedium)
+  {
+    IthoCommand precmd = IthoCommand::IthoMedium;
+    const RemoteTypes remoteType = virtualRemotes.getRemoteType(0);
+    if (remoteType == RemoteTypes::RFTAUTO) // RFT AUTO remote has no meduim button
+      precmd = IthoCommand::IthoAuto;
+    if (remoteType == RemoteTypes::RFTCVE || remoteType == RemoteTypes::RFTCO2 || remoteType == RemoteTypes::RFTRV) // only handle remotes with mediom command support
+      sendRemoteCmd(0, precmd);
+  }
 
-    if (systemConfig.itho_forcemedium)
-    {
-      IthoCommand precmd = IthoCommand::IthoMedium;
-      const RemoteTypes remoteType = remotes.getRemoteType(0);
-      if (remoteType == RemoteTypes::RFTAUTO) // RFT AUTO remote has no meduim button
-        precmd = IthoCommand::IthoAuto;
-      if (remoteType == RemoteTypes::RFTCVE || remoteType == RemoteTypes::RFTCO2 || remoteType == RemoteTypes::RFTRV) // only handle remotes with mediom command support
-        sendRemoteCmd(0, precmd, virtualRemotes);
-    }
+  uint8_t command[] = {0x00, 0x60, 0xC0, 0x20, 0x01, 0x02, 0xFF, 0x00, 0xFF};
 
-    uint8_t command[] = {0x00, 0x60, 0xC0, 0x20, 0x01, 0x02, 0xFF, 0x00, 0xFF};
+  uint8_t b = static_cast<uint8_t>(value);
 
-    uint8_t b = static_cast<uint8_t>(value);
+  command[6] = b;
+  // command[8] = 0 - (67 + b);
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-    command[6] = b;
-    // command[8] = 0 - (67 + b);
-    command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
-
-    if (i2c_sendBytes(command, sizeof(command), I2CLogger::I2C_CMD_PWM_CMD))
-    {
-      *updateIthoMQTT = true;
-    }
-    else
-    {
-      *ithoCurrentVal = valTemp;
-      ithoQueue.add2queue(valTemp, 0, systemConfig.nonQ_cmd_clearsQ);
-    }
+  if (i2c_sendBytes(command, sizeof(command), I2C_CMD_PWM_CMD))
+  {
+    *updateIthoMQTT = true;
+  }
+  else
+  {
+    *ithoCurrentVal = valTemp;
+    ithoQueue.add2queue(valTemp, 0, systemConfig.nonQ_cmd_clearsQ);
+  }
 }
-
-
 
 int quick_pow10(int n)
 {

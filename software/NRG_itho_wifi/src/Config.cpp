@@ -4,10 +4,10 @@ bool loadWifiConfig()
 {
   if (!ACTIVE_FS.exists("/wifi.json"))
   {
-    D_LOG("Setup: writing initial wifi config\n");
+    D_LOG("Setup: writing initial wifi config");
     if (!saveWifiConfig())
     {
-      D_LOG("Setup: failed writing initial wifi config\n");
+      E_LOG("Setup: failed writing initial wifi config");
       return false;
     }
   }
@@ -15,7 +15,7 @@ bool loadWifiConfig()
   File configFile = ACTIVE_FS.open("/wifi.json", "r");
   if (!configFile)
   {
-    D_LOG("Setup: failed to open wifi config file\n");
+    D_LOG("Setup: failed to open wifi config file");
     return false;
   }
   // ACTIVE_FS.exists(path)
@@ -23,7 +23,7 @@ bool loadWifiConfig()
   size_t size = configFile.size();
   if (size > 1024)
   {
-    D_LOG("Setup: wifi config file size is too large\n");
+    E_LOG("Setup: wifi config file size is too large");
     return false;
   }
 
@@ -31,19 +31,19 @@ bool loadWifiConfig()
   DeserializationError error = deserializeJson(root, configFile);
   if (error)
   {
-    D_LOG("Setup: wifi config load DeserializationError\n");
+    E_LOG("Setup: wifi config load DeserializationError");
     return false;
   }
 
   if (root["ssid"] == "")
   {
-    D_LOG("Setup: initial wifi config still there, start WifiAP\n");
+    I_LOG("Setup: initial wifi config still there, start WifiAP");
     return false;
   }
   if (wifiConfig.set(root.as<JsonObject>()))
   {
   }
-  D_LOG("Setup: wifi config loaded successful\n");
+  D_LOG("Setup: wifi config loaded successful");
   return true;
 }
 
@@ -57,13 +57,13 @@ bool saveWifiConfig()
   File configFile = ACTIVE_FS.open("/wifi.json", "w");
   if (!configFile)
   {
-    D_LOG("Failed to open default config file for writing\n");
+    E_LOG("Failed to open default config file for writing");
     return false;
   }
 
   serializeJson(root, configFile);
 
-  logInput("wifi config saved");
+  I_LOG("wifi config saved");
   return true;
 }
 
@@ -86,24 +86,24 @@ bool loadSystemConfig()
 
   if (!ACTIVE_FS.exists("/config.json"))
   {
-    D_LOG("Writing initial default config\n");
+    I_LOG("Writing initial default config");
     if (!saveSystemConfig())
     {
-      D_LOG("Failed writing initial default config\n");
+      E_LOG("Failed writing initial default config");
       return false;
     }
   }
   File configFile = ACTIVE_FS.open("/config.json", "r");
   if (!configFile)
   {
-    D_LOG("Failed to open system config file\n");
+    E_LOG("Failed to open system config file");
     return false;
   }
 
   size_t size = configFile.size();
   if (size > 2048)
   {
-    D_LOG("System config file size is too large\n");
+    E_LOG("System config file size is too large");
     return false;
   }
 
@@ -113,11 +113,11 @@ bool loadSystemConfig()
     return false;
 
   systemConfig.configLoaded = systemConfig.set(root.as<JsonObject>());
-  D_LOG("config : %d\n", systemConfig.configLoaded);
+  D_LOG("config : %d", systemConfig.configLoaded);
 
   if (!systemConfig.configLoaded)
   {
-    logInput("Config version mismatch, resetting config...");
+    W_LOG("Config version mismatch, resetting config...");
     saveSystemConfig();
     delay(1000);
     ESP.restart();
@@ -138,7 +138,7 @@ bool saveSystemConfig()
   File configFile = ACTIVE_FS.open("/config.json", "w");
   if (!configFile)
   {
-    D_LOG("Failed to open default config file for writing\n");
+    E_LOG("Failed to open default config file for writing");
     return false;
   }
 
@@ -194,17 +194,17 @@ bool saveFileRemotes(const char *filename, const IthoRemote &remotes)
   File file = ACTIVE_FS.open(filename, "w");
   if (!file)
   {
-    D_LOG("Failed to create remotes file\n");
+    E_LOG("Failed to create remotes file");
     return false;
   }
   // Serialize JSON to file
   bool success = serializeRemotes(filename, remotes, file);
   if (!success)
   {
-    D_LOG("Failed to serialize remotes\n");
+    E_LOG("Failed to serialize remotes");
     return false;
   }
-  D_LOG("File saved\n");
+  D_LOG("File saved");
   return true;
 }
 
@@ -216,7 +216,7 @@ bool deserializeRemotes(const char *filename, Stream &src, IthoRemote &remotes)
   DeserializationError err = deserializeJson(doc, src);
   if (err)
   {
-    D_LOG("Failed to deserialize remotes config json\n");
+    E_LOG("Failed to deserialize remotes config json");
     return false;
   }
 
@@ -231,8 +231,7 @@ bool deserializeRemotes(const char *filename, Stream &src, IthoRemote &remotes)
   remotes.configLoaded = remotes.set(doc.as<JsonObject>(), rootName.c_str());
   if (!remotes.configLoaded)
   {
-    D_LOG("Remotes config version mismatch, resetting config...\n");
-    logInput("Remotes config version mismatch, resetting config...");
+    W_LOG("Remotes config version mismatch, resetting config...");
     saveFileRemotes(filename, remotes);
     delay(1000);
     ESP.restart();
@@ -258,11 +257,10 @@ bool loadFileRemotes(const char *filename, IthoRemote &remotes)
 
   if (!ACTIVE_FS.exists(filename))
   {
-    D_LOG("Setup: writing initial remotes config\n");
-    logInput("Setup: writing initial remotes config");
+    N_LOG("Setup: writing initial remotes config");
     if (!saveFileRemotes(filename, remotes))
     {
-      D_LOG("Setup: failed writing initial wifi config\n");
+      E_LOG("Setup: failed writing initial remotes config");
       return false;
     }
   }
@@ -271,7 +269,7 @@ bool loadFileRemotes(const char *filename, IthoRemote &remotes)
 
   if (!file)
   {
-    D_LOG("Failed to open config file\n");
+    E_LOG("Failed to open config file");
     return false;
   }
 
@@ -279,9 +277,84 @@ bool loadFileRemotes(const char *filename, IthoRemote &remotes)
 
   if (!success)
   {
-    D_LOG("Failed to deserialize configuration\n");
+    E_LOG("Failed to deserialize configuration");
     return false;
   }
-  logInput("Setup: remotes configfile loaded");
+  I_LOG("Setup: remotes configfile loaded");
   return true;
+}
+
+bool loadLogConfig()
+{
+  if (!ACTIVE_FS.exists("/syslog.json"))
+  {
+    I_LOG("Setup: writing initial syslog config");
+    if (!saveLogConfig())
+    {
+      E_LOG("Setup: failed writing initial syslog config");
+      return false;
+    }
+  }
+
+  File configFile = ACTIVE_FS.open("/syslog.json", "r");
+  if (!configFile)
+  {
+    E_LOG("Setup: failed to open syslog config file");
+    return false;
+  }
+  // ACTIVE_FS.exists(path)
+
+  size_t size = configFile.size();
+  if (size > 1024)
+  {
+    E_LOG("Setup: syslog config file size is too large");
+    return false;
+  }
+
+  DynamicJsonDocument root(1024);
+  DeserializationError error = deserializeJson(root, configFile);
+  if (error)
+  {
+    E_LOG("Setup: syslog config load Deserialization Error");
+    return false;
+  }
+  logConfig.configLoaded = logConfig.set(root.as<JsonObject>());
+
+  I_LOG("Setup: syslog config loaded : %d", logConfig.configLoaded);
+
+  return true;
+}
+
+bool saveLogConfig()
+{
+  DynamicJsonDocument doc(2048);
+  JsonObject root = doc.to<JsonObject>();
+  // Fill the object
+  logConfig.get(root);
+
+  File configFile = ACTIVE_FS.open("/syslog.json", "w");
+  if (!configFile)
+  {
+    E_LOG("Failed to open default config file for writing");
+    return false;
+  }
+
+  serializeJson(root, configFile);
+
+  I_LOG("syslog config saved");
+  return true;
+}
+
+bool resetLogConfig()
+{
+  if (!ACTIVE_FS.remove("/syslog.json"))
+  {
+    return false;
+  }
+  if (!ACTIVE_FS.exists("/syslog.json"))
+  {
+    dontSaveConfig = true;
+    return true;
+  }
+  return false;
 }

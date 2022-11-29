@@ -13,10 +13,8 @@
 
 #include "SystemConfig.h"
 #include "WifiConfig.h"
-#include "hardware.h"
 #include "globals.h"
-#include "Dbglog.h"
-#include "flashLog.h"
+#include "sys_log.h"
 #include "notifyClients.h"
 #include "websocket.h"
 
@@ -46,7 +44,6 @@ void webServerInit();
 void MDNSinit();
 
 void handleAPI(AsyncWebServerRequest *request);
-void handleDebug(AsyncWebServerRequest *request);
 void handleCurLogDownload(AsyncWebServerRequest *request);
 void handlePrevLogDownload(AsyncWebServerRequest *request);
 void handleFileCreate(AsyncWebServerRequest *request);

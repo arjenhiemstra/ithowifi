@@ -10,12 +10,11 @@
 
 #include "SystemConfig.h"
 #include "WifiConfig.h"
-#include "hardware.h"
 #include "globals.h"
-#include "Dbglog.h"
-#include "flashLog.h"
+#include "sys_log.h"
 #include "notifyClients.h"
 #include "task_configandlog.h"
+#include "i2c_sniffer.h"
 
 // globals
 extern bool TaskInitReady;

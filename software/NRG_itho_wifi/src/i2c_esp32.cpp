@@ -1,5 +1,7 @@
 #include "i2c_esp32.h"
 
+std::deque<std::function<void()>> i2c_cmd_queue;
+
 char toHex(uint8_t c)
 {
   return c < 10 ? c + '0' : c + 'A' - 10;
@@ -7,6 +9,24 @@ char toHex(uint8_t c)
 
 uint8_t i2cbuf[I2C_SLAVE_RX_BUF_LEN];
 static size_t buflen;
+
+gpio_num_t master_sda_pin = GPIO_NUM_0;
+gpio_num_t master_scl_pin = GPIO_NUM_0;
+
+gpio_num_t slave_sda_pin = GPIO_NUM_0;
+gpio_num_t slave_scl_pin = GPIO_NUM_0;
+
+void i2c_master_setpins(gpio_num_t sda, gpio_num_t scl)
+{
+  master_sda_pin = sda;
+  master_scl_pin = scl;
+}
+
+void i2c_slave_setpins(gpio_num_t sda, gpio_num_t scl)
+{
+  slave_sda_pin = sda;
+  slave_scl_pin = scl;
+}
 
 esp_err_t i2c_master_init(int log_entry_idx)
 {
@@ -17,17 +37,18 @@ esp_err_t i2c_master_init(int log_entry_idx)
     result = ESP_FAIL;
 
 #ifdef ESPRESSIF32_3_5_0
-  i2c_config_t conf = {I2C_MODE_MASTER, I2C_MASTER_SDA_IO, I2C_MASTER_SDA_PULLUP, I2C_MASTER_SCL_IO, I2C_MASTER_SCL_PULLUP, {.master = {I2C_MASTER_FREQ_HZ}}};
+  i2c_config_t conf = {I2C_MODE_MASTER, master_sda_pin, I2C_MASTER_SDA_PULLUP, master_scl_pin, I2C_MASTER_SCL_PULLUP, {.master = {I2C_MASTER_FREQ_HZ}}};
 #else
   i2c_config_t conf = {
       .mode = I2C_MODE_MASTER,
-      .sda_io_num = I2C_MASTER_SDA_IO,
-      .scl_io_num = I2C_MASTER_SCL_IO,
+      .sda_io_num = master_sda_pin,
+      .scl_io_num = master_scl_pin,
       .sda_pullup_en = I2C_MASTER_SDA_PULLUP,
       .scl_pullup_en = I2C_MASTER_SCL_PULLUP,
       .master = {
           .clk_speed = I2C_MASTER_FREQ_HZ,
       },
+      .clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL, // optional
   };
 #endif
 
@@ -36,7 +57,7 @@ esp_err_t i2c_master_init(int log_entry_idx)
   result = i2c_driver_install(I2C_MASTER_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
   if (result != ESP_OK)
   {
-    D_LOG("i2c_master_init error: %s\n", esp_err_to_name(result));
+    E_LOG("i2c_master_init error: %s", esp_err_to_name(result));
   }
 
   return result;
@@ -84,6 +105,7 @@ esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len
   i2c_master_write(link, (uint8_t *)cmd, len, true);
   i2c_master_stop(link);
   rc = i2c_master_cmd_begin(I2C_MASTER_NUM, link, 200 / portTICK_RATE_MS);
+
   i2c_cmd_link_delete(link);
 
   i2c_master_deinit();
@@ -91,7 +113,7 @@ esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len
   return rc;
 }
 
-esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size, I2CLogger::i2c_cmdref_t origin)
+esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size, i2c_cmdref_t origin)
 {
 
   if (ithoInitResult == -2)
@@ -131,10 +153,10 @@ esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size, I2C
 
 esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size)
 {
-  return i2c_master_read_slave(addr, data_rd, size, I2CLogger::I2C_CMD_UNKOWN);
+  return i2c_master_read_slave(addr, data_rd, size, I2C_CMD_UNKOWN);
 }
 
-bool i2c_sendBytes(const uint8_t *buf, size_t len, I2CLogger::i2c_cmdref_t origin)
+bool i2c_sendBytes(const uint8_t *buf, size_t len, i2c_cmdref_t origin)
 {
   if (ithoInitResult == -2)
   {
@@ -148,7 +170,7 @@ bool i2c_sendBytes(const uint8_t *buf, size_t len, I2CLogger::i2c_cmdref_t origi
     esp_err_t rc = i2c_master_send((const char *)buf, len, log_entry_idx);
     if (rc)
     {
-      // D_LOG("Master send: %d\n", rc);
+      // D_LOG("Master send: %d", rc);
       i2cLogger.i2c_log_final(log_entry_idx, I2CLogger::I2C_NOK);
       return false;
     }
@@ -161,10 +183,10 @@ bool i2c_sendBytes(const uint8_t *buf, size_t len, I2CLogger::i2c_cmdref_t origi
 
 bool i2c_sendBytes(const uint8_t *buf, size_t len)
 {
-  return i2c_sendBytes(buf, len, I2CLogger::I2C_CMD_UNKOWN);
+  return i2c_sendBytes(buf, len, I2C_CMD_UNKOWN);
 }
 
-bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len, I2CLogger::i2c_cmdref_t origin)
+bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len, i2c_cmdref_t origin)
 {
   if (ithoInitResult == -2)
   {
@@ -178,7 +200,7 @@ bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len, I2CLogger::i2c_cm
     esp_err_t rc = i2c_master_send_command(addr, cmd, len, log_entry_idx);
     if (rc)
     {
-      // D_LOG("Master send: %d\n", rc);
+      // D_LOG("Master send: %d", rc);
       i2cLogger.i2c_log_final(log_entry_idx, I2CLogger::I2C_NOK);
       return false;
     }
@@ -191,7 +213,7 @@ bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len, I2CLogger::i2c_cm
 
 bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len)
 {
-  return i2c_sendCmd(addr, cmd, len, I2CLogger::I2C_CMD_UNKOWN);
+  return i2c_sendCmd(addr, cmd, len, I2C_CMD_UNKOWN);
 }
 
 size_t i2c_slave_receive(uint8_t i2c_receive_buf[])
@@ -222,18 +244,20 @@ size_t i2c_slave_receive(uint8_t i2c_receive_buf[])
   // } i2c_config_t;
 
 #ifdef ESPRESSIF32_3_5_0
-  i2c_config_t conf_slave = {I2C_MODE_SLAVE, I2C_SLAVE_SDA_IO, I2C_SLAVE_SDA_PULLUP, I2C_SLAVE_SCL_IO, I2C_SLAVE_SCL_PULLUP, {.slave = {0, I2C_SLAVE_ADDRESS}}};
+  i2c_config_t conf_slave = {I2C_MODE_SLAVE, slave_sda_pin, I2C_SLAVE_SDA_PULLUP, slave_scl_pin, I2C_SLAVE_SCL_PULLUP, {.slave = {0, I2C_SLAVE_ADDRESS}}};
 #else
   i2c_config_t conf_slave = {
       .mode = I2C_MODE_SLAVE,
-      .sda_io_num = I2C_SLAVE_SDA_IO,
-      .scl_io_num = I2C_SLAVE_SCL_IO,
+      .sda_io_num = slave_sda_pin,
+      .scl_io_num = slave_scl_pin,
       .sda_pullup_en = I2C_SLAVE_SDA_PULLUP,
       .scl_pullup_en = I2C_SLAVE_SCL_PULLUP,
       .slave = {
           .addr_10bit_en = 0,
           .slave_addr = I2C_SLAVE_ADDRESS,
-      }, // address of your project
+          .maximum_speed = 400000UL,
+      },
+      .clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL, // optional
   };
 #endif
 
@@ -272,8 +296,8 @@ void i2c_slave_deinit()
 bool checkI2Cbus(int log_entry_idx)
 {
 
-  bool scl_high = digitalRead(I2C_MASTER_SCL_IO) == HIGH;
-  bool sda_high = digitalRead(I2C_MASTER_SDA_IO) == HIGH;
+  bool scl_high = digitalRead(master_scl_pin) == HIGH;
+  bool sda_high = digitalRead(master_sda_pin) == HIGH;
 
   if (scl_high && sda_high)
   {
@@ -299,9 +323,9 @@ bool checkI2Cbus(int log_entry_idx)
   // read I2C pin state as fast as possible and return if both are HIGH for 100uS (about 10 I2C clock periods at 100kHz)
   // Using GPIO.in directly seems to be 3x faster compared to DigitalRead
   // source: https://www.reddit.com/r/esp32/comments/f529hf/results_comparing_the_speeds_of_different_gpio/
-  // As I2C_MASTER_SCL_IO and I2C_MASTER_SDA_IO are within the range GPIO0~31, GPIO.in can be used
+  // As master_scl_pin and master_sda_pin are within the range GPIO0~31, GPIO.in can be used
   unsigned long pin_check_timout = micros();
-  while (digitalRead(I2C_MASTER_SCL_IO) == HIGH && digitalRead(I2C_MASTER_SDA_IO) == HIGH)
+  while (digitalRead(master_scl_pin) == HIGH && digitalRead(master_sda_pin) == HIGH)
   {
     if (micros() - pin_check_timout < 100)
       return true;
@@ -314,7 +338,7 @@ bool checkI2Cbus(int log_entry_idx)
   unsigned int cntr = 0;
   // bool log_i2cbus_busy = false;
 
-  while ((digitalRead(I2C_MASTER_SCL_IO) == LOW || digitalRead(I2C_MASTER_SDA_IO) == LOW) && cntr < 10)
+  while ((digitalRead(master_scl_pin) == LOW || digitalRead(master_sda_pin) == LOW) && cntr < 10)
   {
     // log_i2cbus_busy = true;
 
@@ -328,7 +352,7 @@ bool checkI2Cbus(int log_entry_idx)
   }
   if (cntr > 9)
   {
-    // logInput("Warning: I2C timeout, trying I2C bus reset...");
+    W_LOG("Warning: I2C timeout, trying I2C bus reset...");
     int result = I2C_ClearBus();
     if (result != 0)
     {
@@ -344,7 +368,7 @@ bool checkI2Cbus(int log_entry_idx)
       {
         i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_SDA_LOW);
       }
-      logInput("Error: I2C bus could not be cleared!");
+      E_LOG("Error: I2C bus could not be cleared!");
       ithoInitResult = -2; // stop I2C
     }
     else
@@ -360,7 +384,7 @@ bool checkI2Cbus(int log_entry_idx)
     // {
     //   char buf[64]{};
     //   snprintf(buf, sizeof(buf), "Info: I2C bus busy, cleared after %dms", millis() - startbusy);
-    //   logInput(buf);
+    //   N_LOG(buf);
     // }
     i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_CLEARED_OK);
     return true;
@@ -387,8 +411,8 @@ int I2C_ClearBus()
   i2c_master_deinit();
   i2c_slave_deinit();
 
-  pinMode(I2C_MASTER_SDA_IO, INPUT_PULLUP); // Make SDA (data) and SCL (clock) pins Inputs with pullup.
-  pinMode(I2C_MASTER_SCL_IO, INPUT_PULLUP);
+  pinMode(master_sda_pin, INPUT_PULLUP); // Make SDA (data) and SCL (clock) pins Inputs with pullup.
+  pinMode(master_scl_pin, INPUT_PULLUP);
 
   delay(2500); // Wait 2.5 secs. This is strictly only necessary on the first power
   // up of the DS3231 module to allow it to initialize properly,
@@ -396,40 +420,40 @@ int I2C_ClearBus()
   // IDE a chance to start uploaded the program
   // before existing sketch confuses the IDE by sending Serial data.
 
-  boolean SCL_LOW = (digitalRead(I2C_MASTER_SCL_IO) == LOW); // Check is SCL is Low.
+  boolean SCL_LOW = (digitalRead(master_scl_pin) == LOW); // Check is SCL is Low.
   if (SCL_LOW)
   {           // If it is held low Arduno cannot become the I2C master.
     return 1; // I2C bus error. Could not clear SCL clock line held low
   }
 
-  boolean SDA_LOW = (digitalRead(I2C_MASTER_SDA_IO) == LOW); // vi. Check SDA input.
-  int clockCount = 20;                                       // > 2x9 clock
+  boolean SDA_LOW = (digitalRead(master_sda_pin) == LOW); // vi. Check SDA input.
+  int clockCount = 20;                                    // > 2x9 clock
 
   while (SDA_LOW && (clockCount > 0))
   { //  vii. If SDA is Low,
     clockCount--;
     // Note: I2C bus is open collector so do NOT drive SCL or SDA high.
-    pinMode(I2C_MASTER_SCL_IO, INPUT);        // release SCL pullup so that when made output it will be LOW
-    pinMode(I2C_MASTER_SCL_IO, OUTPUT);       // then clock SCL Low
-    delayMicroseconds(10);                    //  for >5us
-    pinMode(I2C_MASTER_SCL_IO, INPUT);        // release SCL LOW
-    pinMode(I2C_MASTER_SCL_IO, INPUT_PULLUP); // turn on pullup resistors again
+    pinMode(master_scl_pin, INPUT);        // release SCL pullup so that when made output it will be LOW
+    pinMode(master_scl_pin, OUTPUT);       // then clock SCL Low
+    delayMicroseconds(10);                 //  for >5us
+    pinMode(master_scl_pin, INPUT);        // release SCL LOW
+    pinMode(master_scl_pin, INPUT_PULLUP); // turn on pullup resistors again
     // do not force high as slave may be holding it low for clock stretching.
     delayMicroseconds(10); //  for >5us
     // The >5us is so that even the slowest I2C devices are handled.
-    SCL_LOW = (digitalRead(I2C_MASTER_SCL_IO) == LOW); // Check if SCL is Low.
+    SCL_LOW = (digitalRead(master_scl_pin) == LOW); // Check if SCL is Low.
     int counter = 20;
     while (SCL_LOW && (counter > 0))
     { //  loop waiting for SCL to become High only wait 2sec.
       counter--;
       delay(100);
-      SCL_LOW = (digitalRead(I2C_MASTER_SCL_IO) == LOW);
+      SCL_LOW = (digitalRead(master_scl_pin) == LOW);
     }
     if (SCL_LOW)
     {           // still low after 2 sec error
       return 2; // I2C bus error. Could not clear. SCL clock line held low by slave clock stretch for >2sec
     }
-    SDA_LOW = (digitalRead(I2C_MASTER_SDA_IO) == LOW); //   and check SDA input again and loop
+    SDA_LOW = (digitalRead(master_sda_pin) == LOW); //   and check SDA input again and loop
   }
   if (SDA_LOW)
   {           // still low
@@ -437,16 +461,16 @@ int I2C_ClearBus()
   }
 
   // else pull SDA line low for Start or Repeated Start
-  pinMode(I2C_MASTER_SDA_IO, INPUT);  // remove pullup.
-  pinMode(I2C_MASTER_SDA_IO, OUTPUT); // and then make it LOW i.e. send an I2C Start or Repeated start control.
+  pinMode(master_sda_pin, INPUT);  // remove pullup.
+  pinMode(master_sda_pin, OUTPUT); // and then make it LOW i.e. send an I2C Start or Repeated start control.
   // When there is only one I2C master a Start or Repeat Start has the same function as a Stop and clears the bus.
   /// A Repeat Start is a Start occurring after a Start with no intervening Stop.
-  delayMicroseconds(10);                    // wait >5us
-  pinMode(I2C_MASTER_SDA_IO, INPUT);        // remove output low
-  pinMode(I2C_MASTER_SDA_IO, INPUT_PULLUP); // and make SDA high i.e. send I2C STOP control.
-  delayMicroseconds(10);                    // x. wait >5us
-  pinMode(I2C_MASTER_SDA_IO, INPUT);        // and reset pins as tri-state inputs which is the default state on reset
-  pinMode(I2C_MASTER_SCL_IO, INPUT);
+  delayMicroseconds(10);                 // wait >5us
+  pinMode(master_sda_pin, INPUT);        // remove output low
+  pinMode(master_sda_pin, INPUT_PULLUP); // and make SDA high i.e. send I2C STOP control.
+  delayMicroseconds(10);                 // x. wait >5us
+  pinMode(master_sda_pin, INPUT);        // and reset pins as tri-state inputs which is the default state on reset
+  pinMode(master_scl_pin, INPUT);
   return 0; // all ok
 }
 
@@ -467,22 +491,22 @@ void trigger_sht_sensor_reset()
   i2c_master_deinit();
   i2c_slave_deinit();
 
-  pinMode(I2C_MASTER_SDA_IO, OUTPUT); // Make SDA (data) and SCL (clock) pins outputs
-  pinMode(I2C_MASTER_SCL_IO, OUTPUT);
+  pinMode(master_sda_pin, OUTPUT); // Make SDA (data) and SCL (clock) pins outputs
+  pinMode(master_scl_pin, OUTPUT);
 
-  digitalWrite(I2C_MASTER_SDA_IO, HIGH);
-  digitalWrite(I2C_MASTER_SCL_IO, HIGH);
+  digitalWrite(master_sda_pin, HIGH);
+  digitalWrite(master_scl_pin, HIGH);
 
   for (uint i = 0; i < 10; i++)
   {
-    digitalWrite(I2C_MASTER_SCL_IO, LOW);
+    digitalWrite(master_scl_pin, LOW);
     delayMicroseconds(10);
-    digitalWrite(I2C_MASTER_SCL_IO, HIGH);
+    digitalWrite(master_scl_pin, HIGH);
     delayMicroseconds(10);
   }
 
-  pinMode(I2C_MASTER_SDA_IO, INPUT); // and reset pins as tri-state inputs which is the default state on reset
-  pinMode(I2C_MASTER_SCL_IO, INPUT);
+  pinMode(master_sda_pin, INPUT); // and reset pins as tri-state inputs which is the default state on reset
+  pinMode(master_scl_pin, INPUT);
 
   delayMicroseconds(20);
 }

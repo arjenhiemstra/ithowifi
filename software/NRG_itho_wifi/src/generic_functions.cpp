@@ -143,10 +143,10 @@ void getIthoSettingsBackupJSON(JsonObject root)
 
 bool ithoExecCommand(const char *command, cmdOrigin origin)
 {
-  D_LOG("EXEC COMMAND:%s\n", command);
+  D_LOG("EXEC COMMAND:%s", command);
   if (systemConfig.itho_vremoteapi)
   {
-    return ithoI2CCommand(0, command, origin);
+    ithoI2CCommand(0, command, origin);
   }
   else
   {
@@ -207,8 +207,6 @@ bool ithoExecCommand(const char *command, cmdOrigin origin)
   return true;
 }
 
-
-
 bool ithoSetSpeed(const char *speed, cmdOrigin origin)
 {
   uint16_t val = strtoul(speed, NULL, 10);
@@ -217,15 +215,16 @@ bool ithoSetSpeed(const char *speed, cmdOrigin origin)
 
 bool ithoSetSpeed(uint16_t speed, cmdOrigin origin)
 {
-  D_LOG("SET SPEED:%d\n", speed);
-  if (speed < 255)
+  if (speed < 256)
   {
+    D_LOG("SET SPEED:%d", speed);
     nextIthoVal = speed;
     nextIthoTimer = 0;
     updateItho();
   }
   else
   {
+    D_LOG("SET SPEED: value out of range");
     return false;
   }
 
@@ -243,7 +242,7 @@ bool ithoSetTimer(const char *timer, cmdOrigin origin)
 
 bool ithoSetTimer(uint16_t timer, cmdOrigin origin)
 {
-  D_LOG("SET TIMER:%dmin\n", timer);
+  D_LOG("SET TIMER:%dmin", timer);
   if (timer > 0 && timer < 65535)
   {
     nextIthoTimer = timer;
@@ -270,7 +269,7 @@ bool ithoSetSpeedTimer(const char *speed, const char *timer, cmdOrigin origin)
 
 bool ithoSetSpeedTimer(uint16_t speed, uint16_t timer, cmdOrigin origin)
 {
-  D_LOG("SET SPEED AND TIMER\n");
+  D_LOG("SET SPEED AND TIMER");
   if (speed < 255)
   {
     nextIthoVal = speed;
@@ -349,8 +348,6 @@ void add2queue()
 {
   ithoQueue.add2queue(nextIthoVal, nextIthoTimer, systemConfig.nonQ_cmd_clearsQ);
 }
-
-
 
 void setRFdebugLevel(uint8_t level)
 {
