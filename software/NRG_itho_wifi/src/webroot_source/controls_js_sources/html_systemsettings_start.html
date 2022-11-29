@@ -41,35 +41,35 @@
       <input id="option-api_normalize-1" type="radio" name="option-api_normalize" value="1"> on
       <input id="option-api_normalize-0" type="radio" name="option-api_normalize" value="0"> off
     </div>
-    <legend><br>Speed settings (CVE only) (0-254):</legend>
+    <legend><br>Speed settings (CVE only) (0-255):</legend>
     <div class="pure-control-group">
       <label for="itho_fallback">Start/fallback speed</label>
-      <input id="itho_fallback" type="number" min="0" max="254" size="6">
+      <input id="itho_fallback" type="number" min="0" max="255" size="6">
     </div>
     <div class="pure-control-group">
       <label for="itho_low">Low</label>
-      <input id="itho_low" type="number" min="0" max="254" size="6">
+      <input id="itho_low" type="number" min="0" max="255" size="6">
     </div>
     <div class="pure-control-group">
       <label for="itho_medium">Medium</label>
-      <input id="itho_medium" type="number" min="0" max="254" size="6">
+      <input id="itho_medium" type="number" min="0" max="255" size="6">
     </div>
     <div class="pure-control-group">
       <label for="itho_high">High</label>
-      <input id="itho_high" type="number" min="0" max="254" size="6">
+      <input id="itho_high" type="number" min="0" max="255" size="6">
     </div>
-    <legend><br>Timer settings (0-254 minutes):</legend>
+    <legend><br>Timer settings (0-255 minutes):</legend>
     <div class="pure-control-group">
       <label for="itho_timer1">Timer1</label>
-      <input id="itho_timer1" type="number" min="0" max="254" size="6">
+      <input id="itho_timer1" type="number" min="0" max="255" size="6">
     </div>
     <div class="pure-control-group">
       <label for="itho_timer2">Timer2</label>
-      <input id="itho_timer2" type="number" min="0" max="254" size="6">
+      <input id="itho_timer2" type="number" min="0" max="255" size="6">
     </div>
     <div class="pure-control-group">
       <label for="itho_timer3">Timer3</label>
-      <input id="itho_timer3" type="number" min="0" max="254" size="6">
+      <input id="itho_timer3" type="number" min="0" max="255" size="6">
     </div>
     <legend><br>Itho status update frequency (0-65535 seconds):</legend>
     <p>Controls the rate at which sensor data, status data and system information is requested and updated on the API
@@ -90,7 +90,7 @@
       way the add-on can overrule the current speed settings of the itho (ie. due to active input from a built in
       humidity sensor or another remote)</p>
     <p>Received commands from RF remotes can be translated to matching virtual remote commands with the 'Map RF remotes
-      to virtual remote' option for non-CVE devices. The 0-254 speed control does not work for these devices, the timer
+      to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
       settings do work as expected.</p>
     <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
     <div class="pure-control-group">
@@ -121,12 +121,26 @@
       <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
     </div>
     <legend><br>Activate I2C extra debug functionality:</legend>
-    <p>Some CVE users experience issues with crashing I2C communication. This option enables an extra menu where more I2C options and logging is available.</p>
+    <p>Some CVE users experience issues with crashing I2C communication. This option enables an extra menu where more
+      I2C options and logging is available.</p>
     <br>
     <div class="pure-control-group">
       <label for="option-i2cmenu" class="pure-radio">I2C debug menu</label>
       <input id="option-i2cmenu-1" type="radio" name="option-i2cmenu" value="1"> on
       <input id="option-i2cmenu-0" type="radio" name="option-i2cmenu" value="0"> off
+    </div>
+    <p>The i2c safe guard is a protection mechanism for CVE fans with built-in humidity sensor (models with light grey lid)</p><p>(Reboot needed, does not work in conjunction with the i2c sniffer)</p>
+    <div class="pure-control-group">
+      <label for="option-i2c_safe_guard" class="pure-radio">I2C safe guard</label>
+      <input id="option-i2c_safe_guard-1" type="radio" name="option-i2c_safe_guard" value="1"> on
+      <input id="option-i2c_safe_guard-0" type="radio" name="option-i2c_safe_guard" value="0"> off
+    </div>
+    <p>The i2c sniffer works only on sniffer capable devices (non-cve; all versions, cve; as of hw rev. 2.5). See system
+      log for confirmation.</p><p>(Reboot needed)</p>
+    <div class="pure-control-group">
+      <label for="option-i2c_sniffer" class="pure-radio">I2C sniffer</label>
+      <input id="option-i2c_sniffer-1" type="radio" name="option-i2c_sniffer" value="1"> on
+      <input id="option-i2c_sniffer-0" type="radio" name="option-i2c_sniffer" value="0"> off
     </div>
   </fieldset>
 </form>

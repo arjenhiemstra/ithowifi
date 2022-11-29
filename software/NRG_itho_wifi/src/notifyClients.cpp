@@ -144,7 +144,7 @@ void otaWSupdate(size_t prg, size_t sz)
     notifyClients(root.as<JsonObjectConst>());
 
 #if defined(ENABLE_SERIAL)
-    D_LOG("OTA Progress: %d%%\n", newPercent);
+    D_LOG("OTA Progress: %d%%", newPercent);
 #endif
   }
 }

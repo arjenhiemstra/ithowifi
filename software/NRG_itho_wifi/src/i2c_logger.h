@@ -6,27 +6,30 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
+typedef enum
+{
+    I2C_CMD_EMPTY_CMDREF,
+    I2C_CMD_UNKOWN,
+    I2C_CMD_PWM_INIT,
+    I2C_CMD_PWM_CMD,
+    I2C_CMD_REMOTE_CMD,
+    I2C_CMD_QUERY_DEVICE_TYPE,
+    I2C_CMD_QUERY_STATUS_FORMAT,
+    I2C_CMD_QUERY_STATUS,
+    I2C_CMD_QUERY_31DA,
+    I2C_CMD_QUERY_31D9,
+    I2C_CMD_QUERY_2410,
+    I2C_CMD_SET_2410,
+    I2C_CMD_FILTER_RESET,
+    I2C_CMD_TEMP_READ_ITHO,
+    I2C_CMD_TEMP_READ_SLAVE,
+    I2C_CMD_TEMP_READ_CMD
+} i2c_cmdref_t;
+
 class I2CLogger
 {
 public:
-    typedef enum
-    {
-        EMPTY_CMDREF,
-        I2C_CMD_UNKOWN,
-        I2C_CMD_PWM_INIT,
-        I2C_CMD_PWM_CMD,
-        I2C_CMD_REMOTE_CMD,
-        I2C_CMD_QUERY_DEVICE_TYPE,
-        I2C_CMD_QUERY_STATUS_FORMAT,
-        I2C_CMD_QUERY_STATUS,
-        I2C_CMD_QUERY_31DA,
-        I2C_CMD_QUERY_31D9,
-        I2C_CMD_QUERY_2410,
-        I2C_CMD_SET_2410,
-        I2C_CMD_FILTER_RESET,
-        I2C_CMD_TEMP_READ_SLAVE,
-        I2C_CMD_TEMP_READ_CMD
-    } i2c_cmdref_t;
+
 
     typedef enum
     {
@@ -67,8 +70,8 @@ private:
         const char *msg;
     } i2c_error_state_msg;
 
-    const i2c_cmdref_msg i2c_cmdref_msg_table[15]{
-        {EMPTY_CMDREF, ""},
+    const i2c_cmdref_msg i2c_cmdref_msg_table[16]{
+        {I2C_CMD_EMPTY_CMDREF, ""},
         {I2C_CMD_UNKOWN, "UNKOWN"},
         {I2C_CMD_PWM_INIT, "PWM_INIT"},
         {I2C_CMD_PWM_CMD, "PWM_CMD"},
@@ -81,6 +84,7 @@ private:
         {I2C_CMD_QUERY_2410, "QUERY_2410"},
         {I2C_CMD_SET_2410, "SET_2410"},
         {I2C_CMD_FILTER_RESET, "FILTER_RESET"},
+        {I2C_CMD_TEMP_READ_ITHO, "TEMP_READ_FROM_ITHO"},
         {I2C_CMD_TEMP_READ_SLAVE, "TEMP_READ_SLAVE"},
         {I2C_CMD_TEMP_READ_CMD, "TEMP_READ_CMD"}};
     const char *i2c_cmdref_unknown_msg = "UNKNOWN ERROR";

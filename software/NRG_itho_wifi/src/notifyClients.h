@@ -1,7 +1,5 @@
 #pragma once
 
-#define LOG_BUF_SIZE 128
-
 #include <cstdio>
 #include <string>
 
@@ -11,7 +9,7 @@
 #include <ArduinoJson.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include "Dbglog.h"
+#include "sys_log.h"
 
 extern struct mg_mgr mgr;
 extern const char *s_listen_on_ws;
@@ -27,6 +25,16 @@ typedef enum
     RFLOG,
     ITHOSETTINGS
 } logtype;
+
+typedef enum
+{
+    WEB_UPDATE_FALSE = 0x0,
+    WEB_UPDATE_TRUE = 0x01,
+    SETTINGS_FIRST_RUN = 0x02,
+    SETTINGS_UPDATE_TABLE = 0x03,
+    SETTINGS_UPDATE_DEBUG = 0x04
+} web_status_update_t;
+
 extern size_t content_len;
 
 void notifyClients(const char *message);

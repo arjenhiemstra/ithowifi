@@ -29,7 +29,7 @@ IRAM_ATTR void ITHOinterrupt()
 
 void disableRFsupport()
 {
-  detachInterrupt(ITHO_IRQ_PIN);
+  detachInterrupt(itho_irq_pin);
 }
 
 uint8_t findRFTlastCommand()
@@ -208,7 +208,7 @@ void TaskCC1101(void *pvParameters)
     // attach saveConfig and reboot script to fire after 2 sec
     reboot.attach(2, []()
                   {
-      logInput("Setup: init of CC1101 RF module failed");
+      E_LOG("Setup: init of CC1101 RF module failed");
       saveSystemConfig();
       delay(1000);
       ACTIVE_FS.end();
@@ -218,13 +218,13 @@ void TaskCC1101(void *pvParameters)
 
     // init the RF module
     rf.init();
-    pinMode(ITHO_IRQ_PIN, INPUT);
-    attachInterrupt(ITHO_IRQ_PIN, ITHOinterrupt, RISING);
+    pinMode(itho_irq_pin, INPUT);
+    attachInterrupt(itho_irq_pin, ITHOinterrupt, RISING);
 
     // this portion of code will not be reached when no RF module is present: detach reboot script, switch on rf_supprt and load remotes config
     esp_task_wdt_add(NULL);
     reboot.detach();
-    logInput("Setup: init of CC1101 RF module successful");
+    N_LOG("Setup: init of CC1101 RF module successful");
     rf.setDeviceID(sys.getMac(3), sys.getMac(4), sys.getMac(5));
     systemConfig.itho_rf_support = 1;
     loadRemotesConfig();
@@ -245,7 +245,7 @@ void TaskCC1101(void *pvParameters)
       esp_task_wdt_reset();
 
       TaskCC1101Timeout.once_ms(1000, []()
-                                { logInput("Warning: CC1101 Task timed out!"); });
+                                { W_LOG("Warning: CC1101 Task timed out!"); });
       if (ithoCheck)
       {
         ithoCheck = false;
@@ -283,7 +283,7 @@ void TaskCC1101(void *pvParameters)
             }
             if (cmd == IthoLeave && remotes.remoteLearnLeaveStatus())
             {
-              D_LOG("Leave command received. Trying to remove remote...\n");
+              D_LOG("Leave command received. Trying to remove remote...");
               int result = remotes.removeRemote(id);
               switch (result)
               {

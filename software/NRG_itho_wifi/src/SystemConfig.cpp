@@ -50,6 +50,8 @@ SystemConfig::SystemConfig()
   itho_vremoteapi = 0;
   itho_rf_support = 0;
   i2cmenu = 0;
+  i2c_safe_guard = 0;
+  i2c_sniffer = 0;
   rfInitOK = false;
   nonQ_cmd_clearsQ = 1;
 
@@ -284,6 +286,16 @@ bool SystemConfig::set(JsonObjectConst obj)
     updated = true;
     i2cmenu = obj["i2cmenu"];
   }
+  if (!(const char *)obj["i2c_safe_guard"].isNull())
+  {
+    updated = true;
+    i2c_safe_guard = obj["i2c_safe_guard"];
+  }
+  if (!(const char *)obj["i2c_sniffer"].isNull())
+  {
+    updated = true;
+    i2c_sniffer = obj["i2c_sniffer"];
+  }
   if (!(const char *)obj["rfInitOK"].isNull())
   {
     updated = true;
@@ -332,6 +344,8 @@ void SystemConfig::get(JsonObject obj) const
     obj["itho_vremoteapi"] = itho_vremoteapi;
     obj["nonQ_cmd_clearsQ"] = nonQ_cmd_clearsQ;
     obj["i2cmenu"] = i2cmenu;
+    obj["i2c_safe_guard"] = i2c_safe_guard;
+    obj["i2c_sniffer"] = i2c_sniffer;
   }
   if (complete || get_mqtt_settings)
   {

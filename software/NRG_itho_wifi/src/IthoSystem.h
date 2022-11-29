@@ -14,8 +14,7 @@
 #include "IthoPacket.h"
 #include "IthoRemote.h"
 #include "SystemConfig.h"
-#include "hardware.h"
-#include "flashLog.h"
+#include "sys_log.h"
 #include "notifyClients.h"
 #include "i2c_esp32.h"
 #include "task_mqtt.h"
@@ -27,10 +26,10 @@
 extern volatile uint16_t ithoCurrentVal;
 extern const struct ihtoDeviceType *ithoDeviceptr;
 
-extern bool get2410;
-extern bool set2410;
-extern uint8_t index2410;
-extern int32_t value2410;
+// extern bool get2410;
+// extern bool set2410;
+// extern uint8_t index2410;
+// extern int32_t value2410;
 extern int32_t *resultPtr2410;
 extern bool i2c_result_updateweb;
 
@@ -60,7 +59,7 @@ struct ithoDeviceStatus
   } value;
   uint32_t divider;
   uint8_t updated;
-  ithoDeviceStatus():updated(0) {};
+  ithoDeviceStatus() : updated(0){};
 };
 
 struct ithoDeviceMeasurements
@@ -126,7 +125,7 @@ uint16_t currentIthoSettingsLength();
 int16_t currentIthoStatusLabelLength();
 int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop = false);
-void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop, const struct ihtoDeviceType *settingsPtr, const uint8_t deviceID, const uint8_t version);
+void processSettingResult(const uint8_t index, const bool loop);
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
 const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr, const uint8_t version);
 void updateSetting(const uint8_t i, const int32_t value, bool webupdate);
@@ -134,15 +133,16 @@ const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8
 
 uint8_t checksum(const uint8_t *buf, size_t buflen);
 void sendI2CPWMinit();
-void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command, IthoRemote &remotes);
+void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command);
 void sendQueryDevicetype(bool updateweb);
 void sendQueryStatusFormat(bool updateweb);
 void sendQueryStatus(bool updateweb);
 void sendQuery31DA(bool updateweb);
 void sendQuery31D9(bool updateweb);
-int32_t *sendQuery2410(bool &updateweb);
-void setSetting2410(bool &updateweb);
-void filterReset(const int remoteIndex, IthoRemote &remotes);
+int32_t *sendQuery2410(uint8_t index, bool updateweb);
+void setSetting2410(uint8_t index, int32_t value, bool updateweb);
+// void setSetting2410(bool updateweb);
+void filterReset();
 void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
 int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);

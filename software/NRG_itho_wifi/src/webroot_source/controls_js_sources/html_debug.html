@@ -1,0 +1,81 @@
+<div id="main" style="max-width: 1600px;">
+    <div class="header">
+        <h1>Debug page</h1>
+    </div><br><br>
+    <div>
+        <span>Config version: </span><span id='configversion'>unknown</span><br><br>
+        <span>Itho I2C connection status: </span><span id='ithoinit'>unknown</span>
+    </div>
+    <br>
+    <span>File system: </span><span id='bfree'></span><span> bytes used / </span><span id='btotal'></span><span> bytes
+        total</span><br>
+    <a href="#" class="pure-button" onclick="$('#main').empty();$('#main').append( html_edit );">Edit
+        filesystem</a><br><br>
+    <span>CC1101 task memory: </span><span id='cc1101taskmem'></span><span> bytes free</span><br>
+    <span>MQTT task memory: </span><span id='mqtttaskmem'></span><span> bytes free</span><br>
+    <span>Web task memory: </span><span id='webtaskmem'></span><span> bytes free</span><br>
+    <span>Config and Log task memory: </span><span id='cltaskmem'></span><span> bytes free</span><br>
+    <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br><br>
+    <br><br>
+    <div id="rflog_outer" class="hidden">
+        <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
+        <div id="rflog"
+            style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+        </div>
+        <div style="padding-top:5px;">
+            <a href="#" class="pure-button" onclick="$('#rflog').empty()">Clear</a>
+        </div>
+    </div>
+    <form class="pure-form pure-form-aligned">
+        <fieldset>
+            <legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id="rfdebug-0"
+                class="pure-button pure-button-primary">Off</button><br><br><button id="rfdebug-1"
+                class="pure-button pure-button-primary">Level1</button>&nbsp;Level1 will show only known itho commands
+            from all devices<br><br><button id="rfdebug-2"
+                class="pure-button pure-button-primary">Level2</button>&nbsp;Level2 will show all received RF messages
+            from devices joined to the add-on<br><br><button id="rfdebug-3"
+                class="pure-button pure-button-primary">Level3</button>&nbsp;Level3 will show all received RF messages
+            from all devices<br><br>
+            <fieldset>
+                <legend><br>Low level itho I2C commands:</legend><br>
+                <button id="ithobutton-type" class="pure-button pure-button-primary">Query Devicetype</button><br>
+                <span>Result:&nbsp;</span><span id="ithotype"></span><br><br>
+                <button id="ithobutton-statusformat" class="pure-button pure-button-primary">Query Status
+                    Format</button><br><span>Result:&nbsp;</span><span id="ithostatusformat"></span><br><br>
+                <button id="ithobutton-status" class="pure-button pure-button-primary">Query
+                    Status</button><br><span>Result:&nbsp;</span><span id="ithostatus"></span><br><br>
+                <button id="button2410" class="pure-button pure-button-primary">Query 2410</button>setting index: <input
+                    id="itho_setting_id" type="number" min="0" max="255" size="6"
+                    value="0"><br><span>Result:&nbsp;</span><span id="itho2410"></span><br>
+                <span>Current:&nbsp;</span><span id="itho2410cur"></span><br>
+                <span>Minimum value:&nbsp;</span><span id="itho2410min"></span><br>
+                <span>Maximum value:&nbsp;</span><span id="itho2410max"></span><br><br>
+                <span style="color:red">Warning!!<br> "Set 2410" changes the settings of your itho unit<br>Use with care
+                    and
+                    use only if you know what you are doing!</span><br>
+                <button id="button2410set" class="pure-button pure-button-primary">Set 2410</button>setting index:
+                <input id="itho_setting_id_set" type="number" min="0" max="255" size="6" value="0"> setting value:
+                <input id="itho_setting_value_set" type="number" min="-2147483647" max="2147483647" size="10"
+                    value="0"><br>
+                <span>Sent command:&nbsp;</span><span id="itho2410set"></span><br><span>Result:&nbsp;</span><span
+                    id="itho2410setres"></span><br>
+                <span style="color:red">Warning!!</span><br><br><button id="ithobutton-31DA"
+                    class="pure-button pure-button-primary">Query 31DA</button><br><span>Result:&nbsp;</span>
+                <span id="itho31DA"></span><br><br><button id="ithobutton-31D9"
+                    class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
+                    id="itho31D9"></span><br><br>
+                <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
+                    reset</button><br><span>Filter
+                    reset function uses virtual remote 0, this remote needs to be paired with your itho for this command
+                    to
+                    work</span>
+            </fieldset><br><br><br>
+        </fieldset>
+    </form>
+</div>
+<script>
+    $(document).ready(function () {
+        getSettings('debugvalues');
+        getSettings('sysstat');
+    });
+</script>

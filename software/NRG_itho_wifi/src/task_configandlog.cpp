@@ -9,8 +9,11 @@ uint32_t TaskConfigAndLogHWmark = 0;
 volatile bool saveRemotesflag = false;
 volatile bool saveVremotesflag = false;
 bool formatFileSystem = false;
+bool flashLogInitReady = false;
 
 // locals
+FSFilePrint filePrint(ACTIVE_FS, "/logfile", 2, 10000);
+
 StaticTask_t xTaskConfigAndLogBuffer;
 StackType_t xTaskConfigAndLog[STACK_SIZE];
 
@@ -35,11 +38,22 @@ void TaskConfigAndLog(void *pvParameters)
 {
   configASSERT((uint32_t)pvParameters == 1UL);
 
+  syslog_queue_worker();
+
   initFileSystem();
+  syslog_queue_worker();
+
   logInit();
+  syslog_queue_worker();
+
   loadSystemConfig();
+  syslog_queue_worker();
+
+  loadLogConfig();
+  syslog_queue_worker();
 
   startTaskSysControl();
+  syslog_queue_worker();
 
   esp_task_wdt_add(NULL);
 
@@ -49,7 +63,7 @@ void TaskConfigAndLog(void *pvParameters)
     esp_task_wdt_reset();
 
     TaskConfigAndLogTimeout.once_ms(3000, []()
-                                    { logInput("Warning: Task ConfigAndLog timed out!"); });
+                                    { W_LOG("Warning: Task ConfigAndLog timed out!"); });
 
     execLogAndConfigTasks();
 
@@ -63,6 +77,7 @@ void TaskConfigAndLog(void *pvParameters)
 
 void execLogAndConfigTasks()
 {
+  syslog_queue_worker();
   // Logging and config tasks
   if (saveSystemConfigflag)
   {
@@ -74,6 +89,18 @@ void execLogAndConfigTasks()
     else
     {
       logMessagejson("Failed saving System settings: Unable to write config file", WEBINTERFACE);
+    }
+  }
+  if (saveLogConfigflag)
+  {
+    saveLogConfigflag = false;
+    if (saveLogConfig())
+    {
+      logMessagejson("Log settings saved", WEBINTERFACE);
+    }
+    else
+    {
+      logMessagejson("Failed saving Log settings: Unable to write config file", WEBINTERFACE);
     }
   }
   if (saveWifiConfigflag)
@@ -132,10 +159,7 @@ void execLogAndConfigTasks()
 
   if (millis() - lastLog > LOGGING_INTERVAL)
   {
-    char logBuff[LOG_BUF_SIZE]{};
-    sprintf(logBuff, "Mem free: %d, Mem low: %d, Mem block: %d", sys.getMemHigh(), sys.getMemLow(), sys.getMaxFreeBlockSize());
-    logInput(logBuff);
-
+    log_mem_info();
     lastLog = millis();
   }
 
@@ -170,10 +194,68 @@ void execLogAndConfigTasks()
   }
 }
 
+void syslog_queue_worker()
+{
+  if (syslog_queue == NULL)
+    return;
+
+  log_msg input;
+
+  while (xQueueReceive(syslog_queue, &(input), (TickType_t)0))
+  {
+
+    if (flashLogInitReady)
+    {
+      yield();
+
+      filePrint.open();
+
+      if (input.code <= SYSLOG_CRIT && logConfig.loglevel >= SYSLOG_CRIT)
+      {
+        Log.fatalln(input.msg);
+      }
+      else if (input.code == SYSLOG_ERR && logConfig.loglevel >= SYSLOG_ERR)
+      {
+        Log.errorln(input.msg);
+      }
+      else if (input.code == SYSLOG_WARNING && logConfig.loglevel >= SYSLOG_WARNING)
+      {
+        Log.warningln(input.msg);
+      }
+      else if (input.code == SYSLOG_NOTICE && logConfig.loglevel >= SYSLOG_NOTICE)
+      {
+        Log.noticeln(input.msg);
+      }
+      // Do not log INFO en DEBUG levels to Flash to prevent excessive wear
+      // else if (input.code == SYSLOG_INFO && logConfig.loglevel >= SYSLOG_INFO)
+      // {
+      //   Log.traceln(input.msg);
+      // }
+      // else if (input.code == SYSLOG_DEBUG && logConfig.loglevel >= SYSLOG_DEBUG)
+      // {
+      //   Log.verboseln(input.msg);
+      // }
+
+      filePrint.close();
+    }
+    if (WiFi.status() == WL_CONNECTED && logConfig.syslog_active == 1)
+    {
+      syslog.log(input.code, input.msg);
+    }
+
+    // Also update webinterface
+    // DynamicJsonDocument root(250);
+    // root["dblog"] = inputString;
+    // notifyClients(root.as<JsonObjectConst>());
+
+    // do something
+  }
+}
+
 bool initFileSystem()
 {
 
-  D_LOG("Mounting FS...\n");
+  D_LOG("Mounting FS...");
 
   ACTIVE_FS.begin(true);
 
@@ -182,6 +264,8 @@ bool initFileSystem()
 
 void logInit()
 {
+  // log_msg
+
   filePrint.open();
 
   Log.begin(LOG_LEVEL_NOTICE, &filePrint);
@@ -190,8 +274,9 @@ void logInit()
 
   filePrint.close();
 
+  flashLogInitReady = true;
+
   delay(100);
-  char logBuff[LOG_BUF_SIZE]{};
 
   uint8_t reason = esp_reset_reason();
   char buf[32]{};
@@ -246,11 +331,26 @@ void logInit()
   default:
     strlcpy(buf, "NO_MEAN", sizeof(buf));
   }
-  sprintf(logBuff, "System boot, last reset reason: %s", buf);
 
-  logInput(logBuff);
+  N_LOG("System boot, last reset reason: %s", buf);
 
-  strlcpy(logBuff, "", sizeof(logBuff));
-  sprintf(logBuff, "HW rev: %s, FW ver.: %s", HWREVISION, FWVERSION);
-  logInput(logBuff);
+  I_LOG("Hardware detected: 0x%02X", hardware_rev_det);
+
+  N_LOG("HW rev: %s, FW ver.: %s", hw_revision, FWVERSION);
+
+  N_LOG("I2C sniffer capable hardware: %s", i2c_sniffer_capable ? "yes" : "no");
+
+  D_LOG("I2C master pins - SDA: %d SCL: %d", master_sda_pin, master_scl_pin);
+
+  D_LOG("I2C slave pins - SDA: %d SCL: %d", slave_sda_pin, slave_scl_pin);
+
+  if (i2c_sniffer_capable)
+  {
+    D_LOG("I2C sniffer pins - SDA: %d SCL: %d", sniffer_sda_pin, sniffer_scl_pin);
+  }
+}
+
+void log_mem_info()
+{
+  I_LOG("Mem free: %d, Mem low: %d, Mem block: %u", sys.getMemHigh(), sys.getMemLow(), sys.getMaxFreeBlockSize());
 }

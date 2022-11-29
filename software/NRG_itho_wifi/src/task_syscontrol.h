@@ -9,10 +9,8 @@
 
 #include "SystemConfig.h"
 #include "WifiConfig.h"
-#include "hardware.h"
 #include "globals.h"
-#include "Dbglog.h"
-#include "flashLog.h"
+#include "sys_log.h"
 #include "notifyClients.h"
 #include "SHTSensor.h"
 #include "task_mqtt.h"
@@ -26,6 +24,7 @@ extern bool SHT3x_alternative;
 extern bool runscan;
 extern bool dontSaveConfig;
 extern bool saveSystemConfigflag;
+extern bool saveLogConfigflag;
 extern bool saveWifiConfigflag;
 extern bool resetWifiConfigflag;
 extern bool resetSystemConfigflag;
@@ -35,10 +34,15 @@ extern int8_t ithoInitResult;
 extern bool IthoInit;
 extern bool wifiModeAP;
 extern bool reset_sht_sensor;
+extern bool restest;
+
 
 void startTaskSysControl();
 void TaskSysControl(void *pvParameters);
+void update_sht_sensor();
+void work_i2c_queue();
 void execSystemControlTasks();
+void init_i2c_functions();
 void wifiInit();
 void setupWiFiAP();
 bool connectWiFiSTA(bool restore = false);
@@ -49,4 +53,4 @@ void init_vRemote();
 bool ithoInitCheck();
 void update_queue();
 bool writeIthoVal(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
-bool ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin);
+void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin);

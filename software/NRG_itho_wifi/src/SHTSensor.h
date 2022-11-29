@@ -31,7 +31,6 @@
 #include <cinttypes>
 
 #include <Arduino.h>
-#include "hardware.h"
 #include "i2c_esp32.h"
 
 // Forward declaration

@@ -10,9 +10,9 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
+#include <queue>
+#include <functional>
 
-#include "hardware.h"
-#include "Dbglog.h"
 #include "IthoSystem.h"
 #include "i2c_logger.h"
 
@@ -25,29 +25,15 @@
 #define I2C_MASTER_TX_BUF_DISABLE 0 /*!< I2C master doesn't need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE 0 /*!< I2C master doesn't need buffer */
 
-#if defined(CVE)
-#define I2C_MASTER_SDA_IO GPIO_NUM_21
-#define I2C_MASTER_SCL_IO GPIO_NUM_22
-#elif defined(NON_CVE)
-#define I2C_MASTER_SDA_IO GPIO_NUM_27
-#define I2C_MASTER_SCL_IO GPIO_NUM_26
-#endif
 #define I2C_MASTER_SDA_PULLUP GPIO_PULLUP_DISABLE
 #define I2C_MASTER_SCL_PULLUP GPIO_PULLUP_DISABLE
 #define I2C_MASTER_NUM I2C_NUM_0
 #define I2C_MASTER_FREQ_HZ 100000
 
-#if defined(CVE)
-#define I2C_SLAVE_SDA_IO GPIO_NUM_21
-#define I2C_SLAVE_SCL_IO GPIO_NUM_22
-#elif defined(NON_CVE)
-#define I2C_SLAVE_SDA_IO GPIO_NUM_27
-#define I2C_SLAVE_SCL_IO GPIO_NUM_26
-#endif
-
 #define I2C_SLAVE_SDA_PULLUP GPIO_PULLUP_DISABLE
 #define I2C_SLAVE_SCL_PULLUP GPIO_PULLUP_DISABLE
 #define I2C_SLAVE_NUM I2C_NUM_0
+#define I2C_SLAVE_EXPECTED_MAX_FREQ_HZ 400000
 #define I2C_SLAVE_RX_BUF_LEN 512
 #define I2C_SLAVE_TX_BUF_LEN 512
 #define I2C_SLAVE_ADDRESS 0x40
@@ -55,20 +41,43 @@
 #include <driver/gpio.h>
 #include <stdint.h>
 
+extern std::deque<std::function<void()>> i2c_cmd_queue;
+
 extern uint8_t i2cbuf[I2C_SLAVE_RX_BUF_LEN];
+extern gpio_num_t master_sda_pin;
+extern gpio_num_t master_scl_pin;
+extern gpio_num_t slave_sda_pin;
+extern gpio_num_t slave_scl_pin;
+
+
+struct cmd_queue_data
+{
+    i2c_cmdref_t cmd{};
+    uint8_t index{};
+    int32_t value{};
+    bool update_state{};
+    bool update_web{};
+    bool loop{};
+    uint16_t *ithoCurrentVal{};
+    bool *updateIthoMQTT{};
+};
+
+
 
 char toHex(uint8_t c);
 
+void i2c_master_setpins(gpio_num_t sda, gpio_num_t scl);
+void i2c_slave_setpins(gpio_num_t sda, gpio_num_t scl);
 esp_err_t i2c_master_init();
 void i2c_master_deinit();
 esp_err_t i2c_master_send(const char *buf, uint32_t len, int log_entry_idx);
 esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len, int log_entry_idx);
 
-esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size, I2CLogger::i2c_cmdref_t origin);
+esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size, i2c_cmdref_t origin);
 esp_err_t i2c_master_read_slave(uint8_t addr, uint8_t *data_rd, size_t size);
-bool i2c_sendBytes(const uint8_t *buf, size_t len, I2CLogger::i2c_cmdref_t origin);
+bool i2c_sendBytes(const uint8_t *buf, size_t len, i2c_cmdref_t origin);
 bool i2c_sendBytes(const uint8_t *buf, size_t len);
-bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len, I2CLogger::i2c_cmdref_t origin);
+bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len, i2c_cmdref_t origin);
 bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len);
 
 size_t i2c_slave_receive(uint8_t i2c_receive_buf[]);
