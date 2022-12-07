@@ -25,3 +25,6 @@ url=https://github.com/arjenhiemstra/FS_FilePrint
 [submodule "software/lib/Mongoose"]
 	path = software/lib/Mongoose
 	url = https://github.com/cesanta/mongoose.git
+[submodule "software/lib/Syslog"]
+	path = software/lib/Syslog
+	url = https://github.com/arcao/Syslog

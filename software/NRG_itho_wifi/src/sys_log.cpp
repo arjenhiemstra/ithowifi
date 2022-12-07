@@ -46,5 +46,7 @@ void sys_log(log_prio_level_t log_prio, const char *inputString, ...)
     return;
 
   input.code = log_prio;
-  xQueueSend(syslog_queue, (void *)&input, (TickType_t)100 == pdPASS);
+  // xQueueSendFromISR(syslog_queue, (void *)&input, (TickType_t)100 == pdPASS);
+  xQueueSend(syslog_queue, (void *)&input, (TickType_t)0);
+  // xQueueSendFromISR(syslog_queue, (void *)&input, NULL);
 }
