@@ -22,7 +22,7 @@
 #include <FSFilePrint.h>
 #include <FS.h>
 #include <Syslog.h>
-#include <WifiUdp.h>
+#include "WiFiUdp.h"
 
 #ifdef ESPRESSIF32_3_5_0
 #include <LITTLEFS.h>

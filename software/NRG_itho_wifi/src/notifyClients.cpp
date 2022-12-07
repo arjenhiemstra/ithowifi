@@ -44,8 +44,6 @@ void notifyClients(JsonObjectConst obj)
 void wsSendAll(void *arg, const char *message)
 {
   struct mg_mgr *mgr = (struct mg_mgr *)arg;
-  // Broadcast "hi" message to all connected websocket clients.
-  // Traverse over all connections
   for (struct mg_connection *c = mgr->conns; c != NULL; c = c->next)
   {
     mg_ws_send(c, message, strlen(message), WEBSOCKET_OP_TEXT);

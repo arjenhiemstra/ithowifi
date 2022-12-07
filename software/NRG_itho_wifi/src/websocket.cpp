@@ -99,6 +99,7 @@ void jsonWsSend(const char *rootName)
         entry["dblog"] = buf.c_str();
         notifyClients(entry.as<JsonObjectConst>());
         buf = String();
+        delay(20);
       }
       buf += char(file.read());
     }

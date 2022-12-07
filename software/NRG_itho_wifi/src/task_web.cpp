@@ -23,8 +23,6 @@ bool webauth_ok = false;
 AsyncWebServer server(80);
 
 // locals
-Ticker DelayedReq;
-
 StaticTask_t xTaskWebBuffer;
 StackType_t xTaskWebStack[STACK_SIZE_LARGE];
 
@@ -92,7 +90,7 @@ void TaskWeb(void *pvParameters)
     yield();
     esp_task_wdt_reset();
 
-    TaskTimeout.once_ms(3000, []()
+    TaskTimeout.once_ms(10000, []()
                         { W_LOG("Warning: Task Web timed out!"); });
 
     execWebTasks();

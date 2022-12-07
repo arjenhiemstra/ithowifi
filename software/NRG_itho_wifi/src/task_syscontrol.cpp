@@ -75,15 +75,14 @@ void work_i2c_queue()
         if (i2c_safe_guard_log)
         {
           i2c_safe_guard_log = false;
-          D_LOG("i2c_safe_guard blocked queue: start:%d > cur:%d < end:%d", i2c_safe_guard.start_close_time, cur_time, i2c_safe_guard.end_close_time);
-          log_mem_info(); //NOTE: Temp monitor get a sense of queue effect on mem
+          //D_LOG("i2c_safe_guard blocked queue: start:%d > cur:%d < end:%d", i2c_safe_guard.start_close_time, cur_time, i2c_safe_guard.end_close_time);
         }
         return;
       }
     }
     if (!i2c_safe_guard_log)
     {
-      D_LOG("i2c_safe_guard unblocked queue");
+      //D_LOG("i2c_safe_guard unblocked queue");
       i2c_safe_guard_log = true;
     }
     i2c_cmd_queue.front()(); //()() is there for a reason!
