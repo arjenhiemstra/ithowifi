@@ -1377,6 +1377,46 @@ void sendQuery31D9(bool updateweb)
   }
 }
 
+void setSettingCE30(uint16_t temperature1, uint16_t temperature2, uint32_t timestamp, bool updateweb)
+// [00,3E,CE,30,05,08, 63,91,DA,C7, xx,xx, yy,yy, FF]
+// from: 00 (broadcast)
+// source: 3E 
+// command: CE30
+// type: 5 (update)
+// length: 8 
+// 6391DAC7 => 4 byte unix timestamp: lifetime of temp1. After timestamp temp1 is replaced by temp2.
+// xxxx two byte temp1:  0x0539 = 13.37 degrees C.
+// yyyy two byte temp2: 0xFC18 = -10 degrees C. 
+// FF checksum
+
+{
+  uint8_t command[] = {0x00, 0x3E, 0xCE, 0x30, 0x05, 0x08, 0x63, 0x91, 0x00, 0x00, 0x7F, 0xFF, 0x7F, 0xFF, 0xFF};
+    
+  command[6] = (timestamp >> 24) & 0xFF;
+  command[7] = (timestamp >> 16) & 0xFF;
+  command[8] = (timestamp >> 8) & 0xFF;
+  command[9] = timestamp & 0xFF;
+
+  command[10] = (temperature1 >> 8) & 0xFF;
+  command[11] = temperature1 & 0xFF;
+  command[12] = (temperature2 >> 8) & 0xFF;
+  command[13] = temperature2 & 0xFF;
+  
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+  
+  D_LOG("CE30 sending: %s", i2cbuf2string(command, sizeof(command)).c_str());
+
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_SET_CE30))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("itho_CE30_result", "failed");
+    }
+    return;
+  }
+}
+
 int32_t *sendQuery2410(uint8_t index, bool updateweb)
 {
 

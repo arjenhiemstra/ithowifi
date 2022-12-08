@@ -231,6 +231,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
               }
             }
           }
+          else if (val == 0xCE30)
+          {
+            setSettingCE30(root["ithotemptemp"].as<int16_t>(), root["ithotemp"].as<int16_t>(), root["ithotimestamp"].as<uint32_t>(), true);
+          }
         }
         else
         {

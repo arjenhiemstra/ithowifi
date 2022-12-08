@@ -1250,144 +1250,6 @@ function addAllColumnHeaders(jsonVar, selector, appendRow) {
 //
 // HTML string literals
 //
-var html_debug = `
-<div id="main" style="max-width: 1600px;">
-    <div class="header">
-        <h1>Debug page</h1>
-    </div><br><br>
-    <div>
-        <span>Config version: </span><span id='configversion'>unknown</span><br><br>
-        <span>Itho I2C connection status: </span><span id='ithoinit'>unknown</span>
-    </div>
-    <br>
-    <span>File system: </span><span id='bfree'></span><span> bytes used / </span><span id='btotal'></span><span> bytes
-        total</span><br>
-    <a href="#" class="pure-button" onclick="$('#main').empty();$('#main').append( html_edit );">Edit
-        filesystem</a><br><br>
-    <span>CC1101 task memory: </span><span id='cc1101taskmem'></span><span> bytes free</span><br>
-    <span>MQTT task memory: </span><span id='mqtttaskmem'></span><span> bytes free</span><br>
-    <span>Web task memory: </span><span id='webtaskmem'></span><span> bytes free</span><br>
-    <span>Config and Log task memory: </span><span id='cltaskmem'></span><span> bytes free</span><br>
-    <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br><br>
-    <br><br>
-    <div id="rflog_outer" class="hidden">
-        <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
-        <div id="rflog"
-            style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
-        </div>
-        <div style="padding-top:5px;">
-            <a href="#" class="pure-button" onclick="$('#rflog').empty()">Clear</a>
-        </div>
-    </div>
-    <form class="pure-form pure-form-aligned">
-        <fieldset>
-            <legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id="rfdebug-0"
-                class="pure-button pure-button-primary">Off</button><br><br><button id="rfdebug-1"
-                class="pure-button pure-button-primary">Level1</button>&nbsp;Level1 will show only known itho commands
-            from all devices<br><br><button id="rfdebug-2"
-                class="pure-button pure-button-primary">Level2</button>&nbsp;Level2 will show all received RF messages
-            from devices joined to the add-on<br><br><button id="rfdebug-3"
-                class="pure-button pure-button-primary">Level3</button>&nbsp;Level3 will show all received RF messages
-            from all devices<br><br>
-            <fieldset>
-                <legend><br>Low level itho I2C commands:</legend><br>
-                <button id="ithobutton-type" class="pure-button pure-button-primary">Query Devicetype</button><br>
-                <span>Result:&nbsp;</span><span id="ithotype"></span><br><br>
-                <button id="ithobutton-statusformat" class="pure-button pure-button-primary">Query Status
-                    Format</button><br><span>Result:&nbsp;</span><span id="ithostatusformat"></span><br><br>
-                <button id="ithobutton-status" class="pure-button pure-button-primary">Query
-                    Status</button><br><span>Result:&nbsp;</span><span id="ithostatus"></span><br><br>
-                <button id="button2410" class="pure-button pure-button-primary">Query 2410</button>setting index: <input
-                    id="itho_setting_id" type="number" min="0" max="255" size="6"
-                    value="0"><br><span>Result:&nbsp;</span><span id="itho2410"></span><br>
-                <span>Current:&nbsp;</span><span id="itho2410cur"></span><br>
-                <span>Minimum value:&nbsp;</span><span id="itho2410min"></span><br>
-                <span>Maximum value:&nbsp;</span><span id="itho2410max"></span><br><br>
-                <span style="color:red">Warning!!<br> "Set 2410" changes the settings of your itho unit<br>Use with care
-                    and
-                    use only if you know what you are doing!</span><br>
-                <button id="button2410set" class="pure-button pure-button-primary">Set 2410</button>setting index:
-                <input id="itho_setting_id_set" type="number" min="0" max="255" size="6" value="0"> setting value:
-                <input id="itho_setting_value_set" type="number" min="-2147483647" max="2147483647" size="10"
-                    value="0"><br>
-                <span>Sent command:&nbsp;</span><span id="itho2410set"></span><br><span>Result:&nbsp;</span><span
-                    id="itho2410setres"></span><br>
-                <span style="color:red">Warning!!</span><br><br><button id="ithobutton-31DA"
-                    class="pure-button pure-button-primary">Query 31DA</button><br><span>Result:&nbsp;</span>
-                <span id="itho31DA"></span><br><br><button id="ithobutton-31D9"
-                    class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
-                    id="itho31D9"></span><br><br>
-                <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
-                    reset</button><br><span>Filter
-                    reset function uses virtual remote 0, this remote needs to be paired with your itho for this command
-                    to
-                    work</span>
-            </fieldset><br><br><br>
-        </fieldset>
-    </form>
-</div>
-<script>
-    $(document).ready(function () {
-        getSettings('debugvalues');
-        getSettings('sysstat');
-    });
-</script>
-`;
-
-var html_i2cdebug = `
-<div class="header">
-  <h1>I2C debug</h1>
-</div><br><br>
-<p></p>
-<span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span><br><br>
-<span>If the I2C bus is stuck. Please copy the log below and send it to <a
-    href="mailto: info@nrg.watch">info@nrg.watch</a> or add it to the issue on
-  Github.<br>Also try to reset the Temp/Hum sensor below and see if this releases the I2C bus. If succesful then the I2C
-  connection status should return to 'connected'.</span>
-<style>
-  .pure-form-aligned .pure-control-group label {
-    width: 15em;
-  }
-</style>
-<form class="pure-form pure-form-aligned">
-  <fieldset>
-    <br>
-    <legend><br>Last I2C commands:</legend>
-    <br>
-    <table id="I2CLogTable" class="pure-table pure-table-bordered"></table><br><br>
-    <fieldset>
-      <legend><br>I2C debug commands and settings:</legend><br>
-      <button id=\"ithobutton-shtreset\" class=\"pure-button pure-button-primary\">Reset Temp/Hum
-        sensor</button><br><span>Result:&nbsp;</span><span id=\'i2c_sht_reset\'></span><br><br>
-    </fieldset>
-    <div id="i2clog_outer" class="hidden">
-      <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">I2C sniffer Log:</div>
-      <div id="i2clog"
-        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
-      </div>
-      <div style="padding-top:5px;">
-        <a href="#" class="pure-button" onclick="$('#i2clog').empty()">Clear</a>
-      </div>
-    </div>
-    <form class="pure-form pure-form-aligned">
-      <fieldset>
-        <legend><br>I2C sniffer mode (works on I2C sniffer capable hardware only, see system log):</legend><br>
-        <button id="i2csniffer-1" class="pure-button pure-button-primary">On</button>
-        <button id="i2csniffer-0" class="pure-button pure-button-primary">Off</button>
-        <br><br>
-
-      </fieldset>
-    </form>
-    <br><br>
-    <script>
-      $(document).ready(function () {
-        getSettings('sysstat');
-        getSettings('i2cdebuglog');
-        getSettings('i2cdebugsettings');
-      });
-    </script>
-`;
-
 var html_api = `
 <div class="header">
     <h1>IthoWifi - API</h1>
@@ -1639,10 +1501,272 @@ Unless specified otherwise:<br>
 <p><br><br></p>
 `;
 
-var html_systemsettings_end = `
-<div class="pure-controls">
-  <button id="syssumbit" class="pure-button pure-button-primary">Save</button>
+var html_debug = `
+<div id="main" style="max-width: 1600px;">
+    <div class="header">
+        <h1>Debug page</h1>
+    </div><br><br>
+    <div>
+        <span>Config version: </span><span id='configversion'>unknown</span><br><br>
+        <span>Itho I2C connection status: </span><span id='ithoinit'>unknown</span>
+    </div>
+    <br>
+    <span>File system: </span><span id='bfree'></span><span> bytes used / </span><span id='btotal'></span><span> bytes
+        total</span><br>
+    <a href="#" class="pure-button" onclick="$('#main').empty();$('#main').append( html_edit );">Edit
+        filesystem</a><br><br>
+    <span>CC1101 task memory: </span><span id='cc1101taskmem'></span><span> bytes free</span><br>
+    <span>MQTT task memory: </span><span id='mqtttaskmem'></span><span> bytes free</span><br>
+    <span>Web task memory: </span><span id='webtaskmem'></span><span> bytes free</span><br>
+    <span>Config and Log task memory: </span><span id='cltaskmem'></span><span> bytes free</span><br>
+    <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br><br>
+    <br><br>
+    <div id="rflog_outer" class="hidden">
+        <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
+        <div id="rflog"
+            style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+        </div>
+        <div style="padding-top:5px;">
+            <a href="#" class="pure-button" onclick="$('#rflog').empty()">Clear</a>
+        </div>
+    </div>
+    <form class="pure-form pure-form-aligned">
+        <fieldset>
+            <legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id="rfdebug-0"
+                class="pure-button pure-button-primary">Off</button><br><br><button id="rfdebug-1"
+                class="pure-button pure-button-primary">Level1</button>&nbsp;Level1 will show only known itho commands
+            from all devices<br><br><button id="rfdebug-2"
+                class="pure-button pure-button-primary">Level2</button>&nbsp;Level2 will show all received RF messages
+            from devices joined to the add-on<br><br><button id="rfdebug-3"
+                class="pure-button pure-button-primary">Level3</button>&nbsp;Level3 will show all received RF messages
+            from all devices<br><br>
+            <fieldset>
+                <legend><br>Low level itho I2C commands:</legend><br>
+                <button id="ithobutton-type" class="pure-button pure-button-primary">Query Devicetype</button><br>
+                <span>Result:&nbsp;</span><span id="ithotype"></span><br><br>
+                <button id="ithobutton-statusformat" class="pure-button pure-button-primary">Query Status
+                    Format</button><br><span>Result:&nbsp;</span><span id="ithostatusformat"></span><br><br>
+                <button id="ithobutton-status" class="pure-button pure-button-primary">Query
+                    Status</button><br><span>Result:&nbsp;</span><span id="ithostatus"></span><br><br>
+                <button id="button2410" class="pure-button pure-button-primary">Query 2410</button>setting index: <input
+                    id="itho_setting_id" type="number" min="0" max="255" size="6"
+                    value="0"><br><span>Result:&nbsp;</span><span id="itho2410"></span><br>
+                <span>Current:&nbsp;</span><span id="itho2410cur"></span><br>
+                <span>Minimum value:&nbsp;</span><span id="itho2410min"></span><br>
+                <span>Maximum value:&nbsp;</span><span id="itho2410max"></span><br><br>
+                <span style="color:red">Warning!!<br> "Set 2410" changes the settings of your itho unit<br>Use with care
+                    and
+                    use only if you know what you are doing!</span><br>
+                <button id="button2410set" class="pure-button pure-button-primary">Set 2410</button>setting index:
+                <input id="itho_setting_id_set" type="number" min="0" max="255" size="6" value="0"> setting value:
+                <input id="itho_setting_value_set" type="number" min="-2147483647" max="2147483647" size="10"
+                    value="0"><br>
+                <span>Sent command:&nbsp;</span><span id="itho2410set"></span><br><span>Result:&nbsp;</span><span
+                    id="itho2410setres"></span><br>
+                <span style="color:red">Warning!!</span><br><br>
+
+                <span style="color:red">Warning!!<br> "Send CE30" tries to send outside temp. Input field not implemented yet.</span><br>
+                <button id="ithobutton-CE30" class="pure-button pure-button-primary">Send CE30</button>timestamp (hex):
+                <input id="itho_setting_id_timestamp" type="number" min="0" max="255" size="8" value="0"> temp value (hex):
+                <input id="itho_setting_value_set" type="number" min="-2147483647" max="2147483647" size="4"
+                    value="0"><br>
+                <span>Sent command:&nbsp;</span><span id="itho2410set"></span><br><span>Result:&nbsp;</span><span
+                    id="ithoCE30"></span><br>
+                <span style="color:red">Warning!!</span><br><br>
+
+                
+                <button id="ithobutton-31DA"
+                    class="pure-button pure-button-primary">Query 31DA</button><br><span>Result:&nbsp;</span>
+                <span id="itho31DA"></span><br><br><button id="ithobutton-31D9"
+                    class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
+                    id="itho31D9"></span><br><br>
+                
+                    <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
+                    reset</button><br><span>Filter
+                    reset function uses virtual remote 0, this remote needs to be paired with your itho for this command
+                    to
+                    work</span>
+            </fieldset><br><br><br>
+        </fieldset>
+    </form>
 </div>
+<script>
+    $(document).ready(function () {
+        getSettings('debugvalues');
+        getSettings('sysstat');
+    });
+</script>
+`;
+
+var html_edit = `
+<div class="header">
+  <h1>File editor</h1>
+</div>
+<p>Be very carefull, use only if absolutely necessary!</p>
+<p>To activate a changed config file; go to the reset page, check the 'Don't save config' checkbox and reboot.</p><br>
+<iframe id="editor" src="/edit" width="100%" height="100%" style="border:none;padding:5px"></iframe>
+<script>
+  $(document).ready(function () {
+    $('#main').css('max-width', '1200px');
+    $('#editor').height(500);
+  });
+</script>
+`;
+
+var html_help = `
+<div class="header"><h1>Need some help?</h1></div>
+<br><br><span>More information and contact options are available at GitHub: <a href='https://github.com/arjenhiemstra/ithowifi' target='_blank'>https://github.com/arjenhiemstra/ithowifi</a></span>
+`;
+
+var html_i2cdebug = `
+<div class="header">
+  <h1>I2C debug</h1>
+</div><br><br>
+<p></p>
+<span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span><br><br>
+<span>If the I2C bus is stuck. Please copy the log below and send it to <a
+    href="mailto: info@nrg.watch">info@nrg.watch</a> or add it to the issue on
+  Github.<br>Also try to reset the Temp/Hum sensor below and see if this releases the I2C bus. If succesful then the I2C
+  connection status should return to 'connected'.</span>
+<style>
+  .pure-form-aligned .pure-control-group label {
+    width: 15em;
+  }
+</style>
+<form class="pure-form pure-form-aligned">
+  <fieldset>
+    <br>
+    <legend><br>Last I2C commands:</legend>
+    <br>
+    <table id="I2CLogTable" class="pure-table pure-table-bordered"></table><br><br>
+    <fieldset>
+      <legend><br>I2C debug commands and settings:</legend><br>
+      <button id=\"ithobutton-shtreset\" class=\"pure-button pure-button-primary\">Reset Temp/Hum
+        sensor</button><br><span>Result:&nbsp;</span><span id=\'i2c_sht_reset\'></span><br><br>
+    </fieldset>
+    <div id="i2clog_outer" class="hidden">
+      <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">I2C sniffer Log:</div>
+      <div id="i2clog"
+        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+      </div>
+      <div style="padding-top:5px;">
+        <a href="#" class="pure-button" onclick="$('#i2clog').empty()">Clear</a>
+      </div>
+    </div>
+    <form class="pure-form pure-form-aligned">
+      <fieldset>
+        <legend><br>I2C sniffer mode (works on I2C sniffer capable hardware only, see system log):</legend><br>
+        <button id="i2csniffer-1" class="pure-button pure-button-primary">On</button>
+        <button id="i2csniffer-0" class="pure-button pure-button-primary">Off</button>
+        <br><br>
+
+      </fieldset>
+    </form>
+    <br><br>
+    <script>
+      $(document).ready(function () {
+        getSettings('sysstat');
+        getSettings('i2cdebuglog');
+        getSettings('i2cdebugsettings');
+      });
+    </script>
+`;
+
+var html_index = `
+<div class="header">
+  <h1>WiFi controller for Itho</h1>
+</div><br><br>
+<div class="pure-g">
+  <div class="pure-u-1 pure-u-md-1-5"></div>
+  <div class="pure-u-1 pure-u-md-3-5">
+    <div id="sliderdiv">
+      <div style="text-align: center">
+        <div style="float: left;">
+          <svg style="width:24px;height:24px" viewBox="0 0 24 24">
+            <path fill="currentColor"
+              d="M12.5,2C9.64,2 8.57,4.55 9.29,7.47L15,13.16C15.87,13.37 16.81,13.81 17.28,14.73C18.46,17.1 22.03,17 22.03,12.5C22.03,8.92 18.05,8.13 14.35,10.13C14.03,9.73 13.61,9.42 13.13,9.22C13.32,8.29 13.76,7.24 14.75,6.75C17.11,5.57 17,2 12.5,2M3.28,4L2,5.27L4.47,7.73C3.22,7.74 2,8.87 2,11.5C2,15.07 5.96,15.85 9.65,13.87C9.97,14.27 10.4,14.59 10.89,14.79C10.69,15.71 10.25,16.75 9.27,17.24C6.91,18.42 7,22 11.5,22C13.8,22 14.94,20.36 14.94,18.21L18.73,22L20,20.72L3.28,4Z">
+            </path>
+          </svg>
+        </div>
+        <div style="float: right;">
+          <svg style="width:24px;height:24px" viewBox="0 0 24 24">
+            <path fill="currentColor"
+              d="M12,11A1,1 0 0,0 11,12A1,1 0 0,0 12,13A1,1 0 0,0 13,12A1,1 0 0,0 12,11M12.5,2C17,2 17.11,5.57 14.75,6.75C13.76,7.24 13.32,8.29 13.13,9.22C13.61,9.42 14.03,9.73 14.35,10.13C18.05,8.13 22.03,8.92 22.03,12.5C22.03,17 18.46,17.1 17.28,14.73C16.78,13.74 15.72,13.3 14.79,13.11C14.59,13.59 14.28,14 13.88,14.34C15.87,18.03 15.08,22 11.5,22C7,22 6.91,18.42 9.27,17.24C10.25,16.75 10.69,15.71 10.89,14.79C10.4,14.59 9.97,14.27 9.65,13.87C5.96,15.85 2,15.07 2,11.5C2,7 5.56,6.89 6.74,9.26C7.24,10.25 8.29,10.68 9.22,10.87C9.41,10.39 9.73,9.97 10.14,9.65C8.15,5.96 8.94,2 12.5,2Z">
+            </path>
+          </svg>
+        </div>
+        <div id="ithotextval">
+          -
+        </div>
+      </div>
+      <input id="ithoslider" type="range" min="0" max="255" value="0" class="slider" style="width: 100%; margin: 0 0 2em 0;">
+    </div>
+    <div id="reminterface">
+      <div style="text-align: center;margin: 2em 0 0 0;">
+        <button id="command-low" class="pure-button" style="float: left;">Low</button><button id="command-medium"
+          class="pure-button">Medium</button><button id="command-high" class="pure-button"
+          style="float: right;">High</button>
+      </div>
+      <div style="text-align: center;margin: 2em 0 0 0;">
+        <button id="command-timer1" class="pure-button" style="float: left;">Timer1</button><button id="command-timer2"
+          class="pure-button">Timer2</button><button id="command-timer3" class="pure-button"
+          style="float: right;">Timer3</button>
+      </div>
+      <div style="text-align: center;margin: 2em 0 0 0;">
+        <div id="sensor_temp"></div>
+        <div id="sensor_hum"></div>
+      </div>
+    </div>
+  </div>
+  <div class="pure-u-1 pure-u-md-1-5"></div>
+</div>
+<script>
+  $(document).ready(function () {
+    if (hw_revision.startsWith('NON-CVE ')) {
+      $('#sliderdiv').addClass('hidden');
+      $('#reminterface').empty();
+    }
+    else {
+      var slide = document.getElementById("ithoslider");
+      if (!!slide) {
+        slide.oninput = function () { $('#ithotextval').html(this.value); };
+        slide.onchange = function () { updateSlider(this.value); };
+      }
+    }
+
+    getSettings('sysstat');
+    getSettings('remtype');
+  });
+</script>
+`;
+
+var html_ithosettings = `
+<div class="header">
+  <h1>Itho settings</h1>
+</div>
+<p>Configuration of the Itho unit</p>
+<style>
+  .pure-form-aligned .pure-control-group label {
+    width: 15em;
+  }
+</style>
+<form class="pure-form pure-form-aligned">
+  <fieldset>
+    <span>Itho device type: </span><span id="itho_devtype">retreiving...</span>
+    <br>
+    <span>Itho fw version: </span><span id="itho_fwversion">retreiving...</span>
+    <br><br>
+    <button id="ithogetsettings" class="pure-button pure-button-primary">Retrieve settings</button><br><br>
+    <span style="color:red">Warning!!<br>This controls low level settings of your itho unit, possibly damaging the
+      unit.<br>Use with care and use only if you know what you are doing!</span><br><br>
+    <table id="SettingsTable" class="pure-table pure-table-bordered" style="font-size:.85em"></table><br><br>
+  </fieldset>
+</form>
+<script>
+  $(document).ready(function () {
+    getSettings('ithosetup');
+  });
+</script>
 `;
 
 var html_ithostatus = `
@@ -1680,240 +1804,270 @@ var html_ithostatus = `
 </script>
 `;
 
-var html_wifisetup = `
+var html_mqttsetup = `
 <div class="header">
-  <h1>Wifi setup</h1>
+  <h1>MQTT setup</h1>
 </div>
-<div class="pure-g">
-  <div class="pure-u-1 pure-u-md-3-5">
-    <form class="pure-form pure-form-aligned" id="wifiform" action="#">
-      <fieldset>
-        <div class="pure-control-group">
-          <label for="ssid">SSID</label>
-          <input id="ssid" type="text">
-        </div>
-        <div class="pure-control-group">
-          <label for="passwd">Password</label>
-          <input id="passwd" type="Password">
-        </div>
-        <div class="pure-control-group">
-          <label>Show Password</label>
-          <input type="checkbox" onclick="togglePwd()">
-        </div>
-        <div class="pure-controls">
-          <button id="wifisubmit" class="pure-button pure-button-primary">Save</button>
-        </div>
-        <br>
-        <div class="pure-control-group">
-          <label for="option-dhcp" class="pure-radio">Use DHCP</label>
-          <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
-          <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off"> off
-        </div>
-        <div class="pure-control-group">
-          <label for="hostname">Hostname</label>
-          <input id="hostname" type="text">
-        </div>
-        <div class="pure-control-group">
-          <label for="ip">IP address</label>
-          <input id="ip" type="text">
-        </div>
-        <div class="pure-control-group">
-          <label for="subnet">Subnet</label>
-          <input id="subnet" type="text">
-        </div>
-        <div class="pure-control-group">
-          <label for="gateway">Gateway</label>
-          <input id="gateway" type="text">
-        </div>
-        <div class="pure-control-group">
-          <label for="dns1">DNS server 1</label>
-          <input id="dns1" type="text">
-        </div>
-        <div class="pure-control-group">
-          <label for="dns1">DNS server 2</label>
-          <input id="dns2" type="text">
-        </div>
-        <div class="pure-control-group">
-          <label for="ntpserver">NTP server</label>
-          <input id="ntpserver" type="text">
-        </div>
-      </fieldset>
-    </form>
-  </div>
-  <div class="pure-u-1 pure-u-md-2-5">
-    <div>
-      <div><button id="wifiscan" class="pure-button pure-button-active">Scan</button></div>
-    </div>
-    <div class="hidden">
-      <div>
-        <p>Scan results:</p>
-      </div>
-    </div>
-    <div id="wifiscanresult"></div>
-    <br><br><br>
-  </div>
-</div>
-<script>
-  function togglePwd() {
-    var x = document.getElementById('passwd'); 
-    if (x.type === 'password') { x.type = 'text'; } 
-    else { x.type = 'password'; } 
+<p>Configuration of the MQTT server to publish the status to and subscribe topic to receive commands</p>
+<style>
+  .pure-form-aligned .pure-control-group label {
+    width: 15em;
   }
-  $(document).ready(function () {
-    getSettings('wifisetup');
-  });
-</script>
-`;
-
-var html_edit = `
-<div class="header">
-  <h1>File editor</h1>
-</div>
-<p>Be very carefull, use only if absolutely necessary!</p>
-<p>To activate a changed config file; go to the reset page, check the 'Don't save config' checkbox and reboot.</p><br>
-<iframe id="editor" src="/edit" width="100%" height="100%" style="border:none;padding:5px"></iframe>
-<script>
-  $(document).ready(function () {
-    $('#main').css('max-width', '1200px');
-    $('#editor').height(500);
-  });
-</script>
-`;
-
-var html_update = `
-<div class="header">
-  <h1>Update firmware</h1>
-</div>
-<br><br>
-<span style="color: #333">Current system firmware:</span>
-<hr style="border-top: 1px solid #eee">
-<div class="pure-control-group">
-  <label>Current firmware version:</label>
-  <label id="firmware_ver">unknown</label>
-</div>
-<br>
-<div class="pure-control-group">
-  <label for="hardware_rev">Hardware revision:</label>
-  <label id="hardware_rev">unknown</label>
-</div>
-<br><br>
-<span style="color: #333">Available firmwares:</span>
-<hr style="border-top: 1px solid #eee">
-<div class="pure-control-group">
-  <label for="latest_fw">Latest firmware version:</label>
-  <label id="latest_fw">unknown</label>&nbsp;&nbsp;<a target="_blank" href="" id="release_notes"
-    class="pure-button pure-button hidden">Release notes</a><br>
-  <a href="" id="latest_fw_button" class="pure-button pure-button-primary hidden">Download firmware file</a>
-</div>
-<br>
-<div id="beta_fw" class="pure-control-group hidden">
-  <label for="latest_beta_fw">Latest beta firmware version:</label>
-  <label id="latest_beta_fw">unknown</label>&nbsp;&nbsp;<a target="_blank" href="" id="release_beta_notes"
-    class="pure-button pure-button hidden">Release notes</a><br>
-  <a href="" id="latest_beta_fw_button" class="pure-button pure-button-primary hidden">Download beta firmware
-    file</a><br><br>
-</div>
-<div class="pure-control-group">
-  <label for="show_beta_fw">Show beta firmware version:</label>
-  <input id="show_beta_fw" type="checkbox" onclick="toggleBetaFW()">
-</div>
-<br>
-<span>Other firmware versions can be found here:</span>
-<span id="other_firmware"></span>
-<br>
-<form class="pure-form pure-form-stacked" method='POST' action='#' enctype='multipart/form-data' id='updateform'>
+</style>
+<form class="pure-form pure-form-aligned">
   <fieldset>
-    <legend><br>Update the firmware of your device:</legend>
-    <ol>
-      <li>Download a firmware file</li>
-      <li>Select the downloaded firmware file with "Choose file" button</li>
-      <li>Click update and wait for the process to finish</li>
-    </ol>
-    <input type='file' name='update'><br>
-    <button id="updatesubmit" class="pure-button pure-button-primary">Update</button>
+    <div class="pure-control-group">
+      <label>MQTT Status</label>
+      <button id="mqtt_conn" class="pure-button" style="pointer-events:none;">Unknown</button>
+    </div>
+    <br>
+    <div class="pure-control-group">
+      <label for="option-mqtt_active" class="pure-radio">MQTT Active</label>
+      <input id="option-mqtt_active-1" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 1)'
+        value="1"> on
+      <input id="option-mqtt_active-0" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 0)'
+        value="0"> off
+    </div>
+    <br>
+    <div class="pure-control-group">
+      <label for="mqtt_serverName">Server</label>
+      <input id="mqtt_serverName" maxlength="63" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label for="mqtt_username">Username</label>
+      <input id="mqtt_username" maxlength="30" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label for="mqtt_password">Password</label>
+      <input id="mqtt_password" maxlength="30" type="Password">
+    </div>
+    <div class="pure-control-group">
+      <label for="mqtt_port">Port</label>
+      <input id="mqtt_port" maxlength="5" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label for="mqtt_state_topic">State topic</label>
+      <input id="mqtt_state_topic" maxlength="120" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_ithostatus" for="mqtt_ithostatus_topic">Itho status topic</label>
+      <input id="mqtt_ithostatus_topic" maxlength="120" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_remotesinfo" for="mqtt_remotesinfo_topic">Remotes info topic</label>
+      <input id="mqtt_remotesinfo_topic" maxlength="120" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_lastcmd" for="mqtt_lastcmd_topic">Last command info topic</label>
+      <input id="mqtt_lastcmd_topic" maxlength="120" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label for="mqtt_cmd_topic">Command topic</label>
+      <input id="mqtt_cmd_topic" maxlength="120" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-lwt_topic" for="mqtt_lwt_topic">Last will topic</label>
+      <input id="mqtt_lwt_topic" maxlength="120" type="text">
+    </div>
+    <br>
+    <div class="pure-control-group">
+      <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
+      <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active"
+        onchange='radio("mqtt_ha_active", 1)' value="1"> on
+      <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active"
+        onchange='radio("mqtt_ha_active", 0)' value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_ha" for="mqtt_ha_topic">Home Assistant Discovery topic prefix</label>
+      <input id="mqtt_ha_topic" maxlength="120" type="text">
+    </div>
+    <br>
+    <div class="pure-control-group">
+      <label for="option-mqtt_domoticz_active" class="pure-radio">Domoticz MQTT</label>
+      <input id="option-mqtt_domoticz_active-1" type="radio" name="option-mqtt_domoticz_active"
+        onchange='radio("mqtt_domoticz_active", 1)' value="1"> on
+      <input id="option-mqtt_domoticz_active-0" type="radio" name="option-mqtt_domoticz_active"
+        onchange='radio("mqtt_domoticz_active", 0)' value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_idx" for="mqtt_idx" style="display: none;">Device IDX</label>
+      <input id="mqtt_idx" maxlength="5" type="text" style="display: none;">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-sensor_idx" for="sensor_idx" style="display: none;">Sensor IDX</label>
+      <input id="sensor_idx" maxlength="5" type="text" style="display: none;">
+    </div>
+    <br>
+    <div class="pure-controls">
+      <button id="mqttsubmit" class="pure-button pure-button-primary">Save</button>
+    </div>
   </fieldset>
-  <p id="uploadprg" style="display: none;">File upload progress: 0%</p>
-  <div id="uploadProgress" style="border-radius: 20px;max-width: 300px;background-color: #ccc;display: none;">
-    <div id="uploadBar" style="border-radius: 20px;width: 10%;height: 20px;background-color: #999;"></div>
-  </div>
-  <p id="updateprg" style="display: none;">Firmware update progress: 0%</p>
-  <div id="updateProgress" style="border-radius: 20px;max-width: 300px;background-color: #ccc;display: none;">
-    <div id="updateBar" style="border-radius: 20px;width: 10%;height: 20px;background-color: #999;"></div>
-  </div>
-  <p id="time" style="display: none;">This page will reload to the start page in... </p>
 </form>
 <script>
-  $('#firmware_ver').text(fw_version);
-  $('#hardware_rev').text(hw_revision);
-  if (hw_revision.startsWith('NON-CVE ')) {
-    $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/non-cve_rev_1">link</a>');
-  }
-  else if (hw_revision == '2') {
-    $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/hardware_rev_2">link</a>');
-  }
-  function process(key, value) {
-    if (key == hw_revision) {
-      let latest_fw = value.latest_fw;
-      let download_link = value.link;
-      if (latest_fw == fw_version) {
-        $('#latest_fw').text(' firmware is up-to-date');
-      }
-      else {
-        $('#latest_fw').text(latest_fw);
-        $('#latest_fw_button, #release_notes').removeClass('hidden');
-        $('#latest_fw_button').attr("href", download_link);
-        $('#release_notes').attr("href", "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_fw);
-      }
-      let latest_beta_fw = value.latest_beta_fw;
-      let download_beta_link = value.link_beta;
-      if (latest_beta_fw == fw_version) {
-        $('#latest_beta_fw').text(' firmware is up-to-date');
-      }
-      else {
-        $('#latest_beta_fw').text(latest_beta_fw);
-        $('#latest_beta_fw_button, #release_beta_notes').removeClass('hidden');
-        $('#latest_beta_fw_button').attr("href", download_beta_link);
-        $('#release_beta_notes').attr("href", "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_beta_fw);
-      }
-    }
-  }
-
-  function traverse(o, func) {
-    for (var i in o) {
-      func.apply(this, [i, o[i]]);
-      if (o[i] !== null && typeof (o[i]) == 'object') {
-        traverse(o[i], func);
-      }
-    }
-  }
-
-  $.ajax({
-    type: 'GET',
-    url: 'https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json',
-    dataType: 'json',
-    timeout: 3000,
-    success: function (data) {
-      traverse(data, process);
-    },
-    error: function (xhr, type) {
-      if (on_ap) {
-        $('#latest_fw, #latest_beta_fw').text(' firmware check not possible on Access Point mode');
-      }
-      else {
-        $('#latest_fw, #latest_beta_fw').text(' firmware check failed, no internet connection?');
-      }
-
-    }
-  })
-
-  function toggleBetaFW() {
-    var x = document.getElementById('beta_fw');
-    if (x.classList.contains('hidden')) { x.classList.remove('hidden'); }
-    else { x.classList.add('hidden'); }
-  }
-
-
+  $(document).ready(function () {
+    getSettings('mqttsetup');
+  });
 </script>
+`;
+
+var html_reboot_script = `
+<p id="time">This page will reload to the start page in... </p>
+<script>
+  $(document).ready(function () {
+    startCountdown();
+  });
+</script>
+`;
+
+var html_remotessetup = `
+<div class="header">
+  <h1>RF Devices setup</h1>
+</div>
+<style>
+  .pure-form-aligned .pure-control-group label {
+    width: 15em;
+  }
+</style>
+<br>
+<p>A range of RF devices (ie. remotes, co2 and rv sensors) can be joined to the add-on using a CC1101 RF module.<br> The
+  add-on will translate commands from a RF device to speed/timer commands towards the itho.<br>This way the speed status
+  of a
+  RF device is always correctly represented on the add-on and within your domotica software.</p>
+<p>There is also an option
+  to monitor only. With this option checked, a RF device still paired with an itho can be monitored without influencing
+  the commands using the add-on.</p>
+<p>Last received commands (and if applicable data) received from paired RF devices is available through the MQTT API and
+  WebAPI</p>
+<form class="pure-form pure-form-aligned">
+  <fieldset>
+    <br><br>
+    <div class="pure-control-group">
+      <label for="itho_llm">Learn/Leave mode</label>
+      <button id="itho_llm" class="pure-button">Unknown</button>
+    </div>
+  </fieldset>
+  <fieldset>
+    <br>
+    <legend><br>RF remotes:</legend>
+    <br>
+    <table id="RemotesTable" class="pure-table pure-table-bordered" style="text-align: center; white-space:nowrap;">
+    </table>
+    <div class="pure-control-group">
+      <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote"
+        class="pure-button">Remove</button>
+    </div>
+  </fieldset>
+</form>
+<script>
+  $(document).ready(function () {
+    getSettings('ithoremotes');
+  });
+</script>
+`;
+
+var html_reset = `
+<div class="header">
+  <h1>Restart/Restore device</h1>
+</div><br><br>
+<form class="pure-form">
+  <fieldset>
+    <button id="reboot" class="pure-button">Restart device</button>&nbsp;&nbsp;<input type="checkbox"
+      id="dontsaveconf"><label for="dontsaveconf"> Don't save config</label><br><br>
+    <button id="resetwificonf" class="pure-button">Restore wifi config</button>&nbsp;&nbsp;<button id="resetsysconf"
+      class="pure-button">Restore system config</button><br><br>
+    <button id="format" class="pure-button">Format filesystem</button>
+    <div id="rebootscript"></div>
+  </fieldset>
+</form>
+`;
+
+var html_syslog = `
+<div class="header">
+    <h1>System log and log settings</h1>
+</div>
+<p>System log and configuration of log level and syslog target</p>
+<style>
+    .pure-form-aligned .pure-control-group label {
+        width: 15em;
+    }
+</style>
+<div id="sdblog_outer">
+    <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">System Log:</div>
+    <div id='dblog'
+        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+    </div>
+    <div style="padding-top:5px;">
+        <a class="pure-button" href="/curlog">Download current logfile</a>&nbsp;
+        <a id='prevlog' class="pure-button" href="javascript:alert('Not avaiable!');">Download previous logfile</a>
+    </div>
+</div><br><br>
+<form class="pure-form pure-form-aligned">
+    <fieldset>
+        <legend><br>Log Settings:</legend>
+        <div class="pure-control-group">
+            <label for="loglevel">Log level:</label>
+            <select id="loglevel" name="loglevel">
+                <option value="0">Emergency</option>
+                <option value="1">Alert</option>
+                <option value="2">Critical</option>
+                <option value="3">Error</option>
+                <option value="4">Warning</option>
+                <option value="5">Notice</option>
+                <option value="6">Info</option>
+                <option value="7">Debug</option>
+            </select>
+        </div>
+        <legend><br>Syslog Settings:</legend>
+        <div class="pure-control-group">
+            <label for="option-syslog_active" class="pure-radio">Syslog Active</label>
+            <input id="option-syslog_active-1" type="radio" name="option-syslog_active" onchange='radio("syslog_active", 1)'
+                value="1"> on
+            <input id="option-syslog_active-0" type="radio" name="option-syslog_active" onchange='radio("syslog_active", 0)'
+                value="0"> off
+        </div>
+        <div class="pure-control-group">
+            <label for="logserver">Syslog server</label>
+            <input id="logserver" maxlength="63" type="text">
+        </div>
+        <div class="pure-control-group">
+            <label for="logport">Port</label>
+            <input id="logport" maxlength="5" type="text">
+        </div>
+        <div class="pure-control-group">
+            <label for="logref">Syslog Reference</label>
+            <input id="logref" maxlength="63" type="text">
+        </div>
+        <div class="pure-controls">
+            <button id="syslogsumbit" class="pure-button pure-button-primary">Save</button>
+        </div>
+    </fieldset>
+
+</form>
+<script>
+    $(document).ready(function () {
+        getSettings('systemlog');
+        getSettings('logsetup');
+    });
+</script>
+`;
+
+var html_systemsettings_cc1101 = `
+<legend><br>Autodetect CC1101 RF module (reboot needed):</legend>
+<p>Activate the CC1101 RF module. If autodetect fails this setting will be automatically switched off again.</p>
+<div class="pure-control-group">
+  <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
+  <input id="option-itho_remotes-1" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 1)'
+    value="1"> on
+  <input id="option-itho_remotes-0" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 0)'
+    value="0"> off
+</div>
+<br>
+`;
+
+var html_systemsettings_end = `
+<div class="pure-controls">
+  <button id="syssumbit" class="pure-button pure-button-primary">Save</button>
+</div>
 `;
 
 var html_systemsettings_start = `
@@ -2098,295 +2252,139 @@ var html_systemsettings_start = `
 </script>
 `;
 
-var html_mqttsetup = `
+var html_update = `
 <div class="header">
-  <h1>MQTT setup</h1>
+  <h1>Update firmware</h1>
 </div>
-<p>Configuration of the MQTT server to publish the status to and subscribe topic to receive commands</p>
-<style>
-  .pure-form-aligned .pure-control-group label {
-    width: 15em;
-  }
-</style>
-<form class="pure-form pure-form-aligned">
-  <fieldset>
-    <div class="pure-control-group">
-      <label>MQTT Status</label>
-      <button id="mqtt_conn" class="pure-button" style="pointer-events:none;">Unknown</button>
-    </div>
-    <br>
-    <div class="pure-control-group">
-      <label for="option-mqtt_active" class="pure-radio">MQTT Active</label>
-      <input id="option-mqtt_active-1" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 1)'
-        value="1"> on
-      <input id="option-mqtt_active-0" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 0)'
-        value="0"> off
-    </div>
-    <br>
-    <div class="pure-control-group">
-      <label for="mqtt_serverName">Server</label>
-      <input id="mqtt_serverName" maxlength="63" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label for="mqtt_username">Username</label>
-      <input id="mqtt_username" maxlength="30" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label for="mqtt_password">Password</label>
-      <input id="mqtt_password" maxlength="30" type="Password">
-    </div>
-    <div class="pure-control-group">
-      <label for="mqtt_port">Port</label>
-      <input id="mqtt_port" maxlength="5" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label for="mqtt_state_topic">State topic</label>
-      <input id="mqtt_state_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-mqtt_ithostatus" for="mqtt_ithostatus_topic">Itho status topic</label>
-      <input id="mqtt_ithostatus_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-mqtt_remotesinfo" for="mqtt_remotesinfo_topic">Remotes info topic</label>
-      <input id="mqtt_remotesinfo_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-mqtt_lastcmd" for="mqtt_lastcmd_topic">Last command info topic</label>
-      <input id="mqtt_lastcmd_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label for="mqtt_cmd_topic">Command topic</label>
-      <input id="mqtt_cmd_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-lwt_topic" for="mqtt_lwt_topic">Last will topic</label>
-      <input id="mqtt_lwt_topic" maxlength="120" type="text">
-    </div>
-    <br>
-    <div class="pure-control-group">
-      <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
-      <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active"
-        onchange='radio("mqtt_ha_active", 1)' value="1"> on
-      <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active"
-        onchange='radio("mqtt_ha_active", 0)' value="0"> off
-    </div>
-    <div class="pure-control-group">
-      <label id="label-mqtt_ha" for="mqtt_ha_topic">Home Assistant Discovery topic prefix</label>
-      <input id="mqtt_ha_topic" maxlength="120" type="text">
-    </div>
-    <br>
-    <div class="pure-control-group">
-      <label for="option-mqtt_domoticz_active" class="pure-radio">Domoticz MQTT</label>
-      <input id="option-mqtt_domoticz_active-1" type="radio" name="option-mqtt_domoticz_active"
-        onchange='radio("mqtt_domoticz_active", 1)' value="1"> on
-      <input id="option-mqtt_domoticz_active-0" type="radio" name="option-mqtt_domoticz_active"
-        onchange='radio("mqtt_domoticz_active", 0)' value="0"> off
-    </div>
-    <div class="pure-control-group">
-      <label id="label-mqtt_idx" for="mqtt_idx" style="display: none;">Device IDX</label>
-      <input id="mqtt_idx" maxlength="5" type="text" style="display: none;">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-sensor_idx" for="sensor_idx" style="display: none;">Sensor IDX</label>
-      <input id="sensor_idx" maxlength="5" type="text" style="display: none;">
-    </div>
-    <br>
-    <div class="pure-controls">
-      <button id="mqttsubmit" class="pure-button pure-button-primary">Save</button>
-    </div>
-  </fieldset>
-</form>
-<script>
-  $(document).ready(function () {
-    getSettings('mqttsetup');
-  });
-</script>
-`;
-
-var html_systemsettings_cc1101 = `
-<legend><br>Autodetect CC1101 RF module (reboot needed):</legend>
-<p>Activate the CC1101 RF module. If autodetect fails this setting will be automatically switched off again.</p>
+<br><br>
+<span style="color: #333">Current system firmware:</span>
+<hr style="border-top: 1px solid #eee">
 <div class="pure-control-group">
-  <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
-  <input id="option-itho_remotes-1" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 1)'
-    value="1"> on
-  <input id="option-itho_remotes-0" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 0)'
-    value="0"> off
+  <label>Current firmware version:</label>
+  <label id="firmware_ver">unknown</label>
 </div>
 <br>
-`;
-
-var html_help = `
-<div class="header"><h1>Need some help?</h1></div>
-<br><br><span>More information and contact options are available at GitHub: <a href='https://github.com/arjenhiemstra/ithowifi' target='_blank'>https://github.com/arjenhiemstra/ithowifi</a></span>
-`;
-
-var html_reboot_script = `
-<p id="time">This page will reload to the start page in... </p>
-<script>
-  $(document).ready(function () {
-    startCountdown();
-  });
-</script>
-`;
-
-var html_index = `
-<div class="header">
-  <h1>WiFi controller for Itho</h1>
-</div><br><br>
-<div class="pure-g">
-  <div class="pure-u-1 pure-u-md-1-5"></div>
-  <div class="pure-u-1 pure-u-md-3-5">
-    <div id="sliderdiv">
-      <div style="text-align: center">
-        <div style="float: left;">
-          <svg style="width:24px;height:24px" viewBox="0 0 24 24">
-            <path fill="currentColor"
-              d="M12.5,2C9.64,2 8.57,4.55 9.29,7.47L15,13.16C15.87,13.37 16.81,13.81 17.28,14.73C18.46,17.1 22.03,17 22.03,12.5C22.03,8.92 18.05,8.13 14.35,10.13C14.03,9.73 13.61,9.42 13.13,9.22C13.32,8.29 13.76,7.24 14.75,6.75C17.11,5.57 17,2 12.5,2M3.28,4L2,5.27L4.47,7.73C3.22,7.74 2,8.87 2,11.5C2,15.07 5.96,15.85 9.65,13.87C9.97,14.27 10.4,14.59 10.89,14.79C10.69,15.71 10.25,16.75 9.27,17.24C6.91,18.42 7,22 11.5,22C13.8,22 14.94,20.36 14.94,18.21L18.73,22L20,20.72L3.28,4Z">
-            </path>
-          </svg>
-        </div>
-        <div style="float: right;">
-          <svg style="width:24px;height:24px" viewBox="0 0 24 24">
-            <path fill="currentColor"
-              d="M12,11A1,1 0 0,0 11,12A1,1 0 0,0 12,13A1,1 0 0,0 13,12A1,1 0 0,0 12,11M12.5,2C17,2 17.11,5.57 14.75,6.75C13.76,7.24 13.32,8.29 13.13,9.22C13.61,9.42 14.03,9.73 14.35,10.13C18.05,8.13 22.03,8.92 22.03,12.5C22.03,17 18.46,17.1 17.28,14.73C16.78,13.74 15.72,13.3 14.79,13.11C14.59,13.59 14.28,14 13.88,14.34C15.87,18.03 15.08,22 11.5,22C7,22 6.91,18.42 9.27,17.24C10.25,16.75 10.69,15.71 10.89,14.79C10.4,14.59 9.97,14.27 9.65,13.87C5.96,15.85 2,15.07 2,11.5C2,7 5.56,6.89 6.74,9.26C7.24,10.25 8.29,10.68 9.22,10.87C9.41,10.39 9.73,9.97 10.14,9.65C8.15,5.96 8.94,2 12.5,2Z">
-            </path>
-          </svg>
-        </div>
-        <div id="ithotextval">
-          -
-        </div>
-      </div>
-      <input id="ithoslider" type="range" min="0" max="255" value="0" class="slider" style="width: 100%; margin: 0 0 2em 0;">
-    </div>
-    <div id="reminterface">
-      <div style="text-align: center;margin: 2em 0 0 0;">
-        <button id="command-low" class="pure-button" style="float: left;">Low</button><button id="command-medium"
-          class="pure-button">Medium</button><button id="command-high" class="pure-button"
-          style="float: right;">High</button>
-      </div>
-      <div style="text-align: center;margin: 2em 0 0 0;">
-        <button id="command-timer1" class="pure-button" style="float: left;">Timer1</button><button id="command-timer2"
-          class="pure-button">Timer2</button><button id="command-timer3" class="pure-button"
-          style="float: right;">Timer3</button>
-      </div>
-      <div style="text-align: center;margin: 2em 0 0 0;">
-        <div id="sensor_temp"></div>
-        <div id="sensor_hum"></div>
-      </div>
-    </div>
-  </div>
-  <div class="pure-u-1 pure-u-md-1-5"></div>
+<div class="pure-control-group">
+  <label for="hardware_rev">Hardware revision:</label>
+  <label id="hardware_rev">unknown</label>
 </div>
+<br><br>
+<span style="color: #333">Available firmwares:</span>
+<hr style="border-top: 1px solid #eee">
+<div class="pure-control-group">
+  <label for="latest_fw">Latest firmware version:</label>
+  <label id="latest_fw">unknown</label>&nbsp;&nbsp;<a target="_blank" href="" id="release_notes"
+    class="pure-button pure-button hidden">Release notes</a><br>
+  <a href="" id="latest_fw_button" class="pure-button pure-button-primary hidden">Download firmware file</a>
+</div>
+<br>
+<div id="beta_fw" class="pure-control-group hidden">
+  <label for="latest_beta_fw">Latest beta firmware version:</label>
+  <label id="latest_beta_fw">unknown</label>&nbsp;&nbsp;<a target="_blank" href="" id="release_beta_notes"
+    class="pure-button pure-button hidden">Release notes</a><br>
+  <a href="" id="latest_beta_fw_button" class="pure-button pure-button-primary hidden">Download beta firmware
+    file</a><br><br>
+</div>
+<div class="pure-control-group">
+  <label for="show_beta_fw">Show beta firmware version:</label>
+  <input id="show_beta_fw" type="checkbox" onclick="toggleBetaFW()">
+</div>
+<br>
+<span>Other firmware versions can be found here:</span>
+<span id="other_firmware"></span>
+<br>
+<form class="pure-form pure-form-stacked" method='POST' action='#' enctype='multipart/form-data' id='updateform'>
+  <fieldset>
+    <legend><br>Update the firmware of your device:</legend>
+    <ol>
+      <li>Download a firmware file</li>
+      <li>Select the downloaded firmware file with "Choose file" button</li>
+      <li>Click update and wait for the process to finish</li>
+    </ol>
+    <input type='file' name='update'><br>
+    <button id="updatesubmit" class="pure-button pure-button-primary">Update</button>
+  </fieldset>
+  <p id="uploadprg" style="display: none;">File upload progress: 0%</p>
+  <div id="uploadProgress" style="border-radius: 20px;max-width: 300px;background-color: #ccc;display: none;">
+    <div id="uploadBar" style="border-radius: 20px;width: 10%;height: 20px;background-color: #999;"></div>
+  </div>
+  <p id="updateprg" style="display: none;">Firmware update progress: 0%</p>
+  <div id="updateProgress" style="border-radius: 20px;max-width: 300px;background-color: #ccc;display: none;">
+    <div id="updateBar" style="border-radius: 20px;width: 10%;height: 20px;background-color: #999;"></div>
+  </div>
+  <p id="time" style="display: none;">This page will reload to the start page in... </p>
+</form>
 <script>
-  $(document).ready(function () {
-    if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
-      $('#sliderdiv').addClass('hidden');
-      $('#reminterface').empty();
-    }
-    else {
-      var slide = document.getElementById("ithoslider");
-      if (!!slide) {
-        slide.oninput = function () { $('#ithotextval').html(this.value); };
-        slide.onchange = function () { updateSlider(this.value); };
+  $('#firmware_ver').text(fw_version);
+  $('#hardware_rev').text(hw_revision);
+  if (hw_revision.startsWith('NON-CVE ')) {
+    $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/non-cve_rev_1">link</a>');
+  }
+  else if (hw_revision == '2') {
+    $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/hardware_rev_2">link</a>');
+  }
+  function process(key, value) {
+    if (key == hw_revision) {
+      let latest_fw = value.latest_fw;
+      let download_link = value.link;
+      if (latest_fw == fw_version) {
+        $('#latest_fw').text(' firmware is up-to-date');
+      }
+      else {
+        $('#latest_fw').text(latest_fw);
+        $('#latest_fw_button, #release_notes').removeClass('hidden');
+        $('#latest_fw_button').attr("href", download_link);
+        $('#release_notes').attr("href", "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_fw);
+      }
+      let latest_beta_fw = value.latest_beta_fw;
+      let download_beta_link = value.link_beta;
+      if (latest_beta_fw == fw_version) {
+        $('#latest_beta_fw').text(' firmware is up-to-date');
+      }
+      else {
+        $('#latest_beta_fw').text(latest_beta_fw);
+        $('#latest_beta_fw_button, #release_beta_notes').removeClass('hidden');
+        $('#latest_beta_fw_button').attr("href", download_beta_link);
+        $('#release_beta_notes').attr("href", "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_beta_fw);
       }
     }
-
-    getSettings('sysstat');
-    getSettings('remtype');
-  });
-</script>
-`;
-
-var html_ithosettings = `
-<div class="header">
-  <h1>Itho settings</h1>
-</div>
-<p>Configuration of the Itho unit</p>
-<style>
-  .pure-form-aligned .pure-control-group label {
-    width: 15em;
   }
-</style>
-<form class="pure-form pure-form-aligned">
-  <fieldset>
-    <span>Itho device type: </span><span id="itho_devtype">retreiving...</span>
-    <br>
-    <span>Itho fw version: </span><span id="itho_fwversion">retreiving...</span>
-    <br><br>
-    <button id="ithogetsettings" class="pure-button pure-button-primary">Retrieve settings</button><br><br>
-    <span style="color:red">Warning!!<br>This controls low level settings of your itho unit, possibly damaging the
-      unit.<br>Use with care and use only if you know what you are doing!</span><br><br>
-    <table id="SettingsTable" class="pure-table pure-table-bordered" style="font-size:.85em"></table><br><br>
-  </fieldset>
-</form>
-<script>
-  $(document).ready(function () {
-    getSettings('ithosetup');
-  });
-</script>
-`;
 
-var html_reset = `
-<div class="header">
-  <h1>Restart/Restore device</h1>
-</div><br><br>
-<form class="pure-form">
-  <fieldset>
-    <button id="reboot" class="pure-button">Restart device</button>&nbsp;&nbsp;<input type="checkbox"
-      id="dontsaveconf"><label for="dontsaveconf"> Don't save config</label><br><br>
-    <button id="resetwificonf" class="pure-button">Restore wifi config</button>&nbsp;&nbsp;<button id="resetsysconf"
-      class="pure-button">Restore system config</button><br><br>
-    <button id="format" class="pure-button">Format filesystem</button>
-    <div id="rebootscript"></div>
-  </fieldset>
-</form>
-`;
-
-var html_remotessetup = `
-<div class="header">
-  <h1>RF Devices setup</h1>
-</div>
-<style>
-  .pure-form-aligned .pure-control-group label {
-    width: 15em;
+  function traverse(o, func) {
+    for (var i in o) {
+      func.apply(this, [i, o[i]]);
+      if (o[i] !== null && typeof (o[i]) == 'object') {
+        traverse(o[i], func);
+      }
+    }
   }
-</style>
-<br>
-<p>A range of RF devices (ie. remotes, co2 and rv sensors) can be joined to the add-on using a CC1101 RF module.<br> The
-  add-on will translate commands from a RF device to speed/timer commands towards the itho.<br>This way the speed status
-  of a
-  RF device is always correctly represented on the add-on and within your domotica software.</p>
-<p>There is also an option
-  to monitor only. With this option checked, a RF device still paired with an itho can be monitored without influencing
-  the commands using the add-on.</p>
-<p>Last received commands (and if applicable data) received from paired RF devices is available through the MQTT API and
-  WebAPI</p>
-<form class="pure-form pure-form-aligned">
-  <fieldset>
-    <br><br>
-    <div class="pure-control-group">
-      <label for="itho_llm">Learn/Leave mode</label>
-      <button id="itho_llm" class="pure-button">Unknown</button>
-    </div>
-  </fieldset>
-  <fieldset>
-    <br>
-    <legend><br>RF remotes:</legend>
-    <br>
-    <table id="RemotesTable" class="pure-table pure-table-bordered" style="text-align: center; white-space:nowrap;">
-    </table>
-    <div class="pure-control-group">
-      <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote"
-        class="pure-button">Remove</button>
-    </div>
-  </fieldset>
-</form>
-<script>
-  $(document).ready(function () {
-    getSettings('ithoremotes');
-  });
+
+  $.ajax({
+    type: 'GET',
+    url: 'https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json',
+    dataType: 'json',
+    timeout: 3000,
+    success: function (data) {
+      traverse(data, process);
+    },
+    error: function (xhr, type) {
+      if (on_ap) {
+        $('#latest_fw, #latest_beta_fw').text(' firmware check not possible on Access Point mode');
+      }
+      else {
+        $('#latest_fw, #latest_beta_fw').text(' firmware check failed, no internet connection?');
+      }
+
+    }
+  })
+
+  function toggleBetaFW() {
+    var x = document.getElementById('beta_fw');
+    if (x.classList.contains('hidden')) { x.classList.remove('hidden'); }
+    else { x.classList.add('hidden'); }
+  }
+
+
 </script>
 `;
 
@@ -2430,73 +2428,87 @@ var html_vremotessetup = `
 </script>
 `;
 
-var html_syslog = `
+var html_wifisetup = `
 <div class="header">
-    <h1>System log and log settings</h1>
+  <h1>Wifi setup</h1>
 </div>
-<p>System log and configuration of log level and syslog target</p>
-<style>
-    .pure-form-aligned .pure-control-group label {
-        width: 15em;
-    }
-</style>
-<div id="sdblog_outer">
-    <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">System Log:</div>
-    <div id='dblog'
-        style="white-space:pre;padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
-        Loading logfile...
-    </div>
-    <div style="padding-top:5px;">
-        <a class="pure-button" href="/curlog">Download current logfile</a>&nbsp;
-        <a id='prevlog' class="pure-button" href="javascript:alert('Not avaiable!');">Download previous logfile</a>
-    </div>
-</div><br><br>
-<form class="pure-form pure-form-aligned">
-    <fieldset>
-        <legend><br>Log Settings:</legend>
+<div class="pure-g">
+  <div class="pure-u-1 pure-u-md-3-5">
+    <form class="pure-form pure-form-aligned" id="wifiform" action="#">
+      <fieldset>
         <div class="pure-control-group">
-            <label for="loglevel">Log level:</label>
-            <select id="loglevel" name="loglevel">
-                <option value="0">Emergency</option>
-                <option value="1">Alert</option>
-                <option value="2">Critical</option>
-                <option value="3">Error</option>
-                <option value="4">Warning</option>
-                <option value="5">Notice</option>
-                <option value="6">Info</option>
-                <option value="7">Debug</option>
-            </select>
-        </div>
-        <legend><br>Syslog Settings:</legend>
-        <div class="pure-control-group">
-            <label for="option-syslog_active" class="pure-radio">Syslog Active</label>
-            <input id="option-syslog_active-1" type="radio" name="option-syslog_active"
-                onchange='radio("syslog_active", 1)' value="1"> on
-            <input id="option-syslog_active-0" type="radio" name="option-syslog_active"
-                onchange='radio("syslog_active", 0)' value="0"> off
+          <label for="ssid">SSID</label>
+          <input id="ssid" type="text">
         </div>
         <div class="pure-control-group">
-            <label for="logserver">Syslog server</label>
-            <input id="logserver" maxlength="63" type="text">
+          <label for="passwd">Password</label>
+          <input id="passwd" type="Password">
         </div>
         <div class="pure-control-group">
-            <label for="logport">Port</label>
-            <input id="logport" maxlength="5" type="text">
-        </div>
-        <div class="pure-control-group">
-            <label for="logref">Syslog Reference</label>
-            <input id="logref" maxlength="63" type="text">
+          <label>Show Password</label>
+          <input type="checkbox" onclick="togglePwd()">
         </div>
         <div class="pure-controls">
-            <button id="syslogsumbit" class="pure-button pure-button-primary">Save</button>
+          <button id="wifisubmit" class="pure-button pure-button-primary">Save</button>
         </div>
-    </fieldset>
-
-</form>
+        <br>
+        <div class="pure-control-group">
+          <label for="option-dhcp" class="pure-radio">Use DHCP</label>
+          <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
+          <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off"> off
+        </div>
+        <div class="pure-control-group">
+          <label for="hostname">Hostname</label>
+          <input id="hostname" type="text">
+        </div>
+        <div class="pure-control-group">
+          <label for="ip">IP address</label>
+          <input id="ip" type="text">
+        </div>
+        <div class="pure-control-group">
+          <label for="subnet">Subnet</label>
+          <input id="subnet" type="text">
+        </div>
+        <div class="pure-control-group">
+          <label for="gateway">Gateway</label>
+          <input id="gateway" type="text">
+        </div>
+        <div class="pure-control-group">
+          <label for="dns1">DNS server 1</label>
+          <input id="dns1" type="text">
+        </div>
+        <div class="pure-control-group">
+          <label for="dns1">DNS server 2</label>
+          <input id="dns2" type="text">
+        </div>
+        <div class="pure-control-group">
+          <label for="ntpserver">NTP server</label>
+          <input id="ntpserver" type="text">
+        </div>
+      </fieldset>
+    </form>
+  </div>
+  <div class="pure-u-1 pure-u-md-2-5">
+    <div>
+      <div><button id="wifiscan" class="pure-button pure-button-active">Scan</button></div>
+    </div>
+    <div class="hidden">
+      <div>
+        <p>Scan results:</p>
+      </div>
+    </div>
+    <div id="wifiscanresult"></div>
+    <br><br><br>
+  </div>
+</div>
 <script>
-    $(document).ready(function () {
-        getSettings('logsetup');
-        getlog("/curlog");
-    });
+  function togglePwd() {
+    var x = document.getElementById('passwd'); 
+    if (x.type === 'password') { x.type = 'text'; } 
+    else { x.type = 'password'; } 
+  }
+  $(document).ready(function () {
+    getSettings('wifisetup');
+  });
 </script>
 `;
