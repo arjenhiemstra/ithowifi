@@ -37,8 +37,8 @@ or in my Tindie store:
 -   HeatPump WPU
 -   AutoTemp
 
-###  Models confirmed not to work:
--   HRU 300
+###  Models confirmed to work but modifications needed:
+-   HRU 300 - see: https://github.com/arjenhiemstra/ithowifi/issues/97
 
 ####   An important note about the firmware for CVE and HRU200 devices:
 The cve add-on is able to control the itho unit in standard or medium mode setting only. This means you can use the original remote but if you leave the itho box in low or high setting the itho won't accept commands from the add-on. This is itho designed behaviour. Adding a CC1101 RF module and/or letting the add-on present itself as virtual remote can circumvent this issue, the virtual remote function can also be used to force a medium mode before sending commands.
