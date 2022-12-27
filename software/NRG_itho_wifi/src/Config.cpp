@@ -27,7 +27,7 @@ bool loadWifiConfig()
     return false;
   }
 
-  DynamicJsonDocument root(1024);
+  DynamicJsonDocument root(2048);
   DeserializationError error = deserializeJson(root, configFile);
   if (error)
   {
