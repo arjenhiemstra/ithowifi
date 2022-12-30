@@ -59,6 +59,7 @@ struct ithoDeviceStatus
   } value;
   uint32_t divider;
   uint8_t updated;
+  bool is_signed;  // used for floats only
   ithoDeviceStatus() : updated(0){};
 };
 
@@ -146,3 +147,4 @@ void filterReset();
 void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
 int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);
+int cast_to_signed_int(int val, int length);
