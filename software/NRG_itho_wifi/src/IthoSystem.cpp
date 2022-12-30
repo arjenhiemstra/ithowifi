@@ -1501,7 +1501,11 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
     else
     { // float
 
-      if ((i2cbuf[22] & 0x04) != 0)
+      if (i2cbuf[22] == 0x0f)
+      {
+        ithoSettingsArray[index].type = ithoSettings::is_float2;
+      }
+      else if ((i2cbuf[22] & 0x04) != 0)
       {
         ithoSettingsArray[index].type = ithoSettings::is_float1000;
       }
@@ -1562,6 +1566,16 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
         sprintf(tempbuffer0, "%d", values[0]);
         sprintf(tempbuffer1, "%d", values[1]);
         sprintf(tempbuffer2, "%d", values[2]);
+      }
+      else if (ithoSettingsArray[index].type == ithoSettings::is_float2)
+      {
+        double val[3];
+        val[0] = values[0] / 2.0f;
+        val[1] = values[1] / 2.0f;
+        val[2] = values[2] / 2.0f;
+        sprintf(tempbuffer0, "%.1f", val[0]);
+        sprintf(tempbuffer1, "%.1f", val[1]);
+        sprintf(tempbuffer2, "%.1f", val[2]);
       }
       else if (ithoSettingsArray[index].type == ithoSettings::is_float10)
       {
