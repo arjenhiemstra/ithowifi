@@ -711,6 +711,14 @@ void sendQueryStatusFormat(bool updateweb)
       }
       else
       {
+        if ((i2cbuf[6 + i] & 0x80) == 0)
+        { // unsigned value
+          ithoStatus.back().is_signed = false;
+        }
+        else
+        {
+          ithoStatus.back().is_signed = true;
+        }
         ithoStatus.back().type = ithoDeviceStatus::is_float;
         ithoStatus.back().divider = quick_pow10((i2cbuf[6 + i] & 0x07));
       }
@@ -732,6 +740,7 @@ void sendQueryStatusFormat(bool updateweb)
       if (i2cbuf[6 + i] == 0x0F)
       {
         ithoStatus.back().type = ithoDeviceStatus::is_float;
+        ithoStatus.back().is_signed = false;
         ithoStatus.back().length = 1;
         ithoStatus.back().divider = 2;
       }
@@ -818,18 +827,9 @@ void sendQueryStatus(bool updateweb)
         }
         if (ithoStat.type == ithoDeviceStatus::is_int)
         {
-          if (ithoStat.length == 4)
-          {
-            tempVal = static_cast<int32_t>(tempVal);
-          }
-          if (ithoStat.length == 2)
-          {
-            tempVal = static_cast<int16_t>(tempVal);
-          }
-          if (ithoStat.length == 1)
-          {
-            tempVal = static_cast<int8_t>(tempVal);
-          }
+          
+          tempVal = cast_to_signed_int(tempVal, ithoStat.length);
+
           if (ithoStat.value.intval == tempVal)
           {
             ithoStat.updated = 0;
@@ -842,6 +842,7 @@ void sendQueryStatus(bool updateweb)
         }
         if (ithoStat.type == ithoDeviceStatus::is_float)
         {
+          
           double t = ithoStat.value.floatval * ithoStat.divider;
           if (static_cast<uint32_t>(t) == tempVal) // better compare needed of float val, worst case this will result in an extra update of the value, so limited impact
           {
@@ -850,6 +851,11 @@ void sendQueryStatus(bool updateweb)
           else
           {
             ithoStat.updated = 1;
+            if (ithoStat.is_signed) 
+            { 
+              // interpret raw bytes as signed integer
+              tempVal = cast_to_signed_int(tempVal, ithoStat.length);
+            }
             ithoStat.value.floatval = static_cast<double>(tempVal) / ithoStat.divider;
           }
         }
@@ -1788,4 +1794,18 @@ std::string i2cbuf2string(const uint8_t *data, size_t len)
     s += toHex(data[i] & 0xF);
   }
   return s;
+}
+
+int cast_to_signed_int(int val, int length)
+{
+  switch (length) {
+  case 4:
+      return static_cast<int32_t>(val);
+  case 2:
+      return static_cast<int16_t>(val);
+  case 1:
+      return static_cast<int8_t>(val);
+  default:
+      return 0;
+  }
 }
