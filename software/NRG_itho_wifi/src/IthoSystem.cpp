@@ -937,9 +937,8 @@ void sendQuery31DA(bool updateweb)
   uint8_t i2cbuf[512]{};
   size_t len = i2c_slave_receive(i2cbuf);
 
-  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1))
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && i2cbuf[3] == 0x31 && i2cbuf[4] == 0xDA)
   {
-
     if (updateweb)
     {
       updateweb = false;
