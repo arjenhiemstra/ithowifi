@@ -1518,12 +1518,7 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
         ithoSettingsArray[index].type = ithoSettings::is_unknown;
       }
     }
-    // special cases
-    if (i2cbuf[22] == 0x01)
-    {
-      ithoSettingsArray[index].type = ithoSettings::is_uint8;
-    }
-
+    
     if (updateweb)
     {
       jsonSysmessage("itho2410", i2cbuf2string(i2cbuf, len).c_str());
