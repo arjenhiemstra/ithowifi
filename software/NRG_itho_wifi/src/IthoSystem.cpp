@@ -272,29 +272,23 @@ void processSettingResult(const uint8_t index, const bool loop)
       root["Minimum"] = *(reinterpret_cast<uint32_t *>(resultPtr2410 + 1));
       root["Maximum"] = *(reinterpret_cast<uint32_t *>(resultPtr2410 + 2));
     }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_float2)
+    else if (ithoSettingsArray[index].type == ithoSettings::is_float8)
     {
-      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 2.0;
-      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 2.0;
-      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 2.0;
+      root["Current"] = static_cast<double> (*(reinterpret_cast<int8_t *>(resultPtr2410 + 0))) / ithoSettingsArray[index].divider;
+      root["Minimum"] = static_cast<double> (*(reinterpret_cast<int8_t *>(resultPtr2410 + 1))) / ithoSettingsArray[index].divider;
+      root["Maximum"] = static_cast<double> (*(reinterpret_cast<int8_t *>(resultPtr2410 + 2))) / ithoSettingsArray[index].divider;
     }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_float10)
+    else if (ithoSettingsArray[index].type == ithoSettings::is_float16)
     {
-      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 10.0;
-      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 10.0;
-      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 10.0;
+      root["Current"] = static_cast<double> (*(reinterpret_cast<int16_t *>(resultPtr2410 + 0))) / ithoSettingsArray[index].divider;
+      root["Minimum"] = static_cast<double> (*(reinterpret_cast<int16_t *>(resultPtr2410 + 1))) / ithoSettingsArray[index].divider;
+      root["Maximum"] = static_cast<double> (*(reinterpret_cast<int16_t *>(resultPtr2410 + 2))) / ithoSettingsArray[index].divider;
     }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_float100)
+    else if (ithoSettingsArray[index].type == ithoSettings::is_float32)
     {
-      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 100.0;
-      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 100.0;
-      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 100.0;
-    }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_float1000)
-    {
-      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 1000.0;
-      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 1000.0;
-      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 1000.0;
+      root["Current"] = static_cast<double> (*(reinterpret_cast<int32_t *>(resultPtr2410 + 0))) / ithoSettingsArray[index].divider;
+      root["Minimum"] = static_cast<double> (*(reinterpret_cast<int32_t *>(resultPtr2410 + 1))) / ithoSettingsArray[index].divider;
+      root["Maximum"] = static_cast<double> (*(reinterpret_cast<int32_t *>(resultPtr2410 + 2))) / ithoSettingsArray[index].divider;
     }
     else
     {
@@ -1500,26 +1494,23 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
     }
     else
     { // float
-
-      if (i2cbuf[22] == 0x0f)
+      if (i2cbuf[22] == 0x0f)  // special case
       {
-        ithoSettingsArray[index].type = ithoSettings::is_float2;
+        ithoSettingsArray[index].type = ithoSettings::is_float8;
+        ithoSettingsArray[index].divider = 2;
       }
-      else if ((i2cbuf[22] & 0x04) != 0)
-      {
-        ithoSettingsArray[index].type = ithoSettings::is_float1000;
+      else if (ithoSettingsArray[index].length == 1) {
+        ithoSettingsArray[index].type = ithoSettings::is_float8;
+        ithoSettingsArray[index].divider = quick_pow10((i2cbuf[22] & 0x07));
       }
-      else if ((i2cbuf[22] & 0x02) != 0)
-      {
-        ithoSettingsArray[index].type = ithoSettings::is_float100;
-      }
-      else if ((i2cbuf[22] & 0x01) != 0)
-      {
-        ithoSettingsArray[index].type = ithoSettings::is_float10;
+      else if (ithoSettingsArray[index].length == 2) {
+        ithoSettingsArray[index].type = ithoSettings::is_float16;
+        ithoSettingsArray[index].divider = quick_pow10((i2cbuf[22] & 0x07));
       }
       else
       {
-        ithoSettingsArray[index].type = ithoSettings::is_unknown;
+        ithoSettingsArray[index].type = ithoSettings::is_float32;
+        ithoSettingsArray[index].divider = quick_pow10((i2cbuf[22] & 0x07));
       }
     }
     
@@ -1567,45 +1558,16 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
         sprintf(tempbuffer1, "%d", values[1]);
         sprintf(tempbuffer2, "%d", values[2]);
       }
-      else if (ithoSettingsArray[index].type == ithoSettings::is_float2)
+      else if (ithoSettingsArray[index].type == ithoSettings::is_float8 || ithoSettingsArray[index].type == ithoSettings::is_float16 || ithoSettingsArray[index].type == ithoSettings::is_float32)
       {
+        // FIX ME: this should be casted to ints to preserve sign.
         double val[3];
-        val[0] = values[0] / 2.0f;
-        val[1] = values[1] / 2.0f;
-        val[2] = values[2] / 2.0f;
+        val[0] = values[0] / ithoSettingsArray[index].divider;
+        val[1] = values[1] / ithoSettingsArray[index].divider;
+        val[2] = values[2] / ithoSettingsArray[index].divider;
         sprintf(tempbuffer0, "%.1f", val[0]);
         sprintf(tempbuffer1, "%.1f", val[1]);
         sprintf(tempbuffer2, "%.1f", val[2]);
-      }
-      else if (ithoSettingsArray[index].type == ithoSettings::is_float10)
-      {
-        double val[3];
-        val[0] = values[0] / 10.0f;
-        val[1] = values[1] / 10.0f;
-        val[2] = values[2] / 10.0f;
-        sprintf(tempbuffer0, "%.1f", val[0]);
-        sprintf(tempbuffer1, "%.1f", val[1]);
-        sprintf(tempbuffer2, "%.1f", val[2]);
-      }
-      else if (ithoSettingsArray[index].type == ithoSettings::is_float100)
-      {
-        double val[3];
-        val[0] = values[0] / 100.0f;
-        val[1] = values[1] / 100.0f;
-        val[2] = values[2] / 100.0f;
-        sprintf(tempbuffer0, "%.2f", val[0]);
-        sprintf(tempbuffer1, "%.2f", val[1]);
-        sprintf(tempbuffer2, "%.2f", val[2]);
-      }
-      else if (ithoSettingsArray[index].type == ithoSettings::is_float1000)
-      {
-        double val[3];
-        val[0] = values[0] / 1000.0f;
-        val[1] = values[1] / 1000.0f;
-        val[2] = values[2] / 1000.0f;
-        sprintf(tempbuffer0, "%.3f", val[0]);
-        sprintf(tempbuffer1, "%.3f", val[1]);
-        sprintf(tempbuffer2, "%.3f", val[2]);
       }
       else
       {
@@ -1661,7 +1623,7 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
     command[9] = value & 0xFF;
     command[8] = (value >> 8) & 0xFF;
   }
-  else if (ithoSettingsArray[index].type == ithoSettings::is_uint32 || ithoSettingsArray[index].type == ithoSettings::is_int32 || ithoSettingsArray[index].type == ithoSettings::is_float2 || ithoSettingsArray[index].type == ithoSettings::is_float10 || ithoSettingsArray[index].type == ithoSettings::is_float100 || ithoSettingsArray[index].type == ithoSettings::is_float1000)
+  else if (ithoSettingsArray[index].type == ithoSettings::is_uint32 || ithoSettingsArray[index].type == ithoSettings::is_int32 || ithoSettingsArray[index].type == ithoSettings::is_float8 || ithoSettingsArray[index].type == ithoSettings::is_float16 || ithoSettingsArray[index].type == ithoSettings::is_float32)
   {
     command[9] = value & 0xFF;
     command[8] = (value >> 8) & 0xFF;
