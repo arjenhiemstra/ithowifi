@@ -105,14 +105,14 @@ struct ithoSettings
     is_uint8,
     is_uint16,
     is_uint32,
-    is_float2,
-    is_float10,
-    is_float100,
-    is_float1000,
+    is_float8,
+    is_float16,
+    is_float32,
     is_unknown
   } type{is_unknown};
   int32_t value{0};
   uint8_t length{0};
+  uint32_t divider;
 };
 
 extern ithoSettings *ithoSettingsArray;
