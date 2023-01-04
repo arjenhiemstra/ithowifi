@@ -180,9 +180,9 @@ void i2c_sniffer_process_buf(std::string &buffer)
         int len = buffer.length();
         if (len)
         {
-            //DynamicJsonDocument root(len + 100);
-            //root["i2csniffer"] = buffer.c_str();
-            //notifyClients(root.as<JsonObjectConst>());
+            // DynamicJsonDocument root(len + 100);
+            // root["i2csniffer"] = buffer.c_str();
+            // notifyClients(root.as<JsonObjectConst>());
             D_LOG(buffer.c_str());
         }
     }

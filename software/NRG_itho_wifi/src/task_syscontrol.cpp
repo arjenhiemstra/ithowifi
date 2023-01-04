@@ -377,7 +377,6 @@ void init_i2c_functions()
       {
         digitalWrite(status_pin, HIGH);
       }
-
       if (systemConfig.syssht30 > 0)
       {
         if (currentIthoDeviceID() == 0x1B)

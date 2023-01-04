@@ -13,6 +13,7 @@
 
 #include <cstdio>
 #include <string>
+#include <queue>
 
 #include <Arduino.h>
 #include <Ticker.h>
@@ -56,7 +57,7 @@ typedef struct
 
 extern WiFiUDP udpClient;
 extern Syslog syslog;
-extern QueueHandle_t syslog_queue;
+extern std::deque<log_msg> syslog_queue;
 
 void printTimestamp(Print *_logOutput, int logLevel);
 void printNewline(Print *_logOutput, int logLevel);

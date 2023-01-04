@@ -71,7 +71,7 @@ async function asyncWsCall(b) {
       }
       else if (f.systemsettings) {
         let x = f.systemsettings;
-        if ('itho_rf_support' in x) {
+        if ('mqtt_active' in x) {
           $('#mqtt_idx, #label-mqtt_idx').hide();
           $('#sensor_idx, #label-sensor_idx').hide();
           mqtt_state_topic_tmp = x.mqtt_state_topic;
