@@ -160,7 +160,11 @@ int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const u
       }
       if (version > (ithoDevicesptr->versionsMapLen - 1))
       {
-        return -3; // Settings not available for this version
+        return -3; // Version newer than latest version available in the firmware
+      }
+      if (*(ithoDevicesptr->settingsMapping + version) == nullptr)
+      {
+        return -4; // Settings not available for this version
       }
 
       for (int i = 0; i < 999; i++)
