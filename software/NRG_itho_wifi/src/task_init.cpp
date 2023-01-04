@@ -13,8 +13,6 @@ void TaskInit(void *pvParameters)
 
   hardwareInit();
 
-  syslog_queue = xQueueCreate(30, sizeof(log_msg));
-
   if (i2c_sniffer_capable)
   {
     i2c_sniffer_init(false);

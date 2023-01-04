@@ -146,3 +146,4 @@ void filterReset();
 void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
 int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);
+bool check_i2c_reply(const uint8_t *buf, size_t buflen, const uint16_t opcode);

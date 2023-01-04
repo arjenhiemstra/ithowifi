@@ -196,13 +196,11 @@ void execLogAndConfigTasks()
 
 void syslog_queue_worker()
 {
-  if (syslog_queue == NULL)
-    return;
 
-  log_msg input;
-
-  while (xQueueReceive(syslog_queue, &(input), (TickType_t)0))
+  while (!syslog_queue.empty())
   {
+    log_msg input = syslog_queue.front();
+    syslog_queue.pop_front();
 
     if (flashLogInitReady)
     {

@@ -633,7 +633,7 @@ void sendQueryDevicetype(bool updateweb)
   size_t len = i2c_slave_receive(i2cbuf);
 
   // if (len > 2) {
-  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1))
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x90E0))
   {
     if (updateweb)
     {
@@ -673,7 +673,7 @@ void sendQueryStatusFormat(bool updateweb)
 
   uint8_t i2cbuf[512]{};
   uint8_t len = i2c_slave_receive(i2cbuf);
-  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1))
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x2400))
   {
     if (updateweb)
     {
@@ -770,7 +770,7 @@ void sendQueryStatus(bool updateweb)
   uint8_t i2cbuf[512]{};
   size_t len = i2c_slave_receive(i2cbuf);
 
-  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1))
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x2401))
   {
 
     if (updateweb)
@@ -937,7 +937,7 @@ void sendQuery31DA(bool updateweb)
   uint8_t i2cbuf[512]{};
   size_t len = i2c_slave_receive(i2cbuf);
 
-  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1))
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x31DA))
   {
 
     if (updateweb)
@@ -1328,7 +1328,7 @@ void sendQuery31D9(bool updateweb)
 
   uint8_t i2cbuf[512]{};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1))
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x31D9))
   {
 
     if (updateweb)
@@ -1439,7 +1439,7 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
 
   uint8_t i2cbuf[512]{};
   size_t len = i2c_slave_receive(i2cbuf);
-  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1))
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x2410))
   {
 
     uint8_t tempBuf[] = {i2cbuf[9], i2cbuf[8], i2cbuf[7], i2cbuf[6]};
@@ -1788,4 +1788,13 @@ std::string i2cbuf2string(const uint8_t *data, size_t len)
     s += toHex(data[i] & 0xF);
   }
   return s;
+}
+
+bool check_i2c_reply(const uint8_t *buf, size_t buflen, const uint16_t opcode)
+{
+
+  if (buflen < 4)
+    return false;
+
+  return ((buf[2] << 8 | buf[3]) & 0x3FFF) == (opcode & 0x3FFF);
 }

@@ -2,7 +2,8 @@
 
 WiFiUDP udpClient;
 Syslog syslog(udpClient, SYSLOG_PROTO_IETF);
-QueueHandle_t syslog_queue;
+
+std::deque<log_msg> syslog_queue;
 
 void printTimestamp(Print *_logOutput, int logLevel)
 {
@@ -37,16 +38,12 @@ void sys_log(log_prio_level_t log_prio, const char *inputString, ...)
   vsnprintf(input.msg, sizeof(input.msg), inputString, args);
 
   va_end(args);
-  
+
 #if defined(ENABLE_SERIAL)
   Serial.println(input.msg);
 #endif
 
-  if (syslog_queue == NULL)
-    return;
-
   input.code = log_prio;
-  // xQueueSendFromISR(syslog_queue, (void *)&input, (TickType_t)100 == pdPASS);
-  xQueueSend(syslog_queue, (void *)&input, (TickType_t)0);
-  // xQueueSendFromISR(syslog_queue, (void *)&input, NULL);
+
+  syslog_queue.push_back(input);
 }
