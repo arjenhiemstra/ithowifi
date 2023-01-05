@@ -267,9 +267,9 @@ void processSettingResult(const uint8_t index, const bool loop)
     }
     else
     {
-      root["Current"] = static_cast<double> (val0) / ithoSettingsArray[index].divider;
-      root["Minimum"] = static_cast<double> (val1) / ithoSettingsArray[index].divider;
-      root["Maximum"] = static_cast<double> (val2) / ithoSettingsArray[index].divider;
+      root["Current"] = static_cast<double>((int32_t) val0) / ithoSettingsArray[index].divider;
+      root["Minimum"] = static_cast<double>((int32_t) val1) / ithoSettingsArray[index].divider;
+      root["Maximum"] = static_cast<double>((int32_t) val2) / ithoSettingsArray[index].divider;
     }
   }
   else
@@ -1391,6 +1391,9 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
     ithoSettingsArray[index].is_signed = get_signed_from_datatype(i2cbuf[22]);
     ithoSettingsArray[index].length = get_length_from_datatype(i2cbuf[22]);
     ithoSettingsArray[index].divider = get_divider_from_datatype(i2cbuf[22]);
+    D_LOG("Itho settings");
+    D_LOG("Divider %d", ithoSettingsArray[index].divider);
+    D_LOG("Length %d", ithoSettingsArray[index].length);
 
     if (ithoSettingsArray[index].divider == 1)
     { // integer value
@@ -1421,18 +1424,27 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
       val0 = cast_raw_bytes_to_int(&values[0], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
       val1 = cast_raw_bytes_to_int(&values[1], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
       val2 = cast_raw_bytes_to_int(&values[2], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
-
+    
       if (ithoSettingsArray[index].type == ithoSettings::is_int)
       {
-        sprintf(tempbuffer0, "%d", val0);
-        sprintf(tempbuffer1, "%d", val1);
-        sprintf(tempbuffer2, "%d", val2);
+        if (ithoSettingsArray[index].is_signed) 
+        {
+          sprintf(tempbuffer0, "%d", val0);
+          sprintf(tempbuffer1, "%d", val1);
+          sprintf(tempbuffer2, "%d", val2);
+        }
+        else
+        {
+          sprintf(tempbuffer0, "%u", val0);
+          sprintf(tempbuffer1, "%u", val1);
+          sprintf(tempbuffer2, "%u", val2);
+        }
       }
       else
       {
-        sprintf(tempbuffer0, "%.1f", static_cast<double>(val0) / ithoSettingsArray[index].divider);
-        sprintf(tempbuffer1, "%.1f", static_cast<double>(val1) / ithoSettingsArray[index].divider);
-        sprintf(tempbuffer2, "%.1f", static_cast<double>(val2) / ithoSettingsArray[index].divider);
+        sprintf(tempbuffer0, "%.1f", static_cast<double>((int32_t)val0) / ithoSettingsArray[index].divider);
+        sprintf(tempbuffer1, "%.1f", static_cast<double>((int32_t)val1) / ithoSettingsArray[index].divider);
+        sprintf(tempbuffer2, "%.1f", static_cast<double>((int32_t)val2) / ithoSettingsArray[index].divider);
       }
       jsonSysmessage("itho2410cur", tempbuffer0);
       jsonSysmessage("itho2410min", tempbuffer1);
@@ -1634,9 +1646,9 @@ int cast_to_signed_int(int val, int length)
   }
 }
 
-int64_t cast_raw_bytes_to_int(int* valptr, int length, bool is_signed)
+int32_t cast_raw_bytes_to_int(int32_t* valptr, int length, bool is_signed)
 // valptr is a pointer to 4 rawbytes, which are casted to the
-//  correct value and returned as int64 to preserve sign.
+//  correct value and returned as int32.
 {
   if (is_signed) {
     switch (length) {
