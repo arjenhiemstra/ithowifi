@@ -56,9 +56,9 @@ struct ithoDeviceStatus
     double floatval;
     const char *stringval;
   } value;
-  float divider;
+  uint32_t divider;
   uint8_t updated;
-  bool is_signed;  // used for floats only
+  bool is_signed;
   ithoDeviceStatus() : updated(0){};
 };
 
