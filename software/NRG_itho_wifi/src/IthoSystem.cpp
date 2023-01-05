@@ -701,7 +701,7 @@ void sendQueryStatusFormat(bool updateweb)
       ithoStatus.back().length = get_length_from_datatype(i2cbuf[6 + i]);
       ithoStatus.back().divider = get_divider_from_datatype(i2cbuf[6 + i]);
 
-      if (ithoStatus.back().divider == 1.)
+      if (ithoStatus.back().divider == 1)
       { // integer value
           ithoStatus.back().type = ithoDeviceStatus::is_int;
       }
@@ -1771,13 +1771,14 @@ int cast_to_signed_int(int val, int length)
 // bit 7: signed (1), unsigned (0)
 // bit 6,5,4 : length
 // bit 3,2,1,0 : divider
-float get_divider_from_datatype(int8_t datatype) {
+uint32_t get_divider_from_datatype(int8_t datatype) {
 
-  const float _divider[] =
+  const uint32_t _divider[] =
   {
-    1., 10., 100., 1000., 1E+4, 1E+5,
-    1E+6, 1E+7, 1E+8, 0.1, 0.01,
-    1., 1., 1., 256., 2.
+    1, 10, 100, 1000, 10000, 100000,
+    1000000, 10000000, 100000000,
+    1, 1,  // dividers index 9 and 10 should be 0.1 and 0.01
+    1, 1, 1, 256, 2
   };
   return _divider[datatype & 0x0f];
 }
