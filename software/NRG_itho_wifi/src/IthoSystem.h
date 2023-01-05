@@ -147,6 +147,6 @@ void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *upd
 int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);
 int cast_to_signed_int(int val, int length);
-float get_divider_from_datatype(int8_t datatype);
+uint32_t get_divider_from_datatype(int8_t datatype);
 uint8_t get_length_from_datatype(int8_t datatype);
 bool get_signed_from_datatype(int8_t datatype);
