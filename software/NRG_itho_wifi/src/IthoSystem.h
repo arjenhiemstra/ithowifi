@@ -99,17 +99,11 @@ struct ithoSettings
 {
   enum : uint8_t
   {
-    is_int8,
-    is_int16,
-    is_int32,
-    is_uint8,
-    is_uint16,
-    is_uint32,
-    is_float8,
-    is_float16,
-    is_float32,
+    is_int,
+    is_float,
     is_unknown
   } type{is_unknown};
+  bool is_signed;
   int32_t value{0};
   uint8_t length{0};
   uint32_t divider;
@@ -147,6 +141,7 @@ void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *upd
 int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);
 int cast_to_signed_int(int val, int length);
+int64_t cast_raw_bytes_to_int(int* valptr, int length, bool is_signed);
 uint32_t get_divider_from_datatype(int8_t datatype);
 uint8_t get_length_from_datatype(int8_t datatype);
 bool get_signed_from_datatype(int8_t datatype);
