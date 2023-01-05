@@ -47,7 +47,7 @@
 </div>
 <script>
   $(document).ready(function () {
-    if (hw_revision.startsWith('NON-CVE ')) {
+    if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
       $('#sliderdiv').addClass('hidden');
       $('#reminterface').empty();
     }

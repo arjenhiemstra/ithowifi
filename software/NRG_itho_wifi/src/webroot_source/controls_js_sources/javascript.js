@@ -250,7 +250,7 @@ async function asyncWsCall(b) {
       }
       else if (f.remtypeconf) {
         let x = f.remtypeconf;
-        if (hw_revision.startsWith('NON-CVE ')) {
+        if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
           addvRemoteInterface(x.remtype);
         }
       }
@@ -285,7 +285,7 @@ async function asyncWsCall(b) {
         processElements(f);
       }
 
-      
+
     }, 20);
   });
 }
@@ -363,6 +363,10 @@ $(document).ready(function () {
           itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
           itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
           itho_vremoteapi: $('input[name=\'option-itho_vremoteapi\']:checked').val(),
+          itho_pwm2i2c: $('input[name=\'option-itho_pwm2i2c\']:checked').val(),
+          itho_31da: $('input[name=\'option-itho_31da\']:checked').val(),
+          itho_31d9: $('input[name=\'option-itho_31d9\']:checked').val(),
+          itho_2401: $('input[name=\'option-itho_2401\']:checked').val(),
           i2cmenu: $('input[name=\'option-i2cmenu\']:checked').val(),
           i2c_safe_guard: $('input[name=\'option-i2c_safe_guard\']:checked').val(),
           i2c_sniffer: $('input[name=\'option-i2c_sniffer\']:checked').val()

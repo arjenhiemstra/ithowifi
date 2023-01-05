@@ -45,7 +45,10 @@ SystemConfig::SystemConfig()
   itho_numvrem = 1;
   itho_updatefreq = 10;
   itho_sendjoin = 0;
-  itho_pwminit_en = 1;
+  itho_pwm2i2c = 1;
+  itho_31da = 1;
+  itho_31d9 = 1;
+  itho_2401 = 1;
   itho_forcemedium = 0;
   itho_vremoteapi = 0;
   itho_rf_support = 0;
@@ -261,10 +264,25 @@ bool SystemConfig::set(JsonObjectConst obj)
     updated = true;
     itho_sendjoin = obj["itho_sendjoin"];
   }
-  if (!(const char *)obj["itho_pwminit_en"].isNull())
+  if (!(const char *)obj["itho_pwm2i2c"].isNull())
   {
     updated = true;
-    itho_pwminit_en = obj["itho_pwminit_en"];
+    itho_pwm2i2c = obj["itho_pwm2i2c"];
+  }
+  if (!(const char *)obj["itho_31da"].isNull())
+  {
+    updated = true;
+    itho_31da = obj["itho_31da"];
+  }
+  if (!(const char *)obj["itho_31d9"].isNull())
+  {
+    updated = true;
+    itho_31d9 = obj["itho_31d9"];
+  }
+  if (!(const char *)obj["itho_2401"].isNull())
+  {
+    updated = true;
+    itho_2401 = obj["itho_2401"];
   }
   if (!(const char *)obj["itho_forcemedium"].isNull())
   {
@@ -339,7 +357,10 @@ void SystemConfig::get(JsonObject obj) const
     obj["itho_updatefreq"] = itho_updatefreq;
     obj["itho_numvrem"] = itho_numvrem;
     obj["itho_sendjoin"] = itho_sendjoin;
-    obj["itho_pwminit_en"] = itho_pwminit_en;
+    obj["itho_pwm2i2c"] = itho_pwm2i2c;
+    obj["itho_31da"] = itho_31da;
+    obj["itho_31d9"] = itho_31d9;
+    obj["itho_2401"] = itho_2401;
     obj["itho_forcemedium"] = itho_forcemedium;
     obj["itho_vremoteapi"] = itho_vremoteapi;
     obj["nonQ_cmd_clearsQ"] = nonQ_cmd_clearsQ;

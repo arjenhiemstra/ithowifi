@@ -282,6 +282,8 @@ void webServerInit()
     response->print(FWVERSION);
     response->print("'; var hw_revision = '");
     response->print(hw_revision);
+    response->print("'; var itho_pwm2i2c = '");
+    response->print(systemConfig.itho_pwm2i2c);
     response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });");
 
     request->send(response); })
@@ -298,6 +300,8 @@ void webServerInit()
     response->print(FWVERSION);
     response->print("'; var hw_revision = '");
     response->print(hw_revision);
+    response->print("'; var itho_pwm2i2c = '");
+    response->print(systemConfig.itho_pwm2i2c);
     response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_wifisetup); });");
 
     request->send(response); })
@@ -377,6 +381,7 @@ void webServerInit()
           content_len = request->contentLength();
 
           N_LOG("Firmware update: %s", filename.c_str());
+          delay(1000);
 
           detachInterrupt(itho_irq_pin);
 

@@ -35,7 +35,7 @@ void getIthoStatusJSON(JsonObject root)
     root["ppmw"] = static_cast<int>(ppmw + 0.5);
   }
 
-  if (!ithoInternalMeasurements.empty())
+  if (!ithoInternalMeasurements.empty() && systemConfig.itho_31d9 == 1)
   {
     for (const auto &internalMeasurement : ithoInternalMeasurements)
     {
@@ -53,7 +53,7 @@ void getIthoStatusJSON(JsonObject root)
       }
     }
   }
-  if (!ithoMeasurements.empty())
+  if (!ithoMeasurements.empty() && systemConfig.itho_31da == 1)
   {
     for (const auto &ithoMeaserment : ithoMeasurements)
     {
@@ -71,7 +71,7 @@ void getIthoStatusJSON(JsonObject root)
       }
     }
   }
-  if (!ithoStatus.empty())
+  if (!ithoStatus.empty() && systemConfig.itho_2401 == 1)
   {
     for (const auto &ithoStat : ithoStatus)
     {

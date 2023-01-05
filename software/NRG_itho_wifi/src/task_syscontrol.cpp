@@ -75,14 +75,14 @@ void work_i2c_queue()
         if (i2c_safe_guard_log)
         {
           i2c_safe_guard_log = false;
-          //D_LOG("i2c_safe_guard blocked queue: start:%d > cur:%d < end:%d", i2c_safe_guard.start_close_time, cur_time, i2c_safe_guard.end_close_time);
+          // D_LOG("i2c_safe_guard blocked queue: start:%d > cur:%d < end:%d", i2c_safe_guard.start_close_time, cur_time, i2c_safe_guard.end_close_time);
         }
         return;
       }
     }
     if (!i2c_safe_guard_log)
     {
-      //D_LOG("i2c_safe_guard unblocked queue");
+      // D_LOG("i2c_safe_guard unblocked queue");
       i2c_safe_guard_log = true;
     }
     i2c_cmd_queue.front()(); //()() is there for a reason!
@@ -164,15 +164,30 @@ void execSystemControlTasks()
   else if (millis() - query2401tim >= systemConfig.itho_updatefreq * 1000UL)
   {
     query2401tim = millis();
-
-    i2c_cmd_queue.push_back([]()
-                            { sendQueryStatus(false); });
-    i2c_cmd_queue.push_back([]()
-                            { sendQuery31DA(false); });
-    i2c_cmd_queue.push_back([]()
-                            { sendQuery31D9(false); });
-    i2c_cmd_queue.push_back([]()
-                            { updateMQTTihtoStatus = true; });
+    bool _updateMQTT = false;
+    if (systemConfig.itho_2401 == 1)
+    {
+      _updateMQTT = true;
+      i2c_cmd_queue.push_back([]()
+                              { sendQueryStatus(false); });
+    }
+    if (systemConfig.itho_31da == 1)
+    {
+      _updateMQTT = true;
+      i2c_cmd_queue.push_back([]()
+                              { sendQuery31DA(false); });
+    }
+    if (systemConfig.itho_31d9 == 1)
+    {
+      _updateMQTT = true;
+      i2c_cmd_queue.push_back([]()
+                              { sendQuery31D9(false); });
+    }
+    if (_updateMQTT)
+    {
+      i2c_cmd_queue.push_back([]()
+                              { updateMQTTihtoStatus = true; });
+    }
   }
 
   if (systemConfig.itho_sendjoin > 0 && !joinSend && ithoInitResult == 1)
@@ -429,8 +444,11 @@ void init_i2c_functions()
       sendQueryStatusFormat(false);
       N_LOG("I2C init: QueryStatusFormat - items:%lu", static_cast<unsigned long>(ithoStatus.size()));
 
-      sendQueryStatus(false);
-      N_LOG("I2C init: QueryStatus");
+      if (systemConfig.itho_2401 == 1)
+      {
+        sendQueryStatus(false);
+        N_LOG("I2C init: QueryStatus");
+      }
 
       if (i2c_sniffer_capable)
       {
@@ -774,7 +792,7 @@ bool ithoInitCheck()
     {
       return false;
     }
-    if (systemConfig.itho_pwminit_en)
+    if (systemConfig.itho_pwm2i2c)
     {
       sendI2CPWMinit();
     }
@@ -789,6 +807,8 @@ void update_queue()
 // Update itho Value
 bool writeIthoVal(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT)
 {
+  if (systemConfig.itho_pwm2i2c != 1)
+    return false;
   if (value > 256)
     return false;
 
