@@ -79,10 +79,6 @@ void getIthoStatusJSON(JsonObject root)
       {
         root[ithoStat.name] = ithoStat.value.byteval;
       }
-      else if (ithoStat.type == ithoDeviceStatus::is_uint)
-      {
-        root[ithoStat.name] = ithoStat.value.uintval;
-      }
       else if (ithoStat.type == ithoDeviceStatus::is_int)
       {
         root[ithoStat.name] = ithoStat.value.intval;
