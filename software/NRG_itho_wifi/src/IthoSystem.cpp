@@ -697,48 +697,25 @@ void sendQueryStatusFormat(bool updateweb)
       //      char fStringBuf[32];
       //      getSatusLabel(i, ithoDeviceptr, currentItho_fwversion(), fStringBuf);
 
-      ithoStatus.back().divider = 0;
-      if ((i2cbuf[6 + i] & 0x07) == 0)
-      { // integer value
-        if ((i2cbuf[6 + i] & 0x80) == 0)
-        { // unsigned value
-          ithoStatus.back().type = ithoDeviceStatus::is_uint;
-        }
-        else
-        {
-          ithoStatus.back().type = ithoDeviceStatus::is_int;
-        }
-      }
-      else
-      {
-        ithoStatus.back().type = ithoDeviceStatus::is_float;
-        ithoStatus.back().divider = quick_pow10((i2cbuf[6 + i] & 0x07));
-      }
-      if (((i2cbuf[6 + i] >> 3) & 0x07) == 0)
-      {
-        ithoStatus.back().length = 1;
-      }
-      else
-      {
-        ithoStatus.back().length = (i2cbuf[6 + i] >> 3) & 0x07;
-      }
+      ithoStatus.back().is_signed = get_signed_from_datatype(i2cbuf[6 + i]);
+      ithoStatus.back().length = get_length_from_datatype(i2cbuf[6 + i]);
+      ithoStatus.back().divider = get_divider_from_datatype(i2cbuf[6 + i]);
 
-      // special cases
-      if (i2cbuf[6 + i] == 0x0C || i2cbuf[6 + i] == 0x6C)
-      {
-        ithoStatus.back().type = ithoDeviceStatus::is_byte;
-        ithoStatus.back().length = 1;
+      if (ithoStatus.back().divider == 1)
+      { // integer value
+          ithoStatus.back().type = ithoDeviceStatus::is_int;
       }
-      if (i2cbuf[6 + i] == 0x0F)
+      else
       {
         ithoStatus.back().type = ithoDeviceStatus::is_float;
-        ithoStatus.back().length = 1;
-        ithoStatus.back().divider = 2;
       }
+      // special cases
       if (i2cbuf[6 + i] == 0x5B)
       {
-        ithoStatus.back().type = ithoDeviceStatus::is_uint;
+        // legacy itho: 0x5B -> 0x10
+        ithoStatus.back().type = ithoDeviceStatus::is_int;
         ithoStatus.back().length = 2;
+        ithoStatus.back().is_signed = false;
       }
     }
   }
@@ -804,31 +781,12 @@ void sendQueryStatus(bool updateweb)
             ithoStat.value.byteval = (byte)tempVal;
           }
         }
-        if (ithoStat.type == ithoDeviceStatus::is_uint)
-        {
-          if (ithoStat.value.uintval == tempVal)
-          {
-            ithoStat.updated = 0;
-          }
-          else
-          {
-            ithoStat.updated = 1;
-            ithoStat.value.uintval = tempVal;
-          }
-        }
         if (ithoStat.type == ithoDeviceStatus::is_int)
         {
-          if (ithoStat.length == 4)
+          if (ithoStat.is_signed)
           {
-            tempVal = static_cast<int32_t>(tempVal);
-          }
-          if (ithoStat.length == 2)
-          {
-            tempVal = static_cast<int16_t>(tempVal);
-          }
-          if (ithoStat.length == 1)
-          {
-            tempVal = static_cast<int8_t>(tempVal);
+            // interpret raw bytes as signed integer
+            tempVal = cast_to_signed_int(tempVal, ithoStat.length);
           }
           if (ithoStat.value.intval == tempVal)
           {
@@ -841,7 +799,7 @@ void sendQueryStatus(bool updateweb)
           }
         }
         if (ithoStat.type == ithoDeviceStatus::is_float)
-        {
+        { 
           double t = ithoStat.value.floatval * ithoStat.divider;
           if (static_cast<uint32_t>(t) == tempVal) // better compare needed of float val, worst case this will result in an extra update of the value, so limited impact
           {
@@ -850,6 +808,11 @@ void sendQueryStatus(bool updateweb)
           else
           {
             ithoStat.updated = 1;
+            if (ithoStat.is_signed) 
+            { 
+              // interpret raw bytes as signed integer
+              tempVal = cast_to_signed_int(tempVal, ithoStat.length);
+            }
             ithoStat.value.floatval = static_cast<double>(tempVal) / ithoStat.divider;
           }
         }
@@ -1788,4 +1751,51 @@ std::string i2cbuf2string(const uint8_t *data, size_t len)
     s += toHex(data[i] & 0xF);
   }
   return s;
+}
+
+int cast_to_signed_int(int val, int length)
+{
+  switch (length) {
+  case 4:
+      return static_cast<int32_t>(val);
+  case 2:
+      return static_cast<int16_t>(val);
+  case 1:
+      return static_cast<int8_t>(val);
+  default:
+      return 0;
+  }
+}
+
+// Itho datatype
+// bit 7: signed (1), unsigned (0)
+// bit 6,5,4 : length
+// bit 3,2,1,0 : divider
+uint32_t get_divider_from_datatype(int8_t datatype) {
+
+  const uint32_t _divider[] =
+  {
+    1, 10, 100, 1000, 10000, 100000,
+    1000000, 10000000, 100000000,
+    1, 1,  // dividers index 9 and 10 should be 0.1 and 0.01
+    1, 1, 1, 256, 2
+  };
+  return _divider[datatype & 0x0f];
+}
+
+uint8_t get_length_from_datatype(int8_t datatype) {
+ 
+  switch(datatype & 0x70) {
+    case 0x10:
+      return 2;
+    case 0x20:
+    case 0x70:
+      return 4;
+    default:
+      return 1; 
+  }
+}
+
+bool get_signed_from_datatype(int8_t datatype) {
+  return datatype & 0x80;
 }

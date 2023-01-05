@@ -44,7 +44,6 @@ struct ithoDeviceStatus
   {
     is_byte,
     is_int,
-    is_uint,
     is_float,
     is_string
   } type;
@@ -59,6 +58,7 @@ struct ithoDeviceStatus
   } value;
   uint32_t divider;
   uint8_t updated;
+  bool is_signed;
   ithoDeviceStatus() : updated(0){};
 };
 
@@ -146,3 +146,7 @@ void filterReset();
 void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
 int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);
+int cast_to_signed_int(int val, int length);
+uint32_t get_divider_from_datatype(int8_t datatype);
+uint8_t get_length_from_datatype(int8_t datatype);
+bool get_signed_from_datatype(int8_t datatype);
