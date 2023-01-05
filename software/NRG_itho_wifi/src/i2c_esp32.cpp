@@ -369,7 +369,10 @@ bool checkI2Cbus(int log_entry_idx)
         i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_SDA_LOW);
       }
       E_LOG("Error: I2C bus could not be cleared!");
-      ithoInitResult = -2; // stop I2C
+      if(systemConfig.i2cmenu == 1) {
+        ithoInitResult = -2; // stop I2C bus activity to be able to save logging
+      }
+      
     }
     else
     {
