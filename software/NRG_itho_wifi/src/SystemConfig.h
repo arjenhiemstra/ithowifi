@@ -50,13 +50,17 @@ public:
   uint16_t itho_updatefreq;
   uint8_t itho_numvrem;
   uint8_t itho_sendjoin;
-  uint8_t itho_pwminit_en;
+  uint8_t itho_pwm2i2c;
+  uint8_t itho_31da;
+  uint8_t itho_31d9;
+  uint8_t itho_2401;
   uint8_t itho_forcemedium;
   uint8_t itho_vremoteapi;
   uint8_t itho_rf_support;
   uint8_t i2cmenu;
   uint8_t i2c_safe_guard;
   uint8_t i2c_sniffer;
+
   mutable bool rfInitOK;
   uint8_t nonQ_cmd_clearsQ;
   mutable bool itho_updated;

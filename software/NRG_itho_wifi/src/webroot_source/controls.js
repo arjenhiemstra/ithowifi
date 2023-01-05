@@ -251,7 +251,7 @@ async function asyncWsCall(b) {
       }
       else if (f.remtypeconf) {
         let x = f.remtypeconf;
-        if (hw_revision.startsWith('NON-CVE ')) {
+        if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
           addvRemoteInterface(x.remtype);
         }
       }
@@ -286,7 +286,7 @@ async function asyncWsCall(b) {
         processElements(f);
       }
 
-      
+
     }, 20);
   });
 }
@@ -364,6 +364,10 @@ $(document).ready(function () {
           itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
           itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
           itho_vremoteapi: $('input[name=\'option-itho_vremoteapi\']:checked').val(),
+          itho_pwm2i2c: $('input[name=\'option-itho_pwm2i2c\']:checked').val(),
+          itho_31da: $('input[name=\'option-itho_31da\']:checked').val(),
+          itho_31d9: $('input[name=\'option-itho_31d9\']:checked').val(),
+          itho_2401: $('input[name=\'option-itho_2401\']:checked').val(),
           i2cmenu: $('input[name=\'option-i2cmenu\']:checked').val(),
           i2c_safe_guard: $('input[name=\'option-i2c_safe_guard\']:checked').val(),
           i2c_sniffer: $('input[name=\'option-i2c_sniffer\']:checked').val()
@@ -1981,7 +1985,7 @@ var html_systemsettings_start = `
       <label for="itho_updatefreq">Update frequency</label>
       <input id="itho_updatefreq" type="number" min="0" max="65535" size="6">
     </div>
-    <legend><br>Virtual remote settings:</legend>
+    <legend><br>Virtual remote settings(reboot needed):</legend>
     <p>The add-on can present itself as a virtual remote. A virtual remote emulates a physical remote through software.
       A virtual remote must be joined to the itho unit before it can be used.</p>
     <p>A join command will only be accepted by the itho unit within the first 2 minutes after a power cycle.</p>
@@ -2023,23 +2027,51 @@ var html_systemsettings_start = `
       <input id="option-syssht30-1" type="radio" name="option-syssht30" value="1"> on
       <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
     </div>
+    <legend><br>Enable/Disable I2C commands:</legend>
+    <p>Not all commands types are avaiable on all itho devices. These settings make it possible to disable specific
+      commands. <br>Disabling PWM2I2C will also change the main page user interface to use the Virtual Remote.</p>
+    <br>
+    <div class="pure-control-group">
+      <label for="option-pwm2i2c" class="pure-radio">CVE fan control (PWM2I2C)</label>
+      <input id="option-pwm2i2c-1" type="radio" name="option-itho_pwm2i2c" value="1"> on
+      <input id="option-pwm2i2c-0" type="radio" name="option-itho_pwm2i2c" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-31da" class="pure-radio">Ventilation status (31DA)</label>
+      <input id="option-31da-1" type="radio" name="option-itho_31da" value="1"> on
+      <input id="option-31da-0" type="radio" name="option-itho_31da" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-31d9" class="pure-radio">Fan system status (31D9))</label>
+      <input id="option-31d9-1" type="radio" name="option-itho_31d9" value="1"> on
+      <input id="option-31d9-0" type="radio" name="option-itho_31d9" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-2401" class="pure-radio">System status (2401)</label>
+      <input id="option-2401-1" type="radio" name="option-itho_2401" value="1"> on
+      <input id="option-2401-0" type="radio" name="option-itho_2401" value="0"> off
+    </div>
     <legend><br>Activate I2C extra debug functionality:</legend>
     <p>Some CVE users experience issues with crashing I2C communication. This option enables an extra menu where more
-      I2C options and logging is available.</p>
+      I2C options and logging is available. Enabling the I2C debug menu will also halt I2C bus activity in case of
+      errors to be able to save logging.</p>
     <br>
     <div class="pure-control-group">
       <label for="option-i2cmenu" class="pure-radio">I2C debug menu</label>
       <input id="option-i2cmenu-1" type="radio" name="option-i2cmenu" value="1"> on
       <input id="option-i2cmenu-0" type="radio" name="option-i2cmenu" value="0"> off
     </div>
-    <p>The i2c safe guard is a protection mechanism for CVE fans with built-in humidity sensor (models with light grey lid)</p><p>(Reboot needed, does not work in conjunction with the i2c sniffer)</p>
+    <p>The i2c safe guard is a protection mechanism for CVE fans with built-in humidity sensor (models with light grey
+      lid)</p>
+    <p>(Reboot needed, does not work in conjunction with the i2c sniffer)</p>
     <div class="pure-control-group">
       <label for="option-i2c_safe_guard" class="pure-radio">I2C safe guard</label>
       <input id="option-i2c_safe_guard-1" type="radio" name="option-i2c_safe_guard" value="1"> on
       <input id="option-i2c_safe_guard-0" type="radio" name="option-i2c_safe_guard" value="0"> off
     </div>
     <p>The i2c sniffer works only on sniffer capable devices (non-cve; all versions, cve; as of hw rev. 2.5). See system
-      log for confirmation.</p><p>(Reboot needed)</p>
+      log for confirmation.</p>
+    <p>(reboot needed)</p>
     <div class="pure-control-group">
       <label for="option-i2c_sniffer" class="pure-radio">I2C sniffer</label>
       <input id="option-i2c_sniffer-1" type="radio" name="option-i2c_sniffer" value="1"> on
@@ -2237,7 +2269,7 @@ var html_index = `
 </div>
 <script>
   $(document).ready(function () {
-    if (hw_revision.startsWith('NON-CVE ')) {
+    if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
       $('#sliderdiv').addClass('hidden');
       $('#reminterface').empty();
     }
