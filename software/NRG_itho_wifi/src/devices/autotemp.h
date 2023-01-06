@@ -9,7 +9,8 @@ const uint16_t itho_AutoTempsetting6[] 		{ 0,117,118,119,120,121,122,123,124,125
 const uint16_t itho_AutoTempsetting7[] 		{ 0,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,54,55,56,155,156,157,158,159,160,161,162,163,164,165,166,71,72,73,74,75,106,107,108,167,168,109,110,111,112,113,114,115,116,999};
 const uint16_t itho_AutoTempsetting8[] 		{ 0,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,54,55,56,155,156,157,158,159,160,161,162,163,164,165,166,71,72,73,74,75,106,107,108,167,168,109,110,111,112,113,114,115,116,169,999};
 const uint16_t itho_AutoTempsetting9[] 		{ 0,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,54,55,56,155,156,157,158,159,160,161,162,163,164,165,166,71,72,73,74,75,106,107,108,167,168,109,110,111,112,113,114,115,116,169,170,171,999};
-const uint16_t itho_AutoTempsetting10[] 	{ 0,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,54,55,56,155,156,157,158,159,160,161,162,163,164,165,166,71,72,73,74,75,106,107,108,167,168,109,110,111,112,113,114,115,116,169,170,171,172,173,174,175,999};
+const uint16_t itho_AutoTempsetting10_11[]      { 0,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,54,55,56,155,156,157,158,159,160,161,162,163,164,165,166,71,72,73,74,75,106,107,108,167,168,109,110,111,112,113,114,115,116,169,170,171,172,173,174,175,999};
+const uint16_t itho_AutoTempsetting12[]         { 0,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,54,55,56,155,156,157,158,159,160,161,162,163,164,165,166,71,72,73,74,75,106,107,108,167,168,109,110,111,112,113,114,115,116,169,170,171,172,173,174,175,176,177,178,179,999};
 
 const char* ithoAutoTempSettingsLabels[] =  {
       "Number of steps of valve (step)", 
@@ -187,7 +188,11 @@ const char* ithoAutoTempSettingsLabels[] =  {
       "Additional close steps valve (step)", 
       "Relief steps valve (step)", 
       "Additional close steps after startup (step)", 
-      "Number of open steps valve (step)"
+      "Number of open steps valve (step)",
+      "Blocked time between heating and cooling (hour)",
+      "Blocked time between cooling and heating (hour)",
+      "Min Outside temperature heating to cooling (°C)",
+      "Command test cooling and heating"
 };
 
 
@@ -338,5 +343,5 @@ const struct ithoLabels ithoAutoTempStatusLabels[] {
 };
 
 
-const uint16_t *ithoAutoTempSettingsMap[] =	{ nullptr, itho_AutoTempsetting1, itho_AutoTempsetting2_4, itho_AutoTempsetting2_4, itho_AutoTempsetting2_4, itho_AutoTempsetting5, itho_AutoTempsetting6,   itho_AutoTempsetting7,   itho_AutoTempsetting8,   itho_AutoTempsetting9,   itho_AutoTempsetting10  };
+const uint16_t *ithoAutoTempSettingsMap[] =	{ nullptr, itho_AutoTempsetting1, itho_AutoTempsetting2_4, itho_AutoTempsetting2_4, itho_AutoTempsetting2_4, itho_AutoTempsetting5, itho_AutoTempsetting6,   itho_AutoTempsetting7,   itho_AutoTempsetting8,   itho_AutoTempsetting9,   itho_AutoTempsetting10_11, itho_AutoTempsetting10_11, itho_AutoTempsetting12 };
 const uint8_t *ithoAutoTempStatusMap[] =  	{ nullptr, itho_AutoTempstatus1,  itho_AutoTempstatus2_4,  itho_AutoTempstatus2_4,  itho_AutoTempstatus2_4,  itho_AutoTempstatus5,  itho_AutoTempstatus6_10, itho_AutoTempstatus6_10, itho_AutoTempstatus6_10, itho_AutoTempstatus6_10, itho_AutoTempstatus6_10 };
