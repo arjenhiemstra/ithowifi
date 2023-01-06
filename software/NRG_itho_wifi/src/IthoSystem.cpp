@@ -254,7 +254,7 @@ void processSettingResult(const uint8_t index, const bool loop)
   root["loop"] = loop;
   if (resultPtr2410 != nullptr && ithoSettingsArray != nullptr)
   {
-    uint32_t val0, val1, val2;
+    int64_t val0, val1, val2;
     val0 = cast_raw_bytes_to_int(resultPtr2410 + 0, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
     val1 = cast_raw_bytes_to_int(resultPtr2410 + 1, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
     val2 = cast_raw_bytes_to_int(resultPtr2410 + 2, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
@@ -1420,7 +1420,7 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
       char tempbuffer1[256]{};
       char tempbuffer2[256]{};
 
-      uint32_t val0, val1, val2;
+      int64_t val0, val1, val2;
       val0 = cast_raw_bytes_to_int(&values[0], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
       val1 = cast_raw_bytes_to_int(&values[1], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
       val2 = cast_raw_bytes_to_int(&values[2], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
@@ -1429,15 +1429,15 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
       {
         if (ithoSettingsArray[index].is_signed) 
         {
-          sprintf(tempbuffer0, "%d", val0);
-          sprintf(tempbuffer1, "%d", val1);
-          sprintf(tempbuffer2, "%d", val2);
+          sprintf(tempbuffer0, "%lld", val0);
+          sprintf(tempbuffer1, "%lld", val1);
+          sprintf(tempbuffer2, "%lld", val2);
         }
         else
         {
-          sprintf(tempbuffer0, "%u", val0);
-          sprintf(tempbuffer1, "%u", val1);
-          sprintf(tempbuffer2, "%u", val2);
+          sprintf(tempbuffer0, "%llu", val0);
+          sprintf(tempbuffer1, "%llu", val1);
+          sprintf(tempbuffer2, "%llu", val2);
         }
       }
       else
@@ -1646,7 +1646,7 @@ int cast_to_signed_int(int val, int length)
   }
 }
 
-int32_t cast_raw_bytes_to_int(int32_t* valptr, int length, bool is_signed)
+int64_t cast_raw_bytes_to_int(int32_t* valptr, int length, bool is_signed)
 // valptr is a pointer to 4 rawbytes, which are casted to the
 //  correct value and returned as int32.
 {
