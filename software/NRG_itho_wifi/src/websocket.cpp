@@ -248,7 +248,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           if (val == 2410)
           {
             i2c_cmd_queue.push_back([root]()
-                                    { getSetting(root["index"].as<int8_t>(), false, true, false); });
+                                    { getSetting(root["index"].as<uint8_t>(), false, true, false); });
           }
           else if (val == 24109)
           {
