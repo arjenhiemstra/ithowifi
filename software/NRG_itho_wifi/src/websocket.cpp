@@ -6,7 +6,7 @@ void websocketInit()
 {
   mg_log_set(0);
   mg_mgr_init(&mgr);                                   // Initialise event manager
-  mg_http_listen(&mgr, s_listen_on_ws, wsEvent, NULL); // Create WS listener
+  mg_http_listen(&mgr, s_listen_on_ws, wsEvent, NULL); // Create WS listener 
 }
 
 void jsonWsSend(const char *rootName)
@@ -73,44 +73,6 @@ void jsonWsSend(const char *rootName)
     nested["webtaskmem"] = TaskWebHWmark;
     nested["cltaskmem"] = TaskConfigAndLogHWmark;
     nested["syscontaskmem"] = TaskSysControlHWmark;
-  }
-  else if (strcmp(rootName, "syslog") == 0)
-  {
-    char link[24]{};
-    char linkcur[24]{};
-
-    if (ACTIVE_FS.exists("/logfile0.current.log"))
-    {
-      strlcpy(linkcur, "/logfile0.current.log", sizeof(linkcur));
-      strlcpy(link, "/logfile1.log", sizeof(link));
-    }
-    else
-    {
-      strlcpy(linkcur, "/logfile1.current.log", sizeof(linkcur));
-      strlcpy(link, "/logfile0.log", sizeof(link));
-    }
-    File file = ACTIVE_FS.open(linkcur, FILE_READ);
-    String buf;
-    while (file.available())
-    {
-      if (char(file.peek()) == '\n')
-      {
-        StaticJsonDocument<250> entry;
-        entry["dblog"] = buf.c_str();
-        notifyClients(entry.as<JsonObjectConst>());
-        buf = String();
-        delay(20);
-      }
-      buf += char(file.read());
-    }
-    file.close();
-    if (ACTIVE_FS.exists(link))
-    {
-      StaticJsonDocument<250> entry;
-      entry["prevlog"] = "/prevlog";
-      notifyClients(entry.as<JsonObjectConst>());
-    }
-    return;
   }
   else if (strcmp(rootName, "i2cdebuglog") == 0) // i2cdebuglog
   {
@@ -179,10 +141,6 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     if (msg.find("{\"debugvalues\"") != std::string::npos)
     {
       jsonWsSend("debuginfo");
-    }
-    if (msg.find("{\"systemlog\"") != std::string::npos)
-    {
-      jsonWsSend("syslog");
     }
     else if (msg.find("{\"i2cdebuglog\"") != std::string::npos)
     {
