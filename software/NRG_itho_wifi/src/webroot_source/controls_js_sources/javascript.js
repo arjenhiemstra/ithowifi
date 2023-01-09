@@ -663,15 +663,18 @@ function round(value, precision) {
 }
 
 function getlog(url) {
-  xmlhttp = new XMLHttpRequest();
-  xmlhttp.onreadystatechange = function () {
-    if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-      let res = xmlhttp.responseText.split(/\r?\n/).reverse().slice(1).join("<br>");
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", url, true);
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState == 4 && xhr.status == 200) {
+      let res = xhr.responseText.split(/\r?\n/).reverse().slice(1).join("<br>");
       $('#dblog').html(res);
     }
   }
-  xmlhttp.open("GET", url, false);
-  xmlhttp.send();
+  xhr.onerror = (e) => {
+    $('#dblog').html(xhr.statusText);
+  };  
+  xhr.send(null);
 }
 
 var mqtt_state_topic_tmp = "";

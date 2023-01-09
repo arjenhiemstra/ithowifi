@@ -77,6 +77,7 @@ const std::map<uint8_t, const char*> fanHeatErrors = {
 struct ithoLabels ithoLabelErrors[] {
 	{   "Nullptr error" ,				  "nullptr-error"},
 	{   "No label for device error" ,	  "no-label-for-device-error"},
+	{   "Version error newer than latest in firmware" ,	  "version-error-newer-than-latest-in-firmware"},
 	{   "No label for version error" ,	  "no-label-for-version-error"},
 	{   "Label out of bound error" ,	  "label-out-of-bound-error"}
 };
