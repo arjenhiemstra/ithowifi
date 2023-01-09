@@ -285,14 +285,14 @@ void processSettingResult(const uint8_t index, const bool loop)
   logMessagejson(root, ITHOSETTINGS);
 }
 
-int getStatusLabelLength(const uint8_t deviceID, const uint8_t version)
+int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version)
 {
 
   const struct ihtoDeviceType *ithoDevicesptr = ithoDevices;
   const struct ihtoDeviceType *ithoDevicesendPtr = ithoDevices + sizeof(ithoDevices) / sizeof(ithoDevices[0]);
   while (ithoDevicesptr < ithoDevicesendPtr)
   {
-    if (ithoDevicesptr->ID == deviceID)
+    if (ithoDevicesptr->DG == deviceGroup && ithoDevicesptr->ID == deviceID)
     {
       if (ithoDevicesptr->statusLabelMapping == nullptr)
       {
@@ -300,7 +300,11 @@ int getStatusLabelLength(const uint8_t deviceID, const uint8_t version)
       }
       if (version > (ithoDevicesptr->statusMapLen - 1))
       {
-        return -3; // Labels not available for this version
+        return -3; // Version newer than latest version available in the firmware
+      }
+      if (*(ithoDevicesptr->statusLabelMapping + version) == nullptr)
+      {
+        return -4; // Labels not available for this version
       }
 
       for (int i = 0; i < 255; i++)
@@ -317,8 +321,13 @@ int getStatusLabelLength(const uint8_t deviceID, const uint8_t version)
   return -1;
 }
 
-const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr, const uint8_t version)
+const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr)
 {
+  const uint8_t deviceGroup = currentIthoDeviceGroup();
+  const uint8_t deviceID = currentIthoDeviceID();
+  const uint8_t version = currentItho_fwversion();
+
+  int statusLabelLen = getStatusLabelLength(deviceGroup, deviceID, version);
 
   if (statusPtr == nullptr)
   {
@@ -331,7 +340,7 @@ const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPt
       return ithoLabelErrors[0].labelNormalized;
     }
   }
-  else if (currentIthoStatusLabelLength() == -2)
+  else if (statusLabelLen == -2)
   {
     if (systemConfig.api_normalize == 0)
     {
@@ -342,7 +351,7 @@ const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPt
       return ithoLabelErrors[1].labelNormalized;
     }
   }
-  else if (currentIthoStatusLabelLength() == -3)
+  else if (statusLabelLen == -3)
   {
     if (systemConfig.api_normalize == 0)
     {
@@ -353,7 +362,7 @@ const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPt
       return ithoLabelErrors[2].labelNormalized;
     }
   }
-  else if (!(i < currentIthoStatusLabelLength()))
+  else if (statusLabelLen == -4)
   {
     if (systemConfig.api_normalize == 0)
     {
@@ -362,6 +371,17 @@ const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPt
     else
     {
       return ithoLabelErrors[3].labelNormalized;
+    }
+  }
+  else if (!(i < statusLabelLen))
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return ithoLabelErrors[4].labelFull;
+    }
+    else
+    {
+      return ithoLabelErrors[4].labelNormalized;
     }
   }
   else
@@ -660,7 +680,7 @@ void sendQueryStatusFormat(bool updateweb)
     }
     if (!(currentItho_fwversion() > 0))
       return;
-    ithoStatusLabelLength = getStatusLabelLength(currentIthoDeviceID(), currentItho_fwversion());
+    ithoStatusLabelLength = getStatusLabelLength(currentIthoDeviceGroup(), currentIthoDeviceID(), currentItho_fwversion());
     const uint8_t endPos = i2cbuf[5];
 
     for (uint8_t i = 0; i < endPos; i++)
@@ -735,7 +755,7 @@ void sendQueryStatus(bool updateweb)
     {
       for (auto &ithoStat : ithoStatus)
       {
-        ithoStat.name = getSatusLabel(labelPos, ithoDeviceptr, currentItho_fwversion());
+        ithoStat.name = getSatusLabel(labelPos, ithoDeviceptr);
         auto tempVal = 0;
         for (int i = ithoStat.length; i > 0; i--)
         {
