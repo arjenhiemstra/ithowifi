@@ -99,20 +99,14 @@ struct ithoSettings
 {
   enum : uint8_t
   {
-    is_int8,
-    is_int16,
-    is_int32,
-    is_uint8,
-    is_uint16,
-    is_uint32,
-    is_float2,
-    is_float10,
-    is_float100,
-    is_float1000,
+    is_int,
+    is_float,
     is_unknown
   } type{is_unknown};
+  bool is_signed;
   int32_t value{0};
   uint8_t length{0};
+  uint32_t divider;
 };
 
 extern ithoSettings *ithoSettingsArray;
@@ -148,6 +142,7 @@ int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);
 bool check_i2c_reply(const uint8_t *buf, size_t buflen, const uint16_t opcode);
 int cast_to_signed_int(int val, int length);
+int64_t cast_raw_bytes_to_int(int32_t* valptr, int length, bool is_signed);
 uint32_t get_divider_from_datatype(int8_t datatype);
 uint8_t get_length_from_datatype(int8_t datatype);
 bool get_signed_from_datatype(int8_t datatype);

@@ -258,53 +258,22 @@ void processSettingResult(const uint8_t index, const bool loop)
   root["loop"] = loop;
   if (resultPtr2410 != nullptr && ithoSettingsArray != nullptr)
   {
-    if (ithoSettingsArray[index].type == ithoSettings::is_int8)
+    int64_t val0, val1, val2;
+    val0 = cast_raw_bytes_to_int(resultPtr2410 + 0, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
+    val1 = cast_raw_bytes_to_int(resultPtr2410 + 1, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
+    val2 = cast_raw_bytes_to_int(resultPtr2410 + 2, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
+
+    if (ithoSettingsArray[index].type == ithoSettings::is_int)
     {
-      root["Current"] = *(reinterpret_cast<int8_t *>(resultPtr2410 + 0));
-      root["Minimum"] = *(reinterpret_cast<int8_t *>(resultPtr2410 + 1));
-      root["Maximum"] = *(reinterpret_cast<int8_t *>(resultPtr2410 + 2));
-    }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_int16)
-    {
-      root["Current"] = *(reinterpret_cast<int16_t *>(resultPtr2410 + 0));
-      root["Minimum"] = *(reinterpret_cast<int16_t *>(resultPtr2410 + 1));
-      root["Maximum"] = *(reinterpret_cast<int16_t *>(resultPtr2410 + 2));
-    }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_uint8 || ithoSettingsArray[index].type == ithoSettings::is_uint16 || ithoSettingsArray[index].type == ithoSettings::is_uint32)
-    {
-      root["Current"] = *(reinterpret_cast<uint32_t *>(resultPtr2410 + 0));
-      root["Minimum"] = *(reinterpret_cast<uint32_t *>(resultPtr2410 + 1));
-      root["Maximum"] = *(reinterpret_cast<uint32_t *>(resultPtr2410 + 2));
-    }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_float2)
-    {
-      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 2.0;
-      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 2.0;
-      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 2.0;
-    }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_float10)
-    {
-      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 10.0;
-      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 10.0;
-      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 10.0;
-    }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_float100)
-    {
-      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 100.0;
-      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 100.0;
-      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 100.0;
-    }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_float1000)
-    {
-      root["Current"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 0)) / 1000.0;
-      root["Minimum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 1)) / 1000.0;
-      root["Maximum"] = *(reinterpret_cast<int32_t *>(resultPtr2410 + 2)) / 1000.0;
+      root["Current"] = val0;
+      root["Minimum"] = val1;
+      root["Maximum"] = val2;
     }
     else
     {
-      root["Current"] = *(resultPtr2410 + 0);
-      root["Minimum"] = *(resultPtr2410 + 1);
-      root["Maximum"] = *(resultPtr2410 + 2);
+      root["Current"] = static_cast<double>((int32_t) val0) / ithoSettingsArray[index].divider;
+      root["Minimum"] = static_cast<double>((int32_t) val1) / ithoSettingsArray[index].divider;
+      root["Maximum"] = static_cast<double>((int32_t) val2) / ithoSettingsArray[index].divider;
     }
   }
   else
@@ -1423,74 +1392,30 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
 
     ithoSettingsArray[index].value = values[0];
 
-    if (((i2cbuf[22] >> 3) & 0x07) == 0)
-    {
-      ithoSettingsArray[index].length = 1;
-    }
-    else
-    {
-      ithoSettingsArray[index].length = (i2cbuf[22] >> 3) & 0x07;
-    }
+    ithoSettingsArray[index].is_signed = get_signed_from_datatype(i2cbuf[22]);
+    ithoSettingsArray[index].length = get_length_from_datatype(i2cbuf[22]);
+    ithoSettingsArray[index].divider = get_divider_from_datatype(i2cbuf[22]);
+    D_LOG("Itho settings");
+    D_LOG("Divider %d", ithoSettingsArray[index].divider);
+    D_LOG("Length %d", ithoSettingsArray[index].length);
 
-    if ((i2cbuf[22] & 0x07) == 0)
+    if (ithoSettingsArray[index].divider == 1)
     { // integer value
-      if ((i2cbuf[22] & 0x80) == 0)
-      { // unsigned value
-        if (ithoSettingsArray[index].length == 1)
-        {
-          ithoSettingsArray[index].type = ithoSettings::is_uint8;
-        }
-        else if (ithoSettingsArray[index].length == 2)
-        {
-          ithoSettingsArray[index].type = ithoSettings::is_uint16;
-        }
-        else
-        {
-          ithoSettingsArray[index].type = ithoSettings::is_uint32;
-        }
-      }
-      else
-      {
-        if (ithoSettingsArray[index].length == 1)
-        {
-          ithoSettingsArray[index].type = ithoSettings::is_int8;
-        }
-        else if (ithoSettingsArray[index].length == 2)
-        {
-          ithoSettingsArray[index].type = ithoSettings::is_int16;
-        }
-        else
-        {
-          ithoSettingsArray[index].type = ithoSettings::is_int32;
-        }
-      }
+        ithoSettingsArray[index].type = ithoSettings::is_int;
     }
     else
-    { // float
-
-      if ((i2cbuf[22] & 0x04) != 0)
-      {
-        ithoSettingsArray[index].type = ithoSettings::is_float1000;
-      }
-      else if ((i2cbuf[22] & 0x02) != 0)
-      {
-        ithoSettingsArray[index].type = ithoSettings::is_float100;
-      }
-      else if ((i2cbuf[22] & 0x01) != 0)
-      {
-        ithoSettingsArray[index].type = ithoSettings::is_float10;
-      }
-      else
-      {
-        ithoSettingsArray[index].type = ithoSettings::is_unknown;
-      }
+    {
+      ithoSettingsArray[index].type = ithoSettings::is_float;
     }
     // special cases
-    if (i2cbuf[22] == 0x01)
+    if (i2cbuf[22] == 0x5B)
     {
-      ithoSettingsArray[index].type = ithoSettings::is_uint8;
+      // legacy itho: 0x5B -> 0x10
+      ithoSettingsArray[index].type = ithoSettings::is_int;;
+      ithoSettingsArray[index].length = 2;
+      ithoSettingsArray[index].is_signed = false;
     }
-
+        
     if (updateweb)
     {
       jsonSysmessage("itho2410", i2cbuf2string(i2cbuf, len).c_str());
@@ -1499,77 +1424,31 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
       char tempbuffer1[256]{};
       char tempbuffer2[256]{};
 
-      if (ithoSettingsArray[index].type == ithoSettings::is_uint8 || ithoSettingsArray[index].type == ithoSettings::is_uint16 || ithoSettingsArray[index].type == ithoSettings::is_uint32)
-      { // unsigned value
-        uint32_t val[3];
-        std::memcpy(&val[0], &values[0], sizeof(val[0]));
-        std::memcpy(&val[1], &values[1], sizeof(val[0]));
-        std::memcpy(&val[2], &values[2], sizeof(val[0]));
-        sprintf(tempbuffer0, "%u", val[0]);
-        sprintf(tempbuffer1, "%u", val[1]);
-        sprintf(tempbuffer2, "%u", val[2]);
-      }
-      else if (ithoSettingsArray[index].type == ithoSettings::is_int8)
+      int64_t val0, val1, val2;
+      val0 = cast_raw_bytes_to_int(&values[0], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
+      val1 = cast_raw_bytes_to_int(&values[1], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
+      val2 = cast_raw_bytes_to_int(&values[2], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
+    
+      if (ithoSettingsArray[index].type == ithoSettings::is_int)
       {
-        int8_t val[3];
-        std::memcpy(&val[0], &values[0], sizeof(val[0]));
-        std::memcpy(&val[1], &values[1], sizeof(val[0]));
-        std::memcpy(&val[2], &values[2], sizeof(val[0]));
-        sprintf(tempbuffer0, "%d", val[0]);
-        sprintf(tempbuffer1, "%d", val[1]);
-        sprintf(tempbuffer2, "%d", val[2]);
-      }
-      else if (ithoSettingsArray[index].type == ithoSettings::is_int16)
-      {
-        int16_t val[3];
-        std::memcpy(&val[0], &values[0], sizeof(val[0]));
-        std::memcpy(&val[1], &values[1], sizeof(val[0]));
-        std::memcpy(&val[2], &values[2], sizeof(val[0]));
-        sprintf(tempbuffer0, "%d", val[0]);
-        sprintf(tempbuffer1, "%d", val[1]);
-        sprintf(tempbuffer2, "%d", val[2]);
-      }
-      else if (ithoSettingsArray[index].type == ithoSettings::is_int32)
-      {
-        sprintf(tempbuffer0, "%d", values[0]);
-        sprintf(tempbuffer1, "%d", values[1]);
-        sprintf(tempbuffer2, "%d", values[2]);
-      }
-      else if (ithoSettingsArray[index].type == ithoSettings::is_float10)
-      {
-        double val[3];
-        val[0] = values[0] / 10.0f;
-        val[1] = values[1] / 10.0f;
-        val[2] = values[2] / 10.0f;
-        sprintf(tempbuffer0, "%.1f", val[0]);
-        sprintf(tempbuffer1, "%.1f", val[1]);
-        sprintf(tempbuffer2, "%.1f", val[2]);
-      }
-      else if (ithoSettingsArray[index].type == ithoSettings::is_float100)
-      {
-        double val[3];
-        val[0] = values[0] / 100.0f;
-        val[1] = values[1] / 100.0f;
-        val[2] = values[2] / 100.0f;
-        sprintf(tempbuffer0, "%.2f", val[0]);
-        sprintf(tempbuffer1, "%.2f", val[1]);
-        sprintf(tempbuffer2, "%.2f", val[2]);
-      }
-      else if (ithoSettingsArray[index].type == ithoSettings::is_float1000)
-      {
-        double val[3];
-        val[0] = values[0] / 1000.0f;
-        val[1] = values[1] / 1000.0f;
-        val[2] = values[2] / 1000.0f;
-        sprintf(tempbuffer0, "%.3f", val[0]);
-        sprintf(tempbuffer1, "%.3f", val[1]);
-        sprintf(tempbuffer2, "%.3f", val[2]);
+        if (ithoSettingsArray[index].is_signed) 
+        {
+          sprintf(tempbuffer0, "%lld", val0);
+          sprintf(tempbuffer1, "%lld", val1);
+          sprintf(tempbuffer2, "%lld", val2);
+        }
+        else
+        {
+          sprintf(tempbuffer0, "%llu", val0);
+          sprintf(tempbuffer1, "%llu", val1);
+          sprintf(tempbuffer2, "%llu", val2);
+        }
       }
       else
       {
-        sprintf(tempbuffer0, "%d", values[0]);
-        sprintf(tempbuffer1, "%d", values[1]);
-        sprintf(tempbuffer2, "%d", values[2]);
+        sprintf(tempbuffer0, "%.1f", static_cast<double>((int32_t)val0) / ithoSettingsArray[index].divider);
+        sprintf(tempbuffer1, "%.1f", static_cast<double>((int32_t)val1) / ithoSettingsArray[index].divider);
+        sprintf(tempbuffer2, "%.1f", static_cast<double>((int32_t)val2) / ithoSettingsArray[index].divider);
       }
       jsonSysmessage("itho2410cur", tempbuffer0);
       jsonSysmessage("itho2410min", tempbuffer1);
@@ -1610,16 +1489,16 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
 
   command[23] = index;
 
-  if (ithoSettingsArray[index].type == ithoSettings::is_uint8 || ithoSettingsArray[index].type == ithoSettings::is_int8)
+  if (ithoSettingsArray[index].length == 1)
   {
     command[9] = value & 0xFF;
   }
-  else if (ithoSettingsArray[index].type == ithoSettings::is_uint16 || ithoSettingsArray[index].type == ithoSettings::is_int16)
+  else if (ithoSettingsArray[index].length == 2)
   {
     command[9] = value & 0xFF;
     command[8] = (value >> 8) & 0xFF;
   }
-  else if (ithoSettingsArray[index].type == ithoSettings::is_uint32 || ithoSettingsArray[index].type == ithoSettings::is_int32 || ithoSettingsArray[index].type == ithoSettings::is_float2 || ithoSettingsArray[index].type == ithoSettings::is_float10 || ithoSettingsArray[index].type == ithoSettings::is_float100 || ithoSettingsArray[index].type == ithoSettings::is_float1000)
+  else if (ithoSettingsArray[index].length == 4)
   {
     command[9] = value & 0xFF;
     command[8] = (value >> 8) & 0xFF;
@@ -1775,6 +1654,37 @@ int cast_to_signed_int(int val, int length)
       return static_cast<int8_t>(val);
   default:
       return 0;
+  }
+}
+
+int64_t cast_raw_bytes_to_int(int32_t* valptr, int length, bool is_signed)
+// valptr is a pointer to 4 rawbytes, which are casted to the
+//  correct value and returned as int32.
+{
+  if (is_signed) {
+    switch (length) {
+    case 4:
+        return *reinterpret_cast<int32_t*>(valptr);
+    case 2:
+        return *reinterpret_cast<int16_t*>(valptr);
+    case 1:
+        return *reinterpret_cast<int8_t*>(valptr);
+    default:
+        return 0;
+    }
+  }
+  else
+  {
+    switch (length) {
+    case 4:
+        return *reinterpret_cast<uint32_t*>(valptr);
+    case 2:
+        return *reinterpret_cast<uint16_t*>(valptr);
+    case 1:
+        return *reinterpret_cast<uint8_t*>(valptr);
+    default:
+        return 0;
+    }
   }
 }
 

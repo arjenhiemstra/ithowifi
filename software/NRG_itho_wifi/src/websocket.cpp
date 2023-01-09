@@ -248,28 +248,24 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           if (val == 2410)
           {
             i2c_cmd_queue.push_back([root]()
-                                    { getSetting(root["index"].as<int8_t>(), false, true, false); });
+                                    { getSetting(root["index"].as<uint8_t>(), false, true, false); });
           }
           else if (val == 24109)
           {
             if (ithoSettingsArray != nullptr)
             {
               uint8_t index = root["ithosetupdate"].as<uint8_t>();
-              if (ithoSettingsArray[index].type == ithoSettings::is_float2)
+              if (ithoSettingsArray[index].type == ithoSettings::is_float && ithoSettingsArray[index].length == 1)
               {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 2), true);
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int8_t>(root["value"].as<double>() * ithoSettingsArray[index].divider), true);
               }
-              else if (ithoSettingsArray[index].type == ithoSettings::is_float10)
+              else if (ithoSettingsArray[index].type == ithoSettings::is_float && ithoSettingsArray[index].length == 2)
               {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 10), true);
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int16_t>(root["value"].as<double>() * ithoSettingsArray[index].divider), true);
               }
-              else if (ithoSettingsArray[index].type == ithoSettings::is_float100)
+              else if (ithoSettingsArray[index].type == ithoSettings::is_float && ithoSettingsArray[index].length == 4)
               {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 100), true);
-              }
-              else if (ithoSettingsArray[index].type == ithoSettings::is_float1000)
-              {
-                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 1000), true);
+                updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * ithoSettingsArray[index].divider), true);
               }
               else
               {
@@ -344,21 +340,17 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         if (ithoSettingsArray != nullptr)
         {
           uint8_t index = root["ithosetupdate"].as<uint8_t>();
-          if (ithoSettingsArray[index].type == ithoSettings::is_float2)
+          if (ithoSettingsArray[index].type == ithoSettings::is_float && ithoSettingsArray[index].length == 1)
           {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 2), false);
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int8_t>(root["value"].as<double>() * ithoSettingsArray[index].divider), false);
           }
-          else if (ithoSettingsArray[index].type == ithoSettings::is_float10)
+          else if (ithoSettingsArray[index].type == ithoSettings::is_float && ithoSettingsArray[index].length == 2)
           {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 10), false);
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int16_t>(root["value"].as<double>() * ithoSettingsArray[index].divider), false);
           }
-          else if (ithoSettingsArray[index].type == ithoSettings::is_float100)
+          else if (ithoSettingsArray[index].type == ithoSettings::is_float && ithoSettingsArray[index].length == 4)
           {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 100), false);
-          }
-          else if (ithoSettingsArray[index].type == ithoSettings::is_float1000)
-          {
-            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * 1000), false);
+            updateSetting(root["ithosetupdate"].as<uint8_t>(), static_cast<int32_t>(root["value"].as<double>() * ithoSettingsArray[index].divider), false);
           }
           else
           {
