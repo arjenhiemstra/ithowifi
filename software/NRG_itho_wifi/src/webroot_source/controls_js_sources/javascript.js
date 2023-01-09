@@ -11,6 +11,7 @@ var settingIndex = -1;
 var websocketServerLocation = 'ws://' + window.location.hostname + ':8000/ws';
 
 function startWebsock(websocketServerLocation) {
+  console.log(websocketServerLocation);
   websock = new WebSocket(websocketServerLocation);
   websock.onmessage = async function (b) {
     try {
@@ -30,11 +31,11 @@ function startWebsock(websocketServerLocation) {
   };
   websock.onclose = function (a) {
     console.log('websock close');
-    // Try to reconnect in 2 seconds
+    // Try to reconnect in 200 milliseconds
     websock = null;
     document.getElementById("layout").style.opacity = 0.3;
     document.getElementById("loader").style.display = "block";
-    setTimeout(function () { startWebsock(websocketServerLocation) }, 2000);
+    setTimeout(function () { startWebsock(websocketServerLocation) }, 200);
   };
   websock.onerror = function (a) {
     try {
@@ -261,10 +262,6 @@ async function asyncWsCall(b) {
         $('#message_box').show();
         $('#message_box').append(`<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
         removeAfter5secs(count);
-      }
-      else if (f.dblog) {
-        let x = f.dblog;
-        $('#dblog').prepend(`${x}<br>`);
       }
       else if (f.rflog) {
         let x = f.rflog;
@@ -665,6 +662,18 @@ function round(value, precision) {
   return Math.round(value * multiplier) / multiplier;
 }
 
+function getlog(url) {
+  xmlhttp = new XMLHttpRequest();
+  xmlhttp.onreadystatechange = function () {
+    if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+      let res = xmlhttp.responseText.split(/\r?\n/).reverse().slice(1).join("<br>");
+      $('#dblog').html(res);
+    }
+  }
+  xmlhttp.open("GET", url, false);
+  xmlhttp.send();
+}
+
 var mqtt_state_topic_tmp = "";
 var mqtt_cmd_topic_tmp = "";
 
@@ -753,7 +762,7 @@ function getSettings(pagevalue) {
   }
   else {
     console.log("websock not open");
-    setTimeout(getSettings, 100, pagevalue);
+    setTimeout(getSettings, 250, pagevalue);
   }
 }
 

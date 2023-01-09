@@ -54,6 +54,7 @@ void handleStatus(AsyncWebServerRequest *request);
 void handleFileList(AsyncWebServerRequest *request);
 void jsonSystemstat();
 const char *getContentType(bool download, const char *filename);
+int my_stat(const char *path, size_t *size, time_t *mtime);
 void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data);
 void mg_serve_fs(struct mg_connection *c, void *ev_data);
 void mg_handleFileList(struct mg_connection *c, int ev, void *ev_data, void *fn_data);

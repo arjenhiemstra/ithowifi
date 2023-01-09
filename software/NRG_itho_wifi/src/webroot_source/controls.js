@@ -12,6 +12,7 @@ var settingIndex = -1;
 var websocketServerLocation = 'ws://' + window.location.hostname + ':8000/ws';
 
 function startWebsock(websocketServerLocation) {
+  console.log(websocketServerLocation);
   websock = new WebSocket(websocketServerLocation);
   websock.onmessage = async function (b) {
     try {
@@ -31,11 +32,11 @@ function startWebsock(websocketServerLocation) {
   };
   websock.onclose = function (a) {
     console.log('websock close');
-    // Try to reconnect in 2 seconds
+    // Try to reconnect in 200 milliseconds
     websock = null;
     document.getElementById("layout").style.opacity = 0.3;
     document.getElementById("loader").style.display = "block";
-    setTimeout(function () { startWebsock(websocketServerLocation) }, 2000);
+    setTimeout(function () { startWebsock(websocketServerLocation) }, 200);
   };
   websock.onerror = function (a) {
     try {
@@ -262,10 +263,6 @@ async function asyncWsCall(b) {
         $('#message_box').show();
         $('#message_box').append(`<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
         removeAfter5secs(count);
-      }
-      else if (f.dblog) {
-        let x = f.dblog;
-        $('#dblog').prepend(`${x}<br>`);
       }
       else if (f.rflog) {
         let x = f.rflog;
@@ -666,6 +663,18 @@ function round(value, precision) {
   return Math.round(value * multiplier) / multiplier;
 }
 
+function getlog(url) {
+  xmlhttp = new XMLHttpRequest();
+  xmlhttp.onreadystatechange = function () {
+    if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+      let res = xmlhttp.responseText.split(/\r?\n/).reverse().slice(1).join("<br>");
+      $('#dblog').html(res);
+    }
+  }
+  xmlhttp.open("GET", url, false);
+  xmlhttp.send();
+}
+
 var mqtt_state_topic_tmp = "";
 var mqtt_cmd_topic_tmp = "";
 
@@ -754,7 +763,7 @@ function getSettings(pagevalue) {
   }
   else {
     console.log("websock not open");
-    setTimeout(getSettings, 100, pagevalue);
+    setTimeout(getSettings, 250, pagevalue);
   }
 }
 
@@ -2431,7 +2440,7 @@ var html_syslog = `
 <div id="sdblog_outer">
     <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">System Log:</div>
     <div id='dblog'
-        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+        style="white-space:pre;padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
     </div>
     <div style="padding-top:5px;">
         <a class="pure-button" href="/curlog">Download current logfile</a>&nbsp;
@@ -2457,10 +2466,10 @@ var html_syslog = `
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">
             <label for="option-syslog_active" class="pure-radio">Syslog Active</label>
-            <input id="option-syslog_active-1" type="radio" name="option-syslog_active" onchange='radio("syslog_active", 1)'
-                value="1"> on
-            <input id="option-syslog_active-0" type="radio" name="option-syslog_active" onchange='radio("syslog_active", 0)'
-                value="0"> off
+            <input id="option-syslog_active-1" type="radio" name="option-syslog_active"
+                onchange='radio("syslog_active", 1)' value="1"> on
+            <input id="option-syslog_active-0" type="radio" name="option-syslog_active"
+                onchange='radio("syslog_active", 0)' value="0"> off
         </div>
         <div class="pure-control-group">
             <label for="logserver">Syslog server</label>
@@ -2482,8 +2491,8 @@ var html_syslog = `
 </form>
 <script>
     $(document).ready(function () {
-        getSettings('systemlog');
         getSettings('logsetup');
+        getlog("/curlog");
     });
 </script>
 `;

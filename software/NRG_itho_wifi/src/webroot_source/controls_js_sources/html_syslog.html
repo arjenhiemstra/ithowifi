@@ -10,7 +10,7 @@
 <div id="sdblog_outer">
     <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">System Log:</div>
     <div id='dblog'
-        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+        style="white-space:pre;padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
     </div>
     <div style="padding-top:5px;">
         <a class="pure-button" href="/curlog">Download current logfile</a>&nbsp;
@@ -36,10 +36,10 @@
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">
             <label for="option-syslog_active" class="pure-radio">Syslog Active</label>
-            <input id="option-syslog_active-1" type="radio" name="option-syslog_active" onchange='radio("syslog_active", 1)'
-                value="1"> on
-            <input id="option-syslog_active-0" type="radio" name="option-syslog_active" onchange='radio("syslog_active", 0)'
-                value="0"> off
+            <input id="option-syslog_active-1" type="radio" name="option-syslog_active"
+                onchange='radio("syslog_active", 1)' value="1"> on
+            <input id="option-syslog_active-0" type="radio" name="option-syslog_active"
+                onchange='radio("syslog_active", 0)' value="0"> off
         </div>
         <div class="pure-control-group">
             <label for="logserver">Syslog server</label>
@@ -61,7 +61,7 @@
 </form>
 <script>
     $(document).ready(function () {
-        getSettings('systemlog');
         getSettings('logsetup');
+        getlog("/curlog");
     });
 </script>

@@ -214,6 +214,7 @@ void webServerInit()
 #if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
   mg_http_listen(&mgr, s_listen_on_http, httpEvent, NULL); // Create HTTP listener
 #endif
+
   // upload a file to /upload
   server.on(
       "/upload", HTTP_POST, [](AsyncWebServerRequest *request)
@@ -1136,6 +1137,66 @@ void jsonSystemstat()
 
   notifyClients(root.as<JsonObjectConst>());
 }
+
+// FIXME: below code crashes the ESP32 on bigger files due to a watchdog TG1WDT_SYS_RESET timeout, probably due to a too long time it takes to access the file
+// SPIFFS is flat, so tell Mongoose that the FS root is a directory
+// This cludge is not required for filesystems with directory support
+// int my_stat(const char *path, size_t *size, time_t *mtime)
+// {
+//   int flags = mg_fs_posix.st(path, size, mtime);
+//   if (strcmp(path, "/littlefs") == 0)
+//     flags |= MG_FS_DIR;
+//   return flags;
+// }
+
+// void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+// {
+
+//   if (ev == MG_EV_HTTP_MSG)
+//   {
+//     struct mg_http_message *hm = (mg_http_message *)ev_data;
+//     if (mg_http_match_uri(hm, "/curlog"))
+//     {
+
+//       char url[24]{};
+//       size_t len;
+
+//       if (ACTIVE_FS.exists("/logfile0.current.log"))
+//       {
+//         len = strlcpy(url, "/logfile0.current.log", sizeof(url));
+//       }
+//       else
+//       {
+//         len = strlcpy(url, "/logfile1.current.log", sizeof(url));
+//       }
+
+//       struct mg_http_message mg;
+//       mg.uri.ptr = &url[0];
+//       mg.uri.len = len;
+
+//       char buf[64]{};
+//       int urilen = mg.uri.len + 1;
+//       if (urilen > sizeof(buf))
+//         urilen = sizeof(buf);
+//       strlcpy(buf, mg.uri.ptr, urilen);
+//       D_LOG("File '%s' requested", buf);
+//     }
+//     else
+//     {
+//       // mg_http_reply(c, 404, "", "Not found: %d\n", MG_PATH_MAX);
+//       // return;
+//       struct mg_fs fs = mg_fs_posix;
+//       fs.st = my_stat;
+//       struct mg_http_serve_opts opts = {.root_dir = "/littlefs", .fs = &fs};
+//       // opts.fs = NULL;
+
+//       delay(1);
+//       mg_http_serve_dir(c, hm, &opts);
+//     }
+//   }
+
+//   (void)fn_data;
+// }
 
 #if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
 void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
