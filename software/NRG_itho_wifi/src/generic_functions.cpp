@@ -111,19 +111,19 @@ void getIthoSettingsBackupJSON(JsonObject root)
       char buf[12];
       itoa(i, buf, 10);
 
-      if (ithoSettingsArray[i].type == ithoSettings::is_int8)
+      if (ithoSettingsArray[i].type == ithoSettings::is_int && ithoSettingsArray[i].length == 1 && ithoSettingsArray[i].is_signed)
       {
         int8_t val;
         std::memcpy(&val, &ithoSettingsArray[i].value, sizeof(val));
         root[buf] = val;
       }
-      else if (ithoSettingsArray[i].type == ithoSettings::is_int16)
+      else if (ithoSettingsArray[i].type == ithoSettings::is_int && ithoSettingsArray[i].length == 2 && ithoSettingsArray[i].is_signed)
       {
         int16_t val;
         std::memcpy(&val, &ithoSettingsArray[i].value, sizeof(val));
         root[buf] = val;
       }
-      else if (ithoSettingsArray[i].type == ithoSettings::is_int32)
+      else if (ithoSettingsArray[i].type == ithoSettings::is_int && ithoSettingsArray[i].length == 4 && ithoSettingsArray[i].is_signed)
       {
         root[buf] = ithoSettingsArray[i].value;
       }
