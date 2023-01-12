@@ -13,7 +13,7 @@ const char *hostName()
 
   if (strcmp(wifiConfig.hostname, "") == 0)
   {
-    sprintf(hostName, "%s%02x%02x", espName, sys.getMac(4), sys.getMac(5));
+    snprintf(hostName, sizeof(hostName), "%s%02x%02x", espName, sys.getMac(4), sys.getMac(5));
   }
   else
   {
@@ -106,7 +106,7 @@ void getIthoSettingsBackupJSON(JsonObject root)
 
   if (ithoSettingsArray != nullptr)
   {
-    for (int i = 0; i < currentIthoSettingsLength(); i++)
+    for (uint16_t i = 0; i < currentIthoSettingsLength(); i++)
     {
       char buf[12];
       itoa(i, buf, 10);
@@ -225,7 +225,7 @@ bool ithoSetSpeed(uint16_t speed, cmdOrigin origin)
   }
 
   char buf[32]{};
-  sprintf(buf, "speed:%d", speed);
+  snprintf(buf, sizeof(buf), "speed:%d", speed);
   logLastCommand(buf, origin);
   return true;
 }
@@ -251,7 +251,7 @@ bool ithoSetTimer(uint16_t timer, cmdOrigin origin)
   }
 
   char buf[32]{};
-  sprintf(buf, "timer:%d", timer);
+  snprintf(buf, sizeof(buf), "timer:%d", timer);
   logLastCommand(buf, origin);
   return true;
 }
@@ -278,7 +278,7 @@ bool ithoSetSpeedTimer(uint16_t speed, uint16_t timer, cmdOrigin origin)
   }
 
   char buf[32]{};
-  sprintf(buf, "speed:%d,timer:%d", speed, timer);
+  snprintf(buf, sizeof(buf), "speed:%d,timer:%d", speed, timer);
   logLastCommand(buf, origin);
   return true;
 }
@@ -354,9 +354,8 @@ void setRFdebugLevel(uint8_t level)
   {
     rf.setAllowAll(false);
   }
-  sprintf(logBuff, "Debug level = %d", debugLevel);
+  snprintf(logBuff, sizeof(logBuff), "Debug level = %d", debugLevel);
   logMessagejson(logBuff, WEBINTERFACE);
-  strlcpy(logBuff, "", sizeof(logBuff));
 }
 
 double round(double value, int precision)

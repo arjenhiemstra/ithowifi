@@ -180,10 +180,13 @@ void i2c_sniffer_process_buf(std::string &buffer)
         int len = buffer.length();
         if (len)
         {
-            // DynamicJsonDocument root(len + 100);
-            // root["i2csniffer"] = buffer.c_str();
-            // notifyClients(root.as<JsonObjectConst>());
-            D_LOG(buffer.c_str());
+            if (i2c_safe_guard.sniffer_web_enabled)
+            {
+                DynamicJsonDocument root(len + 100);
+                root["i2csniffer"] = buffer.c_str();
+                notifyClients(root.as<JsonObjectConst>());
+            }
+            D_LOG(buffer.c_str()); // FIXME: better solution needed than D_LOG, D_LOG will truncate messages
         }
     }
 

@@ -205,8 +205,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           uint16_t val = root["ithobutton"].as<uint16_t>();
           if (val == 2410)
           {
-            i2c_cmd_queue.push_back([root]()
-                                    { getSetting(root["index"].as<uint8_t>(), false, true, false); });
+            i2c_queue_add_cmd([root]()
+                              { getSetting(root["index"].as<uint8_t>(), false, true, false); });
           }
           else if (val == 24109)
           {
@@ -275,8 +275,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       if (!error)
       {
         // step1: index=0, update=false, loop=true -> reply with settings labels but null for values
-        i2c_cmd_queue.push_back([root]()
-                                { getSetting(root["index"].as<uint8_t>(), root["update"].as<bool>(), false, true); });
+        i2c_queue_add_cmd([root]()
+                          { getSetting(root["index"].as<uint8_t>(), root["update"].as<bool>(), false, true); });
       }
     }
     else if (msg.find("{\"ithosetrefresh\"") != std::string::npos)
@@ -285,8 +285,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
-        i2c_cmd_queue.push_back([root]()
-                                { getSetting(root["ithosetrefresh"].as<uint8_t>(), true, false, false); });
+        i2c_queue_add_cmd([root]()
+                          { getSetting(root["ithosetrefresh"].as<uint8_t>(), true, false, false); });
       }
     }
     else if (msg.find("{\"ithosetupdate\"") != std::string::npos)
@@ -508,11 +508,13 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         if (root["i2csniffer"].as<uint8_t>() == 1)
         {
           i2c_safe_guard.sniffer_enabled = true;
+          i2c_safe_guard.sniffer_web_enabled = true;
           i2c_sniffer_enable();
         }
         else
         {
           i2c_safe_guard.sniffer_enabled = false;
+          i2c_safe_guard.sniffer_web_enabled = false;
           i2c_sniffer_disable();
         }
       }

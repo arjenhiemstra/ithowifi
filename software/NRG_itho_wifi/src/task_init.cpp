@@ -25,7 +25,7 @@ void TaskInit(void *pvParameters)
     yield();
   }
 
-  esp_task_wdt_init(40, true);
+  esp_task_wdt_init(60, true);
   I_LOG("Setup: done");
 
   vTaskDelete(NULL);

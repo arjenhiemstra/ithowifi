@@ -17,7 +17,7 @@ void printTimestamp(Print *_logOutput, int logLevel)
   else
   {
     char c[32]{};
-    sprintf(c, "%10lu ", millis());
+    snprintf(c, sizeof(c), "%10lu ", millis());
     _logOutput->print(c);
   }
 }
@@ -35,15 +35,27 @@ void sys_log(log_prio_level_t log_prio, const char *inputString, ...)
 
   va_start(args, inputString);
 
-  vsnprintf(input.msg, sizeof(input.msg), inputString, args);
+  size_t len = vsnprintf(0, 0, inputString, args);
+  input.msg.resize(len + 1); // need room to NULL terminate the string
+  vsnprintf(&input.msg[0], len + 1, inputString, args);
+  input.msg.resize(len);
 
   va_end(args);
 
 #if defined(ENABLE_SERIAL)
-  Serial.println(input.msg);
+  Serial.println(input.msg.c_str());
 #endif
 
   input.code = log_prio;
+
+  if (syslog_queue.size() > SYSLOG_QUEUE_MAX_SIZE)
+    return;
+
+  if (syslog_queue.size() == SYSLOG_QUEUE_MAX_SIZE)
+  {
+    input.code = SYSLOG_WARNING;
+    input.msg = "Warning: syslog_queue overflow";
+  }
 
   syslog_queue.push_back(input);
 }

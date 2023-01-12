@@ -2,7 +2,7 @@
 
 #include "task_syscontrol.h"
 
-#define TASK_SYS_CONTROL_PRIO 5
+#define TASK_SYS_CONTROL_PRIO 6
 
 // globals
 uint32_t TaskSysControlHWmark = 0;
@@ -27,7 +27,7 @@ bool i2c_safe_guard_log = true;
 
 // locals
 StaticTask_t xTaskSysControlBuffer;
-StackType_t xTaskSysControlStack[STACK_SIZE + STACK_SIZE_SMALL];
+StackType_t xTaskSysControlStack[STACK_SIZE_MEDIUM];
 TaskHandle_t xTaskSysControlHandle = NULL;
 
 unsigned long lastI2CinitRequest = 0;
@@ -52,7 +52,7 @@ void startTaskSysControl()
   xTaskSysControlHandle = xTaskCreateStaticPinnedToCore(
       TaskSysControl,
       "TaskSysControl",
-      STACK_SIZE + STACK_SIZE_SMALL,
+      STACK_SIZE_MEDIUM,
       (void *)1,
       TASK_SYS_CONTROL_PRIO,
       xTaskSysControlStack,
@@ -168,33 +168,33 @@ void execSystemControlTasks()
     if (systemConfig.itho_2401 == 1)
     {
       _updateMQTT = true;
-      i2c_cmd_queue.push_back([]()
-                              { sendQueryStatus(false); });
+      i2c_queue_add_cmd([]()
+                        { sendQueryStatus(false); });
     }
     if (systemConfig.itho_31da == 1)
     {
       _updateMQTT = true;
-      i2c_cmd_queue.push_back([]()
-                              { sendQuery31DA(false); });
+      i2c_queue_add_cmd([]()
+                        { sendQuery31DA(false); });
     }
     if (systemConfig.itho_31d9 == 1)
     {
       _updateMQTT = true;
-      i2c_cmd_queue.push_back([]()
-                              { sendQuery31D9(false); });
+      i2c_queue_add_cmd([]()
+                        { sendQuery31D9(false); });
     }
     if (_updateMQTT)
     {
-      i2c_cmd_queue.push_back([]()
-                              { updateMQTTihtoStatus = true; });
+      i2c_queue_add_cmd([]()
+                        { updateMQTTihtoStatus = true; });
     }
   }
 
   if (systemConfig.itho_sendjoin > 0 && !joinSend && ithoInitResult == 1)
   {
     joinSend = true;
-    i2c_cmd_queue.push_back([]()
-                            { sendRemoteCmd(0, IthoJoin); });
+    i2c_queue_add_cmd([]()
+                      { sendRemoteCmd(0, IthoJoin); });
 
     I_LOG("I2C init: Virtual remote join command send");
 
@@ -216,7 +216,7 @@ void execSystemControlTasks()
     ithoQueue.ithoSpeedUpdated = false;
     uint16_t speed = ithoQueue.get_itho_speed();
     char buf[32]{};
-    sprintf(buf, "speed:%d", speed);
+    snprintf(buf, sizeof(buf), "speed:%d", speed);
 
     if (writeIthoVal(speed, &ithoCurrentVal, &updateIthoMQTT))
     {
@@ -279,8 +279,8 @@ void execSystemControlTasks()
   if (!(currentItho_fwversion() > 0) && millis() - lastVersionCheck > 60000)
   {
     lastVersionCheck = millis();
-    i2c_cmd_queue.push_back([]()
-                            { sendQueryDevicetype(false); });
+    i2c_queue_add_cmd([]()
+                      { sendQueryDevicetype(false); });
   }
 
   if (ithoInitResult == -1)
@@ -299,8 +299,8 @@ void execSystemControlTasks()
 
       if (SHT3x_original || SHT3x_alternative)
       {
-        i2c_cmd_queue.push_back([]()
-                                { update_sht_sensor(); });
+        i2c_queue_add_cmd([]()
+                          { update_sht_sensor(); });
       }
     }
   }
@@ -335,7 +335,7 @@ void update_sht_sensor()
       }
       N_LOG("SHT3x sensor reset: %s", reset_res ? "Success" : "Failed");
       char buf[32]{};
-      sprintf(buf, "%s", reset_res ? "OK" : "NOK");
+      snprintf(buf, sizeof(buf), "%s", reset_res ? "OK" : "NOK");
       jsonSysmessage("i2c_sht_reset", buf);
     }
     else if (sht_org.readSample())
@@ -359,7 +359,7 @@ void update_sht_sensor()
       }
       N_LOG("SHT3x sensor reset: %s", reset_res ? "Success" : "Failed");
       char buf[32]{};
-      sprintf(buf, "%s", reset_res ? "OK" : "NOK");
+      snprintf(buf, sizeof(buf), "%s", reset_res ? "OK" : "NOK");
       jsonSysmessage("i2c_sht_reset", buf);
     }
     else if (sht_alt.readSample())
@@ -426,10 +426,10 @@ void init_i2c_functions()
           }
           if (index > 0)
           {
-            i2c_cmd_queue.push_back([index]()
-                                    { sendQuery2410(index, false); });
-            i2c_cmd_queue.push_back([index, value]()
-                                    { setSetting2410(index, value, false); });
+            i2c_queue_add_cmd([index]()
+                              { sendQuery2410(index, false); });
+            i2c_queue_add_cmd([index, value]()
+                              { setSetting2410(index, value, false); });
 
             N_LOG("I2C init: set hum sensor in itho firmware to: %s", value ? "on" : "off");
           }
@@ -815,8 +815,8 @@ bool writeIthoVal(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updat
   if (*ithoCurrentVal != value)
   {
 
-    i2c_cmd_queue.push_back([value, ithoCurrentVal, updateIthoMQTT]()
-                            { IthoPWMcommand(value, ithoCurrentVal, updateIthoMQTT); });
+    i2c_queue_add_cmd([value, ithoCurrentVal, updateIthoMQTT]()
+                      { IthoPWMcommand(value, ithoCurrentVal, updateIthoMQTT); });
 
     return true;
   }
@@ -833,98 +833,98 @@ void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
 
   if (strcmp(command, "away") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoAway); });
+    i2c_queue_add_cmd([remoteIndex]()
+                      { sendRemoteCmd(remoteIndex, IthoAway); });
   }
   else if (strcmp(command, "low") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoLow); });
+    i2c_queue_add_cmd([remoteIndex]()
+                                   { sendRemoteCmd(remoteIndex, IthoLow); });
   }
   else if (strcmp(command, "medium") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoMedium); });
+    i2c_queue_add_cmd([remoteIndex]()
+                      { sendRemoteCmd(remoteIndex, IthoMedium); });
   }
   else if (strcmp(command, "high") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoHigh); });
+    i2c_queue_add_cmd([remoteIndex]()
+                      { sendRemoteCmd(remoteIndex, IthoHigh); });
   }
   else if (strcmp(command, "timer1") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoTimer1); });
+    i2c_queue_add_cmd([remoteIndex]()
+                      { sendRemoteCmd(remoteIndex, IthoTimer1); });
   }
   else if (strcmp(command, "timer2") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoTimer2); });
+    i2c_queue_add_cmd([remoteIndex]()
+                      { sendRemoteCmd(remoteIndex, IthoTimer2); });
   }
   else if (strcmp(command, "timer3") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoTimer3); });
+    i2c_queue_add_cmd([remoteIndex]()
+                      { sendRemoteCmd(remoteIndex, IthoTimer3); });
   }
   else if (strcmp(command, "cook30") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoCook30); });
+    i2c_queue_add_cmd([remoteIndex]()
+                      { sendRemoteCmd(remoteIndex, IthoCook30); });
   }
   else if (strcmp(command, "cook60") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoCook60); });
+    i2c_queue_add_cmd([remoteIndex]()
+                      { sendRemoteCmd(remoteIndex, IthoCook60); });
   }
   else if (strcmp(command, "auto") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoAuto); });
+    i2c_queue_add_cmd([remoteIndex]()
+                      { sendRemoteCmd(remoteIndex, IthoAuto); });
   }
   else if (strcmp(command, "autonight") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoAutoNight); });
+    i2c_queue_add_cmd([remoteIndex]()
+                      { sendRemoteCmd(remoteIndex, IthoAutoNight); });
   }
   else if (strcmp(command, "join") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
+    i2c_queue_add_cmd([remoteIndex]()
                             { sendRemoteCmd(remoteIndex, IthoJoin); });
   }
   else if (strcmp(command, "leave") == 0)
   {
-    i2c_cmd_queue.push_back([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoLeave); });
+    i2c_queue_add_cmd([remoteIndex]()
+                      { sendRemoteCmd(remoteIndex, IthoLeave); });
   }
   else if (strcmp(command, "type") == 0)
   {
-    i2c_cmd_queue.push_back([updateweb]()
+    i2c_queue_add_cmd([updateweb]()
                             { sendQueryDevicetype(updateweb); });
   }
   else if (strcmp(command, "status") == 0)
   {
-    i2c_cmd_queue.push_back([updateweb]()
-                            { sendQueryStatus(updateweb); });
+    i2c_queue_add_cmd([updateweb]()
+                      { sendQueryStatus(updateweb); });
   }
   else if (strcmp(command, "statusformat") == 0)
   {
-    i2c_cmd_queue.push_back([updateweb]()
+    i2c_queue_add_cmd([updateweb]()
                             { sendQueryStatusFormat(updateweb); });
   }
   else if (strcmp(command, "31DA") == 0)
   {
-    i2c_cmd_queue.push_back([updateweb]()
+    i2c_queue_add_cmd([updateweb]()
                             { sendQuery31DA(updateweb); });
   }
   else if (strcmp(command, "31D9") == 0)
   {
-    i2c_cmd_queue.push_back([updateweb]()
+    i2c_queue_add_cmd([updateweb]()
                             { sendQuery31D9(updateweb); });
   }
   else if (strcmp(command, "10D0") == 0)
   {
-    i2c_cmd_queue.push_back([]()
-                            { filterReset(); });
+    i2c_queue_add_cmd([]()
+                      { filterReset(); });
   }
   else if (strcmp(command, "shtreset") == 0)
   {
@@ -939,7 +939,7 @@ void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
     source = cmdOriginMap.rbegin()->second;
 
   char originchar[30]{};
-  sprintf(originchar, "%s-vremote-%d", source, remoteIndex);
+  snprintf(originchar, sizeof(originchar), "%s-vremote-%d", source, remoteIndex);
 
   logLastCommand(command, originchar);
 }

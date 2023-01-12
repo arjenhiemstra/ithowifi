@@ -991,7 +991,7 @@ String IthoCC1101::LastMessageDecoded()
     {
       str += " ";
       char buf[10]{};
-      sprintf(buf, "%02X,%02X,%02X", inIthoPacket.deviceId1 >> 16 & 0xFF, inIthoPacket.deviceId1 >> 8 & 0xFF, inIthoPacket.deviceId1 & 0xFF);
+      snprintf(buf, sizeof(buf), "%02X,%02X,%02X", inIthoPacket.deviceId1 >> 16 & 0xFF, inIthoPacket.deviceId1 >> 8 & 0xFF, inIthoPacket.deviceId1 & 0xFF);
       str += String(buf);
     }
     if (inIthoPacket.deviceId2 == 0)
@@ -1002,14 +1002,14 @@ String IthoCC1101::LastMessageDecoded()
     {
       str += " ";
       char buf[10]{};
-      sprintf(buf, "%02X,%02X,%02X", inIthoPacket.deviceId2 >> 16 & 0xFF, inIthoPacket.deviceId2 >> 8 & 0xFF, inIthoPacket.deviceId2 & 0xFF);
+      snprintf(buf, sizeof(buf), "%02X,%02X,%02X", inIthoPacket.deviceId2 >> 16 & 0xFF, inIthoPacket.deviceId2 >> 8 & 0xFF, inIthoPacket.deviceId2 & 0xFF);
       str += String(buf);
     }
 
     str += " ";
 
     char buf[10]{};
-    sprintf(buf, "%04X", inIthoPacket.opcode);
+    snprintf(buf, sizeof(buf), "%04X", inIthoPacket.opcode);
     str += String(buf);
 
     str += " ";
@@ -1018,7 +1018,7 @@ String IthoCC1101::LastMessageDecoded()
 
     for (int i = inIthoPacket.payloadPos; i < inIthoPacket.payloadPos + inIthoPacket.len; i++)
     {
-      sprintf(buf, "%02X", inIthoPacket.dataDecoded[i]);
+      snprintf(buf, sizeof(buf), "%02X", inIthoPacket.dataDecoded[i]);
       str += String(buf);
       if (i < inIthoPacket.payloadPos + inIthoPacket.len - 1)
       {
@@ -1032,7 +1032,7 @@ String IthoCC1101::LastMessageDecoded()
     for (uint8_t i = 0; i < inIthoPacket.length; i++)
     {
       char buf[10]{};
-      sprintf(buf, "%02X", inIthoPacket.dataDecoded[i]);
+      snprintf(buf, sizeof(buf), "%02X", inIthoPacket.dataDecoded[i]);
       str += String(buf);
       if (i < inIthoPacket.length - 1)
         str += ",";

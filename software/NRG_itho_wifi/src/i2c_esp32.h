@@ -16,6 +16,8 @@
 #include "IthoSystem.h"
 #include "i2c_logger.h"
 
+#define I2C_CMD_QUEUE_MAX_SIZE 10
+
 #define WRITE_BIT I2C_MASTER_WRITE  /*!< I2C master write */
 #define READ_BIT I2C_MASTER_READ    /*!< I2C master read */
 #define ACK_CHECK_EN 0x1            /*!< I2C master will check ack from slave*/
@@ -49,22 +51,20 @@ extern gpio_num_t master_scl_pin;
 extern gpio_num_t slave_sda_pin;
 extern gpio_num_t slave_scl_pin;
 
-
 struct cmd_queue_data
 {
     i2c_cmdref_t cmd{};
     uint8_t index{};
     int32_t value{};
     bool update_state{};
-    bool update_web{};
+    
     bool loop{};
     uint16_t *ithoCurrentVal{};
     bool *updateIthoMQTT{};
 };
 
-
-
 char toHex(uint8_t c);
+void i2c_queue_add_cmd(const std::function<void()> func);
 
 void i2c_master_setpins(gpio_num_t sda, gpio_num_t scl);
 void i2c_slave_setpins(gpio_num_t sda, gpio_num_t scl);

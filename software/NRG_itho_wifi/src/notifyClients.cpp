@@ -52,14 +52,11 @@ void wsSendAll(void *arg, const char *message)
 
 void jsonSysmessage(const char *id, const char *message)
 {
-  char logBuff[LOG_BUF_SIZE]{};
   StaticJsonDocument<500> root;
 
   JsonObject systemstat = root.createNestedObject("sysmessage");
   systemstat["id"] = id;
   systemstat["message"] = message;
-
-  strlcpy(logBuff, "", sizeof(logBuff));
 
   notifyClients(root.as<JsonObjectConst>());
 }

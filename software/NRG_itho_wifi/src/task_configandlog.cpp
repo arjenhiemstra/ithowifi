@@ -15,7 +15,7 @@ bool flashLogInitReady = false;
 FSFilePrint filePrint(ACTIVE_FS, "/logfile", 2, 10000);
 
 StaticTask_t xTaskConfigAndLogBuffer;
-StackType_t xTaskConfigAndLog[STACK_SIZE];
+StackType_t xTaskConfigAndLog[STACK_SIZE_MEDIUM];
 
 Ticker DelayedSave;
 
@@ -26,7 +26,7 @@ void startTaskConfigAndLog()
   xTaskConfigAndLogHandle = xTaskCreateStaticPinnedToCore(
       TaskConfigAndLog,
       "TaskConfigAndLog",
-      STACK_SIZE,
+      STACK_SIZE_MEDIUM,
       (void *)1,
       TASK_CONFIG_AND_LOG_PRIO,
       xTaskConfigAndLog,
@@ -62,7 +62,7 @@ void TaskConfigAndLog(void *pvParameters)
     yield();
     esp_task_wdt_reset();
 
-    TaskConfigAndLogTimeout.once_ms(3000, []()
+    TaskConfigAndLogTimeout.once_ms(15000, []()
                                     { W_LOG("Warning: Task ConfigAndLog timed out!"); });
 
     execLogAndConfigTasks();
@@ -210,35 +210,35 @@ void syslog_queue_worker()
 
       if (input.code <= SYSLOG_CRIT && logConfig.loglevel >= SYSLOG_CRIT)
       {
-        Log.fatalln(input.msg);
+        Log.fatalln(input.msg.c_str());
       }
       else if (input.code == SYSLOG_ERR && logConfig.loglevel >= SYSLOG_ERR)
       {
-        Log.errorln(input.msg);
+        Log.errorln(input.msg.c_str());
       }
       else if (input.code == SYSLOG_WARNING && logConfig.loglevel >= SYSLOG_WARNING)
       {
-        Log.warningln(input.msg);
+        Log.warningln(input.msg.c_str());
       }
       else if (input.code == SYSLOG_NOTICE && logConfig.loglevel >= SYSLOG_NOTICE)
       {
-        Log.noticeln(input.msg);
+        Log.noticeln(input.msg.c_str());
       }
       // Do not log INFO en DEBUG levels to Flash to prevent excessive wear
       // else if (input.code == SYSLOG_INFO && logConfig.loglevel >= SYSLOG_INFO)
       // {
-      //   Log.traceln(input.msg);
+      //   Log.traceln(input.msg.c_str());
       // }
       // else if (input.code == SYSLOG_DEBUG && logConfig.loglevel >= SYSLOG_DEBUG)
       // {
-      //   Log.verboseln(input.msg);
+      //   Log.verboseln(input.msg.c_str());
       // }
 
       filePrint.close();
     }
     if (WiFi.status() == WL_CONNECTED && logConfig.syslog_active == 1)
     {
-      syslog.log(input.code, input.msg);
+      syslog.log(input.code, input.msg.c_str());
     }
 
     // Also update webinterface

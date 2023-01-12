@@ -2,6 +2,18 @@
 
 std::deque<std::function<void()>> i2c_cmd_queue;
 
+void i2c_queue_add_cmd(const std::function<void()> func)
+{
+  if (i2c_cmd_queue.size() >= I2C_CMD_QUEUE_MAX_SIZE) {
+      log_msg input;
+      input.code = SYSLOG_WARNING;
+      input.msg = "Warning: i2c_cmd_queue overflow";
+      syslog_queue.push_back(input);
+      return;
+  }
+  i2c_cmd_queue.push_back(func);
+}
+
 char toHex(uint8_t c)
 {
   return c < 10 ? c + '0' : c + 'A' - 10;
@@ -369,10 +381,10 @@ bool checkI2Cbus(int log_entry_idx)
         i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_SDA_LOW);
       }
       E_LOG("Error: I2C bus could not be cleared!");
-      if(systemConfig.i2cmenu == 1) {
+      if (systemConfig.i2cmenu == 1)
+      {
         ithoInitResult = -2; // stop I2C bus activity to be able to save logging
       }
-      
     }
     else
     {

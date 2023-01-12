@@ -18,7 +18,7 @@ IthoRemote::IthoRemote(RemoteFunctions initFunc)
 
   for (uint8_t i = 0; i < MAX_NUMBER_OF_REMOTES; i++)
   {
-    sprintf(remotes[i].name, "remote%d", i);
+    snprintf(remotes[i].name, sizeof(remotes[i].name), "remote%d", i);
   }
 
   configLoaded = false;
@@ -109,7 +109,7 @@ int IthoRemote::removeRemote(const int *id)
   {
     remotes[index].ID[i] = 0;
   }
-  sprintf(remotes[index].name, "remote%d", index);
+  snprintf(remotes[index].name, sizeof(remotes[index].name), "remote%d", index);
   // strlcpy(remotes[index].name, remName, sizeof(remotes[index].name));
   remotes[index].remtype = RemoteTypes::UNSETTYPE;
   remotes[index].remfunc = RemoteFunctions::UNSETFUNC;
@@ -141,7 +141,7 @@ int IthoRemote::removeRemote(const uint8_t index)
     }
   }
 
-  sprintf(remotes[index].name, "remote%d", index);
+  snprintf(remotes[index].name, sizeof(remotes[index].name), "remote%d", index);
   remotes[index].remtype = RemoteTypes::UNSETTYPE;
   remotes[index].remfunc = RemoteFunctions::UNSETFUNC;
   if (instanceFunc == RemoteFunctions::RECEIVE)
