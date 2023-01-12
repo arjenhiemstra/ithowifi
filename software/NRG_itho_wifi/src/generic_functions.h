@@ -8,6 +8,7 @@
 #include <Ticker.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
+#include <string.h>
 
 #include "IthoQueue.h"
 #include "SystemConfig.h"

@@ -220,10 +220,10 @@ void getSetting(const uint8_t index, const bool updateState, const bool updatewe
     // i2c_result_updateweb = false;
     resultPtr2410 = nullptr;
     // get2410 = true;
-    i2c_cmd_queue.push_back([index]()
-                            { resultPtr2410 = sendQuery2410(index, false); });
-    i2c_cmd_queue.push_back([index, loop]()
-                            { processSettingResult(index, loop); });
+    i2c_queue_add_cmd([index]()
+                      { resultPtr2410 = sendQuery2410(index, false); });
+    i2c_queue_add_cmd([index, loop]()
+                      { processSettingResult(index, loop); });
   }
   else // -> update setting values from other source (ie. debug page)
   {
@@ -231,8 +231,8 @@ void getSetting(const uint8_t index, const bool updateState, const bool updatewe
     // i2c_result_updateweb = updateweb;
     resultPtr2410 = nullptr;
     // get2410 = true;
-    i2c_cmd_queue.push_back([index, updateweb]()
-                            { resultPtr2410 = sendQuery2410(index, updateweb); });
+    i2c_queue_add_cmd([index, updateweb]()
+                      { resultPtr2410 = sendQuery2410(index, updateweb); });
   }
 }
 
@@ -249,7 +249,7 @@ void processSettingResult(const uint8_t index, const bool loop)
   root["Index"] = index;
   root["Description"] = settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
 
-  auto timeoutmillis = millis() + 3000; // about 1 sec. + 2 sec. for potential i2c queue pause
+  auto timeoutmillis = millis() + 3000; // 1 sec. + 2 sec. for potential i2c queue pause on CVE devices
   while (resultPtr2410 == nullptr && millis() < timeoutmillis)
   {
     // wait for result
@@ -263,7 +263,13 @@ void processSettingResult(const uint8_t index, const bool loop)
     val1 = cast_raw_bytes_to_int(resultPtr2410 + 1, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
     val2 = cast_raw_bytes_to_int(resultPtr2410 + 2, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
 
-    if (ithoSettingsArray[index].type == ithoSettings::is_int)
+    if (*(resultPtr2410 + 0) == 0x5555AAAA && *(resultPtr2410 + 1) == 0xAAAA5555 && *(resultPtr2410 + 2) == 0xFFFFFFFF) //something went wrong, indicate error, better handling needed
+    {
+      root["Current"] = "error";
+      root["Minimum"] = "error";
+      root["Maximum"] = "error";
+    }
+    else if (ithoSettingsArray[index].type == ithoSettings::is_int)
     {
       root["Current"] = val0;
       root["Minimum"] = val1;
@@ -404,11 +410,11 @@ void updateSetting(const uint8_t index, const int32_t value, bool webupdate)
   // value2410 = value;
   // set2410 = true;
 
-  i2c_cmd_queue.push_back([index, value, webupdate]()
-                          { setSetting2410(index, value, webupdate); });
+  i2c_queue_add_cmd([index, value, webupdate]()
+                    { setSetting2410(index, value, webupdate); });
 
-  i2c_cmd_queue.push_back([index]()
-                          { getSetting(index, true, false, false); });
+  i2c_queue_add_cmd([index]()
+                    { getSetting(index, true, false, false); });
 }
 
 const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID)
@@ -596,7 +602,7 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command)
   char buf[250]{};
   for (int i = 0; i < i2c_command_len; i++)
   {
-    sprintf(buf, " 0x%02X", i2c_command[i]);
+    snprintf(buf, sizeof(buf), " 0x%02X", i2c_command[i]);
     str += String(buf);
     if (i < i2c_command_len - 1)
     {
@@ -1415,9 +1421,9 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
     ithoSettingsArray[index].is_signed = get_signed_from_datatype(i2cbuf[22]);
     ithoSettingsArray[index].length = get_length_from_datatype(i2cbuf[22]);
     ithoSettingsArray[index].divider = get_divider_from_datatype(i2cbuf[22]);
-    D_LOG("Itho settings");
-    D_LOG("Divider %d", ithoSettingsArray[index].divider);
-    D_LOG("Length %d", ithoSettingsArray[index].length);
+    // D_LOG("Itho settings");
+    // D_LOG("Divider %d", ithoSettingsArray[index].divider);
+    // D_LOG("Length %d", ithoSettingsArray[index].length);
 
     if (ithoSettingsArray[index].divider == 1)
     { // integer value
@@ -1453,22 +1459,22 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
       {
         if (ithoSettingsArray[index].is_signed) 
         {
-          sprintf(tempbuffer0, "%lld", val0);
-          sprintf(tempbuffer1, "%lld", val1);
-          sprintf(tempbuffer2, "%lld", val2);
+          snprintf(tempbuffer0, sizeof(tempbuffer0), "%lld", val0);
+          snprintf(tempbuffer1, sizeof(tempbuffer1), "%lld", val1);
+          snprintf(tempbuffer2, sizeof(tempbuffer2), "%lld", val2);
         }
         else
         {
-          sprintf(tempbuffer0, "%llu", val0);
-          sprintf(tempbuffer1, "%llu", val1);
-          sprintf(tempbuffer2, "%llu", val2);
+          snprintf(tempbuffer0, sizeof(tempbuffer0), "%llu", val0);
+          snprintf(tempbuffer1, sizeof(tempbuffer1), "%llu", val1);
+          snprintf(tempbuffer2, sizeof(tempbuffer2), "%llu", val2);
         }
       }
       else
       {
-        sprintf(tempbuffer0, "%.1f", static_cast<double>((int32_t)val0) / ithoSettingsArray[index].divider);
-        sprintf(tempbuffer1, "%.1f", static_cast<double>((int32_t)val1) / ithoSettingsArray[index].divider);
-        sprintf(tempbuffer2, "%.1f", static_cast<double>((int32_t)val2) / ithoSettingsArray[index].divider);
+        snprintf(tempbuffer0, sizeof(tempbuffer0), "%.1f", static_cast<double>((int32_t)val0) / ithoSettingsArray[index].divider);
+        snprintf(tempbuffer1, sizeof(tempbuffer1), "%.1f", static_cast<double>((int32_t)val1) / ithoSettingsArray[index].divider);
+        snprintf(tempbuffer2, sizeof(tempbuffer2), "%.1f", static_cast<double>((int32_t)val2) / ithoSettingsArray[index].divider);
       }
       jsonSysmessage("itho2410cur", tempbuffer0);
       jsonSysmessage("itho2410min", tempbuffer1);
@@ -1477,6 +1483,10 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
   }
   else
   {
+    D_LOG("itho2410: failed for index:%d", index);
+    values[0] = 0x5555AAAA;
+    values[1] = 0xAAAA5555;
+    values[2] = 0xFFFFFFFF;
     if (updateweb)
     {
       jsonSysmessage("itho2410", "failed");

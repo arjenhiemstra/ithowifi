@@ -10,6 +10,7 @@
 
 #define STACK_SIZE_SMALL 2048
 #define STACK_SIZE 4096
+#define STACK_SIZE_MEDIUM 6144
 #define STACK_SIZE_LARGE 8192
 
 #if defined(ESP32)

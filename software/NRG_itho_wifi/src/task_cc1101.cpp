@@ -300,7 +300,6 @@ void TaskCC1101(void *pvParameters)
             {
               if (remotes.remoteLearnLeaveStatus())
               {
-                // char logBuff[LOG_BUF_SIZE] = "";
                 int result = remotes.registerNewRemote(id, remtype);
                 switch (result)
                 {

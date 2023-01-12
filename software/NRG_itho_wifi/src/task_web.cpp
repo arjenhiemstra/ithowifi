@@ -24,7 +24,7 @@ AsyncWebServer server(80);
 
 // locals
 StaticTask_t xTaskWebBuffer;
-StackType_t xTaskWebStack[STACK_SIZE_LARGE];
+StackType_t xTaskWebStack[STACK_SIZE_MEDIUM];
 
 unsigned long lastSysMessage = 0;
 unsigned long previousUpdate = 0;
@@ -60,7 +60,7 @@ void startTaskWeb()
   xTaskWebHandle = xTaskCreateStaticPinnedToCore(
       TaskWeb,
       "TaskWeb",
-      STACK_SIZE_LARGE,
+      STACK_SIZE_MEDIUM,
       (void *)1,
       TASK_WEB_PRIO,
       xTaskWebStack,
@@ -90,7 +90,7 @@ void TaskWeb(void *pvParameters)
     yield();
     esp_task_wdt_reset();
 
-    TaskTimeout.once_ms(10000, []()
+    TaskTimeout.once_ms(15000, []()
                         { W_LOG("Warning: Task Web timed out!"); });
 
     execWebTasks();
@@ -190,7 +190,7 @@ void ArduinoOTAinit()
   //  });
   //  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
   //    char p[32];
-  //    sprintf(p, "Progress: %u%%\n", (progress / (total / 100)));
+  //    snprintf(p, sizeof(p), "Progress: %u%%\n", (progress / (total / 100)));
   //  });
   //  ArduinoOTA.onError([](ota_error_t error) {
   //    if (error == OTA_AUTH_ERROR)
@@ -522,7 +522,7 @@ void handleAPI(AsyncWebServerRequest *request)
       if (strcmp(q->value().c_str(), "currentspeed") == 0)
       {
         char ithoval[10]{};
-        sprintf(ithoval, "%d", ithoCurrentVal);
+        snprintf(ithoval, sizeof(ithoval), "%d", ithoCurrentVal);
         request->send(200, "text/html", ithoval);
         return;
       }
@@ -621,12 +621,14 @@ void handleAPI(AsyncWebServerRequest *request)
       {
         i2c_sniffer_enable();
         i2c_safe_guard.sniffer_enabled = true;
+        i2c_safe_guard.sniffer_web_enabled = true;
         parseOK = true;
       }
       else if (strcmp(p->value().c_str(), "off") == 0)
       {
         i2c_sniffer_disable();
         i2c_safe_guard.sniffer_enabled = false;
+        i2c_safe_guard.sniffer_web_enabled = false;
         parseOK = true;
       }
     }

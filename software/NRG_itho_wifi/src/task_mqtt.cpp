@@ -9,7 +9,7 @@ PubSubClient mqttClient(client);
 
 // locals
 StaticTask_t xTaskMQTTBuffer;
-StackType_t xTaskMQTTStack[STACK_SIZE_LARGE];
+StackType_t xTaskMQTTStack[STACK_SIZE_MEDIUM];
 bool sendHomeAssistantDiscovery = false;
 bool updateIthoMQTT = false;
 
@@ -22,7 +22,7 @@ void startTaskMQTT()
   xTaskMQTTHandle = xTaskCreateStaticPinnedToCore(
       TaskMQTT,
       "TaskMQTT",
-      STACK_SIZE_LARGE,
+      STACK_SIZE_MEDIUM,
       (void *)1,
       TASK_MQTT_PRIO,
       xTaskMQTTStack,
@@ -117,7 +117,7 @@ void execMQTTTasks()
           }
 
           char svalue[32]{};
-          sprintf(svalue, "%1.1f;%1.1f;%d", ithoTemp, ithoHum, humstat);
+          snprintf(svalue, sizeof(svalue), "%1.1f;%1.1f;%d", ithoTemp, ithoHum, humstat);
 
           StaticJsonDocument<512> root;
           root["svalue"] = svalue;
@@ -445,7 +445,7 @@ void updateState(uint16_t newState)
       }
       newState = uint16_t(state);
       char buf[10]{};
-      sprintf(buf, "%d", newState);
+      snprintf(buf, sizeof(buf), "%d", newState);
 
       StaticJsonDocument<512> root;
       root["command"] = "switchlight";
@@ -457,7 +457,7 @@ void updateState(uint16_t newState)
     }
     else
     {
-      sprintf(buffer, "%d", newState);
+      snprintf(buffer, sizeof(buffer), "%d", newState);
     }
     mqttClient.publish(systemConfig.mqtt_state_topic, buffer, true);
   }
@@ -486,20 +486,20 @@ void HADiscoveryFan()
 
   addHADevInfo(root);
   root["avty_t"] = (const char *)systemConfig.mqtt_lwt_topic;
-  sprintf(s, "%s_fan", hostName());
+  snprintf(s, sizeof(s), "%s_fan", hostName());
   root["uniq_id"] = s;
   root["name"] = s;
   root["stat_t"] = (const char *)systemConfig.mqtt_lwt_topic;
   root["stat_val_tpl"] = "{% if value == 'online' %}ON{% else %}OFF{% endif %}";
   root["json_attr_t"] = (const char *)systemConfig.mqtt_ithostatus_topic;
-  sprintf(s, "%s/not_used/but_needed_for_HA", systemConfig.mqtt_cmd_topic);
+  snprintf(s, sizeof(s), "%s/not_used/but_needed_for_HA", systemConfig.mqtt_cmd_topic);
   root["cmd_t"] = s;
   root["pct_cmd_t"] = (const char *)systemConfig.mqtt_cmd_topic;
   root["pct_cmd_tpl"] = "{{ value * 2.54 }}";
   root["pct_stat_t"] = (const char *)systemConfig.mqtt_state_topic;
   root["pct_val_tpl"] = "{{ ((value | int) / 2.54) | round}}";
 
-  sprintf(s, "%s/fan/%s/config", (const char *)systemConfig.mqtt_ha_topic, hostName());
+  snprintf(s, sizeof(s), "%s/fan/%s/config", (const char *)systemConfig.mqtt_ha_topic, hostName());
 
   sendHADiscovery(root, s);
 }
@@ -513,7 +513,7 @@ void HADiscoveryTemperature()
   addHADevInfo(root);
   root["avty_t"] = static_cast<const char *>(systemConfig.mqtt_lwt_topic);
   root["dev_cla"] = "temperature";
-  sprintf(s, "%s_temperature", hostName());
+  snprintf(s, sizeof(s), "%s_temperature", hostName());
   root["uniq_id"] = s;
   root["name"] = s;
   root["stat_t"] = static_cast<const char *>(systemConfig.mqtt_ithostatus_topic);
@@ -521,7 +521,7 @@ void HADiscoveryTemperature()
   root["val_tpl"] = "{{ value_json.temp }}";
   root["unit_of_meas"] = "°C";
 
-  sprintf(s, "%s/sensor/%s/temp/config", static_cast<const char *>(systemConfig.mqtt_ha_topic), hostName());
+  snprintf(s, sizeof(s), "%s/sensor/%s/temp/config", static_cast<const char *>(systemConfig.mqtt_ha_topic), hostName());
 
   sendHADiscovery(root, s);
 }
@@ -535,7 +535,7 @@ void HADiscoveryHumidity()
   addHADevInfo(root);
   root["avty_t"] = static_cast<const char *>(systemConfig.mqtt_lwt_topic);
   root["dev_cla"] = "humidity";
-  sprintf(s, "%s_humidity", hostName());
+  snprintf(s, sizeof(s), "%s_humidity", hostName());
   root["uniq_id"] = s;
   root["name"] = s;
   root["stat_t"] = static_cast<const char *>(systemConfig.mqtt_ithostatus_topic);
@@ -543,7 +543,7 @@ void HADiscoveryHumidity()
   root["val_tpl"] = "{{ value_json.hum }}";
   root["unit_of_meas"] = "%";
 
-  sprintf(s, "%s/sensor/%s/hum/config", static_cast<const char *>(systemConfig.mqtt_ha_topic), hostName());
+  snprintf(s, sizeof(s), "%s/sensor/%s/hum/config", static_cast<const char *>(systemConfig.mqtt_ha_topic), hostName());
 
   sendHADiscovery(root, s);
 }
@@ -555,9 +555,9 @@ void addHADevInfo(JsonObject obj)
   dev["identifiers"] = hostName();
   dev["manufacturer"] = "Arjen Hiemstra";
   dev["model"] = "ITHO Wifi Add-on";
-  sprintf(s, "ITHO-WIFI(%s)", hostName());
+  snprintf(s, sizeof(s), "ITHO-WIFI(%s)", hostName());
   dev["name"] = s;
-  sprintf(s, "HW: v%s, FW: %s", hw_revision, FWVERSION);
+  snprintf(s, sizeof(s), "HW: v%s, FW: %s", hw_revision, FWVERSION);
   dev["sw_version"] = s;
 }
 

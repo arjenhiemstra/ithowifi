@@ -118,7 +118,7 @@ void wifiScan()
   else if (n)
   {
     char logBuff[LOG_BUF_SIZE]{};
-    sprintf(logBuff, "Wifi scan found %d networks", n);
+    snprintf(logBuff, sizeof(logBuff), "Wifi scan found %d networks", n);
     logMessagejson(logBuff, WEBINTERFACE);
 
     // sort networks

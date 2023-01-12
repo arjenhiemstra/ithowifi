@@ -30,6 +30,7 @@ typedef struct
     unsigned long end_close_time;
     unsigned long sensor_update_freq_setting{8000};
     bool sniffer_enabled;
+    bool sniffer_web_enabled;
     bool i2c_safe_guard_enabled;
     void update_time()
     {

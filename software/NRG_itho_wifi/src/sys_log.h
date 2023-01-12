@@ -1,5 +1,6 @@
 #pragma once
 
+#define SYSLOG_QUEUE_MAX_SIZE 20
 #define LOG_BUF_SIZE 128
 
 #define EM_LOG(...) sys_log(SYSLOG_EMERG, __VA_ARGS__)
@@ -48,7 +49,7 @@ typedef enum
 typedef struct
 {
     log_prio_level_t code;
-    char msg[LOG_BUF_SIZE]{};
+    std::string msg;
 } log_msg;
 
 
