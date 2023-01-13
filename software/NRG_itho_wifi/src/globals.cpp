@@ -13,11 +13,10 @@ gpio_num_t fail_save_pin = GPIO_NUM_0;
 gpio_num_t itho_status_pin = GPIO_NUM_0;
 
 const char *cve2 = "2";
-const char *non_cve1 = "NON-CVE 2";
+const char *non_cve1 = "NON-CVE 1";
 const char *hw_revision = nullptr;
 
 WiFiClient client;
 
 IthoCC1101 rf;
 IthoPacket packet;
-

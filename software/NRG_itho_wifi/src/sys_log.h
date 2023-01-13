@@ -1,6 +1,6 @@
 #pragma once
 
-#define SYSLOG_QUEUE_MAX_SIZE 20
+#define SYSLOG_QUEUE_MAX_SIZE 50
 #define LOG_BUF_SIZE 128
 
 #define EM_LOG(...) sys_log(SYSLOG_EMERG, __VA_ARGS__)
