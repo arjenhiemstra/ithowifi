@@ -823,7 +823,7 @@ function update_page(page) {
   if (page == 'syslog') { $('#main').append(html_syslog); }
   if (page == 'system') {
     $('#main').append(html_systemsettings_start);
-    if (hw_revision == "2" || hw_revision == "NON-CVE 1") { $('#sys_fieldset').append(html_systemsettings_cc1101); }
+    if (hw_revision == "2" || hw_revision.startsWith('NON-CVE ')) { $('#sys_fieldset').append(html_systemsettings_cc1101); }
     $('#sys_fieldset').append(html_systemsettings_end);
   }
   if (page == 'itho') { $('#main').append(html_ithosettings); }
