@@ -404,6 +404,11 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
             clearQueue = true;
           }
         }
+        if (!(const char *)root["outside_temperature"].isNull())
+        {
+          jsonCmd = true;
+          setSettingCE30(0, (int16_t) root["outside_temperature"].as<float>() * 100, 0, false);
+        }
         if (!jsonCmd)
         {
           ithoSetSpeed(s_payload, MQTTAPI);
