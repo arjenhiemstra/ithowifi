@@ -282,11 +282,11 @@ bool IthoRemote::checkID(const int *id)
 
 void IthoRemote::Remote::set(JsonObjectConst obj)
 {
-  if (!(const char *)obj["name"].isNull())
+  if (!obj["name"].isNull())
   {
     strlcpy(name, obj["name"], sizeof(name));
   }
-  if (!(const char *)obj["id"].isNull())
+  if (!obj["id"].isNull())
   {
     if (obj["id"].is<const char *>())
     {
@@ -297,11 +297,11 @@ void IthoRemote::Remote::set(JsonObjectConst obj)
       copyArray(obj["id"].as<JsonArrayConst>(), ID);
     }
   }
-  if (!(const char *)obj["remtype"].isNull())
+  if (!obj["remtype"].isNull())
   {
     remtype = obj["remtype"];
   }
-  if (!(const char *)obj["remfunc"].isNull())
+  if (!obj["remfunc"].isNull())
   {
     remfunc = static_cast<RemoteFunctions>(obj["remfunc"]);
   }
@@ -368,13 +368,13 @@ bool IthoRemote::set(JsonObjectConst obj, const char *root)
       return false;
     }
   }
-  if (!(const char *)obj[root].isNull())
+  if (!obj[root].isNull())
   {
     JsonArrayConst remotesArray = obj[root];
     remoteCount = 0;
     for (JsonObjectConst remote : remotesArray)
     {
-      if (!(const char *)remote["index"].isNull())
+      if (!remote["index"].isNull())
       {
         uint8_t index = remote["index"].as<uint8_t>();
         if (index < maxRemotes)

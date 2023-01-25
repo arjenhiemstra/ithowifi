@@ -333,7 +333,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
-        if (!(const char *)root["vremote"].isNull() && !(const char *)root["command"].isNull())
+        if (!root["vremote"].isNull() && !root["command"].isNull())
         {
           ithoI2CCommand(root["vremote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
         }
@@ -345,7 +345,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
-        if (!(const char *)root["command"].isNull())
+        if (!root["command"].isNull())
         {
           ithoExecCommand(root["command"].as<const char *>(), WEB);
         }

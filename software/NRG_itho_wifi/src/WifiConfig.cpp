@@ -34,57 +34,57 @@ bool WifiConfig::set(JsonObjectConst obj)
 {
   bool updated = false;
   // WIFI Settings parse
-  if (!(const char *)obj["ssid"].isNull())
+  if (!obj["ssid"].isNull())
   {
     updated = true;
     strlcpy(ssid, obj["ssid"], sizeof(ssid));
   }
-  if (!(const char *)obj["passwd"].isNull())
+  if (!obj["passwd"].isNull())
   {
     updated = true;
     strlcpy(passwd, obj["passwd"], sizeof(passwd));
   }
-  if (!(const char *)obj["dhcp"].isNull())
+  if (!obj["dhcp"].isNull())
   {
     updated = true;
     strlcpy(dhcp, obj["dhcp"], sizeof(dhcp));
   }
-  if (!(const char *)obj["ip"].isNull())
+  if (!obj["ip"].isNull())
   {
     updated = true;
     strlcpy(ip, obj["ip"], sizeof(ip));
   }
-  if (!(const char *)obj["subnet"].isNull())
+  if (!obj["subnet"].isNull())
   {
     updated = true;
     strlcpy(subnet, obj["subnet"], sizeof(subnet));
   }
-  if (!(const char *)obj["gateway"].isNull())
+  if (!obj["gateway"].isNull())
   {
     updated = true;
     strlcpy(gateway, obj["gateway"], sizeof(gateway));
   }
-  if (!(const char *)obj["dns1"].isNull())
+  if (!obj["dns1"].isNull())
   {
     updated = true;
     strlcpy(dns1, obj["dns1"], sizeof(dns1));
   }
-  if (!(const char *)obj["dns2"].isNull())
+  if (!obj["dns2"].isNull())
   {
     updated = true;
     strlcpy(dns2, obj["dns2"], sizeof(dns2));
   }
-  if (!(const char *)obj["port"].isNull())
+  if (!obj["port"].isNull())
   {
     updated = true;
     port = obj["port"];
   }
-  if (!(const char *)obj["hostname"].isNull())
+  if (!obj["hostname"].isNull())
   {
     updated = true;
     strlcpy(hostname, obj["hostname"], sizeof(hostname));
   }
-  if (!(const char *)obj["ntpserver"].isNull())
+  if (!obj["ntpserver"].isNull())
   {
     updated = true;
     strlcpy(ntpserver, obj["ntpserver"], sizeof(ntpserver));

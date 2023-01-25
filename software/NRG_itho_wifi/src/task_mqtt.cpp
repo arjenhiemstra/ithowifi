@@ -285,11 +285,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
   if (payload == NULL)
     return;
 
-  bool dtype = true;
-  if (systemConfig.mqtt_domoticz_active)
-  {
-    dtype = false;
-  }
+  bool dtype = !systemConfig.mqtt_domoticz_active;
 
   if (length > 1023)
     length = 1023;
@@ -302,17 +298,18 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
   {
     StaticJsonDocument<1024> root;
     DeserializationError error = deserializeJson(root, s_payload);
+
     if (!error)
     {
       bool jsonCmd = false;
-      if (!(const char *)root["idx"].isNull())
+      if (!root["idx"].isNull())
       {
         jsonCmd = true;
         // printf("JSON parse -- idx match");
         uint16_t idx = root["idx"].as<uint16_t>();
         if (idx == systemConfig.mqtt_idx)
         {
-          if (!(const char *)root["svalue1"].isNull())
+          if (!root["svalue1"].isNull())
           {
             uint16_t invalue = root["svalue1"].as<uint16_t>();
             double value = invalue * 2.54;
@@ -320,7 +317,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           }
         }
       }
-      if (!(const char *)root["dtype"].isNull())
+      if (!root["dtype"].isNull())
       {
         const char *value = root["dtype"] | "";
         if (strcmp(value, "ithofan") == 0)
@@ -336,19 +333,19 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
               this should be set to true first by a JSON containing key:value pair "dtype":"ithofan",
               otherwise different commands might get processed due to domoticz general domoticz/out topic structure
         */
-        if (!(const char *)root["command"].isNull())
+        if (!root["command"].isNull())
         {
           jsonCmd = true;
           const char *value = root["command"] | "";
           ithoExecCommand(value, MQTTAPI);
         }
-        if (!(const char *)root["vremote"].isNull() || !(const char *)root["vremotecmd"].isNull())
+        if (!root["vremote"].isNull() || !root["vremotecmd"].isNull())
         {
           const char *command = root["vremote"] | "";
           if (strcmp(command, "") == 0)
             command = root["vremotecmd"] | "";
 
-          if (!(const char *)root["vremoteindex"].isNull() && !(const char *)root["vremotename"].isNull())
+          if (!root["vremoteindex"].isNull() && !root["vremotename"].isNull())
           {
             jsonCmd = true;
             ithoI2CCommand(0, command, MQTTAPI);
@@ -356,7 +353,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           else
           {
             int index = -1;
-            if (!(const char *)root["vremotename"].isNull())
+            if (!root["vremotename"].isNull())
             {
               index = virtualRemotes.getRemoteIndexbyName((const char *)root["vremotename"]);
             }
@@ -371,10 +368,10 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
             }
           }
         }
-        if (!(const char *)root["speed"].isNull())
+        if (!root["speed"].isNull())
         {
           jsonCmd = true;
-          if (!(const char *)root["timer"].isNull())
+          if (!root["timer"].isNull())
           {
             ithoSetSpeedTimer(root["speed"].as<uint16_t>(), root["timer"].as<uint16_t>(), MQTTAPI);
           }
@@ -383,19 +380,12 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
             ithoSetSpeed(root["speed"].as<uint16_t>(), MQTTAPI);
           }
         }
-        if (!(const char *)root["timer"].isNull())
+        else if (!root["timer"].isNull())
         {
           jsonCmd = true;
-          if (!(const char *)root["speed"].isNull())
-          {
-            ithoSetSpeedTimer(root["speed"].as<uint16_t>(), root["timer"].as<uint16_t>(), MQTTAPI);
-          }
-          else
-          {
-            ithoSetSpeed(root["timer"].as<uint16_t>(), MQTTAPI);
-          }
+          ithoSetTimer(root["timer"].as<uint16_t>(), MQTTAPI);
         }
-        if (!(const char *)root["clearqueue"].isNull())
+        if (!root["clearqueue"].isNull())
         {
           jsonCmd = true;
           const char *value = root["clearqueue"] | "";

@@ -186,7 +186,7 @@ void i2c_sniffer_process_buf(std::string &buffer)
                 root["i2csniffer"] = buffer.c_str();
                 notifyClients(root.as<JsonObjectConst>());
             }
-            D_LOG(buffer.c_str()); // FIXME: better solution needed than D_LOG, D_LOG will truncate messages
+            I_LOG(buffer.c_str());
         }
     }
 
