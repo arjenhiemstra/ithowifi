@@ -407,7 +407,8 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         if (!(const char *)root["outside_temperature"].isNull())
         {
           jsonCmd = true;
-          setSettingCE30(0, (int16_t) root["outside_temperature"].as<float>() * 100, 0, false);
+          float outside_temp = root["outside_temperature"].as<float>();
+          setSettingCE30(0, static_cast<int16_t>(outside_temp*100), 0, false);
         }
         if (!jsonCmd)
         {

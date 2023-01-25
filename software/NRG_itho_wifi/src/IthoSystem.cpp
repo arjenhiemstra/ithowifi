@@ -1404,8 +1404,6 @@ void setSettingCE30(uint16_t temperature1, uint16_t temperature2, uint32_t times
   
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
   
-  D_LOG("CE30 sending: %s", i2cbuf2string(command, sizeof(command)).c_str());
-
   if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_SET_CE30))
   {
     if (updateweb)
