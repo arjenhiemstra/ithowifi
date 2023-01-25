@@ -285,7 +285,11 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
   if (payload == NULL)
     return;
 
-  bool dtype = !systemConfig.mqtt_domoticz_active;
+  bool dtype = true;
+  if (systemConfig.mqtt_domoticz_active)
+  {
+    dtype = false;
+  }
 
   if (length > 1023)
     length = 1023;
@@ -301,14 +305,14 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
     if (!error)
     {
       bool jsonCmd = false;
-      if (root["idx"])
+      if (!(const char *)root["idx"].isNull())
       {
         jsonCmd = true;
         // printf("JSON parse -- idx match");
         uint16_t idx = root["idx"].as<uint16_t>();
         if (idx == systemConfig.mqtt_idx)
         {
-          if (root["svalue1"])
+          if (!(const char *)root["svalue1"].isNull())
           {
             uint16_t invalue = root["svalue1"].as<uint16_t>();
             double value = invalue * 2.54;
@@ -316,7 +320,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           }
         }
       }
-      if (root["dtype"])
+      if (!(const char *)root["dtype"].isNull())
       {
         const char *value = root["dtype"] | "";
         if (strcmp(value, "ithofan") == 0)
@@ -332,19 +336,19 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
               this should be set to true first by a JSON containing key:value pair "dtype":"ithofan",
               otherwise different commands might get processed due to domoticz general domoticz/out topic structure
         */
-        if (root["command"])
+        if (!(const char *)root["command"].isNull())
         {
           jsonCmd = true;
           const char *value = root["command"] | "";
           ithoExecCommand(value, MQTTAPI);
         }
-        if (root["vremote"] || root["vremotecmd"])
+        if (!(const char *)root["vremote"].isNull() || !(const char *)root["vremotecmd"].isNull())
         {
           const char *command = root["vremote"] | "";
           if (strcmp(command, "") == 0)
             command = root["vremotecmd"] | "";
 
-          if (root["vremoteindex"] && root["vremotename"])
+          if (!(const char *)root["vremoteindex"].isNull() && !(const char *)root["vremotename"].isNull())
           {
             jsonCmd = true;
             ithoI2CCommand(0, command, MQTTAPI);
@@ -352,7 +356,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           else
           {
             int index = -1;
-            if (root["vremotename"])
+            if (!(const char *)root["vremotename"].isNull())
             {
               index = virtualRemotes.getRemoteIndexbyName((const char *)root["vremotename"]);
             }
@@ -367,10 +371,10 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
             }
           }
         }
-        if (root["speed"])
+        if (!(const char *)root["speed"].isNull())
         {
           jsonCmd = true;
-          if (root["timer"])
+          if (!(const char *)root["timer"].isNull())
           {
             ithoSetSpeedTimer(root["speed"].as<uint16_t>(), root["timer"].as<uint16_t>(), MQTTAPI);
           }
@@ -379,19 +383,19 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
             ithoSetSpeed(root["speed"].as<uint16_t>(), MQTTAPI);
           }
         }
-        if (root["timer"])
+        if (!(const char *)root["timer"].isNull())
         {
           jsonCmd = true;
-          if (root["speed"])
+          if (!(const char *)root["speed"].isNull())
           {
             ithoSetSpeedTimer(root["speed"].as<uint16_t>(), root["timer"].as<uint16_t>(), MQTTAPI);
           }
           else
           {
-            ithoSetTimer(root["timer"].as<uint16_t>(), MQTTAPI);
+            ithoSetSpeed(root["timer"].as<uint16_t>(), MQTTAPI);
           }
         }
-        if (root["clearqueue"])
+        if (!(const char *)root["clearqueue"].isNull())
         {
           jsonCmd = true;
           const char *value = root["clearqueue"] | "";
