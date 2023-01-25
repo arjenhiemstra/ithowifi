@@ -32,27 +32,27 @@ bool LogConfig::set(JsonObjectConst obj)
 {
     bool updated = false;
 
-    if (!(const char *)obj["loglevel"].isNull())
+    if (!obj["loglevel"].isNull())
     {
         updated = true;
         loglevel = obj["loglevel"];
     }
-    if (!(const char *)obj["syslog_active"].isNull())
+    if (!obj["syslog_active"].isNull())
     {
         updated = true;
         syslog_active = obj["syslog_active"];
     }
-    if (!(const char *)obj["logserver"].isNull())
+    if (!obj["logserver"].isNull())
     {
         updated = true;
         strlcpy(logserver, obj["logserver"], sizeof(logserver));
     }
-    if (!(const char *)obj["logport"].isNull())
+    if (!obj["logport"].isNull())
     {
         updated = true;
         logport = obj["logport"];
     }
-    if (!(const char *)obj["logref"].isNull())
+    if (!obj["logref"].isNull())
     {
         updated = true;
         strlcpy(logref, obj["logref"], sizeof(logref));

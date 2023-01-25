@@ -80,37 +80,37 @@ bool SystemConfig::set(JsonObjectConst obj)
       return false;
     }
   }
-  if (!(const char *)obj["sys_username"].isNull())
+  if (!obj["sys_username"].isNull())
   {
     updated = true;
     strlcpy(sys_username, obj["sys_username"], sizeof(sys_username));
   }
-  if (!(const char *)obj["sys_password"].isNull())
+  if (!obj["sys_password"].isNull())
   {
     updated = true;
     strlcpy(sys_password, obj["sys_password"], sizeof(sys_password));
   }
-  if (!(const char *)obj["syssec_web"].isNull())
+  if (!obj["syssec_web"].isNull())
   {
     updated = true;
     syssec_web = obj["syssec_web"];
   }
-  if (!(const char *)obj["syssec_api"].isNull())
+  if (!obj["syssec_api"].isNull())
   {
     updated = true;
     syssec_api = obj["syssec_api"];
   }
-  if (!(const char *)obj["syssec_edit"].isNull())
+  if (!obj["syssec_edit"].isNull())
   {
     updated = true;
     syssec_edit = obj["syssec_edit"];
   }
-  if (!(const char *)obj["api_normalize"].isNull())
+  if (!obj["api_normalize"].isNull())
   {
     updated = true;
     api_normalize = obj["api_normalize"];
   }
-  if (!(const char *)obj["syssht30"].isNull())
+  if (!obj["syssht30"].isNull())
   {
     updated = true;
     unsigned char value = obj["syssht30"];
@@ -119,207 +119,207 @@ bool SystemConfig::set(JsonObjectConst obj)
     syssht30 = value;
   }
   // MQTT Settings parse
-  if (!(const char *)obj["mqtt_active"].isNull())
+  if (!obj["mqtt_active"].isNull())
   {
     mqtt_updated = true;
     updated = true;
     mqtt_active = obj["mqtt_active"];
   }
-  if (!(const char *)obj["mqtt_serverName"].isNull())
+  if (!obj["mqtt_serverName"].isNull())
   {
     updated = true;
     strlcpy(mqtt_serverName, obj["mqtt_serverName"], sizeof(mqtt_serverName));
   }
-  if (!(const char *)obj["mqtt_username"].isNull())
+  if (!obj["mqtt_username"].isNull())
   {
     updated = true;
     strlcpy(mqtt_username, obj["mqtt_username"], sizeof(mqtt_username));
   }
-  if (!(const char *)obj["mqtt_password"].isNull())
+  if (!obj["mqtt_password"].isNull())
   {
     updated = true;
     strlcpy(mqtt_password, obj["mqtt_password"], sizeof(mqtt_password));
   }
-  if (!(const char *)obj["mqtt_port"].isNull())
+  if (!obj["mqtt_port"].isNull())
   {
     updated = true;
     mqtt_port = obj["mqtt_port"];
   }
-  if (!(const char *)obj["mqtt_version"].isNull())
+  if (!obj["mqtt_version"].isNull())
   {
     updated = true;
     mqtt_version = obj["mqtt_version"];
   }
-  if (!(const char *)obj["mqtt_state_topic"].isNull())
+  if (!obj["mqtt_state_topic"].isNull())
   {
     updated = true;
     strlcpy(mqtt_state_topic, obj["mqtt_state_topic"], sizeof(mqtt_state_topic));
   }
-  if (!(const char *)obj["mqtt_ithostatus_topic"].isNull())
+  if (!obj["mqtt_ithostatus_topic"].isNull())
   {
     updated = true;
     strlcpy(mqtt_ithostatus_topic, obj["mqtt_ithostatus_topic"], sizeof(mqtt_ithostatus_topic));
   }
-  if (!(const char *)obj["mqtt_remotesinfo_topic"].isNull())
+  if (!obj["mqtt_remotesinfo_topic"].isNull())
   {
     updated = true;
     strlcpy(mqtt_remotesinfo_topic, obj["mqtt_remotesinfo_topic"], sizeof(mqtt_remotesinfo_topic));
   }
-  if (!(const char *)obj["mqtt_lastcmd_topic"].isNull())
+  if (!obj["mqtt_lastcmd_topic"].isNull())
   {
     updated = true;
     strlcpy(mqtt_lastcmd_topic, obj["mqtt_lastcmd_topic"], sizeof(mqtt_lastcmd_topic));
   }
-  if (!(const char *)obj["mqtt_ha_topic"].isNull())
+  if (!obj["mqtt_ha_topic"].isNull())
   {
     updated = true;
     mqtt_updated = true;
     strlcpy(mqtt_ha_topic, obj["mqtt_ha_topic"], sizeof(mqtt_ha_topic));
   }
-  if (!(const char *)obj["mqtt_state_retain"].isNull())
+  if (!obj["mqtt_state_retain"].isNull())
   {
     updated = true;
     strlcpy(mqtt_state_retain, obj["mqtt_state_retain"], sizeof(mqtt_state_retain));
   }
-  if (!(const char *)obj["mqtt_cmd_topic"].isNull())
+  if (!obj["mqtt_cmd_topic"].isNull())
   {
     updated = true;
     strlcpy(mqtt_cmd_topic, obj["mqtt_cmd_topic"], sizeof(mqtt_cmd_topic));
   }
-  if (!(const char *)obj["mqtt_lwt_topic"].isNull())
+  if (!obj["mqtt_lwt_topic"].isNull())
   {
     updated = true;
     strlcpy(mqtt_lwt_topic, obj["mqtt_lwt_topic"], sizeof(mqtt_lwt_topic));
   }
-  if (!(const char *)obj["mqtt_domoticz_active"].isNull())
+  if (!obj["mqtt_domoticz_active"].isNull())
   {
     updated = true;
     mqtt_domoticz_active = obj["mqtt_domoticz_active"];
   }
-  if (!(const char *)obj["mqtt_ha_active"].isNull())
+  if (!obj["mqtt_ha_active"].isNull())
   {
     updated = true;
     mqtt_updated = true;
     mqtt_ha_active = obj["mqtt_ha_active"];
   }
-  if (!(const char *)obj["mqtt_idx"].isNull())
+  if (!obj["mqtt_idx"].isNull())
   {
     updated = true;
     mqtt_idx = obj["mqtt_idx"];
   }
-  if (!(const char *)obj["sensor_idx"].isNull())
+  if (!obj["sensor_idx"].isNull())
   {
     updated = true;
     sensor_idx = obj["sensor_idx"];
   }
-  if (!(const char *)obj["itho_fallback"].isNull())
+  if (!obj["itho_fallback"].isNull())
   {
     // itho_updated = true;
     updated = true;
     itho_fallback = obj["itho_fallback"];
   }
-  if (!(const char *)obj["itho_low"].isNull())
+  if (!obj["itho_low"].isNull())
   {
     // itho_updated = true;
     updated = true;
     itho_low = obj["itho_low"];
   }
-  if (!(const char *)obj["itho_medium"].isNull())
+  if (!obj["itho_medium"].isNull())
   {
     updated = true;
     itho_medium = obj["itho_medium"];
   }
-  if (!(const char *)obj["itho_high"].isNull())
+  if (!obj["itho_high"].isNull())
   {
     updated = true;
     itho_high = obj["itho_high"];
   }
-  if (!(const char *)obj["itho_timer1"].isNull())
+  if (!obj["itho_timer1"].isNull())
   {
     updated = true;
     itho_timer1 = obj["itho_timer1"];
   }
-  if (!(const char *)obj["itho_timer2"].isNull())
+  if (!obj["itho_timer2"].isNull())
   {
     updated = true;
     itho_timer2 = obj["itho_timer2"];
   }
-  if (!(const char *)obj["itho_timer3"].isNull())
+  if (!obj["itho_timer3"].isNull())
   {
     updated = true;
     itho_timer3 = obj["itho_timer3"];
   }
-  if (!(const char *)obj["itho_updatefreq"].isNull())
+  if (!obj["itho_updatefreq"].isNull())
   {
     updated = true;
     itho_updatefreq = obj["itho_updatefreq"];
   }
-  if (!(const char *)obj["itho_numvrem"].isNull())
+  if (!obj["itho_numvrem"].isNull())
   {
     updated = true;
     itho_numvrem = obj["itho_numvrem"];
   }
-  if (!(const char *)obj["itho_sendjoin"].isNull())
+  if (!obj["itho_sendjoin"].isNull())
   {
     updated = true;
     itho_sendjoin = obj["itho_sendjoin"];
   }
-  if (!(const char *)obj["itho_pwm2i2c"].isNull())
+  if (!obj["itho_pwm2i2c"].isNull())
   {
     updated = true;
     itho_pwm2i2c = obj["itho_pwm2i2c"];
   }
-  if (!(const char *)obj["itho_31da"].isNull())
+  if (!obj["itho_31da"].isNull())
   {
     updated = true;
     itho_31da = obj["itho_31da"];
   }
-  if (!(const char *)obj["itho_31d9"].isNull())
+  if (!obj["itho_31d9"].isNull())
   {
     updated = true;
     itho_31d9 = obj["itho_31d9"];
   }
-  if (!(const char *)obj["itho_2401"].isNull())
+  if (!obj["itho_2401"].isNull())
   {
     updated = true;
     itho_2401 = obj["itho_2401"];
   }
-  if (!(const char *)obj["itho_forcemedium"].isNull())
+  if (!obj["itho_forcemedium"].isNull())
   {
     updated = true;
     itho_forcemedium = obj["itho_forcemedium"];
   }
-  if (!(const char *)obj["itho_vremoteapi"].isNull())
+  if (!obj["itho_vremoteapi"].isNull())
   {
     updated = true;
     itho_vremoteapi = obj["itho_vremoteapi"];
   }
-  if (!(const char *)obj["itho_rf_support"].isNull())
+  if (!obj["itho_rf_support"].isNull())
   {
     updated = true;
     itho_rf_support = obj["itho_rf_support"];
   }
-  if (!(const char *)obj["i2cmenu"].isNull())
+  if (!obj["i2cmenu"].isNull())
   {
     updated = true;
     i2cmenu = obj["i2cmenu"];
   }
-  if (!(const char *)obj["i2c_safe_guard"].isNull())
+  if (!obj["i2c_safe_guard"].isNull())
   {
     updated = true;
     i2c_safe_guard = obj["i2c_safe_guard"];
   }
-  if (!(const char *)obj["i2c_sniffer"].isNull())
+  if (!obj["i2c_sniffer"].isNull())
   {
     updated = true;
     i2c_sniffer = obj["i2c_sniffer"];
   }
-  if (!(const char *)obj["rfInitOK"].isNull())
+  if (!obj["rfInitOK"].isNull())
   {
     updated = true;
     rfInitOK = obj["rfInitOK"];
   }
-  if (!(const char *)obj["nonQ_cmd_clearsQ"].isNull())
+  if (!obj["nonQ_cmd_clearsQ"].isNull())
   {
     updated = true;
     nonQ_cmd_clearsQ = obj["nonQ_cmd_clearsQ"];
