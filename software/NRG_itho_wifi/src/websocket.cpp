@@ -196,7 +196,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"ithobutton\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      StaticJsonDocument<255> root;
       DeserializationError error = deserializeJson(root, msg);
       if (!error)
       {
@@ -235,13 +235,17 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           {
             setSettingCE30(root["ithotemptemp"].as<int16_t>(), root["ithotemp"].as<int16_t>(), root["ithotimestamp"].as<uint32_t>(), true);
           }
+          else if (val == 4030)
+          {
+            setSetting4030(root["idx"].as<uint16_t>(), root["dt"].as<uint8_t>(), root["val"].as<int16_t>(), root["chk"].as<uint8_t>(), root["dryrun"].as<bool>(), true);
+          }
         }
         else
         {
           i2c_result_updateweb = true;
           ithoI2CCommand(0, root["ithobutton"], WEB);
         }
-      }
+      } 
     }
     else if (msg.find("{\"wifisetup\"") != std::string::npos)
     {

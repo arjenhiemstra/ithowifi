@@ -573,6 +573,16 @@ $(document).ready(function () {
         ithotimestamp: $('#itho_ce30_timestamp').val()
       }));
     }
+    else if ($(this).attr('id') == 'button4030') { 
+      websock.send(JSON.stringify({
+        ithobutton: 4030,
+        idx: Number($('#itho_4030_index').val()),
+        dt: Number($('#itho_4030_datatype').val()),
+        val: Number($('#itho_4030_value').val()),
+        chk: Number($('#itho_4030_checked').val()),
+        dryrun: ($('#itho_4030_password').val() == 'thisisunsafe') ? false : true, 
+      })); 
+    }
     else if ($(this).attr('id') == 'ithogetsettings') {
       settingIndex = 0;
       websock.send(JSON.stringify({
@@ -843,7 +853,7 @@ function update_page(page) {
   if (page == 'reset') { $('#main').append(html_reset); }
   if (page == 'update') { $('#main').append(html_update); }
   if (page == 'debug') { $('#main').append(html_debug); $('#main').css('max-width', '1600px') }
-  if (page == 'i2cdebug') { $('#main').append(html_i2cdebug); }
+  if (page == 'i2cdebug') { $('#main').append(); }
 
 
 }
@@ -1251,8 +1261,6 @@ function addAllColumnHeaders(jsonVar, selector, appendRow) {
   }
   return columnSet;
 }
-
-
 
 //
 // HTML string literals
