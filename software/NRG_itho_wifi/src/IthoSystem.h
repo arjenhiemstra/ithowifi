@@ -133,7 +133,7 @@ void sendQueryStatusFormat(bool updateweb);
 void sendQueryStatus(bool updateweb);
 void sendQuery31DA(bool updateweb);
 void sendQuery31D9(bool updateweb);
-void setSettingCE30(uint16_t temperature1, uint16_t temperature2, uint32_t timestamp, bool updateweb);
+void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperature, uint32_t timestamp, bool updateweb);
 int32_t *sendQuery2410(uint8_t index, bool updateweb);
 void setSetting2410(uint8_t index, int32_t value, bool updateweb);
 // void setSetting2410(bool updateweb);

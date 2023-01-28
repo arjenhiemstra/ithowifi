@@ -1377,16 +1377,17 @@ void sendQuery31D9(bool updateweb)
   }
 }
 
-void setSettingCE30(uint16_t temperature1, uint16_t temperature2, uint32_t timestamp, bool updateweb)
+void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperature, uint32_t timestamp, bool updateweb)
+// Set the outside temperature for WPU devices.
 // [00,3E,CE,30,05,08, 63,91,DA,C7, xx,xx, yy,yy, FF]
 // from: 00 (broadcast)
 // source: 3E 
 // command: CE30
 // type: 5 (update)
 // length: 8 
-// 6391DAC7 => 4 byte unix timestamp: lifetime of temp1. After timestamp temp1 is replaced by temp2.
-// xxxx two byte temp1:  0x0539 = 13.37 degrees C.
-// yyyy two byte temp2: 0xFC18 = -10 degrees C. 
+// 6391DAC7 => 4 byte unix timestamp: lifetime of temporary_temparture. After timestamp temporary_temp is replaced by fallback_temp.
+// xxxx two byte temporary_temp:  0x0539 = 13.37 degrees C.
+// yyyy two byte fallback_temp: 0xFC18 = -10 degrees C. 
 // FF checksum
 
 {
@@ -1397,10 +1398,10 @@ void setSettingCE30(uint16_t temperature1, uint16_t temperature2, uint32_t times
   command[8] = (timestamp >> 8) & 0xFF;
   command[9] = timestamp & 0xFF;
 
-  command[10] = (temperature1 >> 8) & 0xFF;
-  command[11] = temperature1 & 0xFF;
-  command[12] = (temperature2 >> 8) & 0xFF;
-  command[13] = temperature2 & 0xFF;
+  command[10] = (temporary_temperature >> 8) & 0xFF;
+  command[11] = temporary_temperature & 0xFF;
+  command[12] = (fallback_temperature >> 8) & 0xFF;
+  command[13] = fallback_temperature & 0xFF;
   
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
   
