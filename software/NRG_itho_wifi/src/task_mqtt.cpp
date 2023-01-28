@@ -404,11 +404,13 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
             clearQueue = true;
           }
         }
-        if (!(const char *)root["outside_temperature"].isNull())
+        if (!(const char *)root["outside_temp"].isNull())
         {
           jsonCmd = true;
-          float outside_temp = root["outside_temperature"].as<float>();
-          setSettingCE30(0, static_cast<int16_t>(outside_temp*100), 0, false);
+          float outside_temp = root["outside_temp"].as<float>();
+          float temporary_outside_temp = root["temporary_outside_temp"].as<float>();
+          uint32_t valid_until = root["valid_until"].as<uint32_t>();
+          setSettingCE30(static_cast<int16_t>(temporary_outside_temp*100), static_cast<int16_t>(outside_temp*100), valid_until, false);
         }
         if (!jsonCmd)
         {
