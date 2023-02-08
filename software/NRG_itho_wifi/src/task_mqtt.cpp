@@ -412,6 +412,18 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           uint32_t valid_until = root["valid_until"].as<uint32_t>();
           setSettingCE30(static_cast<int16_t>(temporary_outside_temp*100), static_cast<int16_t>(outside_temp*100), valid_until, false);
         }
+        if (!(const char *)root["manual_operation_index"].isNull())
+        {
+          jsonCmd = true;
+          uint16_t index = root["manual_operation_index"].as<uint16_t>();
+          uint8_t datatype = root["manual_operation_datatype"].as<uint8_t>();
+          uint16_t value = root["manual_operation_value"].as<uint16_t>();
+          uint8_t checked = root["manual_operation_checked"].as<uint8_t>();
+          bool dryrun = root["manual_operation_dryrun"].as<bool>();
+          D_LOG("Manual operation MQTT. Dryrun: %d", dryrun);
+          D_LOG("index: %d dt: %d value: %d checked: %d", index, datatype, value, checked);
+          setSetting4030(index, datatype, value, checked, dryrun, false);
+        }
         if (!jsonCmd)
         {
           ithoSetSpeed(s_payload, MQTTAPI);

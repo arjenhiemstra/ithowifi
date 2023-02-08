@@ -566,6 +566,24 @@ $(document).ready(function () {
         value: parseFloat($('#itho_setting_value_set').val())
       }));
     }
+    else if ($(this).attr('id') == 'buttonCE30') {
+      websock.send(JSON.stringify({
+        ithobutton: 0xCE30,
+        ithotemp: parseFloat($('#itho_ce30_temp').val()*100.),
+        ithotemptemp: parseFloat($('#itho_ce30_temptemp').val()*100.),
+        ithotimestamp: $('#itho_ce30_timestamp').val()
+      }));
+    }
+    else if ($(this).attr('id') == 'button4030') { 
+      websock.send(JSON.stringify({
+        ithobutton: 4030,
+        idx: Number($('#itho_4030_index').val()),
+        dt: Number($('#itho_4030_datatype').val()),
+        val: Number($('#itho_4030_value').val()),
+        chk: Number($('#itho_4030_checked').val()),
+        dryrun: ($('#itho_4030_password').val() == 'thisisunsafe') ? false : true, 
+      })); 
+    }
     else if ($(this).attr('id') == 'ithogetsettings') {
       settingIndex = 0;
       websock.send(JSON.stringify({
@@ -1245,8 +1263,6 @@ function addAllColumnHeaders(jsonVar, selector, appendRow) {
   return columnSet;
 }
 
-
-
 //
 // HTML string literals
 //
@@ -1564,28 +1580,39 @@ var html_debug = `
                 <span>Sent command:&nbsp;</span><span id="itho2410set"></span><br><span>Result:&nbsp;</span><span
                     id="itho2410setres"></span><br>
                 <span style="color:red">Warning!!</span><br><br>
-
-                <span style="color:red">Warning!!<br> "Send CE30" tries to send outside temp. Input field not implemented yet.</span><br>
-                <button id="ithobutton-CE30" class="pure-button pure-button-primary">Send CE30</button>timestamp (hex):
-                <input id="itho_setting_id_timestamp" type="number" min="0" max="255" size="8" value="0"> temp value (hex):
-                <input id="itho_setting_value_set" type="number" min="-2147483647" max="2147483647" size="4"
-                    value="0"><br>
-                <span>Sent command:&nbsp;</span><span id="itho2410set"></span><br><span>Result:&nbsp;</span><span
-                    id="ithoCE30"></span><br>
-                <span style="color:red">Warning!!</span><br><br>
-
-                
+               
                 <button id="ithobutton-31DA"
                     class="pure-button pure-button-primary">Query 31DA</button><br><span>Result:&nbsp;</span>
                 <span id="itho31DA"></span><br><br><button id="ithobutton-31D9"
                     class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
                     id="itho31D9"></span><br><br>
                 
-                    <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
+                <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
                     reset</button><br><span>Filter
                     reset function uses virtual remote 0, this remote needs to be paired with your itho for this command
                     to
-                    work</span>
+                    work</span><br><br>
+                <button id="buttonCE30" class="pure-button pure-button-primary">Send CE30</button>
+                Set outside temperature to: <input id="itho_ce30_temp" type="number" min="-20" max="50" size="4" value="15"><br> 
+                Optional temporary temperature: <input id="itho_ce30_temptemp" type="number" min="-20" max="50" size="4" value="0"> 
+                Valid until(timestamp) <input id="itho_ce30_timestamp" type="number" min="0" max="2147483647" size="12" value="0"><br>
+                <span>Result:&nbsp;</span><span id="itho_ce30_result"></span><br>
+                <br>
+                <span style="color:red">Warning!!<br>
+                4030 "Manual control" is VERY dangerous!!<br>
+                Use with care and use only if you know what you are doing!</span><br>                
+                <button id="button4030" class="pure-button pure-button-primary">Set 4030 Manual Control</button>
+                Index: <input id="itho_4030_index" type="text" size="5">
+                Datatype: <input id="itho_4030_datatype" type="text" size="5">
+                Value: <input id="itho_4030_value" type="text" size="5">
+                Checked: <input id="itho_4030_checked" ttype="text" size="2"><br>
+                Password: "thisisunsafe": <input id="itho_4030_password" type="string" size="15"><br> 
+                <span>i2c command:&nbsp;</span><span id="itho_4030_i2c_command"></span>
+                <span>Result:&nbsp;</span><span id="itho_4030_result"></span><br>
+                <span style="color:red">
+                WPU 5G: Make sure you set the "Max manual operation time" setting in the settings page.<br>
+                The itho unit will remain in manual mode until the timer expires. 0 means unlimited.<br>
+                Warning!!<br></vr></span><br>
             </fieldset><br><br><br>
         </fieldset>
     </form>
@@ -1722,7 +1749,7 @@ var html_index = `
 </div>
 <script>
   $(document).ready(function () {
-    if (hw_revision.startsWith('NON-CVE ')) {
+    if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
       $('#sliderdiv').addClass('hidden');
       $('#reminterface').empty();
     }
@@ -1994,7 +2021,8 @@ var html_syslog = `
 <div id="sdblog_outer">
     <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">System Log:</div>
     <div id='dblog'
-        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+        style="white-space:pre;padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+        Loading logfile...
     </div>
     <div style="padding-top:5px;">
         <a class="pure-button" href="/curlog">Download current logfile</a>&nbsp;
@@ -2020,10 +2048,10 @@ var html_syslog = `
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">
             <label for="option-syslog_active" class="pure-radio">Syslog Active</label>
-            <input id="option-syslog_active-1" type="radio" name="option-syslog_active" onchange='radio("syslog_active", 1)'
-                value="1"> on
-            <input id="option-syslog_active-0" type="radio" name="option-syslog_active" onchange='radio("syslog_active", 0)'
-                value="0"> off
+            <input id="option-syslog_active-1" type="radio" name="option-syslog_active"
+                onchange='radio("syslog_active", 1)' value="1"> on
+            <input id="option-syslog_active-0" type="radio" name="option-syslog_active"
+                onchange='radio("syslog_active", 0)' value="0"> off
         </div>
         <div class="pure-control-group">
             <label for="logserver">Syslog server</label>
@@ -2045,8 +2073,8 @@ var html_syslog = `
 </form>
 <script>
     $(document).ready(function () {
-        getSettings('systemlog');
         getSettings('logsetup');
+        getlog("/curlog");
     });
 </script>
 `;
