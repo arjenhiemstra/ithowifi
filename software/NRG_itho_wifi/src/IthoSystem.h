@@ -83,6 +83,7 @@ struct ithoDeviceMeasurements
 extern std::vector<ithoDeviceStatus> ithoStatus;
 extern std::vector<ithoDeviceMeasurements> ithoMeasurements;
 extern std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
+extern std::vector<ithoDeviceMeasurements> ithoCounters;
 
 struct lastCommand
 {
@@ -136,6 +137,7 @@ void sendQuery31D9(bool updateweb);
 int32_t *sendQuery2410(uint8_t index, bool updateweb);
 void setSetting2410(uint8_t index, int32_t value, bool updateweb);
 // void setSetting2410(bool updateweb);
+void sendQueryCounters(bool updateweb);
 void filterReset();
 void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
 int quick_pow10(int n);
