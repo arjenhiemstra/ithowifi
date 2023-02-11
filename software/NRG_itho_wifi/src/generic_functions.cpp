@@ -93,6 +93,24 @@ void getIthoStatusJSON(JsonObject root)
       }
     }
   }
+  if (!ithoCounters.empty())
+  {
+    for (const auto &Counter : ithoCounters)
+    {
+      if (Counter.type == ithoDeviceMeasurements::is_int)
+      {
+        root[Counter.name] = Counter.value.intval;
+      }
+      else if (Counter.type == ithoDeviceMeasurements::is_float)
+      {
+        root[Counter.name] = Counter.value.floatval;
+      }
+      else
+      {
+        root["error"] = 0;
+      }
+    }
+  }
 }
 
 void getRemotesInfoJSON(JsonObject root)

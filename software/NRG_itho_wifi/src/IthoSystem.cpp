@@ -22,6 +22,7 @@ int16_t ithoStatusLabelLength = 0;
 std::vector<ithoDeviceStatus> ithoStatus;
 std::vector<ithoDeviceMeasurements> ithoMeasurements;
 std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
+std::vector<ithoDeviceMeasurements> ithoCounters;
 struct lastCommand lastCmd;
 ithoSettings *ithoSettingsArray = nullptr;
 
@@ -1581,6 +1582,91 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
     }
   }
 }
+
+void sendQueryCounters(bool updateweb)
+{
+  uint8_t command[] = {0x82, 0x80, 0x42, 0x10, 0x04, 0x00, 0xA8};
+  //command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+  D_LOG("i2c command: %s", i2cbuf2string(command, sizeof(command)).c_str());
+
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_QUERY_STATUS))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("ithocounters", "send i2c command failed");
+    }
+    return;
+  }
+
+  uint8_t i2cbuf[512]{};
+  size_t len = i2c_slave_receive(i2cbuf);
+
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x4210))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("ithocounters", i2cbuf2string(i2cbuf, len).c_str());
+    }
+    D_LOG("i2c command recieved: %s", i2cbuf2string(i2cbuf, len).c_str());
+
+    uint8_t dataType = i2cbuf[6]; // first byte of payload: Datatype.
+    uint8_t length = get_length_from_datatype(dataType);
+    uint32_t divider = get_divider_from_datatype(dataType);
+    
+    bool is_int;
+    if (divider == 1) {
+        is_int = true;
+    } else {
+        is_int = false;
+    }
+    
+    int valPos = 7; // first byte of the first value of the payload.
+    int labelLen = i2cbuf[5] / length; // number of values
+    if (labelLen > 26) {
+      E_LOG("WPU Counter array too long.");
+      return;
+    }
+
+    if (!ithoCounters.empty())
+    {
+      ithoCounters.clear();
+    }
+    
+    uint32_t val;
+    for (int i=0; i < labelLen; i++)
+    {   
+        int idx = length * i + valPos; // idx: start of value in raw bytes
+        val = 0;
+        for (int j=0; j < length; j++) {
+            val += val << 8;
+            val += i2cbuf[idx+j];
+        }
+        
+        ithoCounters.push_back(ithoDeviceMeasurements());
+        
+        // label
+        if (systemConfig.api_normalize == 0) {
+            ithoCounters.back().name = ithoWPUCounterLabels[i].labelFull;
+        } else {
+            ithoCounters.back().name = ithoWPUCounterLabels[i].labelNormalized;
+        }
+        // value
+        if (is_int) {
+            ithoCounters.back().type = ithoDeviceMeasurements::is_int;
+            ithoCounters.back().value.intval = val;
+        } else {
+            ithoCounters.back().type = ithoDeviceMeasurements::is_float;
+            ithoCounters.back().value.intval = (float) val/divider;
+        }
+    }
+    D_LOG("Counters processed!");
+  }
+};
+
+
 
 void filterReset()
 {
