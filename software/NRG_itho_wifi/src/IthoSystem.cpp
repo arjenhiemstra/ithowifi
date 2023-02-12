@@ -1586,9 +1586,6 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
 void sendQueryCounters(bool updateweb)
 {
   uint8_t command[] = {0x82, 0x80, 0x42, 0x10, 0x04, 0x00, 0xA8};
-  //command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
-
-  D_LOG("i2c command: %s", i2cbuf2string(command, sizeof(command)).c_str());
 
   if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_QUERY_STATUS))
   {
@@ -1610,7 +1607,6 @@ void sendQueryCounters(bool updateweb)
       updateweb = false;
       jsonSysmessage("ithocounters", i2cbuf2string(i2cbuf, len).c_str());
     }
-    D_LOG("i2c command recieved: %s", i2cbuf2string(i2cbuf, len).c_str());
 
     uint8_t dataType = i2cbuf[6]; // first byte of payload: Datatype.
     uint8_t length = get_length_from_datatype(dataType);
@@ -1662,7 +1658,6 @@ void sendQueryCounters(bool updateweb)
             ithoCounters.back().value.intval = (float) val/divider;
         }
     }
-    D_LOG("Counters processed!");
   }
 };
 
