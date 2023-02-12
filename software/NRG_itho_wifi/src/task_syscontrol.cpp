@@ -129,14 +129,11 @@ void TaskSysControl(void *pvParameters)
       N_LOG("Reboot requested");
       if (!dontSaveConfig)
       {
-        saveSystemConfig();
+        saveSystemConfig("flash");
       }
       delay(1000);
       ACTIVE_FS.end();
-      esp_task_wdt_init(1, true);
-      esp_task_wdt_add(NULL);
-      while (true)
-        ;
+      esp_restart();
     }
 
     TaskSysControlHWmark = uxTaskGetStackHighWaterMark(NULL);
@@ -201,7 +198,7 @@ void execSystemControlTasks()
     if (systemConfig.itho_sendjoin == 1)
     {
       systemConfig.itho_sendjoin = 0;
-      saveSystemConfig();
+      saveSystemConfig("flash");
     }
   }
 
@@ -437,7 +434,7 @@ void init_i2c_functions()
         if (systemConfig.syssht30 == 2)
         {
           systemConfig.syssht30 = 0;
-          saveSystemConfig();
+          saveSystemConfig("flash");
         }
       }
 
@@ -485,9 +482,14 @@ void init_i2c_functions()
 
 void wifiInit()
 {
-  if (!loadWifiConfig())
+  if (!loadWifiConfig("flash"))
   {
     E_LOG("Setup: Wifi config load failed");
+    setupWiFiAP();
+  }
+  else if (strcmp(wifiConfig.ssid, "") == 0)
+  {
+    I_LOG("Setup: initial wifi config still there, start WifiAP");
     setupWiFiAP();
   }
   else if (!connectWiFiSTA(true))
@@ -781,7 +783,7 @@ void init_vRemote()
   I_LOG("Setup: Virtual remotes, start ID: %02X,%02X,%02X - No.: %d", sys.getMac(3), sys.getMac(4), sys.getMac(5), systemConfig.itho_numvrem);
 
   virtualRemotes.setMaxRemotes(systemConfig.itho_numvrem);
-  loadVirtualRemotesConfig();
+  loadVirtualRemotesConfig("flash");
 }
 
 bool ithoInitCheck()
@@ -839,7 +841,7 @@ void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
   else if (strcmp(command, "low") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
-                                   { sendRemoteCmd(remoteIndex, IthoLow); });
+                      { sendRemoteCmd(remoteIndex, IthoLow); });
   }
   else if (strcmp(command, "medium") == 0)
   {
@@ -889,7 +891,7 @@ void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
   else if (strcmp(command, "join") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
-                            { sendRemoteCmd(remoteIndex, IthoJoin); });
+                      { sendRemoteCmd(remoteIndex, IthoJoin); });
   }
   else if (strcmp(command, "leave") == 0)
   {
@@ -899,7 +901,7 @@ void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
   else if (strcmp(command, "type") == 0)
   {
     i2c_queue_add_cmd([updateweb]()
-                            { sendQueryDevicetype(updateweb); });
+                      { sendQueryDevicetype(updateweb); });
   }
   else if (strcmp(command, "status") == 0)
   {
@@ -909,17 +911,17 @@ void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
   else if (strcmp(command, "statusformat") == 0)
   {
     i2c_queue_add_cmd([updateweb]()
-                            { sendQueryStatusFormat(updateweb); });
+                      { sendQueryStatusFormat(updateweb); });
   }
   else if (strcmp(command, "31DA") == 0)
   {
     i2c_queue_add_cmd([updateweb]()
-                            { sendQuery31DA(updateweb); });
+                      { sendQuery31DA(updateweb); });
   }
   else if (strcmp(command, "31D9") == 0)
   {
     i2c_queue_add_cmd([updateweb]()
-                            { sendQuery31D9(updateweb); });
+                      { sendQuery31D9(updateweb); });
   }
   else if (strcmp(command, "10D0") == 0)
   {

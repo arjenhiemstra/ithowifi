@@ -58,4 +58,5 @@ void sys_log(log_prio_level_t log_prio, const char *inputString, ...)
   }
 
   syslog_queue.push_back(input);
+
 }

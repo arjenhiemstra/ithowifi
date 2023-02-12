@@ -1,11 +1,15 @@
 #include "task_web.h"
 
+#if MG_ENABLE_PACKED_FS == 0
+
 #include "webroot/index_html_gz.h"
 #include "webroot/edit_html_gz.h"
 #include "webroot/controls_js_gz.h"
 #include "webroot/pure_min_css_gz.h"
 #include "webroot/zepto_min_js_gz.h"
 #include "webroot/favicon_png_gz.h"
+
+#endif
 
 #define TASK_WEB_PRIO 5
 
@@ -135,37 +139,42 @@ void ArduinoOTAinit()
   ArduinoOTA
       .onStart([]()
                {
+                 static char buf[128]{};
+                 strcat(buf, "Firmware update: ");
 
-    static char buf[128]{};
-    strcat(buf, "Firmware update: ");
-    
-    if (ArduinoOTA.getCommand() == U_FLASH)
-      strncat(buf, "sketch", sizeof(buf) - strlen(buf) - 1);
-    else // U_SPIFFS
-      strncat(buf, "filesystem", sizeof(buf) - strlen(buf) - 1);
-    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    N_LOG(buf);
-    delay(250);
-    
-    ACTIVE_FS.end();
-    onOTA = true;
-    dontSaveConfig = true;
-    dontReconnectMQTT = true;
-    mqttClient.disconnect();
+                 if (ArduinoOTA.getCommand() == U_FLASH)
+                   strncat(buf, "sketch", sizeof(buf) - strlen(buf) - 1);
+                 else // U_SPIFFS
+                   strncat(buf, "filesystem", sizeof(buf) - strlen(buf) - 1);
+                 // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+                 N_LOG(buf);
+                 delay(250);
 
-    detachInterrupt(itho_irq_pin);
+                 ACTIVE_FS.end();
+                 onOTA = true;
+                 dontSaveConfig = true;
+                 dontReconnectMQTT = true;
+                 mqttClient.disconnect();
 
-    TaskCC1101Timeout.detach();
-    TaskConfigAndLogTimeout.detach();
-    TaskMQTTTimeout.detach();
-
-    vTaskSuspend( xTaskCC1101Handle );
-    vTaskSuspend( xTaskMQTTHandle );
-    vTaskSuspend( xTaskConfigAndLogHandle );
-
-    esp_task_wdt_delete( xTaskCC1101Handle );
-    esp_task_wdt_delete( xTaskMQTTHandle );
-    esp_task_wdt_delete( xTaskConfigAndLogHandle ); })
+                 if (xTaskCC1101Handle != NULL)
+                 {
+                   detachInterrupt(itho_irq_pin);
+                   TaskCC1101Timeout.detach();
+                   vTaskSuspend(xTaskCC1101Handle);
+                   esp_task_wdt_delete(xTaskCC1101Handle);
+                 }
+                 if (xTaskMQTTHandle != NULL)
+                 {
+                   TaskMQTTTimeout.detach();
+                   vTaskSuspend(xTaskMQTTHandle);
+                   esp_task_wdt_delete(xTaskMQTTHandle);
+                 }
+                 if (xTaskConfigAndLogHandle != NULL)
+                 {
+                   TaskConfigAndLogTimeout.detach();
+                   vTaskSuspend(xTaskConfigAndLogHandle);
+                   esp_task_wdt_delete(xTaskConfigAndLogHandle);
+                 } })
       .onEnd([]()
              { D_LOG("\nEnd"); })
       .onProgress([](unsigned int progress, unsigned int total)
@@ -212,8 +221,8 @@ void webServerInit()
 {
 
 #if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-  mg_http_listen(&mgr, s_listen_on_http, httpEvent, NULL); // Create HTTP listener
-#endif
+  mg_http_listen(&mgr, s_listen_on_http, httpEvent, &mgr); // Create HTTP listener
+#else
 
   // upload a file to /upload
   server.on(
@@ -250,6 +259,9 @@ void webServerInit()
 
   server.on("/list", HTTP_GET, handleFileList);
   server.on("/status", HTTP_GET, handleStatus);
+
+  // server.on("/crash", HTTP_GET, handleCoreCrash);
+  server.on("/getcoredump", HTTP_GET, handleCoredumpDownload);
 
   // css_code
   server.on("/pure-min.css", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -384,19 +396,25 @@ void webServerInit()
           N_LOG("Firmware update: %s", filename.c_str());
           delay(1000);
 
-          detachInterrupt(itho_irq_pin);
-
-          TaskCC1101Timeout.detach();
-          TaskConfigAndLogTimeout.detach();
-          TaskMQTTTimeout.detach();
-
-          vTaskSuspend(xTaskCC1101Handle);
-          vTaskSuspend(xTaskMQTTHandle);
-          vTaskSuspend(xTaskConfigAndLogHandle);
-
-          esp_task_wdt_delete(xTaskCC1101Handle);
-          esp_task_wdt_delete(xTaskMQTTHandle);
-          esp_task_wdt_delete(xTaskConfigAndLogHandle);
+          if (xTaskCC1101Handle != NULL)
+          {
+            detachInterrupt(itho_irq_pin);
+            TaskCC1101Timeout.detach();
+            vTaskSuspend(xTaskCC1101Handle);
+            esp_task_wdt_delete(xTaskCC1101Handle);
+          }
+          if (xTaskMQTTHandle != NULL)
+          {
+            TaskMQTTTimeout.detach();
+            vTaskSuspend(xTaskMQTTHandle);
+            esp_task_wdt_delete(xTaskMQTTHandle);
+          }
+          if (xTaskConfigAndLogHandle != NULL)
+          {
+            TaskConfigAndLogTimeout.detach();
+            vTaskSuspend(xTaskConfigAndLogHandle);
+            esp_task_wdt_delete(xTaskConfigAndLogHandle);
+          }
 
           if (!Update.begin(UPDATE_SIZE_UNKNOWN))
           {
@@ -454,7 +472,7 @@ void webServerInit()
       request->send(404); });
 
   server.begin();
-
+#endif
   N_LOG("Webserver: started");
 }
 
@@ -470,6 +488,7 @@ void MDNSinit()
 
   N_LOG("Hostname: %s", hostName());
 }
+
 void handleAPI(AsyncWebServerRequest *request)
 {
   bool parseOK = false;
@@ -727,6 +746,64 @@ void handleAPI(AsyncWebServerRequest *request)
   {
     request->send(200, "text/html", "NOK");
   }
+}
+
+void handleCoreCrash(AsyncWebServerRequest *request)
+{
+  request->send(200);
+  D_LOG("Triggering core crash...");
+  assert(0);
+}
+
+void handleCoredumpDownload(AsyncWebServerRequest *request)
+{
+  // httpd_resp_set_type(req, "application/octet-stream");
+  // httpd_resp_set_hdr(req, "Content-Disposition",
+  //                    "attachment;filename=core.bin");
+
+  esp_partition_iterator_t partition_iterator = esp_partition_find(
+      ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_COREDUMP, "coredump");
+
+  const esp_partition_t *partition = esp_partition_get(partition_iterator);
+
+  esp_core_dump_summary_t *summary = static_cast<esp_core_dump_summary_t *>(malloc(sizeof(esp_core_dump_summary_t)));
+
+  if (summary)
+  {
+    esp_err_t err = esp_core_dump_get_summary(summary);
+    if (err == ESP_OK)
+    {
+      D_LOG("Getting core dump summary ok.");
+    }
+    else
+    {
+      D_LOG("Getting core dump summary not ok. Error: %d\n", (int)err);
+      D_LOG("Probably no coredump present yet.\n");
+      D_LOG("esp_core_dump_image_check() = %s\n", esp_core_dump_image_check() ? "OK" : "NOK");
+    }
+    free(summary);
+  }
+
+  int file_size = 65536;
+  int maxLen = 1024;
+  char buffer[maxLen];
+
+  AsyncWebServerResponse *response = request->beginChunkedResponse("application/octet-stream", [partition, file_size, &buffer](uint8_t *buffer, size_t maxLen, size_t alreadySent) -> size_t
+                                                                   {
+      if (file_size - alreadySent >= maxLen) {
+        ESP_ERROR_CHECK(
+            esp_partition_read(partition, alreadySent, buffer, maxLen));
+        return maxLen;
+      } else {  
+        ESP_ERROR_CHECK(esp_partition_read(partition, alreadySent, buffer,
+                                           file_size - alreadySent));
+        //memcpy(buffer, fileArray + alreadySent, fileSize - alreadySent);
+        return file_size - alreadySent;
+      } });
+
+  response->addHeader("Content-Disposition", "attachment; filename=\"coredump.bin\"");
+  response->addHeader("Transfer-Encoding", "chunked");
+  request->send(response);
 }
 
 void handleCurLogDownload(AsyncWebServerRequest *request)
@@ -1077,6 +1154,14 @@ void handleFileList(AsyncWebServerRequest *request)
   output = String();
 }
 
+bool prevlog_available()
+{
+  if (ACTIVE_FS.exists("/logfile0.log") || ACTIVE_FS.exists("/logfile1.log"))
+    return true;
+
+  return false;
+}
+
 const char *getContentType(bool download, const char *filename)
 {
   if (download)
@@ -1178,9 +1263,7 @@ void jsonSystemstat()
 
 //       char buf[64]{};
 //       int urilen = mg.uri.len + 1;
-//       if (urilen > sizeof(buf))
-//         urilen = sizeof(buf);
-//       strlcpy(buf, mg.uri.ptr, urilen);
+//       strlcpy(buf, mg.uri.ptr, urilen > sizeof(buf) ? sizeof(buf) : urilen);
 //       D_LOG("File '%s' requested", buf);
 //     }
 //     else
@@ -1205,39 +1288,89 @@ void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
 {
   if (ev == MG_EV_HTTP_MSG)
   {
+    D_LOG("MG_EV_HTTP_MSG");
     struct mg_http_message *hm = (struct mg_http_message *)ev_data;
     if (mg_http_match_uri(hm, "/general.js"))
     {
+      D_LOG("URI /general.js");
       mg_http_reply(c, 200, "Content-Type: application/javascript\r\n",
-                    "var on_ap = %s; var hostname = '%s'; var fw_version = '%s'; var hw_revision = '%s'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });\n",
-                    wifiModeAP ? "true" : "false", hostName(), FWVERSION, hw_revision);
+                    "var on_ap = %s; var hostname = '%s'; var fw_version = '%s'; var hw_revision = '%s'; var itho_pwm2i2c = '%d'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });\n ",
+                    wifiModeAP
+                        ? "true"
+                        : "false",
+                    hostName(), FWVERSION, hw_revision, systemConfig.itho_pwm2i2c);
     }
     else if (mg_http_match_uri(hm, "/list"))
     {
+      D_LOG("URI /list");
       mg_handleFileList(c, ev, ev_data, fn_data);
     }
     else if (mg_http_match_uri(hm, "/status"))
     {
+      D_LOG("URI /status");
       mg_handleStatus(c, ev, ev_data, fn_data);
     }
     else if (mg_http_match_uri(hm, "/api.html"))
     {
+      D_LOG("URI /api.html");
       // handleAPI
-    }
-    else if (mg_http_match_uri(hm, "/debug"))
-    {
-      // handleDebug
     }
     else if (mg_http_match_uri(hm, "/curlog"))
     {
-      // handleCurLogDownload
+      D_LOG("URI /curlog");
+      char url[24]{};
+
+      if (ACTIVE_FS.exists("/logfile0.current.log"))
+      {
+        strlcpy(url, "/logfile0.current.log", sizeof(url));
+      }
+      else
+      {
+        strlcpy(url, "/logfile1.current.log", sizeof(url));
+      }
+
+      struct mg_http_message mg;
+      mg.uri.ptr = &url[0];
+      mg.uri.len = strlen(url);
+
+      char buf[64]{};
+      int urilen = mg.uri.len + 1;
+      strlcpy(buf, mg.uri.ptr, urilen > sizeof(buf) ? sizeof(buf) : urilen);
+      D_LOG("File '%s' requested", buf);
+
+      mg_serve_fs(c, (void *)&mg, true);
     }
     else if (mg_http_match_uri(hm, "/prevlog"))
     {
-      // handlePrevLogDownload
+      D_LOG("URI /prevlog");
+
+      char url[24]{};
+      size_t len;
+
+      if (ACTIVE_FS.exists("/logfile0.current.log"))
+      {
+        len = strlcpy(url, "/logfile1.log", sizeof(url));
+      }
+      else
+      {
+        len = strlcpy(url, "/logfile0.log", sizeof(url));
+      }
+
+      struct mg_http_message mg;
+      mg.uri.ptr = &url[0];
+      mg.uri.len = len;
+
+      char buf[64]{};
+      int urilen = mg.uri.len + 1;
+      strlcpy(buf, mg.uri.ptr, urilen > sizeof(buf) ? sizeof(buf) : urilen);
+      D_LOG("File '%s' requested", buf);
+
+      mg_serve_fs(c, (void *)&mg, true);
     }
     else if (mg_http_match_uri(hm, "/reset"))
     {
+      D_LOG("URI /reset");
+
       // add handle auth
       logMessagejson("Reset requested. Device will reboot in a few seconds...", WEBINTERFACE);
       mg_http_reply(c, 200, "", "HTTP OK");
@@ -1250,9 +1383,11 @@ void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
       {
         const char url[] = "/edit.html";
         const size_t len = sizeof(url) / sizeof(url[0]);
-        struct mg_http_message mg = {.uri{.ptr = &url[0], .len = len}};
+        struct mg_http_message mg;
+        mg.uri.ptr = &url[0];
+        mg.uri.len = len;
 
-        mg_serve_fs(c, (void *)&mg);
+        mg_serve_fs(c, (void *)&mg, false);
       }
       else if (strncmp(hm->method.ptr, "PUT", hm->method.len) == 0)
       {
@@ -1265,7 +1400,9 @@ void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
     }
     else
     {
-      mg_serve_fs(c, ev_data);
+      D_LOG("URI else -> mg_serve_fs");
+
+      mg_serve_fs(c, ev_data, false);
     }
 
     (void)fn_data;
@@ -1287,24 +1424,37 @@ bool mg_packed_file_exists(void *ev_data)
   return false;
 }
 
-void mg_serve_fs(struct mg_connection *c, void *ev_data)
+void mg_serve_fs(struct mg_connection *c, void *ev_data, bool download)
 {
-  struct mg_http_message *hm = (struct mg_http_message *)ev_data;
-  if (hm->uri.ptr == NULL)
+  if (c == nullptr)
     return;
+  if (ev_data == nullptr)
+    return;
+
+  struct mg_http_message *hm = (struct mg_http_message *)ev_data;
+  if (hm->uri.ptr == nullptr)
+    return;
+
+  char buf[64]{};
+  int urilen = hm->uri.len + 1;
+  strlcpy(buf, hm->uri.ptr, urilen > sizeof(buf) ? sizeof(buf) : urilen);
+  D_LOG("File '%s' requested", buf);
 
   if (mg_packed_file_exists(ev_data))
   {
-    struct mg_http_serve_opts opts = {
-        .root_dir = "/web_root",
-        .fs = &mg_fs_packed};
+    D_LOG("File '%s' found on Packed file system", buf);
+    struct mg_http_serve_opts opts;
+    opts.root_dir = "/web_root";
+    opts.fs = &mg_fs_packed;
+
     mg_http_serve_dir(c, (struct mg_http_message *)ev_data, &opts);
   }
-  else if (mg_handleFileRead(c, ev_data))
+  else if (mg_handleFileRead(c, ev_data, download))
   {
+
     // char buf[64]{};
     // strlcpy(buf, hm->uri.ptr, hm->uri.len + 1);
-    // D_LOG("File '%s' found on LittleFS file system", buf);
+    D_LOG("File '%s' found on LittleFS file system", buf);
   }
   else
   {
@@ -1368,7 +1518,7 @@ void mg_handleFileList(struct mg_connection *c, int ev, void *ev_data, void *fn_
   output = String();
 }
 
-bool mg_handleFileRead(struct mg_connection *c, void *ev_data)
+bool mg_handleFileRead(struct mg_connection *c, void *ev_data, bool download)
 {
   // handle authentication
   D_LOG("mg_handleFileRead called");
@@ -1422,7 +1572,7 @@ bool mg_handleFileRead(struct mg_connection *c, void *ev_data)
     {
       contents = file.readString();
       file.close();
-      String contect_type = getContentType(false, path.c_str());
+      String contect_type = getContentType(download, path.c_str());
       contect_type += "\r\n";
       mg_http_reply(c, 200, contect_type.c_str(), "%s\n", contents.c_str());
 
@@ -1434,6 +1584,7 @@ bool mg_handleFileRead(struct mg_connection *c, void *ev_data)
     path = String();
     return false;
   }
+  return false;
 }
 
 void mg_handleStatus(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
@@ -1501,8 +1652,8 @@ void mg_handleFileCreate(struct mg_connection *c, int ev, void *ev_data, void *f
   }
   char path[64]{};
   char src[64]{};
-  const char pathname[] = "path";
-  const char srcname[] = "src";
+  // const char pathname[] = "path";
+  // const char srcname[] = "src";
 
   struct mg_http_part part;
   size_t pos = 0;

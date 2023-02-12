@@ -35,6 +35,7 @@ print ("\n")
 PIOENV = env.subst("$PIOENV")
 PROGNAME = env.subst("$PROGNAME")
 firmware_bin = PROGNAME + ".bin"
+firmware_elf = PROGNAME + ".elf"
 PROJECT_DIR = env.subst("$PROJECT_DIR")
 PROJECT_WORKSPACE_DIR = env.subst("$PROJECT_WORKSPACE_DIR")
 PROJECT_BUILD_DIR = env.subst("$PROJECT_BUILD_DIR")
@@ -148,11 +149,21 @@ def build_webUI(*args, **kwargs):
 
 def copy_firmware():
    if os.path.isfile(PROJECT_BIN_DIR + firmware_bin):
-      print('Coping firmware file to: ' + PROJECT_COMPILED_DIR + HW_BIN_DIR + 'nrgitho' + hwrev + '-v' + fwversion + '.bin\n')      
-      shutil.copy(PROJECT_BIN_DIR + firmware_bin, PROJECT_COMPILED_DIR + HW_BIN_DIR + 'nrgitho' + hwrev + '-v' + fwversion + '.bin')
+      dest_fpath = PROJECT_COMPILED_DIR + HW_BIN_DIR + 'nrgitho' + hwrev + '-v' + fwversion + '.bin'
+      print('Coping firmware file to: ' + dest_fpath +'\n')
+      os.makedirs(os.path.dirname(dest_fpath), exist_ok=True)
+      shutil.copy(PROJECT_BIN_DIR + firmware_bin, dest_fpath)
       #check_sha1(name)
    else :
       print('Copy error! firmware file not found')
+   if os.path.isfile(PROJECT_BIN_DIR + firmware_elf):
+      dest_fpath = PROJECT_COMPILED_DIR + HW_BIN_DIR + 'elf' + DIR_SEPERATOR + 'nrgitho' + hwrev + '-v' + fwversion + '.elf'
+      print('Coping firmware elf file to: ' + dest_fpath +'\n')
+      os.makedirs(os.path.dirname(dest_fpath), exist_ok=True)
+      shutil.copy(PROJECT_BIN_DIR + firmware_elf, dest_fpath)
+      #check_sha1(name)
+   else :
+      print('Copy error! firmware elf file not found')      
 
 def update_releaseinfo():
    if(release != 'undefined' and hwversion != 'undefined'):

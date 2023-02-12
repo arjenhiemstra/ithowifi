@@ -23,6 +23,8 @@ WifiConfig::WifiConfig()
   port = 80;
   strlcpy(hostname, "", sizeof(hostname));
   strlcpy(ntpserver, "pool.ntp.org", sizeof(ntpserver));
+
+  configLoaded = false;
 } // WifiConfig
 
 // default destructor

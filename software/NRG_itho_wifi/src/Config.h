@@ -10,22 +10,29 @@
 #include "globals.h"
 #include "sys_log.h"
 
+#ifdef ESPRESSIF32_3_5_0
+#include <LITTLEFS.h>
+#else
+#include "LittleFS.h"
+#endif
 
 
-bool loadWifiConfig();
-bool saveWifiConfig();
+bool loadWifiConfig(const char *location);
+bool saveWifiConfig(const char *location);
 bool resetWifiConfig();
-bool loadSystemConfig();
-bool saveSystemConfig();
+bool loadSystemConfig(const char *location);
+bool saveSystemConfig(const char *location);
 bool resetSystemConfig();
-uint16_t serializeRemotes(const char *filename, const IthoRemote &remotes, Print &dst);
-bool saveRemotesConfig();
-bool saveVirtualRemotesConfig();
-bool saveFileRemotes(const char *filename, const IthoRemote &remotes);
-bool deserializeRemotes(const char *filename, Stream &src, IthoRemote &remotes);
-bool loadRemotesConfig();
-bool loadVirtualRemotesConfig();
-bool loadFileRemotes(const char *filename, IthoRemote &remotes);
+bool loadLogConfig(const char *location);
+bool saveLogConfig(const char *location);
 bool resetLogConfig();
-bool saveLogConfig();
-bool loadLogConfig();
+template <typename TDst>
+uint16_t serializeRemotes(const char *filename, const IthoRemote &remotes, TDst &dst);
+bool saveRemotesConfig(const char *location);
+bool saveVirtualRemotesConfig(const char *location);
+bool saveFileRemotes(const char *location, const char *filename, const char *config_type, const IthoRemote &remotes);
+template <typename TDst>
+bool deserializeRemotes(const char *filename, const char *config_type, TDst &src, IthoRemote &remotes);
+bool loadRemotesConfig(const char *location);
+bool loadVirtualRemotesConfig(const char *location);
+bool loadFileRemotes(const char *location, const char *filename, const char *config_type, const char *nvs_backup_key, IthoRemote &remotes);

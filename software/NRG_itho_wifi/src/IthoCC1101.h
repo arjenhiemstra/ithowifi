@@ -7,8 +7,6 @@
 #include <cstdio>
 #include <string>
 
-#include <Ticker.h>
-
 #include "CC1101.h"
 #include "IthoPacket.h"
 

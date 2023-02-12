@@ -18,8 +18,10 @@
           <input type="checkbox" onclick="togglePwd()">
         </div>
         <div class="pure-controls">
-          <button id="wifisubmit" class="pure-button pure-button-primary">Save</button>
+          <button id="wifisubmit" class="pure-button pure-button-primary">Save</button>&nbsp;&nbsp;
+          <button id="reboot" class="pure-button">Reboot</button>
         </div>
+        <div id="rebootscript"></div>
         <br>
         <div class="pure-control-group">
           <label for="option-dhcp" class="pure-radio">Use DHCP</label>
@@ -72,9 +74,9 @@
 </div>
 <script>
   function togglePwd() {
-    var x = document.getElementById('passwd'); 
-    if (x.type === 'password') { x.type = 'text'; } 
-    else { x.type = 'password'; } 
+    var x = document.getElementById('passwd');
+    if (x.type === 'password') { x.type = 'text'; }
+    else { x.type = 'password'; }
   }
   $(document).ready(function () {
     getSettings('wifisetup');

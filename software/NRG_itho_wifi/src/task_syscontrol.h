@@ -16,6 +16,12 @@
 #include "task_mqtt.h"
 #include "enum.h"
 
+#ifdef ESPRESSIF32_3_5_0
+#include <LITTLEFS.h>
+#else
+#include "LittleFS.h"
+#endif
+
 // globals
 extern uint32_t TaskSysControlHWmark;
 extern DNSServer dnsServer;

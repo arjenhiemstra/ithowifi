@@ -1,6 +1,7 @@
 #pragma once
 
 #include "version.h"
+#include "sdkconfig.h"
 
 #ifdef ESPRESSIF32_3_5_0
 #define ACTIVE_FS LITTLEFS
