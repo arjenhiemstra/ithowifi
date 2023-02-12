@@ -117,10 +117,7 @@ void failSafeBoot()
         {
           ACTIVE_FS.end();
           delay(1000);
-          esp_task_wdt_init(1, true);
-          esp_task_wdt_add(NULL);
-          while (true)
-            ;
+          esp_restart();
         }
         if (millis() - ledblink > 200)
         {

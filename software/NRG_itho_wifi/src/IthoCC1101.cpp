@@ -288,13 +288,13 @@ uint8_t IthoCC1101::receivePacket()
 
 bool IthoCC1101::checkForNewPacket()
 {
-  bool result = false;
+  receivePacket();
   if (parseMessageCommand())
   {
     initReceiveMessage();
-    result = true;
+    return true;
   }
-  return result;
+  return false;
 }
 
 bool IthoCC1101::parseMessageCommand()

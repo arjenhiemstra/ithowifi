@@ -517,7 +517,12 @@ $(document).ready(function () {
     else if ($(this).attr('id') == 'reboot') {
       if (confirm("This will reboot the device, are you sure?")) {
         $('#rebootscript').append(html_reboot_script);
-        websock.send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
+        if (document.getElementById("dontsaveconf") !== null) {
+          websock.send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
+        }
+        else {
+          websock.send('{"reboot":true}');
+        }
       }
     }
     else if ($(this).attr('id') == 'format') {
@@ -540,6 +545,10 @@ $(document).ready(function () {
       websock.send(`{"ithobutton":"${items[1]}"}`);
       if (items[1] == 'shtreset') $(`#i2c_sht_reset`).text("Processing...");
     }
+    else if ($(this).attr('id').startsWith('button-')) {
+      const items = $(this).attr('id').split('-');
+      websock.send(`{"button":"${items[1]}"}`);
+    }    
     else if ($(this).attr('id').startsWith('rfdebug-')) {
       const items = $(this).attr('id').split('-');
       if (items[1] == 0) $('#rflog_outer').addClass('hidden');

@@ -54,8 +54,9 @@ void TaskMQTT(void *pvParameters)
     vTaskDelay(25 / portTICK_PERIOD_MS);
   }
 
-  // else delete task
-  vTaskDelete(NULL);
+  TaskHandle_t xTempTask = xTaskMQTTHandle;
+  xTaskMQTTHandle = NULL;
+  vTaskDelete(xTempTask);
 }
 
 void execMQTTTasks()

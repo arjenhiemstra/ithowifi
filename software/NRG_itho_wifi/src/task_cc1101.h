@@ -20,6 +20,12 @@
 #include "IthoPacket.h"
 #include "task_configandlog.h"
 
+#ifdef ESPRESSIF32_3_5_0
+#include <LITTLEFS.h>
+#else
+#include "LittleFS.h"
+#endif
+
 // globals
 extern Ticker TaskCC1101Timeout;
 extern TaskHandle_t xTaskCC1101Handle;

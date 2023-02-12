@@ -29,7 +29,7 @@
 #ifdef ESPRESSIF32_3_5_0
 #include <LITTLEFS.h>
 #else
-#include <LittleFS.h>
+#include "LittleFS.h"
 #endif
 
 //#include "LogConfig.h"

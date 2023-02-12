@@ -8,6 +8,8 @@ TaskHandle_t xTaskConfigAndLogHandle = NULL;
 uint32_t TaskConfigAndLogHWmark = 0;
 volatile bool saveRemotesflag = false;
 volatile bool saveVremotesflag = false;
+bool chkpartition = false;
+int chk_partition_res = -1;
 bool formatFileSystem = false;
 bool flashLogInitReady = false;
 
@@ -46,10 +48,12 @@ void TaskConfigAndLog(void *pvParameters)
   logInit();
   syslog_queue_worker();
 
-  loadSystemConfig();
+  loadSystemConfig("flash");
+  ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
+
   syslog_queue_worker();
 
-  loadLogConfig();
+  loadLogConfig("flash");
   syslog_queue_worker();
 
   startTaskSysControl();
@@ -72,7 +76,9 @@ void TaskConfigAndLog(void *pvParameters)
   }
 
   // else delete task
-  vTaskDelete(NULL);
+  TaskHandle_t xTempTask = xTaskConfigAndLogHandle;
+  xTaskConfigAndLogHandle = NULL;
+  vTaskDelete(xTempTask);
 }
 
 void execLogAndConfigTasks()
@@ -82,7 +88,7 @@ void execLogAndConfigTasks()
   if (saveSystemConfigflag)
   {
     saveSystemConfigflag = false;
-    if (saveSystemConfig())
+    if (saveSystemConfig("flash"))
     {
       logMessagejson("System settings saved", WEBINTERFACE);
     }
@@ -94,7 +100,7 @@ void execLogAndConfigTasks()
   if (saveLogConfigflag)
   {
     saveLogConfigflag = false;
-    if (saveLogConfig())
+    if (saveLogConfig("flash"))
     {
       logMessagejson("Log settings saved", WEBINTERFACE);
     }
@@ -106,7 +112,7 @@ void execLogAndConfigTasks()
   if (saveWifiConfigflag)
   {
     saveWifiConfigflag = false;
-    if (saveWifiConfig())
+    if (saveWifiConfig("flash"))
     {
       logMessagejson("Wifi settings saved, reboot the device", WEBINTERFACE);
     }
@@ -121,7 +127,7 @@ void execLogAndConfigTasks()
     saveRemotesflag = false;
     DelayedSave.once_ms(150, []()
                         {
-      saveRemotesConfig();
+      saveRemotesConfig("flash");
       jsonWsSend("remotes"); });
   }
   if (saveVremotesflag)
@@ -129,7 +135,7 @@ void execLogAndConfigTasks()
     saveVremotesflag = false;
     DelayedSave.once_ms(150, []()
                         {
-      saveVirtualRemotesConfig();
+      saveVirtualRemotesConfig("flash");
       jsonWsSend("vremotes"); });
   }
   if (resetWifiConfigflag)
@@ -178,10 +184,7 @@ void execLogAndConfigTasks()
       logMessagejson(logBuff, WEBINTERFACE);
       strlcpy(logBuff, "Device rebooting, connect to accesspoint to setup the device", sizeof(logBuff));
       logMessagejson(logBuff, WEBINTERFACE);
-      esp_task_wdt_init(1, true);
-      esp_task_wdt_add(NULL);
-      while (true)
-        ;
+      esp_restart();
     }
     else
     {
@@ -191,6 +194,19 @@ void execLogAndConfigTasks()
       notifyClients(root.as<JsonObjectConst>());
     }
     strlcpy(logBuff, "", sizeof(logBuff));
+  }
+  if (chkpartition)
+  {
+    chkpartition = false;
+    chk_partition_res = current_partition_scheme();
+    if (chk_partition_res == -1)
+    {
+      D_LOG("chkpartition error");
+    }
+    else
+    {
+      jsonWsSend("chkpart");
+    }
   }
 }
 
@@ -206,23 +222,29 @@ void syslog_queue_worker()
     {
       yield();
 
-      filePrint.open();
-
       if (input.code <= SYSLOG_CRIT && logConfig.loglevel >= SYSLOG_CRIT)
       {
+        filePrint.open();
         Log.fatalln(input.msg.c_str());
+        filePrint.close();
       }
       else if (input.code == SYSLOG_ERR && logConfig.loglevel >= SYSLOG_ERR)
       {
+        filePrint.open();
         Log.errorln(input.msg.c_str());
+        filePrint.close();
       }
       else if (input.code == SYSLOG_WARNING && logConfig.loglevel >= SYSLOG_WARNING)
       {
+        filePrint.open();
         Log.warningln(input.msg.c_str());
+        filePrint.close();
       }
       else if (input.code == SYSLOG_NOTICE && logConfig.loglevel >= SYSLOG_NOTICE)
       {
+        filePrint.open();
         Log.noticeln(input.msg.c_str());
+        filePrint.close();
       }
       // Do not log INFO en DEBUG levels to Flash to prevent excessive wear
       // else if (input.code == SYSLOG_INFO && logConfig.loglevel >= SYSLOG_INFO)
@@ -233,8 +255,6 @@ void syslog_queue_worker()
       // {
       //   Log.verboseln(input.msg.c_str());
       // }
-
-      filePrint.close();
     }
     if (WiFi.status() == WL_CONNECTED && logConfig.syslog_active == 1)
     {
@@ -255,7 +275,11 @@ bool initFileSystem()
 
   D_LOG("Mounting FS...");
 
+  NVS.begin();
+
   ACTIVE_FS.begin(true);
+
+  check_partition_tables();
 
   return true;
 }

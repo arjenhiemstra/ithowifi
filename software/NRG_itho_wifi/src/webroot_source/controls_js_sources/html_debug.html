@@ -11,12 +11,26 @@
         total</span><br>
     <a href="#" class="pure-button" onclick="$('#main').empty();$('#main').append( html_edit );">Edit
         filesystem</a><br><br>
+    <p>Partition restore: </p>
+    <p>Firmware versions prior to 2.4.4-beta7 used a different partition scheme. Older version work with the new scheme
+        but in some cases a restore might be needed.<br>
+        After successful repartition, do not restart the module before the firmware flash.
+    </p>
+    <button id="button-restorepart" class="pure-button">Restore partition</button>&nbsp;<button id="button-checkpart"
+        class="pure-button">Check partition</button>&nbsp;<span>Result:&nbsp;</span>&nbsp;<span
+        id="chkpart"></span><br><br>
+
+    <p>Download last system crashlog: </p>
+    <a href="/getcoredump" class="pure-button">Download crashlog</a><br><br>
+
+    <p>System memory usage: </p>
     <span>CC1101 task memory: </span><span id='cc1101taskmem'></span><span> bytes free</span><br>
     <span>MQTT task memory: </span><span id='mqtttaskmem'></span><span> bytes free</span><br>
     <span>Web task memory: </span><span id='webtaskmem'></span><span> bytes free</span><br>
     <span>Config and Log task memory: </span><span id='cltaskmem'></span><span> bytes free</span><br>
-    <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br><br>
-    <br><br>
+    <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br>
+    <span>Loop task memory: </span><span id='looptaskmem'></span><span> bytes free</span><br><br>
+    
     <div id="rflog_outer" class="hidden">
         <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
         <div id="rflog"

@@ -8,7 +8,7 @@
 #include <Ticker.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
-#include <string.h>
+#include <string>
 
 #include "IthoQueue.h"
 #include "SystemConfig.h"
@@ -18,6 +18,12 @@
 #include "notifyClients.h"
 #include "IthoSystem.h"
 #include "enum.h"
+
+#ifdef ESPRESSIF32_3_5_0
+#include <LITTLEFS.h>
+#else
+#include "LittleFS.h"
+#endif
 
 // globals
 

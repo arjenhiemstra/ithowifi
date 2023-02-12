@@ -49,6 +49,8 @@ public:
   char ntpserver[128];
   char config_struct_version[4];
 
+  mutable bool configLoaded;
+
   WifiConfig();
   ~WifiConfig();
 
@@ -57,7 +59,7 @@ public:
 
   const char *wl_status_to_name(wl_status_t code) const;
 
-      protected:
+protected:
 }; // WifiConfig
 
 void wifiScan();

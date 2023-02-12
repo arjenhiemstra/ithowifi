@@ -518,7 +518,12 @@ $(document).ready(function () {
     else if ($(this).attr('id') == 'reboot') {
       if (confirm("This will reboot the device, are you sure?")) {
         $('#rebootscript').append(html_reboot_script);
-        websock.send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
+        if (document.getElementById("dontsaveconf") !== null) {
+          websock.send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
+        }
+        else {
+          websock.send('{"reboot":true}');
+        }
       }
     }
     else if ($(this).attr('id') == 'format') {
@@ -541,6 +546,10 @@ $(document).ready(function () {
       websock.send(`{"ithobutton":"${items[1]}"}`);
       if (items[1] == 'shtreset') $(`#i2c_sht_reset`).text("Processing...");
     }
+    else if ($(this).attr('id').startsWith('button-')) {
+      const items = $(this).attr('id').split('-');
+      websock.send(`{"button":"${items[1]}"}`);
+    }    
     else if ($(this).attr('id').startsWith('rfdebug-')) {
       const items = $(this).attr('id').split('-');
       if (items[1] == 0) $('#rflog_outer').addClass('hidden');
@@ -1264,12 +1273,26 @@ var html_debug = `
         total</span><br>
     <a href="#" class="pure-button" onclick="$('#main').empty();$('#main').append( html_edit );">Edit
         filesystem</a><br><br>
+    <p>Partition restore: </p>
+    <p>Firmware versions prior to 2.4.4-beta7 used a different partition scheme. Older version work with the new scheme
+        but in some cases a restore might be needed.<br>
+        After successful repartition, do not restart the module before the firmware flash.
+    </p>
+    <button id="button-restorepart" class="pure-button">Restore partition</button>&nbsp;<button id="button-checkpart"
+        class="pure-button">Check partition</button>&nbsp;<span>Result:&nbsp;</span>&nbsp;<span
+        id="chkpart"></span><br><br>
+
+    <p>Download last system crashlog: </p>
+    <a href="/getcoredump" class="pure-button">Download crashlog</a><br><br>
+
+    <p>System memory usage: </p>
     <span>CC1101 task memory: </span><span id='cc1101taskmem'></span><span> bytes free</span><br>
     <span>MQTT task memory: </span><span id='mqtttaskmem'></span><span> bytes free</span><br>
     <span>Web task memory: </span><span id='webtaskmem'></span><span> bytes free</span><br>
     <span>Config and Log task memory: </span><span id='cltaskmem'></span><span> bytes free</span><br>
-    <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br><br>
-    <br><br>
+    <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br>
+    <span>Loop task memory: </span><span id='looptaskmem'></span><span> bytes free</span><br><br>
+    
     <div id="rflog_outer" class="hidden">
         <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
         <div id="rflog"
@@ -1701,8 +1724,10 @@ var html_wifisetup = `
           <input type="checkbox" onclick="togglePwd()">
         </div>
         <div class="pure-controls">
-          <button id="wifisubmit" class="pure-button pure-button-primary">Save</button>
+          <button id="wifisubmit" class="pure-button pure-button-primary">Save</button>&nbsp;&nbsp;
+          <button id="reboot" class="pure-button">Reboot</button>
         </div>
+        <div id="rebootscript"></div>
         <br>
         <div class="pure-control-group">
           <label for="option-dhcp" class="pure-radio">Use DHCP</label>
@@ -1755,9 +1780,9 @@ var html_wifisetup = `
 </div>
 <script>
   function togglePwd() {
-    var x = document.getElementById('passwd'); 
-    if (x.type === 'password') { x.type = 'text'; } 
-    else { x.type = 'password'; } 
+    var x = document.getElementById('passwd');
+    if (x.type === 'password') { x.type = 'text'; }
+    else { x.type = 'password'; }
   }
   $(document).ready(function () {
     getSettings('wifisetup');
@@ -2063,23 +2088,27 @@ var html_systemsettings_start = `
       <input id="option-2401-1" type="radio" name="option-itho_2401" value="1"> on
       <input id="option-2401-0" type="radio" name="option-itho_2401" value="0"> off
     </div>
+    <legend><br>I2C safe guard:</legend>
+    <p>The i2c safe guard is a protection mechanism ONLY for CVE fans with built-in humidity sensor (models with light
+      grey
+      lid)</p>
+    <p>(Note: needs sniffer capable add-on (hw revision 2.5 and up) to work, does not work in conjunction with the i2c
+      sniffer, reboot needed)
+    </p>
+    <div class="pure-control-group">
+      <label for="option-i2c_safe_guard" class="pure-radio">I2C safe guard</label>
+      <input id="option-i2c_safe_guard-1" type="radio" name="option-i2c_safe_guard" value="1"> on
+      <input id="option-i2c_safe_guard-0" type="radio" name="option-i2c_safe_guard" value="0"> off
+    </div>
     <legend><br>Activate I2C extra debug functionality:</legend>
-    <p>Some CVE users experience issues with crashing I2C communication. This option enables an extra menu where more
-      I2C options and logging is available. Enabling the I2C debug menu will also halt I2C bus activity in case of
-      errors to be able to save logging.</p>
+    <p>This option enables an extra menu where more I2C options and logging is available. Enabling the I2C debug menu
+      will also halt I2C bus activity in case of
+      errors to be able to save logging!</p>
     <br>
     <div class="pure-control-group">
       <label for="option-i2cmenu" class="pure-radio">I2C debug menu</label>
       <input id="option-i2cmenu-1" type="radio" name="option-i2cmenu" value="1"> on
       <input id="option-i2cmenu-0" type="radio" name="option-i2cmenu" value="0"> off
-    </div>
-    <p>The i2c safe guard is a protection mechanism for CVE fans with built-in humidity sensor (models with light grey
-      lid)</p>
-    <p>(Reboot needed, does not work in conjunction with the i2c sniffer)</p>
-    <div class="pure-control-group">
-      <label for="option-i2c_safe_guard" class="pure-radio">I2C safe guard</label>
-      <input id="option-i2c_safe_guard-1" type="radio" name="option-i2c_safe_guard" value="1"> on
-      <input id="option-i2c_safe_guard-0" type="radio" name="option-i2c_safe_guard" value="0"> off
     </div>
     <p>The i2c sniffer works only on sniffer capable devices (non-cve; all versions, cve; as of hw rev. 2.5). See system
       log for confirmation.</p>

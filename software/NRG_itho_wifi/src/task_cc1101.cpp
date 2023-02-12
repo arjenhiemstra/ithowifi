@@ -4,7 +4,7 @@
 
 // globals
 Ticker TaskCC1101Timeout;
-TaskHandle_t xTaskCC1101Handle = NULL;
+TaskHandle_t xTaskCC1101Handle = nullptr;
 uint32_t TaskCC1101HWmark = 0;
 uint8_t debugLevel = 0;
 
@@ -23,7 +23,6 @@ volatile bool ithoCheck = false;
 
 IRAM_ATTR void ITHOinterrupt()
 {
-  rf.receivePacket();
   ithoCheck = true;
 }
 
@@ -193,12 +192,14 @@ void startTaskCC1101()
 
 void TaskCC1101(void *pvParameters)
 {
+  D_LOG("TaskCC1101 setarted");
   configASSERT((uint32_t)pvParameters == 1UL);
 
   startTaskMQTT();
 
   if (systemConfig.itho_rf_support)
   {
+    D_LOG("systemConfig.itho_rf_support == true");
     Ticker reboot;
 
     // switch off rf_support
@@ -209,12 +210,11 @@ void TaskCC1101(void *pvParameters)
     reboot.attach(2, []()
                   {
       E_LOG("Setup: init of CC1101 RF module failed");
-      saveSystemConfig();
+      saveSystemConfig("flash");
       delay(1000);
       ACTIVE_FS.end();
-      esp_task_wdt_init(1, true);
-      esp_task_wdt_add(NULL);
-      while (true); });
+      esp_restart();
+      });
 
     // init the RF module
     rf.init();
@@ -227,7 +227,7 @@ void TaskCC1101(void *pvParameters)
     N_LOG("Setup: init of CC1101 RF module successful");
     rf.setDeviceID(sys.getMac(3), sys.getMac(4), sys.getMac(5));
     systemConfig.itho_rf_support = 1;
-    loadRemotesConfig();
+    loadRemotesConfig("flash");
     rf.setBindAllowed(true);
     for (int i = 0; i < remotes.getRemoteCount(); i++)
     {
@@ -433,5 +433,8 @@ void TaskCC1101(void *pvParameters)
     }
   } // if (systemConfig.itho_rf_support)
   // else delete task
-  vTaskDelete(NULL);
+  TaskHandle_t xTempTask = xTaskCC1101Handle;
+  xTaskCC1101Handle = NULL;
+  vTaskDelete(xTempTask);
+
 }

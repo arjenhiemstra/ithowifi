@@ -6,7 +6,7 @@ void websocketInit()
 {
   mg_log_set(0);
   mg_mgr_init(&mgr);                                   // Initialise event manager
-  mg_http_listen(&mgr, s_listen_on_ws, wsEvent, NULL); // Create WS listener 
+  mg_http_listen(&mgr, s_listen_on_ws, wsEvent, &mgr); // Create WS listener
 }
 
 void jsonWsSend(const char *rootName)
@@ -48,6 +48,10 @@ void jsonWsSend(const char *rootName)
   {
     JsonObject nested = root.createNestedObject(rootName);
     logConfig.get(nested);
+    if (prevlog_available())
+    {
+      nested["prevlog"] = "/prevlog";
+    }
   }
   else if (strcmp(rootName, "ithodevinfo") == 0)
   {
@@ -73,6 +77,11 @@ void jsonWsSend(const char *rootName)
     nested["webtaskmem"] = TaskWebHWmark;
     nested["cltaskmem"] = TaskConfigAndLogHWmark;
     nested["syscontaskmem"] = TaskSysControlHWmark;
+    TaskHandle_t loopTaskHandle = xTaskGetHandle("loopTask");
+    if (loopTaskHandle != NULL) {
+      nested["looptaskmem"] = static_cast<uint32_t>(uxTaskGetStackHighWaterMark(loopTaskHandle));
+    }
+      
   }
   else if (strcmp(rootName, "i2cdebuglog") == 0) // i2cdebuglog
   {
@@ -92,6 +101,10 @@ void jsonWsSend(const char *rootName)
   {
     JsonObject obj = root.to<JsonObject>(); // Fill the object
     virtualRemotes.get(obj, rootName);
+  }
+  else if (strcmp(rootName, "chkpart") == 0)
+  {
+    root["chkpart"] = chk_partition_res ? "partion scheme supports firmware versions from 2.4.4-beta7 and upwards" : "partion scheme supports firmware versions 2.4.4-beta6 and older";
   }
   notifyClients(root.as<JsonObjectConst>());
 }
@@ -191,6 +204,22 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
               }
             }
           }
+        }
+      }
+    }
+    else if (msg.find("{\"button\"") != std::string::npos)
+    {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg);
+      if (!error)
+      {
+        if (strcmp(root["button"].as<const char *>(), "restorepart") == 0)
+        {
+          repartition_device("legacy");
+        }
+        else if (strcmp(root["button"].as<const char *>(), "checkpart") == 0)
+        {
+          chkpartition = true;
         }
       }
     }
