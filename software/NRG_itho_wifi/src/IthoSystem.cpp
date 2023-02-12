@@ -1620,9 +1620,9 @@ void sendQueryCounters(bool updateweb)
     }
     
     int valPos = 7; // first byte of the first value of the payload.
-    int labelLen = i2cbuf[5] / length; // number of values
-    if (labelLen > 26) {
-      E_LOG("WPU Counter array too long.");
+    int Nvalues = (i2cbuf[5] - 1) / length; // number of values. First byte is datatype.
+    if (Nvalues > ithoWPUCounterLabelLength) {
+      E_LOG("WPU Counter array too long. Counters not read.");
       return;
     }
 
@@ -1632,7 +1632,7 @@ void sendQueryCounters(bool updateweb)
     }
     
     uint32_t val;
-    for (int i=0; i < labelLen; i++)
+    for (int i=0; i < Nvalues; i++)
     {   
         int idx = length * i + valPos; // idx: start of value in raw bytes
         val = 0;
