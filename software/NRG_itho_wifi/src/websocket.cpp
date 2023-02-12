@@ -203,7 +203,6 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         if (root["ithobutton"].as<const char *>() == nullptr)
         {
           uint16_t val = root["ithobutton"].as<uint16_t>();
-          D_LOG("val = %d", val);
           if (val == 2410)
           {
             i2c_queue_add_cmd([root]()
@@ -234,7 +233,6 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           }
           else if (val == 4210)
           {
-            D_LOG("websocket.cpp: 4210!!!");
             sendQueryCounters(true);
           }
         }
