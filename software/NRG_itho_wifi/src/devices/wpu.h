@@ -682,3 +682,4 @@ const struct ithoLabels ithoWPUCounterLabels[] {
  {"Energy out of source (MWh)",     "energy-out-of-source_mwh"},
  {"Energy returned to source (MWh)","energy-returned-to-source_mwh"}
 };
+const uint8_t ithoWPUCounterLabelLength = 26;
