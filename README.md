@@ -1,5 +1,5 @@
 # ithowifi
-ESP based WiFi controller itho devices
+ESP based WiFi controller for Itho devices
 
 *(note: I'm in no way a professional hardware/software engineer and have no background in these subjects. I like this for a hobby, to learn and to share my projects)*
 
