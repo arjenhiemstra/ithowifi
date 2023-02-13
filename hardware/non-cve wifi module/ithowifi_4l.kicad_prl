@@ -63,7 +63,7 @@
       36
     ],
     "visible_layers": "fffffff_ffffffff",
-    "zone_display_mode": 0
+    "zone_display_mode": 1
   },
   "meta": {
     "filename": "ithowifi_4l.kicad_prl",
