@@ -574,6 +574,14 @@ $(document).ready(function () {
         value: parseFloat($('#itho_setting_value_set').val())
       }));
     }
+    else if ($(this).attr('id') == 'buttonCE30') {
+      websock.send(JSON.stringify({
+        ithobutton: 0xCE30,
+        ithotemp: parseFloat($('#itho_ce30_temp').val()*100.),
+        ithotemptemp: parseFloat($('#itho_ce30_temptemp').val()*100.),
+        ithotimestamp: $('#itho_ce30_timestamp').val()
+      }));
+    }
     else if ($(this).attr('id') == 'ithogetsettings') {
       settingIndex = 0;
       websock.send(JSON.stringify({

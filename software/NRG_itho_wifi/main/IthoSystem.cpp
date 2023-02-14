@@ -1377,6 +1377,45 @@ void sendQuery31D9(bool updateweb)
   }
 }
 
+void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperature, uint32_t timestamp, bool updateweb)
+// Set the outside temperature for WPU devices.
+// [00,3E,CE,30,05,08, 63,91,DA,C7, xx,xx, yy,yy, FF]
+// from: 00 (broadcast)
+// source: 3E 
+// command: CE30
+// type: 5 (update)
+// length: 8 
+// 6391DAC7 => 4 byte unix timestamp: lifetime of temporary_temparture. After timestamp temporary_temp is replaced by fallback_temp.
+// xxxx two byte temporary_temp:  0x0539 = 13.37 degrees C.
+// yyyy two byte fallback_temp: 0xFC18 = -10 degrees C. 
+// FF checksum
+
+{
+  uint8_t command[] = {0x00, 0x3E, 0xCE, 0x30, 0x05, 0x08, 0x63, 0x91, 0x00, 0x00, 0x7F, 0xFF, 0x7F, 0xFF, 0xFF};
+    
+  command[6] = (timestamp >> 24) & 0xFF;
+  command[7] = (timestamp >> 16) & 0xFF;
+  command[8] = (timestamp >> 8) & 0xFF;
+  command[9] = timestamp & 0xFF;
+
+  command[10] = (temporary_temperature >> 8) & 0xFF;
+  command[11] = temporary_temperature & 0xFF;
+  command[12] = (fallback_temperature >> 8) & 0xFF;
+  command[13] = fallback_temperature & 0xFF;
+  
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+  
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_SET_CE30))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("itho_CE30_result", "failed");
+    }
+    return;
+  }
+}
+
 int32_t *sendQuery2410(uint8_t index, bool updateweb)
 {
 
