@@ -73,16 +73,24 @@
                     value="0"><br>
                 <span>Sent command:&nbsp;</span><span id="itho2410set"></span><br><span>Result:&nbsp;</span><span
                     id="itho2410setres"></span><br>
-                <span style="color:red">Warning!!</span><br><br><button id="ithobutton-31DA"
+                <span style="color:red">Warning!!</span><br><br>
+               
+                <button id="ithobutton-31DA"
                     class="pure-button pure-button-primary">Query 31DA</button><br><span>Result:&nbsp;</span>
                 <span id="itho31DA"></span><br><br><button id="ithobutton-31D9"
                     class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
                     id="itho31D9"></span><br><br>
+                
                 <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
                     reset</button><br><span>Filter
                     reset function uses virtual remote 0, this remote needs to be paired with your itho for this command
                     to
-                    work</span>
+                    work</span><br><br>
+                <button id="buttonCE30" class="pure-button pure-button-primary">Send CE30</button>
+                Set outside temperature to: <input id="itho_ce30_temp" type="number" min="-20" max="50" size="4" value="15"><br> 
+                Optional temporary temperature: <input id="itho_ce30_temptemp" type="number" min="-20" max="50" size="4" value="0"> 
+                Valid until(timestamp) <input id="itho_ce30_timestamp" type="number" min="0" max="2147483647" size="12" value="0"><br>
+                <span>Result:&nbsp;</span><span id="itho_ce30_result"></span><br>
             </fieldset><br><br><br>
         </fieldset>
     </form>
