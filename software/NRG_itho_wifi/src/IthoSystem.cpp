@@ -1607,20 +1607,12 @@ void sendQueryCounters(bool updateweb)
       updateweb = false;
       jsonSysmessage("ithocounters", i2cbuf2string(i2cbuf, len).c_str());
     }
+    // i2c reply structure:
+    //  [I2C addr ][I2C command   ][len payload ][N values][2byte value] ... [2byte value][chk ]
+    //  0x80,0x82,  0xC2,0x10,0x01, 0x35,         0x1A,     0x0D,0x26,   ...  0x0A,0xF8,   0xFF
 
-    uint8_t dataType = i2cbuf[6]; // first byte of payload: Datatype.
-    uint8_t length = get_length_from_datatype(dataType);
-    uint32_t divider = get_divider_from_datatype(dataType);
-    
-    bool is_int;
-    if (divider == 1) {
-        is_int = true;
-    } else {
-        is_int = false;
-    }
-    
-    int valPos = 7; // first byte of the first value of the payload.
-    int Nvalues = (i2cbuf[5] - 1) / length; // number of values. First byte is datatype.
+    int valPos = 7; // position of first 2byte value
+    int Nvalues = i2cbuf[6];
     if (Nvalues > ithoWPUCounterLabelLength) {
       E_LOG("WPU Counter array too long. Counters not read.");
       return;
@@ -1634,13 +1626,11 @@ void sendQueryCounters(bool updateweb)
     uint32_t val;
     for (int i=0; i < Nvalues; i++)
     {   
-        int idx = length * i + valPos; // idx: start of value in raw bytes
-        val = 0;
-        for (int j=0; j < length; j++) {
-            val += val << 8;
-            val += i2cbuf[idx+j];
-        }
-        
+        int idx = 2 * i + valPos; // idx: start of value in raw bytes
+        // read 2 raw bytes: uint16_t.
+        val = i2cbuf[idx+1];
+        val |= (i2cbuf[idx] << 8);
+
         ithoCounters.push_back(ithoDeviceMeasurements());
         
         // label
@@ -1649,19 +1639,12 @@ void sendQueryCounters(bool updateweb)
         } else {
             ithoCounters.back().name = ithoWPUCounterLabels[i].labelNormalized;
         }
-        // value
-        if (is_int) {
-            ithoCounters.back().type = ithoDeviceMeasurements::is_int;
-            ithoCounters.back().value.intval = val;
-        } else {
-            ithoCounters.back().type = ithoDeviceMeasurements::is_float;
-            ithoCounters.back().value.intval = (float) val/divider;
-        }
+
+        ithoCounters.back().type = ithoDeviceMeasurements::is_int;
+        ithoCounters.back().value.intval = val;
     }
   }
 };
-
-
 
 void filterReset()
 {
