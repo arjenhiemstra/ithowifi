@@ -567,8 +567,7 @@ $(document).ready(function () {
     }
     else if ($(this).attr('id') == 'button4210') {
       websock.send(JSON.stringify({
-        ithobutton: 4210,
-        index: 0
+        ithobutton: 4210
       }));
     }
     else if ($(this).attr('id') == 'ithogetsettings') {
