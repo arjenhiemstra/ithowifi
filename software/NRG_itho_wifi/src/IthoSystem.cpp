@@ -1623,7 +1623,7 @@ void sendQueryCounters(bool updateweb)
       ithoCounters.clear();
     }
     
-    uint32_t val;
+    uint16_t val;
     for (int i=0; i < Nvalues; i++)
     {   
         int idx = 2 * i + valPos; // idx: start of value in raw bytes
