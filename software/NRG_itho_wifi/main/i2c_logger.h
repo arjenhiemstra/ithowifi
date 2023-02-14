@@ -20,6 +20,7 @@ typedef enum
     I2C_CMD_QUERY_31D9,
     I2C_CMD_QUERY_2410,
     I2C_CMD_SET_2410,
+    I2C_CMD_SET_CE30,
     I2C_CMD_FILTER_RESET,
     I2C_CMD_TEMP_READ_ITHO,
     I2C_CMD_TEMP_READ_SLAVE,
@@ -70,7 +71,7 @@ private:
         const char *msg;
     } i2c_error_state_msg;
 
-    const i2c_cmdref_msg i2c_cmdref_msg_table[16]{
+    const i2c_cmdref_msg i2c_cmdref_msg_table[17]{
         {I2C_CMD_EMPTY_CMDREF, ""},
         {I2C_CMD_UNKOWN, "UNKOWN"},
         {I2C_CMD_PWM_INIT, "PWM_INIT"},
@@ -83,6 +84,7 @@ private:
         {I2C_CMD_QUERY_31D9, "QUERY_31D9"},
         {I2C_CMD_QUERY_2410, "QUERY_2410"},
         {I2C_CMD_SET_2410, "SET_2410"},
+        {I2C_CMD_SET_CE30, "SET_CE30"},
         {I2C_CMD_FILTER_RESET, "FILTER_RESET"},
         {I2C_CMD_TEMP_READ_ITHO, "TEMP_READ_FROM_ITHO"},
         {I2C_CMD_TEMP_READ_SLAVE, "TEMP_READ_SLAVE"},
