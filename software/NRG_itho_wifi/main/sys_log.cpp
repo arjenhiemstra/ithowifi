@@ -22,6 +22,11 @@ void printTimestamp(Print *_logOutput, int logLevel)
   }
 }
 
+void LogPrefixESP(Print *_logOutput, int logLevel)
+{
+  _logOutput->print("ESP-IDF: ");
+}
+
 void printNewline(Print *_logOutput, int logLevel)
 {
   _logOutput->print("");
@@ -59,4 +64,36 @@ void sys_log(log_prio_level_t log_prio, const char *inputString, ...)
 
   syslog_queue.push_back(input);
 
+}
+
+int esp_vprintf(const char *fmt, va_list args)
+{
+  D_LOG("execute esp_vprintf");
+
+  log_msg input;
+
+  size_t len = vsnprintf(0, 0, fmt, args);
+  input.msg.resize(len); // NULL terminate the string on the last character, effectively removing carriage return
+  vsnprintf(&input.msg[0], len, fmt, args);
+  input.msg.resize(len);
+
+
+#if defined(ENABLE_SERIAL)
+  Serial.println(input.msg.c_str());
+#endif
+
+  input.code = ESP_SYSLOG_ERR;
+
+  if (syslog_queue.size() > SYSLOG_QUEUE_MAX_SIZE)
+    return 0;
+
+  if (syslog_queue.size() == SYSLOG_QUEUE_MAX_SIZE)
+  {
+    input.code = SYSLOG_WARNING;
+    input.msg = "Warning: syslog_queue overflow";
+  }
+
+  syslog_queue.push_back(input);
+
+  return 0;//vprintf(fmt, args);
 }

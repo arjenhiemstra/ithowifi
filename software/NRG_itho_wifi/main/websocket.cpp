@@ -78,10 +78,10 @@ void jsonWsSend(const char *rootName)
     nested["cltaskmem"] = TaskConfigAndLogHWmark;
     nested["syscontaskmem"] = TaskSysControlHWmark;
     TaskHandle_t loopTaskHandle = xTaskGetHandle("loopTask");
-    if (loopTaskHandle != NULL) {
+    if (loopTaskHandle != NULL)
+    {
       nested["looptaskmem"] = static_cast<uint32_t>(uxTaskGetStackHighWaterMark(loopTaskHandle));
     }
-      
   }
   else if (strcmp(rootName, "i2cdebuglog") == 0) // i2cdebuglog
   {
@@ -104,7 +104,7 @@ void jsonWsSend(const char *rootName)
   }
   else if (strcmp(rootName, "chkpart") == 0)
   {
-    root["chkpart"] = chk_partition_res ? "partion scheme supports firmware versions from 2.4.4-beta7 and upwards" : "partion scheme supports firmware versions 2.4.4-beta6 and older";
+    root["chkpart"] = chk_partition_res ? "partition scheme supports firmware versions from 2.4.4-beta7 and upwards" : "partion scheme supports firmware versions 2.4.4-beta6 and older";
   }
   notifyClients(root.as<JsonObjectConst>());
 }

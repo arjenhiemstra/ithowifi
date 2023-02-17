@@ -78,7 +78,7 @@
       <label for="itho_updatefreq">Update frequency</label>
       <input id="itho_updatefreq" type="number" min="0" max="65535" size="6">
     </div>
-    <legend><br>Virtual remote settings(reboot needed):</legend>
+    <legend><br>Virtual remote settings (reboot needed):</legend>
     <p>The add-on can present itself as a virtual remote. A virtual remote emulates a physical remote through software.
       A virtual remote must be joined to the itho unit before it can be used.</p>
     <p>A join command will only be accepted by the itho unit within the first 2 minutes after a power cycle.</p>
@@ -121,7 +121,7 @@
       <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
     </div>
     <legend><br>Enable/Disable I2C commands:</legend>
-    <p>Not all commands types are avaiable on all itho devices. These settings make it possible to disable specific
+    <p>Not all commands types are available on all itho devices. These settings make it possible to disable specific
       commands. <br>Disabling PWM2I2C will also change the main page user interface to use the Virtual Remote.</p>
     <br>
     <div class="pure-control-group">
@@ -153,6 +153,7 @@
     </p>
     <div class="pure-control-group">
       <label for="option-i2c_safe_guard" class="pure-radio">I2C safe guard</label>
+      <input id="option-i2c_safe_guard-2" type="radio" name="option-i2c_safe_guard" value="2"> auto
       <input id="option-i2c_safe_guard-1" type="radio" name="option-i2c_safe_guard" value="1"> on
       <input id="option-i2c_safe_guard-0" type="radio" name="option-i2c_safe_guard" value="0"> off
     </div>

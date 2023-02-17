@@ -4,12 +4,13 @@ std::deque<std::function<void()>> i2c_cmd_queue;
 
 void i2c_queue_add_cmd(const std::function<void()> func)
 {
-  if (i2c_cmd_queue.size() >= I2C_CMD_QUEUE_MAX_SIZE) {
-      log_msg input;
-      input.code = SYSLOG_WARNING;
-      input.msg = "Warning: i2c_cmd_queue overflow";
-      syslog_queue.push_back(input);
-      return;
+  if (i2c_cmd_queue.size() >= I2C_CMD_QUEUE_MAX_SIZE)
+  {
+    log_msg input;
+    input.code = SYSLOG_WARNING;
+    input.msg = "Warning: i2c_cmd_queue overflow";
+    syslog_queue.push_back(input);
+    return;
   }
   i2c_cmd_queue.push_back(func);
 }
@@ -48,9 +49,6 @@ esp_err_t i2c_master_init(int log_entry_idx)
   if (!checkI2Cbus(log_entry_idx))
     result = ESP_FAIL;
 
-#ifdef ESPRESSIF32_3_5_0
-  i2c_config_t conf = {I2C_MODE_MASTER, master_sda_pin, I2C_MASTER_SDA_PULLUP, master_scl_pin, I2C_MASTER_SCL_PULLUP, {.master = {I2C_MASTER_FREQ_HZ}}};
-#else
   i2c_config_t conf = {
       .mode = I2C_MODE_MASTER,
       .sda_io_num = master_sda_pin,
@@ -62,7 +60,6 @@ esp_err_t i2c_master_init(int log_entry_idx)
       },
       .clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL, // optional
   };
-#endif
 
   i2c_param_config(I2C_MASTER_NUM, &conf);
 
@@ -255,9 +252,6 @@ size_t i2c_slave_receive(uint8_t i2c_receive_buf[])
   //   uint32_t clk_flags; /*!< Bitwise of ``I2C_SCLK_SRC_FLAG_**FOR_DFS**`` for clk source choice*/
   // } i2c_config_t;
 
-#ifdef ESPRESSIF32_3_5_0
-  i2c_config_t conf_slave = {I2C_MODE_SLAVE, slave_sda_pin, I2C_SLAVE_SDA_PULLUP, slave_scl_pin, I2C_SLAVE_SCL_PULLUP, {.slave = {0, I2C_SLAVE_ADDRESS}}};
-#else
   i2c_config_t conf_slave = {
       .mode = I2C_MODE_SLAVE,
       .sda_io_num = slave_sda_pin,
@@ -271,7 +265,6 @@ size_t i2c_slave_receive(uint8_t i2c_receive_buf[])
       },
       .clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL, // optional
   };
-#endif
 
   i2c_param_config(I2C_SLAVE_NUM, &conf_slave);
 
@@ -434,6 +427,8 @@ int I2C_ClearBus()
   // but is also assists in reliable programming of FioV3 boards as it gives the
   // IDE a chance to start uploaded the program
   // before existing sketch confuses the IDE by sending Serial data.
+
+  //i2c_master_clear_bus(I2C_MASTER_NUM);
 
   boolean SCL_LOW = (digitalRead(master_scl_pin) == LOW); // Check is SCL is Low.
   if (SCL_LOW)

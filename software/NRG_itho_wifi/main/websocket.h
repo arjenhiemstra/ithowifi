@@ -8,14 +8,10 @@
 
 #include "globals.h"
 
-#ifdef ESPRESSIF32_3_5_0
-#include <LITTLEFS.h>
-#else
 #include "LittleFS.h"
-#endif
 
-#include "SystemConfig.h"
-#include "WifiConfig.h"
+#include "config/SystemConfig.h"
+#include "config/WifiConfig.h"
 
 void websocketInit();
 void jsonWsSend(const char *rootName);

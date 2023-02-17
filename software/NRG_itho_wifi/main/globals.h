@@ -3,11 +3,7 @@
 #include "version.h"
 #include "sdkconfig.h"
 
-#ifdef ESPRESSIF32_3_5_0
-#define ACTIVE_FS LITTLEFS
-#else
 #define ACTIVE_FS LittleFS
-#endif
 
 #define STACK_SIZE_SMALL 2048
 #define STACK_SIZE 4096
@@ -21,19 +17,19 @@
 
 #define LOGGING_INTERVAL 21600000 // Log system status at regular intervals
 #define ENABLE_FAILSAVE_BOOT
-//#define ENABLE_SERIAL
+// #define ENABLE_SERIAL
 
-#include "task_mqtt.h"
-#include "task_web.h"
-#include "task_init.h"
-#include "task_cc1101.h"
+#include "tasks/task_mqtt.h"
+#include "tasks/task_web.h"
+#include "tasks/task_init.h"
+#include "tasks/task_cc1101.h"
 
 #include "esp_wifi.h"
 #include "WiFiClient.h"
 
-#include "IthoCC1101.h" // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
-#include "IthoPacket.h" // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
-#include "IthoRemote.h"
+#include "cc1101/IthoCC1101.h" // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
+#include "cc1101/IthoPacket.h" // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
+#include "config/IthoRemote.h"
 
 extern const char *WiFiAPPSK;
 
@@ -55,4 +51,3 @@ extern WiFiClient client;
 
 extern IthoCC1101 rf;
 extern IthoPacket packet;
-

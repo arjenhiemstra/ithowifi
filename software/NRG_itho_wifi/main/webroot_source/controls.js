@@ -377,6 +377,7 @@ $(document).ready(function () {
         logsettings: {
           loglevel: $('#loglevel').val(),
           syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
+          esplog_active: $('input[name=\'option-esplog_active\']:checked').val(),
           logserver: $('#logserver').val(),
           logport: $('#logport').val(),
           logref: $('#logref').val()
@@ -573,6 +574,14 @@ $(document).ready(function () {
         ithobutton: 24109,
         ithosetupdate: $('#itho_setting_id_set').val(),
         value: parseFloat($('#itho_setting_value_set').val())
+      }));
+    }
+    else if ($(this).attr('id') == 'buttonCE30') {
+      websock.send(JSON.stringify({
+        ithobutton: 0xCE30,
+        ithotemp: parseFloat($('#itho_ce30_temp').val()*100.),
+        ithotemptemp: parseFloat($('#itho_ce30_temptemp').val()*100.),
+        ithotimestamp: $('#itho_ce30_timestamp').val()
       }));
     }
     else if ($(this).attr('id') == 'ithogetsettings') {
@@ -1335,16 +1344,24 @@ var html_debug = `
                     value="0"><br>
                 <span>Sent command:&nbsp;</span><span id="itho2410set"></span><br><span>Result:&nbsp;</span><span
                     id="itho2410setres"></span><br>
-                <span style="color:red">Warning!!</span><br><br><button id="ithobutton-31DA"
+                <span style="color:red">Warning!!</span><br><br>
+               
+                <button id="ithobutton-31DA"
                     class="pure-button pure-button-primary">Query 31DA</button><br><span>Result:&nbsp;</span>
                 <span id="itho31DA"></span><br><br><button id="ithobutton-31D9"
                     class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
                     id="itho31D9"></span><br><br>
+                
                 <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
                     reset</button><br><span>Filter
                     reset function uses virtual remote 0, this remote needs to be paired with your itho for this command
                     to
-                    work</span>
+                    work</span><br><br>
+                <button id="buttonCE30" class="pure-button pure-button-primary">Send CE30</button>
+                Set outside temperature to: <input id="itho_ce30_temp" type="number" min="-20" max="50" size="4" value="15"><br> 
+                Optional temporary temperature: <input id="itho_ce30_temptemp" type="number" min="-20" max="50" size="4" value="0"> 
+                Valid until(timestamp) <input id="itho_ce30_timestamp" type="number" min="0" max="2147483647" size="12" value="0"><br>
+                <span>Result:&nbsp;</span><span id="itho_ce30_result"></span><br>
             </fieldset><br><br><br>
         </fieldset>
     </form>
@@ -1555,7 +1572,7 @@ Unless specified otherwise:<br>
         <tr>
             <td></td>
             <td></td>
-            <td>Variable keys</td>
+            <td>variable keys</td>
             <td>JSON</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">◌</td>
@@ -1580,7 +1597,7 @@ Unless specified otherwise:<br>
         <tr>
             <td></td>
             <td></td>
-            <td>Variable keys</td>
+            <td>variable keys</td>
             <td>JSON</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">◌</td>
@@ -1656,6 +1673,24 @@ Unless specified otherwise:<br>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td>
+        </tr>
+        <tr>
+            <td colspan="6"><b>Commands only for WPU devices</b></td>
+        </tr>
+        <tr>
+            <td>outside_temp</td>
+            <td>number</td>
+            <td>outside_temp,temporary_outside_temp,valid_until</td>
+            <td>number</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>With this command an outside temperature can be send to a WPU. Unset values
+                    will default to 0. <b>valid_until</b> = epoch now + valid time. <b>temporary_outside_temp</b> will
+                    be used by the WPU during this valid time. After the valid time has
+                    passed it will fallback to <b>outside_temp</b>.
+                </em></td>
         </tr>
     </tbody>
 </table>
@@ -2022,7 +2057,7 @@ var html_systemsettings_start = `
       <label for="itho_updatefreq">Update frequency</label>
       <input id="itho_updatefreq" type="number" min="0" max="65535" size="6">
     </div>
-    <legend><br>Virtual remote settings(reboot needed):</legend>
+    <legend><br>Virtual remote settings (reboot needed):</legend>
     <p>The add-on can present itself as a virtual remote. A virtual remote emulates a physical remote through software.
       A virtual remote must be joined to the itho unit before it can be used.</p>
     <p>A join command will only be accepted by the itho unit within the first 2 minutes after a power cycle.</p>
@@ -2065,7 +2100,7 @@ var html_systemsettings_start = `
       <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
     </div>
     <legend><br>Enable/Disable I2C commands:</legend>
-    <p>Not all commands types are avaiable on all itho devices. These settings make it possible to disable specific
+    <p>Not all commands types are available on all itho devices. These settings make it possible to disable specific
       commands. <br>Disabling PWM2I2C will also change the main page user interface to use the Virtual Remote.</p>
     <br>
     <div class="pure-control-group">
@@ -2097,6 +2132,7 @@ var html_systemsettings_start = `
     </p>
     <div class="pure-control-group">
       <label for="option-i2c_safe_guard" class="pure-radio">I2C safe guard</label>
+      <input id="option-i2c_safe_guard-2" type="radio" name="option-i2c_safe_guard" value="2"> auto
       <input id="option-i2c_safe_guard-1" type="radio" name="option-i2c_safe_guard" value="1"> on
       <input id="option-i2c_safe_guard-0" type="radio" name="option-i2c_safe_guard" value="0"> off
     </div>
@@ -2477,7 +2513,7 @@ var html_syslog = `
     </div>
     <div style="padding-top:5px;">
         <a class="pure-button" href="/curlog">Download current logfile</a>&nbsp;
-        <a id='prevlog' class="pure-button" href="javascript:alert('Not avaiable!');">Download previous logfile</a>
+        <a id='prevlog' class="pure-button" href="javascript:alert('Not available!');">Download previous logfile</a>
     </div>
 </div><br><br>
 <form class="pure-form pure-form-aligned">
@@ -2495,6 +2531,13 @@ var html_syslog = `
                 <option value="6">Info</option>
                 <option value="7">Debug</option>
             </select>
+        </div>
+        <div class="pure-control-group">
+            <label for="option-esplog_active" class="pure-radio">Include ESP-IDF error log</label>
+            <input id="option-esplog_active-1" type="radio" name="option-esplog_active"
+                onchange='radio("esplog_active", 1)' value="1"> on
+            <input id="option-esplog_active-0" type="radio" name="option-esplog_active"
+                onchange='radio("esplog_active", 0)' value="0"> off
         </div>
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">

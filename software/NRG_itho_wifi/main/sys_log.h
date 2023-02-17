@@ -26,13 +26,9 @@
 #include <Syslog.h>
 #include "WiFiUdp.h"
 
-#ifdef ESPRESSIF32_3_5_0
-#include <LITTLEFS.h>
-#else
 #include "LittleFS.h"
-#endif
 
-//#include "LogConfig.h"
+// #include "config/LogConfig.h"
 
 typedef enum
 {
@@ -43,7 +39,9 @@ typedef enum
     SYSLOG_WARNING = 4, /* warning conditions */
     SYSLOG_NOTICE = 5,  /* normal but significant condition */
     SYSLOG_INFO = 6,    /* informational */
-    SYSLOG_DEBUG = 7    /* debug-level messages */
+    SYSLOG_DEBUG = 7,   /* debug-level messages */
+    ESP_SYSLOG_ERR = 13 /* ESP IDF error conditions */
+
 } log_prio_level_t;
 
 typedef struct
@@ -52,17 +50,15 @@ typedef struct
     std::string msg;
 } log_msg;
 
-
-
-
-
 extern WiFiUDP udpClient;
 extern Syslog syslog;
 extern std::deque<log_msg> syslog_queue;
 
 void printTimestamp(Print *_logOutput, int logLevel);
+void LogPrefixESP(Print *_logOutput, int logLevel);
 void printNewline(Print *_logOutput, int logLevel);
 void sys_log(log_prio_level_t log_prio, const char *inputString, ...);
+int esp_vprintf(const char *fmt, va_list args);
 
-//void sys_log(log_prio_level_t log_prio, const char *inputString, ...);
-// void sys_log(log_prio_level_t log_prio, const char *inputString, va_list args);
+// void sys_log(log_prio_level_t log_prio, const char *inputString, ...);
+//  void sys_log(log_prio_level_t log_prio, const char *inputString, va_list args);
