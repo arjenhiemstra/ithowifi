@@ -11,16 +11,16 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include "IthoPacket.h"
-#include "IthoRemote.h"
-#include "SystemConfig.h"
+#include "cc1101/IthoPacket.h"
+#include "config/IthoRemote.h"
+#include "config/SystemConfig.h"
 #include "sys_log.h"
 #include "notifyClients.h"
 #include "i2c_esp32.h"
-#include "task_mqtt.h"
+#include "tasks/task_mqtt.h"
 #include "IthoQueue.h"
 #include "enum.h"
-#include "task_syscontrol.h"
+#include "tasks/task_syscontrol.h"
 
 // globals
 extern volatile uint16_t ithoCurrentVal;
@@ -143,7 +143,7 @@ int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);
 bool check_i2c_reply(const uint8_t *buf, size_t buflen, const uint16_t opcode);
 int cast_to_signed_int(int val, int length);
-int64_t cast_raw_bytes_to_int(int32_t* valptr, int length, bool is_signed);
+int64_t cast_raw_bytes_to_int(int32_t *valptr, int length, bool is_signed);
 uint32_t get_divider_from_datatype(int8_t datatype);
 uint8_t get_length_from_datatype(int8_t datatype);
 bool get_signed_from_datatype(int8_t datatype);

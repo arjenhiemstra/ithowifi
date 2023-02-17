@@ -11,19 +11,15 @@
 #include <string>
 
 #include "IthoQueue.h"
-#include "SystemConfig.h"
-#include "WifiConfig.h"
+#include "config/SystemConfig.h"
+#include "config/WifiConfig.h"
 #include "globals.h"
 #include "sys_log.h"
 #include "notifyClients.h"
 #include "IthoSystem.h"
 #include "enum.h"
 
-#ifdef ESPRESSIF32_3_5_0
-#include <LITTLEFS.h>
-#else
 #include "LittleFS.h"
-#endif
 
 // globals
 

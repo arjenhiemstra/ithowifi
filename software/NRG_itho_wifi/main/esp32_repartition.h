@@ -5,7 +5,7 @@
 #include <string>
 
 #include "sys_log.h"
-#include "Config.h"
+#include "config/Config.h"
 
 #include "freertos/FreeRTOS.h"
 #include "esp_ota_ops.h"

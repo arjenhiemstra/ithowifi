@@ -376,6 +376,7 @@ $(document).ready(function () {
         logsettings: {
           loglevel: $('#loglevel').val(),
           syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
+          esplog_active: $('input[name=\'option-esplog_active\']:checked').val(),
           logserver: $('#logserver').val(),
           logport: $('#logport').val(),
           logref: $('#logref').val()

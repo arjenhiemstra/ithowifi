@@ -141,7 +141,7 @@ Unless specified otherwise:<br>
         <tr>
             <td></td>
             <td></td>
-            <td>Variable keys</td>
+            <td>variable keys</td>
             <td>JSON</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">◌</td>
@@ -166,7 +166,7 @@ Unless specified otherwise:<br>
         <tr>
             <td></td>
             <td></td>
-            <td>Variable keys</td>
+            <td>variable keys</td>
             <td>JSON</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">◌</td>
@@ -242,6 +242,24 @@ Unless specified otherwise:<br>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td>
+        </tr>
+        <tr>
+            <td colspan="6"><b>Commands only for WPU devices</b></td>
+        </tr>
+        <tr>
+            <td>outside_temp</td>
+            <td>number</td>
+            <td>outside_temp,temporary_outside_temp,valid_until</td>
+            <td>number</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>With this command an outside temperature can be send to a WPU. Unset values
+                    will default to 0. <b>valid_until</b> = epoch now + valid time. <b>temporary_outside_temp</b> will
+                    be used by the WPU during this valid time. After the valid time has
+                    passed it will fallback to <b>outside_temp</b>.
+                </em></td>
         </tr>
     </tbody>
 </table>
