@@ -21,8 +21,5 @@ extern bool TaskInitReady;
 
 void TaskInit(void *pvParameters);
 
-#if defined(ENABLE_FAILSAVE_BOOT)
 void failSafeBoot();
-#endif
-
 void hardwareInit();
