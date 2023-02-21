@@ -16,7 +16,6 @@
 #endif
 
 #define LOGGING_INTERVAL 21600000 // Log system status at regular intervals
-#define ENABLE_FAILSAVE_BOOT
 // #define ENABLE_SERIAL
 
 #include "tasks/task_mqtt.h"

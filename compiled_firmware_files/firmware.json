@@ -7,16 +7,16 @@
             "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_1/nrgitho-hw1-v2.2.4.bin"
         },
         "2": {
-            "latest_fw": "2.5.0",
-            "link": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_2/nrgitho-hw2-v2.5.0.bin",
-            "latest_beta_fw": "2.5.0",
-            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_2/nrgitho-hw2-v2.5.0.bin"
+            "latest_fw": "2.5.2",
+            "link": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_2/nrgitho-hw2-v2.5.2.bin",
+            "latest_beta_fw": "2.5.2",
+            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_2/nrgitho-hw2-v2.5.2.bin"
         },
         "NON-CVE 1": {
-            "latest_fw": "2.5.0",
-            "link": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/non-cve_rev_1/nrgitho-noncve-v2.5.0.bin",
-            "latest_beta_fw": "2.5.0",
-            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/non-cve_rev_1/nrgitho-noncve-v2.5.0.bin"
+            "latest_fw": "2.5.2",
+            "link": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/non-cve_rev_1/nrgitho-noncve-v2.5.2.bin",
+            "latest_beta_fw": "2.5.2",
+            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/non-cve_rev_1/nrgitho-noncve-v2.5.2.bin"
         }
     }
 }

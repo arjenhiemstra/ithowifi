@@ -31,7 +31,6 @@ void TaskInit(void *pvParameters)
   vTaskDelete(NULL);
 }
 
-#if defined(ENABLE_FAILSAVE_BOOT)
 
 void failSafeBoot()
 {
@@ -150,7 +149,6 @@ void failSafeBoot()
   digitalWrite(wifi_led_pin, HIGH);
 }
 
-#endif
 
 void hardwareInit()
 {
@@ -163,13 +161,8 @@ void hardwareInit()
   pinMode(GPIO_NUM_33, INPUT_PULLDOWN);
   pinMode(GPIO_NUM_21, INPUT_PULLDOWN);
   pinMode(GPIO_NUM_22, INPUT_PULLDOWN);
-  hardware_rev_det = digitalRead(GPIO_NUM_25) << 5 | digitalRead(GPIO_NUM_26) << 4 | digitalRead(GPIO_NUM_32) << 3 | digitalRead(GPIO_NUM_33) << 2 | digitalRead(GPIO_NUM_21) << 1 | digitalRead(GPIO_NUM_22);
 
-  // /*
-  //  * 0x34 -> NON-CVE
-  //  * 0x3F -> CVE i2c sniffer capable
-  //  * 0x03 -> CVE not i2c sniffer capable
-  //  */
+  delay(50);
 
   pinMode(GPIO_NUM_25, INPUT);
   pinMode(GPIO_NUM_26, INPUT);
@@ -177,6 +170,16 @@ void hardwareInit()
   pinMode(GPIO_NUM_33, INPUT);
   pinMode(GPIO_NUM_21, INPUT);
   pinMode(GPIO_NUM_22, INPUT);
+
+  delay(50);
+
+  hardware_rev_det = digitalRead(GPIO_NUM_25) << 5 | digitalRead(GPIO_NUM_26) << 4 | digitalRead(GPIO_NUM_32) << 3 | digitalRead(GPIO_NUM_33) << 2 | digitalRead(GPIO_NUM_21) << 1 | digitalRead(GPIO_NUM_22);
+
+  // /*
+  //  * 0x34 -> NON-CVE
+  //  * 0x3F -> CVE i2c sniffer capable
+  //  * 0x03 -> CVE not i2c sniffer capable
+  //  */
 
   if (hardware_rev_det == 0x3F || hardware_rev_det == 0x34)
   {
@@ -200,6 +203,7 @@ void hardwareInit()
   else // CVE i2c not sniffer capable
   {
     i2c_master_setpins(GPIO_NUM_21, GPIO_NUM_22);
+    i2c_slave_setpins(GPIO_NUM_21, GPIO_NUM_22);
   }
 
   if (hardware_rev_det == 0x3F || hardware_rev_det == 0x03) // CVE
@@ -230,10 +234,8 @@ void hardwareInit()
     digitalWrite(status_pin, LOW);
   }
 
-#if defined(ENABLE_FAILSAVE_BOOT)
   pinMode(fail_save_pin, INPUT);
-  // failSafeBoot();
-#endif
+  failSafeBoot();
 
   IthoInit = true;
 }
