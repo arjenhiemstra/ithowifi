@@ -31,7 +31,6 @@ void TaskInit(void *pvParameters)
   vTaskDelete(NULL);
 }
 
-#if defined(ENABLE_FAILSAVE_BOOT)
 
 void failSafeBoot()
 {
@@ -150,7 +149,6 @@ void failSafeBoot()
   digitalWrite(wifi_led_pin, HIGH);
 }
 
-#endif
 
 void hardwareInit()
 {
@@ -230,10 +228,8 @@ void hardwareInit()
     digitalWrite(status_pin, LOW);
   }
 
-#if defined(ENABLE_FAILSAVE_BOOT)
   pinMode(fail_save_pin, INPUT);
-  // failSafeBoot();
-#endif
+  failSafeBoot();
 
   IthoInit = true;
 }
