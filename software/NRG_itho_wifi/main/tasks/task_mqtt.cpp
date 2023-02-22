@@ -556,8 +556,8 @@ void addHADevInfo(JsonObject obj)
   dev["model"] = "ITHO Wifi Add-on";
   snprintf(s, sizeof(s), "ITHO-WIFI(%s)", hostName());
   dev["name"] = s;
-  snprintf(s, sizeof(s), "HW: v%s, FW: %s", hw_revision, FWVERSION);
-  dev["sw_version"] = s;
+  dev["hw_version"] = hw_revision;
+  dev["sw_version"] = FWVERSION;
 }
 
 void sendHADiscovery(JsonObject obj, const char *topic)
