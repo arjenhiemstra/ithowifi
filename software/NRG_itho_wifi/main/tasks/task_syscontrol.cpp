@@ -39,6 +39,7 @@ unsigned long APmodeTimeout = 0;
 unsigned long wifiLedUpdate = 0;
 unsigned long SHT3x_readout = 0;
 unsigned long query2401tim = 0;
+unsigned long query4210tim = 0;
 unsigned long mqttUpdatetim = 0;
 unsigned long lastVersionCheck = 0;
 bool i2c_init_functions_done = false;
@@ -156,6 +157,18 @@ void execSystemControlTasks()
   if (!i2c_init_functions_done)
   {
     init_i2c_functions();
+  }
+  // request itho counter status every systemConfig.itho_counter_updatefreq sec.
+  else if (millis() - query4210tim >= systemConfig.itho_counter_updatefreq * 1000UL)
+  {
+    query4210tim = millis();
+    if (systemConfig.itho_4210 == 1)
+    {
+      i2c_queue_add_cmd([]()
+                        { sendQueryCounters(false); });
+      i2c_queue_add_cmd([]()
+                        { updateMQTTihtoStatus = true; });
+    }
   }
   // request itho status every systemConfig.itho_updatefreq sec.
   else if (millis() - query2401tim >= systemConfig.itho_updatefreq * 1000UL)

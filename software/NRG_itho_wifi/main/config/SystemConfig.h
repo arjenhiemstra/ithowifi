@@ -48,12 +48,14 @@ public:
   uint16_t itho_timer2;
   uint16_t itho_timer3;
   uint16_t itho_updatefreq;
+  uint16_t itho_counter_updatefreq;
   uint8_t itho_numvrem;
   uint8_t itho_sendjoin;
   uint8_t itho_pwm2i2c;
   uint8_t itho_31da;
   uint8_t itho_31d9;
   uint8_t itho_2401;
+  uint8_t itho_4210;
   uint8_t itho_forcemedium;
   uint8_t itho_vremoteapi;
   uint8_t itho_rf_support;
