@@ -57,7 +57,7 @@ static void packed_list(const char *dir, void (*fn)(const char *, void *),
     // NOTE: we're assuming that file list is sorted alphabetically
     if (strcmp(buf, tmp) == 0) continue;
     fn(buf, userdata);  // Not yet listed, call user function
-    strlcpy(tmp, buf, sizeof(buf)); // And save this entry as listed
+    strcpy(tmp, buf);   // And save this entry as listed
   }
 }
 

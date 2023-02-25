@@ -1,0 +1,184 @@
+<div class="header">
+  <h1>System settings</h1>
+</div>
+<p>Configuration of add-on (security) settings.</p>
+<style>
+  .pure-form-aligned .pure-control-group label {
+    width: 15em;
+  }
+</style>
+<form class="pure-form pure-form-aligned">
+  <fieldset id="sys_fieldset">
+    <legend><br>System security:</legend>
+    <div class="pure-control-group">
+      <label for="sys_username">Username</label>
+      <input id="sys_username" maxlength="20" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label for="sys_password">Password</label>
+      <input id="sys_password" maxlength="20" type="text">
+    </div>
+    <div class="pure-control-group">
+      <label for="option-syssec_web" class="pure-radio">Web interface authentication</label>
+      <input id="option-syssec_web-1" type="radio" name="option-syssec_web" value="1"> on
+      <input id="option-syssec_web-0" type="radio" name="option-syssec_web" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-syssec_api" class="pure-radio">API authentication</label>
+      <input id="option-syssec_api-1" type="radio" name="option-syssec_api" value="1"> on
+      <input id="option-syssec_api-0" type="radio" name="option-syssec_api" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-syssec_edit" class="pure-radio">File editor authentication</label>
+      <input id="option-syssec_edit-1" type="radio" name="option-syssec_edit" value="1"> on
+      <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
+    </div>
+    <legend><br>API settings:</legend>
+    <p>Have api keys on the WebAPI, MQTT API and Itho Status page normlized (all lowercase, no spaces and special
+      characters).</p>
+    <div class="pure-control-group">
+      <label for="option-api_normalize" class="pure-radio">Normalize keys</label>
+      <input id="option-api_normalize-1" type="radio" name="option-api_normalize" value="1"> on
+      <input id="option-api_normalize-0" type="radio" name="option-api_normalize" value="0"> off
+    </div>
+    <legend><br>Speed settings (CVE only) (0-255):</legend>
+    <div class="pure-control-group">
+      <label for="itho_fallback">Start/fallback speed</label>
+      <input id="itho_fallback" type="number" min="0" max="255" size="6">
+    </div>
+    <div class="pure-control-group">
+      <label for="itho_low">Low</label>
+      <input id="itho_low" type="number" min="0" max="255" size="6">
+    </div>
+    <div class="pure-control-group">
+      <label for="itho_medium">Medium</label>
+      <input id="itho_medium" type="number" min="0" max="255" size="6">
+    </div>
+    <div class="pure-control-group">
+      <label for="itho_high">High</label>
+      <input id="itho_high" type="number" min="0" max="255" size="6">
+    </div>
+    <legend><br>Timer settings (0-255 minutes):</legend>
+    <div class="pure-control-group">
+      <label for="itho_timer1">Timer1</label>
+      <input id="itho_timer1" type="number" min="0" max="255" size="6">
+    </div>
+    <div class="pure-control-group">
+      <label for="itho_timer2">Timer2</label>
+      <input id="itho_timer2" type="number" min="0" max="255" size="6">
+    </div>
+    <div class="pure-control-group">
+      <label for="itho_timer3">Timer3</label>
+      <input id="itho_timer3" type="number" min="0" max="255" size="6">
+    </div>
+    <legend><br>Itho status update frequency (0-65535 seconds):</legend>
+    <p>Controls the rate at which sensor data, status data and system information is requested and updated on the API
+      (Web/MQTT)</p>
+    <div class="pure-control-group">
+      <label for="itho_updatefreq">Update frequency</label>
+      <input id="itho_updatefreq" type="number" min="0" max="65535" size="6">
+    </div>
+    <legend><br>Virtual remote settings (reboot needed):</legend>
+    <p>The add-on can present itself as a virtual remote. A virtual remote emulates a physical remote through software.
+      A virtual remote must be joined to the itho unit before it can be used.</p>
+    <p>A join command will only be accepted by the itho unit within the first 2 minutes after a power cycle.</p>
+    <div class="pure-control-group">
+      <label for="itho_numvrem">Number of virtual remotes</label>
+      <input id="itho_numvrem" type="number" min="1" max="12" size="6">
+    </div>
+    <p>A virtual remote can be used to force the itho unit in medium mode before sending a command from the add-on. This
+      way the add-on can overrule the current speed settings of the itho (ie. due to active input from a built in
+      humidity sensor or another remote)</p>
+    <p>Received commands from RF remotes can be translated to matching virtual remote commands with the 'Map RF remotes
+      to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
+      settings do work as expected.</p>
+    <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
+    <div class="pure-control-group">
+      <label for="option-vremotejoin" class="pure-radio">Send join command</label>
+      <input id="option-vremotejoin-2" type="radio" name="option-itho_sendjoin" value="2"> every power on
+      <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1"> next power on
+      <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-vremotemedium" class="pure-radio">Force medium/auto mode</label>
+      <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1"> on
+      <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-vremoteapi" class="pure-radio">Map RF remotes to virtual remote</label>
+      <input id="option-vremoteapi-1" type="radio" name="option-itho_vremoteapi" value="1"> on
+      <input id="option-vremoteapi-0" type="radio" name="option-itho_vremoteapi" value="0"> off
+    </div>
+    <legend><br>Built-in humidity/temp sensor support (reboot needed):</legend>
+    <p>The add-on firmware by default makes available the humidity/temperature data (via web page, API, MQTT) if an
+      original sensor was fitted.</p>
+    <p>Additional sensor support may be enabled to disable the itho firmware sensor support (box will not respond to
+      humidity changes) and to access an alternative or a retrofitted SHT30 sensor.</p>
+    <br>
+    <div class="pure-control-group">
+      <label for="option-syssht30" class="pure-radio">Additional sensor support</label>
+      <input id="option-syssht30-1" type="radio" name="option-syssht30" value="1"> on
+      <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
+    </div>
+    <legend><br>Enable/Disable I2C commands:</legend>
+    <p>Not all commands types are available on all itho devices. These settings make it possible to disable specific
+      commands. <br>Disabling PWM2I2C will also change the main page user interface to use the Virtual Remote.</p>
+    <br>
+    <div class="pure-control-group">
+      <label for="option-pwm2i2c" class="pure-radio">CVE fan control (PWM2I2C)</label>
+      <input id="option-pwm2i2c-1" type="radio" name="option-itho_pwm2i2c" value="1"> on
+      <input id="option-pwm2i2c-0" type="radio" name="option-itho_pwm2i2c" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-31da" class="pure-radio">Ventilation status (31DA)</label>
+      <input id="option-31da-1" type="radio" name="option-itho_31da" value="1"> on
+      <input id="option-31da-0" type="radio" name="option-itho_31da" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-31d9" class="pure-radio">Fan system status (31D9))</label>
+      <input id="option-31d9-1" type="radio" name="option-itho_31d9" value="1"> on
+      <input id="option-31d9-0" type="radio" name="option-itho_31d9" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-2401" class="pure-radio">System status (2401)</label>
+      <input id="option-2401-1" type="radio" name="option-itho_2401" value="1"> on
+      <input id="option-2401-0" type="radio" name="option-itho_2401" value="0"> off
+    </div>
+    <legend><br>I2C safe guard:</legend>
+    <p>The i2c safe guard is a protection mechanism ONLY for CVE fans with built-in humidity sensor (models with light
+      grey
+      lid)</p>
+    <p>(Note: needs sniffer capable add-on (hw revision 2.5 and up) to work, does not work in conjunction with the i2c
+      sniffer, reboot needed)
+    </p>
+    <div class="pure-control-group">
+      <label for="option-i2c_safe_guard" class="pure-radio">I2C safe guard</label>
+      <input id="option-i2c_safe_guard-2" type="radio" name="option-i2c_safe_guard" value="2"> auto
+      <input id="option-i2c_safe_guard-1" type="radio" name="option-i2c_safe_guard" value="1"> on
+      <input id="option-i2c_safe_guard-0" type="radio" name="option-i2c_safe_guard" value="0"> off
+    </div>
+    <legend><br>Activate I2C extra debug functionality:</legend>
+    <p>This option enables an extra menu where more I2C options and logging is available. Enabling the I2C debug menu
+      will also halt I2C bus activity in case of
+      errors to be able to save logging!</p>
+    <br>
+    <div class="pure-control-group">
+      <label for="option-i2cmenu" class="pure-radio">I2C debug menu</label>
+      <input id="option-i2cmenu-1" type="radio" name="option-i2cmenu" value="1"> on
+      <input id="option-i2cmenu-0" type="radio" name="option-i2cmenu" value="0"> off
+    </div>
+    <p>The i2c sniffer works only on sniffer capable devices (non-cve; all versions, cve; as of hw rev. 2.5). See system
+      log for confirmation.</p>
+    <p>(reboot needed)</p>
+    <div class="pure-control-group">
+      <label for="option-i2c_sniffer" class="pure-radio">I2C sniffer</label>
+      <input id="option-i2c_sniffer-1" type="radio" name="option-i2c_sniffer" value="1"> on
+      <input id="option-i2c_sniffer-0" type="radio" name="option-i2c_sniffer" value="0"> off
+    </div>
+  </fieldset>
+</form>
+<script>
+  $(document).ready(function () {
+    getSettings('syssetup');
+  });
+</script>
