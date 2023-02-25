@@ -402,6 +402,7 @@ void TaskCC1101(void *pvParameters)
             int remIndex = remotes.remoteIndex(item.deviceId);
             if (remIndex != -1)
             {
+              remotes.addCapabilities(remIndex, "timestamp", item.timestamp);
               remotes.addCapabilities(remIndex, "lastcmd", item.lastCommand);
               if (item.co2 != 0xEFFF)
               {
