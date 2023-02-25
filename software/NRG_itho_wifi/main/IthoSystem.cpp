@@ -1624,6 +1624,7 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
 
 void sendQueryCounters(bool updateweb)
 {
+  D_LOG("sendQueryCounters");
   uint8_t command[] = {0x82, 0x80, 0x42, 0x10, 0x04, 0x00, 0xA8};
 
   if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_QUERY_STATUS))

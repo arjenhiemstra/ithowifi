@@ -93,7 +93,7 @@ void getIthoStatusJSON(JsonObject root)
       }
     }
   }
-  if (!ithoCounters.empty())
+  if (!ithoCounters.empty() && systemConfig.itho_4210 == 1)
   {
     for (const auto &Counter : ithoCounters)
     {
