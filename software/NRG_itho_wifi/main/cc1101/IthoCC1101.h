@@ -18,6 +18,7 @@ struct ithoRFDevice
   RemoteTypes remType;
   //  char name[16];
   IthoCommand lastCommand{IthoUnknown};
+  time_t timestamp;
   int32_t co2{0xEFFF};
   int32_t temp{0xEFFF};
   int32_t hum{0xEFFF};
