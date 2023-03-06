@@ -43,50 +43,11 @@ bool itho_internal_hum_temp = false;
 double ithoHum = 0;
 double ithoTemp = 0;
 
-//                                  { IthoUnknown,  IthoJoin, IthoLeave,  IthoAway, IthoLow, IthoMedium,  IthoHigh,  IthoFull, IthoTimer1,  IthoTimer2,  IthoTimer3,  IthoAuto,  IthoAutoNight, IthoCook30,  IthoCook60 }
-const uint8_t *RFTCVE_Remote_Map[] = {nullptr, ithoMessageCVERFTJoinCommandBytes, ithoMessageLeaveCommandBytes, ithoMessageAwayCommandBytes, ithoMessageLowCommandBytes, ithoMessageMediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageTimer1CommandBytes, ithoMessageTimer2CommandBytes, ithoMessageTimer3CommandBytes, nullptr, nullptr, nullptr, nullptr};
-const uint8_t *RFTAUTO_Remote_Map[] = {nullptr, ithoMessageAUTORFTJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes, nullptr, ithoMessageAUTORFTLowCommandBytes, nullptr, ithoMessageAUTORFTHighCommandBytes, nullptr, ithoMessageAUTORFTTimer1CommandBytes, ithoMessageAUTORFTTimer2CommandBytes, ithoMessageAUTORFTTimer3CommandBytes, ithoMessageAUTORFTAutoCommandBytes, ithoMessageAUTORFTAutoNightCommandBytes, nullptr, nullptr};
-const uint8_t *DEMANDFLOW_Remote_Map[] = {nullptr, ithoMessageDFJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageDFLowCommandBytes, nullptr, ithoMessageDFHighCommandBytes, nullptr, ithoMessageDFTimer1CommandBytes, ithoMessageDFTimer2CommandBytes, ithoMessageDFTimer3CommandBytes, nullptr, nullptr, ithoMessageDFCook30CommandBytes, ithoMessageDFCook60CommandBytes};
-const uint8_t *RFTRV_Remote_Map[] = {nullptr, ithoMessageRVJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageLowCommandBytes, ithoMessageRV_CO2MediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageRV_CO2Timer1CommandBytes, ithoMessageRV_CO2Timer2CommandBytes, ithoMessageRV_CO2Timer3CommandBytes, ithoMessageRV_CO2AutoCommandBytes, ithoMessageRV_CO2AutoNightCommandBytes, nullptr, nullptr};
-const uint8_t *RFTCO2_Remote_Map[] = {nullptr, ithoMessageCO2JoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageLowCommandBytes, ithoMessageRV_CO2MediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageRV_CO2Timer1CommandBytes, ithoMessageRV_CO2Timer2CommandBytes, ithoMessageRV_CO2Timer3CommandBytes, ithoMessageRV_CO2AutoCommandBytes, ithoMessageRV_CO2AutoNightCommandBytes, nullptr, nullptr};
-
-struct ihtoRemoteCmdMap
-{
-  RemoteTypes type;
-  const uint8_t **cammandMapping;
-};
-
-const struct ihtoRemoteCmdMap ihtoRemoteCmdMapping[]
-{
-  {RFTCVE, RFTCVE_Remote_Map},
-      {RFTAUTO, RFTAUTO_Remote_Map},
-      {DEMANDFLOW, DEMANDFLOW_Remote_Map},
-      {RFTRV, RFTRV_Remote_Map},
-  {
-    RFTCO2, RFTCO2_Remote_Map
-  }
-};
-
 int currentIthoDeviceGroup() { return ithoDeviceGroup; }
 int currentIthoDeviceID() { return ithoDeviceID; }
 uint8_t currentItho_fwversion() { return itho_fwversion; }
 uint16_t currentIthoSettingsLength() { return ithoSettingsLength; }
 int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
-const uint8_t *getRemoteCmd(const RemoteTypes type, const IthoCommand command)
-{
-
-  const struct ihtoRemoteCmdMap *ihtoRemoteCmdMapPtr = ihtoRemoteCmdMapping;
-  const struct ihtoRemoteCmdMap *ihtoRemoteCmdMapEndPtr = ihtoRemoteCmdMapping + sizeof(ihtoRemoteCmdMapping) / sizeof(ihtoRemoteCmdMapping[0]);
-  while (ihtoRemoteCmdMapPtr < ihtoRemoteCmdMapEndPtr)
-  {
-    if (ihtoRemoteCmdMapPtr->type == type)
-    {
-      return *(ihtoRemoteCmdMapPtr->cammandMapping + command);
-    }
-    ihtoRemoteCmdMapPtr++;
-  }
-  return nullptr;
-}
 
 struct ihtoDeviceType
 {
@@ -468,11 +429,11 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command)
     return;
 
   // Get the corresponding command / remote type combination
-  const uint8_t *remote_command = getRemoteCmd(remoteType, command);
+  const uint8_t *remote_command = rf.getRemoteCmd(remoteType, command);
   if (remote_command == nullptr)
     return;
 
-  uint8_t i2c_command[64] = {};
+  uint8_t i2c_command[64] = {0};
   uint8_t i2c_command_len = 0;
 
   /*
@@ -577,7 +538,7 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command)
   // uint8_t i2c_footer[] = { 0x00, 0x00, 0xFF };
 
   // calculate chk2 val
-  uint8_t i2c_command_tmp[64] = {};
+  uint8_t i2c_command_tmp[64] = {0};
   for (int i = 10; i < i2c_command_len; i++)
   {
     i2c_command_tmp[(i - 10)] = i2c_command[i];
@@ -599,7 +560,7 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command)
 
 #if defined(ENABLE_SERIAL)
   String str;
-  char buf[250]{};
+  char buf[250] = {0};
   for (int i = 0; i < i2c_command_len; i++)
   {
     snprintf(buf, sizeof(buf), " 0x%02X", i2c_command[i]);
@@ -628,7 +589,7 @@ void sendQueryDevicetype(bool updateweb)
     }
   }
 
-  uint8_t i2cbuf[512]{};
+  uint8_t i2cbuf[512] = {0};
   size_t len = i2c_slave_receive(i2cbuf);
 
   // if (len > 2) {
@@ -670,7 +631,7 @@ void sendQueryStatusFormat(bool updateweb)
     return;
   }
 
-  uint8_t i2cbuf[512]{};
+  uint8_t i2cbuf[512] = {0};
   uint8_t len = i2c_slave_receive(i2cbuf);
   if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x2400))
   {
@@ -743,7 +704,7 @@ void sendQueryStatus(bool updateweb)
     return;
   }
 
-  uint8_t i2cbuf[512]{};
+  uint8_t i2cbuf[512] = {0};
   size_t len = i2c_slave_receive(i2cbuf);
 
   if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x2401))
@@ -896,7 +857,7 @@ void sendQuery31DA(bool updateweb)
     return;
   }
 
-  uint8_t i2cbuf[512]{};
+  uint8_t i2cbuf[512] = {0};
   size_t len = i2c_slave_receive(i2cbuf);
 
   if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x31DA))
@@ -916,7 +877,7 @@ void sendQuery31DA(bool updateweb)
       ithoMeasurements.clear();
     }
     const int labelLen = 19;
-    static const char *labels31DA[labelLen]{};
+    static const char *labels31DA[labelLen] = {0};
     for (int i = 0; i < labelLen; i++)
     {
       if (systemConfig.api_normalize == 0)
@@ -1288,7 +1249,7 @@ void sendQuery31D9(bool updateweb)
     return;
   }
 
-  uint8_t i2cbuf[512]{};
+  uint8_t i2cbuf[512] = {0};
   size_t len = i2c_slave_receive(i2cbuf);
   if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x31D9))
   {
@@ -1306,7 +1267,7 @@ void sendQuery31D9(bool updateweb)
       ithoInternalMeasurements.clear();
     }
     const int labelLen = 4;
-    static const char *labels31D9[labelLen]{};
+    static const char *labels31D9[labelLen] = {0};
     for (int i = 0; i < labelLen; i++)
     {
       if (systemConfig.api_normalize == 0)
@@ -1438,7 +1399,7 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
     return nullptr;
   }
 
-  uint8_t i2cbuf[512]{};
+  uint8_t i2cbuf[512] = {0};
   size_t len = i2c_slave_receive(i2cbuf);
   if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x2410))
   {
@@ -1485,9 +1446,9 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
     {
       jsonSysmessage("itho2410", i2cbuf2string(i2cbuf, len).c_str());
 
-      char tempbuffer0[256]{};
-      char tempbuffer1[256]{};
-      char tempbuffer2[256]{};
+      char tempbuffer0[256] = {0};
+      char tempbuffer1[256] = {0};
+      char tempbuffer2[256] = {0};
 
       int64_t val0, val1, val2;
       val0 = cast_raw_bytes_to_int(&values[0], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
@@ -1596,7 +1557,7 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
     return;
   }
 
-  uint8_t i2cbuf[512]{};
+  uint8_t i2cbuf[512] = {0};
   size_t len = i2c_slave_receive(i2cbuf);
   if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1))
   {

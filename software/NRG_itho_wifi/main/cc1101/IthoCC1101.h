@@ -15,9 +15,10 @@
 struct ithoRFDevice
 {
   uint32_t deviceId{0};
-  RemoteTypes remType;
+  RemoteTypes remType{RemoteTypes::RFTCVE};
   //  char name[16];
   IthoCommand lastCommand{IthoUnknown};
+  uint8_t counter;
   int32_t co2{0xEFFF};
   int32_t temp{0xEFFF};
   int32_t hum{0xEFFF};
@@ -109,6 +110,9 @@ public:
 
   bool addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2, RemoteTypes deviceType);
   bool addRFDevice(uint32_t ID, RemoteTypes deviceType);
+  bool updateRFDeviceID(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t remote_index);
+  bool updateRFDeviceID(uint32_t ID, uint8_t remote_index);
+  bool updateRFDeviceType(RemoteTypes deviceType, uint8_t remote_index);
   bool removeRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2);
   bool removeRFDevice(uint32_t ID);
   bool checkRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2);
@@ -165,6 +169,8 @@ public:
   String LastMessageDecoded();
 
   // send
+  const uint8_t *getRemoteCmd(const RemoteTypes type, const IthoCommand command);
+  void sendRFCommand(uint8_t remote_index, IthoCommand command);
   void sendCommand(IthoCommand command);
 
   void handleBind();
@@ -196,11 +202,7 @@ private:
 
   // send
   void createMessageStart(IthoPacket *itho, CC1101Packet *packet);
-  void createMessageCommand(IthoPacket *itho, CC1101Packet *packet);
-  void createMessageJoin(IthoPacket *itho, CC1101Packet *packet);
-  void createMessageLeave(IthoPacket *itho, CC1101Packet *packet);
-  const uint8_t *getMessageCommandBytes(IthoCommand command);
-  uint8_t getCounter2(IthoPacket *itho, uint8_t len);
+  uint8_t checksum(IthoPacket *itho, uint8_t len);
 
   uint8_t messageEncode(IthoPacket *itho, CC1101Packet *packet);
   void messageDecode(CC1101Packet *packet, IthoPacket *itho);

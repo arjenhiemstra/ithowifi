@@ -28,6 +28,7 @@ void getIthoStatusJSON(JsonObject root);
 void getRemotesInfoJSON(JsonObject root);
 void getIthoSettingsBackupJSON(JsonObject root);
 bool ithoExecCommand(const char *command, cmdOrigin origin);
+bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin origin);
 bool ithoSetSpeed(const char *speed, cmdOrigin origin);
 bool ithoSetSpeed(uint16_t speed, cmdOrigin origin);
 bool ithoSetTimer(const char *timer, cmdOrigin origin);
