@@ -1090,6 +1090,7 @@ bool IthoCC1101::removeRFDevice(uint32_t ID)
       //      strlcpy(item.name, "", sizeof(item.name));
       item.remType = RemoteTypes::UNSETTYPE;
       item.lastCommand = IthoUnknown;
+      item.timestamp = (time_t)0;
       item.co2 = 0xEFFF;
       item.temp = 0xEFFF;
       item.hum = 0xEFFF;
@@ -1281,11 +1282,15 @@ void IthoCC1101::handleLevel()
     }
   }
 
+  time_t now;
+  time(&now);
+
   for (auto &item : ithoRF.device)
   {
     if (item.deviceId == tempID)
     {
       item.lastCommand = inIthoPacket.command;
+      item.timestamp = now;
     }
   }
 }
@@ -1352,11 +1357,15 @@ void IthoCC1101::handleTimer()
     }
   }
 
+  time_t now;
+  time(&now);
+
   for (auto &item : ithoRF.device)
   {
     if (item.deviceId == tempID)
     {
       item.lastCommand = inIthoPacket.command;
+      item.timestamp = now;
     }
   }
 }
