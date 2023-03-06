@@ -68,7 +68,6 @@ void sys_log(log_prio_level_t log_prio, const char *inputString, ...)
 
 int esp_vprintf(const char *fmt, va_list args)
 {
-  D_LOG("execute esp_vprintf");
 
   log_msg input;
 

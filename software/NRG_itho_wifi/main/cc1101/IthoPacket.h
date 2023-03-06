@@ -29,6 +29,8 @@ enum IthoCommand
   IthoCook30 = 13,
   IthoCook60 = 14,
 
+  IthoTimerUser = 15,
+
 };
 
 enum message_state
@@ -147,6 +149,8 @@ const uint8_t orconMessageFilterCleanCommandBytes[] = {0x10, 0xD0, 0x02, 0x00, 0
 const uint8_t orconMessageJoinCommandBytes[] = {0x1F, 0xC9, 0x12, 0x00, 0x22, 0xF1, 0x00, 0x00, 0x00, 0x00, 0x22, 0xF3, 0x00, 0x00, 0x00, 0x67, 0x10, 0xE0, 0x00, 0x00, 0x00};
 const uint8_t orconMessageBatteryStatusCommandBytes[] = {0x10, 0x60, 0x03, 0x00, 0xFF, 0x01};
 
+
+
 class IthoPacket
 {
 public:
@@ -185,10 +189,9 @@ public:
   uint8_t error;
 
   uint8_t payloadPos;
-  uint8_t payload[MAX_PAYLOAD];
+  // uint8_t payload[MAX_PAYLOAD];
 
   uint8_t dataDecoded[MAX_DECODED];
-  uint8_t dataDecodedChk[MAX_DECODED];
   uint8_t length;
 
   uint8_t deviceType;

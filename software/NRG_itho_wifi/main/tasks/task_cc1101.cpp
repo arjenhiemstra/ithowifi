@@ -52,7 +52,7 @@ uint8_t findRFTlastCommand()
 
 void RFDebug(IthoCommand cmd)
 {
-  char debugLog[200]{};
+  char debugLog[200] = {0};
   strncat(debugLog, rf.LastMessageDecoded().c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
   // log command
   switch (cmd)
@@ -96,6 +96,9 @@ void RFDebug(IthoCommand cmd)
   case IthoCook60:
     strncat(debugLog, " (cmd:cook60)", sizeof(debugLog) - strlen(debugLog) - 1);
     break;
+  case IthoTimerUser:
+    strncat(debugLog, " (cmd:timeruser)", sizeof(debugLog) - strlen(debugLog) - 1);
+    break;
   case IthoJoin:
     strncat(debugLog, " (cmd:join)", sizeof(debugLog) - strlen(debugLog) - 1);
     break;
@@ -103,6 +106,7 @@ void RFDebug(IthoCommand cmd)
     strncat(debugLog, " (cmd:leave)", sizeof(debugLog) - strlen(debugLog) - 1);
     break;
   }
+  D_LOG(debugLog);
   //  LogMessage.once_ms(150, []() {
   logMessagejson(debugLog, RFLOG);
   //    } );
@@ -199,7 +203,6 @@ void TaskCC1101(void *pvParameters)
 
   if (systemConfig.itho_rf_support)
   {
-    D_LOG("systemConfig.itho_rf_support == true");
     Ticker reboot;
 
     // switch off rf_support
@@ -224,14 +227,15 @@ void TaskCC1101(void *pvParameters)
     esp_task_wdt_add(NULL);
     reboot.detach();
     N_LOG("Setup: init of CC1101 RF module successful");
-    rf.setDeviceID(sys.getMac(3), sys.getMac(4), sys.getMac(5));
+    // rf.setDeviceID(sys.getMac(3), sys.getMac(4), sys.getMac(5));
     systemConfig.itho_rf_support = 1;
     loadRemotesConfig("flash");
-    rf.setBindAllowed(true);
+    // rf.setBindAllowed(true);
     for (int i = 0; i < remotes.getRemoteCount(); i++)
     {
       const int *id = remotes.getRemoteIDbyIndex(i);
-      rf.addRFDevice(*id, *(id + 1), *(id + 2), remotes.getRemoteType(i));
+      rf.updateRFDeviceID(*id, *(id + 1), *(id + 2), i);
+      rf.updateRFDeviceType(remotes.getRemoteType(i), i);
     }
     rf.setBindAllowed(false);
     rf.setAllowAll(false);
@@ -243,8 +247,9 @@ void TaskCC1101(void *pvParameters)
       yield();
       esp_task_wdt_reset();
 
-      TaskCC1101Timeout.once_ms(1000, []()
+      TaskCC1101Timeout.once_ms(3000, []()
                                 { W_LOG("Warning: CC1101 Task timed out!"); });
+
       if (ithoCheck)
       {
         ithoCheck = false;
@@ -266,7 +271,6 @@ void TaskCC1101(void *pvParameters)
           bool chk = remotes.checkID(id);
           // bool chk = rf.checkID(RFTid);
           RFTidChk[RFTcommandpos] = chk;
-
           if (debugLevel >= 2)
           {
             if (chk || debugLevel == 3)
@@ -297,6 +301,7 @@ void TaskCC1101(void *pvParameters)
             }
             if (cmd == IthoJoin)
             {
+              D_LOG("Join command received. Trying to join remote...");
               if (remotes.remoteLearnLeaveStatus())
               {
                 int result = remotes.registerNewRemote(id, remtype);

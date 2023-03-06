@@ -132,8 +132,13 @@ uint8_t CC1101::readRegisterMedian3(uint8_t address)
 uint8_t /* ICACHE_RAM_ATTR */ CC1101::readRegisterWithSyncProblem(uint8_t address, uint8_t registerType)
 {
   uint8_t value1, value2;
-
+  delay(25);
   value1 = readRegister(address | registerType);
+  delay(10);
+  value2 = readRegister(address | registerType);
+
+  if (value1 == value2)
+    return value1;
 
   // if two consecutive reads gives us the same result then we know we are ok
   do
@@ -273,7 +278,6 @@ void CC1101::sendData(CC1101Packet *packet)
   if (packet->length > CC1101_DATA_LEN)
   {
     index += length;
-
     // loop until all bytes are transmitted
     while (index < packet->length)
     {
@@ -292,7 +296,6 @@ void CC1101::sendData(CC1101Packet *packet)
       index += length;
     }
   }
-
   // wait until transmission is finished (TXOFF_MODE is expected to be set to 0/IDLE or TXFIFO_UNDERFLOW)
   do
   {
