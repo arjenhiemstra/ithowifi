@@ -649,3 +649,37 @@ const struct ithoLabels ithoWPUStatusLabels[] {
 const uint16_t *ithoWPUSettingsMap[] = 	{ nullptr, nullptr, itho_WPUsetting2, nullptr, itho_WPUsetting4, itho_WPUsetting5, itho_WPUsetting6, itho_WPUsetting7, itho_WPUsetting8,  itho_WPUsetting9, itho_WPUsetting10, itho_WPUsetting11,   itho_WPUsetting12,   itho_WPUsetting13,   itho_WPUsetting14,   nullptr, itho_WPUsetting16,   itho_WPUsetting17,   itho_WPUsetting18,   itho_WPUsetting19,   itho_WPUsetting20, itho_WPUsetting21, itho_WPUsetting22, itho_WPUsetting23, itho_WPUsetting24, itho_WPUsetting25, nullptr, itho_WPUsetting27, nullptr, nullptr, nullptr, itho_WPUsetting31, nullptr, itho_WPUsetting33, itho_WPUsetting34, nullptr, nullptr, itho_WPUsetting37};
 
 const uint8_t *ithoWPUStatusMap[] = 	{ nullptr, nullptr, itho_WPUstatus2,  nullptr, itho_WPUstatus4,  itho_WPUstatus5,  itho_WPUstatus6,  itho_WPUstatus7,  itho_WPUstatus8_9, itho_WPUstatus8_9, itho_WPUstatus10,  itho_WPUstatus11_17, itho_WPUstatus11_17, itho_WPUstatus11_17, itho_WPUstatus11_17, nullptr, itho_WPUstatus11_17, itho_WPUstatus11_17, itho_WPUstatus18_19, itho_WPUstatus18_19, itho_WPUstatus20,  itho_WPUstatus21,  itho_WPUstatus22,  itho_WPUstatus23,  itho_WPUstatus24,  itho_WPUstatus25,  nullptr, itho_WPUstatus27,  nullptr, nullptr, nullptr, itho_WPUstatus31,  nullptr, itho_WPUstatus33,  itho_WPUstatus34,  nullptr, nullptr, itho_WPUstatus37};
+
+// the order of the labels is has not been changed between version. No gaps.
+// fw v2 0-17
+// fw v10 0-19
+// fw v37 0-25
+const struct ithoLabels ithoWPUCounterLabels[] {
+ {"CH pump on (h)",                 "ch-pump-on_h"},
+ {"Source pump on (h)",             "source-pump-on_h"},
+ {"DHW pump on (h)",                "dhw-pump-on_h"},
+ {"Compressor on (h)",              "compressor-on_h"},
+ {"Electrical element on (h)",      "electrical-element-on_h"},
+ {"CH mode (h)",                    "ch-mode_h"},
+ {"DHW mode (h)",                   "dhw-mode_h"},
+ {"Free cooling mode (h)",          "free-cooling-mode_h"},
+ {"Total runtime (h)",              "total-runtime_h"},
+ {"CH pump starts",                 "ch-pump-starts"},
+ {"Source pump starts",             "source-pump-starts"},
+ {"DHW pump starts",                "dhw-pump-starts"},
+ {"Compressor starts",              "compressor-starts"},
+ {"Electrical element starts",      "electrical-element-starts"},
+ {"CH mode starts",                 "ch-mode-starts"},
+ {"DHW mode starts",                "dhw-mode-starts"},
+ {"Free cooling starts",            "free-cooling-starts"},
+ {"System starts",                  "system-starts"},
+ {"DHW element on (h)",             "dhw-element-on_h"},
+ {"DHW element starts",             "dhw-element-starts"},
+ {"E-consumption stand-by (kWh)",   "e-consumption-stand-by_kwh"},
+ {"E-consumption heating (kWh)",    "e-consumption-heating_kwh"},
+ {"E-consumption DHW (kWh)",        "e-consumption-dhw_kwh"},
+ {"E-consumption cooling (kWh)",    "e-consumption-cooling_kwh"},
+ {"Energy out of source (MWh)",     "energy-out-of-source_mwh"},
+ {"Energy returned to source (MWh)","energy-returned-to-source_mwh"}
+};
+const uint8_t ithoWPUCounterLabelLength = 26;
