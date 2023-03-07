@@ -356,6 +356,7 @@ $(document).ready(function () {
           itho_timer2: $('#itho_timer2').val(),
           itho_timer3: $('#itho_timer3').val(),
           itho_updatefreq: $('#itho_updatefreq').val(),
+          itho_counter_updatefreq: $('#itho_counter_updatefreq').val(),
           itho_numvrem: $('#itho_numvrem').val(),
           itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
           itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
@@ -364,6 +365,7 @@ $(document).ready(function () {
           itho_31da: $('input[name=\'option-itho_31da\']:checked').val(),
           itho_31d9: $('input[name=\'option-itho_31d9\']:checked').val(),
           itho_2401: $('input[name=\'option-itho_2401\']:checked').val(),
+          itho_4210: $('input[name=\'option-itho_4210\']:checked').val(),
           i2cmenu: $('input[name=\'option-i2cmenu\']:checked').val(),
           i2c_safe_guard: $('input[name=\'option-i2c_safe_guard\']:checked').val(),
           i2c_sniffer: $('input[name=\'option-i2c_sniffer\']:checked').val()
@@ -573,6 +575,11 @@ $(document).ready(function () {
         ithobutton: 24109,
         ithosetupdate: $('#itho_setting_id_set').val(),
         value: parseFloat($('#itho_setting_value_set').val())
+      }));
+    }
+    else if ($(this).attr('id') == 'button4210') {
+      websock.send(JSON.stringify({
+        ithobutton: 4210
       }));
     }
     else if ($(this).attr('id') == 'buttonCE30') {

@@ -22,6 +22,7 @@ int16_t ithoStatusLabelLength = 0;
 std::vector<ithoDeviceStatus> ithoStatus;
 std::vector<ithoDeviceMeasurements> ithoMeasurements;
 std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
+std::vector<ithoDeviceMeasurements> ithoCounters;
 struct lastCommand lastCmd;
 ithoSettings *ithoSettingsArray = nullptr;
 
@@ -1581,6 +1582,69 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
     }
   }
 }
+
+void sendQueryCounters(bool updateweb)
+{
+  uint8_t command[] = {0x82, 0x80, 0x42, 0x10, 0x04, 0x00, 0xA8};
+
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_QUERY_STATUS))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("ithocounters", "send i2c command failed");
+    }
+    return;
+  }
+
+  uint8_t i2cbuf[512]{};
+  size_t len = i2c_slave_receive(i2cbuf);
+
+  if (len > 1 && i2cbuf[len - 1] == checksum(i2cbuf, len - 1) && check_i2c_reply(i2cbuf, len, 0x4210))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("ithocounters", i2cbuf2string(i2cbuf, len).c_str());
+    }
+    // i2c reply structure:
+    //  [I2C addr ][I2C command   ][len payload ][N values][2byte value] ... [2byte value][chk ]
+    //  0x80,0x82,  0xC2,0x10,0x01, 0x35,         0x1A,     0x0D,0x26,   ...  0x0A,0xF8,   0xFF
+
+    int valPos = 7; // position of first 2byte value
+    int Nvalues = i2cbuf[6];
+    if (Nvalues > ithoWPUCounterLabelLength) {
+      E_LOG("WPU Counter array too long. Counters not read.");
+      return;
+    }
+
+    if (!ithoCounters.empty())
+    {
+      ithoCounters.clear();
+    }
+    
+    uint16_t val;
+    for (int i=0; i < Nvalues; i++)
+    {   
+        int idx = 2 * i + valPos; // idx: start of value in raw bytes
+        // read 2 raw bytes: uint16_t.
+        val = i2cbuf[idx+1];
+        val |= (i2cbuf[idx] << 8);
+
+        ithoCounters.push_back(ithoDeviceMeasurements());
+        
+        // label
+        if (systemConfig.api_normalize == 0) {
+            ithoCounters.back().name = ithoWPUCounterLabels[i].labelFull;
+        } else {
+            ithoCounters.back().name = ithoWPUCounterLabels[i].labelNormalized;
+        }
+
+        ithoCounters.back().type = ithoDeviceMeasurements::is_int;
+        ithoCounters.back().value.intval = val;
+    }
+  }
+};
 
 void filterReset()
 {
