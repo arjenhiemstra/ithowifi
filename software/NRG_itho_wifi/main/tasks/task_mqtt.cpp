@@ -365,7 +365,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
             if (index != -1)
             {
               jsonCmd = true;
-              ithoI2CCommand(0, command, MQTTAPI);
+              ithoI2CCommand(index, command, MQTTAPI);
             }
           }
         }
