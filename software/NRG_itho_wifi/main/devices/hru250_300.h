@@ -162,5 +162,5 @@ const char *ithoHRU250_300SettingsLabels[] = {
     "FrostValveClosedTimeStartup (m)",
 };
 
-const uint16_t *ithoHRU250_300SettingsMap[] = {nullptr, itho_HRU250_300setting1, itho_HRU250_300setting2, itho_HRU250_300setting3, itho_HRU250_300setting4, nullptr, itho_HRU250_300setting6, itho_HRU250_300setting7, itho_HRU250_300setting8, itho_HRU250_300setting9};
+const uint16_t *ithoHRU250_300SettingsMap[] = {nullptr, itho_HRU250_300setting1, itho_HRU250_300setting2, itho_HRU250_300setting3, itho_HRU250_300setting4, nullptr, itho_HRU250_300setting6, itho_HRU250_300setting7, itho_HRU250_300setting8, itho_HRU250_300setting9, itho_HRU250_300setting10};
 const uint8_t *ithoHRU250_300StatusMap[] = {nullptr, itho_HRU250_300status1, itho_HRU250_300status2_10, itho_HRU250_300status2_10, itho_HRU250_300status2_10, nullptr, itho_HRU250_300status2_10, itho_HRU250_300status2_10, itho_HRU250_300status2_10, itho_HRU250_300status2_10, itho_HRU250_300status2_10};
