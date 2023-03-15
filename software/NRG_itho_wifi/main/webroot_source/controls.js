@@ -357,6 +357,7 @@ $(document).ready(function () {
           itho_timer2: $('#itho_timer2').val(),
           itho_timer3: $('#itho_timer3').val(),
           itho_updatefreq: $('#itho_updatefreq').val(),
+          itho_counter_updatefreq: $('#itho_counter_updatefreq').val(),
           itho_numvrem: $('#itho_numvrem').val(),
           itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
           itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
@@ -365,6 +366,7 @@ $(document).ready(function () {
           itho_31da: $('input[name=\'option-itho_31da\']:checked').val(),
           itho_31d9: $('input[name=\'option-itho_31d9\']:checked').val(),
           itho_2401: $('input[name=\'option-itho_2401\']:checked').val(),
+          itho_4210: $('input[name=\'option-itho_4210\']:checked').val(),
           i2cmenu: $('input[name=\'option-i2cmenu\']:checked').val(),
           i2c_safe_guard: $('input[name=\'option-i2c_safe_guard\']:checked').val(),
           i2c_sniffer: $('input[name=\'option-i2c_sniffer\']:checked').val()
@@ -574,6 +576,11 @@ $(document).ready(function () {
         ithobutton: 24109,
         ithosetupdate: $('#itho_setting_id_set').val(),
         value: parseFloat($('#itho_setting_value_set').val())
+      }));
+    }
+    else if ($(this).attr('id') == 'button4210') {
+      websock.send(JSON.stringify({
+        ithobutton: 4210
       }));
     }
     else if ($(this).attr('id') == 'buttonCE30') {
@@ -1357,6 +1364,8 @@ var html_debug = `
                     reset function uses virtual remote 0, this remote needs to be paired with your itho for this command
                     to
                     work</span><br><br>
+                <button id="button4210" class="pure-button pure-button-primary">Query
+                    Counters</button><br><span>Result:&nbsp;</span><span id="ithocounters"></span><br><br>
                 <button id="buttonCE30" class="pure-button pure-button-primary">Send CE30</button>
                 Set outside temperature to: <input id="itho_ce30_temp" type="number" min="-20" max="50" size="4" value="15"><br> 
                 Optional temporary temperature: <input id="itho_ce30_temptemp" type="number" min="-20" max="50" size="4" value="0"> 
@@ -2057,6 +2066,11 @@ var html_systemsettings_start = `
       <label for="itho_updatefreq">Update frequency</label>
       <input id="itho_updatefreq" type="number" min="0" max="65535" size="6">
     </div>
+    <p>WPU-only: WPU counters do not require frequent updates. Set update frequency to 1 hour (3600 s) or more:</p>
+    <div class="pure-control-group">
+      <label for="itho_counter_updatefreq">Counter update frequency</label>
+      <input id="itho_counter_updatefreq" type="number" min="0" max="65535" size="6">
+    </div>
     <legend><br>Virtual remote settings (reboot needed):</legend>
     <p>The add-on can present itself as a virtual remote. A virtual remote emulates a physical remote through software.
       A virtual remote must be joined to the itho unit before it can be used.</p>
@@ -2122,6 +2136,11 @@ var html_systemsettings_start = `
       <label for="option-2401" class="pure-radio">System status (2401)</label>
       <input id="option-2401-1" type="radio" name="option-itho_2401" value="1"> on
       <input id="option-2401-0" type="radio" name="option-itho_2401" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-4210" class="pure-radio">WPU counters (4210)</label>
+      <input id="option-4210-1" type="radio" name="option-itho_4210" value="1"> on
+      <input id="option-4210-0" type="radio" name="option-itho_4210" value="0"> off
     </div>
     <legend><br>I2C safe guard:</legend>
     <p>The i2c safe guard is a protection mechanism ONLY for CVE fans with built-in humidity sensor (models with light
