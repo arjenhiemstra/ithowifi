@@ -540,7 +540,114 @@ void wifiInit()
     E_LOG("Setup: Wifi connect STA failed");
     setupWiFiAP();
   }
+
   configTime(0, 0, wifiConfig.ntpserver);
+
+  // set timezone
+  
+  struct tzLabels 
+    {
+    const char* tzlabel;
+    const uint8_t tzindex;
+    };
+
+  const struct tzLabels tzlabels[] {
+  {"Europe/Amsterdam", 0 }, 
+  {"Europe/Andorra", 0 }, 
+  {"Europe/Astrakhan", 1 }, 
+  {"Europe/Athens", 2 }, 
+  {"Europe/Belgrade", 0 }, 
+  {"Europe/Berlin", 0 }, 
+  {"Europe/Bratislava", 0 }, 
+  {"Europe/Brussels", 0 }, 
+  {"Europe/Bucharest", 2 }, 
+  {"Europe/Budapest", 0 }, 
+  {"Europe/Busingen", 0 }, 
+  {"Europe/Chisinau", 3 }, 
+  {"Europe/Copenhagen", 0 }, 
+  {"Europe/Dublin", 4 }, 
+  {"Europe/Gibraltar", 0 }, 
+  {"Europe/Guernsey", 5 }, 
+  {"Europe/Helsinki", 2 }, 
+  {"Europe/Isle_of_Man", 5 }, 
+  {"Europe/Istanbul", 6 }, 
+  {"Europe/Jersey", 5 }, 
+  {"Europe/Kaliningrad", 7 }, 
+  {"Europe/Kyiv", 2 }, 
+  {"Europe/Kirov", 6 }, 
+  {"Europe/Lisbon", 8 }, 
+  {"Europe/Ljubljana", 0 }, 
+  {"Europe/London", 5 }, 
+  {"Europe/Luxembourg", 0 }, 
+  {"Europe/Madrid", 0 }, 
+  {"Europe/Malta", 0 }, 
+  {"Europe/Mariehamn", 2 }, 
+  {"Europe/Minsk", 6 }, 
+  {"Europe/Monaco", 0 }, 
+  {"Europe/Moscow", 9 }, 
+  {"Europe/Oslo", 0 }, 
+  {"Europe/Paris", 0 }, 
+  {"Europe/Podgorica", 0 }, 
+  {"Europe/Prague", 0 }, 
+  {"Europe/Riga", 2 }, 
+  {"Europe/Rome", 0 }, 
+  {"Europe/Samara", 1 }, 
+  {"Europe/San_Marino", 0 }, 
+  {"Europe/Sarajevo", 0 }, 
+  {"Europe/Saratov", 1 }, 
+  {"Europe/Simferopol", 9 }, 
+  {"Europe/Skopje", 0 }, 
+  {"Europe/Sofia", 2 }, 
+  {"Europe/Stockholm", 0 }, 
+  {"Europe/Tallinn", 2 }, 
+  {"Europe/Tirane", 0 }, 
+  {"Europe/Ulyanovsk", 1 }, 
+  {"Europe/Uzhgorod", 2 }, 
+  {"Europe/Vaduz", 0 }, 
+  {"Europe/Vatican", 0 }, 
+  {"Europe/Vienna", 0 }, 
+  {"Europe/Vilnius", 2 }, 
+  {"Europe/Volgograd", 6 }, 
+  {"Europe/Warsaw", 0 }, 
+  {"Europe/Zagreb", 0 }, 
+  {"Europe/Zaporizhzhia", 2 }, 
+  {"Europe/Zurich", 0 }, 
+  {"Etc/Greenwich", 10 }, 
+  {"Etc/Universal", 11 }, 
+  };
+
+  char tz_strings[][30] = 
+  {
+  "CET-1CEST,M3.5.0,M10.5.0/3", 
+  "<+04>-4", 
+  "EET-2EEST,M3.5.0/3,M10.5.0/4", 
+  "EET-2EEST,M3.5.0,M10.5.0/3", 
+  "IST-1GMT0,M10.5.0,M3.5.0/1", 
+  "GMT0BST,M3.5.0/1,M10.5.0", 
+  "<+03>-3", 
+  "EET-2", 
+  "WET0WEST,M3.5.0/1,M10.5.0", 
+  "MSK-3", 
+  "GMT0", 
+  "UTC0", 
+  };
+
+  const char *tz_string = "CET-1CEST,M3.5.0,M10.5.0/3";
+
+  const char* target = wifiConfig.timezone; // the timezone we want to find
+  for (const auto& label : tzlabels) 
+  {
+    if (std::strcmp(target, label.tzlabel) == 0) 
+    {
+        // the timezone matches, so we've found the corresponding index
+        tz_string = tz_strings [static_cast<int>(label.tzindex)];
+        break;
+    }
+  }
+
+  N_LOG("Timezone: %s, specifier %s ", wifiConfig.timezone, tz_string);
+  setenv("TZ", tz_string, 1);
+  tzset();
 
   WiFi.scanDelete();
   if (WiFi.scanComplete() == -2)
