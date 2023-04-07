@@ -331,7 +331,8 @@ $(document).ready(function () {
           dns2: $('#dns2').val(),
           port: $('#port').val(),
           hostname: $('#hostname').val(),
-          ntpserver: $('#ntpserver').val()
+          ntpserver: $('#ntpserver').val(),
+          timezone: $('#timezone').val()
         }
       }));
       update_page('wifisetup');

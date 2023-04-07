@@ -38,6 +38,7 @@ void jsonWsSend(const char *rootName)
     nested["port"] = wifiConfig.port;
     nested["hostname"] = hostName();
     nested["ntpserver"] = wifiConfig.ntpserver;
+    nested["timezone"] = wifiConfig.timezone;
   }
   else if (strcmp(rootName, "systemsettings") == 0)
   {
