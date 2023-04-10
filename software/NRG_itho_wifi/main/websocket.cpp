@@ -221,6 +221,26 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         {
           chkpartition = true;
         }
+        else if (strcmp(root["button"].as<const char *>(), "i2cdebugon") == 0)
+        {
+          systemConfig.i2cmenu = 1;
+          saveLogConfigflag = true;
+        }
+        else if (strcmp(root["button"].as<const char *>(), "i2cdebugoff") == 0)
+        {
+          systemConfig.i2cmenu = 0;
+          saveLogConfigflag = true;
+        }
+        else if (strcmp(root["button"].as<const char *>(), "i2csnifferon") == 0)
+        {
+          systemConfig.i2c_sniffer = 1;
+          saveLogConfigflag = true;
+        }
+        else if (strcmp(root["button"].as<const char *>(), "i2csnifferoff") == 0)
+        {
+          systemConfig.i2c_sniffer = 0;
+          saveLogConfigflag = true;
+        }
       }
     }
     else if (msg.find("{\"ithobutton\"") != std::string::npos)

@@ -2,8 +2,8 @@
    Author: Klusjesman, supersjimmie, modified and reworked by arjenhiemstra
 */
 
-#include "cc1101/IthoCC1101.h"
-#include "cc1101/IthoPacket.h"
+#include "IthoCC1101.h"
+#include "IthoPacket.h"
 #include <string>
 #include <Arduino.h>
 #include <SPI.h>

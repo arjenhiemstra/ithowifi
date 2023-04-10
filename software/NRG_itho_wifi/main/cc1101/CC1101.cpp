@@ -132,9 +132,7 @@ uint8_t CC1101::readRegisterMedian3(uint8_t address)
 uint8_t /* ICACHE_RAM_ATTR */ CC1101::readRegisterWithSyncProblem(uint8_t address, uint8_t registerType)
 {
   uint8_t value1, value2;
-  delay(25);
   value1 = readRegister(address | registerType);
-  delay(10);
   value2 = readRegister(address | registerType);
 
   if (value1 == value2)

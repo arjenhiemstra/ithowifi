@@ -8,7 +8,7 @@
 #include <string>
 
 #include "CC1101.h"
-#include "cc1101/IthoPacket.h"
+#include "IthoPacket.h"
 
 #define MAX_NUM_OF_REMOTES 10
 
