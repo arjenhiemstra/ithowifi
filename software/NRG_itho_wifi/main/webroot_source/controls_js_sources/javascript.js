@@ -366,7 +366,6 @@ $(document).ready(function () {
           itho_31d9: $('input[name=\'option-itho_31d9\']:checked').val(),
           itho_2401: $('input[name=\'option-itho_2401\']:checked').val(),
           itho_4210: $('input[name=\'option-itho_4210\']:checked').val(),
-          i2cmenu: $('input[name=\'option-i2cmenu\']:checked').val(),
           i2c_safe_guard: $('input[name=\'option-i2c_safe_guard\']:checked').val(),
           i2c_sniffer: $('input[name=\'option-i2c_sniffer\']:checked').val()
         }

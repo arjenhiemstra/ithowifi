@@ -30,7 +30,7 @@
     <span>Config and Log task memory: </span><span id='cltaskmem'></span><span> bytes free</span><br>
     <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br>
     <span>Loop task memory: </span><span id='looptaskmem'></span><span> bytes free</span><br><br>
-    
+
     <div id="rflog_outer" class="hidden">
         <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
         <div id="rflog"
@@ -51,6 +51,20 @@
                 class="pure-button pure-button-primary">Level3</button>&nbsp;Level3 will show all received RF messages
             from all devices<br><br>
             <fieldset>
+                <legend><br>I2C extra debug functionality:</legend>
+                <p>This option enables an extra menu where more I2C options and logging is available. <br>Enabling the
+                    I2C
+                    debug menu will also halt I2C bus activity in case of errors to be able to save logging!</p>
+                <button id="button-i2cdebugon" class="pure-button pure-button-primary">Debug on</button>
+                <button id="button-i2cdebugoff" class="pure-button pure-button-primary">Debug off</button>
+                <br>
+                <legend><br>I2C sniffer:</legend>
+                <p>The i2c sniffer works only on sniffer capable devices (non-cve; all versions, cve; as of hw rev.
+                    2.5). <br>See system log for confirmation.<br>
+                    Sniffer output is available through syslog. (reboot needed)</p>
+                <button id="button-i2csnifferon" class="pure-button pure-button-primary">Sniffer on</button>
+                <button id="button-i2csnifferoff" class="pure-button pure-button-primary">Sniffer off</button>
+                <br><br>
                 <legend><br>Low level itho I2C commands:</legend><br>
                 <button id="ithobutton-type" class="pure-button pure-button-primary">Query Devicetype</button><br>
                 <span>Result:&nbsp;</span><span id="ithotype"></span><br><br>
@@ -74,13 +88,13 @@
                 <span>Sent command:&nbsp;</span><span id="itho2410set"></span><br><span>Result:&nbsp;</span><span
                     id="itho2410setres"></span><br>
                 <span style="color:red">Warning!!</span><br><br>
-               
-                <button id="ithobutton-31DA"
-                    class="pure-button pure-button-primary">Query 31DA</button><br><span>Result:&nbsp;</span>
+
+                <button id="ithobutton-31DA" class="pure-button pure-button-primary">Query
+                    31DA</button><br><span>Result:&nbsp;</span>
                 <span id="itho31DA"></span><br><br><button id="ithobutton-31D9"
                     class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
                     id="itho31D9"></span><br><br>
-                
+
                 <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
                     reset</button><br><span>Filter
                     reset function uses virtual remote 0, this remote needs to be paired with your itho for this command
@@ -89,9 +103,12 @@
                 <button id="button4210" class="pure-button pure-button-primary">Query
                     Counters</button><br><span>Result:&nbsp;</span><span id="ithocounters"></span><br><br>
                 <button id="buttonCE30" class="pure-button pure-button-primary">Send CE30</button>
-                Set outside temperature to: <input id="itho_ce30_temp" type="number" min="-20" max="50" size="4" value="15"><br> 
-                Optional temporary temperature: <input id="itho_ce30_temptemp" type="number" min="-20" max="50" size="4" value="0"> 
-                Valid until(timestamp) <input id="itho_ce30_timestamp" type="number" min="0" max="2147483647" size="12" value="0"><br>
+                Set outside temperature to: <input id="itho_ce30_temp" type="number" min="-20" max="50" size="4"
+                    value="15"><br>
+                Optional temporary temperature: <input id="itho_ce30_temptemp" type="number" min="-20" max="50" size="4"
+                    value="0">
+                Valid until(timestamp) <input id="itho_ce30_timestamp" type="number" min="0" max="2147483647" size="12"
+                    value="0"><br>
                 <span>Result:&nbsp;</span><span id="itho_ce30_result"></span><br>
             </fieldset><br><br><br>
         </fieldset>
