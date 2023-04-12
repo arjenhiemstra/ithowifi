@@ -1,4 +1,4 @@
-Import("env", "projenv")
+Import("env")
 import gzip, os, glob, shutil, json
 
 from SCons.Script import (
