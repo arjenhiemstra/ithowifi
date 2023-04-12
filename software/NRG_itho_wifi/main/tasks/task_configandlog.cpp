@@ -45,6 +45,10 @@ void TaskConfigAndLog(void *pvParameters)
   initFileSystem();
   syslog_queue_worker();
 
+  //set provisional timezone
+  setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
+  tzset();  
+
   logInit();
   syslog_queue_worker();
 

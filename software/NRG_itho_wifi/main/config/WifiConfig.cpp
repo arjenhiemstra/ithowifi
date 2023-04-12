@@ -23,6 +23,7 @@ WifiConfig::WifiConfig()
   port = 80;
   strlcpy(hostname, "", sizeof(hostname));
   strlcpy(ntpserver, "pool.ntp.org", sizeof(ntpserver));
+  strlcpy(timezone, "Europe/Amsterdam", sizeof(timezone));
 
   configLoaded = false;
 } // WifiConfig
@@ -91,6 +92,11 @@ bool WifiConfig::set(JsonObjectConst obj)
     updated = true;
     strlcpy(ntpserver, obj["ntpserver"], sizeof(ntpserver));
   }
+  if (!obj["timezone"].isNull())
+  {
+    updated = true;
+    strlcpy(timezone, obj["timezone"], sizeof(timezone));
+  }
   return updated;
 }
 
@@ -107,6 +113,7 @@ void WifiConfig::get(JsonObject obj) const
   obj["port"] = port;
   obj["hostname"] = hostname;
   obj["ntpserver"] = ntpserver;
+  obj["timezone"] = timezone;
 }
 
 void wifiScan()
