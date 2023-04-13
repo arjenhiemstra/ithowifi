@@ -113,7 +113,7 @@ const char* ithoHRU200SettingsLabels[] =  {
     "SummerNightDegree (Kh)",
     "SummerNightSetpoint (°C)",
     "SummerNightSpeed (%)",
-    "SummerNightMaxAreaDegreeHours (Kh)",
+    "SummerNightMaxAreaDegreeHours (Kh)"
 };
 
 

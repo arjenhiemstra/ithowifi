@@ -49,24 +49,9 @@ private:
     const char *msg;
   } remote_command_char;
 
-  const remote_command_char remote_command_msg_table[15]{
-      {IthoUnknown, "IthoUnknown"},
-      {IthoJoin, "IthoJoin"},
-      {IthoLeave, "IthoLeave"},
-      {IthoAway, "IthoAway"},
-      {IthoLow, "IthoLow"},
-      {IthoMedium, "IthoMedium"},
-      {IthoHigh, "IthoHigh"},
-      {IthoFull, "IthoFull"},
-      {IthoTimer1, "IthoTimer1"},
-      {IthoTimer2, "IthoTimer2"},
-      {IthoTimer3, "IthoTimer3"},
-      {IthoAuto, "IthoAuto"},
-      {IthoAutoNight, "IthoAutoNight"},
-      {IthoCook30, "IthoCook30"},
-      {IthoCook60, "IthoCook60"}};
+  static const remote_command_char remote_command_msg_table[];
 
-  const char *remote_unknown_msg = "CMD UNKNOWN ERROR";
+  static const char *remote_unknown_msg;
 
 public:
   IthoRemote();

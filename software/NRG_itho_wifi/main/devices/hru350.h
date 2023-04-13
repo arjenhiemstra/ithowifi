@@ -157,7 +157,7 @@ const struct ithoLabels ithoHRU350StatusLabels[] {
 	{   "Highest received RH value (%RH)", 		  "highest-received-rh-value_rh" },
 	{   "Air Quality (%)", 						  "air-quality_perc" },
 	{   "Remaining override timer (Sec)", 		  "remaining-override-timer_sec" },
-	{   "Fallback speed timer (Sec)", 			  "fallback-speed-timer_sec" },
+	{   "Fallback speed timer (Sec)", 			  "fallback-speed-timer_sec" }
 };
 
 const uint16_t *ithoHRU350SettingsMap[] =      	{ nullptr, itho_HRU350setting1,  nullptr, itho_HRU350setting3_4, itho_HRU350setting3_4 };

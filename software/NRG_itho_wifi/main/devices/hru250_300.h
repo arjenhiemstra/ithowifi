@@ -35,7 +35,7 @@ const struct ithoLabels ithoHRU250_300StatusLabels[]
         {"Measured blend temperature heated NTC (°C)", "measured-blend-temperature-heated-ntc_c"},
         {"Desired capacity (m3/h)", "desired-capacity_mh"},
         {"Current consumption of fan (mA)", "current-consumption-of-fan_ma"},
-        {"Desired current consumption of fan (mA)", "desired-current-consumption-of-fan_ma"},
+        {"Desired current consumption of fan (mA)", "desired-current-consumption-of-fan_ma"}
 };
 
 const uint16_t itho_HRU250_300setting1[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 999};
@@ -159,7 +159,7 @@ const char *ithoHRU250_300SettingsLabels[] = {
     "Offset temperature (K)",
     "P-action bypass valve movement (d#/dT)",
     "Summer Night Boost Increase (%/min)",
-    "FrostValveClosedTimeStartup (m)",
+    "FrostValveClosedTimeStartup (m)"
 };
 
 const uint16_t *ithoHRU250_300SettingsMap[] = {nullptr, itho_HRU250_300setting1, itho_HRU250_300setting2, itho_HRU250_300setting3, itho_HRU250_300setting4, nullptr, itho_HRU250_300setting6, itho_HRU250_300setting7, itho_HRU250_300setting8, itho_HRU250_300setting9, itho_HRU250_300setting10};

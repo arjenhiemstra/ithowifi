@@ -225,7 +225,7 @@ void processSettingResult(const uint8_t index, const bool loop)
     val1 = cast_raw_bytes_to_int(resultPtr2410 + 1, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
     val2 = cast_raw_bytes_to_int(resultPtr2410 + 2, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
 
-    if (*(resultPtr2410 + 0) == 0x5555AAAA && *(resultPtr2410 + 1) == 0xAAAA5555 && *(resultPtr2410 + 2) == 0xFFFFFFFF) //something went wrong, indicate error, better handling needed
+    if (*(resultPtr2410 + 0) == 0x5555AAAA && *(resultPtr2410 + 1) == 0xAAAA5555 && *(resultPtr2410 + 2) == 0xFFFFFFFF) // something went wrong, indicate error, better handling needed
     {
       root["Current"] = "error";
       root["Minimum"] = "error";
@@ -239,9 +239,9 @@ void processSettingResult(const uint8_t index, const bool loop)
     }
     else
     {
-      root["Current"] = static_cast<double>((int32_t) val0) / ithoSettingsArray[index].divider;
-      root["Minimum"] = static_cast<double>((int32_t) val1) / ithoSettingsArray[index].divider;
-      root["Maximum"] = static_cast<double>((int32_t) val2) / ithoSettingsArray[index].divider;
+      root["Current"] = static_cast<double>((int32_t)val0) / ithoSettingsArray[index].divider;
+      root["Minimum"] = static_cast<double>((int32_t)val1) / ithoSettingsArray[index].divider;
+      root["Maximum"] = static_cast<double>((int32_t)val2) / ithoSettingsArray[index].divider;
     }
   }
   else
@@ -664,7 +664,7 @@ void sendQueryStatusFormat(bool updateweb)
 
       if (ithoStatus.back().divider == 1)
       { // integer value
-          ithoStatus.back().type = ithoDeviceStatus::is_int;
+        ithoStatus.back().type = ithoDeviceStatus::is_int;
       }
       else
       {
@@ -760,7 +760,7 @@ void sendQueryStatus(bool updateweb)
           }
         }
         if (ithoStat.type == ithoDeviceStatus::is_float)
-        { 
+        {
           double t = ithoStat.value.floatval * ithoStat.divider;
           if (static_cast<uint32_t>(t) == tempVal) // better compare needed of float val, worst case this will result in an extra update of the value, so limited impact
           {
@@ -769,8 +769,8 @@ void sendQueryStatus(bool updateweb)
           else
           {
             ithoStat.updated = 1;
-            if (ithoStat.is_signed) 
-            { 
+            if (ithoStat.is_signed)
+            {
               // interpret raw bytes as signed integer
               tempVal = cast_to_signed_int(tempVal, ithoStat.length);
             }
@@ -1343,18 +1343,18 @@ void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperatur
 // Set the outside temperature for WPU devices.
 // [00,3E,CE,30,05,08, 63,91,DA,C7, xx,xx, yy,yy, FF]
 // from: 00 (broadcast)
-// source: 3E 
+// source: 3E
 // command: CE30
 // type: 5 (update)
-// length: 8 
+// length: 8
 // 6391DAC7 => 4 byte unix timestamp: lifetime of temporary_temparture. After timestamp temporary_temp is replaced by fallback_temp.
 // xxxx two byte temporary_temp:  0x0539 = 13.37 degrees C.
-// yyyy two byte fallback_temp: 0xFC18 = -10 degrees C. 
+// yyyy two byte fallback_temp: 0xFC18 = -10 degrees C.
 // FF checksum
 
 {
   uint8_t command[] = {0x00, 0x3E, 0xCE, 0x30, 0x05, 0x08, 0x63, 0x91, 0x00, 0x00, 0x7F, 0xFF, 0x7F, 0xFF, 0xFF};
-    
+
   command[6] = (timestamp >> 24) & 0xFF;
   command[7] = (timestamp >> 16) & 0xFF;
   command[8] = (timestamp >> 8) & 0xFF;
@@ -1364,9 +1364,9 @@ void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperatur
   command[11] = temporary_temperature & 0xFF;
   command[12] = (fallback_temperature >> 8) & 0xFF;
   command[13] = fallback_temperature & 0xFF;
-  
+
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
-  
+
   if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_SET_CE30))
   {
     if (updateweb)
@@ -1428,7 +1428,7 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
 
     if (ithoSettingsArray[index].divider == 1)
     { // integer value
-        ithoSettingsArray[index].type = ithoSettings::is_int;
+      ithoSettingsArray[index].type = ithoSettings::is_int;
     }
     else
     {
@@ -1438,11 +1438,12 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
     if (i2cbuf[22] == 0x5B)
     {
       // legacy itho: 0x5B -> 0x10
-      ithoSettingsArray[index].type = ithoSettings::is_int;;
+      ithoSettingsArray[index].type = ithoSettings::is_int;
+      ;
       ithoSettingsArray[index].length = 2;
       ithoSettingsArray[index].is_signed = false;
     }
-        
+
     if (updateweb)
     {
       jsonSysmessage("itho2410", i2cbuf2string(i2cbuf, len).c_str());
@@ -1455,10 +1456,10 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
       val0 = cast_raw_bytes_to_int(&values[0], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
       val1 = cast_raw_bytes_to_int(&values[1], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
       val2 = cast_raw_bytes_to_int(&values[2], ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
-    
+
       if (ithoSettingsArray[index].type == ithoSettings::is_int)
       {
-        if (ithoSettingsArray[index].is_signed) 
+        if (ithoSettingsArray[index].is_signed)
         {
           snprintf(tempbuffer0, sizeof(tempbuffer0), "%lld", val0);
           snprintf(tempbuffer1, sizeof(tempbuffer1), "%lld", val1);
@@ -1613,7 +1614,8 @@ void sendQueryCounters(bool updateweb)
 
     int valPos = 7; // position of first 2byte value
     int Nvalues = i2cbuf[6];
-    if (Nvalues > ithoWPUCounterLabelLength) {
+    if (Nvalues > ithoWPUCounterLabelLength)
+    {
       E_LOG("WPU Counter array too long. Counters not read.");
       return;
     }
@@ -1622,26 +1624,29 @@ void sendQueryCounters(bool updateweb)
     {
       ithoCounters.clear();
     }
-    
+
     uint16_t val;
-    for (int i=0; i < Nvalues; i++)
-    {   
-        int idx = 2 * i + valPos; // idx: start of value in raw bytes
-        // read 2 raw bytes: uint16_t.
-        val = i2cbuf[idx+1];
-        val |= (i2cbuf[idx] << 8);
+    for (int i = 0; i < Nvalues; i++)
+    {
+      int idx = 2 * i + valPos; // idx: start of value in raw bytes
+      // read 2 raw bytes: uint16_t.
+      val = i2cbuf[idx + 1];
+      val |= (i2cbuf[idx] << 8);
 
-        ithoCounters.push_back(ithoDeviceMeasurements());
-        
-        // label
-        if (systemConfig.api_normalize == 0) {
-            ithoCounters.back().name = ithoWPUCounterLabels[i].labelFull;
-        } else {
-            ithoCounters.back().name = ithoWPUCounterLabels[i].labelNormalized;
-        }
+      ithoCounters.push_back(ithoDeviceMeasurements());
 
-        ithoCounters.back().type = ithoDeviceMeasurements::is_int;
-        ithoCounters.back().value.intval = val;
+      // label
+      if (systemConfig.api_normalize == 0)
+      {
+        ithoCounters.back().name = ithoWPUCounterLabels[i].labelFull;
+      }
+      else
+      {
+        ithoCounters.back().name = ithoWPUCounterLabels[i].labelNormalized;
+      }
+
+      ithoCounters.back().type = ithoDeviceMeasurements::is_int;
+      ithoCounters.back().value.intval = val;
     }
   }
 };
@@ -1739,45 +1744,49 @@ bool check_i2c_reply(const uint8_t *buf, size_t buflen, const uint16_t opcode)
 }
 int cast_to_signed_int(int val, int length)
 {
-  switch (length) {
+  switch (length)
+  {
   case 4:
-      return static_cast<int32_t>(val);
+    return static_cast<int32_t>(val);
   case 2:
-      return static_cast<int16_t>(val);
+    return static_cast<int16_t>(val);
   case 1:
-      return static_cast<int8_t>(val);
+    return static_cast<int8_t>(val);
   default:
-      return 0;
+    return 0;
   }
 }
 
-int64_t cast_raw_bytes_to_int(int32_t* valptr, int length, bool is_signed)
+int64_t cast_raw_bytes_to_int(int32_t *valptr, int length, bool is_signed)
 // valptr is a pointer to 4 rawbytes, which are casted to the
 //  correct value and returned as int32.
 {
-  if (is_signed) {
-    switch (length) {
+  if (is_signed)
+  {
+    switch (length)
+    {
     case 4:
-        return *reinterpret_cast<int32_t*>(valptr);
+      return *reinterpret_cast<int32_t *>(valptr);
     case 2:
-        return *reinterpret_cast<int16_t*>(valptr);
+      return *reinterpret_cast<int16_t *>(valptr);
     case 1:
-        return *reinterpret_cast<int8_t*>(valptr);
+      return *reinterpret_cast<int8_t *>(valptr);
     default:
-        return 0;
+      return 0;
     }
   }
   else
   {
-    switch (length) {
+    switch (length)
+    {
     case 4:
-        return *reinterpret_cast<uint32_t*>(valptr);
+      return *reinterpret_cast<uint32_t *>(valptr);
     case 2:
-        return *reinterpret_cast<uint16_t*>(valptr);
+      return *reinterpret_cast<uint16_t *>(valptr);
     case 1:
-        return *reinterpret_cast<uint8_t*>(valptr);
+      return *reinterpret_cast<uint8_t *>(valptr);
     default:
-        return 0;
+      return 0;
     }
   }
 }
@@ -1786,31 +1795,34 @@ int64_t cast_raw_bytes_to_int(int32_t* valptr, int length, bool is_signed)
 // bit 7: signed (1), unsigned (0)
 // bit 6,5,4 : length
 // bit 3,2,1,0 : divider
-uint32_t get_divider_from_datatype(int8_t datatype) {
+uint32_t get_divider_from_datatype(int8_t datatype)
+{
 
   const uint32_t _divider[] =
-  {
-    1, 10, 100, 1000, 10000, 100000,
-    1000000, 10000000, 100000000,
-    1, 1,  // dividers index 9 and 10 should be 0.1 and 0.01
-    1, 1, 1, 256, 2
-  };
+      {
+          1, 10, 100, 1000, 10000, 100000,
+          1000000, 10000000, 100000000,
+          1, 1, // dividers index 9 and 10 should be 0.1 and 0.01
+          1, 1, 1, 256, 2};
   return _divider[datatype & 0x0f];
 }
 
-uint8_t get_length_from_datatype(int8_t datatype) {
- 
-  switch(datatype & 0x70) {
-    case 0x10:
-      return 2;
-    case 0x20:
-    case 0x70:
-      return 4;
-    default:
-      return 1; 
+uint8_t get_length_from_datatype(int8_t datatype)
+{
+
+  switch (datatype & 0x70)
+  {
+  case 0x10:
+    return 2;
+  case 0x20:
+  case 0x70:
+    return 4;
+  default:
+    return 1;
   }
 }
 
-bool get_signed_from_datatype(int8_t datatype) {
+bool get_signed_from_datatype(int8_t datatype)
+{
   return datatype & 0x80;
 }
