@@ -26,12 +26,103 @@ WifiConfig::WifiConfig()
   strlcpy(timezone, "Europe/Amsterdam", sizeof(timezone));
 
   configLoaded = false;
+
 } // WifiConfig
 
 // default destructor
 WifiConfig::~WifiConfig()
 {
 } //~WifiConfig
+
+const WifiConfig::wl_status_msg WifiConfig::wl_status_msg_table[]{
+    {WL_NO_SHIELD, "WL_NO_SHIELD"},
+    {WL_IDLE_STATUS, "WL_IDLE_STATUS"},
+    {WL_NO_SSID_AVAIL, "WL_NO_SSID_AVAIL"},
+    {WL_SCAN_COMPLETED, "WL_SCAN_COMPLETED"},
+    {WL_CONNECTED, "WL_CONNECTED"},
+    {WL_CONNECT_FAILED, "WL_CONNECT_FAILED"},
+    {WL_CONNECTION_LOST, "WL_CONNECTION_LOST"},
+    {WL_DISCONNECTED, "WL_DISCONNECTED"}};
+
+const char *WifiConfig::wl_unknown_msg = "UNKNOWN ERROR";
+
+const WifiConfig::tzLabels WifiConfig::tzlabels[]{
+    {"Europe/Amsterdam", 0},
+    {"Europe/Andorra", 0},
+    {"Europe/Astrakhan", 1},
+    {"Europe/Athens", 2},
+    {"Europe/Belgrade", 0},
+    {"Europe/Berlin", 0},
+    {"Europe/Bratislava", 0},
+    {"Europe/Brussels", 0},
+    {"Europe/Bucharest", 2},
+    {"Europe/Budapest", 0},
+    {"Europe/Busingen", 0},
+    {"Europe/Chisinau", 3},
+    {"Europe/Copenhagen", 0},
+    {"Europe/Dublin", 4},
+    {"Europe/Gibraltar", 0},
+    {"Europe/Guernsey", 5},
+    {"Europe/Helsinki", 2},
+    {"Europe/Isle_of_Man", 5},
+    {"Europe/Istanbul", 6},
+    {"Europe/Jersey", 5},
+    {"Europe/Kaliningrad", 7},
+    {"Europe/Kyiv", 2},
+    {"Europe/Kirov", 6},
+    {"Europe/Lisbon", 8},
+    {"Europe/Ljubljana", 0},
+    {"Europe/London", 5},
+    {"Europe/Luxembourg", 0},
+    {"Europe/Madrid", 0},
+    {"Europe/Malta", 0},
+    {"Europe/Mariehamn", 2},
+    {"Europe/Minsk", 6},
+    {"Europe/Monaco", 0},
+    {"Europe/Moscow", 9},
+    {"Europe/Oslo", 0},
+    {"Europe/Paris", 0},
+    {"Europe/Podgorica", 0},
+    {"Europe/Prague", 0},
+    {"Europe/Riga", 2},
+    {"Europe/Rome", 0},
+    {"Europe/Samara", 1},
+    {"Europe/San_Marino", 0},
+    {"Europe/Sarajevo", 0},
+    {"Europe/Saratov", 1},
+    {"Europe/Simferopol", 9},
+    {"Europe/Skopje", 0},
+    {"Europe/Sofia", 2},
+    {"Europe/Stockholm", 0},
+    {"Europe/Tallinn", 2},
+    {"Europe/Tirane", 0},
+    {"Europe/Ulyanovsk", 1},
+    {"Europe/Uzhgorod", 2},
+    {"Europe/Vaduz", 0},
+    {"Europe/Vatican", 0},
+    {"Europe/Vienna", 0},
+    {"Europe/Vilnius", 2},
+    {"Europe/Volgograd", 6},
+    {"Europe/Warsaw", 0},
+    {"Europe/Zagreb", 0},
+    {"Europe/Zaporizhzhia", 2},
+    {"Europe/Zurich", 0},
+    {"Etc/Greenwich", 10},
+    {"Etc/Universal", 11}};
+
+const char WifiConfig::tz_strings[][30] =
+    {"CET-1CEST,M3.5.0,M10.5.0/3",
+     "<+04>-4",
+     "EET-2EEST,M3.5.0/3,M10.5.0/4",
+     "EET-2EEST,M3.5.0,M10.5.0/3",
+     "IST-1GMT0,M10.5.0,M3.5.0/1",
+     "GMT0BST,M3.5.0/1,M10.5.0",
+     "<+03>-3",
+     "EET-2",
+     "WET0WEST,M3.5.0/1,M10.5.0",
+     "MSK-3",
+     "GMT0",
+     "UTC0"};
 
 bool WifiConfig::set(JsonObjectConst obj)
 {
@@ -114,6 +205,37 @@ void WifiConfig::get(JsonObject obj) const
   obj["hostname"] = hostname;
   obj["ntpserver"] = ntpserver;
   obj["timezone"] = timezone;
+}
+
+const char *WifiConfig::wl_status_to_name(wl_status_t code) const
+{
+  size_t i;
+
+  for (i = 0; i < sizeof(wl_status_msg_table) / sizeof(wl_status_msg_table[0]); ++i)
+  {
+    if (wl_status_msg_table[i].code == code)
+    {
+      return wl_status_msg_table[i].msg;
+    }
+  }
+  return wl_unknown_msg;
+}
+
+const char *WifiConfig::getTimeZoneStr() const
+{
+
+  const char *tz_string = tz_strings[0]; // default tz string
+
+  const char *target = timezone; // the timezone we want to find
+  for (const auto &label : tzlabels)
+  {
+    if (std::strcmp(target, label.tzlabel) == 0)
+    {
+      // the timezone matches, so we've found the corresponding index
+      tz_string = tz_strings[static_cast<int>(label.tzindex)];
+    }
+  }
+  return tz_string;
 }
 
 void wifiScan()
@@ -236,18 +358,4 @@ void logWifiInfo()
   I_LOG("  Mode:%s", modes[WiFi.getMode()]);
   I_LOG("  Status:%s", wifiConfig.wl_status_to_name(WiFi.status()));
   I_LOG("  IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-}
-
-const char *WifiConfig::wl_status_to_name(wl_status_t code) const
-{
-  size_t i;
-
-  for (i = 0; i < sizeof(wl_status_msg_table) / sizeof(wl_status_msg_table[0]); ++i)
-  {
-    if (wl_status_msg_table[i].code == code)
-    {
-      return wl_status_msg_table[i].msg;
-    }
-  }
-  return wl_unknown_msg;
 }
