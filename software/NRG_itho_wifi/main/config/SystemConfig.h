@@ -62,6 +62,7 @@ public:
   uint8_t i2cmenu;
   uint8_t i2c_safe_guard;
   uint8_t i2c_sniffer;
+  uint8_t api_settings;
 
   mutable bool rfInitOK;
   uint8_t nonQ_cmd_clearsQ;
