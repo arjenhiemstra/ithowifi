@@ -332,7 +332,7 @@ void webServerInit()
             {
     if (systemConfig.syssec_web) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password)) {
-        webauth_ok = false; 
+        webauth_ok = false;
         return request->requestAuthentication();
       }
       else {
@@ -465,8 +465,8 @@ void webServerInit()
   server.onNotFound([](AsyncWebServerRequest *request)
                     {
     //--> download or not
-    //--> Handle request    
-    //if not known file            
+    //--> Handle request
+    //if not known file
     //Handle Unknown Request
     if (!handleFileRead(request))
       request->send(404); });
@@ -607,6 +607,155 @@ void handleAPI(AsyncWebServerRequest *request)
 
         return;
       }
+    }
+    else if (strcmp(p->name().c_str(), "getsetting") == 0)
+    {
+      if (systemConfig.api_settings == 0)
+      {
+        request->send(403, "text/html", "The settings API is disabled");
+        return;
+      }
+
+      uint8_t idx = static_cast<uint8_t>(p->value().toInt());
+
+      if (ithoSettingsArray == nullptr)
+      {
+        request->send(400, "text/html", "The Itho settings array is NULL");
+        return;
+      }
+
+      if (idx >= currentIthoSettingsLength())
+      {
+        request->send(400, "text/html", "The setting index is invalid");
+        return;
+      }
+
+      // Get the settings directly instead of scheduling them, that way we can
+      // present the up-to-date settings in the response.
+      resultPtr2410 = sendQuery2410(idx, true);
+      ithoSettings *setting = &ithoSettingsArray[idx];
+      double cur = 0.0;
+      double min = 0.0;
+      double max = 0.0;
+
+      if (resultPtr2410 == nullptr)
+      {
+        request->send(500, "text/html", "The I2C command failed");
+        return;
+      }
+
+      if (!decodeQuery2410(resultPtr2410, setting, &cur, &min, &max))
+      {
+        request->send(500, "text/html", "Failed to decode the setting's value");
+        return;
+      }
+
+      StaticJsonDocument<128> doc;
+      JsonObject root = doc.to<JsonObject>();
+
+      root["current"] = cur;
+      root["minimum"] = min;
+      root["maximum"] = max;
+
+      AsyncResponseStream *response = request->beginResponseStream("text/html");
+
+      serializeJson(root, *response);
+      request->send(response);
+      return;
+    }
+    else if (strcmp(p->name().c_str(), "setsetting") == 0)
+    {
+      if (systemConfig.api_settings == 0)
+      {
+        request->send(403, "text/html", "The settings API is disabled");
+        return;
+      }
+
+      AsyncWebParameter *val_param = request->getParam("value");
+
+      if (val_param == nullptr)
+      {
+        request->send(400, "text/html", "The 'value' parameter is required");
+        return;
+      }
+
+      if (ithoSettingsArray == nullptr)
+      {
+        request->send(400, "text/html", "The Itho settings array is NULL");
+        return;
+      }
+
+      uint8_t idx = static_cast<uint8_t>(p->value().toInt());
+
+      if (idx >= currentIthoSettingsLength())
+      {
+        request->send(400, "text/html", "The setting index is invalid");
+        return;
+      }
+
+      ithoSettings *setting = &ithoSettingsArray[idx];
+      resultPtr2410 = sendQuery2410(idx, true);
+      double cur = 0.0;
+      double min = 0.0;
+      double max = 0.0;
+
+      if (resultPtr2410 == nullptr)
+      {
+        request->send(500, "text/html", "The I2C command failed");
+        return;
+      }
+
+      if (!decodeQuery2410(resultPtr2410, setting, &cur, &min, &max))
+      {
+        request->send(500, "text/html", "Failed to decode the setting's value");
+        return;
+      }
+
+      const String &val = val_param->value();
+      int32_t new_val = 0;
+      double new_dval = val.toDouble();
+
+      if (new_dval < min || new_dval > max)
+      {
+        request->send(400, "text/html", "The specified value falls outside of the allowed range");
+        return;
+      }
+
+      if (setting->type == ithoSettings::is_float)
+      {
+        double dval = new_dval * setting->divider;
+
+        switch (ithoSettingsArray[idx].length)
+        {
+          case 1:
+            new_val = static_cast<int32_t>(static_cast<int8_t>(dval));
+            break;
+          case 2:
+            new_val = static_cast<int32_t>(static_cast<int16_t>(dval));
+            break;
+          default:
+            new_val = static_cast<int32_t>(dval);
+            break;
+        }
+      }
+      else
+      {
+        new_val = static_cast<int32_t>(new_dval);
+      }
+
+      // Settings are updated synchronously as API clients might expect the
+      // response to not return until the settings are up to date (this is also
+      // easier to work with).
+      if (setSetting2410(idx, new_val, true))
+      {
+        request->send(200, "OK");
+      }
+      else
+      {
+        request->send(500, "text/html", "The I2C command failed");
+      }
+
+      return;
     }
     else if (strcmp(p->name().c_str(), "command") == 0)
     {
@@ -816,7 +965,7 @@ void handleCoredumpDownload(AsyncWebServerRequest *request)
         ESP_ERROR_CHECK(
             esp_partition_read(partition, alreadySent, buffer, maxLen));
         return maxLen;
-      } else {  
+      } else {
         ESP_ERROR_CHECK(esp_partition_read(partition, alreadySent, buffer,
                                            file_size - alreadySent));
         //memcpy(buffer, fileArray + alreadySent, fileSize - alreadySent);

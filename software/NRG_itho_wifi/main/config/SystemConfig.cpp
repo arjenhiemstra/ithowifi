@@ -13,6 +13,7 @@ SystemConfig::SystemConfig()
   syssec_api = 0;
   syssec_edit = 0;
   api_normalize = 0;
+  api_settings = 0;
   syssht30 = 0;
   mqtt_active = 0;
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
@@ -111,6 +112,11 @@ bool SystemConfig::set(JsonObjectConst obj)
   {
     updated = true;
     api_normalize = obj["api_normalize"];
+  }
+  if (!obj["api_settings"].isNull())
+  {
+    updated = true;
+    api_settings = obj["api_settings"];
   }
   if (!obj["syssht30"].isNull())
   {
@@ -381,6 +387,7 @@ void SystemConfig::get(JsonObject obj) const
     obj["i2cmenu"] = i2cmenu;
     obj["i2c_safe_guard"] = i2c_safe_guard;
     obj["i2c_sniffer"] = i2c_sniffer;
+    obj["api_settings"] = api_settings;
   }
   if (complete || get_mqtt_settings)
   {
