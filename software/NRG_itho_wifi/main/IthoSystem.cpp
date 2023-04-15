@@ -220,29 +220,22 @@ void processSettingResult(const uint8_t index, const bool loop)
   root["loop"] = loop;
   if (resultPtr2410 != nullptr && ithoSettingsArray != nullptr)
   {
-    int64_t val0, val1, val2;
-    val0 = cast_raw_bytes_to_int(resultPtr2410 + 0, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
-    val1 = cast_raw_bytes_to_int(resultPtr2410 + 1, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
-    val2 = cast_raw_bytes_to_int(resultPtr2410 + 2, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
+		double cur = 0.0;
+		double min = 0.0;
+		double max = 0.0;
 
-    if (*(resultPtr2410 + 0) == 0x5555AAAA && *(resultPtr2410 + 1) == 0xAAAA5555 && *(resultPtr2410 + 2) == 0xFFFFFFFF) // something went wrong, indicate error, better handling needed
-    {
+		if (decodeQuery2410(resultPtr2410, &ithoSettingsArray[index], &cur, &min, &max))
+		{
+			root["Current"] = cur;
+			root["Minimum"] = min;
+			root["Maximum"] = max;
+		}
+		else
+		{
       root["Current"] = "error";
       root["Minimum"] = "error";
       root["Maximum"] = "error";
-    }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_int)
-    {
-      root["Current"] = val0;
-      root["Minimum"] = val1;
-      root["Maximum"] = val2;
-    }
-    else
-    {
-      root["Current"] = static_cast<double>((int32_t)val0) / ithoSettingsArray[index].divider;
-      root["Minimum"] = static_cast<double>((int32_t)val1) / ithoSettingsArray[index].divider;
-      root["Maximum"] = static_cast<double>((int32_t)val2) / ithoSettingsArray[index].divider;
-    }
+		}
   }
   else
   {
@@ -1498,6 +1491,33 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
   return values;
 }
 
+bool decodeQuery2410(int32_t *ptr, ithoSettings *setting, double *cur, double *min, double *max)
+{
+	if (*(ptr + 0) == 0x5555AAAA && *(ptr + 1) == 0xAAAA5555 && *(ptr + 2) == 0xFFFFFFFF)
+	{
+		return false;
+	}
+
+	uint8_t len = setting->length;
+	bool is_signed = setting->is_signed;
+	int64_t a = cast_raw_bytes_to_int(ptr + 0, len, is_signed);
+	int64_t b = cast_raw_bytes_to_int(ptr + 1, len, is_signed);
+	int64_t c = cast_raw_bytes_to_int(ptr + 2, len, is_signed);
+
+	*cur = static_cast<double>(static_cast<int32_t>(a));
+	*min = static_cast<double>(static_cast<int32_t>(b));
+	*max = static_cast<double>(static_cast<int32_t>(c));
+
+	if (setting->type == ithoSettings::is_float)
+	{
+		*cur = *cur / setting->divider;
+		*min = *min / setting->divider;
+		*max = *max / setting->divider;
+	}
+
+	return true;
+}
+
 // void setSetting2410(bool updateweb)
 // {
 //   uint8_t index = index2410;
@@ -1505,17 +1525,17 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
 //   setSetting2410(index, value, updateweb);
 // }
 
-void setSetting2410(uint8_t index, int32_t value, bool updateweb)
+bool setSetting2410(uint8_t index, int32_t value, bool updateweb)
 {
 
   if (index == 7 && value == 1 && (currentIthoDeviceID() == 0x14 || currentIthoDeviceID() == 0x1B || currentIthoDeviceID() == 0x1D))
   {
     logMessagejson("<br>!!Warning!! Command ignored!<br>Setting index 7 to value 1 will switch off I2C!", WEBINTERFACE);
-    return;
+    return false;
   }
 
   if (ithoSettingsArray == nullptr)
-    return;
+    return false;
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x10, 0x06, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF};
 
@@ -1543,7 +1563,7 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
     {
       jsonSysmessage("itho2410setres", "format error, first use query 2410");
     }
-    return; // unsupported value format
+    return false; // unsupported value format
   }
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
@@ -1556,7 +1576,7 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
     {
       jsonSysmessage("itho2410setres", "failed");
     }
-    return;
+    return false;
   }
 
   uint8_t i2cbuf[512] = {0};
@@ -1570,6 +1590,7 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
         if (command[6] == i2cbuf[6] && command[7] == i2cbuf[7] && command[8] == i2cbuf[8] && command[9] == i2cbuf[9] && command[23] == i2cbuf[23])
         {
           jsonSysmessage("itho2410setres", "confirmed");
+          return true;
         }
         else
         {
@@ -1582,6 +1603,8 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
       }
     }
   }
+
+  return false;
 }
 
 void sendQueryCounters(bool updateweb)
