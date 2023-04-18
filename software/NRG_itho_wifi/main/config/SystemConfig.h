@@ -12,8 +12,8 @@ class SystemConfig
 {
 private:
 public:
-  char sys_username[22];
-  char sys_password[22];
+  char sys_username[33];
+  char sys_password[33];
   uint8_t syssec_web;
   uint8_t syssec_api;
   uint8_t syssec_edit;
@@ -21,8 +21,8 @@ public:
   uint8_t syssht30;
   uint8_t mqtt_active;
   char mqtt_serverName[65];
-  char mqtt_username[32];
-  char mqtt_password[32];
+  char mqtt_username[33];
+  char mqtt_password[33];
   int mqtt_port;
   int mqtt_version;
   char mqtt_state_topic[128];
