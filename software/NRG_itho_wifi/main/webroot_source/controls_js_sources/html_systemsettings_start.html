@@ -13,10 +13,13 @@
     <div class="pure-control-group">
       <label for="sys_username">Username</label>
       <input id="sys_username" maxlength="20" type="text">
+      <input id="sys_username" maxlength="33" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('input-msg').innerHTML = 'Username truncated to 32 characters.'; } else { document.getElementById('input-msg').innerHTML = ''; }">
+      <span id="input-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
       <label for="sys_password">Password</label>
-      <input id="sys_password" maxlength="20" type="text">
+      <input id="sys_password" maxlength="33" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('input-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('input-msg').innerHTML = ''; }">
+      <span id="input-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
       <label for="option-syssec_web" class="pure-radio">Web interface authentication</label>
