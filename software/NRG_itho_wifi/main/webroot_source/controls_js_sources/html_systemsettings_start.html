@@ -17,7 +17,7 @@
     </div>
     <div class="pure-control-group">
       <label for="sys_password">Password</label>
-      <input id="sys_password" maxlength="33" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('input-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('input-msg').innerHTML = ''; }">
+      <input id="sys_password" maxlength="64" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('input-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('input-msg').innerHTML = ''; }">
       <span id="input-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
