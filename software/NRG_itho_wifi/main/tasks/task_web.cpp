@@ -262,6 +262,8 @@ void webServerInit()
 
   // server.on("/crash", HTTP_GET, handleCoreCrash);
   server.on("/getcoredump", HTTP_GET, handleCoredumpDownload);
+  
+  server.on("/getithosettings", HTTP_GET, handleIthosettingsDownload);
 
   // css_code
   server.on("/pure-min.css", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -1013,6 +1015,16 @@ void handlePrevLogDownload(AsyncWebServerRequest *request)
     strlcpy(link, "/logfile0.log", sizeof(link));
   }
   request->send(ACTIVE_FS, link, "", true);
+}
+
+void handleIthosettingsDownload(AsyncWebServerRequest *request)
+{
+  char link[24]{};
+  if (ACTIVE_FS.exists("/IthoSettings.json"))
+  {
+    strlcpy(link, "/IthoSettings.json", sizeof(link));
+    request->send(ACTIVE_FS, link, "", true);
+  }
 }
 
 void handleFileCreate(AsyncWebServerRequest *request)

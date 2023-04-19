@@ -53,6 +53,7 @@ void handleAPI(AsyncWebServerRequest *request);
 void handleCoredumpDownload(AsyncWebServerRequest *request);
 void handleCurLogDownload(AsyncWebServerRequest *request);
 void handlePrevLogDownload(AsyncWebServerRequest *request);
+void handleIthosettingsDownload(AsyncWebServerRequest *request);
 void handleFileCreate(AsyncWebServerRequest *request);
 void handleFileDelete(AsyncWebServerRequest *request);
 void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);

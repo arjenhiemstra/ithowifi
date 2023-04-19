@@ -598,6 +598,13 @@ $(document).ready(function () {
         index: 0,
         update: false
       }));
+    else if ($(this).attr('id') == 'ithodownloadsettings') {
+      settingIndex = 0;
+      websock.send(JSON.stringify({
+        ithodownloadsetting: true,
+        index: 0,
+        update: false
+      }));
     }
     else if ($(this).attr('id') == 'updatesubmit') {
       e.preventDefault();
