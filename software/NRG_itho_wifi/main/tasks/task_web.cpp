@@ -1025,6 +1025,15 @@ void handleIthosettingsDownload(AsyncWebServerRequest *request)
     strlcpy(link, "/IthoSettings.json", sizeof(link));
     request->send(ACTIVE_FS, link, "", true);
   }
+  // // Clear the file
+  // File file = ACTIVE_FS.open("/IthoSettings.json", "w+");
+  // if (!file)
+  // {
+  //   E_LOG("Failed to reset IthoSettings,json file");
+  //   return;
+  // }
+  // // Close the file
+  // file.close();
 }
 
 void handleFileCreate(AsyncWebServerRequest *request)

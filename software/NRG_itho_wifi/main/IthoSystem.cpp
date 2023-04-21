@@ -25,6 +25,7 @@ std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 std::vector<ithoDeviceMeasurements> ithoCounters;
 struct lastCommand lastCmd;
 ithoSettings *ithoSettingsArray = nullptr;
+bool writtenToFile = false;
 
 const std::map<cmdOrigin, const char *> cmdOriginMap = {
     {cmdOrigin::HTMLAPI, "HTML API"},
@@ -245,39 +246,46 @@ void processSettingResult(const uint8_t index, const bool loop)
   }
   logMessagejson(root, ITHOSETTINGS);
 
-  //send line to file
+  //send line with settings to file
   if (!ACTIVE_FS.exists("/IthoSettings.json"))
   {    
     // If the file doesn't exist, create it
     File file = ACTIVE_FS.open("/IthoSettings.json", "w+");
     if (!file)
     {
-     E_LOG("Failed to create IthoSettings,json file for writing");
-     return;
+      E_LOG("Failed to create IthoSettings,json file for writing");
+      return;
     }
-    // Write header to the file
-    String headerIthoSettings = "Index	Description	Current	Minimum	Maximum";
-    file.write(reinterpret_cast<const uint8_t*>(headerIthoSettings.c_str()), headerIthoSettings.length());
-  }
+    file.close();   // Close the file
 
-  // If the file already exists, open it for writing
-  File file = ACTIVE_FS.open("/IthoSettings.json", "w");
-  if (!file)
-  {
-    E_LOG("Failed to open IthoSettings.json file for writing");
-    return;
+    // Open the file for appending
+    file = ACTIVE_FS.open("/IthoSettings.json", "a+");
+    if (!file)
+    {
+      E_LOG("Failed to open IthoSettings.json file for writing");
+      return;
+    }
+    // Select pairs to write, exclude update and loop
+    DynamicJsonDocument filteredRoot(256);
+    for (JsonPair kv : root) 
+    {
+      String key = kv.key().c_str();
+      if (key != "update" && key != "loop") 
+      {
+        filteredRoot[key] = kv.value();
+      }
+    }
+    size_t len = measureJsonPretty(filteredRoot);
+    std::unique_ptr<char[]> buffer(new char[len]); // Ensure buffer memory if released after the if statement
+    if (buffer)
+    {
+      serializeJsonPretty(filteredRoot, buffer.get(), len);
+      file.write(reinterpret_cast<const uint8_t*>(buffer.get()), len);
+      file.write(','); // Add a comma after each line
+      file.write('\n'); // Add a newline after each line
+    }
+    file.close();   // Close the file
   }
-
-  // Write the JSON data to the file
-  size_t len = measureJson(root);
-  std::unique_ptr<char[]> buffer(new char[len + 1]);
-  if (buffer)
-  {
-    serializeJson(root, buffer.get(), len + 1);
-    file.write(reinterpret_cast<const uint8_t*>(buffer.get()), len + 1);
-  }
-  // Close the file
-  file.close();
 }
 
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version)
