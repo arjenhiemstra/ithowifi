@@ -244,6 +244,40 @@ void processSettingResult(const uint8_t index, const bool loop)
     root["Maximum"] = nullptr;
   }
   logMessagejson(root, ITHOSETTINGS);
+
+  //send line to file
+  if (!ACTIVE_FS.exists("/IthoSettings.json"))
+  {    
+    // If the file doesn't exist, create it
+    File file = ACTIVE_FS.open("/IthoSettings.json", "w+");
+    if (!file)
+    {
+     E_LOG("Failed to create IthoSettings,json file for writing");
+     return;
+    }
+    // Write header to the file
+    String headerIthoSettings = "Index	Description	Current	Minimum	Maximum";
+    file.write(reinterpret_cast<const uint8_t*>(headerIthoSettings.c_str()), headerIthoSettings.length());
+  }
+
+  // If the file already exists, open it for writing
+  File file = ACTIVE_FS.open("/IthoSettings.json", "w");
+  if (!file)
+  {
+    E_LOG("Failed to open IthoSettings.json file for writing");
+    return;
+  }
+
+  // Write the JSON data to the file
+  size_t len = measureJson(root);
+  std::unique_ptr<char[]> buffer(new char[len + 1]);
+  if (buffer)
+  {
+    serializeJson(root, buffer.get(), len + 1);
+    file.write(reinterpret_cast<const uint8_t*>(buffer.get()), len + 1);
+  }
+  // Close the file
+  file.close();
 }
 
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version)
