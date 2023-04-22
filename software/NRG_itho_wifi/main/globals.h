@@ -50,3 +50,5 @@ extern WiFiClient client;
 
 extern IthoCC1101 rf;
 extern IthoPacket packet;
+
+extern JsonArray sumJson ; // Json array of Itho settings objects, one object per index; defined in IthoSystem JsonArray 

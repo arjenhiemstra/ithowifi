@@ -50,7 +50,7 @@ uint8_t currentItho_fwversion() { return itho_fwversion; }
 uint16_t currentIthoSettingsLength() { return ithoSettingsLength; }
 int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
 
-// Define JSON object to accumulate all Itho settings in function processSettingResult()
+// Define JSON array to accumulate all Itho settings (in function processSettingResult() )
 StaticJsonDocument<16384> content; // Too large? DynamicJsonDocument?
 JsonArray sumJson = content.to<JsonArray>(); // Create Json array
 
@@ -249,54 +249,18 @@ void processSettingResult(const uint8_t index, const bool loop)
   }
   logMessagejson(root, ITHOSETTINGS);
   
-  // Assemble settings data for every index into sumJson array
-  // sumJson.add(root); // append the JsonObject to the end of the JsonArray
-  // Create a JsonObject with only "Index", "Description", "Current", "Minimum"and "Maximum and add it to the JsonArray
-  sumJson.add(JsonObject({"Index",root["Index"]},{"Description",root["Description"]},
-              {"Current",root["Current"]},{"Minimum",root["Minimum"]},{"Maximum",root["Maximum"]}));
-}
-
-
-  // //send line with settings to file
-  // if (!ACTIVE_FS.exists("/IthoSettings.json"))
-  // {    
-  //   // If the file doesn't exist, create it
-  //   File file = ACTIVE_FS.open("/IthoSettings.json", "w+");
-  //   if (!file)
-  //   {
-  //     E_LOG("Failed to create IthoSettings,json file for writing");
-  //     return;
-  //   }
-  //   file.close();   // Close the file
-
-  //   // Open the file for appending
-  //   file = ACTIVE_FS.open("/IthoSettings.json", "a+");
-  //   if (!file)
-  //   {
-  //     E_LOG("Failed to open IthoSettings.json file for writing");
-  //     return;
-  //   }
-  //   // Select pairs to write, exclude update and loop
-  //   DynamicJsonDocument filteredRoot(256);
-  //   for (JsonPair kv : root) 
-  //   {
-  //     String key = kv.key().c_str();
-  //     if (key != "update" && key != "loop") 
-  //     {
-  //       filteredRoot[key] = kv.value();
-  //     }
-  //   }
-  //   size_t len = measureJsonPretty(filteredRoot);
-  //   std::unique_ptr<char[]> buffer(new char[len]); // Ensure buffer memory if released after the if statement
-  //   if (buffer)
-  //   {
-  //     serializeJsonPretty(filteredRoot, buffer.get(), len);
-  //     file.write(reinterpret_cast<const uint8_t*>(buffer.get()), len);
-  //     file.write(','); // Add a comma after each line
-  //     file.write('\n'); // Add a newline after each line
-  //   }
-  //   file.close();   // Close the file
-  // }
+  // Copy settings data for every index into sumJson array
+  // First, select pairs to copy, exclude update and loop
+  DynamicJsonDocument filteredRoot(256);
+  for (JsonPair kv : root) 
+  {
+    String key = kv.key().c_str();
+    if (key != "update" && key != "loop") 
+    {
+      filteredRoot[key] = kv.value();
+    }
+  }
+  sumJson.add(filteredRoot); // append the JsonObject to the end of the JsonArray
 }
 
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version)
