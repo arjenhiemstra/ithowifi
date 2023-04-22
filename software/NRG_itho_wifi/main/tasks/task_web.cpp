@@ -1020,6 +1020,16 @@ void handlePrevLogDownload(AsyncWebServerRequest *request)
 void handleIthosettingsDownload(AsyncWebServerRequest *request)
 {
   char link[24]{};
+  size_t len = measureJson(IthoSystem.sumJson);
+  std::unique_ptr<char[]> buffer(new char[len]); // Ensure buffer memory if released after the if statement
+  if (buffer)
+  {
+    serializeJson(IthoSystem.sumJson, buffer.get(), len);
+    file.write(reinterpret_cast<const uint8_t*>(buffer.get()), len);
+    // file.write(','); // Add a comma after each line
+    // file.write('\n'); // Add a newline after each line
+  }
+  file.close();   // Close the file
   if (ACTIVE_FS.exists("/IthoSettings.json"))
   {
     strlcpy(link, "/IthoSettings.json", sizeof(link));
