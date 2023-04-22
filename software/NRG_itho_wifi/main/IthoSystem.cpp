@@ -53,6 +53,7 @@ int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
 // Define JSON array to accumulate all Itho settings (in function processSettingResult() )
 StaticJsonDocument<16384> content; // Too large? DynamicJsonDocument?
 JsonArray sumJson = content.to<JsonArray>(); // Create Json array
+bool sumJsonReady = false; // no sumJson filled yet
 
 struct ihtoDeviceType
 {
@@ -249,18 +250,30 @@ void processSettingResult(const uint8_t index, const bool loop)
   }
   logMessagejson(root, ITHOSETTINGS);
   
-  // Copy settings data for every index into sumJson array
-  // First, select pairs to copy, exclude update and loop
-  DynamicJsonDocument filteredRoot(256);
-  for (JsonPair kv : root) 
-  {
-    String key = kv.key().c_str();
-    if (key != "update" && key != "loop") 
+  // For every index copy settings into sumJson array, stop when all indexes have been processed (sumJsonReady = true)
+  
+  const uint16_t len = currentIthoSettingsLength();
+   if (!sumJsonReady) 
+  { 
+    // D_LOG("index = %d, currentIthoSettingsLen = %d\n", index, len);
+    if (index >=len -1)
     {
-      filteredRoot[key] = kv.value();
+      sumJsonReady = true;
+      D_LOG("sumJsonReady true\n");
     }
-  }
+    // First, select pairs to copy, exclude update and loop
+    DynamicJsonDocument filteredRoot(256);
+    for (JsonPair kv : root) 
+    {
+      String key = kv.key().c_str();
+      if (key != "update" && key != "loop") 
+      {
+        filteredRoot[key] = kv.value();
+      }
+    }
   sumJson.add(filteredRoot); // append the JsonObject to the end of the JsonArray
+  D_LOG("settings added to sumJson\n");
+  }
 }
 
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version)

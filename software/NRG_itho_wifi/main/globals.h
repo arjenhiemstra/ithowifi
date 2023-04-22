@@ -52,3 +52,4 @@ extern IthoCC1101 rf;
 extern IthoPacket packet;
 
 extern JsonArray sumJson ; // Json array of Itho settings objects, one object per index; defined in IthoSystem JsonArray 
+extern bool sumJsonReady; // true when all indexes have been copied into sumJson, false when the sumJson has been downloaded

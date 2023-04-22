@@ -1025,6 +1025,11 @@ The array sumJson is serialized and send to IthoSettings.json, that than is sent
 */
 void handleIthosettingsDownload(AsyncWebServerRequest *request)
 {
+  if (!sumJsonReady)
+  { 
+    D_LOG("No IthoSettings.json file ready yet.\n");
+    return request->send(400, "text/plain", "FILE NOT READY");
+  }
   //send Json array with settings to file
   File file;
   if (!ACTIVE_FS.exists("/IthoSettings.json")) // If the file doesn't exist, create it
@@ -1046,7 +1051,7 @@ void handleIthosettingsDownload(AsyncWebServerRequest *request)
     return;
   }
   size_t len = measureJsonPretty(sumJson);
-  std::unique_ptr<char[]> buffer(new char[len]); // Ensure buffer memory if released after the if statement
+  std::unique_ptr<char[]> buffer(new char[len]); // Ensure buffer memory if released after the end of this function
   if (buffer)
   {
     serializeJsonPretty(sumJson, buffer.get(), len);
@@ -1070,6 +1075,8 @@ void handleIthosettingsDownload(AsyncWebServerRequest *request)
   }
   // Close the file
   file.close();
+  // Enable new sumJson
+  sumJsonReady = false;
 }
 
 void handleFileCreate(AsyncWebServerRequest *request)
