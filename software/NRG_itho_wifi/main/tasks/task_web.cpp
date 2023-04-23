@@ -1017,33 +1017,66 @@ void handlePrevLogDownload(AsyncWebServerRequest *request)
   request->send(ACTIVE_FS, link, "", true);
 }
 
+/*
+handleIthosettingsDownload() is called from server.on("/getithosettings",..
+The string /getithosettings is generated in html_ithosettings.html when the button 'Download IthoSettings.json' is pressed
+The Json array sumJson (extern declared in globals.h) is generated in IthoSystem after the Itho settings are retrieved on the Itho settings webpage.
+The array sumJson is serialized and send to IthoSettings.json, that than is sent to download.
+*/
 void handleIthosettingsDownload(AsyncWebServerRequest *request)
 {
-  char link[24]{};
-  size_t len = measureJson(IthoSystem.sumJson);
-  std::unique_ptr<char[]> buffer(new char[len]); // Ensure buffer memory if released after the if statement
+  if (!sumJsonReady)
+  { 
+    D_LOG("No IthoSettings.json file ready yet.\n");
+    return request->send(400, "text/plain", "FILE NOT READY");
+  }
+  //send Json array with settings to file
+  File file;
+  if (!ACTIVE_FS.exists("/IthoSettings.json")) // If the file doesn't exist, create it
+  {    
+    file = ACTIVE_FS.open("/IthoSettings.json", "w+");
+    if (!file)
+    {
+      E_LOG("Failed to create IthoSettings.json file for writing");
+      return;
+    }
+  file.close();   // Close the file
+  }
+
+  // Open the file for appending
+  file = ACTIVE_FS.open("/IthoSettings.json", "a+");
+  if (!file)
+  {
+    E_LOG("Failed to open IthoSettings.json file for writing");
+    return;
+  }
+  size_t len = measureJsonPretty(sumJson);
+  std::unique_ptr<char[]> buffer(new char[len]); // Ensure buffer memory if released after the end of this function
   if (buffer)
   {
-    serializeJson(IthoSystem.sumJson, buffer.get(), len);
+    serializeJsonPretty(sumJson, buffer.get(), len);
     file.write(reinterpret_cast<const uint8_t*>(buffer.get()), len);
-    // file.write(','); // Add a comma after each line
-    // file.write('\n'); // Add a newline after each line
   }
   file.close();   // Close the file
+
+  char link[24]{};
   if (ACTIVE_FS.exists("/IthoSettings.json"))
   {
     strlcpy(link, "/IthoSettings.json", sizeof(link));
     request->send(ACTIVE_FS, link, "", true);
   }
-  // // Clear the file
-  // File file = ACTIVE_FS.open("/IthoSettings.json", "w+");
-  // if (!file)
-  // {
-  //   E_LOG("Failed to reset IthoSettings,json file");
-  //   return;
-  // }
-  // // Close the file
-  // file.close();
+  
+  // Clear the file
+  file = ACTIVE_FS.open("/IthoSettings.json", "w+");
+  if (!file)
+  {
+    E_LOG("Failed to reset IthoSettings,json file");
+    return;
+  }
+  // Close the file
+  file.close();
+  // Enable new sumJson
+  sumJsonReady = false;
 }
 
 void handleFileCreate(AsyncWebServerRequest *request)
