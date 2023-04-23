@@ -263,7 +263,7 @@ void webServerInit()
   // server.on("/crash", HTTP_GET, handleCoreCrash);
   server.on("/getcoredump", HTTP_GET, handleCoredumpDownload);
   
-  server.on("/getithosettings", HTTP_GET, handleIthosettingsDownload);
+  server.on("/getithosettings", HTTP_GET, handleIthosettingsDownload); // Download IthoSettings.json
 
   // css_code
   server.on("/pure-min.css", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -1020,37 +1020,25 @@ void handlePrevLogDownload(AsyncWebServerRequest *request)
 /*
 handleIthosettingsDownload() is called from server.on("/getithosettings",..
 The string /getithosettings is generated in html_ithosettings.html when the button 'Download IthoSettings.json' is pressed
-The Json array sumJson (extern declared in globals.h) is generated in IthoSystem after the Itho settings are retrieved on the Itho settings webpage.
-The array sumJson is serialized and send to IthoSettings.json, that than is sent to download.
+The Json array sumJson (extern declared in globals.h) is generated in IthoSystem.cpp when the Itho settings are retrieved. 
+The array sumJson is serialized and sent to  file IthoSettings.json, that then is offered for download.
 */
 void handleIthosettingsDownload(AsyncWebServerRequest *request)
 {
   if (!sumJsonReady)
   { 
-    D_LOG("No IthoSettings.json file ready yet.\n");
-    return request->send(400, "text/plain", "FILE NOT READY");
+    D_LOG("No IthoSettings.json file ready yet.");
+    return request->send(400, "text/plain", "FILE NOT READY YET, PRESS BROWSER BACK BUTTON");
   }
   //send Json array with settings to file
-  File file;
-  if (!ACTIVE_FS.exists("/IthoSettings.json")) // If the file doesn't exist, create it
-  {    
-    file = ACTIVE_FS.open("/IthoSettings.json", "w+");
-    if (!file)
-    {
-      E_LOG("Failed to create IthoSettings.json file for writing");
-      return;
-    }
-  file.close();   // Close the file
-  }
-
-  // Open the file for appending
-  file = ACTIVE_FS.open("/IthoSettings.json", "a+");
+  File file = ACTIVE_FS.open("/IthoSettings.json", "w+"); // Create empty file
   if (!file)
   {
-    E_LOG("Failed to open IthoSettings.json file for writing");
+    E_LOG("Failed to create IthoSettings.json file for writing");
     return;
   }
   size_t len = measureJsonPretty(sumJson);
+  // D_LOG("sumJson length %d, memory %d", len, sumJson.memoryUsage());
   std::unique_ptr<char[]> buffer(new char[len]); // Ensure buffer memory if released after the end of this function
   if (buffer)
   {
@@ -1065,18 +1053,6 @@ void handleIthosettingsDownload(AsyncWebServerRequest *request)
     strlcpy(link, "/IthoSettings.json", sizeof(link));
     request->send(ACTIVE_FS, link, "", true);
   }
-  
-  // Clear the file
-  file = ACTIVE_FS.open("/IthoSettings.json", "w+");
-  if (!file)
-  {
-    E_LOG("Failed to reset IthoSettings,json file");
-    return;
-  }
-  // Close the file
-  file.close();
-  // Enable new sumJson
-  sumJsonReady = false;
 }
 
 void handleFileCreate(AsyncWebServerRequest *request)
