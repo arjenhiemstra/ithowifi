@@ -54,7 +54,7 @@ int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
 // The array is extern, for task_web.cpp
 DynamicJsonDocument content(10000); // Is sufficient for 13 kB file
 JsonArray sumJson = content.to<JsonArray>(); // Create Json array
-static bool sumJsonReady = false; // no sumJson filled yet
+bool sumJsonReady = false; // no sumJson filled yet
 static bool* sumJsonFilled = new bool[currentIthoSettingsLength()-1]{false}; // Array to check that every index has been copied
 
 struct ihtoDeviceType
@@ -281,7 +281,7 @@ void processSettingResult(const uint8_t index, const bool loop)
         }
       }
       sumJson.add(filteredRoot); // append the JsonObject at the end of the JsonArray
-      // D_LOG("settings added to sumJson, index %d", index);
+      D_LOG("settings added to sumJson, index %d", index);
       sumJsonFilled[index] = true; 
       if (index >= currentIthoSettingsLength() - 1) // Last index copied, but...
       {
@@ -295,9 +295,8 @@ void processSettingResult(const uint8_t index, const bool loop)
             break;
           }
         }
-        // if (sumJsonReady) 
-        // {D_LOG("sumJson filled, sumJsonReady true");} else {D_LOG("sumJson filled, sumJsonReady false");}
-        D_LOG("sumJson filled, sumJsonReady " + std::string(sumJsonReady ? "true" : "false"));
+        if (sumJsonReady) 
+        {D_LOG("sumJson filled, sumJsonReady true");} else {D_LOG("sumJson filled, sumJsonReady false");}
       }
     }
   }
