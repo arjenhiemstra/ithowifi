@@ -262,7 +262,7 @@ void processSettingResult(const uint8_t index, const bool loop)
       sumJsonReady = false;
     }
     // First, select pairs to copy, exclude update and loop
-    StaticJsonDocument filteredRoot(256);
+    StaticJsonDocument<256> filteredRoot;
     for (JsonPair kv : root) 
     {
       String key = kv.key().c_str();

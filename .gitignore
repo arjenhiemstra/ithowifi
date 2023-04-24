@@ -3,7 +3,6 @@ hardware/gerbers 2.1/ithowifi-pos-xlsx.xlsx
 hardware/gerbers 2.1/ithowifi-top-pos.csv
 */.vscode/*
 vscode-build/*
-software/NRG_itho_wifi/main/webroot/controls_js_gz.h
 software/NRG_itho_wifi/main/webroot/edit_html_gz.h
 software/NRG_itho_wifi/main/webroot/favicon_png_gz.h
 software/NRG_itho_wifi/main/webroot/index_html_gz.h
