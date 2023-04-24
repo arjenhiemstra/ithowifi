@@ -54,7 +54,8 @@ int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
 // The array is extern, for task_web.cpp
 DynamicJsonDocument content(10000); // Is sufficient for 13 kB file
 JsonArray sumJson = content.to<JsonArray>(); // Create Json array
-bool sumJsonReady = false; // no sumJson filled yet
+static bool sumJsonReady = false; // no sumJson filled yet
+static bool* sumJsonFilled = new bool[currentIthoSettingsLength()-1]{false}; // Array to check that every index has been copied
 
 struct ihtoDeviceType
 {
@@ -247,36 +248,57 @@ void processSettingResult(const uint8_t index, const bool loop)
   }
   logMessagejson(root, ITHOSETTINGS);
   
-  // For every index, copy settings into sumJson array
-  // Flag when all indexes have been processed (sumJsonReady = true)
-
+  /*  
+  For every index, copy settings into sumJson array
+  Check that every index is copied at least once (array filled[])
+  Flag when all indexes have been processed (sumJsonReady = true)
+  */  
   if (!(sumJsonReady && index))
     // Never continue with index larger than 0, e.g. when updating a setting. 
-    // Never continue when sumJson is completely filled.
+    // Never continue when sumJson is ready (completely filled).
   {
-    if (index == 0) // Start new copy, clear array
+    if (index == 0) // Start new copy of sumJson, clear array
     {
       sumJson.clear(); // Clear JsonArray, but this leaves memory occupied
       content.garbageCollect(); // Clears leftover Jsonarray memory
-      // D_LOG("sumJson cleared, sumJsonReady false");
-      sumJsonReady = false;
-    }
-    // First, select pairs to copy, exclude update and loop
-    StaticJsonDocument<256> filteredRoot;
-    for (JsonPair kv : root) 
-    {
-      String key = kv.key().c_str();
-      if (key != "update" && key != "loop") 
+      for (int i = 0; i < currentIthoSettingsLength()-1; i++)  // Clear sumJsonFilled array
       {
-        filteredRoot[key] = kv.value();
+        sumJsonFilled[i] = false;
       }
+      sumJsonReady = false;
+      D_LOG("sumJson cleared, sumJsonReady false");
     }
-    sumJson.add(filteredRoot); // append the JsonObject at the end of the JsonArray
-    // D_LOG("settings added to sumJson, index %d", index);
-    if (index >= currentIthoSettingsLength() - 1)
+    if (!sumJsonFilled[index]) // Index not copied yet, continue
     {
-      sumJsonReady = true;
-      // D_LOG("sumJson filled, sumJsonReady true");
+      // First, select pairs to copy, exclude update and loop
+      StaticJsonDocument<256> filteredRoot;
+      for (JsonPair kv : root) 
+      {
+        String key = kv.key().c_str();
+        if (key != "update" && key != "loop") 
+        {
+          filteredRoot[key] = kv.value();
+        }
+      }
+      sumJson.add(filteredRoot); // append the JsonObject at the end of the JsonArray
+      // D_LOG("settings added to sumJson, index %d", index);
+      sumJsonFilled[index] = true; 
+      if (index >= currentIthoSettingsLength() - 1) // Last index copied, but...
+      {
+        sumJsonReady = true;
+        // ...all indexes copied?
+        for (uint16_t i = 0; i <currentIthoSettingsLength()-1; i++)
+        {
+          if (!sumJsonFilled[i])
+          {
+            sumJsonReady = false;
+            break;
+          }
+        }
+        // if (sumJsonReady) 
+        // {D_LOG("sumJson filled, sumJsonReady true");} else {D_LOG("sumJson filled, sumJsonReady false");}
+        D_LOG("sumJson filled, sumJsonReady " + std::string(sumJsonReady ? "true" : "false"));
+      }
     }
   }
 }
