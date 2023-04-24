@@ -598,13 +598,6 @@ $(document).ready(function () {
         index: 0,
         update: false
       }));
-    else if ($(this).attr('id') == 'ithodownloadsettings') {
-      settingIndex = 0;
-      websock.send(JSON.stringify({
-        ithodownloadsetting: true,
-        index: 0,
-        update: false
-      }));
     }
     else if ($(this).attr('id') == 'updatesubmit') {
       e.preventDefault();
@@ -1892,8 +1885,6 @@ var html_ithosettings = `
 </style>
 <form class="pure-form pure-form-aligned">
   <fieldset>
-    <p>Download current Itho settings as json: </p>
-    <a href="/getithosettings" class="pure-button">Download IthoSettings.json</a><br><br>
     <span>Itho device type: </span><span id="itho_devtype">retreiving...</span>
     <br>
     <span>Itho fw version: </span><span id="itho_fwversion">retreiving...</span>
@@ -1901,6 +1892,10 @@ var html_ithosettings = `
     <button id="ithogetsettings" class="pure-button pure-button-primary">Retrieve settings</button><br><br>
     <span style="color:red">Warning!!<br>This controls low level settings of your itho unit, possibly damaging the
       unit.<br>Use with care and use only if you know what you are doing!</span><br><br>
+      After the table has been retreived completely, it can be downloaded as a JSON formatted text document called 
+      IthoSettings.json<br><br>
+      <p>Download current Itho settings as json: </p>
+      <a href="/getithosettings" class="pure-button  pure-button-primary">Download IthoSettings.json</a><br><br>
     <table id="SettingsTable" class="pure-table pure-table-bordered" style="font-size:.85em"></table><br><br>
   </fieldset>
 </form>
