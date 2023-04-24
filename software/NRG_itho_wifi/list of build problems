@@ -1,0 +1,216 @@
+[{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/main/IthoSystem.cpp",
+	"owner": "C/C++",
+	"code": "1696",
+	"severity": 8,
+	"message": "#include errors detected. Please update your includePath. Squiggles are disabled for this translation unit (/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/main/IthoSystem.cpp).",
+	"source": "C/C++",
+	"startLineNumber": 2,
+	"startColumn": 1,
+	"endLineNumber": 2,
+	"endColumn": 24
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/main/IthoSystem.cpp",
+	"owner": "C/C++",
+	"code": "1696",
+	"severity": 8,
+	"message": "cannot open source file \"sys/epoll.h\" (dependency of \"IthoSystem.h\")",
+	"source": "C/C++",
+	"startLineNumber": 2,
+	"startColumn": 1,
+	"endLineNumber": 2,
+	"endColumn": 24
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/main/tasks/task_web.cpp",
+	"owner": "C/C++",
+	"code": "1696",
+	"severity": 8,
+	"message": "#include errors detected. Please update your includePath. Squiggles are disabled for this translation unit (/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/main/tasks/task_web.cpp).",
+	"source": "C/C++",
+	"startLineNumber": 1,
+	"startColumn": 1,
+	"endLineNumber": 1,
+	"endColumn": 28
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/main/tasks/task_web.cpp",
+	"owner": "C/C++",
+	"code": "1696",
+	"severity": 8,
+	"message": "cannot open source file \"sys/epoll.h\" (dependency of \"tasks/task_web.h\")",
+	"source": "C/C++",
+	"startLineNumber": 1,
+	"startColumn": 1,
+	"endLineNumber": 1,
+	"endColumn": 28
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-arduinoespressif32/libraries/I2S/src/I2S.cpp",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "missing initializer for member 'esp_i2s::i2s_driver_config_t::tx_desc_auto_clear' [-Wmissing-field-initializers]",
+	"startLineNumber": 148,
+	"startColumn": 3,
+	"endLineNumber": 148,
+	"endColumn": 3
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-arduinoespressif32/libraries/I2S/src/I2S.cpp",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "missing initializer for member 'esp_i2s::i2s_pin_config_t::mck_io_num' [-Wmissing-field-initializers]",
+	"startLineNumber": 324,
+	"startColumn": 5,
+	"endLineNumber": 324,
+	"endColumn": 5
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/app_update/esp_ota_ops.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 82,
+	"startColumn": 40,
+	"endLineNumber": 82,
+	"endColumn": 40
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/bootloader_support/src/esp_image_format.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 343,
+	"startColumn": 51,
+	"endLineNumber": 343,
+	"endColumn": 51
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/driver/i2c.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 1117,
+	"startColumn": 35,
+	"endLineNumber": 1117,
+	"endColumn": 35
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/driver/i2s.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 2233,
+	"startColumn": 53,
+	"endLineNumber": 2233,
+	"endColumn": 53
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/esp_system/port/arch/xtensa/debug_helpers.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 37,
+	"startColumn": 47,
+	"endLineNumber": 37,
+	"endColumn": 47
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/esp_system/port/arch/xtensa/debug_helpers.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 38,
+	"startColumn": 43,
+	"endLineNumber": 38,
+	"endColumn": 43
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/hal/emac_hal.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 156,
+	"startColumn": 65,
+	"endLineNumber": 156,
+	"endColumn": 65
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/heap/heap_tlsf.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 615,
+	"startColumn": 47,
+	"endLineNumber": 615,
+	"endColumn": 47
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/heap/multi_heap.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 107,
+	"startColumn": 33,
+	"endLineNumber": 107,
+	"endColumn": 33
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/heap/multi_heap.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 136,
+	"startColumn": 57,
+	"endLineNumber": 136,
+	"endColumn": 57
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/log/log_buffers.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 46,
+	"startColumn": 16,
+	"endLineNumber": 46,
+	"endColumn": 16
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/log/log_buffers.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 80,
+	"startColumn": 16,
+	"endLineNumber": 80,
+	"endColumn": 16
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/log/log_buffers.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 136,
+	"startColumn": 16,
+	"endLineNumber": 136,
+	"endColumn": 16
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/newlib/abort.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 35,
+	"startColumn": 49,
+	"endLineNumber": 35,
+	"endColumn": 49
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/newlib/assert.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 34,
+	"startColumn": 49,
+	"endLineNumber": 34,
+	"endColumn": 49
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/soc/lldesc.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "pointer of type 'void *' used in arithmetic [-Wpointer-arith]",
+	"startLineNumber": 25,
+	"startColumn": 14,
+	"endLineNumber": 25,
+	"endColumn": 14
+},{
+	"resource": "/home/sander/GitHub/ithowifi/software/NRG_itho_wifi/home/sander/.platformio/packages/framework-espidf/components/spi_flash/flash_ops.c",
+	"owner": "cpp",
+	"severity": 4,
+	"message": "unused variable 'guard' [-Wunused-variable]",
+	"startLineNumber": 296,
+	"startColumn": 36,
+	"endLineNumber": 296,
+	"endColumn": 36
+}]
