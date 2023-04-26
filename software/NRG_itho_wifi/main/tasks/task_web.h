@@ -71,3 +71,4 @@ bool mg_handleFileRead(struct mg_connection *c, void *ev_data, bool download);
 void mg_handleStatus(struct mg_connection *c, int ev, void *ev_data, void *fn_data);
 void mg_handleFileDelete(struct mg_connection *c, int ev, void *ev_data, void *fn_data);
 void mg_handleFileCreate(struct mg_connection *c, int ev, void *ev_data, void *fn_data);
+void getIthoSettingsBackupJSONPlus(JsonArray sumJson);
