@@ -2659,9 +2659,6 @@ var html_ithosettings = `
     <button id="ithogetsettings" class="pure-button pure-button-primary">Retrieve settings</button><br><br>
     <span style="color:red">Warning!!<br>This controls low level settings of your itho unit, possibly damaging the
       unit.<br>Use with care and use only if you know what you are doing!</span><br><br>
-      After the table has been retreived completely, it can be downloaded as a JSON formatted text document called 
-      IthoSettings.json<br> Note that any changes in settings will only be visible in IthoSettings.json 
-      after a new Retrieve settings <br><br>
       <p>Download current Itho settings as json: </p>
       <a href="/getithosettings" class="pure-button  pure-button-primary">Download IthoSettings.json</a><br><br>
     <table id="SettingsTable" class="pure-table pure-table-bordered" style="font-size:.85em"></table><br><br>

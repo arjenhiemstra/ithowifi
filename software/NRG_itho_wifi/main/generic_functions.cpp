@@ -127,7 +127,6 @@ void getIthoSettingsBackupJSON(JsonObject root)
   {
     for (uint16_t i = 0; i < currentIthoSettingsLength(); i++)
     {
-      // D_LOG("description %s", getIthoDescription(i));
       char buf[12];
       itoa(i, buf, 10);
 
@@ -164,7 +163,6 @@ void getIthoSettingsBackupJSONPlus(JsonArray sumJson) //include description in J
     for (uint16_t i = 0; i < currentIthoSettingsLength(); i++)
     {
       StaticJsonDocument<256> root;
-      // D_LOG("description %s", getIthoDescription(i));
       root["Index"] = i;
       root["Description"] = getIthoDescription(i);
 
