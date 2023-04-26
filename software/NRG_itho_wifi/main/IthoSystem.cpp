@@ -198,19 +198,20 @@ void getSetting(const uint8_t index, const bool updateState, const bool updatewe
   }
 }
 
+const char * getIthoDescription(const uint8_t index)
+{
+  const uint8_t version = currentItho_fwversion();
+  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+  return settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
+}
+
 void processSettingResult(const uint8_t index, const bool loop)
 {
-
-  const uint8_t version = currentItho_fwversion();
-
-  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
-
   StaticJsonDocument<512> doc;
   JsonObject root = doc.to<JsonObject>();
 
   root["Index"] = index;
-  root["Description"] = settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
-
+  root["Description"] = getIthoDescription(index);
   auto timeoutmillis = millis() + 3000; // 1 sec. + 2 sec. for potential i2c queue pause on CVE devices
   while (resultPtr2410 == nullptr && millis() < timeoutmillis)
   {
