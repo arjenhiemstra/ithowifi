@@ -1028,7 +1028,7 @@ void handleIthosettingsDownload(AsyncWebServerRequest *request)
   if (!sumJsonReady)
   { 
     D_LOG("No IthoSettings.json file ready yet.");
-    return request->send(400, "text/plain", "FILE NOT READY YET, PRESS BROWSER BACK BUTTON");
+    return request->send(400, "text/plain", "FILE NOT READY YET, PRESS BROWSER BACK BUTTON AND RETRIEVE SETTINGS");
   }
   //send Json array with settings to file
   File file = ACTIVE_FS.open("/IthoSettings.json", "w+"); // Create empty file

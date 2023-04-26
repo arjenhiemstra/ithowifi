@@ -132,7 +132,7 @@ void execMQTTTasks()
           mqttSendStatus();
           mqttSendRemotesInfo();
           mqttPublishLastcmd();
-          // mqttSendSettingsJSON();
+          mqttSendSettingsJSON();
         }
       }
     }

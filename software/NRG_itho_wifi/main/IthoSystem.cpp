@@ -55,7 +55,8 @@ int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
 DynamicJsonDocument content(10000); // Is sufficient for 13 kB file
 JsonArray sumJson = content.to<JsonArray>(); // Create Json array
 bool sumJsonReady = false; // no sumJson filled yet
-static bool* sumJsonFilled = new bool[currentIthoSettingsLength()-1]{false}; // Array to check that every index has been copied
+// static bool* sumJsonFilled = new bool[currentIthoSettingsLength()-1]{false}; // Array to check that every index has been copied
+static bool sumJsonFilled[90]{false};
 
 struct ihtoDeviceType
 {
@@ -205,15 +206,23 @@ void getSetting(const uint8_t index, const bool updateState, const bool updatewe
   }
 }
 
-void processSettingResult(const uint8_t index, const bool loop)
+const char * getIthoDescription(const uint8_t index)
 {
   const uint8_t version = currentItho_fwversion();
   const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+  return settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
+}
+
+void processSettingResult(const uint8_t index, const bool loop)
+{
+  // const uint8_t version = currentItho_fwversion();
+  // const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
   StaticJsonDocument<512> doc;
   JsonObject root = doc.to<JsonObject>();
 
   root["Index"] = index;
-  root["Description"] = settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
+  // root["Description"] = settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
+  root["Description"] = getIthoDescription(index);
   auto timeoutmillis = millis() + 3000; // 1 sec. + 2 sec. for potential i2c queue pause on CVE devices
   while (resultPtr2410 == nullptr && millis() < timeoutmillis)
   {
@@ -261,7 +270,7 @@ void processSettingResult(const uint8_t index, const bool loop)
     {
       sumJson.clear(); // Clear JsonArray, but this leaves memory occupied
       content.garbageCollect(); // Clears leftover Jsonarray memory
-      for (int i = 0; i < currentIthoSettingsLength()-1; i++)  // Clear sumJsonFilled array
+      for (int i = 0; i < currentIthoSettingsLength(); i++)  // Clear sumJsonFilled array
       {
         sumJsonFilled[i] = false;
       }
