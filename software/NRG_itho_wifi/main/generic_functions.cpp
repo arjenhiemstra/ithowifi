@@ -155,6 +155,45 @@ void getIthoSettingsBackupJSON(JsonObject root)
   }
 }
 
+void getIthoSettingsBackupJSONPlus(JsonArray sumJson) //include description in JSON Array
+{
+  if (ithoSettingsArray != nullptr)
+  {
+    for (uint16_t i = 0; i < currentIthoSettingsLength(); i++)
+    {
+      StaticJsonDocument<256> root;
+      root["Index"] = i;
+      root["Description"] = getIthoDescription(i);
+
+      if (ithoSettingsArray[i].type == ithoSettings::is_int && ithoSettingsArray[i].length == 1 && ithoSettingsArray[i].is_signed)
+      {
+        int8_t val;
+        std::memcpy(&val, &ithoSettingsArray[i].value, sizeof(val));
+        root["Current"] = val;
+      }
+      else if (ithoSettingsArray[i].type == ithoSettings::is_int && ithoSettingsArray[i].length == 2 && ithoSettingsArray[i].is_signed)
+      {
+        int16_t val;
+        std::memcpy(&val, &ithoSettingsArray[i].value, sizeof(val));
+        root["Current"] = val;
+      }
+      else if (ithoSettingsArray[i].type == ithoSettings::is_int && ithoSettingsArray[i].length == 4 && ithoSettingsArray[i].is_signed)
+      {
+        root["Current"] = ithoSettingsArray[i].value;
+      }
+      else
+      {
+        uint32_t val;
+        std::memcpy(&val, &ithoSettingsArray[i].value, sizeof(val));
+        root["Current"] = val;
+      }
+      sumJson.add(root); // append the JsonObject at the end of the JsonArray
+      root.clear(); // clear the JsonObject at the end of each iteration
+    }
+  }
+}
+
+
 bool ithoExecCommand(const char *command, cmdOrigin origin)
 {
   D_LOG("EXEC COMMAND:%s", command);

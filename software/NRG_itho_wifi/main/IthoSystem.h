@@ -120,6 +120,7 @@ uint16_t currentIthoSettingsLength();
 int16_t currentIthoStatusLabelLength();
 int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop = false);
+const char * getIthoDescription(const uint8_t index);
 void processSettingResult(const uint8_t index, const bool loop);
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
 const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr);
