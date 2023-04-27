@@ -206,7 +206,7 @@ const char * getIthoDescription(const uint8_t index)
 }
 
 void processSettingResult(const uint8_t index, const bool loop)
-
+{
   StaticJsonDocument<512> doc;
   JsonObject root = doc.to<JsonObject>();
 
