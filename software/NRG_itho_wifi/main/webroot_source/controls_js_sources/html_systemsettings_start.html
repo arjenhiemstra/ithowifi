@@ -12,13 +12,11 @@
     <legend><br>System security:</legend>
     <div class="pure-control-group">
       <label for="sys_username">Username</label>
-      <input id="sys_username" maxlength="64" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('username-msg').innerHTML = 'Username truncated to 32 characters.'; } else { document.getElementById('username-msg').innerHTML = ''; }">
-      <span id="username-msg" style="color: red;"></span>
+      <input id="sys_username" maxlength="20" type="text">
     </div>
     <div class="pure-control-group">
       <label for="sys_password">Password</label>
-      <input id="sys_password" maxlength="64" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('password-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('password-msg').innerHTML = ''; }">
-      <span id="password-msg" style="color: red;"></span>
+      <input id="sys_password" maxlength="20" type="text">
     </div>
     <div class="pure-control-group">
       <label for="option-syssec_web" class="pure-radio">Web interface authentication</label>
