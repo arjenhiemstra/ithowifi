@@ -67,6 +67,8 @@ PROJECT_BIN_DIR = PROJECT_BUILD_DIR + DIR_SEPERATOR + PIOENV + DIR_SEPERATOR
 PROJECT_COMPILED_DIR = PROJECT_DIR + DIR_SEPERATOR + '..' + DIR_SEPERATOR + '..' + DIR_SEPERATOR + 'compiled_firmware_files' + DIR_SEPERATOR
 HW_BIN_DIR = ''
 
+if not os.path.exists(WEBROOT_OUT_DIR): os.makedirs(WEBROOT_OUT_DIR)
+
 if (PIOENV == 'release_cve' or PIOENV == 'beta_cve') :
    hwrev = '-hw2'
    HW_BIN_DIR = 'hardware_rev_2' + DIR_SEPERATOR

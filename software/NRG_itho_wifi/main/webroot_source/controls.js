@@ -2418,6 +2418,11 @@ var html_systemsettings_start = `
       <input id="option-api_settings-1" type="radio" name="option-api_settings" value="1"> on
       <input id="option-api_settings-0" type="radio" name="option-api_settings" value="0"> off
     </div>
+    <b style="color: red">Warning:</b>
+    using this API incorrectly may result in
+    your Itho device not working as intended. Only use this API if you're
+    certain it won't break your device.
+  </p>
     <legend><br>Speed settings (CVE only) (0-255):</legend>
     <div class="pure-control-group">
       <label for="itho_fallback">Start/fallback speed</label>
