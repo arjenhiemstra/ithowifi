@@ -1,4 +1,3 @@
-
 #include "IthoSystem.h"
 
 #include "devices/cve14.h"
@@ -49,14 +48,6 @@ int currentIthoDeviceID() { return ithoDeviceID; }
 uint8_t currentItho_fwversion() { return itho_fwversion; }
 uint16_t currentIthoSettingsLength() { return ithoSettingsLength; }
 int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
-
-// Define JSON array to accumulate all Itho settings (in function processSettingResult() )
-// The array is extern, for task_web.cpp
-// DynamicJsonDocument content(10000); // Is sufficient for 13 kB file
-// JsonArray sumJson = content.to<JsonArray>(); // Create Json array
-// bool sumJsonReady = false; // no sumJson filled yet
-// // static bool* sumJsonFilled = new bool[currentIthoSettingsLength()-1]{false}; // Array to check that every index has been copied
-// static bool sumJsonFilled[90]{false};
 
 struct ihtoDeviceType
 {
