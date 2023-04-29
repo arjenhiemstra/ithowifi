@@ -36,11 +36,6 @@ String debugVal = "";
 bool onOTA = false;
 bool TaskWebStarted = false;
 
-// Define JSON array to accumulate all Itho settings (in function getIthoSettingsBackupJSONPlus)
-// The array is extern, for task_web.cpp
-DynamicJsonDocument content(10000); // Is sufficient for 13 kB file
-JsonArray sumJson = content.to<JsonArray>(); // Create Json array
-
 static const struct packed_files_lst
 {
   const char *name;
@@ -1030,8 +1025,9 @@ The array sumJson is serialized and sent to  file IthoSettings.json, that then i
 */
 void handleIthosettingsDownload(AsyncWebServerRequest *request)
 {
-  sumJson.clear(); // Clear JsonArray, but this leaves memory occupied
-  content.garbageCollect(); // Therefor clear leftover Jsonarray memory
+  // Define JSON array to accumulate all Itho settings (in function getIthoSettingsBackupJSONPlus)
+  DynamicJsonDocument content(110*currentIthoSettingsLength()); // e.g. 10000 is sufficient for 100 indexes, 13 kB file
+  JsonArray sumJson = content.to<JsonArray>(); // Create Json array
   File file = ACTIVE_FS.open("/IthoSettings.json", "w+"); // Create empty file
   if (!file)
   {
