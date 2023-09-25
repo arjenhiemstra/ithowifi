@@ -77,6 +77,7 @@ IthoCC1101::~IthoCC1101()
 //                                  { IthoUnknown,  IthoJoin, IthoLeave,  IthoAway, IthoLow, IthoMedium,  IthoHigh,  IthoFull, IthoTimer1,  IthoTimer2,  IthoTimer3,  IthoAuto,  IthoAutoNight, IthoCook30,  IthoCook60 }
 const uint8_t *RFTCVE_Remote_Map[] = {nullptr, ithoMessageCVERFTJoinCommandBytes, ithoMessageLeaveCommandBytes, ithoMessageAwayCommandBytes, ithoMessageLowCommandBytes, ithoMessageMediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageTimer1CommandBytes, ithoMessageTimer2CommandBytes, ithoMessageTimer3CommandBytes, nullptr, nullptr, nullptr, nullptr};
 const uint8_t *RFTAUTO_Remote_Map[] = {nullptr, ithoMessageAUTORFTJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes, nullptr, ithoMessageAUTORFTLowCommandBytes, nullptr, ithoMessageAUTORFTHighCommandBytes, nullptr, ithoMessageAUTORFTTimer1CommandBytes, ithoMessageAUTORFTTimer2CommandBytes, ithoMessageAUTORFTTimer3CommandBytes, ithoMessageAUTORFTAutoCommandBytes, ithoMessageAUTORFTAutoNightCommandBytes, nullptr, nullptr};
+const uint8_t *RFTAUTON_Remote_Map[] = {nullptr, ithoMessageAUTORFTNJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes, nullptr, ithoMessageAUTORFTLowCommandBytes, nullptr, ithoMessageAUTORFTHighCommandBytes, nullptr, ithoMessageAUTORFTTimer1CommandBytes, ithoMessageAUTORFTTimer2CommandBytes, ithoMessageAUTORFTTimer3CommandBytes, ithoMessageAUTORFTAutoCommandBytes, ithoMessageAUTORFTAutoNightCommandBytes, nullptr, nullptr};
 const uint8_t *DEMANDFLOW_Remote_Map[] = {nullptr, ithoMessageDFJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageDFLowCommandBytes, nullptr, ithoMessageDFHighCommandBytes, nullptr, ithoMessageDFTimer1CommandBytes, ithoMessageDFTimer2CommandBytes, ithoMessageDFTimer3CommandBytes, nullptr, nullptr, ithoMessageDFCook30CommandBytes, ithoMessageDFCook60CommandBytes};
 const uint8_t *RFTRV_Remote_Map[] = {nullptr, ithoMessageRVJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageLowCommandBytes, ithoMessageRV_CO2MediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageRV_CO2Timer1CommandBytes, ithoMessageRV_CO2Timer2CommandBytes, ithoMessageRV_CO2Timer3CommandBytes, ithoMessageRV_CO2AutoCommandBytes, ithoMessageRV_CO2AutoNightCommandBytes, nullptr, nullptr};
 const uint8_t *RFTCO2_Remote_Map[] = {nullptr, ithoMessageCO2JoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageLowCommandBytes, ithoMessageRV_CO2MediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageRV_CO2Timer1CommandBytes, ithoMessageRV_CO2Timer2CommandBytes, ithoMessageRV_CO2Timer3CommandBytes, ithoMessageRV_CO2AutoCommandBytes, ithoMessageRV_CO2AutoNightCommandBytes, nullptr, nullptr};
@@ -87,16 +88,13 @@ struct ihtoRemoteCmdMap
   const uint8_t **commandMapping;
 };
 
-const struct ihtoRemoteCmdMap ihtoRemoteCmdMapping[]
-{
-  {RFTCVE, RFTCVE_Remote_Map},
-      {RFTAUTO, RFTAUTO_Remote_Map},
-      {DEMANDFLOW, DEMANDFLOW_Remote_Map},
-      {RFTRV, RFTRV_Remote_Map},
-  {
-    RFTCO2, RFTCO2_Remote_Map
-  }
-};
+const struct ihtoRemoteCmdMap ihtoRemoteCmdMapping[]{
+    {RFTCVE, RFTCVE_Remote_Map},
+    {RFTAUTO, RFTAUTO_Remote_Map},
+    {RFTAUTON, RFTAUTON_Remote_Map},
+    {DEMANDFLOW, DEMANDFLOW_Remote_Map},
+    {RFTRV, RFTRV_Remote_Map},
+    {RFTCO2, RFTCO2_Remote_Map}};
 
 void IthoCC1101::initSendMessage(uint8_t len)
 {
@@ -1156,6 +1154,15 @@ void IthoCC1101::handleBind()
     if (bindAllowed)
     {
       addRFDevice(tempID, RemoteTypes::RFTAUTO);
+    }
+  }
+  else if (checkIthoCommand(&inIthoPacket, ithoMessageAUTORFTNJoinCommandBytes))
+  {
+    inIthoPacket.command = IthoJoin;
+    inIthoPacket.remType = RemoteTypes::RFTAUTON;
+    if (bindAllowed)
+    {
+      addRFDevice(tempID, RemoteTypes::RFTAUTON);
     }
   }
   else if (checkIthoCommand(&inIthoPacket, ithoMessageDFJoinCommandBytes))
