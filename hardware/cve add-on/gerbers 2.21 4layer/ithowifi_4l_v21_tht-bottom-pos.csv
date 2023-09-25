@@ -1,0 +1,4 @@
+Ref,Val,Package,PosX,PosY,Rot,Side
+"J2","conn","PinSocket_2x04_P2.54mm_Vertical",38.989000,-32.766000,0.000000,bottom
+"J3","Conn_Coaxial","SMA_Amphenol_132289_EdgeMount",22.123400,-2.819400,90.000000,bottom
+"U2","CC1101-868MHz-Module","CC1101-868MHz-Module",23.114000,-16.510000,90.000000,bottom
