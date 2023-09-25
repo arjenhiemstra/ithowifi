@@ -8,21 +8,21 @@ var sensor = -1;
 
 sessionStorage.setItem("statustimer", 0);
 var settingIndex = -1;
- 
+
 var websocketServerLocation = location.protocol === 'https' ? 'wss://' + window.location + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
 
-let messageQueue;
-let webSocket;
+let messageQueue = [];
+let websock;
 
 function startWebsock(websocketServerLocation) {
   console.log(websocketServerLocation);
   messageQueue = [];
-  webSocket = new WebSocket(websocketServerLocation);
-  webSocket.addEventListener('message', event => {
+  websock = new WebSocket(websocketServerLocation);
+  websock.addEventListener('message', event => {
     // Add message to the queue
     messageQueue.push(event.data);
   });
-  webSocket.onopen = function (a) {
+  websock.onopen = function (a) {
     console.log('websock open');
     document.getElementById("layout").style.opacity = 1;
     document.getElementById("loader").style.display = "none";
@@ -32,7 +32,7 @@ function startWebsock(websocketServerLocation) {
     getSettings('syssetup');
   };
 
-  webSocket.onclose = function (a) {
+  websock.onclose = function (a) {
     console.log('websock close');
     // Try to reconnect in 200 milliseconds
     websock = null;
@@ -41,7 +41,7 @@ function startWebsock(websocketServerLocation) {
     setTimeout(function () { startWebsock(websocketServerLocation) }, 200);
   };
 
-  webSocket.onerror = function (a) {
+  websock.onerror = function (a) {
     try {
       console.log(a);
     } catch (error) {
@@ -53,20 +53,18 @@ function startWebsock(websocketServerLocation) {
 (async function processMessages() {
   while (messageQueue.length > 0) {
     const message = messageQueue.shift();
-    // Process message here
-    console.log(`Received message: ${message}`);
-    asyncWsCall(message);
+    processMessage(message);
   }
   await new Promise(resolve => setTimeout(resolve, 0));
   processMessages();
 })();
 
-function asyncWsCall(b) {
+function processMessage(message) {
   let f;
   try {
-    f = JSON.parse(decodeURIComponent(b.data));
+    f = JSON.parse(decodeURIComponent(message));
   } catch (error) {
-    f = JSON.parse(b.data);
+    f = JSON.parse(message);
   }
   console.log(f);
   let g = document.body;
@@ -357,7 +355,6 @@ $(document).ready(function () {
           syssec_api: $('input[name=\'option-syssec_api\']:checked').val(),
           syssec_edit: $('input[name=\'option-syssec_edit\']:checked').val(),
           api_normalize: $('input[name=\'option-api_normalize\']:checked').val(),
-          api_settings: $('input[name=\'option-api_settings\']:checked').val(),
           syssht30: $('input[name=\'option-syssht30\']:checked').val(),
           itho_rf_support: $('input[name=\'option-itho_rf_support\']:checked').val(),
           itho_fallback: $('#itho_fallback').val(),
@@ -1002,6 +999,7 @@ var remotesCount;
 var remtypes = [
   ["RFT CVE", 0x22F1, ['away', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT AUTO", 0x22F3, ['auto', 'autonight', 'low', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["RFT AUTO-N", 0x22F4, ['auto', 'autonight', 'low', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT DF/QF", 0x22F8, ['low', 'high', 'cook30', 'cook60', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT RV", 0x12A0, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT CO2", 0x1298, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
@@ -1644,67 +1642,6 @@ Unless specified otherwise:<br>
                     comments on remotesinfo of the Web API</em></td>
         </tr>
         <tr>
-            <td>getsetting</td>
-            <td>string</td>
-            <td>0-256</td>
-            <td>number</td>
-            <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
-        </tr>
-        <tr>
-            <td colspan="6">
-                Comments:<br>
-                <em>
-                    Returns a JSON object containing the current, minimum and
-                    maximum value of the given setting, using its index. If the
-                    setting index is invalid, the HTTP response code is 400 and
-                    the body is text containing an error message.
-                </em>
-            </td>
-        </tr>
-        <tr>
-            <td>setsetting</td>
-            <td>string</td>
-            <td>0-256</td>
-            <td>number</td>
-            <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
-        </tr>
-        <tr>
-            <td>value</td>
-            <td>string</td>
-            <td>any number</td>
-            <td>number</td>
-            <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
-        </tr>
-        <tr>
-            <td colspan="6">
-                Comments:<br>
-                <em>
-                    Sets the current value of a setting using its index. The
-                    value must be specified in the "value" parameter. The new
-                    value must be within the minimum and maximum of the setting.
-                    If the value is invalid, the HTTP response code is 400 and
-                    the body is text containing an error message.
-                </em>
-                <br>
-                <br>
-                Example:<br>
-                <em>
-                    http://192.168.4.1/api.html?setsetting=4&value=10
-                </em>
-                <br>
-                <br>
-                <b style="color: red">
-                    Using this API changes the settings of your Itho Daalderop
-                    unit, and this may affect its behaviour (i.e. turn it off).
-                    Only use this API if you know what you're doing and are
-                    certain it won't damage your unit.
-                </b>
-            </td>
-        </tr>
-        <tr>
             <td colspan="6"><b>Commands below this line work on itho devices that support the PWM2IC2 protocol. Devices
                     supported are at least the HRU200 and all CVE models. Devices known not to support these commands
                     are the HRU350, WPU, DemandFlow/QualityFlow. These commands cannot be used together with vremote
@@ -2185,18 +2122,6 @@ var html_systemsettings_start = `
       <input id="option-api_normalize-1" type="radio" name="option-api_normalize" value="1"> on
       <input id="option-api_normalize-0" type="radio" name="option-api_normalize" value="0"> off
     </div>
-    <p>Enable the API used for managing your device's settings.</p>
-    <div class="pure-control-group">
-      <label for="option-api_settings" class="pure-radio">Enable settings API</label>
-      <input id="option-api_settings-1" type="radio" name="option-api_settings" value="1"> on
-      <input id="option-api_settings-0" type="radio" name="option-api_settings" value="0"> off
-    </div>
-    <p>
-      <b style="color: red">Warning:</b>
-      using this API incorrectly may result in
-      your Itho device not working as intended. Only use this API if you're
-      certain it won't break your device.
-    </p>
     <legend><br>Speed settings (CVE only) (0-255):</legend>
     <div class="pure-control-group">
       <label for="itho_fallback">Start/fallback speed</label>
@@ -2330,7 +2255,6 @@ var html_systemsettings_start = `
     getSettings('syssetup');
   });
 </script>
-
 `;
 
 var html_mqttsetup = `
@@ -2641,7 +2565,7 @@ var html_vremotessetup = `
 <p>With the 'Copy ID' function the ID from an existing physical remote can be copied. If the remote type is supported,
   the type will be detected automatically. If this physical remote is already joined to the itho unit a new join is not
   necessary.</p>
-<p>There are multiple types of remotes that can be emulated; The RFT CVE (536-0020, 536-0024, 536-0124), RFT AUTO
+<p>There are multiple types of remotes that can be emulated; The RFT CVE (536-0020, 536-0024, 536-0124), RFT AUTO(-N)
   (536-0150), RFT DemandFlow/QualityFlow (536-0146).<br>Pictures of these remotes can be found here: <a
     href='https://github.com/arjenhiemstra/ithowifi/tree/master/remotes'
     target='_blank'>https://github.com/arjenhiemstra/ithowifi/tree/master/remotes</a></p>

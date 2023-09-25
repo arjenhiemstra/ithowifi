@@ -8,7 +8,7 @@ var sensor = -1;
 sessionStorage.setItem("statustimer", 0);
 var settingIndex = -1;
 
-var websocketServerLocation = 'ws://' + window.location.hostname + ':8000/ws';
+var websocketServerLocation = location.protocol === 'https' ? 'wss://' + window.location + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
 
 let messageQueue = [];
 let websock;
