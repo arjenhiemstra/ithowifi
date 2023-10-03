@@ -500,15 +500,15 @@ void HADiscoveryFan()
   root["pr_mode_stat_t"] = (const char *)systemConfig.mqtt_state_topic;
   root["pr_mode_val_tpl"] =
     "{%- set valuepct = 100*(value | int)/255|round(0) %}"
-    "{%- if valuepct >= 20 and valuepct <= 27 %}Low"
-    "{%- elif valuepct >= 46 and valuepct <= 53 %}Medium"
-    "{%- elif valuepct >= 77 and valuepct <= 83 %}High"
+    "{%- if valuepct >= " + String(systemConfig.itho_low - 5) + " and valuepct <= " + String(systemConfig.itho_low + 5) + " %}Low"
+    "{%- elif valuepct >= " + String(systemConfig.itho_medium - 5) + " and valuepct <= " + String(systemConfig.itho_medium + 5) + " %}Medium"
+    "{%- elif valuepct >= " + String(systemConfig.itho_high - 5) + " and valuepct <= " + String(systemConfig.itho_high + 5) + " %}High"
     "{%- elif valuepct >= 97 %}Max{% endif -%}";
   root["pr_mode_cmd_t"] = (const char *)systemConfig.mqtt_cmd_topic;
   root["pr_mode_cmd_tpl"] =
-    "{%- if value == 'Low' %}{{(25*255/100)|round(0)}}"
-    "{%- elif value == 'Medium' %}{{(50*255/100)|round(0)}}"
-    "{%- elif value == 'High' %}{{(80*255/100)|round(0)}}"
+    "{%- if value == 'Low' %}{{(" + String(systemConfig.itho_low) + "*255/100)|round(0)}}"
+    "{%- elif value == 'Medium' %}{{(" + String(systemConfig.itho_medium) + "*255/100)|round(0)}}"
+    "{%- elif value == 'High' %}{{(" + String(systemConfig.itho_high) + "*255/100)|round(0)}}"
     "{%- elif value == 'Max' %}{{(100*255/100)|round(0)}}"
     "{%- endif -%}";
 
