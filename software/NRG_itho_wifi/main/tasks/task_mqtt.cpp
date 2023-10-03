@@ -488,15 +488,35 @@ void HADiscoveryFan()
   snprintf(s, sizeof(s), "%s_fan", hostName());
   root["uniq_id"] = s;
   root["name"] = s;
-  root["stat_t"] = (const char *)systemConfig.mqtt_lwt_topic;
-  root["stat_val_tpl"] = "{% if value == 'online' %}ON{% else %}OFF{% endif %}";
+  root["stat_t"] = (const char *)systemConfig.mqtt_state_topic;
+  root["stat_val_tpl"] = "{% if (value | int) > 0 %}ON{% else %}OFF{% endif %}";
   root["json_attr_t"] = (const char *)systemConfig.mqtt_ithostatus_topic;
-  snprintf(s, sizeof(s), "%s/not_used/but_needed_for_HA", systemConfig.mqtt_cmd_topic);
-  root["cmd_t"] = s;
+  root["cmd_t"] = (const char *)systemConfig.mqtt_cmd_topic;
+  root["cmd_tpl"] = "{% if value == 'OFF' %}{ 'speed':'0' }{% else %}{ 'command':'low' }{% endif %}";
   root["pct_cmd_t"] = (const char *)systemConfig.mqtt_cmd_topic;
   root["pct_cmd_tpl"] = "{{ value * 2.54 }}";
   root["pct_stat_t"] = (const char *)systemConfig.mqtt_state_topic;
-  root["pct_val_tpl"] = "{{ ((value | int) / 2.54) | round}}";
+  root["pct_val_tpl"] = "{{ ((value | int)*100/255) | round(0) }}";
+  root["pr_mode_stat_t"] = (const char *)systemConfig.mqtt_state_topic;
+  root["pr_mode_val_tpl"] =
+    "{%- set valuepct = 100*(value | int)/255|round(0) %}"
+    "{%- if valuepct >= 20 and valuepct <= 27 %}Low"
+    "{%- elif valuepct >= 46 and valuepct <= 53 %}Medium"
+    "{%- elif valuepct >= 77 and valuepct <= 83 %}High"
+    "{%- elif valuepct >= 97 %}Max{% endif -%}";
+  root["pr_mode_cmd_t"] = (const char *)systemConfig.mqtt_cmd_topic;
+  root["pr_mode_cmd_tpl"] =
+    "{%- if value == 'Low' %}{{(25*255/100)|round(0)}}"
+    "{%- elif value == 'Medium' %}{{(50*255/100)|round(0)}}"
+    "{%- elif value == 'High' %}{{(80*255/100)|round(0)}}"
+    "{%- elif value == 'Max' %}{{(100*255/100)|round(0)}}"
+    "{%- endif -%}";
+
+  JsonArray pr_modes = root.createNestedArray("pr_modes");
+  pr_modes.add("Low");
+  pr_modes.add("Medium");
+  pr_modes.add("High");
+  pr_modes.add("Max");
 
   snprintf(s, sizeof(s), "%s/fan/%s/config", (const char *)systemConfig.mqtt_ha_topic, hostName());
 
