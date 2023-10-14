@@ -217,7 +217,8 @@ bool ithoExecCommand(const char *command, cmdOrigin origin)
       return false;
     }
   }
-
+  
+  updateMQTTihtoStatus = true;
   return true;
 }
 

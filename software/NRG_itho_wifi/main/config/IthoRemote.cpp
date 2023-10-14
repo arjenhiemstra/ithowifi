@@ -101,7 +101,7 @@ int IthoRemote::registerNewRemote(const int *id, const RemoteTypes remtype)
   {
     remotes[index].ID[i] = id[i];
   }
-  // remotes[index].remtype = remtype;
+  remotes[index].remtype = remtype;
 
   this->remoteCount++;
 
@@ -165,7 +165,6 @@ int IthoRemote::removeRemote(const uint8_t index)
   remotes[index].remfunc = RemoteFunctions::UNSETFUNC;
   if (instanceFunc == RemoteFunctions::RECEIVE)
   {
-    // remotes[index].remtype = RemoteTypes::NORMAL;
     remotes[index].remfunc = RemoteFunctions::RECEIVE;
   }
   if (instanceFunc == RemoteFunctions::VREMOTE)

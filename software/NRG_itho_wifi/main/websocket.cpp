@@ -397,6 +397,18 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         }
       }
     }
+    else if (msg.find("{\"remote\"") != std::string::npos)
+    {
+      StaticJsonDocument<128> root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error)
+      {
+        if (!root["remote"].isNull() && !root["command"].isNull())
+        {
+          ithoExecRFCommand(root["remote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
+        }
+      }
+    }
     else if (msg.find("{\"command\"") != std::string::npos)
     {
       StaticJsonDocument<128> root;
@@ -466,7 +478,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       {
         uint8_t index = root["itho_update_remote"].as<unsigned int>();
         remotes.updateRemoteName(index, root["value"] | "");
-        remotes.updateRemoteFunction(index, root["remtype"] | 0);
+        remotes.updateRemoteFunction(index, root["remfunc"] | 0);
+        remotes.updateRemoteType(index, root["remtype"] | 0);
         uint8_t id[3] = {0, 0, 0};
         id[0] = root["id"][0].as<uint8_t>();
         id[1] = root["id"][1].as<uint8_t>();
