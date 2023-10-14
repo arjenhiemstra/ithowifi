@@ -14,6 +14,7 @@
 <p>There is also an option
   to monitor only. With this option checked, a RF device still paired with an itho can be monitored without influencing
   the commands using the add-on.</p>
+<p>Changing the remote function to "Send" will enable the user to send RF commands by using the CC1101 RF module.</p>
 <p>Last received commands (and if applicable data) received from paired RF devices is available through the MQTT API and
   WebAPI</p>
 <form class="pure-form pure-form-aligned">
@@ -38,6 +39,7 @@
 </form>
 <script>
   $(document).ready(function () {
+    $('#main').css('max-width', '1400px')
     getSettings('ithoremotes');
   });
 </script>
