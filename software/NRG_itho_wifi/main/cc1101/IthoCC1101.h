@@ -27,6 +27,43 @@ struct ithoRFDevice
   int32_t battery{0xEFFF};
 };
 
+struct RFmessage
+{
+  //<HEADER> <addr0> <addr1> <addr2> <param0> <param1> <OPCODE> <LENGTH> <PAYLOAD> <CHECKSUM>
+  // from: https://github.com/ghoti57/evofw3/wiki/Message-Body#message-body
+  // Header format:
+  // 00TTAAPP
+  // TT specifies the type of the message
+  // TT
+  // 00 RQ
+  // 01  I
+  // 10  W
+  // 11 RP
+
+  // AA specifies which address fields are present
+  // AA
+  // 00 addr0 + addr1 + addr2
+  // 01 addr2
+  // 10 addr0 + addr2
+  // 11 addr0 + addr1
+
+  // PP which params are present PP
+  // 1x Param 0 is present
+  // x1 Param 1 is present
+  //
+  // ie. 0x16 == 00 01 01 10
+  uint8_t header{0xC0};
+  uint8_t deviceid0[3]{0};
+  uint8_t deviceid1[3]{0};
+  uint8_t deviceid2[3]{0};
+  uint8_t opt0{0};
+  uint8_t opt1{0};
+  uint16_t opcode{0};
+  uint8_t len{0};
+  const uint8_t *command{nullptr};
+  //uint8_t checksum;
+};
+
 struct ithoRFDevices
 {
   uint8_t count{0};
@@ -172,6 +209,7 @@ public:
   // send
   const uint8_t *getRemoteCmd(const RemoteTypes type, const IthoCommand command);
   void sendRFCommand(uint8_t remote_index, IthoCommand command);
+  void sendRFMessage(RFmessage *message);
   void sendCommand(IthoCommand command);
 
   void handleBind();

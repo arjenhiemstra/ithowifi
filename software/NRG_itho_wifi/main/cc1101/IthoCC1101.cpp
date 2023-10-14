@@ -34,6 +34,16 @@
 // #define SYNC0 149
 // #define MDMCFG2 0x03 //32bit sync word / 30bit specific
 
+#define DEVICEID_MASK 0xC
+
+#define MESSAGE_TYPE_RQ_MASK 0x0
+#define MESSAGE_TYPE_I_MASK 0x10
+#define MESSAGE_TYPE_W_MASK 0x20
+#define MESSAGE_TYPE_RP_MASK 0x30
+
+#define OPT0_MASK 0x2
+#define OPT1_MASK 0x1
+
 // default constructor
 IthoCC1101::IthoCC1101(uint8_t counter, uint8_t sendTries) : CC1101()
 {
@@ -505,6 +515,7 @@ bool IthoCC1101::checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]
   return true;
 }
 
+// sendCommand -> sendRFCommand(0, command) results in backwards compatible behaviour
 void IthoCC1101::sendCommand(IthoCommand command)
 {
   sendRFCommand(0, command);
@@ -547,15 +558,36 @@ void IthoCC1101::createMessageStart(IthoPacket *itho, CC1101Packet *packet)
 
 void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
 {
+  RFmessage message;
+  message.header = 0x16; // header of regular itho remote commands seems always to be 0x16 (message type: I, addr2, opt0)
+
+  message.deviceid2[0] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 16) & 0xFF);
+  message.deviceid2[1] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 8) & 0xFF);
+  message.deviceid2[2] = static_cast<uint8_t>(ithoRF.device[remote_index].deviceId & 0xFF);
+
+  ithoRF.device[remote_index].counter += 1;
+  message.opt0 = ithoRF.device[remote_index].counter;
+
+  message.command = getRemoteCmd(ithoRF.device[remote_index].remType, command);
+
+  sendRFMessage(&message);
+}
+
+//<HEADER> <addr0> <addr1> <addr2> <param0> <param1> <OPCODE> <LENGTH> <PAYLOAD> <CHECKSUM>
+// rewrite: uint8_t header, uint32_t deviceid0, uint32_t deviceid1, uint32_t deviceid2, uint8_t opt0, uint8_t opt1, uint8_t opcode*, uint8_t len*, uint8_t* command
+void IthoCC1101::sendRFMessage(RFmessage *message)
+{
+
+  if (message->header == 0xC0) // header not set
+    return;
+  if (message->command == nullptr)
+    return;
 
   CC1101Packet CC1101Message;
   IthoPacket ithoPacket;
 
   uint8_t maxTries = sendTries;
   uint8_t delaytime = 40;
-
-  // update itho packet data
-  ithoRF.device[remote_index].counter += 1;
 
   // itho = ithoPacket
   // packet = CC1101Message
@@ -564,68 +596,85 @@ void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
 
   uint8_t messagePos = 0;
   // set message structure, for itho RF remotes this seems to be always 0x16
-  ithoPacket.dataDecoded[messagePos] = 0x16;
+  ithoPacket.dataDecoded[messagePos] = message->header;
 
-  // set deviceID
-  ithoPacket.dataDecoded[++messagePos] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 16) & 0xFF);
-  ithoPacket.dataDecoded[++messagePos] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 8) & 0xFF);
-  ithoPacket.dataDecoded[++messagePos] = static_cast<uint8_t>(ithoRF.device[remote_index].deviceId & 0xFF);
+  // set deviceIDs based on header bits xxxxAAxx
+  if ((message->header & DEVICEID_MASK) ^ 0x4) // true if AA bits are 00, 10 or 11
+  {
+    ithoPacket.dataDecoded[++messagePos] = message->deviceid0[0];
+    ithoPacket.dataDecoded[++messagePos] = message->deviceid0[1];
+    ithoPacket.dataDecoded[++messagePos] = message->deviceid0[2];
+  }
+  if (((message->header & DEVICEID_MASK) == 0) || ((message->header & DEVICEID_MASK) == DEVICEID_MASK)) // true if AA bits are 00 or 11
+  {
+    ithoPacket.dataDecoded[++messagePos] = message->deviceid1[0];
+    ithoPacket.dataDecoded[++messagePos] = message->deviceid1[1];
+    ithoPacket.dataDecoded[++messagePos] = message->deviceid1[2];
+  }
+  if (((message->header & DEVICEID_MASK)) ^ 0x8) // true if AA bits are 00, 01 or 11
+  {
+    ithoPacket.dataDecoded[++messagePos] = message->deviceid2[0];
+    ithoPacket.dataDecoded[++messagePos] = message->deviceid2[1];
+    ithoPacket.dataDecoded[++messagePos] = message->deviceid2[2];
+  }
 
-  // set counter1
-  ithoPacket.dataDecoded[++messagePos] = ithoRF.device[remote_index].counter;
-
-  // Get command bytes on
-  const uint8_t *commandBytes = getRemoteCmd(ithoRF.device[remote_index].remType, command);
-
-  if (commandBytes == nullptr)
-    return;
+  // set option fields
+  if (message->header & OPT0_MASK)
+  {
+    ithoPacket.dataDecoded[++messagePos] = message->opt0;
+  }
+  if (message->header & OPT1_MASK)
+  {
+    ithoPacket.dataDecoded[++messagePos] = message->opt1;
+  }
 
   // determine command length
-  const int command_len = commandBytes[2];
+  const uint8_t command_len = message->command[2];
+  const uint16_t opcode = message->command[0] << 8 | message->command[1];
 
   for (int i = 0; i < 2 + command_len + 1; i++)
   {
-    ithoPacket.dataDecoded[++messagePos] = commandBytes[i];
+    ithoPacket.dataDecoded[++messagePos] = message->command[i];
   }
 
   // if join or leave, add remote ID fields
-  if (command == IthoJoin || command == IthoLeave)
+  if (opcode == 0x1FC9)
   {
     // set command ID's
     if (command_len > 0x05)
     {
       // add 1st ID
-      ithoPacket.dataDecoded[11] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 16) & 0xFF);
-      ithoPacket.dataDecoded[12] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 8) & 0xFF);
-      ithoPacket.dataDecoded[13] = static_cast<uint8_t>(ithoRF.device[remote_index].deviceId & 0xFF);
+      ithoPacket.dataDecoded[11] = message->deviceid2[0];
+      ithoPacket.dataDecoded[12] = message->deviceid2[1];
+      ithoPacket.dataDecoded[13] = message->deviceid2[2];
     }
     if (command_len > 0x0B)
     {
       // add 2nd ID
-      ithoPacket.dataDecoded[17] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 16) & 0xFF);
-      ithoPacket.dataDecoded[18] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 8) & 0xFF);
-      ithoPacket.dataDecoded[19] = static_cast<uint8_t>(ithoRF.device[remote_index].deviceId & 0xFF);
+      ithoPacket.dataDecoded[17] = message->deviceid2[0];
+      ithoPacket.dataDecoded[18] = message->deviceid2[1];
+      ithoPacket.dataDecoded[19] = message->deviceid2[2];
     }
-    if (command_len > 0x12)
+    if (command_len > 0x11)
     {
       // add 3rd ID
-      ithoPacket.dataDecoded[23] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 16) & 0xFF);
-      ithoPacket.dataDecoded[24] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 8) & 0xFF);
-      ithoPacket.dataDecoded[25] = static_cast<uint8_t>(ithoRF.device[remote_index].deviceId & 0xFF);
+      ithoPacket.dataDecoded[23] = message->deviceid2[0];
+      ithoPacket.dataDecoded[24] = message->deviceid2[1];
+      ithoPacket.dataDecoded[25] = message->deviceid2[2];
     }
     if (command_len > 0x17)
     {
       // add 4th ID
-      ithoPacket.dataDecoded[29] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 16) & 0xFF);
-      ithoPacket.dataDecoded[30] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 8) & 0xFF);
-      ithoPacket.dataDecoded[31] = static_cast<uint8_t>(ithoRF.device[remote_index].deviceId & 0xFF);
+      ithoPacket.dataDecoded[29] = message->deviceid2[0];
+      ithoPacket.dataDecoded[30] = message->deviceid2[1];
+      ithoPacket.dataDecoded[31] = message->deviceid2[2];
     }
     if (command_len > 0x1D)
     {
       // add 5th ID
-      ithoPacket.dataDecoded[35] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 16) & 0xFF);
-      ithoPacket.dataDecoded[36] = static_cast<uint8_t>((ithoRF.device[remote_index].deviceId >> 8) & 0xFF);
-      ithoPacket.dataDecoded[37] = static_cast<uint8_t>(ithoRF.device[remote_index].deviceId & 0xFF);
+      ithoPacket.dataDecoded[35] = message->deviceid2[0];
+      ithoPacket.dataDecoded[36] = message->deviceid2[1];
+      ithoPacket.dataDecoded[37] = message->deviceid2[2];
     }
   }
 
@@ -645,15 +694,15 @@ void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
   CC1101Message.length += 1;
 
   // set end byte - even/uneven cmd length determines last byte?
-  if (command == IthoJoin || command == IthoLeave) 
+  if (opcode == 0x1FC9)
   {
     CC1101Message.data[CC1101Message.length] = 0xCA;
   }
-  else 
+  else
   {
     CC1101Message.data[CC1101Message.length] = 0xAC;
   }
-    
+
   CC1101Message.length += 1;
 
   // set end 'noise'
