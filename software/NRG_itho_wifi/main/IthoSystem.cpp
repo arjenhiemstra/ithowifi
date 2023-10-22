@@ -23,6 +23,7 @@ std::vector<ithoDeviceStatus> ithoStatus;
 std::vector<ithoDeviceMeasurements> ithoMeasurements;
 std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 std::vector<ithoDeviceMeasurements> ithoCounters;
+
 struct lastCommand lastCmd;
 ithoSettings *ithoSettingsArray = nullptr;
 
@@ -50,6 +51,14 @@ uint8_t currentItho_fwversion() { return itho_fwversion; }
 uint16_t currentIthoSettingsLength() { return ithoSettingsLength; }
 int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
 
+struct retryItem
+{
+  int index;
+  int retries;
+};
+
+std::vector<retryItem> retryList;
+
 struct ihtoDeviceType
 {
   uint8_t DG; // device group?
@@ -63,32 +72,28 @@ struct ihtoDeviceType
   const struct ithoLabels *settingsStatusLabels;
 };
 
-const struct ihtoDeviceType ithoDevices[]
-{
-  {0x00, 0x01, "Air curtain", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x03, "HRU ECO-fan", ithoHRUecoFanSettingsMap, sizeof(ithoHRUecoFanSettingsMap) / sizeof(ithoHRUecoFanSettingsMap[0]), ithoHRUecoSettingsLabels, ithoHRUecoFanStatusMap, sizeof(ithoHRUecoFanStatusMap) / sizeof(ithoHRUecoFanStatusMap[0]), ithoHRUecoStatusLabels},
-      {0x00, 0x08, "LoadBoiler", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x0A, "GGBB", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x0B, "DemandFlow", ithoDemandFlowSettingsMap, sizeof(ithoDemandFlowSettingsMap) / sizeof(ithoDemandFlowSettingsMap[0]), ithoDemandFlowSettingsLabels, ithoDemandFlowStatusMap, sizeof(ithoDemandFlowStatusMap) / sizeof(ithoDemandFlowStatusMap[0]), ithoDemandFlowStatusLabels},
-      {0x00, 0x0C, "CO2 relay", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x0D, "Heatpump", ithoWPUSettingsMap, sizeof(ithoWPUSettingsMap) / sizeof(ithoWPUSettingsMap[0]), ithoWPUSettingsLabels, ithoWPUStatusMap, sizeof(ithoWPUStatusMap) / sizeof(ithoWPUStatusMap[0]), ithoWPUStatusLabels},
-      {0x00, 0x0E, "OLB Single", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x0F, "AutoTemp", ithoAutoTempSettingsMap, sizeof(ithoAutoTempSettingsMap) / sizeof(ithoAutoTempSettingsMap[0]), ithoAutoTempSettingsLabels, ithoAutoTempStatusMap, sizeof(ithoAutoTempStatusMap) / sizeof(ithoAutoTempStatusMap[0]), ithoAutoTempStatusLabels},
-      {0x00, 0x10, "OLB Double", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x11, "RF+", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x14, "CVE", itho14SettingsMap, sizeof(itho14SettingsMap) / sizeof(itho14SettingsMap[0]), ithoCVE14SettingsLabels, itho14StatusMap, sizeof(itho14StatusMap) / sizeof(itho14StatusMap[0]), ithoCVE14StatusLabels},
-      {0x00, 0x15, "Extended", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x16, "Extended Plus", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x1A, "AreaFlow", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x1B, "CVE-Silent", itho1BSettingsMap, sizeof(itho1BSettingsMap) / sizeof(itho1BSettingsMap[0]), ithoCVE1BSettingsLabels, itho1BStatusMap, sizeof(itho1BStatusMap) / sizeof(itho1BStatusMap[0]), ithoCVE1BStatusLabels},
-      {0x00, 0x1C, "CVE-SilentExt", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x1D, "CVE-SilentExtPlus", ithoHRU200SettingsMap, sizeof(ithoHRU200SettingsMap) / sizeof(ithoHRU200SettingsMap[0]), ithoHRU200SettingsLabels, ithoHRU200StatusMap, sizeof(ithoHRU200StatusMap) / sizeof(ithoHRU200StatusMap[0]), ithoHRU200StatusLabels},
-      {0x00, 0x20, "RF_CO2", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x2B, "HRU 350", ithoHRU350SettingsMap, sizeof(ithoHRU350SettingsMap) / sizeof(ithoHRU350SettingsMap[0]), ithoHRU350SettingsLabels, ithoHRU350StatusMap, sizeof(ithoHRU350StatusMap) / sizeof(ithoHRU350StatusMap[0]), ithoHRU350StatusLabels},
-  {
-    0x07, 0x01, "HRU 250-300", ithoHRU250_300SettingsMap, sizeof(ithoHRU250_300SettingsMap) / sizeof(ithoHRU250_300SettingsMap[0]), ithoHRU250_300SettingsLabels, ithoHRU250_300StatusMap, sizeof(ithoHRU250_300StatusMap) / sizeof(ithoHRU250_300StatusMap[0]), ithoHRU250_300StatusLabels
-  }
-};
+const struct ihtoDeviceType ithoDevices[]{
+    {0x00, 0x01, "Air curtain", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x03, "HRU ECO-fan", ithoHRUecoFanSettingsMap, sizeof(ithoHRUecoFanSettingsMap) / sizeof(ithoHRUecoFanSettingsMap[0]), ithoHRUecoSettingsLabels, ithoHRUecoFanStatusMap, sizeof(ithoHRUecoFanStatusMap) / sizeof(ithoHRUecoFanStatusMap[0]), ithoHRUecoStatusLabels},
+    {0x00, 0x08, "LoadBoiler", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x0A, "GGBB", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x0B, "DemandFlow", ithoDemandFlowSettingsMap, sizeof(ithoDemandFlowSettingsMap) / sizeof(ithoDemandFlowSettingsMap[0]), ithoDemandFlowSettingsLabels, ithoDemandFlowStatusMap, sizeof(ithoDemandFlowStatusMap) / sizeof(ithoDemandFlowStatusMap[0]), ithoDemandFlowStatusLabels},
+    {0x00, 0x0C, "CO2 relay", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x0D, "Heatpump", ithoWPUSettingsMap, sizeof(ithoWPUSettingsMap) / sizeof(ithoWPUSettingsMap[0]), ithoWPUSettingsLabels, ithoWPUStatusMap, sizeof(ithoWPUStatusMap) / sizeof(ithoWPUStatusMap[0]), ithoWPUStatusLabels},
+    {0x00, 0x0E, "OLB Single", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x0F, "AutoTemp", ithoAutoTempSettingsMap, sizeof(ithoAutoTempSettingsMap) / sizeof(ithoAutoTempSettingsMap[0]), ithoAutoTempSettingsLabels, ithoAutoTempStatusMap, sizeof(ithoAutoTempStatusMap) / sizeof(ithoAutoTempStatusMap[0]), ithoAutoTempStatusLabels},
+    {0x00, 0x10, "OLB Double", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x11, "RF+", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x14, "CVE", itho14SettingsMap, sizeof(itho14SettingsMap) / sizeof(itho14SettingsMap[0]), ithoCVE14SettingsLabels, itho14StatusMap, sizeof(itho14StatusMap) / sizeof(itho14StatusMap[0]), ithoCVE14StatusLabels},
+    {0x00, 0x15, "Extended", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x16, "Extended Plus", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x1A, "AreaFlow", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x1B, "CVE-Silent", itho1BSettingsMap, sizeof(itho1BSettingsMap) / sizeof(itho1BSettingsMap[0]), ithoCVE1BSettingsLabels, itho1BStatusMap, sizeof(itho1BStatusMap) / sizeof(itho1BStatusMap[0]), ithoCVE1BStatusLabels},
+    {0x00, 0x1C, "CVE-SilentExt", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x1D, "CVE-SilentExtPlus", ithoHRU200SettingsMap, sizeof(ithoHRU200SettingsMap) / sizeof(ithoHRU200SettingsMap[0]), ithoHRU200SettingsLabels, ithoHRU200StatusMap, sizeof(ithoHRU200StatusMap) / sizeof(ithoHRU200StatusMap[0]), ithoHRU200StatusLabels},
+    {0x00, 0x20, "RF_CO2", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x2B, "HRU 350", ithoHRU350SettingsMap, sizeof(ithoHRU350SettingsMap) / sizeof(ithoHRU350SettingsMap[0]), ithoHRU350SettingsLabels, ithoHRU350StatusMap, sizeof(ithoHRU350StatusMap) / sizeof(ithoHRU350StatusMap[0]), ithoHRU350StatusLabels},
+    {0x07, 0x01, "HRU 250-300", ithoHRU250_300SettingsMap, sizeof(ithoHRU250_300SettingsMap) / sizeof(ithoHRU250_300SettingsMap[0]), ithoHRU250_300SettingsLabels, ithoHRU250_300StatusMap, sizeof(ithoHRU250_300StatusMap) / sizeof(ithoHRU250_300StatusMap[0]), ithoHRU250_300StatusLabels}};
 
 const char *getIthoType()
 {
@@ -230,6 +235,49 @@ void processSettingResult(const uint8_t index, const bool loop)
       root["Current"] = "error";
       root["Minimum"] = "error";
       root["Maximum"] = "error";
+
+      // bool indexpresent = false;
+      // bool retry = false;
+
+      // for (auto it = retryList.begin(); it != retryList.end(); /* NOTHING */)
+      // {
+      //   if ((it->index) == index)
+      //   {
+      //     indexpresent = true;
+      //     if (it->retries > 0)
+      //     {
+      //       it->retries--;
+      //       retry = true;
+      //     }
+      //     else
+      //     {
+      //       it = retryList.erase(it);
+      //     }
+      //     break;
+      //   }
+      //   else
+      //   {
+      //     ++it;
+      //   }
+      // }
+
+      // if (!indexpresent)
+      // {
+      //   retryList.push_back({index, 2});
+      //   retry = true;
+      // }
+      // if (retry)
+      // {
+      //   root["Current"] = "error - retrying...";
+      //   root["Minimum"] = "error - retrying...";
+      //   root["Maximum"] = "error - retrying...";
+      //   resultPtr2410 = nullptr;
+      //   i2c_queue_add_cmd([index]()
+      //                     { resultPtr2410 = sendQuery2410(index, false); });
+      //   i2c_queue_add_cmd([index, loop]()
+      //                     { processSettingResult(index, false); });
+      // }
+
     }
     else if (ithoSettingsArray[index].type == ithoSettings::is_int)
     {
