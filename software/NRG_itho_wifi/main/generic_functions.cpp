@@ -285,7 +285,7 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   {
     res = false;
   }
-  
+
   attachInterrupt(itho_irq_pin, ITHOinterrupt, RISING);
   return res;
 }

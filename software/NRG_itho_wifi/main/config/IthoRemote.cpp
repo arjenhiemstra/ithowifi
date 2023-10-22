@@ -105,7 +105,7 @@ int IthoRemote::registerNewRemote(const int *id, const RemoteTypes remtype)
 
   this->remoteCount++;
 
-  return 1;
+  return index;
 }
 
 int IthoRemote::removeRemote(const int *id)

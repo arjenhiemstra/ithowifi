@@ -1009,7 +1009,8 @@ var remtypes = [
 var remfuncs = [
   ["Receive", 1],
   ["Monitor Only", 3],
-  ["Send", 4]
+  ["Send", 5],
+  ["Bidirectional", 7]
 ];
 
 function addRemoteButtons(selector, remfunc, remtype, vremotenum, seperator) {
@@ -1069,11 +1070,6 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
   remotesCount = jsonVar.length;
   for (var i = 0; i < remotesCount; i++) {
     var remtype = 0;
-    //remfunction
-    //0=UNSETFUNC
-    //1=RECEIVE
-    //2=VREMOTE
-    //3=MONITOR
     var remfunction = 0;
     var row$ = $('<tr>');
     row$.append($('<td>').html(`<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}'/>`));
@@ -1123,8 +1119,12 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
         row$.append($('<td>').html(select));
       }
       else if (colIndex == 5) {
-
-        if (remfunction == 1 || remfunction == 3) {
+        if (remfunction == 2 || remfunction == 5) {
+          var td$ = $('<td>');
+          addRemoteButtons(td$, remfunc, remtype, i, false);
+          row$.append(td$);
+        }
+        else {
           var str = '';
           var JSONObj = jsonVar[i][columns[colIndex]];
           if (JSONObj != null) {
@@ -1136,11 +1136,6 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
             }
           }
           row$.append($('<td>').html(str));
-        }
-        else if (remfunction == 2 || remfunction == 4) {
-          var td$ = $('<td>');
-          addRemoteButtons(td$, remfunc, remtype, i, false);
-          row$.append(td$);
         }
       }
       else {

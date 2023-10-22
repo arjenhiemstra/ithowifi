@@ -488,7 +488,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         const int *current_id = remotes.getRemoteIDbyIndex(index);
         rf.removeRFDevice(*current_id, *(current_id + 1), *(current_id + 2));
         remotes.updateRemoteID(index, id);
-        rf.addRFDevice(*id, *(id + 1), *(id + 2), remotes.getRemoteType(index));
+        rf.addRFDevice(*id, *(id + 1), *(id + 2), remotes.getRemoteType(index), remotes.getRemoteFunction(index) == RemoteFunctions::BIDIRECT ? true : false);
         rf.setBindAllowed(false);
         saveRemotesflag = true;
       }

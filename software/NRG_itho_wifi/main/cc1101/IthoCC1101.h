@@ -20,6 +20,7 @@ struct ithoRFDevice
   IthoCommand lastCommand{IthoUnknown};
   time_t timestamp;
   uint8_t counter;
+  bool bidirectional{false};
   int32_t co2{0xEFFF};
   int32_t temp{0xEFFF};
   int32_t hum{0xEFFF};
@@ -29,29 +30,6 @@ struct ithoRFDevice
 
 struct RFmessage
 {
-  //<HEADER> <addr0> <addr1> <addr2> <param0> <param1> <OPCODE> <LENGTH> <PAYLOAD> <CHECKSUM>
-  // from: https://github.com/ghoti57/evofw3/wiki/Message-Body#message-body
-  // Header format:
-  // 00TTAAPP
-  // TT specifies the type of the message
-  // TT
-  // 00 RQ
-  // 01  I
-  // 10  W
-  // 11 RP
-
-  // AA specifies which address fields are present
-  // AA
-  // 00 addr0 + addr1 + addr2
-  // 01 addr2
-  // 10 addr0 + addr2
-  // 11 addr0 + addr1
-
-  // PP which params are present PP
-  // 1x Param 0 is present
-  // x1 Param 1 is present
-  //
-  // ie. 0x16 == 00 01 01 10
   uint8_t header{0xC0};
   uint8_t deviceid0[3]{0};
   uint8_t deviceid1[3]{0};
@@ -61,7 +39,7 @@ struct RFmessage
   uint16_t opcode{0};
   uint8_t len{0};
   const uint8_t *command{nullptr};
-  //uint8_t checksum;
+  // uint8_t checksum;
 };
 
 struct ithoRFDevices
@@ -84,7 +62,9 @@ private:
   IthoPacket inIthoPacket; // stores last received message data
 
   // send
+  uint8_t deviceIDsend[3]{33, 66, 99};
   IthoPacket outIthoPacket; // stores state of "remote"
+  int8_t joinreply_test{-1};
 
   // settings
   uint8_t sendTries;  // number of times a command is send at one button press
@@ -123,7 +103,8 @@ private:
 public:
   IthoCC1101(uint8_t counter = 0, uint8_t sendTries = 3); // set initial counter value
   ~IthoCC1101();
-
+  uint8_t CC1101MessageLen{};
+  uint8_t IthoPacketLen{};
   // init
   void init()
   {
@@ -131,23 +112,19 @@ public:
     initReceive();
   }
   void initReceive();
-  uint8_t getLastCounter()
-  {
-    return outIthoPacket.counter; // counter is increased before sending a command
-  }
+
   void setSendTries(uint8_t sendTries)
   {
     this->sendTries = sendTries;
   }
-  void setDeviceID(uint8_t byte0, uint8_t byte1, uint8_t byte2)
+  void setDeviceIDsend(uint8_t byte0, uint8_t byte1, uint8_t byte2)
   {
-    this->outIthoPacket.deviceId[0] = byte0;
-    this->outIthoPacket.deviceId[1] = byte1;
-    this->outIthoPacket.deviceId[2] = byte2;
+    this->deviceIDsend[0] = byte0;
+    this->deviceIDsend[1] = byte1;
+    this->deviceIDsend[2] = byte2;
   }
-
-  bool addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2, RemoteTypes deviceType);
-  bool addRFDevice(uint32_t ID, RemoteTypes deviceType);
+  bool addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2, RemoteTypes deviceType, bool bidirectional = false);
+  bool addRFDevice(uint32_t ID, RemoteTypes deviceType, bool bidirectional = false);
   bool updateRFDeviceID(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t remote_index);
   bool updateRFDeviceID(uint32_t ID, uint8_t remote_index);
   bool updateRFDeviceType(RemoteTypes deviceType, uint8_t remote_index);
@@ -155,6 +132,11 @@ public:
   bool removeRFDevice(uint32_t ID);
   bool checkRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2);
   bool checkRFDevice(uint32_t ID);
+  void setRFDeviceBidirectional(uint8_t remote_index, bool bidirectional);
+  bool getRFDeviceBidirectional(uint8_t remote_index);
+  bool getRFDeviceBidirectionalByID(int32_t ID);
+  int8_t getRemoteIndexByID(int32_t ID);
+
   void setBindAllowed(bool input)
   {
     bindAllowed = input;
@@ -190,17 +172,13 @@ public:
   {
     return inIthoPacket.remType; // retrieve last received/parsed rf device type
   }
-  uint8_t getLastInCounter()
-  {
-    return inIthoPacket.counter; // retrieve last received/parsed command from remote
-  }
   uint32_t getFrequency()
   {
     return ((uint32_t)cc_freq[2] << 16) | ((uint32_t)cc_freq[1] << 8) | ((uint32_t)cc_freq[0] << 0);
   }
 
   uint8_t ReadRSSI();
-  bool checkID(const uint8_t *id);
+  // bool checkID(const uint8_t *id);
   int *getLastID();
   String getLastIDstr(bool ashex = true);
   String getLastMessagestr(bool ashex = true);
@@ -209,6 +187,9 @@ public:
   // send
   const uint8_t *getRemoteCmd(const RemoteTypes type, const IthoCommand command);
   void sendRFCommand(uint8_t remote_index, IthoCommand command);
+  void sendJoinReply(uint8_t byte0, uint8_t byte1, uint8_t byte2);
+  void sendJoinReply(uint32_t ID);
+  void send10E0();
   void sendRFMessage(RFmessage *message);
   void sendCommand(IthoCommand command);
 
@@ -245,5 +226,4 @@ private:
 
   uint8_t messageEncode(IthoPacket *itho, CC1101Packet *packet);
   void messageDecode(CC1101Packet *packet, IthoPacket *itho);
-
 }; // IthoCC1101
