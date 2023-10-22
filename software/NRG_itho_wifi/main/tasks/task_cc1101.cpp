@@ -52,7 +52,7 @@ uint8_t findRFTlastCommand()
 
 void RFDebug(IthoCommand cmd)
 {
-  char debugLog[200] = {0};
+  char debugLog[400] = {0};
   strncat(debugLog, rf.LastMessageDecoded().c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
   // log command
   switch (cmd)
@@ -104,6 +104,9 @@ void RFDebug(IthoCommand cmd)
     break;
   case IthoLeave:
     strncat(debugLog, " (cmd:leave)", sizeof(debugLog) - strlen(debugLog) - 1);
+    break;
+  case IthoJoinReply:
+    strncat(debugLog, " (cmd:joinreply)", sizeof(debugLog) - strlen(debugLog) - 1);
     break;
   }
   D_LOG(debugLog);
@@ -227,7 +230,7 @@ void TaskCC1101(void *pvParameters)
     esp_task_wdt_add(NULL);
     reboot.detach();
     N_LOG("Setup: init of CC1101 RF module successful");
-    // rf.setDeviceID(sys.getMac(3), sys.getMac(4), sys.getMac(5));
+    rf.setDeviceIDsend(sys.getMac(3), sys.getMac(4), sys.getMac(5) - 1);
     systemConfig.itho_rf_support = 1;
     loadRemotesConfig("flash");
     // rf.setBindAllowed(true);
@@ -236,6 +239,7 @@ void TaskCC1101(void *pvParameters)
       const int *id = remotes.getRemoteIDbyIndex(i);
       rf.updateRFDeviceID(*id, *(id + 1), *(id + 2), i);
       rf.updateRFDeviceType(remotes.getRemoteType(i), i);
+      rf.setRFDeviceBidirectional(i, remotes.getRemoteFunction(i) == RemoteFunctions::BIDIRECT ? true : false);
     }
     rf.setBindAllowed(false);
     rf.setAllowAll(false);
@@ -259,7 +263,7 @@ void TaskCC1101(void *pvParameters)
           int id[3];
           for (uint8_t i = 0; i < 3; i++)
           {
-            id[i] = lastID[i];
+            id[i] = *(&lastID[0] + i);
           }
           IthoCommand cmd = rf.getLastCommand();
           RemoteTypes remtype = rf.getLastRemType();
@@ -302,36 +306,50 @@ void TaskCC1101(void *pvParameters)
             if (cmd == IthoJoin)
             {
               D_LOG("Join command received. Trying to join remote...");
+              D_LOG("ID:%02X,%02X,%02X", id[0], id[1], id[2]);
               if (remotes.remoteLearnLeaveStatus())
               {
                 int result = remotes.registerNewRemote(id, remtype);
-                switch (result)
+                if (result >= 0)
                 {
-                case -1: // failed! - remote already registered
-                  break;
-                case -2: // failed! - max number of remotes reached"
-                  break;
-                case 1:
+                  if (remotes.getRemoteFunction(result) == RemoteFunctions::BIDIRECT)
+                  {
+                    // delay(500);
+                    // rf.setSendTries(1);
+                    // rf.sendJoinReply(id[0],id[1],id[2]);
+                    // D_LOG("Join reply send");
+                    // delay(100);
+                    // rf.send10E0();
+                    // D_LOG("10E0 send");
+                    // rf.setSendTries(3);
+                  }
+
                   saveRemotesflag = true;
-                  break;
-                  // default:
+                }
+                else
+                {
+                  // error
+                  // case -1: // failed! - remote already registered
+                  //   break;
+                  // case -2: // failed! - max number of remotes reached"
                 }
               }
               if (virtualRemotes.remoteLearnLeaveStatus())
               {
                 int result = virtualRemotes.registerNewRemote(id, remtype);
-                switch (result)
+                if (result >= 0)
                 {
-                case -1: // failed! - remote already registered
-                  break;
-                case -2: // failed! - max number of remotes reached"
-                  break;
-                case 1:
                   saveVremotesflag = true;
                   delay(200);
                   toggleRemoteLLmode("vremote");
                   break;
-                  // default:
+                }
+                else
+                {
+                  // error
+                  // case -1: // failed! - remote already registered
+                  //   break;
+                  // case -2: // failed! - max number of remotes reached"
                 }
               }
             }

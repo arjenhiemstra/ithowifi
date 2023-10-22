@@ -31,6 +31,8 @@ enum IthoCommand
 
   IthoTimerUser = 15,
 
+  IthoJoinReply = 16,
+
 };
 
 enum RemoteTypes : uint16_t
@@ -66,7 +68,7 @@ enum RemoteTypes : uint16_t
 #define MAX_PAYLOAD 64
 #define MAX_DECODED MAX_PAYLOAD + 18
 
-static char const *const MsgType[4] = {"RQ", "_W", "_I", "RP"};
+static char const *const MsgType[4] = {"RQ", "_I", "_W", "RP"};
 
 // General command structure:
 // < opcode 2 bytes >< len 1 byte >< command len bytes >
@@ -120,6 +122,9 @@ const uint8_t ithoMessageLeaveCommandBytes[] = {0x1F, 0xC9, 0x06, 0x00, 0x1F, 0x
 const uint8_t ithoMessageAUTORFTLeaveCommandBytes[] = {0x1F, 0xC9, 0x06, 0x63, 0x1F, 0xC9, 0x00, 0x00, 0x00};                                                                                                                                            // leave command of AUTO RFT (536-0150)
 const uint8_t ithoMessageAUTORFTNJoinCommandBytes[] = {0x1F, 0xC9, 0x12, 0x00, 0x22, 0xF8, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00};                                                                    // join command of Auto RFT-N (04-00161) (bi-directioal)
 
+// Join/Leave reply commands:
+const uint8_t ithoMessageJoinReplyCommandBytes[] = {0x1F, 0xC9, 0x0C, 0x00, 0x31, 0xD9, 0x00, 0x00, 0x00, 0x00, 0x31, 0xDA, 0x00, 0x00, 0x00}; // leave command of AUTO RFT (536-0150)
+
 // Orcon remote VMN-15LF01
 const uint8_t orconMessageAwayCommandBytes[] = {0x22, 0xF1, 0x03, 0x00, 0x00, 0x04};
 const uint8_t orconMessageAutoCommandBytes[] = {0x22, 0xF1, 0x03, 0x00, 0x04, 0x04};
@@ -159,28 +164,28 @@ public:
   //<HEADER> <addr0> <addr1> <addr2> <param0> <param1> <OPCODE> <LENGTH> <PAYLOAD> <CHECKSUM>
   //<  1   > <  3  > <  3  > <  3  > <  1   > <  1   > <  2   > <  1   > <length > <   1    >
 
-  uint8_t header;
-  uint8_t type;
-  uint32_t deviceId0;
-  uint32_t deviceId1;
-  uint32_t deviceId2;
-  uint8_t param0;
-  uint8_t param1;
-  uint16_t opcode;
-  uint8_t len;
+  uint8_t header{0};
+  //uint8_t type;
+  uint32_t deviceId0{0};
+  uint32_t deviceId1{0};
+  uint32_t deviceId2{0};
+  uint8_t param0{0};
+  uint8_t param1{0};
+  uint16_t opcode{0};
+  uint8_t len{0};
 
-  uint8_t error;
+  uint8_t error{0};
 
-  uint8_t payloadPos;
+  uint8_t payloadPos{0};
   // uint8_t payload[MAX_PAYLOAD];
 
-  uint8_t dataDecoded[MAX_DECODED];
-  uint8_t length;
+  uint8_t dataDecoded[MAX_DECODED]{};
+  uint8_t length{0};
 
-  uint8_t deviceType;
-  uint8_t deviceId[3];
+  // uint8_t deviceType{0};
+  // uint8_t deviceId[3];
 
-  uint8_t counter; // 0-255, counter is increased on every remote button press
+  // uint8_t counter{0}; // 0-255, counter is increased on every remote button press
 
   // Type getType(uint16_t opcode) const;
 };

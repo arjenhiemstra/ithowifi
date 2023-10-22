@@ -198,6 +198,7 @@ void CC1101::readBurstRegister(uint8_t *buffer, const uint8_t address, const uin
 
 size_t CC1101::readData(CC1101Packet *packet, size_t maxLen)
 {
+  packet->length = 0;
   size_t length = maxLen;
   uint8_t bytesInFIFO = 0;
 

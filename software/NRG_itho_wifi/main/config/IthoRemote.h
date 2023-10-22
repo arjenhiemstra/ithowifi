@@ -16,11 +16,12 @@
 
 enum RemoteFunctions : uint8_t
 {
-  UNSETFUNC,
-  RECEIVE,
-  VREMOTE,
-  MONITOR,
-  SEND
+  UNSETFUNC = 0,
+  RECEIVE = 1,
+  VREMOTE = 2,
+  MONITOR = 3,
+  SEND = 5,
+  BIDIRECT = 7
 };
 
 class IthoRemote
