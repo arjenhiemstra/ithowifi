@@ -18,7 +18,6 @@
 #include "config/Config.h"
 #include "config/LogConfig.h"
 #include "esp32_repartition.h"
-#include "ArduinoNvs.h"
 
 #include "LittleFS.h"
 
