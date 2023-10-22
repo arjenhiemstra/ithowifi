@@ -110,14 +110,13 @@ void backup_all_configs()
     saveLogConfig("nvs");
     saveRemotesConfig("nvs");
     saveVirtualRemotesConfig("nvs");
-
 }
 
 void load_all_configs()
 {
     D_LOG("Load all configs before backup to NVS");
-    
-    //clear NVS to prevent any bogus readings
+
+    // clear NVS to prevent any bogus readings
     nvs_flash_erase();
     nvs_flash_init();
 
@@ -154,7 +153,7 @@ void change_partitions_to_coredump()
     {
 
         load_all_configs();
-        
+
         NVS.begin();
 
         NVS.setInt("partupdated", static_cast<uint8_t>(1));

@@ -1,4 +1,4 @@
-GIT_REPO = "https://github.com/joltwallet/esp_littlefs.git#v1.9.1"
+GIT_REPO = "https://github.com/joltwallet/esp_littlefs.git#v1.9.2"
 
 import os
 from sys import platform
