@@ -438,22 +438,15 @@ $(document).ready(function () {
         alert("Please select a remote.");
       }
       else {
-        var remtype = 1;
-        if ($('#type_remote-' + i).val() < 4) {
-          if ($('#type_remote-' + i).prop('checked')) {
-            remtype = 3;
-          }
-        }
-        else {
-          remtype = $('#type_remote-' + i).val();
-        }
+        var remfunc = $('#func_remote-' + i).val();
+        var remtype = $('#type_remote-' + i).val();
         var id = $('#id_remote-' + i).val();
         if (id == 'empty slot') id = "0,0,0";
         if (isNaN(parseInt(id.split(",")[0], 16)) || isNaN(parseInt(id.split(",")[1], 16)) || isNaN(parseInt(id.split(",")[2], 16))) {
           alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
         }
         else {
-          websock.send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype}}`);
+          websock.send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc}}`);
         }
       }
     }
@@ -550,6 +543,10 @@ $(document).ready(function () {
     else if ($(this).attr('id').startsWith('button_vremote-')) {
       const items = $(this).attr('id').split('-');
       websock.send(`{"vremote":${items[1]}, "command":"${items[2]}"}`);
+    }
+    else if ($(this).attr('id').startsWith('button_remote-')) {
+      const items = $(this).attr('id').split('-');
+      websock.send(`{"remote":${items[1]}, "command":"${items[2]}"}`);
     }
     else if ($(this).attr('id').startsWith('ithobutton-')) {
       const items = $(this).attr('id').split('-');
@@ -773,6 +770,12 @@ function radio(origin, state) {
       $(`#type_${origin}-${index}`).prop('disabled', true);
       if (index == state) {
         $(`#type_${origin}-${index}`).prop('disabled', false);
+      }
+    });
+    $(`[id^=func_${origin}-]`).each(function (index) {
+      $(`#func_${origin}-${index}`).prop('disabled', true);
+      if (index == state) {
+        $(`#func_${origin}-${index}`).prop('disabled', false);
       }
     });
     $(`[id^=id_${origin}-]`).each(function (index) {
@@ -1004,8 +1007,15 @@ var remtypes = [
   ["RFT RV", 0x12A0, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT CO2", 0x1298, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
 ];
+var remfuncs = [
+  ["Receive", 1],
+  ["Monitor Only", 3],
+  ["Send", 5],
+  ["Bidirectional", 7]
+];
 
-function addRemoteButtons(selector, remtype, vremotenum, seperator) {
+function addRemoteButtons(selector, remfunc, remtype, vremotenum, seperator) {
+  var remfuncname = remfunc == 1 ? "remote" : "vremote";
   for (const item of remtypes) {
     if (remtype == item[1]) {
       var newinner = '';
@@ -1014,7 +1024,7 @@ function addRemoteButtons(selector, remtype, vremotenum, seperator) {
           if (i == 0 || item[2][i] == 'cook30' || item[2][i] == 'timer1' || (item[2].length == 10 && item[2][i] == 'low') || item[2][i] == 'join') { newinner += `<div style="text-align: center;margin: 2em 0 0 0;">`; }
         }
 
-        newinner += `<button value='${item[2][i]}_remote-${vremotenum}' id='button_vremote-${vremotenum}-${item[2][i]}' class='pure-button pure-button-primary'>${item[2][i].charAt(0).toUpperCase() + item[2][i].slice(1)}</button>\u00A0`;
+        newinner += `<button value='${item[2][i]}_remote-${vremotenum}' id='button_${remfuncname}-${vremotenum}-${item[2][i]}' class='pure-button pure-button-primary'>${item[2][i].charAt(0).toUpperCase() + item[2][i].slice(1)}</button>\u00A0`;
 
         if (seperator) {
           if (item[2][i] == 'high' || item[2][i] == 'cook60' || item[2][i] == 'timer3' || (item[2].length == 10 && item[2][i] == 'autonight') || item[2][i] == 'leave') {
@@ -1037,7 +1047,7 @@ function addvRemoteInterface(remtype) {
 
   var elem = $('#reminterface');
   elem.empty();
-  addRemoteButtons(elem, remtype, 0, true);
+  addRemoteButtons(elem, 2, remtype, 0, true);
 
 }
 
@@ -1073,42 +1083,49 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
       if (colIndex == 3) {
         remfunction = jsonVar[i][columns[colIndex]];
-      }
-      else if (colIndex == 4) {
-        var cellValue = jsonVar[i][columns[colIndex]];
-        if (remfunction == 1 || remfunction == 3) {
-          var checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.id = `type_remote-${i}`;
-          checkbox.value = remfunction;
-          checkbox.disabled = true;
-          if (remfunction == 3) checkbox.checked = true;
-          row$.append($('<td>').html(checkbox));
-        }
-        else if (remfunction == 2) {
+        if (remfunction != 2) { //do not add remote function is remfunction == virtual remote
           var select = document.createElement('select');
-          select.name = cellValue;
-          select.id = `type_remote-${i}`;
+          select.name = remfunction;
+          select.id = `func_remote-${i}`;
           select.disabled = true;
-          for (const item of remtypes) {
+          for (const item of remfuncs) {
             var option = document.createElement('option');
             option.value = item[1];
             option.text = item[0];
-            if (item[1] == cellValue) {
+            if (item[1] == remfunction) {
               option.selected = true;
-              remtype = cellValue;
+              remtype = remfunction;
             }
             select.appendChild(option);
           }
           row$.append($('<td>').html(select));
         }
-        else {
-          row$.append($('<td>').html(cellValue));
+      }
+      else if (colIndex == 4) {
+        var cellValue = jsonVar[i][columns[colIndex]];
+        var select = document.createElement('select');
+        select.name = cellValue;
+        select.id = `type_remote-${i}`;
+        select.disabled = true;
+        for (const item of remtypes) {
+          var option = document.createElement('option');
+          option.value = item[1];
+          option.text = item[0];
+          if (item[1] == cellValue) {
+            option.selected = true;
+            remtype = cellValue;
+          }
+          select.appendChild(option);
         }
+        row$.append($('<td>').html(select));
       }
       else if (colIndex == 5) {
-
-        if (remfunction == 1 || remfunction == 3) {
+        if (remfunction == 2 || remfunction == 5) {
+          var td$ = $('<td>');
+          addRemoteButtons(td$, remfunc, remtype, i, false);
+          row$.append(td$);
+        }
+        else {
           var str = '';
           var JSONObj = jsonVar[i][columns[colIndex]];
           if (JSONObj != null) {
@@ -1120,11 +1137,6 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
             }
           }
           row$.append($('<td>').html(str));
-        }
-        else if (remfunction == 2) {
-          var td$ = $('<td>');
-          addRemoteButtons(td$, remtype, i, false);
-          row$.append(td$);
         }
       }
       else {
@@ -1149,9 +1161,6 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
     headerTbody$.append(row$);
   }
   $(selector).append(headerTbody$);
-  if (remfunc == 1) {
-    $('#remtype').html("monitor only");
-  }
 }
 
 function buildHtmlStatusTable(selector, jsonVar) {
@@ -1251,7 +1260,7 @@ function addAllColumnHeadersPlain(jsonVar, selector) {
   return columnSet;
 }
 
-function addAllColumnHeaders(jsonVar, selector, appendRow) {
+function addAllColumnHeaders(jsonVar, selector, appendRow, remfunc) {
   var columnSet = [];
   var headerThead$ = $('<thead>');
   var headerTr$ = $('<tr>');
@@ -1262,8 +1271,8 @@ function addAllColumnHeaders(jsonVar, selector, appendRow) {
     for (var key in rowHash) {
       if ($.inArray(key, columnSet) == -1) {
         columnSet.push(key);
-        if (key == "remtype") {
-          headerTr$.append($('<th id="remtype">').html(key));
+        if (key == "remfunc" & remfunc == 1) {
+          headerTr$.append($('<th id="remfunc">').html(key));
         }
         else if (key != "remfunc") {
           headerTr$.append($('<th>').html(key));
@@ -2520,6 +2529,7 @@ var html_remotessetup = `
 <p>There is also an option
   to monitor only. With this option checked, a RF device still paired with an itho can be monitored without influencing
   the commands using the add-on.</p>
+<p>Changing the remote function to "Send" will enable the user to send RF commands by using the CC1101 RF module.</p>
 <p>Last received commands (and if applicable data) received from paired RF devices is available through the MQTT API and
   WebAPI</p>
 <form class="pure-form pure-form-aligned">
@@ -2544,6 +2554,7 @@ var html_remotessetup = `
 </form>
 <script>
   $(document).ready(function () {
+    $('#main').css('max-width', '1400px')
     getSettings('ithoremotes');
   });
 </script>
