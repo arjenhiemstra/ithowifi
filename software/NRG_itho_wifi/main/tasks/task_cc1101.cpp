@@ -447,6 +447,10 @@ void TaskCC1101(void *pvParameters)
               {
                 remotes.addCapabilities(remIndex, "battery", item.battery);
               }
+              if (item.pir != 0xEF)
+              {
+                remotes.addCapabilities(remIndex, "pir", item.pir);
+              }
             }
           }
         }
