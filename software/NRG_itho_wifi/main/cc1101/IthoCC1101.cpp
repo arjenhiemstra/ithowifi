@@ -1701,6 +1701,39 @@ void IthoCC1101::handleBattery()
   }
 }
 
+void IthoCC1101::handlePIR()
+{
+  /*
+     message length: 3
+     message opcode: 0x2E10
+     byte[0]    : unknown
+     byte[1]    : movement (1) / no movement (0)
+     byte[2]    : unknown
+
+  */
+  if (inIthoPacket.error > 0)
+    return;
+  uint32_t tempID = 0;
+  if (inIthoPacket.deviceId0 != 0)
+    tempID = inIthoPacket.deviceId0;
+  else if (inIthoPacket.deviceId2 != 0)
+    tempID = inIthoPacket.deviceId2;
+  else
+    return;
+
+  if (!checkRFDevice(tempID))
+    return;
+  int32_t tempVal = inIthoPacket.dataDecoded[inIthoPacket.payloadPos + 1];
+
+  for (auto &item : ithoRF.device)
+  {
+    if (item.deviceId == tempID)
+    {
+      item.pir = tempVal;
+    }
+  }
+}
+
 const char *IthoCC1101::rem_cmd_to_name(IthoCommand code)
 {
   size_t i;

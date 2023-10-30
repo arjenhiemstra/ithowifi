@@ -24,6 +24,7 @@ struct ithoRFDevice
   int32_t co2{0xEFFF};
   int32_t temp{0xEFFF};
   int32_t hum{0xEFFF};
+  uint8_t pir{0xEF};
   int32_t dewpoint{0xEFFF};
   int32_t battery{0xEFFF};
 };
@@ -201,7 +202,7 @@ public:
   void handleTemphum();
   void handleCo2();
   void handleBattery();
-
+  void handlePIR();
   const char *rem_cmd_to_name(IthoCommand code);
 
 protected:
