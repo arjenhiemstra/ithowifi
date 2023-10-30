@@ -530,8 +530,8 @@ void handleAPI(AsyncWebServerRequest *request)
   const char *vremotecmd = nullptr;
   const char *vremoteidx = nullptr;
   const char *vremotename = nullptr;
-  const char *rfremotecommand = nullptr;
-  const char *rfremoteidx = nullptr;
+  const char *rfremotecmd = nullptr;
+  const char *rfremoteindex = nullptr;
 
   for (int i = 0; i < params; i++)
   {
@@ -612,14 +612,14 @@ void handleAPI(AsyncWebServerRequest *request)
     {
       parseOK = ithoExecCommand(p->value().c_str(), HTMLAPI);
     }
-    else if (strcmp(p->name().c_str(), "rfcommand") == 0)
+    else if (strcmp(p->name().c_str(), "rfremotecmd") == 0)
     {
-      rfremotecommand = p->value().c_str();
+      rfremotecmd = p->value().c_str();
       // parseOK = ithoExecRFCommand(p->value().c_str(), HTMLAPI);
     }
-    else if (strcmp(p->name().c_str(), "rfremoteidx") == 0)
+    else if (strcmp(p->name().c_str(), "rfremoteindex") == 0)
     {
-      rfremoteidx = p->value().c_str();
+      rfremoteindex = p->value().c_str();
     }
     else if (strcmp(p->name().c_str(), "vremote") == 0)
     {
@@ -748,16 +748,16 @@ void handleAPI(AsyncWebServerRequest *request)
       parseOK = ithoSetTimer(timer, HTMLAPI);
     }
   }
-  else if (rfremotecommand != nullptr || rfremoteidx != nullptr)
+  else if (rfremotecmd != nullptr || rfremoteindex != nullptr)
   {
     uint8_t idx = 0;
-    if (rfremoteidx != nullptr)
+    if (rfremoteindex != nullptr)
     {
-      idx = strtoul(rfremoteidx, NULL, 10);
+      idx = strtoul(rfremoteindex, NULL, 10);
     }
-    if (rfremotecommand != nullptr)
+    if (rfremotecmd != nullptr)
     {
-      parseOK = ithoExecRFCommand(idx, rfremotecommand, HTMLAPI);
+      parseOK = ithoExecRFCommand(idx, rfremotecmd, HTMLAPI);
     }
   }
   if (parseOK)
