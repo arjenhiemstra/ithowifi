@@ -369,6 +369,19 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
             }
           }
         }
+        if (!root["rfremotecmd"].isNull() || !root["rfremoteindex"].isNull())
+        {
+          uint8_t idx = 0;
+          if (!root["rfremoteindex"].isNull())
+          {
+            idx = strtoul(root["rfremoteindex"], NULL, 10);
+          }
+          if (!root["rfremotecmd"].isNull())
+          {
+            jsonCmd = true;
+            ithoExecRFCommand(idx, root["rfremotecmd"], MQTTAPI);
+          }
+        }
         if (!root["speed"].isNull())
         {
           jsonCmd = true;
