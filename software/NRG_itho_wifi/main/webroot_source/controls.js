@@ -9,7 +9,7 @@ var sensor = -1;
 sessionStorage.setItem("statustimer", 0);
 var settingIndex = -1;
 
-var websocketServerLocation = location.protocol === 'https' ? 'wss://' + window.location + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
+var websocketServerLocation = location.protocol.indexOf("https") > -1 ? 'wss://' + window.location.hostname + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
 
 let messageQueue = [];
 let websock;
@@ -1718,6 +1718,7 @@ Unless specified otherwise:<br>
         <tr>
             <td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td>
         </tr>
+
         <tr>
             <td colspan="6"><b>Commands only for WPU devices</b></td>
         </tr>
@@ -1736,6 +1737,43 @@ Unless specified otherwise:<br>
                     passed it will fallback to <b>outside_temp</b>.
                 </em></td>
         </tr>
+
+        <tr>
+            <td colspan="6"><b>Commands only for devices with CC1101 module</b></td>
+        </tr>
+        <tr>
+            <td>rfremotecmd</td>
+            <td>string</td>
+            <td>away, low, medium, high, timer1, timer2, timer3, join, leave, auto, autonight, cook30, cook60</td>
+            <td>string</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>These commands emulate a normal physical remote using the CC1101 module and
+                    a RF signal,
+                    available commands depend
+                    on type of remote configured to emulate. For these commands to work, the rf remote needs to be
+                    joined with the itho unit first. This can be done with a physical remote or with the RF remote
+                    buttons on the RF devices page.
+                    If the "rfremoteindex" key is not present, the first RF remote will be used.</em></td>
+        </tr>
+        <tr>
+            <td>rfremoteindex</td>
+            <td>string</td>
+            <td>0-11</td>
+            <td>number</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>The rfremoteindex key/value enables the selection of a specific RF
+                    remote if more than 1 RF remote is configured. The index can be found on the "RF devices"
+                    page.</em></td>
+        </tr>
+
+
+
     </tbody>
 </table>
 <p><br><br></p>
