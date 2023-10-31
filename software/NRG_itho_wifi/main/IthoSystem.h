@@ -88,7 +88,7 @@ extern std::vector<ithoDeviceMeasurements> ithoCounters;
 struct lastCommand
 {
   char source[30];
-  char command[20];
+  char command[32];
   time_t timestamp;
 };
 
