@@ -354,6 +354,7 @@ $(document).ready(function () {
           syssec_api: $('input[name=\'option-syssec_api\']:checked').val(),
           syssec_edit: $('input[name=\'option-syssec_edit\']:checked').val(),
           api_normalize: $('input[name=\'option-api_normalize\']:checked').val(),
+          api_settings: $('input[name=\'option-api_settings\']:checked').val(),
           syssht30: $('input[name=\'option-syssht30\']:checked').val(),
           itho_rf_support: $('input[name=\'option-itho_rf_support\']:checked').val(),
           itho_fallback: $('#itho_fallback').val(),
