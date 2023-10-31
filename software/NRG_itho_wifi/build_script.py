@@ -13,9 +13,8 @@ from SCons.Script import (
 from sys import platform
 
 fwversion = "undefined"
-hwversion = "undefined"
 release = "undefined"
-hwrev = "undefined"
+hwref = "undefined"
 
 my_flags = env.ParseFlags(env["BUILD_FLAGS"])
 # print(my_flags)
@@ -25,16 +24,6 @@ for i in defines:
     if i[0] == "VERSION":
         fwversion = i[1]
         print("\nFirmware version: " + i[1])
-    if i == "NON_CVE":
-        hwversion = "NON_CVE"
-    if i == "CVE":
-        hwversion = "CVE"
-    if i == "BETA":
-        release = "beta"
-    if i == "STABLE":
-        release = "stable"
-
-print("Hardware version: " + hwversion + "\n")
 
 PIOENV = env.subst("$PIOENV")
 PROGNAME = env.subst("$PROGNAME")
@@ -68,12 +57,14 @@ PROJECT_BIN_DIR = os.path.join(PROJECT_BUILD_DIR, PIOENV)
 PROJECT_COMPILED_DIR = os.path.join(PROJECT_DIR, "..", "..", "compiled_firmware_files")
 HW_BIN_DIR = ""
 
-if PIOENV == "release_cve" or PIOENV == "beta_cve":
-    hwrev = "-hw2"
-    HW_BIN_DIR = "hardware_rev_2"
-elif PIOENV == "release_noncve" or PIOENV == "beta_noncve":
-    hwrev = "-noncve"
-    HW_BIN_DIR = "non-cve_rev_1"
+if PIOENV == "release":
+    release = "release"
+    hwrev = ""
+    HW_BIN_DIR = "unified_hw2_noncve"
+elif PIOENV == "beta":
+    release = "beta"
+    hwrev = ""
+    HW_BIN_DIR = "unified_hw2_noncve"        
 elif PIOENV == "debug":
     hwrev = "-debug"
     HW_BIN_DIR = "debug"
@@ -158,7 +149,7 @@ def make_c_header(inName, outName):
     outfile.close()
 
 
-def build_webUI(*args, **kwargs):
+def build_webui(*args, **kwargs):
     print("\n### Building webroot sources...\n")
     concat_controls_js()
     print("### Compressing webroot sources into gzipped header files...")
@@ -186,7 +177,7 @@ def copy_firmware():
         # check_sha1(name)
     else:
         print("Copy error! firmware file not found")
-    if os.path.isfile(PROJECT_BIN_DIR + firmware_elf):
+    if os.path.isfile(os.path.join(PROJECT_BIN_DIR, firmware_elf)):
         dest_fpath = os.path.join(
             PROJECT_COMPILED_DIR,
             HW_BIN_DIR,
@@ -202,7 +193,7 @@ def copy_firmware():
 
 
 def update_releaseinfo():
-    if release != "undefined" and hwversion != "undefined":
+    if release == "beta" or release == "stable":
         print("\n### Updating releaseinfo for the " + release + " release\n")
 
         latest_fw_key = "latest_fw" if release == "stable" else "latest_beta_fw"
@@ -213,19 +204,17 @@ def update_releaseinfo():
         with open(releasefile) as f:
             data = json.load(f)
 
-        if hwversion == "CVE":
-            data["hw_rev"]["2"][latest_link_key] = (
-                "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_2/"
-                + latest_fw_file
-            )
-            data["hw_rev"]["2"][latest_fw_key] = fwversion
-        elif hwversion == "NON_CVE":
-            data["hw_rev"]["NON-CVE 1"][latest_link_key] = (
-                "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/non-cve_rev_1/"
-                + latest_fw_file
-            )
-            data["hw_rev"]["NON-CVE 1"][latest_fw_key] = fwversion
+        data["hw_rev"]["2"][latest_link_key] = (
+            "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/"+ HW_BIN_DIR +"/"
+            + latest_fw_file
+        )
+        data["hw_rev"]["2"][latest_fw_key] = fwversion
 
+        data["hw_rev"]["NON-CVE 1"][latest_link_key] = (
+            "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/"+ HW_BIN_DIR +"/"
+            + latest_fw_file
+        )
+        data["hw_rev"]["NON-CVE 1"][latest_fw_key] = fwversion
         json_object = json.dumps(data, indent=4)
 
         with open(
@@ -237,7 +226,7 @@ def update_releaseinfo():
 def build_prep(*args, **kwargs):
     print("\n### running build preparation commands...\n")
     export_version()
-    build_webUI(*args, **kwargs)
+    build_webui(*args, **kwargs)
 
 
 def build_after(*args, **kwargs):
