@@ -236,49 +236,6 @@ void processSettingResult(const uint8_t index, const bool loop)
       root["Current"] = "error";
       root["Minimum"] = "error";
       root["Maximum"] = "error";
-
-      // bool indexpresent = false;
-      // bool retry = false;
-
-      // for (auto it = retryList.begin(); it != retryList.end(); /* NOTHING */)
-      // {
-      //   if ((it->index) == index)
-      //   {
-      //     indexpresent = true;
-      //     if (it->retries > 0)
-      //     {
-      //       it->retries--;
-      //       retry = true;
-      //     }
-      //     else
-      //     {
-      //       it = retryList.erase(it);
-      //     }
-      //     break;
-      //   }
-      //   else
-      //   {
-      //     ++it;
-      //   }
-      // }
-
-      // if (!indexpresent)
-      // {
-      //   retryList.push_back({index, 2});
-      //   retry = true;
-      // }
-      // if (retry)
-      // {
-      //   root["Current"] = "error - retrying...";
-      //   root["Minimum"] = "error - retrying...";
-      //   root["Maximum"] = "error - retrying...";
-      //   resultPtr2410 = nullptr;
-      //   i2c_queue_add_cmd([index]()
-      //                     { resultPtr2410 = sendQuery2410(index, false); });
-      //   i2c_queue_add_cmd([index, loop]()
-      //                     { processSettingResult(index, false); });
-      // }
-
     }
     else if (ithoSettingsArray[index].type == ithoSettings::is_int)
     {
