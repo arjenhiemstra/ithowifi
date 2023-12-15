@@ -159,7 +159,7 @@ def build_webui(*args, **kwargs):
     make_c_header("index.html", "index_html_gz")
     make_c_header("edit.html", "edit_html_gz")
     make_c_header("pure-min.css", "pure_min_css_gz")
-    make_c_header("zepto.min.js", "zepto_min_js_gz")
+    make_c_header("jquery.min.js", "jquery_min_js_gz")
     make_c_header("favicon.png", "favicon_png_gz")
     print("\n### Webroot sources ready...\n")
 
