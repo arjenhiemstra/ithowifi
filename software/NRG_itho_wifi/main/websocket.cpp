@@ -207,6 +207,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           }
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"wifisettings\"");
+      }
     }
     else if (msg.find("{\"button\"") != std::string::npos)
     {
@@ -242,6 +246,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           systemConfig.i2c_sniffer = 0;
           saveLogConfigflag = true;
         }
+      }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"button\"");
       }
     }
     else if (msg.find("{\"ithobutton\"") != std::string::npos)
@@ -296,6 +304,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           ithoI2CCommand(0, root["ithobutton"], WEB);
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"ithobutton\"");
+      }
     }
     else if (msg.find("{\"wifisetup\"") != std::string::npos)
     {
@@ -336,6 +348,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         i2c_queue_add_cmd([root]()
                           { getSetting(root["index"].as<uint8_t>(), root["update"].as<bool>(), false, true); });
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"ithogetsetting\"");
+      }
     }
     else if (msg.find("{\"ithosetrefresh\"") != std::string::npos)
     {
@@ -345,6 +361,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       {
         i2c_queue_add_cmd([root]()
                           { getSetting(root["ithosetrefresh"].as<uint8_t>(), true, false, false); });
+      }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"ithosetrefresh\"");
       }
     }
     else if (msg.find("{\"ithosetupdate\"") != std::string::npos)
@@ -374,6 +394,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           }
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"ithosetupdate\"");
+      }
     }
     else if (msg.find("{\"ithoremotes\"") != std::string::npos)
     {
@@ -396,6 +420,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           ithoI2CCommand(root["vremote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"vremote\"");
+      }
     }
     else if (msg.find("{\"remote\"") != std::string::npos)
     {
@@ -408,6 +436,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           ithoExecRFCommand(root["remote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"remote\"");
+      }
     }
     else if (msg.find("{\"command\"") != std::string::npos)
     {
@@ -419,6 +451,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         {
           ithoExecCommand(root["command"].as<const char *>(), WEB);
         }
+      }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"command\"");
       }
     }
 
@@ -469,6 +505,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           saveRemotesflag = true;
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"itho_remove_remote\"");
+      }
     }
     else if (msg.find("{\"itho_update_remote\"") != std::string::npos)
     {
@@ -492,6 +532,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         rf.setBindAllowed(false);
         saveRemotesflag = true;
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"itho_update_remote\"");
+      }
     }
     else if (msg.find("{\"itho_remove_vremote\"") != std::string::npos)
     {
@@ -512,6 +556,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           saveVremotesflag = true;
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"itho_remove_vremote\"");
+      }
     }
     else if (msg.find("{\"itho_update_vremote\"") != std::string::npos)
     {
@@ -528,6 +576,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         ID[2] = root["id"][2].as<uint8_t>();
         virtualRemotes.updateRemoteID(index, ID);
         saveVremotesflag = true;
+      }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"itho_update_vremote\"");
       }
     }
     else if (msg.find("{\"reboot\"") != std::string::npos)
@@ -559,6 +611,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       if (!error)
       {
         ithoSetSpeed(root["itho"].as<uint16_t>(), WEB);
+      }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"itho\"");
       }
     }
     else if (msg.find("{\"rfdebug\"") != std::string::npos)
