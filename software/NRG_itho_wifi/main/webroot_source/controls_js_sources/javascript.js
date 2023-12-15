@@ -438,8 +438,8 @@ $(document).ready(function () {
         alert("Please select a remote.");
       }
       else {
-        var remfunc = $('#func_remote-' + i).val();
-        var remtype = $('#type_remote-' + i).val();
+        var remfunc = (typeof $('#func_remote-' + i).val() === 'undefined') ? 0 : $('#func_remote-' + i).val();
+        var remtype = (typeof $('#type_remote-' + i).val() === 'undefined') ? 0 : $('#type_remote-' + i).val();
         var id = $('#id_remote-' + i).val();
         if (id == 'empty slot') id = "0,0,0";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
