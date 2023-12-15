@@ -6,7 +6,7 @@
 #include "webroot/edit_html_gz.h"
 #include "webroot/controls_js_gz.h"
 #include "webroot/pure_min_css_gz.h"
-#include "webroot/zepto_min_js_gz.h"
+#include "webroot/jquery_min_js_gz.h"
 #include "webroot/favicon_png_gz.h"
 
 #endif
@@ -46,7 +46,7 @@ static const struct packed_files_lst
     "/edit.html",
     "/favicon.png",
     "/pure-min.css",
-    "/zepto.min.js",
+    "/jquery.min.js",
     ""};
 
 // const char packed_files_list[] = {
@@ -55,7 +55,7 @@ static const struct packed_files_lst
 //     "/edit.html",
 //     "/favicon.png",
 //     "/pure-min.css",
-//     "/zepto.min.js",
+//     "/jquery.min.js",
 //     NULL,
 // };
 
@@ -271,9 +271,9 @@ void webServerInit()
     request->send(response); });
 
   // javascript files
-  server.on("/zepto.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", zepto_min_js_gz, zepto_min_js_gz_len);
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", jquery_min_js_gz, jquery_min_js_gz_len);
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); });
 
