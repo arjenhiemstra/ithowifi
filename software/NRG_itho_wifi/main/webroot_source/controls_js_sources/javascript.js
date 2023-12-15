@@ -94,7 +94,7 @@ function processMessage(message) {
           $('#main').empty();
           $('#main').append("<br><br><br><br>");
           $('#main').append(html_reboot_script);
-          websock.send('{"reboot":true}');
+          websock_send('{"reboot":true}');
         }
       }
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
@@ -165,7 +165,7 @@ function processMessage(message) {
     }
     if (x.Index < sessionStorage.getItem("itho_setlen") - 1 && x.loop === true && settingIndex == x.Index) {
       settingIndex++;
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithogetsetting: true,
         index: settingIndex,
         update: x.update
@@ -173,7 +173,7 @@ function processMessage(message) {
     }
     if (x.Index === sessionStorage.getItem("itho_setlen") - 1 && x.update === false && x.loop === true) {
       settingIndex = 0;
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithogetsetting: true,
         index: 0,
         update: true
@@ -322,11 +322,11 @@ $(document).ready(function () {
   $(document).on('click', 'button', function (e) {
     if ($(this).attr('id').startsWith('command-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"command":"${items[1]}"}`);
+      websock_send(`{"command":"${items[1]}"}`);
     }
     else if ($(this).attr('id') == 'wifisubmit') {
       hostname = $('#hostname').val();
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         wifisettings: {
           ssid: $('#ssid').val(),
           passwd: $('#passwd').val(),
@@ -346,7 +346,7 @@ $(document).ready(function () {
     }
     //syssubmit
     else if ($(this).attr('id') == 'syssumbit') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         systemsettings: {
           sys_username: $('#sys_username').val(),
           sys_password: $('#sys_password').val(),
@@ -382,7 +382,7 @@ $(document).ready(function () {
       update_page('system');
     }
     else if ($(this).attr('id') == 'syslogsumbit') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         logsettings: {
           loglevel: $('#loglevel').val(),
           syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
@@ -396,7 +396,7 @@ $(document).ready(function () {
     }
     //mqttsubmit
     else if ($(this).attr('id') == 'mqttsubmit') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         systemsettings: {
           mqtt_active: $('input[name=\'option-mqtt_active\']:checked').val(),
           mqtt_serverName: $('#mqtt_serverName').val(),
@@ -420,7 +420,7 @@ $(document).ready(function () {
       update_page('mqtt');
     }
     else if ($(this).attr('id') == 'itho_llm') {
-      websock.send('{"itho_llm":true}');
+      websock_send('{"itho_llm":true}');
     }
     else if ($(this).attr('id') == 'itho_remove_remote' || $(this).attr('id') == 'itho_remove_vremote') {
       var selected = $('input[name=\'optionsRemotes\']:checked').val();
@@ -429,7 +429,7 @@ $(document).ready(function () {
       }
       else {
         var val = parseInt(selected, 10) + 1;
-        websock.send('{"' + $(this).attr('id') + '":' + val + '}');
+        websock_send('{"' + $(this).attr('id') + '":' + val + '}');
       }
     }
     else if ($(this).attr('id') == 'itho_update_remote' || $(this).attr('id') == 'itho_update_vremote') {
@@ -442,11 +442,11 @@ $(document).ready(function () {
         var remtype = $('#type_remote-' + i).val();
         var id = $('#id_remote-' + i).val();
         if (id == 'empty slot') id = "0,0,0";
-        if (isNaN(parseInt(id.split(",")[0], 16)) || isNaN(parseInt(id.split(",")[1], 16)) || isNaN(parseInt(id.split(",")[2], 16))) {
-          alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
+        if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
+          websock_send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc}}`);
         }
         else {
-          websock.send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc}}`);
+          alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
         }
       }
     }
@@ -457,7 +457,7 @@ $(document).ready(function () {
       }
       else {
         var val = parseInt(i, 10) + 1;
-        websock.send(`{"copy_id":true, "index":${val}}`);
+        websock_send(`{"copy_id":true, "index":${val}}`);
       }
     }
     else if ($(this).attr('id').substr(0, 15) == 'ithosetrefresh-') {
@@ -475,7 +475,7 @@ $(document).ready(function () {
           $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).removeClass('pure-button-primary');
         });
         $(`#Current-${i}, #Minimum-${i}, #Maximum-${i}`).html(`<div style='margin: auto;' class='dot-elastic'></div>`);
-        websock.send('{"ithosetrefresh":' + i + '}');
+        websock_send('{"ithosetrefresh":' + i + '}');
       }
     }
     else if ($(this).attr('id').substr(0, 14) == 'ithosetupdate-') {
@@ -489,13 +489,13 @@ $(document).ready(function () {
       }
       else {
         if (Number.isInteger(parseFloat($('#name_ithoset-' + i).val()))) {
-          websock.send(JSON.stringify({
+          websock_send(JSON.stringify({
             ithosetupdate: i,
             value: parseInt($('#name_ithoset-' + i).val())
           }));
         }
         else {
-          websock.send(JSON.stringify({
+          websock_send(JSON.stringify({
             ithosetupdate: i,
             value: parseFloat($('#name_ithoset-' + i).val())
           }));
@@ -510,85 +510,85 @@ $(document).ready(function () {
     }
     else if ($(this).attr('id') == 'resetwificonf') {
       if (confirm("This will reset the wifi config to factory default, are you sure?")) {
-        websock.send('{"resetwificonf":true}');
+        websock_send('{"resetwificonf":true}');
       }
     }
     else if ($(this).attr('id') == 'resetsysconf') {
       if (confirm("This will reset the system config to factory default, are you sure?")) {
-        websock.send('{"resetsysconf":true}');
+        websock_send('{"resetsysconf":true}');
       }
     }
     else if ($(this).attr('id') == 'reboot') {
       if (confirm("This will reboot the device, are you sure?")) {
         $('#rebootscript').append(html_reboot_script);
         if (document.getElementById("dontsaveconf") !== null) {
-          websock.send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
+          websock_send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
         }
         else {
-          websock.send('{"reboot":true}');
+          websock_send('{"reboot":true}');
         }
       }
     }
     else if ($(this).attr('id') == 'format') {
       if (confirm("This will erase all settings, are you sure?")) {
-        websock.send('{"format":true}');
+        websock_send('{"format":true}');
         $('#format').text('Formatting...');
       }
     }
     else if ($(this).attr('id') == 'wifiscan') {
       $('.ScanResults').remove();
       $('.hidden').removeClass('hidden');
-      websock.send('{"wifiscan":true}');
+      websock_send('{"wifiscan":true}');
     }
     else if ($(this).attr('id').startsWith('button_vremote-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"vremote":${items[1]}, "command":"${items[2]}"}`);
+      websock_send(`{"vremote":${items[1]}, "command":"${items[2]}"}`);
     }
     else if ($(this).attr('id').startsWith('button_remote-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"remote":${items[1]}, "command":"${items[2]}"}`);
+      websock_send(`{"remote":${items[1]}, "command":"${items[2]}"}`);
     }
     else if ($(this).attr('id').startsWith('ithobutton-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"ithobutton":"${items[1]}"}`);
+      websock_send(`{"ithobutton":"${items[1]}"}`);
       if (items[1] == 'shtreset') $(`#i2c_sht_reset`).text("Processing...");
     }
     else if ($(this).attr('id').startsWith('button-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"button":"${items[1]}"}`);
+      websock_send(`{"button":"${items[1]}"}`);
     }
     else if ($(this).attr('id').startsWith('rfdebug-')) {
       const items = $(this).attr('id').split('-');
       if (items[1] == 0) $('#rflog_outer').addClass('hidden');
       if (items[1] > 0) $('#rflog_outer').removeClass('hidden');
-      websock.send(`{"rfdebug":${items[1]}}`);
+      websock_send(`{"rfdebug":${items[1]}}`);
     }
     else if ($(this).attr('id').startsWith('i2csniffer-')) {
       const items = $(this).attr('id').split('-');
       if (items[1] == 0) $('#i2clog_outer').addClass('hidden');
       if (items[1] > 0) $('#i2clog_outer').removeClass('hidden');
-      websock.send(`{"i2csniffer":${items[1]}}`);
+      websock_send(`{"i2csniffer":${items[1]}}`);
     }
     else if ($(this).attr('id') == 'button2410') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 2410,
         index: parseInt($('#itho_setting_id').val())
       }));
     }
     else if ($(this).attr('id') == 'button2410set') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 24109,
         ithosetupdate: $('#itho_setting_id_set').val(),
         value: parseFloat($('#itho_setting_value_set').val())
       }));
     }
     else if ($(this).attr('id') == 'button4210') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 4210
       }));
     }
     else if ($(this).attr('id') == 'buttonCE30') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 0xCE30,
         ithotemp: parseFloat($('#itho_ce30_temp').val() * 100.),
         ithotemptemp: parseFloat($('#itho_ce30_temptemp').val() * 100.),
@@ -597,7 +597,7 @@ $(document).ready(function () {
     }
     else if ($(this).attr('id') == 'ithogetsettings') {
       settingIndex = 0;
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithogetsetting: true,
         index: 0,
         update: false
@@ -637,6 +637,10 @@ $(document).ready(function () {
   });
 });
 
+function websock_send(message) {
+  websock.send(message);
+  //console.log(message);
+}
 
 var timerHandle = setTimeout(function () {
   $('#message_box').hide();
@@ -797,7 +801,7 @@ function radio(origin, state) {
 
 function getSettings(pagevalue) {
   if (websock.readyState === 1) {
-    websock.send('{"' + pagevalue + '":1}');
+    websock_send('{"' + pagevalue + '":1}');
   }
   else {
     console.log("websock not open");
@@ -841,7 +845,7 @@ function updateSlider(value) {
   var val = parseInt(value);
   if (isNaN(val)) val = 0;
   $('#ithotextval').html(val);
-  websock.send(JSON.stringify({ 'itho': val }));
+  websock_send(JSON.stringify({ 'itho': val }));
 }
 
 //function to load html main content
@@ -921,6 +925,12 @@ function ValidateIPaddress(ipaddress) {
     return true;
   }
   return false;
+}
+
+function isHex(hex) {
+  return typeof hex === 'string'
+    && hex.length === 2
+    && !isNaN(Number('0x' + hex))
 }
 
 function returnMqttState(state) {
