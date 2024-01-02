@@ -119,6 +119,7 @@ uint8_t currentItho_fwversion();
 uint16_t currentIthoSettingsLength();
 int16_t currentIthoStatusLabelLength();
 int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
+const char* getSettingLabel(const uint8_t index);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop = false);
 void processSettingResult(const uint8_t index, const bool loop);
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
