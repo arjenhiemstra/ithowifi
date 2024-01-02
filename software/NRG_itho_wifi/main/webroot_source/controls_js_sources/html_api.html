@@ -195,48 +195,6 @@ Unless specified otherwise:<br>
             </td>
         </tr>
         <tr>
-            <td>setsetting</td>
-            <td>string</td>
-            <td>0-256</td>
-            <td>number</td>
-            <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
-        </tr>
-        <tr>
-            <td>value</td>
-            <td>string</td>
-            <td>any number</td>
-            <td>number</td>
-            <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
-        </tr>
-        <tr>
-            <td colspan="6">
-                Comments:<br>
-                <em>
-                    Sets the current value of a setting using its index. The
-                    value must be specified in the "value" parameter. The new
-                    value must be within the minimum and maximum of the setting.
-                    If the value is invalid, the HTTP response code is 400 and
-                    the body is text containing an error message.
-                </em>
-                <br>
-                <br>
-                Example:<br>
-                <em>
-                    http://192.168.4.1/api.html?setsetting=4&value=10
-                </em>
-                <br>
-                <br>
-                <b style="color: red">
-                    Using this API changes the settings of your Itho Daalderop
-                    unit, and this may affect its behaviour (i.e. turn it off).
-                    Only use this API if you know what you're doing and are
-                    certain it won't damage your unit.
-                </b>
-            </td>
-        </tr>
-        <tr>
             <td colspan="6"><b>Commands below this line work on itho devices that support the PWM2IC2 protocol. Devices
                     supported are at least the HRU200 and all CVE models. Devices known not to support these commands
                     are the HRU350, WPU, DemandFlow/QualityFlow. These commands cannot be used together with vremote
@@ -357,8 +315,50 @@ Unless specified otherwise:<br>
                     remote if more than 1 RF remote is configured. The index can be found on the "RF devices"
                     page.</em></td>
         </tr>
-
-
+        <!--SETTINGSAPI
+        <tr>
+            <td colspan="6"><b style="color: red">API Commands below this line can change the settings of your Itho
+                    Daalderop
+                    unit, and this may affect its behaviour (i.e. turn it to a non working state).
+                    Only use this part of the API if you know what you're doing and are
+                    certain it won't damage your unit.
+                </b></td>
+        </tr>
+        <tr>
+            <td>setsetting</td>
+            <td>string</td>
+            <td>0-256</td>
+            <td>number</td>
+            <td style="text-align:center">◌</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td>value</td>
+            <td>string</td>
+            <td>any number</td>
+            <td>number</td>
+            <td style="text-align:center">◌</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">
+                Comments:<br>
+                <em>
+                    Sets the current value of a setting using its index. The
+                    value must be specified in the "value" parameter. The new
+                    value must be within the minimum and maximum of the setting.
+                    If the value is invalid, the HTTP response code is 400 and
+                    the body is text containing an error message.
+                </em>
+                <br>
+                <br>
+                Example:<br>
+                <em>
+                    http://192.168.4.1/api.html?setsetting=4&value=10
+                </em>
+            </td>
+        </tr>
+        -->
 
     </tbody>
 </table>

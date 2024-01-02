@@ -151,6 +151,78 @@ int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const u
   return -1;
 }
 
+const char* getSettingLabel(const uint8_t index) {
+
+
+  const uint8_t deviceID = currentIthoDeviceID();
+  const uint8_t version = currentItho_fwversion();
+  const uint8_t deviceGroup = currentIthoDeviceGroup();
+
+  int settingsLen = getSettingsLength(deviceGroup, deviceID, version);
+  
+  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+
+
+  if (settingsPtr == nullptr)
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return ithoLabelErrors[0].labelFull;
+    }
+    else
+    {
+      return ithoLabelErrors[0].labelNormalized;
+    }
+  }
+  else if (settingsLen == -2) // Settings not available for this device
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return ithoLabelErrors[1].labelFull;
+    }
+    else
+    {
+      return ithoLabelErrors[1].labelNormalized;
+    }
+  }
+  else if (settingsLen == -3) // Version newer than latest version available in the firmware
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return ithoLabelErrors[2].labelFull;
+    }
+    else
+    {
+      return ithoLabelErrors[2].labelNormalized;
+    }
+  }
+  else if (settingsLen == -4) // Settings not available for this version
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return ithoLabelErrors[3].labelFull;
+    }
+    else
+    {
+      return ithoLabelErrors[3].labelNormalized;
+    }
+  }
+  else if (!(index < settingsLen)) // out of bound
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return ithoLabelErrors[4].labelFull;
+    }
+    else
+    {
+      return ithoLabelErrors[4].labelNormalized;
+    }
+  }
+
+  return settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
+  
+}
+
 void getSetting(const uint8_t index, const bool updateState, const bool updateweb, const bool loop)
 {
 
@@ -171,7 +243,7 @@ void getSetting(const uint8_t index, const bool updateState, const bool updatewe
   JsonObject root = doc.to<JsonObject>();
 
   root["Index"] = index;
-  root["Description"] = settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
+  root["Description"] = getSettingLabel(index);
 
   if (!updateState && !updateweb) // -> first run, just send labels and null values
   {

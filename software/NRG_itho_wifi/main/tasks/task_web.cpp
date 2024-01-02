@@ -22,7 +22,9 @@ int MQTT_conn_state_new = 0;
 unsigned long lastMQTTReconnectAttempt = 0;
 bool dontReconnectMQTT = false;
 bool updateMQTTihtoStatus = false;
+bool updateMQTTmodeStatus = false;
 bool webauth_ok = false;
+char modestate[32];
 
 AsyncWebServer server(80);
 
@@ -610,151 +612,12 @@ void handleAPI(AsyncWebServerRequest *request)
     }
     else if (strcmp(p->name().c_str(), "getsetting") == 0)
     {
-      if (systemConfig.api_settings == 0)
-      {
-        request->send(403, "text/html", "The settings API is disabled");
-        return;
-      }
-
-      uint8_t idx = static_cast<uint8_t>(p->value().toInt());
-
-      if (ithoSettingsArray == nullptr)
-      {
-        request->send(400, "text/html", "The Itho settings array is NULL");
-        return;
-      }
-
-      if (idx >= currentIthoSettingsLength())
-      {
-        request->send(400, "text/html", "The setting index is invalid");
-        return;
-      }
-
-      // Get the settings directly instead of scheduling them, that way we can
-      // present the up-to-date settings in the response.
-      resultPtr2410 = sendQuery2410(idx, true);
-      ithoSettings *setting = &ithoSettingsArray[idx];
-      double cur = 0.0;
-      double min = 0.0;
-      double max = 0.0;
-
-      if (resultPtr2410 == nullptr)
-      {
-        request->send(500, "text/html", "The I2C command failed");
-        return;
-      }
-
-      if (!decodeQuery2410(resultPtr2410, setting, &cur, &min, &max))
-      {
-        request->send(500, "text/html", "Failed to decode the setting's value");
-        return;
-      }
-
-      StaticJsonDocument<128> doc;
-      JsonObject root = doc.to<JsonObject>();
-
-      root["current"] = cur;
-      root["minimum"] = min;
-      root["maximum"] = max;
-
-      AsyncResponseStream *response = request->beginResponseStream("text/html");
-
-      serializeJson(root, *response);
-      request->send(response);
+      handleAPI_new(request);
       return;
     }
     else if (strcmp(p->name().c_str(), "setsetting") == 0)
     {
-      if (systemConfig.api_settings == 0)
-      {
-        request->send(403, "text/html", "The settings API is disabled");
-        return;
-      }
-
-      AsyncWebParameter *val_param = request->getParam("value");
-
-      if (val_param == nullptr)
-      {
-        request->send(400, "text/html", "The 'value' parameter is required");
-        return;
-      }
-
-      if (ithoSettingsArray == nullptr)
-      {
-        request->send(400, "text/html", "The Itho settings array is NULL");
-        return;
-      }
-
-      uint8_t idx = static_cast<uint8_t>(p->value().toInt());
-
-      if (idx >= currentIthoSettingsLength())
-      {
-        request->send(400, "text/html", "The setting index is invalid");
-        return;
-      }
-
-      ithoSettings *setting = &ithoSettingsArray[idx];
-      resultPtr2410 = sendQuery2410(idx, true);
-      double cur = 0.0;
-      double min = 0.0;
-      double max = 0.0;
-
-      if (resultPtr2410 == nullptr)
-      {
-        request->send(500, "text/html", "The I2C command failed");
-        return;
-      }
-
-      if (!decodeQuery2410(resultPtr2410, setting, &cur, &min, &max))
-      {
-        request->send(500, "text/html", "Failed to decode the setting's value");
-        return;
-      }
-
-      const String &val = val_param->value();
-      int32_t new_val = 0;
-      double new_dval = val.toDouble();
-
-      if (new_dval < min || new_dval > max)
-      {
-        request->send(400, "text/html", "The specified value falls outside of the allowed range");
-        return;
-      }
-
-      if (setting->type == ithoSettings::is_float)
-      {
-        double dval = new_dval * setting->divider;
-
-        switch (ithoSettingsArray[idx].length)
-        {
-          case 1:
-            new_val = static_cast<int32_t>(static_cast<int8_t>(dval));
-            break;
-          case 2:
-            new_val = static_cast<int32_t>(static_cast<int16_t>(dval));
-            break;
-          default:
-            new_val = static_cast<int32_t>(dval);
-            break;
-        }
-      }
-      else
-      {
-        new_val = static_cast<int32_t>(new_dval);
-      }
-
-      // Settings are updated synchronously as API clients might expect the
-      // response to not return until the settings are up to date (this is also
-      // easier to work with).
-      if (setSetting2410(idx, new_val, true))
-      {
-        request->send(200, "OK");
-      }
-      else
-      {
-        request->send(500, "text/html", "The I2C command failed");
-      }
-
+      handleAPI_new(request);
       return;
     }
     else if (strcmp(p->name().c_str(), "command") == 0)
@@ -917,6 +780,484 @@ void handleAPI(AsyncWebServerRequest *request)
   {
     request->send(200, "text/html", "NOK");
   }
+}
+
+ApiResponse::api_response_status_t checkAuthenticationAsyncWeb(AsyncWebServerRequest *request, JsonDocument &response)
+{
+
+  int params = request->params();
+
+  if (systemConfig.syssec_api)
+  {
+    bool username = false;
+    bool password = false;
+
+    for (int i = 0; i < params; i++)
+    {
+      AsyncWebParameter *p = request->getParam(i);
+      if (strcmp(p->name().c_str(), "username") == 0)
+      {
+        if (strcmp(p->value().c_str(), systemConfig.sys_username) == 0)
+        {
+          username = true;
+        }
+      }
+      else if (strcmp(p->name().c_str(), "password") == 0)
+      {
+        if (strcmp(p->value().c_str(), systemConfig.sys_password) == 0)
+        {
+          password = true;
+        }
+      }
+    }
+    if (!username || !password)
+    {
+      response["code"] = 401;
+      response["username"] = "username and/or password invalid";
+      response["password"] = "password and/or username invalid";
+      return ApiResponse::status::FAIL;
+    }
+  }
+  return ApiResponse::status::CONTINUE;
+}
+
+ApiResponse::api_response_status_t processGetCommandsAsynWeb(AsyncWebServerRequest *request, JsonDocument &response)
+{
+  int params = request->params();
+
+  for (int i = 0; i < params; i++)
+  {
+    AsyncWebParameter *p = request->getParam(i);
+
+    if (strcmp(p->name().c_str(), "get") == 0)
+    {
+      response["cmdkey"] = "get";
+
+      AsyncWebParameter *q = request->getParam("get");
+      response["cmdvalue"] = q->value().c_str();
+
+      if (strcmp(q->value().c_str(), "currentspeed") == 0)
+      {
+        char ithoval[10]{};
+        snprintf(ithoval, sizeof(ithoval), "%d", ithoCurrentVal);
+        response["currentspeed"] = ithoval;
+        return ApiResponse::status::SUCCESS;
+      }
+      else if (strcmp(q->value().c_str(), "queue") == 0)
+      {
+        AsyncResponseStream *response = request->beginResponseStream("text/html");
+        StaticJsonDocument<1000> root;
+        JsonObject obj = root.to<JsonObject>(); // Fill the object
+        ithoQueue.get(obj);
+        obj["ithoSpeed"] = ithoQueue.ithoSpeed;
+        obj["ithoOldSpeed"] = ithoQueue.ithoOldSpeed;
+        obj["fallBackSpeed"] = ithoQueue.fallBackSpeed;
+        serializeJson(root, *response);
+        request->send(response);
+
+        return ApiResponse::status::SUCCESS;
+      }
+      else if (strcmp(q->value().c_str(), "ithostatus") == 0)
+      {
+        AsyncResponseStream *response = request->beginResponseStream("text/html");
+        DynamicJsonDocument doc(6000);
+
+        if (doc.capacity() == 0)
+        {
+          E_LOG("MQTT: JsonDocument memory allocation failed (html api)");
+          return ApiResponse::status::SUCCESS;
+        }
+
+        JsonObject root = doc.to<JsonObject>();
+        getIthoStatusJSON(root);
+
+        serializeJson(root, *response);
+        request->send(response);
+
+        return ApiResponse::status::SUCCESS;
+      }
+      else if (strcmp(q->value().c_str(), "lastcmd") == 0)
+      {
+        AsyncResponseStream *response = request->beginResponseStream("text/html");
+        DynamicJsonDocument doc(1000);
+
+        JsonObject root = doc.to<JsonObject>();
+        getLastCMDinfoJSON(root);
+
+        serializeJson(root, *response);
+        request->send(response);
+
+        return ApiResponse::status::SUCCESS;
+      }
+      else if (strcmp(q->value().c_str(), "remotesinfo") == 0)
+      {
+        AsyncResponseStream *response = request->beginResponseStream("text/html");
+        DynamicJsonDocument doc(2000);
+
+        JsonObject root = doc.to<JsonObject>();
+
+        getRemotesInfoJSON(root);
+
+        serializeJson(root, *response);
+        request->send(response);
+
+        return ApiResponse::status::SUCCESS;
+      }
+      response["failreason"] = "cmdvalue not valid";
+      return ApiResponse::status::FAIL;
+    }
+  }
+  return ApiResponse::status::CONTINUE;
+}
+
+ApiResponse::api_response_status_t processGetsettingCommandsAsynWeb(AsyncWebServerRequest *request, JsonDocument &response)
+{
+  int params = request->params();
+
+  for (int i = 0; i < params; i++)
+  {
+    AsyncWebParameter *p = request->getParam(i);
+
+    if (strcmp(p->name().c_str(), "getsetting") == 0)
+    {
+      response["cmdkey"] = "getsetting";
+
+      if (systemConfig.api_settings == 0)
+      {
+        response["code"] = 403;
+        response["failreason"] = "The settings API is disabled";
+        return ApiResponse::status::FAIL;
+      }
+
+      response["cmdval"] = p->value();
+
+      const std::string str = p->value().c_str();
+
+      unsigned long idx;
+      try
+      {
+        size_t pos;
+        idx = std::stoul(str, &pos);
+
+        if (pos != str.size())
+        {
+          throw std::invalid_argument("extra characters after index number");
+        }
+      }
+      catch (const std::invalid_argument &ia)
+      {
+        response["code"] = 400;
+        std::string err = "Invalid index argument: ";
+        err += ia.what();
+        response["failreason"] = err;
+        return ApiResponse::status::FAIL;
+      }
+      catch (const std::out_of_range &oor)
+      {
+        response["code"] = 400;
+        response["failreason"] = "Index out of range";
+        return ApiResponse::status::FAIL;
+      }
+
+      if (ithoSettingsArray == nullptr)
+      {
+        response["code"] = 400;
+        response["failreason"] = "The Itho settings array is NULL";
+        return ApiResponse::status::FAIL;
+      }
+
+      if (idx >= currentIthoSettingsLength())
+      {
+        response["code"] = 400;
+        response["failreason"] = "The setting index is invalid";
+        return ApiResponse::status::FAIL;
+      }
+
+      // Get the settings directly instead of scheduling them, that way we can
+      // present the up-to-date settings in the response.
+      resultPtr2410 = sendQuery2410(idx, true);
+      ithoSettings *setting = &ithoSettingsArray[idx];
+      double cur = 0.0;
+      double min = 0.0;
+      double max = 0.0;
+
+      if (resultPtr2410 == nullptr)
+      {
+        response["code"] = 500;
+        response["error"] = "The I2C command failed";
+        return ApiResponse::status::ERROR;
+      }
+
+      if (!decodeQuery2410(resultPtr2410, setting, &cur, &min, &max))
+      {
+        response["code"] = 500;
+        response["error"] = "Failed to decode the setting's value";
+        return ApiResponse::status::ERROR;
+      }
+      else
+      {
+        response["label"] = getSettingLabel(idx);
+        response["current"] = cur;
+        response["minimum"] = min;
+        response["maximum"] = max;
+
+        return ApiResponse::status::SUCCESS;
+      }
+
+      response["code"] = 400;
+      response["failreason"] = "cmdvalue not valid";
+      return ApiResponse::status::FAIL;
+    }
+  }
+
+  return ApiResponse::status::CONTINUE;
+}
+
+ApiResponse::api_response_status_t processSetsettingCommandsAsynWeb(AsyncWebServerRequest *request, JsonDocument &response)
+{
+
+  int params = request->params();
+
+  for (int i = 0; i < params; i++)
+  {
+    AsyncWebParameter *p = request->getParam(i);
+
+    if (strcmp(p->name().c_str(), "setsetting") == 0)
+    {
+      response["cmdkey"] = "setsetting";
+
+      if (systemConfig.api_settings == 0)
+      {
+        response["code"] = 403;
+        response["failreason"] = "The settings API is disabled";
+        return ApiResponse::status::FAIL;
+      }
+
+      AsyncWebParameter *val_param = request->getParam("value");
+
+      if (val_param == nullptr)
+      {
+        response["code"] = 400;
+        response["failreason"] = "The 'value' parameter is required";
+        return ApiResponse::status::FAIL;
+      }
+
+      response["newvalue"] = val_param->value();
+
+      if (ithoSettingsArray == nullptr)
+      {
+        response["code"] = 400;
+        response["failreason"] = "The Itho settings array is NULL";
+        return ApiResponse::status::FAIL;
+      }
+
+      response["cmdval"] = p->value();
+
+      const std::string str = p->value().c_str();
+
+      unsigned long idx;
+      try
+      {
+        size_t pos;
+        idx = std::stoul(str, &pos);
+
+        if (pos != str.size())
+        {
+          throw std::invalid_argument("extra characters after index number");
+        }
+      }
+      catch (const std::invalid_argument &ia)
+      {
+        response["code"] = 400;
+        std::string err = "Invalid index argument: ";
+        err += ia.what();
+        response["failreason"] = err;
+        return ApiResponse::status::FAIL;
+      }
+      catch (const std::out_of_range &oor)
+      {
+        response["code"] = 400;
+        response["failreason"] = "Index out of range";
+        return ApiResponse::status::FAIL;
+      }
+
+      response["idx"] = idx;
+
+      if (idx >= currentIthoSettingsLength())
+      {
+        response["code"] = 400;
+        response["failreason"] = "The setting index is invalid";
+        return ApiResponse::status::FAIL;
+      }
+
+      ithoSettings *setting = &ithoSettingsArray[idx];
+      resultPtr2410 = sendQuery2410(idx, true);
+      double cur = 0.0;
+      double min = 0.0;
+      double max = 0.0;
+
+      if (resultPtr2410 == nullptr)
+      {
+        response["code"] = 500;
+        response["failreason"] = "The I2C command failed";
+        return ApiResponse::status::ERROR;
+      }
+
+      if (!decodeQuery2410(resultPtr2410, setting, &cur, &min, &max))
+      {
+        response["code"] = 500;
+        response["failreason"] = "Failed to decode the setting's value";
+        return ApiResponse::status::ERROR;
+      }
+
+      
+      response["minimum"] = min;
+      response["maximum"] = max;
+
+      const String &val = val_param->value();
+      int32_t new_val = 0;
+      double new_dval = val.toDouble();
+
+      if (new_dval < min || new_dval > max)
+      {
+        response["code"] = 400;
+        response["failreason"] = "The specified value falls outside of the allowed range";
+        return ApiResponse::status::FAIL;
+      }
+
+      if (setting->type == ithoSettings::is_float)
+      {
+        double dval = new_dval * setting->divider;
+
+        switch (ithoSettingsArray[idx].length)
+        {
+        case 1:
+          new_val = static_cast<int32_t>(static_cast<int8_t>(dval));
+          break;
+        case 2:
+          new_val = static_cast<int32_t>(static_cast<int16_t>(dval));
+          break;
+        default:
+          new_val = static_cast<int32_t>(dval);
+          break;
+        }
+      }
+      else
+      {
+        new_val = static_cast<int32_t>(new_dval);
+      }
+
+      // response to not return until the settings are up to date (this is also
+      // easier to work with).
+      if (setSetting2410(idx, new_val, true))
+      {
+        response["previous"] = cur;
+        return ApiResponse::status::SUCCESS;
+      }
+      else
+      {
+        response["code"] = 500;
+        response["failreason"] = "The I2C command failed";
+        return ApiResponse::status::ERROR;
+      }
+
+      response["code"] = 400;
+      response["failreason"] = "cmdvalue not valid";
+      return ApiResponse::status::FAIL;
+    }
+  }
+
+  return ApiResponse::status::CONTINUE;
+}
+
+ApiResponse::api_response_status_t processCommandAsynWeb(AsyncWebServerRequest *request, JsonDocument &response)
+{
+  return ApiResponse::status::CONTINUE;
+}
+
+ApiResponse::api_response_status_t processRFremoteCommandsAsynWeb(AsyncWebServerRequest *request, JsonDocument &response)
+{
+  return ApiResponse::status::CONTINUE;
+}
+ApiResponse::api_response_status_t processVremoteCommandsAsynWeb(AsyncWebServerRequest *request, JsonDocument &response)
+{
+  return ApiResponse::status::CONTINUE;
+}
+ApiResponse::api_response_status_t processPWMSpeedTimerCommandsAsynWeb(AsyncWebServerRequest *request, JsonDocument &response)
+{
+  return ApiResponse::status::CONTINUE;
+}
+ApiResponse::api_response_status_t processi2csnifferCommandsAsynWeb(AsyncWebServerRequest *request, JsonDocument &response)
+{
+  return ApiResponse::status::CONTINUE;
+}
+ApiResponse::api_response_status_t processDebugCommandsAsynWeb(AsyncWebServerRequest *request, JsonDocument &response)
+{
+  return ApiResponse::status::CONTINUE;
+}
+
+void handleAPI_new(AsyncWebServerRequest *request)
+{
+  AsyncWebServerAdapter adapter(request);
+  ApiResponse apiresponse(&adapter, &mqttClient);
+  StaticJsonDocument<200> response;
+
+  time_t now;
+  time(&now);
+  response["timestamp"] = now;
+  ApiResponse::api_response_status_t response_status = ApiResponse::status::CONTINUE;
+
+  // if (checkAuthenticationAsyncWeb(request, response) != ApiResponse::status::CONTINUE)
+  // {
+  //   apiresponse.sendFail(response);
+  //   return; // Authentication failed, exit early.
+  // }
+
+  // if (response_status == ApiResponse::status::CONTINUE)
+  //   response_status = processGetCommandsAsynWeb(request, response);
+
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processGetsettingCommandsAsynWeb(request, response);
+
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processSetsettingCommandsAsynWeb(request, response);
+
+  // if (response_status == ApiResponse::status::CONTINUE)
+  //   response_status = processCommandAsynWeb(request, response);
+
+  // if (response_status == ApiResponse::status::CONTINUE)
+  //   response_status = processRFremoteCommandsAsynWeb(request, response);
+
+  // if (response_status == ApiResponse::status::CONTINUE)
+  //   response_status = processVremoteCommandsAsynWeb(request, response);
+
+  // if (response_status == ApiResponse::status::CONTINUE)
+  //   response_status = processPWMSpeedTimerCommandsAsynWeb(request, response);
+
+  // if (response_status == ApiResponse::status::CONTINUE)
+  //   response_status = processi2csnifferCommandsAsynWeb(request, response);
+
+  // if (response_status == ApiResponse::status::CONTINUE)
+  //   response_status = processDebugCommandsAsynWeb(request, response);
+
+  if (response_status == ApiResponse::status::SUCCESS)
+  {
+    apiresponse.sendSuccess(response);
+  }
+  else if (response_status == ApiResponse::status::FAIL)
+  {
+    apiresponse.sendFail(response);
+  }
+  else if (!response["error"].isNull())
+  {
+    apiresponse.sendError(response["error"].as<const char *>());
+  }
+  else
+  {
+    apiresponse.sendError("api call could not be processed");
+  }
+
+  return;
 }
 
 void handleCoreCrash(AsyncWebServerRequest *request)
