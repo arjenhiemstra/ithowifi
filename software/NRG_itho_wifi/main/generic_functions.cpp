@@ -218,6 +218,9 @@ bool ithoExecCommand(const char *command, cmdOrigin origin)
     }
   }
 
+  // snprintf(modestate, sizeof(modestate), "%s", command);
+  // updateMQTTmodeStatus = true;
+  
   updateMQTTihtoStatus = true;
   return true;
 }
@@ -287,7 +290,7 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   }
 
   char buf[32]{};
-  snprintf(buf, sizeof(buf), "rfcommand:%s, idx:%d", (res ? command : "unknown"), remote_index);
+  snprintf(buf, sizeof(buf), "rfremotecmd:%s, idx:%d", (res ? command : "unknown"), remote_index);
   logLastCommand(buf, origin);
 
   attachInterrupt(itho_irq_pin, ITHOinterrupt, RISING);
