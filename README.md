@@ -57,5 +57,9 @@ More information is available on the wiki and in the manual:
 |Dutch:  |https://github.com/arjenhiemstra/ithowifi/raw/master/handleiding.pdf  |
 |English:  |https://github.com/arjenhiemstra/ithowifi/raw/master/manual.pdf  |
 
+## Support this project:
+If you like this project and would like to support it, please contribute with code updates, wiki edits, pull requests etc. You could also buy me a coffee as appreciation.
+I will be really thankfull for anything even if it is just a kind comment towards my work, because that helps me a lot.
 
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/nrgwatch)
 
