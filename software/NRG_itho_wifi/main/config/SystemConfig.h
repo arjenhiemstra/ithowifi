@@ -25,16 +25,14 @@ public:
   char mqtt_password[32];
   int mqtt_port;
   int mqtt_version;
-  char mqtt_state_topic[128];
-  char mqtt_ithostatus_topic[128];
-  char mqtt_remotesinfo_topic[128];
-  char mqtt_lastcmd_topic[128];
+  char mqtt_base_topic[128];
+
   char mqtt_ha_topic[128];
   char mqtt_state_retain[5];
-  char mqtt_cmd_topic[128];
-  char mqtt_lwt_topic[128];
   uint8_t mqtt_domoticz_active;
   uint8_t mqtt_ha_active;
+  char mqtt_domoticzin_topic[128];
+  char mqtt_domoticzout_topic[128];
   uint16_t mqtt_idx;
   uint16_t sensor_idx;
   mutable bool mqtt_updated;

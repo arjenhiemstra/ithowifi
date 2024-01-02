@@ -81,12 +81,6 @@ function processMessage(message) {
   }
   else if (f.systemsettings) {
     let x = f.systemsettings;
-    if ('mqtt_active' in x) {
-      $('#mqtt_idx, #label-mqtt_idx').hide();
-      $('#sensor_idx, #label-sensor_idx').hide();
-      mqtt_state_topic_tmp = x.mqtt_state_topic;
-      mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
-    }
     processElements(x);
     if ("itho_rf_support" in x) {
       if (x.itho_rf_support == 1 && x.rfInitOK == false) {
@@ -404,13 +398,10 @@ $(document).ready(function () {
           mqtt_password: $('#mqtt_password').val(),
           mqtt_port: $('#mqtt_port').val(),
           mqtt_version: $('#mqtt_version').val(),
-          mqtt_state_topic: $('#mqtt_state_topic').val(),
-          mqtt_ithostatus_topic: $('#mqtt_ithostatus_topic').val(),
-          mqtt_remotesinfo_topic: $('#mqtt_remotesinfo_topic').val(),
-          mqtt_lastcmd_topic: $('#mqtt_lastcmd_topic').val(),
+          mqtt_base_topic: $('#mqtt_base_topic').val(),
           mqtt_ha_topic: $('#mqtt_ha_topic').val(),
-          mqtt_cmd_topic: $('#mqtt_cmd_topic').val(),
-          mqtt_lwt_topic: $('#mqtt_lwt_topic').val(),
+          mqtt_domoticzin_topic: $('#mqtt_domoticzin_topic').val(),
+          mqtt_domoticzout_topic: $('#mqtt_domoticzout_topic').val(),
           mqtt_idx: $('#mqtt_idx').val(),
           sensor_idx: $('#sensor_idx').val(),
           mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val(),
@@ -639,7 +630,7 @@ $(document).ready(function () {
 
 function websock_send(message) {
   websock.send(message);
-  //console.log(message);
+  console.log(message);
 }
 
 var timerHandle = setTimeout(function () {
@@ -678,7 +669,12 @@ function processElements(x) {
           }
           radio(key, x[key]);
         }
-      }
+      }   
+      var elbyname = $(`[name='${key}']`).each(function () {
+        if ($(this).is('span')) {
+          $(this).text(x[key]);
+        }
+      });
     }
   }
 }
@@ -711,9 +707,6 @@ function getlog(url) {
   xhr.send(null);
 }
 
-var mqtt_state_topic_tmp = "";
-var mqtt_cmd_topic_tmp = "";
-
 function radio(origin, state) {
   if (origin == "dhcp") {
     if (state == 'on') {
@@ -728,36 +721,26 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_active") {
     if (state == 1) {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
-      $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', false);
-      $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', false);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_base_topic, #mqtt_ha_topic, #mqtt_domoticzin_topic, #mqtt_domoticzout_topic, #mqtt_idx, #sensor_idx').prop('readonly', false);
+      $('#option-mqtt_domoticz_active-0, #option-mqtt_domoticz_active-1, #option-mqtt_ha_active-1, #option-mqtt_ha_active-0').prop('disabled', false);
     }
     else {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
-      $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', true);
-      $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', true);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_base_topic, #mqtt_ha_topic, #mqtt_domoticzin_topic, #mqtt_domoticzout_topic, #mqtt_idx, #sensor_idx').prop('readonly', true);
+      $('#option-mqtt_domoticz_active-0, #option-mqtt_domoticz_active-1, #option-mqtt_ha_active-1, #option-mqtt_ha_active-0').prop('disabled', true);
+
     }
   }
   else if (origin == "mqtt_domoticz_active") {
     if (state == 1) {
-      $('#mqtt_idx').prop('readonly', false);
-      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').show();
-      $('#mqtt_state_topic').val("domoticz/in");
-      $('#mqtt_cmd_topic').val("domoticz/out");
-      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd, #mqtt_ha_topic, #label-mqtt_ha, #mqtt_lwt_topic, #label-lwt_topic').hide();
+      $('#mqtt_domoticzin_topic, #label-mqtt_domoticzin, #label-mqtt_domoticzout, #mqtt_domoticzout_topic, #mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').show();
     }
     else {
-      $('#mqtt_idx').prop('readonly', true);
-      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
-      $('#mqtt_state_topic').val(mqtt_state_topic_tmp);
-      $('#mqtt_cmd_topic').val(mqtt_cmd_topic_tmp);
-      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd ,#mqtt_lwt_topic, #label-lwt_topic').show();
+      $('#mqtt_domoticzin_topic, #label-mqtt_domoticzin, #label-mqtt_domoticzout, #mqtt_domoticzout_topic, #mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
     }
   }
   else if (origin == "mqtt_ha_active") {
     if (state == 1) {
-      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd, #mqtt_ha_topic, #label-mqtt_ha, #mqtt_lwt_topic, #label-lwt_topic').show();
-      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
+      $('#mqtt_ha_topic, #label-mqtt_ha').show();
     }
     else {
       $('#mqtt_ha_topic, #label-mqtt_ha').hide();
