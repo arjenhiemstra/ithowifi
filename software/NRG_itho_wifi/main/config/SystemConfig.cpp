@@ -69,7 +69,7 @@ SystemConfig::~SystemConfig()
 {
 } //~SystemConfig
 
-bool SystemConfig::set(JsonObjectConst obj)
+bool SystemConfig::set(JsonObject obj)
 {
   bool updated = false;
 
@@ -83,12 +83,12 @@ bool SystemConfig::set(JsonObjectConst obj)
   if (!obj["sys_username"].isNull())
   {
     updated = true;
-    strlcpy(sys_username, obj["sys_username"], sizeof(sys_username));
+    strlcpy(sys_username, obj["sys_username"] | "", sizeof(sys_username));
   }
   if (!obj["sys_password"].isNull())
   {
     updated = true;
-    strlcpy(sys_password, obj["sys_password"], sizeof(sys_password));
+    strlcpy(sys_password, obj["sys_password"] | "", sizeof(sys_password));
   }
   if (!obj["syssec_web"].isNull())
   {
@@ -133,17 +133,17 @@ bool SystemConfig::set(JsonObjectConst obj)
   if (!obj["mqtt_serverName"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_serverName, obj["mqtt_serverName"], sizeof(mqtt_serverName));
+    strlcpy(mqtt_serverName, obj["mqtt_serverName"] | "", sizeof(mqtt_serverName));
   }
   if (!obj["mqtt_username"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_username, obj["mqtt_username"], sizeof(mqtt_username));
+    strlcpy(mqtt_username, obj["mqtt_username"] | "", sizeof(mqtt_username));
   }
   if (!obj["mqtt_password"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_password, obj["mqtt_password"], sizeof(mqtt_password));
+    strlcpy(mqtt_password, obj["mqtt_password"] | "", sizeof(mqtt_password));
   }
   if (!obj["mqtt_port"].isNull())
   {
@@ -158,18 +158,18 @@ bool SystemConfig::set(JsonObjectConst obj)
   if (!obj["mqtt_base_topic"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_base_topic, obj["mqtt_base_topic"], sizeof(mqtt_base_topic));
+    strlcpy(mqtt_base_topic, obj["mqtt_base_topic"] | "", sizeof(mqtt_base_topic));
   }
   if (!obj["mqtt_ha_topic"].isNull())
   {
     updated = true;
     mqtt_updated = true;
-    strlcpy(mqtt_ha_topic, obj["mqtt_ha_topic"], sizeof(mqtt_ha_topic));
+    strlcpy(mqtt_ha_topic, obj["mqtt_ha_topic"] | "", sizeof(mqtt_ha_topic));
   }
   if (!obj["mqtt_state_retain"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_state_retain, obj["mqtt_state_retain"], sizeof(mqtt_state_retain));
+    strlcpy(mqtt_state_retain, obj["mqtt_state_retain"] | "", sizeof(mqtt_state_retain));
   }
   if (!obj["mqtt_domoticz_active"].isNull())
   {
@@ -185,12 +185,12 @@ bool SystemConfig::set(JsonObjectConst obj)
   if (!obj["mqtt_domoticzin_topic"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_domoticzin_topic, obj["mqtt_domoticzin_topic"], sizeof(mqtt_domoticzin_topic));
+    strlcpy(mqtt_domoticzin_topic, obj["mqtt_domoticzin_topic"] | "", sizeof(mqtt_domoticzin_topic));
   }
   if (!obj["mqtt_domoticzout_topic"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_domoticzout_topic, obj["mqtt_domoticzout_topic"], sizeof(mqtt_domoticzout_topic));
+    strlcpy(mqtt_domoticzout_topic, obj["mqtt_domoticzout_topic"] | "", sizeof(mqtt_domoticzout_topic));
   }
   if (!obj["mqtt_idx"].isNull())
   {

@@ -3,7 +3,7 @@
 template <typename TRef>
 bool saveConfigFile(const char *location, const char *filename, size_t size, const char *config_type, TRef &ref)
 {
-  DynamicJsonDocument doc(size);
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
   ref.get(root);
@@ -72,7 +72,7 @@ bool loadConfigFile(const char *location, const char *nvs_backup_key, const char
       return false;
     }
 
-    DynamicJsonDocument root(size);
+    JsonDocument root;
     DeserializationError error = deserializeJson(root, configFile);
     if (error)
       return false;
@@ -95,7 +95,7 @@ bool loadConfigFile(const char *location, const char *nvs_backup_key, const char
     if (conf.empty())
       return false;
 
-    DynamicJsonDocument root(size);
+    JsonDocument root;
     DeserializationError error = deserializeJson(root, conf);
     if (error)
       return false;
@@ -172,7 +172,7 @@ bool resetLogConfig()
 template <typename TDst>
 uint16_t serializeRemotes(const char *filename, const IthoRemote &remotes, TDst &dst)
 {
-  DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 400));
+  JsonDocument doc;
 
   JsonObject root = doc.to<JsonObject>();
 
@@ -224,7 +224,7 @@ template <typename TDst>
 bool deserializeRemotes(const char *filename, const char *config_type, TDst &src, IthoRemote &remotes)
 {
 
-  DynamicJsonDocument doc(1000 + (MAX_NUMBER_OF_REMOTES * 400));
+  JsonDocument doc;
 
   DeserializationError err = deserializeJson(doc, src);
   if (err)

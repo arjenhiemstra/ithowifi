@@ -11,11 +11,11 @@ void websocketInit()
 
 void jsonWsSend(const char *rootName)
 {
-  DynamicJsonDocument root(4000);
+  JsonDocument root;
 
   if (strcmp(rootName, "wifisettings") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     nested["ssid"] = wifiConfig.ssid;
     nested["passwd"] = wifiConfig.passwd;
     nested["dhcp"] = wifiConfig.dhcp;
@@ -42,12 +42,12 @@ void jsonWsSend(const char *rootName)
   }
   else if (strcmp(rootName, "systemsettings") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     systemConfig.get(nested);
   }
   else if (strcmp(rootName, "logsettings") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     logConfig.get(nested);
     if (prevlog_available())
     {
@@ -56,19 +56,19 @@ void jsonWsSend(const char *rootName)
   }
   else if (strcmp(rootName, "ithodevinfo") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     nested["itho_devtype"] = getIthoType();
     nested["itho_fwversion"] = currentItho_fwversion();
     nested["itho_setlen"] = currentIthoSettingsLength();
   }
   else if (strcmp(rootName, "ithostatusinfo") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     getIthoStatusJSON(nested);
   }
   else if (strcmp(rootName, "debuginfo") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     nested["configversion"] = CONFIG_VERSION;
     nested["bfree"] = ACTIVE_FS.usedBytes();
     nested["btotal"] = ACTIVE_FS.totalBytes();
@@ -90,7 +90,7 @@ void jsonWsSend(const char *rootName)
   }
   else if (strcmp(rootName, "remtypeconf") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     nested["remtype"] = static_cast<uint16_t>(virtualRemotes.getRemoteType(0));
   }
   else if (strcmp(rootName, "remotes") == 0)
@@ -107,7 +107,7 @@ void jsonWsSend(const char *rootName)
   {
     root["chkpart"] = chk_partition_res ? "partition scheme supports firmware versions from 2.4.4-beta7 and upwards" : "partion scheme supports firmware versions 2.4.4-beta6 and older";
   }
-  notifyClients(root.as<JsonObjectConst>());
+  notifyClients(root.as<JsonObject>());
 }
 
 static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
@@ -162,7 +162,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"wifisettings\"") != std::string::npos || msg.find("{\"systemsettings\"") != std::string::npos || msg.find("{\"logsettings\"") != std::string::npos)
     {
-      DynamicJsonDocument root(2048);
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -214,7 +214,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"button\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg);
       if (!error)
       {
@@ -254,7 +254,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"ithobutton\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg);
       if (!error)
       {
@@ -340,7 +340,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"ithogetsetting\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -355,7 +355,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"ithosetrefresh\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -369,7 +369,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"ithosetupdate\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -411,7 +411,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"vremote\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -427,7 +427,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"remote\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -443,7 +443,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"command\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -464,7 +464,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"copy_id\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -484,7 +484,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"itho_remove_remote\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -512,7 +512,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"itho_update_remote\"") != std::string::npos)
     {
-      StaticJsonDocument<512> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -539,7 +539,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"itho_remove_vremote\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -563,7 +563,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"itho_update_vremote\"") != std::string::npos)
     {
-      StaticJsonDocument<512> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -584,7 +584,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"reboot\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -606,7 +606,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"itho\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg);
       if (!error)
       {
@@ -619,7 +619,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"rfdebug\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -628,7 +628,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"i2csniffer\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {

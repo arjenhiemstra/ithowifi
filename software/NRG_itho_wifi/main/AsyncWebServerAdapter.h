@@ -13,8 +13,8 @@ public:
     AsyncWebServerAdapter(AsyncWebServerRequest *request)
         : _request(request) {}
 
-    void send(int code, const char *contentType, const String &content) override
+    void send(int code, const char *contentType, const std::string &content) override
     {
-        _request->send(code, contentType, content);
+        _request->send(code, contentType, content.c_str());
     }
 };

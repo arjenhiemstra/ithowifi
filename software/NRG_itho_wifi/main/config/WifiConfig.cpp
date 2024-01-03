@@ -124,49 +124,49 @@ const char WifiConfig::tz_strings[][30] =
      "GMT0",
      "UTC0"};
 
-bool WifiConfig::set(JsonObjectConst obj)
+bool WifiConfig::set(JsonObject obj)
 {
   bool updated = false;
   // WIFI Settings parse
   if (!obj["ssid"].isNull())
   {
     updated = true;
-    strlcpy(ssid, obj["ssid"], sizeof(ssid));
+    strlcpy(ssid, obj["ssid"] | "", sizeof(ssid));
   }
   if (!obj["passwd"].isNull())
   {
     updated = true;
-    strlcpy(passwd, obj["passwd"], sizeof(passwd));
+    strlcpy(passwd, obj["passwd"] | "", sizeof(passwd));
   }
   if (!obj["dhcp"].isNull())
   {
     updated = true;
-    strlcpy(dhcp, obj["dhcp"], sizeof(dhcp));
+    strlcpy(dhcp, obj["dhcp"] | "", sizeof(dhcp));
   }
   if (!obj["ip"].isNull())
   {
     updated = true;
-    strlcpy(ip, obj["ip"], sizeof(ip));
+    strlcpy(ip, obj["ip"] | "", sizeof(ip));
   }
   if (!obj["subnet"].isNull())
   {
     updated = true;
-    strlcpy(subnet, obj["subnet"], sizeof(subnet));
+    strlcpy(subnet, obj["subnet"] | "", sizeof(subnet));
   }
   if (!obj["gateway"].isNull())
   {
     updated = true;
-    strlcpy(gateway, obj["gateway"], sizeof(gateway));
+    strlcpy(gateway, obj["gateway"] | "", sizeof(gateway));
   }
   if (!obj["dns1"].isNull())
   {
     updated = true;
-    strlcpy(dns1, obj["dns1"], sizeof(dns1));
+    strlcpy(dns1, obj["dns1"] | "", sizeof(dns1));
   }
   if (!obj["dns2"].isNull())
   {
     updated = true;
-    strlcpy(dns2, obj["dns2"], sizeof(dns2));
+    strlcpy(dns2, obj["dns2"] | "", sizeof(dns2));
   }
   if (!obj["port"].isNull())
   {
@@ -176,17 +176,17 @@ bool WifiConfig::set(JsonObjectConst obj)
   if (!obj["hostname"].isNull())
   {
     updated = true;
-    strlcpy(hostname, obj["hostname"], sizeof(hostname));
+    strlcpy(hostname, obj["hostname"] | "", sizeof(hostname));
   }
   if (!obj["ntpserver"].isNull())
   {
     updated = true;
-    strlcpy(ntpserver, obj["ntpserver"], sizeof(ntpserver));
+    strlcpy(ntpserver, obj["ntpserver"] | "", sizeof(ntpserver));
   }
   if (!obj["timezone"].isNull())
   {
     updated = true;
-    strlcpy(timezone, obj["timezone"], sizeof(timezone));
+    strlcpy(timezone, obj["timezone"] | "", sizeof(timezone));
   }
   return updated;
 }
@@ -325,15 +325,15 @@ void wifiScan()
       strlcpy(ssid, WiFi.SSID(indices[i]).c_str(), sizeof(ssid));
       strlcpy(bssid, WiFi.BSSIDstr(indices[i]).c_str(), sizeof(bssid));
 
-      StaticJsonDocument<512> root;
-      JsonObject wifiscanresult = root.createNestedObject("wifiscanresult");
+      JsonDocument root;
+      JsonObject wifiscanresult = root["wifiscanresult"].to<JsonObject>();
       wifiscanresult["id"] = i;
       wifiscanresult["ssid"] = ssid;
       wifiscanresult["bssid"] = bssid;
       wifiscanresult["sigval"] = signalStrengthResult;
       wifiscanresult["sec"] = sec;
 
-      notifyClients(root.as<JsonObjectConst>());
+      notifyClients(root.as<JsonObject>());
 
       delay(25);
     }
