@@ -28,6 +28,3 @@ url=https://github.com/arjenhiemstra/FS_FilePrint
 [submodule "software/lib/Syslog"]
 	path = software/lib/Syslog
 	url = https://github.com/arcao/Syslog
-[submodule "software/NRG_itho_wifi/components/esp_littlefs"]
-	path = software/NRG_itho_wifi/components/esp_littlefs
-	url = https://github.com/joltwallet/esp_littlefs.git
