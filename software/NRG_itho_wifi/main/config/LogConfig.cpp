@@ -29,7 +29,7 @@ LogConfig::~LogConfig()
 {
 } //~LogConfig
 
-bool LogConfig::set(JsonObjectConst obj)
+bool LogConfig::set(JsonObject obj)
 {
     bool updated = false;
 
@@ -51,7 +51,7 @@ bool LogConfig::set(JsonObjectConst obj)
     if (!obj["logserver"].isNull())
     {
         updated = true;
-        strlcpy(logserver, obj["logserver"], sizeof(logserver));
+        strlcpy(logserver, obj["logserver"] | "", sizeof(logserver));
     }
     if (!obj["logport"].isNull())
     {
@@ -61,7 +61,7 @@ bool LogConfig::set(JsonObjectConst obj)
     if (!obj["logref"].isNull())
     {
         updated = true;
-        strlcpy(logref, obj["logref"], sizeof(logref));
+        strlcpy(logref, obj["logref"] | "", sizeof(logref));
     }
     return updated;
 }

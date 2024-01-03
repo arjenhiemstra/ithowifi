@@ -151,17 +151,16 @@ int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const u
   return -1;
 }
 
-const char* getSettingLabel(const uint8_t index) {
-
+const char *getSettingLabel(const uint8_t index)
+{
 
   const uint8_t deviceID = currentIthoDeviceID();
   const uint8_t version = currentItho_fwversion();
   const uint8_t deviceGroup = currentIthoDeviceGroup();
 
   int settingsLen = getSettingsLength(deviceGroup, deviceID, version);
-  
-  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
 
+  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
 
   if (settingsPtr == nullptr)
   {
@@ -220,7 +219,6 @@ const char* getSettingLabel(const uint8_t index) {
   }
 
   return settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
-  
 }
 
 void getSetting(const uint8_t index, const bool updateState, const bool updateweb, const bool loop)
@@ -239,7 +237,7 @@ void getSetting(const uint8_t index, const bool updateState, const bool updatewe
 
   const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
 
-  StaticJsonDocument<512> doc;
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
   root["Index"] = index;
@@ -283,7 +281,7 @@ void processSettingResult(const uint8_t index, const bool loop)
 
   const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
 
-  StaticJsonDocument<512> doc;
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
   root["Index"] = index;
@@ -298,22 +296,22 @@ void processSettingResult(const uint8_t index, const bool loop)
   root["loop"] = loop;
   if (resultPtr2410 != nullptr && ithoSettingsArray != nullptr)
   {
-		double cur = 0.0;
-		double min = 0.0;
-		double max = 0.0;
+    double cur = 0.0;
+    double min = 0.0;
+    double max = 0.0;
 
-		if (decodeQuery2410(resultPtr2410, &ithoSettingsArray[index], &cur, &min, &max))
-		{
-			root["Current"] = cur;
-			root["Minimum"] = min;
-			root["Maximum"] = max;
-		}
-		else
-		{
+    if (decodeQuery2410(resultPtr2410, &ithoSettingsArray[index], &cur, &min, &max))
+    {
+      root["Current"] = cur;
+      root["Minimum"] = min;
+      root["Maximum"] = max;
+    }
+    else
+    {
       root["Current"] = "error";
       root["Minimum"] = "error";
       root["Maximum"] = "error";
-		}
+    }
   }
   else
   {
@@ -1571,29 +1569,29 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
 
 bool decodeQuery2410(int32_t *ptr, ithoSettings *setting, double *cur, double *min, double *max)
 {
-	if (*(ptr + 0) == 0x5555AAAA && *(ptr + 1) == 0xAAAA5555 && *(ptr + 2) == 0xFFFFFFFF)
-	{
-		return false;
-	}
+  if (*(ptr + 0) == 0x5555AAAA && *(ptr + 1) == 0xAAAA5555 && *(ptr + 2) == 0xFFFFFFFF)
+  {
+    return false;
+  }
 
-	uint8_t len = setting->length;
-	bool is_signed = setting->is_signed;
-	int64_t a = cast_raw_bytes_to_int(ptr + 0, len, is_signed);
-	int64_t b = cast_raw_bytes_to_int(ptr + 1, len, is_signed);
-	int64_t c = cast_raw_bytes_to_int(ptr + 2, len, is_signed);
+  uint8_t len = setting->length;
+  bool is_signed = setting->is_signed;
+  int64_t a = cast_raw_bytes_to_int(ptr + 0, len, is_signed);
+  int64_t b = cast_raw_bytes_to_int(ptr + 1, len, is_signed);
+  int64_t c = cast_raw_bytes_to_int(ptr + 2, len, is_signed);
 
-	*cur = static_cast<double>(static_cast<int32_t>(a));
-	*min = static_cast<double>(static_cast<int32_t>(b));
-	*max = static_cast<double>(static_cast<int32_t>(c));
+  *cur = static_cast<double>(static_cast<int32_t>(a));
+  *min = static_cast<double>(static_cast<int32_t>(b));
+  *max = static_cast<double>(static_cast<int32_t>(c));
 
-	if (setting->type == ithoSettings::is_float)
-	{
-		*cur = *cur / setting->divider;
-		*min = *min / setting->divider;
-		*max = *max / setting->divider;
-	}
+  if (setting->type == ithoSettings::is_float)
+  {
+    *cur = *cur / setting->divider;
+    *min = *min / setting->divider;
+    *max = *max / setting->divider;
+  }
 
-	return true;
+  return true;
 }
 
 // void setSetting2410(bool updateweb)

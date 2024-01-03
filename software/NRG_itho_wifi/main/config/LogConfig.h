@@ -24,7 +24,7 @@ public:
     LogConfig();
     ~LogConfig();
 
-    bool set(JsonObjectConst);
+    bool set(JsonObject);
     void get(JsonObject) const;
 
 protected:

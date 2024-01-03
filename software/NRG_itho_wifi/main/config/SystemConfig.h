@@ -72,7 +72,7 @@ public:
   SystemConfig();
   ~SystemConfig();
 
-  bool set(JsonObjectConst);
+  bool set(JsonObject);
   void get(JsonObject) const;
 
 protected:

@@ -552,7 +552,7 @@ void handleAPI(AsyncWebServerRequest *request)
       else if (strcmp(q->value().c_str(), "queue") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
-        StaticJsonDocument<1000> root;
+        JsonDocument root;
         JsonObject obj = root.to<JsonObject>(); // Fill the object
         ithoQueue.get(obj);
         obj["ithoSpeed"] = ithoQueue.ithoSpeed;
@@ -566,26 +566,22 @@ void handleAPI(AsyncWebServerRequest *request)
       else if (strcmp(q->value().c_str(), "ithostatus") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
-        DynamicJsonDocument doc(6000);
-
-        if (doc.capacity() == 0)
-        {
-          E_LOG("MQTT: JsonDocument memory allocation failed (html api)");
-          return;
-        }
-
+        JsonDocument doc;
         JsonObject root = doc.to<JsonObject>();
         getIthoStatusJSON(root);
 
         serializeJson(root, *response);
         request->send(response);
-
+        if (doc.overflowed())
+        {
+          E_LOG("MQTT: JsonDocument overflowed (html api)");
+        }
         return;
       }
       else if (strcmp(q->value().c_str(), "lastcmd") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
-        DynamicJsonDocument doc(1000);
+        JsonDocument doc;
 
         JsonObject root = doc.to<JsonObject>();
         getLastCMDinfoJSON(root);
@@ -598,7 +594,7 @@ void handleAPI(AsyncWebServerRequest *request)
       else if (strcmp(q->value().c_str(), "remotesinfo") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
-        DynamicJsonDocument doc(2000);
+        JsonDocument doc;
 
         JsonObject root = doc.to<JsonObject>();
 
@@ -846,7 +842,7 @@ ApiResponse::api_response_status_t processGetCommandsAsynWeb(AsyncWebServerReque
       else if (strcmp(q->value().c_str(), "queue") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
-        StaticJsonDocument<1000> root;
+        JsonDocument root;
         JsonObject obj = root.to<JsonObject>(); // Fill the object
         ithoQueue.get(obj);
         obj["ithoSpeed"] = ithoQueue.ithoSpeed;
@@ -860,26 +856,22 @@ ApiResponse::api_response_status_t processGetCommandsAsynWeb(AsyncWebServerReque
       else if (strcmp(q->value().c_str(), "ithostatus") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
-        DynamicJsonDocument doc(6000);
-
-        if (doc.capacity() == 0)
-        {
-          E_LOG("MQTT: JsonDocument memory allocation failed (html api)");
-          return ApiResponse::status::SUCCESS;
-        }
-
+        JsonDocument doc;
         JsonObject root = doc.to<JsonObject>();
         getIthoStatusJSON(root);
 
         serializeJson(root, *response);
         request->send(response);
-
+        if (doc.overflowed())
+        {
+          E_LOG("MQTT: JsonDocument overflowed (html api)");
+        }
         return ApiResponse::status::SUCCESS;
       }
       else if (strcmp(q->value().c_str(), "lastcmd") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
-        DynamicJsonDocument doc(1000);
+        JsonDocument doc;
 
         JsonObject root = doc.to<JsonObject>();
         getLastCMDinfoJSON(root);
@@ -892,7 +884,7 @@ ApiResponse::api_response_status_t processGetCommandsAsynWeb(AsyncWebServerReque
       else if (strcmp(q->value().c_str(), "remotesinfo") == 0)
       {
         AsyncResponseStream *response = request->beginResponseStream("text/html");
-        DynamicJsonDocument doc(2000);
+        JsonDocument doc;
 
         JsonObject root = doc.to<JsonObject>();
 
@@ -1110,7 +1102,6 @@ ApiResponse::api_response_status_t processSetsettingCommandsAsynWeb(AsyncWebServ
         return ApiResponse::status::ERROR;
       }
 
-      
       response["minimum"] = min;
       response["maximum"] = max;
 
@@ -1200,7 +1191,7 @@ void handleAPI_new(AsyncWebServerRequest *request)
 {
   AsyncWebServerAdapter adapter(request);
   ApiResponse apiresponse(&adapter, &mqttClient);
-  StaticJsonDocument<200> response;
+  JsonDocument response;
 
   time_t now;
   time(&now);
@@ -1708,9 +1699,8 @@ const char *getContentType(bool download, const char *filename)
 
 void jsonSystemstat()
 {
-  StaticJsonDocument<512> root;
-  // JsonObject root = jsonBuffer.createObject();
-  JsonObject systemstat = root.createNestedObject("systemstat");
+  JsonDocument root;
+  JsonObject systemstat = root["systemstat"].to<JsonObject>();
   systemstat["freemem"] = sys.getMemHigh();
   systemstat["memlow"] = sys.getMemLow();
   systemstat["mqqtstatus"] = MQTT_conn_state;
@@ -1729,7 +1719,7 @@ void jsonSystemstat()
   systemstat["copy_id"] = virtualRemotes.getllModeTime();
   systemstat["ithoinit"] = ithoInitResult;
 
-  notifyClients(root.as<JsonObjectConst>());
+  notifyClients(root.as<JsonObject>());
 }
 
 // FIXME: below code crashes the ESP32 on bigger files due to a watchdog TG1WDT_SYS_RESET timeout, probably due to a too long time it takes to access the file

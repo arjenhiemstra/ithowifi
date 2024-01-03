@@ -184,13 +184,13 @@ void execLogAndConfigTasks()
   {
     formatFileSystem = false;
     char logBuff[LOG_BUF_SIZE]{};
-    StaticJsonDocument<128> root;
-    JsonObject systemstat = root.createNestedObject("systemstat");
+    JsonDocument root;
+    JsonObject systemstat = root["systemstat"].to<JsonObject>();
 
     if (ACTIVE_FS.format())
     {
       systemstat["format"] = 1;
-      notifyClients(root.as<JsonObjectConst>());
+      notifyClients(root.as<JsonObject>());
       strlcpy(logBuff, "Filesystem format done", sizeof(logBuff));
       logMessagejson(logBuff, WEBINTERFACE);
       strlcpy(logBuff, "Device rebooting, connect to accesspoint to setup the device", sizeof(logBuff));
@@ -202,7 +202,7 @@ void execLogAndConfigTasks()
       systemstat["format"] = 0;
       strlcpy(logBuff, "Unable to format", sizeof(logBuff));
       logMessagejson(logBuff, WEBINTERFACE);
-      notifyClients(root.as<JsonObjectConst>());
+      notifyClients(root.as<JsonObject>());
     }
     strlcpy(logBuff, "", sizeof(logBuff));
   }
@@ -285,9 +285,9 @@ void syslog_queue_worker()
     }
 
     // Also update webinterface
-    // DynamicJsonDocument root(250);
+    // JsonDocument root;
     // root["dblog"] = inputString;
-    // notifyClients(root.as<JsonObjectConst>());
+    // notifyClients(root.as<JsonObject>());
 
     // do something
   }

@@ -56,7 +56,7 @@ public:
   WifiConfig();
   ~WifiConfig();
 
-  bool set(JsonObjectConst);
+  bool set(JsonObject);
   void get(JsonObject) const;
 
   const char *wl_status_to_name(wl_status_t code) const;

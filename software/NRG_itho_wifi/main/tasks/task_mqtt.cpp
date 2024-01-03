@@ -131,7 +131,7 @@ void execMQTTTasks()
           char svalue[32]{};
           snprintf(svalue, sizeof(svalue), "%1.1f;%1.1f;%d", ithoTemp, ithoHum, humstat);
 
-          StaticJsonDocument<512> root;
+          JsonDocument root;
           root["svalue"] = svalue;
           root["nvalue"] = 0;
           root["idx"] = systemConfig.sensor_idx;
@@ -185,14 +185,7 @@ void mqttSendStatus()
   char ihtostatustopic[140]{};
   snprintf(ihtostatustopic, sizeof(ihtostatustopic), "%s%s", systemConfig.mqtt_base_topic, "/ithostatus");
 
-  DynamicJsonDocument doc(6000);
-
-  if (doc.capacity() == 0)
-  {
-    E_LOG("MQTT: JsonDocument memory allocation failed (itho status)");
-    return;
-  }
-
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
   getIthoStatusJSON(root);
 
@@ -208,7 +201,11 @@ void mqttSendStatus()
     if (!mqttClient.endPublish())
       E_LOG("MQTT: Failed to send payload (itho status)");
   }
-  // reset buffer
+  if (doc.overflowed())
+  {
+    E_LOG("MQTT: JsonDocument overflowed (itho status)");
+  }
+
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }
 void mqttSendRemotesInfo()
@@ -216,14 +213,7 @@ void mqttSendRemotesInfo()
   char remotesinfotopic[140]{};
   snprintf(remotesinfotopic, sizeof(remotesinfotopic), "%s%s", systemConfig.mqtt_base_topic, "/remotesinfo");
 
-  DynamicJsonDocument doc(1000);
-
-  if (doc.capacity() == 0)
-  {
-    E_LOG("MQTT: JsonDocument memory allocation failed (itho remote info)");
-    return;
-  }
-
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
   getRemotesInfoJSON(root);
@@ -240,7 +230,11 @@ void mqttSendRemotesInfo()
     if (!mqttClient.endPublish())
       E_LOG("MQTT: Failed to send payload (itho remote info))");
   }
-  // reset buffer
+  if (doc.overflowed())
+  {
+    E_LOG("MQTT: JsonDocument overflowed (itho remote info)");
+  }
+
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }
 
@@ -248,7 +242,7 @@ void mqttPublishLastcmd()
 {
   char lastcmdtopic[140]{};
   snprintf(lastcmdtopic, sizeof(lastcmdtopic), "%s%s", systemConfig.mqtt_base_topic, "/lastcmd");
-  DynamicJsonDocument doc(1000);
+  JsonDocument doc;
 
   JsonObject root = doc.to<JsonObject>();
 
@@ -272,7 +266,7 @@ void mqttPublishLastcmd()
 
 void mqttSendSettingsJSON()
 {
-  DynamicJsonDocument doc(4000);
+  JsonDocument doc;
 
   JsonObject root = doc.to<JsonObject>();
 
@@ -314,7 +308,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
 
   if (strcmp(topic, c_topic) == 0)
   {
-    StaticJsonDocument<1024> root;
+    JsonDocument root;
     DeserializationError error = deserializeJson(root, s_payload);
 
     if (!error)
@@ -444,7 +438,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
   }
   if (strcmp(topic, systemConfig.mqtt_domoticzout_topic) == 0)
   {
-    StaticJsonDocument<1024> root;
+    JsonDocument root;
     DeserializationError error = deserializeJson(root, s_payload);
     if (!error)
     {
@@ -491,7 +485,7 @@ void updateState(uint16_t newState)
       char buf[10]{};
       snprintf(buf, sizeof(buf), "%d", newState);
 
-      StaticJsonDocument<512> root;
+      JsonDocument root;
       root["command"] = "switchlight";
       root["idx"] = systemConfig.mqtt_idx;
       root["nvalue"] = nvalue;
@@ -566,7 +560,7 @@ add:
   snprintf(statetopic, sizeof(statetopic), "%s%s", systemConfig.mqtt_base_topic, "/state");
   snprintf(modestatetopic, sizeof(modestatetopic), "%s%s", systemConfig.mqtt_base_topic, "/modestate");
 
-  DynamicJsonDocument doc(2048);
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>(); // Fill the object
   char s[300]{};
 
@@ -584,9 +578,9 @@ add:
   root["pct_cmd_tpl"] = "{{ (value * 2.55) | round | int }}";
   root["pct_stat_t"] = static_cast<const char *>(statetopic);
   root["pct_val_tpl"] = "{{ (value / 2.55) | round | int }}";
-  //root["pct_val_tpl"] = "{% if {{ ((value | int) / 2.55) | round }} == '0' %}OFF{% else %}{{ ((value | int) / 2.55) | round }}{% endif %} ";
+  // root["pct_val_tpl"] = "{% if {{ ((value | int) / 2.55) | round }} == '0' %}OFF{% else %}{{ ((value | int) / 2.55) | round }}{% endif %} ";
 
-  JsonArray modes = root.createNestedArray("pr_modes");
+  JsonArray modes = root["pr_modes"].to<JsonArray>();
   modes.add("Low");
   modes.add("Medium");
   modes.add("High");
@@ -594,7 +588,7 @@ add:
   modes.add("Timer 20min");
   modes.add("Timer 30min");
   root["pr_mode_cmd_t"] = cmdtopic;
-  //root["pr_mode_stat_t"] = modestatetopic;
+  // root["pr_mode_stat_t"] = modestatetopic;
   root["pr_mode_cmd_tpl"] = "{%- if value == 'Low' %}{{'low'}}{%- elif value == 'Medium' %}{{'medium'}}{%- elif value == 'High' %}{{'high'}}{%- elif value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- endif -%}";
 
   snprintf(s, sizeof(s), "%s/fan/%s/config", systemConfig.mqtt_ha_topic, hostName());
@@ -611,7 +605,7 @@ void HADiscoveryTemperature()
   snprintf(lwttopic, sizeof(lwttopic), "%s%s", systemConfig.mqtt_base_topic, "/lwt");
   snprintf(ihtostatustopic, sizeof(ihtostatustopic), "%s%s", systemConfig.mqtt_base_topic, "/ithostatus");
 
-  DynamicJsonDocument doc(2048);
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>(); // Fill the object
   char s[300]{};
 
@@ -638,7 +632,7 @@ void HADiscoveryHumidity()
   snprintf(lwttopic, sizeof(lwttopic), "%s%s", systemConfig.mqtt_base_topic, "/lwt");
   snprintf(ihtostatustopic, sizeof(ihtostatustopic), "%s%s", systemConfig.mqtt_base_topic, "/ithostatus");
 
-  DynamicJsonDocument doc(2048);
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>(); // Fill the object
   char s[300]{};
 
@@ -661,7 +655,7 @@ void HADiscoveryHumidity()
 void addHADevInfo(JsonObject obj)
 {
   char s[64]{};
-  JsonObject dev = obj.createNestedObject("dev");
+  JsonObject dev = obj["dev"].to<JsonObject>();
   dev["identifiers"] = hostName();
   dev["manufacturer"] = "Arjen Hiemstra";
   dev["model"] = "Wifi add-on for Itho";

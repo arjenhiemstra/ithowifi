@@ -13,7 +13,7 @@ public:
     MongooseWebServerAdapter(struct mg_connection *connection)
         : _connection(connection) {}
 
-    void send(int code, const char *contentType, const String &content) override
+    void send(int code, const char *contentType, const std::string &content) override
     {
         // Construct HTTP response header
         mg_printf(_connection,
