@@ -782,7 +782,7 @@ void handleAPI(AsyncWebServerRequest *request)
   }
 }
 
-ApiResponse::api_response_status_t checkAuthentication(JsonObject &params, JsonDocument &response)
+ApiResponse::api_response_status_t checkAuthentication(JsonObject params, JsonDocument &response)
 {
 
   if (!systemConfig.syssec_api)
@@ -805,7 +805,7 @@ ApiResponse::api_response_status_t checkAuthentication(JsonObject &params, JsonD
   return ApiResponse::status::FAIL;
 }
 
-ApiResponse::api_response_status_t processGetCommands(JsonObject &params, JsonDocument &response)
+ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDocument &response)
 {
   const char *value = params["get"];
 
@@ -870,7 +870,7 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject &params, JsonDo
   return ApiResponse::status::FAIL;
 }
 
-ApiResponse::api_response_status_t processGetsettingCommands(JsonObject &params, JsonDocument &response)
+ApiResponse::api_response_status_t processGetsettingCommands(JsonObject params, JsonDocument &response)
 {
   const char *value = params["getsetting"];
 
@@ -964,7 +964,7 @@ ApiResponse::api_response_status_t processGetsettingCommands(JsonObject &params,
   return ApiResponse::status::FAIL;
 }
 
-ApiResponse::api_response_status_t processSetsettingCommands(JsonObject &params, JsonDocument &response)
+ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, JsonDocument &response)
 {
   const char *value = params["setsetting"];
 
@@ -1166,7 +1166,7 @@ ApiResponse::api_response_status_t processSetsettingCommands(JsonObject &params,
   return ApiResponse::status::FAIL;
 }
 
-ApiResponse::api_response_status_t processCommand(JsonObject &params, JsonDocument &response)
+ApiResponse::api_response_status_t processCommand(JsonObject params, JsonDocument &response)
 {
   const char *value = params["command"];
 
@@ -1203,7 +1203,7 @@ ApiResponse::api_response_status_t processCommand(JsonObject &params, JsonDocume
   return ApiResponse::status::FAIL;
 }
 
-ApiResponse::api_response_status_t processRFremoteCommands(JsonObject &params, JsonDocument &response)
+ApiResponse::api_response_status_t processRFremoteCommands(JsonObject params, JsonDocument &response)
 {
 
   const char *rfremotecmd = params["rfremotecmd"];
@@ -1244,7 +1244,7 @@ ApiResponse::api_response_status_t processRFremoteCommands(JsonObject &params, J
   return ApiResponse::status::FAIL;
 }
 
-ApiResponse::api_response_status_t processVremoteCommands(JsonObject &params, JsonDocument &response)
+ApiResponse::api_response_status_t processVremoteCommands(JsonObject params, JsonDocument &response)
 {
   const char *vremotecmd = params["vremote"];
 
@@ -1326,7 +1326,7 @@ ApiResponse::api_response_status_t processVremoteCommands(JsonObject &params, Js
   response["failreason"] = "cmdvalue not valid";
   return ApiResponse::status::FAIL;
 }
-ApiResponse::api_response_status_t processPWMSpeedTimerCommands(JsonObject &params, JsonDocument &response)
+ApiResponse::api_response_status_t processPWMSpeedTimerCommands(JsonObject params, JsonDocument &response)
 {
   const char *speed = params["speed"];
   const char *timer = params["timer"];
@@ -1371,7 +1371,7 @@ ApiResponse::api_response_status_t processPWMSpeedTimerCommands(JsonObject &para
   response["failreason"] = "cmdvalue not valid";
   return ApiResponse::status::FAIL;
 }
-ApiResponse::api_response_status_t processi2csnifferCommands(JsonObject &params, JsonDocument &response)
+ApiResponse::api_response_status_t processi2csnifferCommands(JsonObject params, JsonDocument &response)
 {
   const char *value = params["i2csniffer"];
 
@@ -1403,7 +1403,7 @@ ApiResponse::api_response_status_t processi2csnifferCommands(JsonObject &params,
   return ApiResponse::status::FAIL;
 }
 
-ApiResponse::api_response_status_t processDebugCommands(JsonObject &params, JsonDocument &response)
+ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonDocument &response)
 {
   const char *value = params["debug"];
 
