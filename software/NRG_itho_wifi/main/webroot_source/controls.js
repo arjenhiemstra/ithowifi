@@ -82,12 +82,6 @@ function processMessage(message) {
   }
   else if (f.systemsettings) {
     let x = f.systemsettings;
-    if ('mqtt_active' in x) {
-      $('#mqtt_idx, #label-mqtt_idx').hide();
-      $('#sensor_idx, #label-sensor_idx').hide();
-      mqtt_state_topic_tmp = x.mqtt_state_topic;
-      mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
-    }
     processElements(x);
     if ("itho_rf_support" in x) {
       if (x.itho_rf_support == 1 && x.rfInitOK == false) {
@@ -95,7 +89,7 @@ function processMessage(message) {
           $('#main').empty();
           $('#main').append("<br><br><br><br>");
           $('#main').append(html_reboot_script);
-          websock.send('{"reboot":true}');
+          websock_send('{"reboot":true}');
         }
       }
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
@@ -166,7 +160,7 @@ function processMessage(message) {
     }
     if (x.Index < sessionStorage.getItem("itho_setlen") - 1 && x.loop === true && settingIndex == x.Index) {
       settingIndex++;
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithogetsetting: true,
         index: settingIndex,
         update: x.update
@@ -174,7 +168,7 @@ function processMessage(message) {
     }
     if (x.Index === sessionStorage.getItem("itho_setlen") - 1 && x.update === false && x.loop === true) {
       settingIndex = 0;
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithogetsetting: true,
         index: 0,
         update: true
@@ -323,11 +317,11 @@ $(document).ready(function () {
   $(document).on('click', 'button', function (e) {
     if ($(this).attr('id').startsWith('command-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"command":"${items[1]}"}`);
+      websock_send(`{"command":"${items[1]}"}`);
     }
     else if ($(this).attr('id') == 'wifisubmit') {
       hostname = $('#hostname').val();
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         wifisettings: {
           ssid: $('#ssid').val(),
           passwd: $('#passwd').val(),
@@ -347,7 +341,7 @@ $(document).ready(function () {
     }
     //syssubmit
     else if ($(this).attr('id') == 'syssumbit') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         systemsettings: {
           sys_username: $('#sys_username').val(),
           sys_password: $('#sys_password').val(),
@@ -355,6 +349,7 @@ $(document).ready(function () {
           syssec_api: $('input[name=\'option-syssec_api\']:checked').val(),
           syssec_edit: $('input[name=\'option-syssec_edit\']:checked').val(),
           api_normalize: $('input[name=\'option-api_normalize\']:checked').val(),
+          api_settings: $('input[name=\'option-api_settings\']:checked').val(),
           syssht30: $('input[name=\'option-syssht30\']:checked').val(),
           itho_rf_support: $('input[name=\'option-itho_rf_support\']:checked').val(),
           itho_fallback: $('#itho_fallback').val(),
@@ -382,7 +377,7 @@ $(document).ready(function () {
       update_page('system');
     }
     else if ($(this).attr('id') == 'syslogsumbit') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         logsettings: {
           loglevel: $('#loglevel').val(),
           syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
@@ -396,7 +391,7 @@ $(document).ready(function () {
     }
     //mqttsubmit
     else if ($(this).attr('id') == 'mqttsubmit') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         systemsettings: {
           mqtt_active: $('input[name=\'option-mqtt_active\']:checked').val(),
           mqtt_serverName: $('#mqtt_serverName').val(),
@@ -404,13 +399,10 @@ $(document).ready(function () {
           mqtt_password: $('#mqtt_password').val(),
           mqtt_port: $('#mqtt_port').val(),
           mqtt_version: $('#mqtt_version').val(),
-          mqtt_state_topic: $('#mqtt_state_topic').val(),
-          mqtt_ithostatus_topic: $('#mqtt_ithostatus_topic').val(),
-          mqtt_remotesinfo_topic: $('#mqtt_remotesinfo_topic').val(),
-          mqtt_lastcmd_topic: $('#mqtt_lastcmd_topic').val(),
+          mqtt_base_topic: $('#mqtt_base_topic').val(),
           mqtt_ha_topic: $('#mqtt_ha_topic').val(),
-          mqtt_cmd_topic: $('#mqtt_cmd_topic').val(),
-          mqtt_lwt_topic: $('#mqtt_lwt_topic').val(),
+          mqtt_domoticzin_topic: $('#mqtt_domoticzin_topic').val(),
+          mqtt_domoticzout_topic: $('#mqtt_domoticzout_topic').val(),
           mqtt_idx: $('#mqtt_idx').val(),
           sensor_idx: $('#sensor_idx').val(),
           mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val(),
@@ -420,7 +412,7 @@ $(document).ready(function () {
       update_page('mqtt');
     }
     else if ($(this).attr('id') == 'itho_llm') {
-      websock.send('{"itho_llm":true}');
+      websock_send('{"itho_llm":true}');
     }
     else if ($(this).attr('id') == 'itho_remove_remote' || $(this).attr('id') == 'itho_remove_vremote') {
       var selected = $('input[name=\'optionsRemotes\']:checked').val();
@@ -429,7 +421,7 @@ $(document).ready(function () {
       }
       else {
         var val = parseInt(selected, 10) + 1;
-        websock.send('{"' + $(this).attr('id') + '":' + val + '}');
+        websock_send('{"' + $(this).attr('id') + '":' + val + '}');
       }
     }
     else if ($(this).attr('id') == 'itho_update_remote' || $(this).attr('id') == 'itho_update_vremote') {
@@ -438,15 +430,15 @@ $(document).ready(function () {
         alert("Please select a remote.");
       }
       else {
-        var remfunc = $('#func_remote-' + i).val();
-        var remtype = $('#type_remote-' + i).val();
+        var remfunc = (typeof $('#func_remote-' + i).val() === 'undefined') ? 0 : $('#func_remote-' + i).val();
+        var remtype = (typeof $('#type_remote-' + i).val() === 'undefined') ? 0 : $('#type_remote-' + i).val();
         var id = $('#id_remote-' + i).val();
         if (id == 'empty slot') id = "0,0,0";
-        if (isNaN(parseInt(id.split(",")[0], 16)) || isNaN(parseInt(id.split(",")[1], 16)) || isNaN(parseInt(id.split(",")[2], 16))) {
-          alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
+        if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
+          websock_send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc}}`);
         }
         else {
-          websock.send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc}}`);
+          alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
         }
       }
     }
@@ -457,7 +449,7 @@ $(document).ready(function () {
       }
       else {
         var val = parseInt(i, 10) + 1;
-        websock.send(`{"copy_id":true, "index":${val}}`);
+        websock_send(`{"copy_id":true, "index":${val}}`);
       }
     }
     else if ($(this).attr('id').substr(0, 15) == 'ithosetrefresh-') {
@@ -475,7 +467,7 @@ $(document).ready(function () {
           $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).removeClass('pure-button-primary');
         });
         $(`#Current-${i}, #Minimum-${i}, #Maximum-${i}`).html(`<div style='margin: auto;' class='dot-elastic'></div>`);
-        websock.send('{"ithosetrefresh":' + i + '}');
+        websock_send('{"ithosetrefresh":' + i + '}');
       }
     }
     else if ($(this).attr('id').substr(0, 14) == 'ithosetupdate-') {
@@ -489,13 +481,13 @@ $(document).ready(function () {
       }
       else {
         if (Number.isInteger(parseFloat($('#name_ithoset-' + i).val()))) {
-          websock.send(JSON.stringify({
+          websock_send(JSON.stringify({
             ithosetupdate: i,
             value: parseInt($('#name_ithoset-' + i).val())
           }));
         }
         else {
-          websock.send(JSON.stringify({
+          websock_send(JSON.stringify({
             ithosetupdate: i,
             value: parseFloat($('#name_ithoset-' + i).val())
           }));
@@ -510,85 +502,85 @@ $(document).ready(function () {
     }
     else if ($(this).attr('id') == 'resetwificonf') {
       if (confirm("This will reset the wifi config to factory default, are you sure?")) {
-        websock.send('{"resetwificonf":true}');
+        websock_send('{"resetwificonf":true}');
       }
     }
     else if ($(this).attr('id') == 'resetsysconf') {
       if (confirm("This will reset the system config to factory default, are you sure?")) {
-        websock.send('{"resetsysconf":true}');
+        websock_send('{"resetsysconf":true}');
       }
     }
     else if ($(this).attr('id') == 'reboot') {
       if (confirm("This will reboot the device, are you sure?")) {
         $('#rebootscript').append(html_reboot_script);
         if (document.getElementById("dontsaveconf") !== null) {
-          websock.send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
+          websock_send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
         }
         else {
-          websock.send('{"reboot":true}');
+          websock_send('{"reboot":true}');
         }
       }
     }
     else if ($(this).attr('id') == 'format') {
       if (confirm("This will erase all settings, are you sure?")) {
-        websock.send('{"format":true}');
+        websock_send('{"format":true}');
         $('#format').text('Formatting...');
       }
     }
     else if ($(this).attr('id') == 'wifiscan') {
       $('.ScanResults').remove();
       $('.hidden').removeClass('hidden');
-      websock.send('{"wifiscan":true}');
+      websock_send('{"wifiscan":true}');
     }
     else if ($(this).attr('id').startsWith('button_vremote-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"vremote":${items[1]}, "command":"${items[2]}"}`);
+      websock_send(`{"vremote":${items[1]}, "command":"${items[2]}"}`);
     }
     else if ($(this).attr('id').startsWith('button_remote-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"remote":${items[1]}, "command":"${items[2]}"}`);
+      websock_send(`{"remote":${items[1]}, "command":"${items[2]}"}`);
     }
     else if ($(this).attr('id').startsWith('ithobutton-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"ithobutton":"${items[1]}"}`);
+      websock_send(`{"ithobutton":"${items[1]}"}`);
       if (items[1] == 'shtreset') $(`#i2c_sht_reset`).text("Processing...");
     }
     else if ($(this).attr('id').startsWith('button-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"button":"${items[1]}"}`);
+      websock_send(`{"button":"${items[1]}"}`);
     }
     else if ($(this).attr('id').startsWith('rfdebug-')) {
       const items = $(this).attr('id').split('-');
       if (items[1] == 0) $('#rflog_outer').addClass('hidden');
       if (items[1] > 0) $('#rflog_outer').removeClass('hidden');
-      websock.send(`{"rfdebug":${items[1]}}`);
+      websock_send(`{"rfdebug":${items[1]}}`);
     }
     else if ($(this).attr('id').startsWith('i2csniffer-')) {
       const items = $(this).attr('id').split('-');
       if (items[1] == 0) $('#i2clog_outer').addClass('hidden');
       if (items[1] > 0) $('#i2clog_outer').removeClass('hidden');
-      websock.send(`{"i2csniffer":${items[1]}}`);
+      websock_send(`{"i2csniffer":${items[1]}}`);
     }
     else if ($(this).attr('id') == 'button2410') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 2410,
         index: parseInt($('#itho_setting_id').val())
       }));
     }
     else if ($(this).attr('id') == 'button2410set') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 24109,
         ithosetupdate: $('#itho_setting_id_set').val(),
         value: parseFloat($('#itho_setting_value_set').val())
       }));
     }
     else if ($(this).attr('id') == 'button4210') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 4210
       }));
     }
     else if ($(this).attr('id') == 'buttonCE30') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 0xCE30,
         ithotemp: parseFloat($('#itho_ce30_temp').val() * 100.),
         ithotemptemp: parseFloat($('#itho_ce30_temptemp').val() * 100.),
@@ -597,7 +589,7 @@ $(document).ready(function () {
     }
     else if ($(this).attr('id') == 'ithogetsettings') {
       settingIndex = 0;
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithogetsetting: true,
         index: 0,
         update: false
@@ -637,6 +629,10 @@ $(document).ready(function () {
   });
 });
 
+function websock_send(message) {
+  websock.send(message);
+  console.log(message);
+}
 
 var timerHandle = setTimeout(function () {
   $('#message_box').hide();
@@ -674,7 +670,12 @@ function processElements(x) {
           }
           radio(key, x[key]);
         }
-      }
+      }   
+      var elbyname = $(`[name='${key}']`).each(function () {
+        if ($(this).is('span')) {
+          $(this).text(x[key]);
+        }
+      });
     }
   }
 }
@@ -707,9 +708,6 @@ function getlog(url) {
   xhr.send(null);
 }
 
-var mqtt_state_topic_tmp = "";
-var mqtt_cmd_topic_tmp = "";
-
 function radio(origin, state) {
   if (origin == "dhcp") {
     if (state == 'on') {
@@ -724,36 +722,26 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_active") {
     if (state == 1) {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
-      $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', false);
-      $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', false);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_base_topic, #mqtt_ha_topic, #mqtt_domoticzin_topic, #mqtt_domoticzout_topic, #mqtt_idx, #sensor_idx').prop('readonly', false);
+      $('#option-mqtt_domoticz_active-0, #option-mqtt_domoticz_active-1, #option-mqtt_ha_active-1, #option-mqtt_ha_active-0').prop('disabled', false);
     }
     else {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
-      $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', true);
-      $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', true);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_base_topic, #mqtt_ha_topic, #mqtt_domoticzin_topic, #mqtt_domoticzout_topic, #mqtt_idx, #sensor_idx').prop('readonly', true);
+      $('#option-mqtt_domoticz_active-0, #option-mqtt_domoticz_active-1, #option-mqtt_ha_active-1, #option-mqtt_ha_active-0').prop('disabled', true);
+
     }
   }
   else if (origin == "mqtt_domoticz_active") {
     if (state == 1) {
-      $('#mqtt_idx').prop('readonly', false);
-      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').show();
-      $('#mqtt_state_topic').val("domoticz/in");
-      $('#mqtt_cmd_topic').val("domoticz/out");
-      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd, #mqtt_ha_topic, #label-mqtt_ha, #mqtt_lwt_topic, #label-lwt_topic').hide();
+      $('#mqtt_domoticzin_topic, #label-mqtt_domoticzin, #label-mqtt_domoticzout, #mqtt_domoticzout_topic, #mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').show();
     }
     else {
-      $('#mqtt_idx').prop('readonly', true);
-      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
-      $('#mqtt_state_topic').val(mqtt_state_topic_tmp);
-      $('#mqtt_cmd_topic').val(mqtt_cmd_topic_tmp);
-      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd ,#mqtt_lwt_topic, #label-lwt_topic').show();
+      $('#mqtt_domoticzin_topic, #label-mqtt_domoticzin, #label-mqtt_domoticzout, #mqtt_domoticzout_topic, #mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
     }
   }
   else if (origin == "mqtt_ha_active") {
     if (state == 1) {
-      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd, #mqtt_ha_topic, #label-mqtt_ha, #mqtt_lwt_topic, #label-lwt_topic').show();
-      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
+      $('#mqtt_ha_topic, #label-mqtt_ha').show();
     }
     else {
       $('#mqtt_ha_topic, #label-mqtt_ha').hide();
@@ -797,7 +785,7 @@ function radio(origin, state) {
 
 function getSettings(pagevalue) {
   if (websock.readyState === 1) {
-    websock.send('{"' + pagevalue + '":1}');
+    websock_send('{"' + pagevalue + '":1}');
   }
   else {
     console.log("websock not open");
@@ -841,7 +829,7 @@ function updateSlider(value) {
   var val = parseInt(value);
   if (isNaN(val)) val = 0;
   $('#ithotextval').html(val);
-  websock.send(JSON.stringify({ 'itho': val }));
+  websock_send(JSON.stringify({ 'itho': val }));
 }
 
 //function to load html main content
@@ -921,6 +909,12 @@ function ValidateIPaddress(ipaddress) {
     return true;
   }
   return false;
+}
+
+function isHex(hex) {
+  return typeof hex === 'string'
+    && hex.length === 2
+    && !isNaN(Number('0x' + hex))
 }
 
 function returnMqttState(state) {
@@ -1651,6 +1645,24 @@ Unless specified otherwise:<br>
                     comments on remotesinfo of the Web API</em></td>
         </tr>
         <tr>
+            <td>getsetting</td>
+            <td>string</td>
+            <td>0-256</td>
+            <td>number</td>
+            <td style="text-align:center">◌</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">
+                Comments:<br>
+                <em>
+                    Returns a JSON object containing the result of the API call. If succeful it contains a data object with the current, minimum and
+                    maximum value of the given setting, using its index. If the
+                    setting index is invalid, the data object contains a key failreason.
+                </em>
+            </td>
+        </tr>
+        <tr>
             <td colspan="6"><b>Commands below this line work on itho devices that support the PWM2IC2 protocol. Devices
                     supported are at least the HRU200 and all CVE models. Devices known not to support these commands
                     are the HRU350, WPU, DemandFlow/QualityFlow. These commands cannot be used together with vremote
@@ -1771,9 +1783,49 @@ Unless specified otherwise:<br>
                     remote if more than 1 RF remote is configured. The index can be found on the "RF devices"
                     page.</em></td>
         </tr>
-
-
-
+        <tr>
+            <td colspan="6"><b style="color: red">API Commands below this line can change the settings of your Itho
+                    Daalderop
+                    unit, and this may affect its behaviour (i.e. turn it to a non working state).
+                    Only use this part of the API if you know what you're doing and are
+                    certain it won't damage your unit.
+                </b></td>
+        </tr>
+        <tr>
+            <td>setsetting</td>
+            <td>string</td>
+            <td>0-256</td>
+            <td>number</td>
+            <td style="text-align:center">◌</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td>value</td>
+            <td>string</td>
+            <td>any number</td>
+            <td>number</td>
+            <td style="text-align:center">◌</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">
+                Comments:<br>
+                <em>
+                    Sets the current value of a setting using its index. The
+                    value must be specified in the "value" parameter. The new
+                    value must be within the minimum and maximum of the setting.<br>
+                    Returns a JSON object containing the result of the API call. If succeful it contains a data object with the current, previous, minimum and
+                    maximum value of the given setting, using its index. If the
+                    setting index or value is invalid, the data object contains a key failreason.
+                </em>
+                <br>
+                <br>
+                Example:<br>
+                <em>
+                    http://192.168.4.1/api.html?setsetting=4&value=10
+                </em>
+            </td>
+        </tr>
     </tbody>
 </table>
 <p><br><br></p>
@@ -2169,6 +2221,18 @@ var html_systemsettings_start = `
       <input id="option-api_normalize-1" type="radio" name="option-api_normalize" value="1"> on
       <input id="option-api_normalize-0" type="radio" name="option-api_normalize" value="0"> off
     </div>
+    <p>Enable the WebAPI for managing your device's settings.</p>
+    <div class="pure-control-group">
+      <label for="option-api_settings" class="pure-radio">Enable settings API</label>
+      <input id="option-api_settings-1" type="radio" name="option-api_settings" value="1"> on
+      <input id="option-api_settings-0" type="radio" name="option-api_settings" value="0"> off
+    </div>
+    <p>
+      <b style="color: red">Warning:</b>
+      using this part of the API incorrectly may result in
+      your Itho device not working as intended. Only use this part of the API if you're
+      certain it won't break your device.
+    </p>
     <legend><br>Speed settings (CVE only) (0-255):</legend>
     <div class="pure-control-group">
       <label for="itho_fallback">Start/fallback speed</label>
@@ -2309,6 +2373,7 @@ var html_mqttsetup = `
   <h1>MQTT setup</h1>
 </div>
 <p>Configuration of the MQTT server to publish the status to and subscribe topic to receive commands</p>
+<p>Note: the MQTT base topic should to be unique for every add-on</p>
 <style>
   .pure-form-aligned .pure-control-group label {
     width: 15em;
@@ -2346,28 +2411,8 @@ var html_mqttsetup = `
       <input id="mqtt_port" maxlength="5" type="text">
     </div>
     <div class="pure-control-group">
-      <label for="mqtt_state_topic">State topic</label>
-      <input id="mqtt_state_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-mqtt_ithostatus" for="mqtt_ithostatus_topic">Itho status topic</label>
-      <input id="mqtt_ithostatus_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-mqtt_remotesinfo" for="mqtt_remotesinfo_topic">Remotes info topic</label>
-      <input id="mqtt_remotesinfo_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-mqtt_lastcmd" for="mqtt_lastcmd_topic">Last command info topic</label>
-      <input id="mqtt_lastcmd_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label for="mqtt_cmd_topic">Command topic</label>
-      <input id="mqtt_cmd_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-lwt_topic" for="mqtt_lwt_topic">Last will topic</label>
-      <input id="mqtt_lwt_topic" maxlength="120" type="text">
+      <label id="label-mqtt_basetopic" for="mqtt_base_topic">MQTT base topic</label>
+      <input id="mqtt_base_topic" maxlength="120" type="text">
     </div>
     <br>
     <div class="pure-control-group">
@@ -2390,6 +2435,14 @@ var html_mqttsetup = `
         onchange='radio("mqtt_domoticz_active", 0)' value="0"> off
     </div>
     <div class="pure-control-group">
+      <label id="label-mqtt_domoticzin" for="mqtt_domoticzin_topic" style="display: none;">Domoticz in topic</label>
+      <input id="mqtt_domoticzin_topic" maxlength="120" type="text" style="display: none;">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_domoticzout" for="mqtt_domoticzout_topic" style="display: none;">Domoticz out topic</label>
+      <input id="mqtt_domoticzout_topic" maxlength="120" type="text" style="display: none;">
+    </div>
+    <div class="pure-control-group">
       <label id="label-mqtt_idx" for="mqtt_idx" style="display: none;">Device IDX</label>
       <input id="mqtt_idx" maxlength="5" type="text" style="display: none;">
     </div>
@@ -2403,10 +2456,65 @@ var html_mqttsetup = `
     </div>
   </fieldset>
 </form>
+<p><br>MQTT Topics:<br></p>
+<table class="pure-table pure-table-bordered">
+  <thead style="white-space: nowrap;">
+    <tr>
+      <th>Topic type:</th>
+      <th>Topic name:</th>
+      <th>Use:</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>State</td>
+      <td><span name="mqtt_base_topic"></span>/state</td>
+      <td>Contains a 0-254 value representing the PWM2I2C speed setting</td>
+    </tr>
+    <tr>
+      <td>Itho status</td>
+      <td><span name="mqtt_base_topic"></span>/ithostatus</td>
+      <td>Contains JSON with info from itho firmware (same info as under menu Itho status)</td>
+    </tr>
+    <tr>
+      <td>Remotes info</td>
+      <td><span name="mqtt_base_topic"></span>/remotesinfo</td>
+      <td>Contains JSON with info from RF devices paired to the add-on</td>
+    </tr>
+    <tr>
+      <td>Last command info</td>
+      <td><span name="mqtt_base_topic"></span>/lastcmd</td>
+      <td>Contains the last command received on the API</td>
+    </tr>
+    <tr>
+      <td>Command</td>
+      <td><span name="mqtt_base_topic"></span>/cmd</td>
+      <td>Commands posted to this topic will be processed by the MQTTAPI</td>
+    </tr>
+    <tr>
+      <td>Last will</td>
+      <td><span name="mqtt_base_topic"></span>/lwt</td>
+      <td>Last will online/offline info topic</td>
+    </tr>
+  </tbody>
+</table>
+<br><br><br>
 <script>
   $(document).ready(function () {
     getSettings('mqttsetup');
   });
+
+  var input = document.getElementById("mqtt_base_topic");
+  input.addEventListener('input', updateSpanByName);
+  input.targetName = "mqtt_base_topic";
+
+  function updateSpanByName(e) {
+
+    let elements = document.getElementsByName(e.currentTarget.targetName);
+    for (let i = 0; i < elements.length; i++) {
+      elements[i].textContent = this.value;
+    }
+  }  
 </script>
 `;
 

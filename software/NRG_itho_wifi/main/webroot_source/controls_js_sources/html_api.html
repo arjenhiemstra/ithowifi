@@ -187,10 +187,9 @@ Unless specified otherwise:<br>
             <td colspan="6">
                 Comments:<br>
                 <em>
-                    Returns a JSON object containing the current, minimum and
+                    Returns a JSON object containing the result of the API call. If succeful it contains a data object with the current, minimum and
                     maximum value of the given setting, using its index. If the
-                    setting index is invalid, the HTTP response code is 400 and
-                    the body is text containing an error message.
+                    setting index is invalid, the data object contains a key failreason.
                 </em>
             </td>
         </tr>
@@ -315,7 +314,6 @@ Unless specified otherwise:<br>
                     remote if more than 1 RF remote is configured. The index can be found on the "RF devices"
                     page.</em></td>
         </tr>
-        <!--SETTINGSAPI
         <tr>
             <td colspan="6"><b style="color: red">API Commands below this line can change the settings of your Itho
                     Daalderop
@@ -346,9 +344,10 @@ Unless specified otherwise:<br>
                 <em>
                     Sets the current value of a setting using its index. The
                     value must be specified in the "value" parameter. The new
-                    value must be within the minimum and maximum of the setting.
-                    If the value is invalid, the HTTP response code is 400 and
-                    the body is text containing an error message.
+                    value must be within the minimum and maximum of the setting.<br>
+                    Returns a JSON object containing the result of the API call. If succeful it contains a data object with the current, previous, minimum and
+                    maximum value of the given setting, using its index. If the
+                    setting index or value is invalid, the data object contains a key failreason.
                 </em>
                 <br>
                 <br>
@@ -358,8 +357,6 @@ Unless specified otherwise:<br>
                 </em>
             </td>
         </tr>
-        -->
-
     </tbody>
 </table>
 <p><br><br></p>

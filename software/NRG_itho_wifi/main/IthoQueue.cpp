@@ -108,13 +108,11 @@ void IthoQueue::Queue::get(JsonObject obj, int index) const
   obj["speed"] = speed;
   obj["valid"] = valid;
 }
-void IthoQueue::get(JsonObject obj)
+void IthoQueue::get(JsonArray arr)
 {
-  // Add "queue" object
-  JsonArray q = obj["queue"].to<JsonArray>();
   // Add each queue item in the array
   for (int i = 0; i < MAX_QUEUE; i++)
   {
-    items[i].get(q.add<JsonObject>(), i);
+    items[i].get(arr.add<JsonObject>(), i);
   }
 }
