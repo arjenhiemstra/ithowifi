@@ -20,6 +20,7 @@
 #include "esp32_repartition.h"
 
 #include "LittleFS.h"
+#include "uuid.h"
 
 // globals
 extern Ticker TaskConfigAndLogTimeout;
@@ -31,6 +32,7 @@ extern bool chkpartition;
 extern int chk_partition_res;
 extern bool formatFileSystem;
 extern bool flashLogInitReady;
+extern char uuid[UUID_STR_LEN];
 
 void startTaskConfigAndLog();
 void TaskConfigAndLog(void *pvParameters);

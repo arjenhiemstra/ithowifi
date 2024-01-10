@@ -310,9 +310,9 @@ void processSettingResult(const uint8_t index, const bool loop)
     }
     else
     {
-      root["Current"] = "error";
-      root["Minimum"] = "error";
-      root["Maximum"] = "error";
+      root["Current"] = "ret_error";
+      root["Minimum"] = "ret_error";
+      root["Maximum"] = "ret_error";
     }
   }
   else
