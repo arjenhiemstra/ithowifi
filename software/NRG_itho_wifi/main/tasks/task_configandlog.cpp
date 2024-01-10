@@ -125,7 +125,8 @@ void execLogAndConfigTasks()
     saveWifiConfigflag = false;
     if (saveWifiConfig("flash"))
     {
-      logMessagejson("Wifi settings saved, reboot the device", WEBINTERFACE);
+      logMessagejson("Wifi settings saved, connecting to wifi network...", WEBINTERFACE);
+      connectWiFiSTA();
     }
     else
     {

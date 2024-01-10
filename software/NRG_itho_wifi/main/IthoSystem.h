@@ -115,6 +115,7 @@ extern ithoSettings *ithoSettingsArray;
 const char *getIthoType();
 int currentIthoDeviceGroup();
 int currentIthoDeviceID();
+uint8_t currentItho_hwversion();
 uint8_t currentItho_fwversion();
 uint16_t currentIthoSettingsLength();
 int16_t currentIthoStatusLabelLength();

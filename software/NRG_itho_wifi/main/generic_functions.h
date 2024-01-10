@@ -22,6 +22,7 @@
 #include "LittleFS.h"
 
 // globals
+extern const char *espName;
 
 const char *hostName();
 void getIthoStatusJSON(JsonObject root);

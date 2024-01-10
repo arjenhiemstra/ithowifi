@@ -35,6 +35,7 @@ extern bool shouldReboot;
 extern int8_t ithoInitResult;
 extern bool IthoInit;
 extern bool wifiModeAP;
+extern unsigned long APmodeTimeout;
 extern bool reset_sht_sensor;
 extern bool restest;
 
@@ -45,6 +46,8 @@ void work_i2c_queue();
 void execSystemControlTasks();
 void init_i2c_functions();
 void wifiInit();
+void WiFiEvent(WiFiEvent_t event, arduino_event_info_t info);
+void setupWiFigeneric();
 void setupWiFiAP();
 bool connectWiFiSTA(bool restore = false);
 void set_static_ip_config();

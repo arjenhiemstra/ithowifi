@@ -24,7 +24,7 @@ WifiConfig::WifiConfig()
   strlcpy(hostname, "", sizeof(hostname));
   strlcpy(ntpserver, "pool.ntp.org", sizeof(ntpserver));
   strlcpy(timezone, "Europe/Amsterdam", sizeof(timezone));
-
+  aptimeout = 15;
   configLoaded = false;
 
 } // WifiConfig
@@ -188,6 +188,11 @@ bool WifiConfig::set(JsonObject obj)
     updated = true;
     strlcpy(timezone, obj["timezone"] | "", sizeof(timezone));
   }
+  if (!obj["aptimeout"].isNull())
+  {
+    updated = true;
+    aptimeout = obj["aptimeout"];
+  }
   return updated;
 }
 
@@ -205,6 +210,7 @@ void WifiConfig::get(JsonObject obj) const
   obj["hostname"] = hostname;
   obj["ntpserver"] = ntpserver;
   obj["timezone"] = timezone;
+  obj["aptimeout"] = aptimeout;
 }
 
 const char *WifiConfig::wl_status_to_name(wl_status_t code) const
@@ -358,4 +364,19 @@ void logWifiInfo()
   I_LOG("  Mode:%s", modes[WiFi.getMode()]);
   I_LOG("  Status:%s", wifiConfig.wl_status_to_name(WiFi.status()));
   I_LOG("  IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+}
+
+JsonDocument wifiInfoJson()
+{
+  IPAddress ip = WiFi.localIP();
+  char ipstr[16] = {};
+  snprintf(ipstr, sizeof(ipstr), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+
+  JsonDocument wifiinfo;
+
+  wifiinfo["wifissid"] = WiFi.SSID();
+  wifiinfo["wificonnstat"] = wifiConfig.wl_status_to_name(WiFi.status());
+  wifiinfo["wifiip"] = ipstr;
+
+  return wifiinfo;
 }

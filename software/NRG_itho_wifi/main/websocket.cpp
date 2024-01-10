@@ -16,18 +16,8 @@ void jsonWsSend(const char *rootName)
   if (strcmp(rootName, "wifisettings") == 0)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
-    nested["ssid"] = wifiConfig.ssid;
-    nested["passwd"] = wifiConfig.passwd;
-    nested["dhcp"] = wifiConfig.dhcp;
-    if (strcmp(wifiConfig.dhcp, "off") == 0)
-    {
-      nested["ip"] = wifiConfig.ip;
-      nested["subnet"] = wifiConfig.subnet;
-      nested["gateway"] = wifiConfig.gateway;
-      nested["dns1"] = wifiConfig.dns1;
-      nested["dns2"] = wifiConfig.dns2;
-    }
-    else
+    wifiConfig.get(nested);
+    if (strcmp(wifiConfig.dhcp, "on") == 0)
     {
       nested["ip"] = WiFi.localIP().toString();
       nested["subnet"] = WiFi.subnetMask().toString();
@@ -35,10 +25,46 @@ void jsonWsSend(const char *rootName)
       nested["dns1"] = WiFi.dnsIP().toString();
       nested["dns2"] = WiFi.dnsIP(1).toString();
     }
-    nested["port"] = wifiConfig.port;
-    nested["hostname"] = hostName();
-    nested["ntpserver"] = wifiConfig.ntpserver;
-    nested["timezone"] = wifiConfig.timezone;
+    if (strcmp(wifiConfig.hostname, "") == 0) //defualt config still there
+    {
+      nested["hostname"] = hostName();
+    }
+  }
+  else if (strcmp(rootName, "wifistat") == 0)
+  {
+
+    JsonObject wifiinfo = root[rootName].to<JsonObject>();
+    IPAddress ip = WiFi.localIP();
+    char wifiip[16] = {};
+    snprintf(wifiip, sizeof(wifiip), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+
+    char apremain[16] = {};
+    long time = (millis() - APmodeTimeout) < 900000 ? (900000 - (millis() - APmodeTimeout)) / 1000 : 0;
+
+    if (wifiConfig.aptimeout == 0)
+    {
+      snprintf(apremain, sizeof(apremain), "%s", "always off");
+    }
+    else if (wifiConfig.aptimeout == 255)
+    {
+      snprintf(apremain, sizeof(apremain), "%s", "always on");
+    }
+    else
+    {
+      snprintf(apremain, sizeof(apremain), "%ld sec.", time);
+    }
+
+    static char apssid[32]{};
+
+    snprintf(apssid, sizeof(apssid), "%s%02x%02x", espName, sys.getMac(4), sys.getMac(5));
+
+    wifiinfo["wifissid"] = WiFi.SSID();
+    wifiinfo["wificonnstat"] = wifiConfig.wl_status_to_name(WiFi.status());
+    wifiinfo["wifiip"] = wifiip;
+    wifiinfo["apactive"] = wifiModeAP ? "yes" : "no";
+    wifiinfo["apremain"] = apremain;
+    wifiinfo["apssid"] = apssid;
+    wifiinfo["apip"] = "192.168.4.1";
   }
   else if (strcmp(rootName, "systemsettings") == 0)
   {
@@ -58,6 +84,8 @@ void jsonWsSend(const char *rootName)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
     nested["itho_devtype"] = getIthoType();
+    nested["itho_mfr"] = currentIthoDeviceGroup();
+    nested["itho_hwversion"] = currentItho_hwversion();
     nested["itho_fwversion"] = currentItho_fwversion();
     nested["itho_setlen"] = currentIthoSettingsLength();
   }
@@ -312,6 +340,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     else if (msg.find("{\"wifisetup\"") != std::string::npos)
     {
       jsonWsSend("wifisettings");
+    }
+    else if (msg.find("{\"wifistat\"") != std::string::npos)
+    {
+      jsonWsSend("wifistat");
     }
     else if (msg.find("{\"syssetup\"") != std::string::npos)
     {
