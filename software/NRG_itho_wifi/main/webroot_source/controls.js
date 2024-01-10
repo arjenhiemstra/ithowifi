@@ -5,8 +5,9 @@ var itho_low = 0;
 var itho_medium = 127;
 var itho_high = 255;
 var sensor = -1;
+var uuid = 0;
 
-sessionStorage.setItem("statustimer", 0);
+localStorage.setItem("statustimer", 0);
 var settingIndex = -1;
 
 var websocketServerLocation = location.protocol.indexOf("https") > -1 ? 'wss://' + window.location.hostname + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
@@ -76,6 +77,10 @@ function processMessage(message) {
     let x = f.logsettings;
     processElements(x);
   }
+  else if (f.wifistat) {
+    let x = f.wifistat;
+    processElements(x);
+  }
   else if (f.debuginfo) {
     let x = f.debuginfo;
     processElements(x);
@@ -139,14 +144,18 @@ function processMessage(message) {
   else if (f.ithodevinfo) {
     let x = f.ithodevinfo;
     processElements(x);
-    if (x.itho_setlen) {
-      sessionStorage.setItem("itho_setlen", x.itho_setlen);
-    }
+    localStorage.setItem("itho_setlen", x.itho_setlen);
+    localStorage.setItem("itho_devtype", x.itho_devtype);
+    localStorage.setItem("itho_fwversion", x.itho_fwversion);
+    localStorage.setItem("itho_hwversion", x.itho_hwversion);
   }
   else if (f.ithosettings) {
     let x = f.ithosettings;
+    updateSettingsLocStor(x);
 
     if (x.Index === 0 && x.update === false) {
+      clearSettingsLocStor();
+      localStorage.setItem("ihto_settings_complete", "false");
       $('#SettingsTable').empty();
       //add header
       addColumnHeader(x, '#SettingsTable', true);
@@ -158,7 +167,7 @@ function processMessage(message) {
     else {
       updateRowTableIthoSettings(x);
     }
-    if (x.Index < sessionStorage.getItem("itho_setlen") - 1 && x.loop === true && settingIndex == x.Index) {
+    if (x.Index < localStorage.getItem("itho_setlen") - 1 && x.loop === true && settingIndex == x.Index) {
       settingIndex++;
       websock_send(JSON.stringify({
         ithogetsetting: true,
@@ -166,7 +175,7 @@ function processMessage(message) {
         update: x.update
       }));
     }
-    if (x.Index === sessionStorage.getItem("itho_setlen") - 1 && x.update === false && x.loop === true) {
+    if (x.Index === localStorage.getItem("itho_setlen") - 1 && x.update === false && x.loop === true) {
       settingIndex = 0;
       websock_send(JSON.stringify({
         ithogetsetting: true,
@@ -181,6 +190,7 @@ function processMessage(message) {
   }
   else if (f.systemstat) {
     let x = f.systemstat;
+    uuid = x.uuid;
     if ('sensor_temp' in x) {
       $('#sensor_temp').html(`Temperature: ${round(x.sensor_temp, 1)}&#8451;`);
     }
@@ -289,6 +299,86 @@ function processMessage(message) {
 
 }
 
+function clearSettingsLocStor() {
+  let setlen = localStorage.getItem("itho_setlen");
+  for (var index = 0; index < setlen; index++) {
+    const localStorageKey = 'settingsIndex_' + index;
+    let existingData = localStorage.getItem(localStorageKey);
+    if (existingData) {
+      localStorage.removeItem(localStorageKey);
+    }
+  }
+}
+
+function updateSettingsLocStor(receivedData) {
+  let setlen = localStorage.getItem("itho_setlen");
+  if (receivedData.hasOwnProperty('Index')) {
+
+    const localStorageKey = 'settingsIndex_' + receivedData.Index;
+    let existingData = localStorage.getItem(localStorageKey);
+
+    if (existingData) {
+      existingData = JSON.parse(existingData);
+
+      // Update existing data with new values
+      for (const key in receivedData) {
+        existingData[key] = receivedData[key];
+      }
+
+      // Store the updated data in LocalStorage
+      localStorage.setItem(localStorageKey, JSON.stringify(existingData));
+      if (existingData.Index == (setlen - 1)) {
+        localStorage.setItem("ihto_settings_complete", "true");
+        localStorage.setItem("uuid", uuid);
+        $('#downloadsettingsdiv').removeClass('hidden');
+      }
+    }
+    else {
+      // If no existing data, store the new data as is
+      localStorage.setItem("ihto_settings_complete", "false");
+      localStorage.setItem(localStorageKey, JSON.stringify(receivedData));
+    }
+
+  }
+}
+function loadSettingsLocStor() {
+
+  let setlen = localStorage.getItem("itho_setlen");
+  if (typeof setlen == 'undefined' || setlen == null) {
+    console.log("error: loadSettingsLocStor setting length unavailable");
+    return;
+  }
+  for (var index = 0; index < setlen; index++) {
+    const localStorageKey = 'settingsIndex_' + index;
+    let existingData = localStorage.getItem(localStorageKey);
+    if (existingData) {
+      existingData = JSON.parse(existingData);
+
+      if (index == 0) {
+        $('#SettingsTable').empty();
+        addColumnHeader(existingData, '#SettingsTable', true);
+        $('#SettingsTable').append('<tbody>');
+      }
+      let current_tmp = existingData.Current;
+      let maximum_tmp = existingData.Maximum;
+      let minimum_tmp = existingData.Minimum;
+      existingData.Current = null;
+      existingData.Maximum = null;
+      existingData.Minimum = null;
+      addRowTableIthoSettings($('#SettingsTable > tbody'), existingData);
+      existingData.Current = current_tmp;
+      existingData.Maximum = maximum_tmp;
+      existingData.Minimum = minimum_tmp;
+      updateRowTableIthoSettings(existingData);
+    }
+    else {
+      console.log("error: no cached setting info for index:" + index);
+    }
+  }
+
+}
+
+
 $(document).ready(function () {
   document.getElementById("layout").style.opacity = 0.3;
   document.getElementById("loader").style.display = "block";
@@ -334,7 +424,8 @@ $(document).ready(function () {
           port: $('#port').val(),
           hostname: $('#hostname').val(),
           ntpserver: $('#ntpserver').val(),
-          timezone: $('#timezone').val()
+          timezone: $('#timezone').val(),
+          aptimeout: $('#aptimeout').val()
         }
       }));
       update_page('wifisetup');
@@ -588,12 +679,74 @@ $(document).ready(function () {
       }));
     }
     else if ($(this).attr('id') == 'ithogetsettings') {
+      if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
+        loadSettingsLocStor();
+        $('#settings_cache_load').removeClass('hidden');
+        $('#downloadsettingsdiv').removeClass('hidden');
+      }
+      else {
+        settingIndex = 0;
+        websock_send(JSON.stringify({
+          ithogetsetting: true,
+          index: 0,
+          update: false
+        }));
+      }
+    }
+    else if ($(this).attr('id') == 'ithoforcerefresh') {
+      $('#settings_cache_load').addClass('hidden');
+      $('#downloadsettingsdiv').addClass('hidden');
       settingIndex = 0;
       websock_send(JSON.stringify({
         ithogetsetting: true,
         index: 0,
         update: false
       }));
+    }
+    else if ($(this).attr('id') == 'downloadsettings') {
+      if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
+        let settings = {};
+        let setlen = localStorage.getItem("itho_setlen");
+        settings['uuid'] = uuid;
+        settings['itho_setlen'] = setlen;
+        settings['itho_devtype'] = localStorage.getItem("itho_devtype");
+        settings['itho_fwversion'] = localStorage.getItem("itho_fwversion");
+        settings['itho_hwversion'] = localStorage.getItem("itho_hwversion");
+        let errordetect = false;
+
+        for (var index = 0; index < setlen; index++) {
+          const localStorageKey = 'settingsIndex_' + index;
+          let existingData = localStorage.getItem(localStorageKey);
+          if (existingData) {
+            let obj = JSON.parse(existingData);
+            delete obj.loop;
+            delete obj.update;
+            settings[localStorageKey] = obj;
+            for (const key in obj) {
+              if (obj[key] == "ret_error") {
+                errordetect = true;
+              }
+            }
+          }
+        }
+        if (errordetect) {
+          alert("error: values with errors detected, settings load not complete!");
+        }
+        else {
+          let dataStr = JSON.stringify(settings);
+          let dataBlob = new Blob([dataStr], { type: 'application/json' });
+          let downloadLink = document.createElement('a');
+          downloadLink.href = window.URL.createObjectURL(dataBlob);
+          downloadLink.download = 'settings.json';
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+        }
+
+      }
+      else {
+        alert("error: download of settings file not possible!");
+      }
     }
     else if ($(this).attr('id') == 'updatesubmit') {
       e.preventDefault();
@@ -631,7 +784,7 @@ $(document).ready(function () {
 
 function websock_send(message) {
   websock.send(message);
-  console.log(message);
+  //console.log(message);
 }
 
 var timerHandle = setTimeout(function () {
@@ -670,7 +823,7 @@ function processElements(x) {
           }
           radio(key, x[key]);
         }
-      }   
+      }
       var elbyname = $(`[name='${key}']`).each(function () {
         if ($(this).is('span')) {
           $(this).text(x[key]);
@@ -814,7 +967,7 @@ function tick() {
   secondsRemaining--;
 }
 function startCountdown() {
-  secondsRemaining = 20;
+  secondsRemaining = 30;
   intervalHandle = setInterval(tick, 1000);
 }
 function moveBar(nPer, element) {
@@ -837,7 +990,7 @@ var lastPageReq = "";
 function update_page(page) {
   lastPageReq = page;
   if (page != 'status') {
-    sessionStorage.setItem("statustimer", 0);
+    localStorage.setItem("statustimer", 0);
   }
   $('#main').empty();
   $('#main').css('max-width', '768px')
@@ -1656,7 +1809,7 @@ Unless specified otherwise:<br>
             <td colspan="6">
                 Comments:<br>
                 <em>
-                    Returns a JSON object containing the result of the API call. If succeful it contains a data object with the current, minimum and
+                    Returns a JSON object containing the result of the API call. If successful it contains a data object with the current, minimum and
                     maximum value of the given setting, using its index. If the
                     setting index is invalid, the data object contains a key failreason.
                 </em>
@@ -1814,7 +1967,7 @@ Unless specified otherwise:<br>
                     Sets the current value of a setting using its index. The
                     value must be specified in the "value" parameter. The new
                     value must be within the minimum and maximum of the setting.<br>
-                    Returns a JSON object containing the result of the API call. If succeful it contains a data object with the current, previous, minimum and
+                    Returns a JSON object containing the result of the API call. If successful it contains a data object with the current, previous, minimum and
                     maximum value of the given setting, using its index. If the
                     setting index or value is invalid, the data object contains a key failreason.
                 </em>
@@ -1861,9 +2014,9 @@ var html_ithostatus = `
 </form>
 <script>
   $(document).ready(function () {
-    sessionStorage.setItem("statustimer", 1);
+    localStorage.setItem("statustimer", 1);
     function repeat() {
-      if (sessionStorage.getItem("statustimer") != 1) return;
+      if (localStorage.getItem("statustimer") != 1) return;
       getSettings('ithostatus');
       setTimeout(repeat, 5000);
     }
@@ -1924,7 +2077,7 @@ var html_wifisetup = `
           <input id="dns1" type="text">
         </div>
         <div class="pure-control-group">
-          <label for="dns1">DNS server 2</label>
+          <label for="dns2">DNS server 2</label>
           <input id="dns2" type="text">
         </div>
         <div class="pure-control-group">
@@ -1932,73 +2085,117 @@ var html_wifisetup = `
           <input id="ntpserver" type="text">
         </div>
         <div class="pure-control-group">
-					<label for="timezone">Timezone</label>
-					<select name="timezone" id="timezone">
-					  <option value="Europe/Amsterdam" selected>Europe/Amsterdam</option>
-					  <option value="Europe/Andorra">Europe/Andorra</option>
-						<option value="Europe/Athens">Europe/Athens</option>
-					  <option value="Europe/Belgrade">Europe/Belgrade</option>
-						<option value="Europe/Berlin">Europe/Berlin</option> 
-						<option value="Europe/Bratislava">Europe/Bratislava</option> 
-						<option value="Europe/Brussels">Europe/Brussels</option> 
-						<option value="Europe/Bucharest">Europe/Bucharest</option> 
-						<option value="Europe/Budapest">Europe/Budapest</option> 
-						<option value="Europe/Busingen">Europe/Busingen</option> 
-						<option value="Europe/Chisinau">Europe/Chisinau</option> 
-						<option value="Europe/Copenhagen">Europe/Copenhagen</option> 
-						<option value="Europe/Dublin">Europe/Dublin</option> 
-						<option value="Europe/Gibraltar">Europe/Gibraltar</option> 
-						<option value="Europe/Guernsey">Europe/Guernsey</option> 
-						<option value="Europe/Helsinki">Europe/Helsinki</option> 
-						<option value="Europe/Isle_of_Man">Europe/Isle_of_Man</option> 
-						<option value="Europe/Istanbul">Europe/Istanbul</option> 
-						<option value="Europe/Jersey">Europe/Jersey</option> 
-						<option value="Europe/Kaliningrad">Europe/Kaliningrad</option> 
-						<option value="Europe/Kyiv">Europe/Kyiv</option> 
-						<option value="Europe/Kirov">Europe/Kirov</option> 
-						<option value="Europe/Lisbon">Europe/Lisbon</option> 
-						<option value="Europe/Ljubljana">Europe/Ljubljana</option> 
-						<option value="Europe/London">Europe/London</option> 
-						<option value="Europe/Luxembourg">Europe/Luxembourg</option> 
-						<option value="Europe/Madrid">Europe/Madrid</option> 
-						<option value="Europe/Malta">Europe/Malta</option> 
-						<option value="Europe/Mariehamn">Europe/Mariehamn</option> 
-						<option value="Europe/Minsk">Europe/Minsk</option> 
-						<option value="Europe/Monaco">Europe/Monaco</option> 
-						<option value="Europe/Moscow">Europe/Moscow</option> 
-						<option value="Europe/Oslo">Europe/Oslo</option> 
-						<option value="Europe/Paris">Europe/Paris</option> 
-						<option value="Europe/Podgorica">Europe/Podgorica</option> 
-						<option value="Europe/Prague">Europe/Prague</option> 
-						<option value="Europe/Riga">Europe/Riga</option> 
-						<option value="Europe/Rome">Europe/Rome</option> 
-						<option value="Europe/Samara">Europe/Samara</option> 
-						<option value="Europe/San_Marino">Europe/San_Marino</option> 
-						<option value="Europe/Sarajevo">Europe/Sarajevo</option> 
-						<option value="Europe/Saratov">Europe/Saratov</option> 
-						<option value="Europe/Simferopol">Europe/Simferopol</option> 
-						<option value="Europe/Skopje">Europe/Skopje</option> 
-						<option value="Europe/Sofia">Europe/Sofia</option> 
-						<option value="Europe/Stockholm">Europe/Stockholm</option> 
-						<option value="Europe/Tallinn">Europe/Tallinn</option> 
-						<option value="Europe/Tirane">Europe/Tirane</option> 
-						<option value="Europe/Ulyanovsk">Europe/Ulyanovsk</option> 
-						<option value="Europe/Uzhgorod">Europe/Uzhgorod</option> 
-						<option value="Europe/Vaduz">Europe/Vaduz</option> 
-						<option value="Europe/Vatican">Europe/Vatican</option> 
-						<option value="Europe/Vienna">Europe/Vienna</option> 
-						<option value="Europe/Vilnius">Europe/Vilnius</option> 
-						<option value="Europe/Volgograd">Europe/Volgograd</option> 
-						<option value="Europe/Warsaw">Europe/Warsaw</option> 
-						<option value="Europe/Zagreb">Europe/Zagreb</option> 
-						<option value="Europe/Zaporizhzhia">Europe/Zaporizhzhia</option> 
-						<option value="Europe/Zurich">Europe/Zurich</option> 
-						<option value="Etc/Greenwich">Etc/Greenwich</option> 
-						<option value="Etc/Universal">Etc/Universal</option>
-					</select>
+          <label for="timezone">Timezone</label>
+          <select name="timezone" id="timezone">
+            <option value="Europe/Amsterdam" selected>Europe/Amsterdam</option>
+            <option value="Europe/Andorra">Europe/Andorra</option>
+            <option value="Europe/Athens">Europe/Athens</option>
+            <option value="Europe/Belgrade">Europe/Belgrade</option>
+            <option value="Europe/Berlin">Europe/Berlin</option>
+            <option value="Europe/Bratislava">Europe/Bratislava</option>
+            <option value="Europe/Brussels">Europe/Brussels</option>
+            <option value="Europe/Bucharest">Europe/Bucharest</option>
+            <option value="Europe/Budapest">Europe/Budapest</option>
+            <option value="Europe/Busingen">Europe/Busingen</option>
+            <option value="Europe/Chisinau">Europe/Chisinau</option>
+            <option value="Europe/Copenhagen">Europe/Copenhagen</option>
+            <option value="Europe/Dublin">Europe/Dublin</option>
+            <option value="Europe/Gibraltar">Europe/Gibraltar</option>
+            <option value="Europe/Guernsey">Europe/Guernsey</option>
+            <option value="Europe/Helsinki">Europe/Helsinki</option>
+            <option value="Europe/Isle_of_Man">Europe/Isle_of_Man</option>
+            <option value="Europe/Istanbul">Europe/Istanbul</option>
+            <option value="Europe/Jersey">Europe/Jersey</option>
+            <option value="Europe/Kaliningrad">Europe/Kaliningrad</option>
+            <option value="Europe/Kyiv">Europe/Kyiv</option>
+            <option value="Europe/Kirov">Europe/Kirov</option>
+            <option value="Europe/Lisbon">Europe/Lisbon</option>
+            <option value="Europe/Ljubljana">Europe/Ljubljana</option>
+            <option value="Europe/London">Europe/London</option>
+            <option value="Europe/Luxembourg">Europe/Luxembourg</option>
+            <option value="Europe/Madrid">Europe/Madrid</option>
+            <option value="Europe/Malta">Europe/Malta</option>
+            <option value="Europe/Mariehamn">Europe/Mariehamn</option>
+            <option value="Europe/Minsk">Europe/Minsk</option>
+            <option value="Europe/Monaco">Europe/Monaco</option>
+            <option value="Europe/Moscow">Europe/Moscow</option>
+            <option value="Europe/Oslo">Europe/Oslo</option>
+            <option value="Europe/Paris">Europe/Paris</option>
+            <option value="Europe/Podgorica">Europe/Podgorica</option>
+            <option value="Europe/Prague">Europe/Prague</option>
+            <option value="Europe/Riga">Europe/Riga</option>
+            <option value="Europe/Rome">Europe/Rome</option>
+            <option value="Europe/Samara">Europe/Samara</option>
+            <option value="Europe/San_Marino">Europe/San_Marino</option>
+            <option value="Europe/Sarajevo">Europe/Sarajevo</option>
+            <option value="Europe/Saratov">Europe/Saratov</option>
+            <option value="Europe/Simferopol">Europe/Simferopol</option>
+            <option value="Europe/Skopje">Europe/Skopje</option>
+            <option value="Europe/Sofia">Europe/Sofia</option>
+            <option value="Europe/Stockholm">Europe/Stockholm</option>
+            <option value="Europe/Tallinn">Europe/Tallinn</option>
+            <option value="Europe/Tirane">Europe/Tirane</option>
+            <option value="Europe/Ulyanovsk">Europe/Ulyanovsk</option>
+            <option value="Europe/Uzhgorod">Europe/Uzhgorod</option>
+            <option value="Europe/Vaduz">Europe/Vaduz</option>
+            <option value="Europe/Vatican">Europe/Vatican</option>
+            <option value="Europe/Vienna">Europe/Vienna</option>
+            <option value="Europe/Vilnius">Europe/Vilnius</option>
+            <option value="Europe/Volgograd">Europe/Volgograd</option>
+            <option value="Europe/Warsaw">Europe/Warsaw</option>
+            <option value="Europe/Zagreb">Europe/Zagreb</option>
+            <option value="Europe/Zaporizhzhia">Europe/Zaporizhzhia</option>
+            <option value="Europe/Zurich">Europe/Zurich</option>
+            <option value="Etc/Greenwich">Etc/Greenwich</option>
+            <option value="Etc/Universal">Etc/Universal</option>
+          </select>
+        </div>
+        <div class="pure-control-group">
+          <label for="aptimeout">AP time out (min)</label>
+          <input id="aptimeout" type="number" min="0" max="255" size="6"
+            title="0-255 minutes, 0: AP always off, 255: always on">
         </div>
       </fieldset>
     </form>
+    <br><br>
+    <table class="pure-table pure-table-bordered wifiinfo" style="margin-left:auto;margin-right:auto;">
+      <thead style="white-space: nowrap;">
+        <tr>
+          <th colspan="2">WiFi satus:</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>AP active:</td>
+          <td><span name="apactive">unknown</span></td>
+        </tr>
+        <tr>
+          <td>AP remaining:</td>
+          <td><span name="apremain">unknown</span></td>
+        </tr>
+        <tr>
+          <td>AP IP:</td>
+          <td><span name="apip">unknown</span></td>
+        </tr>
+        <tr>
+          <td>AP SSID:</td>
+          <td><span name="apssid">unknown</span></td>
+        </tr>
+        <tr>
+          <td>WiFi SSID:</td>
+          <td><span name="wifissid">unknown</span></td>
+        </tr>
+        <tr>
+          <td>WiFi status:</td>
+          <td><span name="wificonnstat">unknown</span></td>
+        </tr>
+        <tr>
+          <td>WiFi IP:</td>
+          <td><span name="wifiip">unknown</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <br><br><br><br>  
   </div>
   <div class="pure-u-1 pure-u-md-2-5">
     <div>
@@ -2021,9 +2218,19 @@ var html_wifisetup = `
   }
   $(document).ready(function () {
     getSettings('wifisetup');
+    localStorage.setItem("wifistat", 1);
+    function repeat_wifistat() {
+      if (localStorage.getItem("wifistat") != 1) return;
+      getSettings('wifistat');
+      setTimeout(repeat_wifistat, 1000);
+    }
+    repeat_wifistat();
   });
-</script>
 
+  $(document).ready(function () {
+
+  });  
+</script>
 `;
 
 var html_edit = `
@@ -2627,9 +2834,21 @@ var html_ithosettings = `
   <fieldset>
     <span>Itho device type: </span><span id="itho_devtype">retreiving...</span>
     <br>
+    <span>Itho hw version: </span><span id="itho_hwversion">retreiving...</span>
+    <br>
     <span>Itho fw version: </span><span id="itho_fwversion">retreiving...</span>
+    <br>
+    <span>Manufacturer: </span><span id="itho_mfr">retreiving...</span>
     <br><br>
     <button id="ithogetsettings" class="pure-button pure-button-primary">Retrieve settings</button><br><br>
+    <div id="settings_cache_load" class="hidden">
+      <span>Settings loaded from browser cache.<br></span>
+      <button id="ithoforcerefresh" class="pure-button pure-button-primary">Force settings refresh</button><br><br>
+    </div>
+    <div id="downloadsettingsdiv" class="hidden">
+      <span>Download most recent settings cache as JSON file:<br></span>
+      <button id="downloadsettings" class="pure-button pure-button-primary">Download</button><br><br>
+    </div>
     <span style="color:red">Warning!!<br>This controls low level settings of your itho unit, possibly damaging the
       unit.<br>Use with care and use only if you know what you are doing!</span><br><br>
     <table id="SettingsTable" class="pure-table pure-table-bordered" style="font-size:.85em"></table><br><br>
@@ -2638,6 +2857,11 @@ var html_ithosettings = `
 <script>
   $(document).ready(function () {
     getSettings('ithosetup');
+    if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
+      loadSettingsLocStor();
+      $('#settings_cache_load').removeClass('hidden');
+      $('#downloadsettingsdiv').removeClass('hidden');
+    }
   });
 </script>
 `;
