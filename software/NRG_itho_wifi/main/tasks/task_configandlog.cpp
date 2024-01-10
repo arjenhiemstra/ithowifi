@@ -12,6 +12,7 @@ bool chkpartition = false;
 int chk_partition_res = -1;
 bool formatFileSystem = false;
 bool flashLogInitReady = false;
+char uuid[UUID_STR_LEN]{};
 
 // locals
 FSFilePrint filePrint(ACTIVE_FS, "/logfile", 2, 10000);
@@ -45,9 +46,9 @@ void TaskConfigAndLog(void *pvParameters)
   initFileSystem();
   syslog_queue_worker();
 
-  //set provisional timezone
+  // set provisional timezone
   setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
-  tzset();  
+  tzset();
 
   logInit();
   syslog_queue_worker();
@@ -301,6 +302,20 @@ bool initFileSystem()
 
   NVS.begin();
 
+  // NVS.erase("uuid");
+  std::string uuidstr = NVS.getstring("uuid");
+  if (uuidstr.empty())
+  {
+    uuid_t uu;
+
+    uuid_generate(uu);
+    uuid_unparse(uu, uuid);
+    NVS.setString("uuid", uuid);
+  }
+  else {
+    strlcpy(uuid, uuidstr.c_str(), sizeof(uuid));
+  }
+
   ACTIVE_FS.begin(true);
 
   check_partition_tables();
@@ -379,6 +394,8 @@ void logInit()
   }
 
   N_LOG("System boot, last reset reason: %s", buf);
+
+  N_LOG("Device UUID: %s", uuid);
 
   I_LOG("Hardware detected: 0x%02X", hardware_rev_det);
 

@@ -4,8 +4,9 @@ var itho_low = 0;
 var itho_medium = 127;
 var itho_high = 255;
 var sensor = -1;
+var uuid = 0;
 
-sessionStorage.setItem("statustimer", 0);
+localStorage.setItem("statustimer", 0);
 var settingIndex = -1;
 
 var websocketServerLocation = location.protocol.indexOf("https") > -1 ? 'wss://' + window.location.hostname + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
@@ -78,6 +79,7 @@ function processMessage(message) {
   else if (f.wifistat) {
     let x = f.wifistat;
     processElements(x);
+  }
   else if (f.debuginfo) {
     let x = f.debuginfo;
     processElements(x);
@@ -141,14 +143,18 @@ function processMessage(message) {
   else if (f.ithodevinfo) {
     let x = f.ithodevinfo;
     processElements(x);
-    if (x.itho_setlen) {
-      sessionStorage.setItem("itho_setlen", x.itho_setlen);
-    }
+    localStorage.setItem("itho_setlen", x.itho_setlen);
+    localStorage.setItem("itho_devtype", x.itho_devtype);
+    localStorage.setItem("itho_fwversion", x.itho_fwversion);
+    localStorage.setItem("itho_hwversion", x.itho_hwversion);
   }
   else if (f.ithosettings) {
     let x = f.ithosettings;
+    updateSettingsLocStor(x);
 
     if (x.Index === 0 && x.update === false) {
+      clearSettingsLocStor();
+      localStorage.setItem("ihto_settings_complete", "false");
       $('#SettingsTable').empty();
       //add header
       addColumnHeader(x, '#SettingsTable', true);
@@ -160,7 +166,7 @@ function processMessage(message) {
     else {
       updateRowTableIthoSettings(x);
     }
-    if (x.Index < sessionStorage.getItem("itho_setlen") - 1 && x.loop === true && settingIndex == x.Index) {
+    if (x.Index < localStorage.getItem("itho_setlen") - 1 && x.loop === true && settingIndex == x.Index) {
       settingIndex++;
       websock_send(JSON.stringify({
         ithogetsetting: true,
@@ -168,7 +174,7 @@ function processMessage(message) {
         update: x.update
       }));
     }
-    if (x.Index === sessionStorage.getItem("itho_setlen") - 1 && x.update === false && x.loop === true) {
+    if (x.Index === localStorage.getItem("itho_setlen") - 1 && x.update === false && x.loop === true) {
       settingIndex = 0;
       websock_send(JSON.stringify({
         ithogetsetting: true,
@@ -183,6 +189,7 @@ function processMessage(message) {
   }
   else if (f.systemstat) {
     let x = f.systemstat;
+    uuid = x.uuid;
     if ('sensor_temp' in x) {
       $('#sensor_temp').html(`Temperature: ${round(x.sensor_temp, 1)}&#8451;`);
     }
@@ -291,6 +298,86 @@ function processMessage(message) {
 
 }
 
+function clearSettingsLocStor() {
+  let setlen = localStorage.getItem("itho_setlen");
+  for (var index = 0; index < setlen; index++) {
+    const localStorageKey = 'settingsIndex_' + index;
+    let existingData = localStorage.getItem(localStorageKey);
+    if (existingData) {
+      localStorage.removeItem(localStorageKey);
+    }
+  }
+}
+
+function updateSettingsLocStor(receivedData) {
+  let setlen = localStorage.getItem("itho_setlen");
+  if (receivedData.hasOwnProperty('Index')) {
+
+    const localStorageKey = 'settingsIndex_' + receivedData.Index;
+    let existingData = localStorage.getItem(localStorageKey);
+
+    if (existingData) {
+      existingData = JSON.parse(existingData);
+
+      // Update existing data with new values
+      for (const key in receivedData) {
+        existingData[key] = receivedData[key];
+      }
+
+      // Store the updated data in LocalStorage
+      localStorage.setItem(localStorageKey, JSON.stringify(existingData));
+      if (existingData.Index == (setlen - 1)) {
+        localStorage.setItem("ihto_settings_complete", "true");
+        localStorage.setItem("uuid", uuid);
+        $('#downloadsettingsdiv').removeClass('hidden');
+      }
+    }
+    else {
+      // If no existing data, store the new data as is
+      localStorage.setItem("ihto_settings_complete", "false");
+      localStorage.setItem(localStorageKey, JSON.stringify(receivedData));
+    }
+
+  }
+}
+function loadSettingsLocStor() {
+
+  let setlen = localStorage.getItem("itho_setlen");
+  if (typeof setlen == 'undefined' || setlen == null) {
+    console.log("error: loadSettingsLocStor setting length unavailable");
+    return;
+  }
+  for (var index = 0; index < setlen; index++) {
+    const localStorageKey = 'settingsIndex_' + index;
+    let existingData = localStorage.getItem(localStorageKey);
+    if (existingData) {
+      existingData = JSON.parse(existingData);
+
+      if (index == 0) {
+        $('#SettingsTable').empty();
+        addColumnHeader(existingData, '#SettingsTable', true);
+        $('#SettingsTable').append('<tbody>');
+      }
+      let current_tmp = existingData.Current;
+      let maximum_tmp = existingData.Maximum;
+      let minimum_tmp = existingData.Minimum;
+      existingData.Current = null;
+      existingData.Maximum = null;
+      existingData.Minimum = null;
+      addRowTableIthoSettings($('#SettingsTable > tbody'), existingData);
+      existingData.Current = current_tmp;
+      existingData.Maximum = maximum_tmp;
+      existingData.Minimum = minimum_tmp;
+      updateRowTableIthoSettings(existingData);
+    }
+    else {
+      console.log("error: no cached setting info for index:" + index);
+    }
+  }
+
+}
+
+
 $(document).ready(function () {
   document.getElementById("layout").style.opacity = 0.3;
   document.getElementById("loader").style.display = "block";
@@ -336,7 +423,8 @@ $(document).ready(function () {
           port: $('#port').val(),
           hostname: $('#hostname').val(),
           ntpserver: $('#ntpserver').val(),
-          timezone: $('#timezone').val()
+          timezone: $('#timezone').val(),
+          aptimeout: $('#aptimeout').val()
         }
       }));
       update_page('wifisetup');
@@ -590,12 +678,74 @@ $(document).ready(function () {
       }));
     }
     else if ($(this).attr('id') == 'ithogetsettings') {
+      if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
+        loadSettingsLocStor();
+        $('#settings_cache_load').removeClass('hidden');
+        $('#downloadsettingsdiv').removeClass('hidden');
+      }
+      else {
+        settingIndex = 0;
+        websock_send(JSON.stringify({
+          ithogetsetting: true,
+          index: 0,
+          update: false
+        }));
+      }
+    }
+    else if ($(this).attr('id') == 'ithoforcerefresh') {
+      $('#settings_cache_load').addClass('hidden');
+      $('#downloadsettingsdiv').addClass('hidden');
       settingIndex = 0;
       websock_send(JSON.stringify({
         ithogetsetting: true,
         index: 0,
         update: false
       }));
+    }
+    else if ($(this).attr('id') == 'downloadsettings') {
+      if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
+        let settings = {};
+        let setlen = localStorage.getItem("itho_setlen");
+        settings['uuid'] = uuid;
+        settings['itho_setlen'] = setlen;
+        settings['itho_devtype'] = localStorage.getItem("itho_devtype");
+        settings['itho_fwversion'] = localStorage.getItem("itho_fwversion");
+        settings['itho_hwversion'] = localStorage.getItem("itho_hwversion");
+        let errordetect = false;
+
+        for (var index = 0; index < setlen; index++) {
+          const localStorageKey = 'settingsIndex_' + index;
+          let existingData = localStorage.getItem(localStorageKey);
+          if (existingData) {
+            let obj = JSON.parse(existingData);
+            delete obj.loop;
+            delete obj.update;
+            settings[localStorageKey] = obj;
+            for (const key in obj) {
+              if (obj[key] == "ret_error") {
+                errordetect = true;
+              }
+            }
+          }
+        }
+        if (errordetect) {
+          alert("error: values with errors detected, settings load not complete!");
+        }
+        else {
+          let dataStr = JSON.stringify(settings);
+          let dataBlob = new Blob([dataStr], { type: 'application/json' });
+          let downloadLink = document.createElement('a');
+          downloadLink.href = window.URL.createObjectURL(dataBlob);
+          downloadLink.download = 'settings.json';
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+        }
+
+      }
+      else {
+        alert("error: download of settings file not possible!");
+      }
     }
     else if ($(this).attr('id') == 'updatesubmit') {
       e.preventDefault();
@@ -633,7 +783,7 @@ $(document).ready(function () {
 
 function websock_send(message) {
   websock.send(message);
-  console.log(message);
+  //console.log(message);
 }
 
 var timerHandle = setTimeout(function () {
@@ -672,7 +822,7 @@ function processElements(x) {
           }
           radio(key, x[key]);
         }
-      }   
+      }
       var elbyname = $(`[name='${key}']`).each(function () {
         if ($(this).is('span')) {
           $(this).text(x[key]);
@@ -816,7 +966,7 @@ function tick() {
   secondsRemaining--;
 }
 function startCountdown() {
-  secondsRemaining = 20;
+  secondsRemaining = 30;
   intervalHandle = setInterval(tick, 1000);
 }
 function moveBar(nPer, element) {
@@ -839,7 +989,7 @@ var lastPageReq = "";
 function update_page(page) {
   lastPageReq = page;
   if (page != 'status') {
-    sessionStorage.setItem("statustimer", 0);
+    localStorage.setItem("statustimer", 0);
   }
   $('#main').empty();
   $('#main').css('max-width', '768px')

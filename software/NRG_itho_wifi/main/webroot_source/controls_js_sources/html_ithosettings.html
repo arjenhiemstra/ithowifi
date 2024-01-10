@@ -11,9 +11,21 @@
   <fieldset>
     <span>Itho device type: </span><span id="itho_devtype">retreiving...</span>
     <br>
+    <span>Itho hw version: </span><span id="itho_hwversion">retreiving...</span>
+    <br>
     <span>Itho fw version: </span><span id="itho_fwversion">retreiving...</span>
+    <br>
+    <span>Manufacturer: </span><span id="itho_mfr">retreiving...</span>
     <br><br>
     <button id="ithogetsettings" class="pure-button pure-button-primary">Retrieve settings</button><br><br>
+    <div id="settings_cache_load" class="hidden">
+      <span>Settings loaded from browser cache.<br></span>
+      <button id="ithoforcerefresh" class="pure-button pure-button-primary">Force settings refresh</button><br><br>
+    </div>
+    <div id="downloadsettingsdiv" class="hidden">
+      <span>Download most recent settings cache as JSON file:<br></span>
+      <button id="downloadsettings" class="pure-button pure-button-primary">Download</button><br><br>
+    </div>
     <span style="color:red">Warning!!<br>This controls low level settings of your itho unit, possibly damaging the
       unit.<br>Use with care and use only if you know what you are doing!</span><br><br>
     <table id="SettingsTable" class="pure-table pure-table-bordered" style="font-size:.85em"></table><br><br>
@@ -22,5 +34,10 @@
 <script>
   $(document).ready(function () {
     getSettings('ithosetup');
+    if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
+      loadSettingsLocStor();
+      $('#settings_cache_load').removeClass('hidden');
+      $('#downloadsettingsdiv').removeClass('hidden');
+    }
   });
 </script>
