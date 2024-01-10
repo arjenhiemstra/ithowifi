@@ -30,7 +30,9 @@ esp_vfs_littlefs_conf_t conf = {
     .base_path = "/littlefs",
     .partition_label = "spiffs",
     .format_if_mount_failed = true,
-    .dont_mount = false};
+    .read_only = false,
+    .dont_mount = false,
+    .grow_on_mount = false};
 
 bool validate_table(const char *input_table)
 {
