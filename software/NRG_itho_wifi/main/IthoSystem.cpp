@@ -14,6 +14,7 @@
 
 uint8_t ithoDeviceGroup = 0;
 uint8_t ithoDeviceID = 0;
+uint8_t itho_hwversion = 0;
 uint8_t itho_fwversion = 0;
 volatile uint16_t ithoCurrentVal = 0;
 const struct ihtoDeviceType *ithoDeviceptr = nullptr;
@@ -47,6 +48,7 @@ double ithoTemp = 0;
 
 int currentIthoDeviceGroup() { return ithoDeviceGroup; }
 int currentIthoDeviceID() { return ithoDeviceID; }
+uint8_t currentItho_hwversion() { return itho_hwversion; }
 uint8_t currentItho_fwversion() { return itho_fwversion; }
 uint16_t currentIthoSettingsLength() { return ithoSettingsLength; }
 int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
@@ -672,6 +674,7 @@ void sendQueryDevicetype(bool updateweb)
 
     ithoDeviceGroup = i2cbuf[8];
     ithoDeviceID = i2cbuf[9];
+    itho_hwversion = i2cbuf[10];
     itho_fwversion = i2cbuf[11];
     ithoDeviceptr = getDevicePtr(currentIthoDeviceGroup(), currentIthoDeviceID());
     ithoSettingsLength = getSettingsLength(currentIthoDeviceGroup(), currentIthoDeviceID(), currentItho_fwversion());

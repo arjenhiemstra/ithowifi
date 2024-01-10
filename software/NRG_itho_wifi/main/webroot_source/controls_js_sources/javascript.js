@@ -75,6 +75,9 @@ function processMessage(message) {
     let x = f.logsettings;
     processElements(x);
   }
+  else if (f.wifistat) {
+    let x = f.wifistat;
+    processElements(x);
   else if (f.debuginfo) {
     let x = f.debuginfo;
     processElements(x);

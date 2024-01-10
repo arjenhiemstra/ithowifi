@@ -481,10 +481,28 @@ void webServerInit()
 void MDNSinit()
 {
 
-  MDNS.begin(hostName());
-  mdns_instance_name_set(hostName());
+  mdns_free();
+  // initialize mDNS service
+  esp_err_t err = mdns_init();
+  if (err)
+  {
+    E_LOG("mDNS: init failed: %d", err);
+    return;
+  }
 
-  MDNS.addService("http", "tcp", 80);
+  // set hostname
+  mdns_hostname_set(hostName());
+  // set default instance
+  char inst_name[64]{};
+  snprintf(inst_name, sizeof(inst_name), "%s Web Interface", hostName());
+
+  mdns_instance_name_set(inst_name);
+
+  // add our services
+  mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
+  mdns_service_add(NULL, "_websocket", "_tcp", 8000, NULL, 0);
+
+  mdns_service_instance_name_set("_http", "_tcp", inst_name);
 
   N_LOG("mDNS: started");
 
@@ -1975,6 +1993,12 @@ const char *getContentType(bool download, const char *filename)
   return "text/plain";
 }
 
+void wifistat()
+{
+  JsonDocument root = wifiInfoJson();
+
+  notifyClients(root.as<JsonObject>());
+}
 void jsonSystemstat()
 {
   JsonDocument root;
@@ -1996,6 +2020,7 @@ void jsonSystemstat()
   systemstat["itho_llm"] = remotes.getllModeTime();
   systemstat["copy_id"] = virtualRemotes.getllModeTime();
   systemstat["ithoinit"] = ithoInitResult;
+  systemstat["uuid"] = uuid;
 
   notifyClients(root.as<JsonObject>());
 }

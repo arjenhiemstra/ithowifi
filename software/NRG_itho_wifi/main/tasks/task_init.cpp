@@ -53,7 +53,7 @@ void failSafeBoot()
 
       WiFi.persistent(false);
       WiFi.disconnect(); //  this alone is not enough to stop the autoconnecter
-      WiFi.mode(WIFI_AP);
+      WiFi.mode(WIFI_AP_STA);
       delay(2000);
 
       WiFi.softAP(hostName(), WiFiAPPSK);

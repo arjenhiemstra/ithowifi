@@ -49,6 +49,7 @@ public:
   char hostname[32];
   char ntpserver[128];
   char timezone[30];
+  uint8_t aptimeout;
   char config_struct_version[4];
 
   mutable bool configLoaded;
@@ -67,5 +68,6 @@ protected:
 
 void wifiScan();
 void logWifiInfo();
+JsonDocument wifiInfoJson();
 
 extern WifiConfig wifiConfig;
