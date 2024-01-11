@@ -124,7 +124,7 @@ const char* getSettingLabel(const uint8_t index);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop = false);
 void processSettingResult(const uint8_t index, const bool loop);
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
-const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr);
+const char *getStatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr);
 void updateSetting(const uint8_t i, const int32_t value, bool webupdate);
 const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID);
 

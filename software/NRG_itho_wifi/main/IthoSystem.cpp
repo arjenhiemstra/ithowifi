@@ -360,7 +360,7 @@ int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, cons
   return -1;
 }
 
-const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr)
+const char *getStatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr)
 {
   const uint8_t deviceGroup = currentIthoDeviceGroup();
   const uint8_t deviceID = currentIthoDeviceID();
@@ -728,7 +728,7 @@ void sendQueryStatusFormat(bool updateweb)
       ithoStatus.push_back(ithoDeviceStatus());
 
       //      char fStringBuf[32];
-      //      getSatusLabel(i, ithoDeviceptr, currentItho_fwversion(), fStringBuf);
+      //      getStatusLabel(i, ithoDeviceptr, currentItho_fwversion(), fStringBuf);
 
       ithoStatus.back().is_signed = get_signed_from_datatype(i2cbuf[6 + i]);
       ithoStatus.back().length = get_length_from_datatype(i2cbuf[6 + i]);
@@ -795,7 +795,7 @@ void sendQueryStatus(bool updateweb)
     {
       for (auto &ithoStat : ithoStatus)
       {
-        ithoStat.name = getSatusLabel(labelPos, ithoDeviceptr);
+        ithoStat.name = getStatusLabel(labelPos, ithoDeviceptr);
         auto tempVal = 0;
         for (int i = ithoStat.length; i > 0; i--)
         {
