@@ -1,15 +1,10 @@
 #include "log.h"
-#include "fmt.h"
+#include "printf.h"
 #include "str.h"
 #include "util.h"
 
-static void default_logger(char c, void *param) {
-  putchar(c);
-  (void) c, (void) param;
-}
-
 static int s_level = MG_LL_INFO;
-static mg_pfn_t s_log_func = default_logger;
+static mg_pfn_t s_log_func = mg_pfn_stdout;
 static void *s_log_func_param = NULL;
 
 void mg_log_set_fn(mg_pfn_t fn, void *param) {
@@ -31,13 +26,16 @@ void mg_log_set(int log_level) {
   s_level = log_level;
 }
 
+#if MG_ENABLE_CUSTOM_LOG
+// Let user define their own mg_log_prefix() and mg_log()
+#else
 bool mg_log_prefix(int level, const char *file, int line, const char *fname) {
   if (level <= s_level) {
     const char *p = strrchr(file, '/');
     char buf[41];
     size_t n;
     if (p == NULL) p = strrchr(file, '\\');
-    n = mg_snprintf(buf, sizeof(buf), "%llx %d %s:%d:%s", mg_millis(), level,
+    n = mg_snprintf(buf, sizeof(buf), "%-6llx %d %s:%d:%s", mg_millis(), level,
                     p == NULL ? file : p + 1, line, fname);
     if (n > sizeof(buf) - 2) n = sizeof(buf) - 2;
     while (n < sizeof(buf)) buf[n++] = ' ';
@@ -53,8 +51,9 @@ void mg_log(const char *fmt, ...) {
   va_start(ap, fmt);
   mg_vxprintf(s_log_func, s_log_func_param, fmt, &ap);
   va_end(ap);
-  logc((unsigned char) '\n');
+  logs("\r\n", 2);
 }
+#endif
 
 static unsigned char nibble(unsigned c) {
   return (unsigned char) (c < 10 ? c + '0' : c + 'W');
