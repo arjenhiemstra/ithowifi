@@ -33,6 +33,9 @@ enum IthoCommand
 
   IthoJoinReply = 16,
 
+  IthoPIRmotionOn = 17,
+  IthoPIRmotionOff = 18,
+
 };
 
 enum RemoteTypes : uint16_t
@@ -44,6 +47,7 @@ enum RemoteTypes : uint16_t
   DEMANDFLOW = 0x22F8,
   RFTRV = 0x12A0,
   RFTCO2 = 0x1298,
+  RFTPIR = 0x2E10,
   ORCON15LF01 = 0x6710
 };
 
@@ -109,6 +113,10 @@ const uint8_t ithoMessageDFTimer3CommandBytes[] = {0x22, 0xF3, 0x05, 0x00, 0x42,
 const uint8_t ithoMessageDFCook30CommandBytes[] = {0x22, 0xF3, 0x05, 0x00, 0x02, 0x1E, 0x02, 0x03};
 const uint8_t ithoMessageDFCook60CommandBytes[] = {0x22, 0xF3, 0x05, 0x00, 0x02, 0x3C, 0x02, 0x03};
 
+// message command bytes specific for RFT PIR remote
+const uint8_t ithoMessageRFTPIRonCommandBytes[] = {0x2E, 0x10, 0x03, 0x00, 0x01, 0x00};
+const uint8_t ithoMessageRFTPIRoffCommandBytes[] = {0x2E, 0x10, 0x03, 0x00, 0x00, 0x00};
+
 // Join/Leave command structure:
 // < opcode 2 bytes >< len 1 byte >[next command + device ID block repeats len/6 times]< command 3 bytes >< device ID 3 bytes >
 
@@ -153,6 +161,7 @@ public:
     REMOTESTATUS = 0x31E0,
     TEMPHUM = 0x12A0,
     CO2 = 0x1298,
+    PIR = 0x2E10,
     BATTERY = 0x1060
   };
 

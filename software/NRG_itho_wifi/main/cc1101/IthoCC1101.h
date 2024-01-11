@@ -191,6 +191,7 @@ public:
   void sendJoinReply(uint8_t byte0, uint8_t byte1, uint8_t byte2);
   void sendJoinReply(uint32_t ID);
   void send10E0();
+  void send2E10(uint8_t remote_index, IthoCommand command);
   void sendRFMessage(RFmessage *message);
   void sendCommand(IthoCommand command);
 
