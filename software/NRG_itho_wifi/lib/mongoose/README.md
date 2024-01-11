@@ -5,29 +5,34 @@
 [![Code Coverage](https://codecov.io/gh/cesanta/mongoose/branch/master/graph/badge.svg)](https://codecov.io/gh/cesanta/mongoose)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/mongoose.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:mongoose)
 
-Mongoose is a networking library for C/C++. It implements event-driven
+Mongoose is a network library for C/C++. 
+It implements event-driven
 non-blocking APIs for TCP, UDP, HTTP, WebSocket, MQTT.  It is designed for
 connecting devices and bringing them online. On the market since 2004, used by
 vast number of open source and commercial products - it even runs on the
 International Space Station!  Mongoose makes embedded network programming fast,
 robust, and easy. Features include:
 
-- Cross-platform: works on Linux/UNIX, MacOS, Windows, Android, FreeRTOS, etc.
-- Supported embedded architectures: ESP32, NRF52, STM32, NXP, and more
-- Built-in protocols: plain TCP/UDP, HTTP, MQTT, Websocket
+- Cross-platform:
+  - works on Linux/UNIX, MacOS, Windows, Android
+  - works on STM32, NXP, ESP32, NRF52, TI, Microchip, and other
+  - write code once - and it'll work everywhere
+  - ideal for the unification of the network infrastructure code across company
+- Built-in protocols: plain TCP/UDP, SNTP, HTTP, MQTT, Websocket
 - SSL/TLS support: mbedTLS, OpenSSL or custom (via API)
 - Asynchronous DNS resolver
 - Tiny static and run-time footprint
 - Source code is both ISO C and ISO C++ compliant
+- Very easy to integrate: just copy `mongoose.c` and `mongoose.h` files to your source tree. See
+  [exact steps](https://mongoose.ws/documentation/#2-minute-integration-guide)
 - Works with any network stack with socket API, like LwIP or FreeRTOS-Plus-TCP
-- Very easy to integrate: just copy `mongoose.c` and `mongoose.h` files to your build tree
-- Optional built-in TCP/IP stack with drivers for bare metal or RTOS firmwares
-   - A full device dashboard
-  [bare metal example on Nucleo-F429ZI](examples/stm32/nucleo-f429zi-baremetal)
-  is only 6 files
+- Built-in TCP/IP stack with drivers for bare metal or RTOS systems
+   - Available drivers: STM32 F4, F7, H5, H7; NXP RT1020; TI TM4C; Microchip SAME54; Wiznet W5500
+   - A complete Web device dashboard on bare metal
+  [Nucleo-F429ZI](examples/stm32/nucleo-f429zi-baremetal) is only 6 files
    - For comparison, a CubeIDE generated HTTP example is 400+ files
-- Detailed [documentation](https://mongoose.ws/documentation/) and
-  [tutorials](https://mongoose.ws/tutorials/)
+- Built-in firmware updates for STM32H5, STM32H7, and more coming
+- Detailed [user guide, API reference and tons of tutorials](https://mongoose.ws/documentation/) available
 
 
 # Commercial use
@@ -40,8 +45,8 @@ robust, and easy. Features include:
 - See [Case Studies](https://mongoose.ws/case-studies/) from our respected
   customers like [Schneider Electric](https://mongoose.ws/case-studies/schneider-electric/) (industrial automation), [Broadcom](https://mongoose.ws/case-studies/broadcom/) (semiconductors), [Pilz](https://mongoose.ws/case-studies/pilz/) (industrial automation), and others
 - See [Testimonials](https://mongoose.ws/testimonials/) from engineers that integrated Mongoose in their commercial products
-- We provide [Evaluation and Commercial licensing](https://mongoose.ws/licensing/), [support](https://mongoose.ws/support/), consultancy and integration
-  assistance - don't hesitate to [contact us](https://mongoose.ws/contact/)
+- We provide [Evaluation and Commercial licensing](https://mongoose.ws/licensing/), [support](https://mongoose.ws/support/), consultancy and [integration
+  services](https://mongoose.ws/integration/) - don't hesitate to [contact us](https://mongoose.ws/contact/)
 
 
 # Security

@@ -1,5 +1,5 @@
-#include "fmt.h"
 #include "fs.h"
+#include "printf.h"
 #include "str.h"
 
 struct packed_file {
@@ -8,13 +8,11 @@ struct packed_file {
   size_t pos;
 };
 
-const char *mg_unpack(const char *path, size_t *size, time_t *mtime);
-const char *mg_unlist(size_t no);
-
 #if MG_ENABLE_PACKED_FS
 #else
 const char *mg_unpack(const char *path, size_t *size, time_t *mtime) {
-  (void) path, (void) size, (void) mtime;
+  *size = 0, *mtime = 0;
+  (void) path;
   return NULL;
 }
 const char *mg_unlist(size_t no) {
@@ -22,6 +20,12 @@ const char *mg_unlist(size_t no) {
   return NULL;
 }
 #endif
+
+struct mg_str mg_unpacked(const char *path) {
+  size_t len = 0;
+  const char *buf = mg_unpack(path, &len, NULL);
+  return mg_str_n(buf, len);
+}
 
 static int is_dir_prefix(const char *prefix, size_t n, const char *path) {
   // MG_INFO(("[%.*s] [%s] %c", (int) n, prefix, path, path[n]));
@@ -67,9 +71,10 @@ static void *packed_open(const char *path, int flags) {
   struct packed_file *fp = NULL;
   if (data == NULL) return NULL;
   if (flags & MG_FS_WRITE) return NULL;
-  fp = (struct packed_file *) calloc(1, sizeof(*fp));
-  fp->size = size;
-  fp->data = data;
+  if ((fp = (struct packed_file *) calloc(1, sizeof(*fp))) != NULL) {
+    fp->size = size;
+    fp->data = data;
+  }
   return (void *) fp;
 }
 

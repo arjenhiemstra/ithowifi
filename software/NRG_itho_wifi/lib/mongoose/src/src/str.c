@@ -74,6 +74,7 @@ const char *mg_strstr(const struct mg_str haystack,
                       const struct mg_str needle) {
   size_t i;
   if (needle.len > haystack.len) return NULL;
+  if (needle.len == 0) return haystack.ptr;
   for (i = 0; i <= haystack.len - needle.len; i++) {
     if (memcmp(haystack.ptr + i, needle.ptr, needle.len) == 0) {
       return haystack.ptr + i;
@@ -186,49 +187,12 @@ void mg_unhex(const char *buf, size_t len, unsigned char *to) {
   }
 }
 
-uint64_t mg_tou64(struct mg_str str) {
-  uint64_t result = 0;
-  size_t i = 0;
-  while (i < str.len && (str.ptr[i] == ' ' || str.ptr[i] == '\t')) i++;
-  while (i < str.len && str.ptr[i] >= '0' && str.ptr[i] <= '9') {
-    result *= 10;
-    result += (unsigned) (str.ptr[i] - '0');
-    i++;
-  }
-  return result;
-}
-
-int64_t mg_to64(struct mg_str str) {
-  int64_t result = 0, neg = 1, max = 922337203685477570 /* INT64_MAX/10-10 */;
-  size_t i = 0;
-  while (i < str.len && (str.ptr[i] == ' ' || str.ptr[i] == '\t')) i++;
-  if (i < str.len && str.ptr[i] == '-') neg = -1, i++;
-  while (i < str.len && str.ptr[i] >= '0' && str.ptr[i] <= '9') {
-    if (result > max) return 0;
-    result *= 10;
-    result += (str.ptr[i] - '0');
-    i++;
-  }
-  return result * neg;
-}
-
-char *mg_remove_double_dots(char *s) {
-  char *saved = s, *p = s;
-  while (*s != '\0') {
-    *p++ = *s++;
-    if (s[-1] == '/' || s[-1] == '\\') {
-      while (s[0] != '\0') {
-        if (s[0] == '/' || s[0] == '\\') {
-          s++;
-        } else if (s[0] == '.' && s[1] == '.' &&
-                   (s[2] == '/' || s[2] == '\\')) {
-          s += 2;
-        } else {
-          break;
-        }
-      }
+bool mg_path_is_sane(const char *path) {
+  const char *s = path;
+  for (; s[0] != '\0'; s++) {
+    if (s == path || s[0] == '/' || s[0] == '\\') {  // Subdir?
+      if (s[1] == '.' && s[2] == '.') return false;  // Starts with ..
     }
   }
-  *p = '\0';
-  return saved;
+  return true;
 }
