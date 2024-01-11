@@ -55,19 +55,19 @@ void getIthoStatusJSON(JsonObject root)
   }
   if (!ithoMeasurements.empty() && systemConfig.itho_31da == 1)
   {
-    for (const auto &ithoMeaserment : ithoMeasurements)
+    for (const auto &ithoMeasurement : ithoMeasurements)
     {
-      if (ithoMeaserment.type == ithoDeviceMeasurements::is_int)
+      if (ithoMeasurement.type == ithoDeviceMeasurements::is_int)
       {
-        root[ithoMeaserment.name] = ithoMeaserment.value.intval;
+        root[ithoMeasurement.name] = ithoMeasurement.value.intval;
       }
-      else if (ithoMeaserment.type == ithoDeviceMeasurements::is_float)
+      else if (ithoMeasurement.type == ithoDeviceMeasurements::is_float)
       {
-        root[ithoMeaserment.name] = ithoMeaserment.value.floatval;
+        root[ithoMeasurement.name] = ithoMeasurement.value.floatval;
       }
-      else if (ithoMeaserment.type == ithoDeviceMeasurements::is_string)
+      else if (ithoMeasurement.type == ithoDeviceMeasurements::is_string)
       {
-        root[ithoMeaserment.name] = ithoMeaserment.value.stringval;
+        root[ithoMeasurement.name] = ithoMeasurement.value.stringval;
       }
     }
   }
