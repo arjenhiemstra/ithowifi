@@ -284,6 +284,14 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   {
     rf.sendRFCommand(remote_index, IthoCommand::IthoLeave);
   }
+  else if (strcmp(command, "motion_on") == 0)
+  {
+    rf.send2E10(remote_index, IthoCommand::IthoPIRmotionOn);
+  }
+  else if (strcmp(command, "motion_off") == 0)
+  {
+    rf.send2E10(remote_index, IthoCommand::IthoPIRmotionOff);
+  }
   else
   {
     res = false;

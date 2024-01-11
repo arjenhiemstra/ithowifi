@@ -108,6 +108,12 @@ void RFDebug(IthoCommand cmd)
   case IthoJoinReply:
     strncat(debugLog, " (cmd:joinreply)", sizeof(debugLog) - strlen(debugLog) - 1);
     break;
+  case IthoPIRmotionOn:
+    strncat(debugLog, " (cmd:motion_on)", sizeof(debugLog) - strlen(debugLog) - 1);
+    break;
+  case IthoPIRmotionOff:
+    strncat(debugLog, " (cmd:motion_off)", sizeof(debugLog) - strlen(debugLog) - 1);
+    break;
   }
   D_LOG(debugLog);
   //  LogMessage.once_ms(150, []() {

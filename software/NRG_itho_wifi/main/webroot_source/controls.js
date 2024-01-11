@@ -1152,8 +1152,10 @@ var remtypes = [
   ["RFT AUTO-N", 0x22F4, ['auto', 'autonight', 'low', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT DF/QF", 0x22F8, ['low', 'high', 'cook30', 'cook60', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT RV", 0x12A0, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
-  ["RFT CO2", 0x1298, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
+  ["RFT CO2", 0x1298, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["RFT PIR", 0x2E10, ['motion_on', 'motion_off', 'join', 'leave']]
 ];
+
 var remfuncs = [
   ["Receive", 1],
   ["Monitor Only", 3],
@@ -1909,7 +1911,8 @@ Unless specified otherwise:<br>
         <tr>
             <td>rfremotecmd</td>
             <td>string</td>
-            <td>away, low, medium, high, timer1, timer2, timer3, join, leave, auto, autonight, cook30, cook60</td>
+            <td>away, low, medium, high, timer1, timer2, timer3, join, leave, auto, autonight, cook30, cook60,
+                motion_on, motion_off</td>
             <td>string</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">●</td>
