@@ -677,6 +677,16 @@ $(document).ready(function () {
         ithotimestamp: $('#itho_ce30_timestamp').val()
       }));
     }
+    else if ($(this).attr('id') == 'button4030') {
+      websock.send(JSON.stringify({
+        ithobutton: 4030,
+        idx: Number($('#itho_4030_index').val()),
+        dt: Number($('#itho_4030_datatype').val()),
+        val: Number($('#itho_4030_value').val()),
+        chk: Number($('#itho_4030_checked').val()),
+        dryrun: ($('#itho_4030_password').val() == 'thisisunsafe') ? false : true,
+      }));
+    }
     else if ($(this).attr('id') == 'ithogetsettings') {
       if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
         loadSettingsLocStor();
