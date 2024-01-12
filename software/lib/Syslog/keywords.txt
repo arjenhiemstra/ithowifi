@@ -1,0 +1,65 @@
+#######################################
+#	Syntax	Coloring	Map	syslog	lib
+#######################################
+
+#######################################
+#	Datatypes	(KEYWORD1)
+#######################################
+Syslog	KEYWORD1
+
+#######################################
+#	Methods	and	Functions	(KEYWORD2)
+####################################### 
+log	KEYWORD2
+logf	KEYWORD2
+vlogf	KEYWORD2
+server	KEYWORD2
+deviceHostname	KEYWORD2
+appName	KEYWORD2
+defaultPriority	KEYWORD2
+logMask	KEYWORD2
+
+#######################################
+#	Instances	(KEYWORD2)
+#######################################
+
+
+#######################################
+#	Constants	(LITERAL1)
+#######################################
+LOG_EMERG	LITERAL1
+LOG_ALERT	LITERAL1
+LOG_CRIT	LITERAL1
+LOG_ERR	LITERAL1
+LOG_WARNING	LITERAL1
+LOG_NOTICE	LITERAL1
+LOG_INFO	LITERAL1
+LOG_DEBUG	LITERAL1
+
+LOG_KERN	LITERAL1
+LOG_USER	LITERAL1
+LOG_MAIL	LITERAL1
+LOG_DAEMON	LITERAL1
+LOG_AUTH	LITERAL1
+LOG_SYSLOG	LITERAL1
+LOG_LPR	LITERAL1
+LOG_NEWS	LITERAL1
+LOG_UUCP	LITERAL1
+LOG_CRON	LITERAL1
+LOG_AUTHPRIV	LITERAL1
+LOG_FTP	LITERAL1
+
+LOG_LOCAL0	LITERAL1
+LOG_LOCAL1	LITERAL1
+LOG_LOCAL2	LITERAL1
+LOG_LOCAL3	LITERAL1
+LOG_LOCAL4	LITERAL1
+LOG_LOCAL5	LITERAL1
+LOG_LOCAL6	LITERAL1
+LOG_LOCAL7	LITERAL1
+
+LOG_MASK	LITERAL1
+LOG_UPTO	LITERAL1
+
+SYSLOG_PROTO_IETF	LITERAL1
+SYSLOG_PROTO_BSD	LITERAL1
