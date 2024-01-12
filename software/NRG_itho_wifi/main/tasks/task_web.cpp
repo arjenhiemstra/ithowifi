@@ -896,14 +896,6 @@ ApiResponse::api_response_status_t processGetsettingCommands(JsonObject params, 
     return ApiResponse::status::CONTINUE;
 
   response["cmdkey"] = "getsetting";
-
-  if (systemConfig.api_settings == 0)
-  {
-    response["code"] = 403;
-    response["failreason"] = "The settings API is disabled";
-    return ApiResponse::status::FAIL;
-  }
-
   response["cmdval"] = value;
 
   const std::string str = value;
