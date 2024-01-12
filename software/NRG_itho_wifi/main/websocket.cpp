@@ -325,6 +325,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           {
             setSettingCE30(root["ithotemptemp"].as<int16_t>(), root["ithotemp"].as<int16_t>(), root["ithotimestamp"].as<uint32_t>(), true);
           }
+          else if (val == 4030)
+          {
+            setSetting4030(root["idx"].as<uint16_t>(), root["dt"].as<uint8_t>(), root["val"].as<int16_t>(), root["chk"].as<uint8_t>(), root["dryrun"].as<bool>(), true);
+          }          
         }
         else
         {
