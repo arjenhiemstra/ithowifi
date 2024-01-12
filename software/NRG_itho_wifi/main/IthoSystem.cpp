@@ -1450,6 +1450,41 @@ void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperatur
   }
 }
 
+void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t checked, bool dryrun, bool updateweb)
+{
+  uint8_t command[] = {0x82,0x80,0x40,0x30,0x06,0x07,0x01,0x00,0x0F,0x00,0x01,0x01,0x01,0xFF};
+  
+  command[7] = (index >> 8) & 0xFF;
+  command[8] = index & 0xFF;
+
+  command[9] = datatype & 0xFF;
+
+  command[10] = (value >> 8) & 0xFF;
+  command[11] = value & 0xFF;
+
+  command[12] = checked & 0xFF;
+
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+  
+  if (dryrun) {
+    jsonSysmessage("itho_4030_i2c_command", i2cbuf2string(command, sizeof(command)).c_str());
+    return;
+  }
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_SET_CE30))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("itho_4030_result", "failed");
+    }
+    return;
+  } 
+}
+
+
+
+
+
 int32_t *sendQuery2410(uint8_t index, bool updateweb)
 {
 
