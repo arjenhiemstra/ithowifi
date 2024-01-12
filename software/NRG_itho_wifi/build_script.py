@@ -1,5 +1,5 @@
 Import("env")
-import gzip, os, glob, shutil, json
+import gzip, os, glob, shutil, json, filecmp
 
 from SCons.Script import (
     ARGUMENTS,
@@ -11,6 +11,7 @@ from SCons.Script import (
 )
 
 from sys import platform
+from pathlib import Path
 
 fwversion = "undefined"
 release = "undefined"
@@ -191,6 +192,61 @@ def copy_firmware():
     else:
         print("Copy error! firmware elf file not found")
 
+def copy_libs():
+    source_path_libdeps = os.path.join(
+        PROJECT_DIR,
+        ".pio",
+        "libdeps",
+        PIOENV)
+    source_path_lib = os.path.join(
+        PROJECT_DIR,
+        "lib")
+    cwd = Path.cwd()
+    goal_dir = cwd.parent
+    target_path = os.path.join(
+        goal_dir,
+        "lib")
+    print("source_path_libdeps:" + source_path_libdeps)
+    print("source_path_lib:" + source_path_lib)
+    print("target_path:" + target_path)
+    try:
+        sync_directories(source_path_libdeps, target_path)
+        print("libdeps directory synchronized successfully.")
+        sync_directories(source_path_lib, target_path)
+        print("lib directory synchronized successfully.")
+    except Exception as e:
+        print(f"Error during directory synchronization: {e}")    
+
+
+def is_hidden(path):
+    """ Check if a file or directory is hidden """
+    return os.path.basename(path).startswith('.')
+
+def sync_directories(source, target):
+    # Create sets of subdirectories in both source and target, excluding hidden ones
+    source_dirs = set()
+    for dirpath, dirnames, filenames in os.walk(source):
+        if is_hidden(dirpath):
+            continue  # Skip hidden directories
+        dirnames[:] = [d for d in dirnames if not is_hidden(d)]  # Skip hidden subdirectories
+        filenames[:] = [f for f in filenames if not is_hidden(f)]  # Skip hidden files
+        source_dirs.add(os.path.relpath(dirpath, source))
+
+    target_dirs = set(os.path.relpath(dirpath, target)
+                      for dirpath, dirnames, filenames in os.walk(target)
+                      if not is_hidden(dirpath))
+
+    # Identify subdirectories present in source but not in target
+    source_only_dirs = source_dirs - target_dirs
+
+    # Delete and then copy these subdirectories to the target
+    for subdir in source_only_dirs:
+        abs_subdir_source = os.path.join(source, subdir)
+        abs_subdir_target = os.path.join(target, subdir)
+
+        if os.path.exists(abs_subdir_target):
+            shutil.rmtree(abs_subdir_target)
+        shutil.copytree(abs_subdir_source, abs_subdir_target, ignore=shutil.ignore_patterns('.*'))
 
 def update_releaseinfo():
     if release == "beta" or release == "stable":
@@ -232,6 +288,8 @@ def build_prep(*args, **kwargs):
 def build_after(*args, **kwargs):
     print("\n### running post build commands...\n")
     copy_firmware()
+    if(PIOENV == "beta" or PIOENV == "release"):
+        copy_libs()
     update_releaseinfo()
 
 
