@@ -7,6 +7,7 @@ var sensor = -1;
 var uuid = 0;
 
 localStorage.setItem("statustimer", 0);
+localStorage.setItem("wifistat", 0);
 var settingIndex = -1;
 
 var websocketServerLocation = location.protocol.indexOf("https") > -1 ? 'wss://' + window.location.hostname + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
@@ -66,7 +67,7 @@ function processMessage(message) {
   } catch (error) {
     f = JSON.parse(message);
   }
-  console.log(f);
+  //console.log(f);
   let g = document.body;
   if (f.wifisettings) {
     let x = f.wifisettings;
@@ -431,6 +432,16 @@ $(document).ready(function () {
     }
     //syssubmit
     else if ($(this).attr('id') == 'syssumbit') {
+      if(!isValidJsonArray($('#api_settings_activated').val())) {
+        alert("error: Activated settings input value is not a valid JSON array!");
+        return;
+      }
+      else {
+        if(!areAllUnsignedIntegers(JSON.parse($('#api_settings_activated').val()))) {
+          alert("error: Activated settings array contains non integer values!");
+          return;
+        }
+      }
       websock_send(JSON.stringify({
         systemsettings: {
           sys_username: $('#sys_username').val(),
@@ -440,6 +451,7 @@ $(document).ready(function () {
           syssec_edit: $('input[name=\'option-syssec_edit\']:checked').val(),
           api_normalize: $('input[name=\'option-api_normalize\']:checked').val(),
           api_settings: $('input[name=\'option-api_settings\']:checked').val(),
+          api_settings_activated: JSON.parse($('#api_settings_activated').val()),
           syssht30: $('input[name=\'option-syssht30\']:checked').val(),
           itho_rf_support: $('input[name=\'option-itho_rf_support\']:checked').val(),
           itho_fallback: $('#itho_fallback').val(),
@@ -814,6 +826,9 @@ function removeID(id) {
 function processElements(x) {
   for (var key in x) {
     if (x.hasOwnProperty(key)) {
+      if(Array.isArray(x[key])) {
+        x[key] = JSON.stringify(x[key]);
+      }
       var el = $(`#${key}`);
       if (el.is('input') || el.is('select')) {
         $(`#${key}`).val(x[key]);
@@ -1001,6 +1016,9 @@ function update_page(page) {
   if (page != 'status') {
     localStorage.setItem("statustimer", 0);
   }
+  if (page != 'wifisetup') {
+    localStorage.setItem("wifistat", 0);
+  }  
   $('#main').empty();
   $('#main').css('max-width', '768px')
   if (page == 'index') { $('#main').append(html_index); }
@@ -1077,6 +1095,23 @@ function isHex(hex) {
   return typeof hex === 'string'
     && hex.length === 2
     && !isNaN(Number('0x' + hex))
+}
+
+function isUnsignedInteger(value) {
+  return Number.isInteger(value) && value >= 0;
+}
+
+function areAllUnsignedIntegers(array) {
+  return array.every(isUnsignedInteger);
+}
+
+function isValidJsonArray(input) {
+  try {
+      const parsed = JSON.parse(input);
+      return Array.isArray(parsed);
+  } catch (e) {
+      return false;
+  }
 }
 
 function returnMqttState(state) {

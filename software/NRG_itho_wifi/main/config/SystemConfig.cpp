@@ -33,6 +33,7 @@ SystemConfig::SystemConfig()
   mqtt_updated = false;
   get_mqtt_settings = false;
   get_sys_settings = false;
+  JsonArray arr = api_settings_activated.to<JsonArray>();
   itho_fallback = 20;
   itho_low = 20;
   itho_medium = 120;
@@ -114,6 +115,12 @@ bool SystemConfig::set(JsonObject obj)
   {
     updated = true;
     api_settings = obj["api_settings"];
+  }
+  if (!obj["api_settings_activated"].isNull())
+  {
+    updated = true;
+    JsonArray arr = obj["api_settings_activated"].as<JsonArray>();
+    api_settings_activated.set(arr);
   }
   if (!obj["syssht30"].isNull())
   {
@@ -370,6 +377,7 @@ void SystemConfig::get(JsonObject obj) const
     obj["i2c_safe_guard"] = i2c_safe_guard;
     obj["i2c_sniffer"] = i2c_sniffer;
     obj["api_settings"] = api_settings;
+    obj["api_settings_activated"].set(api_settings_activated.as<JsonArrayConst>());
   }
   if (complete || get_mqtt_settings)
   {
