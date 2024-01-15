@@ -1047,6 +1047,24 @@ ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, 
     return ApiResponse::status::FAIL;
   }
 
+  JsonArray arr = systemConfig.api_settings_activated.as<JsonArray>();
+  bool allowed = false;
+  if (arr.size() > 0)
+  {
+    for (JsonVariant el : arr)
+    {
+      if (el.as<unsigned long>() == idx)
+        allowed = true;
+    }
+  }
+
+  if (!allowed)
+  {
+    response["code"] = 400;
+    response["failreason"] = "The setting index is not in the allowed list";
+    return ApiResponse::status::FAIL;
+  }
+
   ithoSettings *setting = &ithoSettingsArray[idx];
   resultPtr2410 = sendQuery2410(idx, true);
   double cur = 0.0;
