@@ -580,16 +580,16 @@ add:
   root["avty_t"] = static_cast<const char *>(lwttopic);
   snprintf(s, sizeof(s), "%s_fan", hostName());
   root["uniq_id"] = s;
-  root["name"] = hostName();
+  root["name"] = "fan";
   // root["stat_t"] = static_cast<const char *>(statetopic);
   // root["stat_val_tpl"] = "{% if value == '0' %}OFF{% else %}ON{% endif %}";
   root["json_attr_t"] = static_cast<const char *>(ihtostatustopic);
   snprintf(s, sizeof(s), "%s/not_used/but_needed_for_HA", static_cast<const char *>(cmdtopic));
   root["cmd_t"] = s;
   root["pct_cmd_t"] = static_cast<const char *>(cmdtopic);
-  root["pct_cmd_tpl"] = "{{ (value * 2.55) | round | int }}";
+  root["pct_cmd_tpl"] = "{{ (value | int * 2.55) | round | int }}";
   root["pct_stat_t"] = static_cast<const char *>(statetopic);
-  root["pct_val_tpl"] = "{{ (value / 2.55) | round | int }}";
+  root["pct_val_tpl"] = "{{ (value | int / 2.55) | round | int }}";
   // root["pct_val_tpl"] = "{% if {{ ((value | int) / 2.55) | round }} == '0' %}OFF{% else %}{{ ((value | int) / 2.55) | round }}{% endif %} ";
 
   JsonArray modes = root["pr_modes"].to<JsonArray>();
@@ -626,7 +626,7 @@ void HADiscoveryTemperature()
   root["dev_cla"] = "temperature";
   snprintf(s, sizeof(s), "%s_temperature", hostName());
   root["uniq_id"] = s;
-  root["name"] = s;
+  root["name"] = "temperature";
   root["stat_t"] = static_cast<const char *>(ihtostatustopic);
   root["stat_cla"] = "measurement";
   root["val_tpl"] = "{{ value_json.temp }}";
@@ -653,7 +653,7 @@ void HADiscoveryHumidity()
   root["dev_cla"] = "humidity";
   snprintf(s, sizeof(s), "%s_humidity", hostName());
   root["uniq_id"] = s;
-  root["name"] = s;
+  root["name"] = "humidity";
   root["stat_t"] = static_cast<const char *>(ihtostatustopic);
   root["stat_cla"] = "measurement";
   root["val_tpl"] = "{{ value_json.hum }}";
@@ -671,8 +671,8 @@ void addHADevInfo(JsonObject obj)
   dev["identifiers"] = hostName();
   dev["manufacturer"] = "Arjen Hiemstra";
   dev["model"] = "Wifi add-on for Itho";
-  snprintf(s, sizeof(s), "%s", hostName());
-  dev["name"] = s;
+  //snprintf(s, sizeof(s), "%s", hostName());
+  dev["name"] = hostName();
   dev["hw_version"] = hw_revision;
   dev["sw_version"] = FWVERSION;
 }
