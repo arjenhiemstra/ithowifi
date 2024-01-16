@@ -237,7 +237,7 @@ void getSetting(const uint8_t index, const bool updateState, const bool updatewe
     return;
   }
 
-  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+  //const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
 
   JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();

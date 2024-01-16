@@ -249,11 +249,11 @@ def sync_directories(source, target):
         shutil.copytree(abs_subdir_source, abs_subdir_target, ignore=shutil.ignore_patterns('.*'))
 
 def update_releaseinfo():
-    if release == "beta" or release == "stable":
+    if release == "beta" or release == "release":
         print("\n### Updating releaseinfo for the " + release + " release\n")
 
-        latest_fw_key = "latest_fw" if release == "stable" else "latest_beta_fw"
-        latest_link_key = "link" if release == "stable" else "link_beta"
+        latest_fw_key = "latest_fw" if release == "release" else "latest_beta_fw"
+        latest_link_key = "link" if release == "release" else "link_beta"
         latest_fw_file = "nrgitho" + hwrev + "-v" + fwversion + ".bin"
 
         releasefile = os.path.join(PROJECT_COMPILED_DIR, "firmware.json")
