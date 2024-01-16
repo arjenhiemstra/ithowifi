@@ -8,6 +8,7 @@ var sensor = -1;
 var uuid = 0;
 
 localStorage.setItem("statustimer", 0);
+localStorage.setItem("wifistat", 0);
 var settingIndex = -1;
 
 var websocketServerLocation = location.protocol.indexOf("https") > -1 ? 'wss://' + window.location.hostname + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
@@ -67,7 +68,7 @@ function processMessage(message) {
   } catch (error) {
     f = JSON.parse(message);
   }
-  console.log(f);
+  //console.log(f);
   let g = document.body;
   if (f.wifisettings) {
     let x = f.wifisettings;
@@ -432,6 +433,16 @@ $(document).ready(function () {
     }
     //syssubmit
     else if ($(this).attr('id') == 'syssumbit') {
+      if(!isValidJsonArray($('#api_settings_activated').val())) {
+        alert("error: Activated settings input value is not a valid JSON array!");
+        return;
+      }
+      else {
+        if(!areAllUnsignedIntegers(JSON.parse($('#api_settings_activated').val()))) {
+          alert("error: Activated settings array contains non integer values!");
+          return;
+        }
+      }
       websock_send(JSON.stringify({
         systemsettings: {
           sys_username: $('#sys_username').val(),
@@ -441,6 +452,7 @@ $(document).ready(function () {
           syssec_edit: $('input[name=\'option-syssec_edit\']:checked').val(),
           api_normalize: $('input[name=\'option-api_normalize\']:checked').val(),
           api_settings: $('input[name=\'option-api_settings\']:checked').val(),
+          api_settings_activated: JSON.parse($('#api_settings_activated').val()),
           syssht30: $('input[name=\'option-syssht30\']:checked').val(),
           itho_rf_support: $('input[name=\'option-itho_rf_support\']:checked').val(),
           itho_fallback: $('#itho_fallback').val(),
@@ -678,6 +690,16 @@ $(document).ready(function () {
         ithotimestamp: $('#itho_ce30_timestamp').val()
       }));
     }
+    else if ($(this).attr('id') == 'button4030') {
+      websock.send(JSON.stringify({
+        ithobutton: 4030,
+        idx: Number($('#itho_4030_index').val()),
+        dt: Number($('#itho_4030_datatype').val()),
+        val: Number($('#itho_4030_value').val()),
+        chk: Number($('#itho_4030_checked').val()),
+        dryrun: ($('#itho_4030_password').val() == 'thisisunsafe') ? false : true,
+      }));
+    }
     else if ($(this).attr('id') == 'ithogetsettings') {
       if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
         loadSettingsLocStor();
@@ -805,6 +827,9 @@ function removeID(id) {
 function processElements(x) {
   for (var key in x) {
     if (x.hasOwnProperty(key)) {
+      if(Array.isArray(x[key])) {
+        x[key] = JSON.stringify(x[key]);
+      }
       var el = $(`#${key}`);
       if (el.is('input') || el.is('select')) {
         $(`#${key}`).val(x[key]);
@@ -992,6 +1017,9 @@ function update_page(page) {
   if (page != 'status') {
     localStorage.setItem("statustimer", 0);
   }
+  if (page != 'wifisetup') {
+    localStorage.setItem("wifistat", 0);
+  }  
   $('#main').empty();
   $('#main').css('max-width', '768px')
   if (page == 'index') { $('#main').append(html_index); }
@@ -1068,6 +1096,23 @@ function isHex(hex) {
   return typeof hex === 'string'
     && hex.length === 2
     && !isNaN(Number('0x' + hex))
+}
+
+function isUnsignedInteger(value) {
+  return Number.isInteger(value) && value >= 0;
+}
+
+function areAllUnsignedIntegers(array) {
+  return array.every(isUnsignedInteger);
+}
+
+function isValidJsonArray(input) {
+  try {
+      const parsed = JSON.parse(input);
+      return Array.isArray(parsed);
+  } catch (e) {
+      return false;
+  }
 }
 
 function returnMqttState(state) {
@@ -1800,24 +1845,6 @@ Unless specified otherwise:<br>
                     comments on remotesinfo of the Web API</em></td>
         </tr>
         <tr>
-            <td>getsetting</td>
-            <td>string</td>
-            <td>0-256</td>
-            <td>number</td>
-            <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
-        </tr>
-        <tr>
-            <td colspan="6">
-                Comments:<br>
-                <em>
-                    Returns a JSON object containing the result of the API call. If successful it contains a data object with the current, minimum and
-                    maximum value of the given setting, using its index. If the
-                    setting index is invalid, the data object contains a key failreason.
-                </em>
-            </td>
-        </tr>
-        <tr>
             <td colspan="6"><b>Commands below this line work on itho devices that support the PWM2IC2 protocol. Devices
                     supported are at least the HRU200 and all CVE models. Devices known not to support these commands
                     are the HRU350, WPU, DemandFlow/QualityFlow. These commands cannot be used together with vremote
@@ -1940,6 +1967,25 @@ Unless specified otherwise:<br>
                     page.</em></td>
         </tr>
         <tr>
+            <td>getsetting</td>
+            <td>string</td>
+            <td>0-255</td>
+            <td>number</td>
+            <td style="text-align:center">◌</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">
+                Comments:<br>
+                <em>
+                    Returns a JSON object containing the result of the API call. If successful it contains a data object
+                    with the current, minimum and
+                    maximum value of the given setting, using its index. If the
+                    setting index is invalid, the data object contains a key failreason.
+                </em>
+            </td>
+        </tr>
+        <tr>
             <td colspan="6"><b style="color: red">API Commands below this line can change the settings of your Itho
                     Daalderop
                     unit, and this may affect its behaviour (i.e. turn it to a non working state).
@@ -1950,7 +1996,7 @@ Unless specified otherwise:<br>
         <tr>
             <td>setsetting</td>
             <td>string</td>
-            <td>0-256</td>
+            <td>0-255</td>
             <td>number</td>
             <td style="text-align:center">◌</td>
             <td style="text-align:center">●</td>
@@ -1970,7 +2016,8 @@ Unless specified otherwise:<br>
                     Sets the current value of a setting using its index. The
                     value must be specified in the "value" parameter. The new
                     value must be within the minimum and maximum of the setting.<br>
-                    Returns a JSON object containing the result of the API call. If successful it contains a data object with the current, previous, minimum and
+                    Returns a JSON object containing the result of the API call. If successful it contains a data object
+                    with the current, previous, minimum and
                     maximum value of the given setting, using its index. If the
                     setting index or value is invalid, the data object contains a key failreason.
                 </em>
@@ -2230,9 +2277,6 @@ var html_wifisetup = `
     repeat_wifistat();
   });
 
-  $(document).ready(function () {
-
-  });  
 </script>
 `;
 
@@ -2431,11 +2475,15 @@ var html_systemsettings_start = `
       <input id="option-api_normalize-1" type="radio" name="option-api_normalize" value="1"> on
       <input id="option-api_normalize-0" type="radio" name="option-api_normalize" value="0"> off
     </div>
-    <p>Enable the WebAPI for managing your device's settings.</p>
+    <p>Enable the WebAPI for updating your device's settings.</p>
     <div class="pure-control-group">
-      <label for="option-api_settings" class="pure-radio">Enable settings API</label>
+      <label for="option-api_settings" class="pure-radio">Enable update settings API</label>
       <input id="option-api_settings-1" type="radio" name="option-api_settings" value="1"> on
       <input id="option-api_settings-0" type="radio" name="option-api_settings" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="api_settings_activated">Activate settings indexes</label>
+      <input id="api_settings_activated" title="Must be a valid JSON array ie.: [12,34]" type="text" maxlength="1024" size="20">
     </div>
     <p>
       <b style="color: red">Warning:</b>
@@ -2679,7 +2727,7 @@ var html_mqttsetup = `
     <tr>
       <td>State</td>
       <td><span name="mqtt_base_topic"></span>/state</td>
-      <td>Contains a 0-254 value representing the PWM2I2C speed setting</td>
+      <td>Contains a 0-255 value representing the PWM2I2C speed setting</td>
     </tr>
     <tr>
       <td>Itho status</td>
@@ -2845,7 +2893,7 @@ var html_ithosettings = `
     <br><br>
     <button id="ithogetsettings" class="pure-button pure-button-primary">Retrieve settings</button><br><br>
     <div id="settings_cache_load" class="hidden">
-      <span>Settings loaded from browser cache.<br></span>
+      <span>Settings loaded from browser cache. Note that changes done through the settings WebAPI might not be reflected correctly here. Force refresh the (induvidual) setting(s) to update values and cache.<br></span>
       <button id="ithoforcerefresh" class="pure-button pure-button-primary">Force settings refresh</button><br><br>
     </div>
     <div id="downloadsettingsdiv" class="hidden">
