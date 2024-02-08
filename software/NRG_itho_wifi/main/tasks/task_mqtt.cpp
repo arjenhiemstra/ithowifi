@@ -581,8 +581,8 @@ add:
   snprintf(s, sizeof(s), "%s_fan", hostName());
   root["uniq_id"] = s;
   root["name"] = "fan";
-  // root["stat_t"] = static_cast<const char *>(statetopic);
-  // root["stat_val_tpl"] = "{% if value == '0' %}OFF{% else %}ON{% endif %}";
+  root["stat_t"] = static_cast<const char *>(statetopic);
+  root["stat_val_tpl"] = "{% if value == '0' %}OFF{% else %}ON{% endif %}";
   root["json_attr_t"] = static_cast<const char *>(ihtostatustopic);
   snprintf(s, sizeof(s), "%s/not_used/but_needed_for_HA", static_cast<const char *>(cmdtopic));
   root["cmd_t"] = s;
