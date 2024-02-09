@@ -19,7 +19,7 @@ private:
   {
     int16_t speed{-1};
     unsigned long valid{0};
-    void get(JsonObject, int index) const;
+    void get(JsonObject obj, int index) const;
   };
 
   mutable bool firstQueueItem{true};
@@ -39,7 +39,7 @@ public:
   };
   mutable bool ithoSpeedUpdated = false;
   void set_itho_fallback_speed(uint16_t speedVal) { fallBackSpeed = speedVal; };
-  void get(JsonObject);
+  void get(JsonArray arr);
   IthoQueue();
   ~IthoQueue();
 

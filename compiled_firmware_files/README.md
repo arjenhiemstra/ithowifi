@@ -18,3 +18,5 @@ Hardware revision 2:
 Hardware revision 1:
 
 ![alt text](https://github.com/arjenhiemstra/ithowifi/raw/master/images/non-cve-pcb.png "Hardware revision 1")
+
+Since firmware version 2.6.0 hardware revision 2 and the non-cve module use the same firmware file.

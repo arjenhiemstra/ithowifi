@@ -21,6 +21,9 @@ bool shouldReboot = false;
 int8_t ithoInitResult = 0;
 bool IthoInit = false;
 bool wifiModeAP = false;
+bool wifiSTAshouldConnect = false;
+bool wifiSTAconnected = false;
+bool wifiSTAconnecting = false;
 bool reset_sht_sensor = false;
 bool restest = false;
 bool i2c_safe_guard_log = true;
@@ -96,6 +99,7 @@ void TaskSysControl(void *pvParameters)
   configASSERT((uint32_t)pvParameters == 1UL);
   Ticker TaskTimeout;
   Ticker queueUpdater;
+
   delay(2000);
   wifiInit();
   delay(2000);
@@ -243,27 +247,39 @@ void execSystemControlTasks()
 
   if (wifiModeAP)
   {
-    if (millis() - APmodeTimeout > 900000)
-    { // reboot after 15 min in AP mode
-      shouldReboot = true;
+    if (wifiConfig.aptimeout > 0 && wifiConfig.aptimeout < 255)
+    {
+      if (millis() - APmodeTimeout > (wifiConfig.aptimeout * 60 * 1000))
+      {
+        // disable AP after wifiConfig.aptimeout min
+        WiFi.enableAP(false);
+        // reboot after 15 min in AP mode
+        // shouldReboot = true;
+      }
     }
     dnsServer.processNextRequest();
-
-    if (millis() - wifiLedUpdate >= 500)
+    if (!wifiSTAconnected && !wifiSTAconnecting)
     {
-      wifiLedUpdate = millis();
-      if (digitalRead(wifi_led_pin) == LOW)
+      if (millis() - wifiLedUpdate >= 500)
       {
-        digitalWrite(wifi_led_pin, HIGH);
-      }
-      else
-      {
-        digitalWrite(wifi_led_pin, LOW);
+        wifiLedUpdate = millis();
+        if (digitalRead(wifi_led_pin) == LOW)
+        {
+          digitalWrite(wifi_led_pin, HIGH);
+        }
+        else
+        {
+          digitalWrite(wifi_led_pin, LOW);
+        }
       }
     }
   }
-  else if (WiFi.status() != WL_CONNECTED)
+  if (WiFi.status() != WL_CONNECTED && wifiSTAshouldConnect && !wifiSTAconnecting)
   {
+    if (digitalRead(wifi_led_pin) == LOW)
+    {
+      digitalWrite(wifi_led_pin, HIGH);
+    }
     if (millis() - lastWIFIReconnectAttempt > 60000)
     {
       I_LOG("Attempt to reconnect WiFi");
@@ -278,6 +294,13 @@ void execSystemControlTasks()
       {
         E_LOG("Reconnect WiFi failed!");
       }
+    }
+  }
+  if (WiFi.status() == WL_CONNECTED && wifiSTAshouldConnect)
+  {
+    if (digitalRead(wifi_led_pin) == HIGH)
+    {
+      digitalWrite(wifi_led_pin, LOW);
     }
   }
   if (runscan)
@@ -389,7 +412,7 @@ void init_i2c_functions()
 
     if (currentItho_fwversion() > 0)
     {
-      N_LOG("I2C init: QueryDevicetype - fw:%d hw:%d", currentItho_fwversion(), currentIthoDeviceID());
+      N_LOG("I2C init: QueryDevicetype - mfr:0x%02X type:0x%02X fw:0x%02X hw:0x%02X", currentIthoDeviceGroup(), currentIthoDeviceID(), currentItho_fwversion(), currentItho_hwversion());
 
       ithoInitResult = 1;
       i2c_init_functions_done = true;
@@ -525,23 +548,32 @@ void init_i2c_functions()
 
 void wifiInit()
 {
+  WiFi.onEvent(WiFiEvent);
+
+  setupWiFigeneric();
+
   if (!loadWifiConfig("flash"))
   {
     E_LOG("Setup: Wifi config load failed");
+  }
+  if (wifiConfig.aptimeout > 0)
+  {
+    I_LOG("Setup: starting wifi access point");
     setupWiFiAP();
   }
-  else if (strcmp(wifiConfig.ssid, "") == 0)
+  if (strcmp(wifiConfig.ssid, "") != 0)
   {
-    I_LOG("Setup: initial wifi config still there, start WifiAP");
-    setupWiFiAP();
+    connectWiFiSTA();
   }
-  else if (!connectWiFiSTA(true))
+  else
   {
-    E_LOG("Setup: Wifi connect STA failed");
-    setupWiFiAP();
+    I_LOG("Setup: initial wifi config still there");
   }
 
-  configTime(0, 0, wifiConfig.ntpserver);
+  if (strcmp(wifiConfig.ntpserver, "") != 0)
+  {
+    configTime(0, 0, wifiConfig.ntpserver);
+  }
 
   // set timezone
 
@@ -556,37 +588,157 @@ void wifiInit()
   {
     WiFi.scanNetworks(true);
   }
-  if (!wifiModeAP)
+}
+
+void WiFiEvent(WiFiEvent_t event, arduino_event_info_t info)
+{
+  /*
+  * WiFi Events
+
+  0  ARDUINO_EVENT_WIFI_READY               < ESP32 WiFi ready
+  1  ARDUINO_EVENT_WIFI_SCAN_DONE                < ESP32 finish scanning AP
+  2  ARDUINO_EVENT_WIFI_STA_START                < ESP32 station start
+  3  ARDUINO_EVENT_WIFI_STA_STOP                 < ESP32 station stop
+  4  ARDUINO_EVENT_WIFI_STA_CONNECTED            < ESP32 station connected to AP
+  5  ARDUINO_EVENT_WIFI_STA_DISCONNECTED         < ESP32 station disconnected from AP
+  6  ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE      < the auth mode of AP connected by ESP32 station changed
+  7  ARDUINO_EVENT_WIFI_STA_GOT_IP               < ESP32 station got IP from connected AP
+  8  ARDUINO_EVENT_WIFI_STA_LOST_IP              < ESP32 station lost IP and the IP is reset to 0
+  9  ARDUINO_EVENT_WPS_ER_SUCCESS       < ESP32 station wps succeeds in enrollee mode
+  10 ARDUINO_EVENT_WPS_ER_FAILED        < ESP32 station wps fails in enrollee mode
+  11 ARDUINO_EVENT_WPS_ER_TIMEOUT       < ESP32 station wps timeout in enrollee mode
+  12 ARDUINO_EVENT_WPS_ER_PIN           < ESP32 station wps pin code in enrollee mode
+  13 ARDUINO_EVENT_WIFI_AP_START                 < ESP32 soft-AP start
+  14 ARDUINO_EVENT_WIFI_AP_STOP                  < ESP32 soft-AP stop
+  15 ARDUINO_EVENT_WIFI_AP_STACONNECTED          < a station connected to ESP32 soft-AP
+  16 ARDUINO_EVENT_WIFI_AP_STADISCONNECTED       < a station disconnected from ESP32 soft-AP
+  17 ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED         < ESP32 soft-AP assign an IP to a connected station
+  18 ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED        < Receive probe request packet in soft-AP interface
+  19 ARDUINO_EVENT_WIFI_AP_GOT_IP6               < ESP32 ap interface v6IP addr is preferred
+  19 ARDUINO_EVENT_WIFI_STA_GOT_IP6              < ESP32 station interface v6IP addr is preferred
+  20 ARDUINO_EVENT_ETH_START                < ESP32 ethernet start
+  21 ARDUINO_EVENT_ETH_STOP                 < ESP32 ethernet stop
+  22 ARDUINO_EVENT_ETH_CONNECTED            < ESP32 ethernet phy link up
+  23 ARDUINO_EVENT_ETH_DISCONNECTED         < ESP32 ethernet phy link down
+  24 ARDUINO_EVENT_ETH_GOT_IP               < ESP32 ethernet got IP from connected AP
+  19 ARDUINO_EVENT_ETH_GOT_IP6              < ESP32 ethernet interface v6IP addr is preferred
+  25 ARDUINO_EVENT_MAX
+  */
+  char buf[70]{};
+
+  switch (event)
   {
+  case ARDUINO_EVENT_WIFI_READY:
+    strlcpy(buf, "WiFi interface ready", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_SCAN_DONE:
+    strlcpy(buf, "Completed scan for access points", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_STA_START:
+    strlcpy(buf, "WiFi client started", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_STA_STOP:
+    wifiSTAshouldConnect = false;
+    strlcpy(buf, "WiFi clients stopped", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+    strlcpy(buf, "Connected to access point", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+    wifiSTAconnected = false;
+    wifiSTAshouldConnect = true;
+    strlcpy(buf, "Disconnected from WiFi access point", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
+    strlcpy(buf, "Authentication mode of access point has changed", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+  {
+    wifiSTAconnected = true;
     logWifiInfo();
+    strlcpy(buf, "WiFi client got IP", sizeof(buf));
+    break;
   }
-  else
+  case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+    wifiSTAconnected = false;
+    wifiSTAshouldConnect = true;
+    strlcpy(buf, "Lost IP address and IP address is reset to 0", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WPS_ER_SUCCESS:
+    strlcpy(buf, "WiFi Protected Setup (WPS): succeeded in enrollee mode", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WPS_ER_FAILED:
+    strlcpy(buf, "WiFi Protected Setup (WPS): failed in enrollee mode", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WPS_ER_TIMEOUT:
+    strlcpy(buf, "WiFi Protected Setup (WPS): timeout in enrollee mode", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WPS_ER_PIN:
+    strlcpy(buf, "WiFi Protected Setup (WPS): pin code in enrollee mode", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_AP_START:
   {
-    N_LOG("Setup: AP mode active");
+    wifiModeAP = true;
+    strlcpy(buf, "WiFi access point started", sizeof(buf));
+    break;
   }
+  case ARDUINO_EVENT_WIFI_AP_STOP:
+  {
+    wifiModeAP = false;
+    strlcpy(buf, "WiFi access point stopped", sizeof(buf));
+    break;
+  }
+  case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
+    strlcpy(buf, "Client connected", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
+    strlcpy(buf, "Client disconnected", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
+    strlcpy(buf, "Assigned IP address to client", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED:
+    strlcpy(buf, "Received probe request", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_AP_GOT_IP6:
+    strlcpy(buf, "AP IPv6 is preferred", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
+    strlcpy(buf, "STA IPv6 is preferred", sizeof(buf));
+    break;
+  case ARDUINO_EVENT_ETH_GOT_IP6:
+    break;
+  case ARDUINO_EVENT_ETH_START:
+    break;
+  case ARDUINO_EVENT_ETH_STOP:
+    break;
+  case ARDUINO_EVENT_ETH_CONNECTED:
+    break;
+  case ARDUINO_EVENT_ETH_DISCONNECTED:
+    break;
+  case ARDUINO_EVENT_ETH_GOT_IP:
+    break;
+  default:
+    break;
+  }
+
+  D_LOG("WiFi-event: %d - %s", event, buf);
 }
 
 void setupWiFiAP()
 {
 
+  static char apname[32]{};
+
+  snprintf(apname, sizeof(apname), "%s%02x%02x", espName, sys.getMac(4), sys.getMac(5));
+
   /* Soft AP network parameters */
   IPAddress apIP(192, 168, 4, 1);
   IPAddress netMsk(255, 255, 255, 0);
 
-  WiFi.persistent(false); // Do not use SDK storage of SSID/WPA parameters
-  esp_wifi_set_storage(WIFI_STORAGE_RAM);
-
-  WiFi.disconnect(true);
-  WiFi.setAutoReconnect(false);
-  delay(200);
-  WiFi.mode(WIFI_AP);
-
-  esp_wifi_set_ps(WIFI_PS_NONE);
-
-  delay(100);
-
   WiFi.softAPConfig(apIP, apIP, netMsk);
-  WiFi.softAP(hostName(), WiFiAPPSK);
+  WiFi.softAP(apname, WiFiAPPSK);
+  WiFi.enableAP(true);
 
   delay(500);
 
@@ -594,17 +746,14 @@ void setupWiFiAP()
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
   dnsServer.start(53, "*", apIP);
 
-  wifiModeAP = true;
+  // wifiModeAP = true;
 
   APmodeTimeout = millis();
   N_LOG("wifi AP mode started");
 }
 
-bool connectWiFiSTA(bool restore)
+void setupWiFigeneric()
 {
-
-  wifiModeAP = false;
-  D_LOG("Connecting to wireless network...");
 
   // Do not use SDK storage of SSID/WPA parameters
   WiFi.persistent(false);
@@ -614,11 +763,9 @@ bool connectWiFiSTA(bool restore)
     E_LOG("Unable to set WiFi mode to STA");
 
   // Clear any saved wifi config
-  if (restore)
-  {
-    esp_err_t wifi_restore = esp_wifi_restore();
-    D_LOG("esp_wifi_restore: %s", esp_err_to_name(wifi_restore));
-  }
+  esp_err_t wifi_restore = esp_wifi_restore();
+  D_LOG("esp_wifi_restore: %s", esp_err_to_name(wifi_restore));
+
   // Disconnect any existing connections and clear
   if (!WiFi.disconnect(true, true))
     E_LOG("Unable to set wifi disconnect");
@@ -640,7 +787,7 @@ bool connectWiFiSTA(bool restore)
   // Begin init of actual wifi connection
 
   // Set correct mode
-  if (!WiFi.mode(WIFI_STA))
+  if (!WiFi.mode(WIFI_AP_STA))
     E_LOG("Unable to set WiFi mode");
 
   esp_err_t esp_wifi_set_max_tx_power(int8_t power);
@@ -658,7 +805,11 @@ bool connectWiFiSTA(bool restore)
   // No power saving
   esp_err_t wifi_set_ps = esp_wifi_set_ps(WIFI_PS_NONE);
   D_LOG("esp_wifi_set_ps: %s", esp_err_to_name(wifi_set_ps));
+}
 
+bool connectWiFiSTA(bool restore)
+{
+  wifiSTAconnecting = true;
   // Switch from defualt WIFI_FAST_SCAN ScanMethod to WIFI_ALL_CHANNEL_SCAN. Also set sortMethod to WIFI_CONNECT_AP_BY_SIGNAL just to be sure.
   // WIFI_FAST_SCAN will connect to the first SSID match found causing connection issues when multiple AP active with the same SSID name
   WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
@@ -670,6 +821,9 @@ bool connectWiFiSTA(bool restore)
   }
 
   delay(2000);
+
+  // wifiModeAP = false;
+  D_LOG("Connecting to wireless network...");
 
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 
@@ -685,6 +839,7 @@ bool connectWiFiSTA(bool restore)
     if (status == WL_CONNECTED)
     {
       digitalWrite(wifi_led_pin, LOW);
+      wifiSTAconnecting = false;
       return true;
     }
     if (digitalRead(wifi_led_pin) == LOW)
@@ -702,7 +857,8 @@ bool connectWiFiSTA(bool restore)
   digitalWrite(wifi_led_pin, HIGH);
 
   E_LOG("Setup: wifi not connected - %s", wifiConfig.wl_status_to_name(status));
-
+  wifiSTAconnecting = false;
+  wifiSTAshouldConnect = true;
   return false;
 }
 

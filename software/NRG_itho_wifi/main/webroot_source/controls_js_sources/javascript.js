@@ -4,22 +4,25 @@ var itho_low = 0;
 var itho_medium = 127;
 var itho_high = 255;
 var sensor = -1;
+var uuid = 0;
 
-sessionStorage.setItem("statustimer", 0);
+localStorage.setItem("statustimer", 0);
+localStorage.setItem("wifistat", 0);
 var settingIndex = -1;
 
-var websocketServerLocation = 'ws://' + window.location.hostname + ':8000/ws';
+var websocketServerLocation = location.protocol.indexOf("https") > -1 ? 'wss://' + window.location.hostname + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
+
+let messageQueue = [];
+let websock;
 
 function startWebsock(websocketServerLocation) {
   console.log(websocketServerLocation);
+  messageQueue = [];
   websock = new WebSocket(websocketServerLocation);
-  websock.onmessage = async function (b) {
-    try {
-      await asyncWsCall(b);
-    } catch (e) {
-      console.log('Error', e);
-    }
-  };
+  websock.addEventListener('message', event => {
+    // Add message to the queue
+    messageQueue.push(event.data);
+  });
   websock.onopen = function (a) {
     console.log('websock open');
     document.getElementById("layout").style.opacity = 1;
@@ -29,6 +32,7 @@ function startWebsock(websocketServerLocation) {
     }
     getSettings('syssetup');
   };
+
   websock.onclose = function (a) {
     console.log('websock close');
     // Try to reconnect in 200 milliseconds
@@ -37,6 +41,7 @@ function startWebsock(websocketServerLocation) {
     document.getElementById("loader").style.display = "block";
     setTimeout(function () { startWebsock(websocketServerLocation) }, 200);
   };
+
   websock.onerror = function (a) {
     try {
       console.log(a);
@@ -46,246 +51,333 @@ function startWebsock(websocketServerLocation) {
   };
 }
 
-async function asyncWsCall(b) {
-  let myPromise = new Promise(function (resolve) {
-    setTimeout(() => {
-      var f;
-      try {
-        f = JSON.parse(decodeURIComponent(b.data));
-      } catch (error) {
-        f = JSON.parse(b.data);
-      }
-      console.log(f);
-      var g = document.body;
-      if (f.wifisettings) {
-        let x = f.wifisettings;
-        processElements(x);
-      }
-      else if (f.logsettings) {
-        let x = f.logsettings;
-        processElements(x);
-      }
-      else if (f.debuginfo) {
-        let x = f.debuginfo;
-        processElements(x);
-      }
-      else if (f.systemsettings) {
-        let x = f.systemsettings;
-        if ('mqtt_active' in x) {
-          $('#mqtt_idx, #label-mqtt_idx').hide();
-          $('#sensor_idx, #label-sensor_idx').hide();
-          mqtt_state_topic_tmp = x.mqtt_state_topic;
-          mqtt_cmd_topic_tmp = x.mqtt_cmd_topic;
-        }
-        processElements(x);
-        if ("itho_rf_support" in x) {
-          if (x.itho_rf_support == 1 && x.rfInitOK == false) {
-            if (confirm("For changes to take effect click 'Ok' to reboot")) {
-              $('#main').empty();
-              $('#main').append("<br><br><br><br>");
-              $('#main').append(html_reboot_script);
-              websock.send('{"reboot":true}');
-            }
-          }
-          if (x.itho_rf_support == 1 && x.rfInitOK == true) {
-            $('#remotemenu').removeClass('hidden');
-          }
-          else {
-            $('#remotemenu').addClass('hidden');
-          }
-        }
-        if ("i2cmenu" in x) {
-          if (x.i2cmenu == 1) {
-            $('#i2cmenu').removeClass('hidden');
-          }
-          else {
-            $('#i2cmenu').addClass('hidden');
-          }
-        }
-      }
-      else if (f.remotes) {
-        let x = f.remotes;
-        let remfunc = f.remfunc;
-        $('#RemotesTable').empty();
-        buildHtmlTable('#RemotesTable', remfunc, x);
-      }
-      else if (f.vremotes) {
-        let x = f.vremotes;
-        let remfunc = f.remfunc;
-        $('#vremotesTable').empty();
-        buildHtmlTable('#vremotesTable', remfunc, x);
-      }
-      else if (f.ithostatusinfo) {
-        let x = f.ithostatusinfo;
-        $('#StatusTable').empty();
-        buildHtmlStatusTable('#StatusTable', x);
-      }
-      else if (f.i2cdebuglog) {
-        let x = f.i2cdebuglog;
-        $('#I2CLogTable').empty();
-        buildHtmlTablePlain('#I2CLogTable', x);
-      }
-      else if (f.i2csniffer) {
-        let x = f.i2csniffer;
-        $('#i2clog_outer').removeClass('hidden');
-        var d = new Date();
-        $('#i2clog').prepend(`${d.toLocaleString('nl-NL')}: ${x}<br>`);
-      }
-      else if (f.ithodevinfo) {
-        let x = f.ithodevinfo;
-        processElements(x);
-        if (x.itho_setlen) {
-          sessionStorage.setItem("itho_setlen", x.itho_setlen);
-        }
-      }
-      else if (f.ithosettings) {
-        let x = f.ithosettings;
+(async function processMessages() {
+  while (messageQueue.length > 0) {
+    const message = messageQueue.shift();
+    processMessage(message);
+  }
+  await new Promise(resolve => setTimeout(resolve, 0));
+  processMessages();
+})();
 
-        if (x.Index === 0 && x.update === false) {
-          $('#SettingsTable').empty();
-          //add header
-          addColumnHeader(x, '#SettingsTable', true);
-          $('#SettingsTable').append('<tbody>');
-        }
-        if (x.update === false) {
-          addRowTableIthoSettings($('#SettingsTable > tbody'), x);
-        }
-        else {
-          updateRowTableIthoSettings(x);
-        }
-        if (x.Index < sessionStorage.getItem("itho_setlen") - 1 && x.loop === true && settingIndex == x.Index) {
-          settingIndex++;
-          websock.send(JSON.stringify({
-            ithogetsetting: true,
-            index: settingIndex,
-            update: x.update
-          }));
-        }
-        if (x.Index === sessionStorage.getItem("itho_setlen") - 1 && x.update === false && x.loop === true) {
-          settingIndex = 0;
-          websock.send(JSON.stringify({
-            ithogetsetting: true,
-            index: 0,
-            update: true
-          }));
-        }
-      }
-      else if (f.wifiscanresult) {
-        let x = f.wifiscanresult;
-        $('#wifiscanresult').append(`<div class='ScanResults'><input id='${x.id}' class='pure-input-1-5' name='optionsWifi' value='${x.ssid}' type='radio'>${returnSignalSVG(x.sigval)}${returnWifiSecSVG(x.sec)} ${x.ssid}</label></div>`);
-      }
-      else if (f.systemstat) {
-        let x = f.systemstat;
-        if ('sensor_temp' in x) {
-          $('#sensor_temp').html(`Temperature: ${round(x.sensor_temp, 1)}&#8451;`);
-        }
-        if ('sensor_hum' in x) {
-          $('#sensor_hum').html(`Humidity: ${round(x.sensor_hum, 1)}%`);
-        }
-        $('#memory_box').show();
-        $('#memory_box').html(`<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`);
-        $('#mqtt_conn').removeClass();
-        var button = returnMqttState(x.mqqtstatus);
-        $('#mqtt_conn').addClass(`pure-button ${button.button}`);
-        $('#mqtt_conn').text(button.state);
-        $('#ithoslider').val(x.itho);
-        $('#ithotextval').html(x.itho);
-        if ('itho_low' in x) {
-          itho_low = x.itho_low;
-        }
-        if ('itho_medium' in x) {
-          itho_medium = x.itho_medium;
-        }
-        if ('itho_high' in x) {
-          itho_high = x.itho_high;
-        }
-        var initstatus = '';
-        if (x.ithoinit == -1) {
-          initstatus = '<span style="color:#ca3c3c;">init failed - please power cycle the itho unit -</span>';
-        }
-        else if (x.ithoinit == -2) {
-          initstatus = '<span style="color:#ca3c3c;">i2c bus stuck - please power cycle the itho unit -</span>';
-        }
-        else if (x.ithoinit == 1) {
-          initstatus = '<span style="color:#1cb841;">connected</span>';
-        }
-        else if (x.ithoinit == 0) {
-          initstatus = '<span style="color:#777;">setting up i2c connection</span>';
-        }
-        else {
-          initstatus = 'unknown status';
-        }
-        $('#ithoinit').html(initstatus);
-        if ('sensor' in x) {
-          sensor = x.sensor;
-        }
-        if (x.itho_llm > 0) {
-          $('#itho_llm').removeClass();
-          $('#itho_llm').addClass("pure-button button-success");
-          $('#itho_llm').text(`On ${x.itho_llm}`);
-        }
-        else {
-          $('#itho_llm').removeClass();
-          $('#itho_llm').addClass("pure-button button-secondary");
-          $('#itho_llm').text("Off");
-        }
-        if (x.copy_id > 0) {
-          $('#itho_copyid_vremote').removeClass();
-          $('#itho_copyid_vremote').addClass("pure-button button-success");
-          $('#itho_copyid_vremote').text(`Press join. Time remaining: ${x.copy_id}`);
-        }
-        else {
-          $('#itho_copyid_vremote').removeClass();
-          $('#itho_copyid_vremote').addClass("pure-button");
-          $('#itho_copyid_vremote').text("Copy ID");
-        }
-        if ('format' in x) {
-          if (x.format) {
-            $('#format').text('Format filesystem');
-          }
-          else {
-            $('#format').text('Format failed');
-          }
-
+function processMessage(message) {
+  let f;
+  try {
+    f = JSON.parse(decodeURIComponent(message));
+  } catch (error) {
+    f = JSON.parse(message);
+  }
+  //console.log(f);
+  let g = document.body;
+  if (f.wifisettings) {
+    let x = f.wifisettings;
+    processElements(x);
+  }
+  else if (f.logsettings) {
+    let x = f.logsettings;
+    processElements(x);
+  }
+  else if (f.wifistat) {
+    let x = f.wifistat;
+    processElements(x);
+  }
+  else if (f.debuginfo) {
+    let x = f.debuginfo;
+    processElements(x);
+  }
+  else if (f.systemsettings) {
+    let x = f.systemsettings;
+    processElements(x);
+    if ("itho_rf_support" in x) {
+      if (x.itho_rf_support == 1 && x.rfInitOK == false) {
+        if (confirm("For changes to take effect click 'Ok' to reboot")) {
+          $('#main').empty();
+          $('#main').append("<br><br><br><br>");
+          $('#main').append(html_reboot_script);
+          websock_send('{"reboot":true}');
         }
       }
-      else if (f.remtypeconf) {
-        let x = f.remtypeconf;
-        if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
-          addvRemoteInterface(x.remtype);
-        }
-      }
-      else if (f.messagebox) {
-        let x = f.messagebox;
-        count += 1;
-        resetTimer();
-        $('#message_box').show();
-        $('#message_box').append(`<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
-        removeAfter5secs(count);
-      }
-      else if (f.rflog) {
-        let x = f.rflog;
-        $('#rflog_outer').removeClass('hidden');
-        var d = new Date();
-        $('#rflog').prepend(`${d.toLocaleString('nl-NL')}: ${x.message}<br>`);
-      }
-      else if (f.ota) {
-        let x = f.ota;
-        $('#updateprg').html(`Firmware update progress: ${x.percent}%`);
-        moveBar(x.percent, "updateBar");
-      }
-      else if (f.sysmessage) {
-        let x = f.sysmessage;
-        $(`#${x.id}`).text(x.message);
+      if (x.itho_rf_support == 1 && x.rfInitOK == true) {
+        $('#remotemenu').removeClass('hidden');
       }
       else {
-        processElements(f);
+        $('#remotemenu').addClass('hidden');
+      }
+    }
+    if ("i2cmenu" in x) {
+      if (x.i2cmenu == 1) {
+        $('#i2cmenu').removeClass('hidden');
+      }
+      else {
+        $('#i2cmenu').addClass('hidden');
+      }
+    }
+  }
+  else if (f.remotes) {
+    let x = f.remotes;
+    let remfunc = f.remfunc;
+    $('#RemotesTable').empty();
+    buildHtmlTable('#RemotesTable', remfunc, x);
+  }
+  else if (f.vremotes) {
+    let x = f.vremotes;
+    let remfunc = f.remfunc;
+    $('#vremotesTable').empty();
+    buildHtmlTable('#vremotesTable', remfunc, x);
+  }
+  else if (f.ithostatusinfo) {
+    let x = f.ithostatusinfo;
+    $('#StatusTable').empty();
+    buildHtmlStatusTable('#StatusTable', x);
+  }
+  else if (f.i2cdebuglog) {
+    let x = f.i2cdebuglog;
+    $('#I2CLogTable').empty();
+    buildHtmlTablePlain('#I2CLogTable', x);
+  }
+  else if (f.i2csniffer) {
+    let x = f.i2csniffer;
+    $('#i2clog_outer').removeClass('hidden');
+    var d = new Date();
+    $('#i2clog').prepend(`${d.toLocaleString('nl-NL')}: ${x}<br>`);
+  }
+  else if (f.ithodevinfo) {
+    let x = f.ithodevinfo;
+    processElements(x);
+    localStorage.setItem("itho_setlen", x.itho_setlen);
+    localStorage.setItem("itho_devtype", x.itho_devtype);
+    localStorage.setItem("itho_fwversion", x.itho_fwversion);
+    localStorage.setItem("itho_hwversion", x.itho_hwversion);
+  }
+  else if (f.ithosettings) {
+    let x = f.ithosettings;
+    updateSettingsLocStor(x);
+
+    if (x.Index === 0 && x.update === false) {
+      clearSettingsLocStor();
+      localStorage.setItem("ihto_settings_complete", "false");
+      $('#SettingsTable').empty();
+      //add header
+      addColumnHeader(x, '#SettingsTable', true);
+      $('#SettingsTable').append('<tbody>');
+    }
+    if (x.update === false) {
+      addRowTableIthoSettings($('#SettingsTable > tbody'), x);
+    }
+    else {
+      updateRowTableIthoSettings(x);
+    }
+    if (x.Index < localStorage.getItem("itho_setlen") - 1 && x.loop === true && settingIndex == x.Index) {
+      settingIndex++;
+      websock_send(JSON.stringify({
+        ithogetsetting: true,
+        index: settingIndex,
+        update: x.update
+      }));
+    }
+    if (x.Index === localStorage.getItem("itho_setlen") - 1 && x.update === false && x.loop === true) {
+      settingIndex = 0;
+      websock_send(JSON.stringify({
+        ithogetsetting: true,
+        index: 0,
+        update: true
+      }));
+    }
+  }
+  else if (f.wifiscanresult) {
+    let x = f.wifiscanresult;
+    $('#wifiscanresult').append(`<div class='ScanResults'><input id='${x.id}' class='pure-input-1-5' name='optionsWifi' value='${x.ssid}' type='radio'>${returnSignalSVG(x.sigval)}${returnWifiSecSVG(x.sec)} ${x.ssid}</label></div>`);
+  }
+  else if (f.systemstat) {
+    let x = f.systemstat;
+    uuid = x.uuid;
+    if ('sensor_temp' in x) {
+      $('#sensor_temp').html(`Temperature: ${round(x.sensor_temp, 1)}&#8451;`);
+    }
+    if ('sensor_hum' in x) {
+      $('#sensor_hum').html(`Humidity: ${round(x.sensor_hum, 1)}%`);
+    }
+    $('#memory_box').show();
+    $('#memory_box').html(`<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`);
+    $('#mqtt_conn').removeClass();
+    var button = returnMqttState(x.mqqtstatus);
+    $('#mqtt_conn').addClass(`pure-button ${button.button}`);
+    $('#mqtt_conn').text(button.state);
+    $('#ithoslider').val(x.itho);
+    $('#ithotextval').html(x.itho);
+    if ('itho_low' in x) {
+      itho_low = x.itho_low;
+    }
+    if ('itho_medium' in x) {
+      itho_medium = x.itho_medium;
+    }
+    if ('itho_high' in x) {
+      itho_high = x.itho_high;
+    }
+    var initstatus = '';
+    if (x.ithoinit == -1) {
+      initstatus = '<span style="color:#ca3c3c;">init failed - please power cycle the itho unit -</span>';
+    }
+    else if (x.ithoinit == -2) {
+      initstatus = '<span style="color:#ca3c3c;">i2c bus stuck - please power cycle the itho unit -</span>';
+    }
+    else if (x.ithoinit == 1) {
+      initstatus = '<span style="color:#1cb841;">connected</span>';
+    }
+    else if (x.ithoinit == 0) {
+      initstatus = '<span style="color:#777;">setting up i2c connection</span>';
+    }
+    else {
+      initstatus = 'unknown status';
+    }
+    $('#ithoinit').html(initstatus);
+    if ('sensor' in x) {
+      sensor = x.sensor;
+    }
+    if (x.itho_llm > 0) {
+      $('#itho_llm').removeClass();
+      $('#itho_llm').addClass("pure-button button-success");
+      $('#itho_llm').text(`On ${x.itho_llm}`);
+    }
+    else {
+      $('#itho_llm').removeClass();
+      $('#itho_llm').addClass("pure-button button-secondary");
+      $('#itho_llm').text("Off");
+    }
+    if (x.copy_id > 0) {
+      $('#itho_copyid_vremote').removeClass();
+      $('#itho_copyid_vremote').addClass("pure-button button-success");
+      $('#itho_copyid_vremote').text(`Press join. Time remaining: ${x.copy_id}`);
+    }
+    else {
+      $('#itho_copyid_vremote').removeClass();
+      $('#itho_copyid_vremote').addClass("pure-button");
+      $('#itho_copyid_vremote').text("Copy ID");
+    }
+    if ('format' in x) {
+      if (x.format) {
+        $('#format').text('Format filesystem');
+      }
+      else {
+        $('#format').text('Format failed');
       }
 
+    }
+  }
+  else if (f.remtypeconf) {
+    let x = f.remtypeconf;
+    if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
+      addvRemoteInterface(x.remtype);
+    }
+  }
+  else if (f.messagebox) {
+    let x = f.messagebox;
+    count += 1;
+    resetTimer();
+    $('#message_box').show();
+    $('#message_box').append(`<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
+    removeAfter5secs(count);
+  }
+  else if (f.rflog) {
+    let x = f.rflog;
+    $('#rflog_outer').removeClass('hidden');
+    var d = new Date();
+    $('#rflog').prepend(`${d.toLocaleString('nl-NL')}: ${x.message}<br>`);
+  }
+  else if (f.ota) {
+    let x = f.ota;
+    $('#updateprg').html(`Firmware update progress: ${x.percent}%`);
+    moveBar(x.percent, "updateBar");
+  }
+  else if (f.sysmessage) {
+    let x = f.sysmessage;
+    $(`#${x.id}`).text(x.message);
+  }
+  else {
+    processElements(f);
+  }
 
-    }, 20);
-  });
 }
+
+function clearSettingsLocStor() {
+  let setlen = localStorage.getItem("itho_setlen");
+  for (var index = 0; index < setlen; index++) {
+    const localStorageKey = 'settingsIndex_' + index;
+    let existingData = localStorage.getItem(localStorageKey);
+    if (existingData) {
+      localStorage.removeItem(localStorageKey);
+    }
+  }
+}
+
+function updateSettingsLocStor(receivedData) {
+  let setlen = localStorage.getItem("itho_setlen");
+  if (receivedData.hasOwnProperty('Index')) {
+
+    const localStorageKey = 'settingsIndex_' + receivedData.Index;
+    let existingData = localStorage.getItem(localStorageKey);
+
+    if (existingData) {
+      existingData = JSON.parse(existingData);
+
+      // Update existing data with new values
+      for (const key in receivedData) {
+        existingData[key] = receivedData[key];
+      }
+
+      // Store the updated data in LocalStorage
+      localStorage.setItem(localStorageKey, JSON.stringify(existingData));
+      if (existingData.Index == (setlen - 1)) {
+        localStorage.setItem("ihto_settings_complete", "true");
+        localStorage.setItem("uuid", uuid);
+        $('#downloadsettingsdiv').removeClass('hidden');
+      }
+    }
+    else {
+      // If no existing data, store the new data as is
+      localStorage.setItem("ihto_settings_complete", "false");
+      localStorage.setItem(localStorageKey, JSON.stringify(receivedData));
+    }
+
+  }
+}
+function loadSettingsLocStor() {
+
+  let setlen = localStorage.getItem("itho_setlen");
+  if (typeof setlen == 'undefined' || setlen == null) {
+    console.log("error: loadSettingsLocStor setting length unavailable");
+    return;
+  }
+  for (var index = 0; index < setlen; index++) {
+    const localStorageKey = 'settingsIndex_' + index;
+    let existingData = localStorage.getItem(localStorageKey);
+    if (existingData) {
+      existingData = JSON.parse(existingData);
+
+      if (index == 0) {
+        $('#SettingsTable').empty();
+        addColumnHeader(existingData, '#SettingsTable', true);
+        $('#SettingsTable').append('<tbody>');
+      }
+      let current_tmp = existingData.Current;
+      let maximum_tmp = existingData.Maximum;
+      let minimum_tmp = existingData.Minimum;
+      existingData.Current = null;
+      existingData.Maximum = null;
+      existingData.Minimum = null;
+      addRowTableIthoSettings($('#SettingsTable > tbody'), existingData);
+      existingData.Current = current_tmp;
+      existingData.Maximum = maximum_tmp;
+      existingData.Minimum = minimum_tmp;
+      updateRowTableIthoSettings(existingData);
+    }
+    else {
+      console.log("error: no cached setting info for index:" + index);
+    }
+  }
+
+}
+
 
 $(document).ready(function () {
   document.getElementById("layout").style.opacity = 0.3;
@@ -315,11 +407,11 @@ $(document).ready(function () {
   $(document).on('click', 'button', function (e) {
     if ($(this).attr('id').startsWith('command-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"command":"${items[1]}"}`);
+      websock_send(`{"command":"${items[1]}"}`);
     }
     else if ($(this).attr('id') == 'wifisubmit') {
       hostname = $('#hostname').val();
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         wifisettings: {
           ssid: $('#ssid').val(),
           passwd: $('#passwd').val(),
@@ -332,14 +424,25 @@ $(document).ready(function () {
           port: $('#port').val(),
           hostname: $('#hostname').val(),
           ntpserver: $('#ntpserver').val(),
-          timezone: $('#timezone').val()
+          timezone: $('#timezone').val(),
+          aptimeout: $('#aptimeout').val()
         }
       }));
       update_page('wifisetup');
     }
     //syssubmit
     else if ($(this).attr('id') == 'syssumbit') {
-      websock.send(JSON.stringify({
+      if(!isValidJsonArray($('#api_settings_activated').val())) {
+        alert("error: Activated settings input value is not a valid JSON array!");
+        return;
+      }
+      else {
+        if(!areAllUnsignedIntegers(JSON.parse($('#api_settings_activated').val()))) {
+          alert("error: Activated settings array contains non integer values!");
+          return;
+        }
+      }
+      websock_send(JSON.stringify({
         systemsettings: {
           sys_username: $('#sys_username').val(),
           sys_password: $('#sys_password').val(),
@@ -347,6 +450,8 @@ $(document).ready(function () {
           syssec_api: $('input[name=\'option-syssec_api\']:checked').val(),
           syssec_edit: $('input[name=\'option-syssec_edit\']:checked').val(),
           api_normalize: $('input[name=\'option-api_normalize\']:checked').val(),
+          api_settings: $('input[name=\'option-api_settings\']:checked').val(),
+          api_settings_activated: JSON.parse($('#api_settings_activated').val()),
           syssht30: $('input[name=\'option-syssht30\']:checked').val(),
           itho_rf_support: $('input[name=\'option-itho_rf_support\']:checked').val(),
           itho_fallback: $('#itho_fallback').val(),
@@ -374,7 +479,7 @@ $(document).ready(function () {
       update_page('system');
     }
     else if ($(this).attr('id') == 'syslogsumbit') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         logsettings: {
           loglevel: $('#loglevel').val(),
           syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
@@ -388,7 +493,7 @@ $(document).ready(function () {
     }
     //mqttsubmit
     else if ($(this).attr('id') == 'mqttsubmit') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         systemsettings: {
           mqtt_active: $('input[name=\'option-mqtt_active\']:checked').val(),
           mqtt_serverName: $('#mqtt_serverName').val(),
@@ -396,13 +501,10 @@ $(document).ready(function () {
           mqtt_password: $('#mqtt_password').val(),
           mqtt_port: $('#mqtt_port').val(),
           mqtt_version: $('#mqtt_version').val(),
-          mqtt_state_topic: $('#mqtt_state_topic').val(),
-          mqtt_ithostatus_topic: $('#mqtt_ithostatus_topic').val(),
-          mqtt_remotesinfo_topic: $('#mqtt_remotesinfo_topic').val(),
-          mqtt_lastcmd_topic: $('#mqtt_lastcmd_topic').val(),
+          mqtt_base_topic: $('#mqtt_base_topic').val(),
           mqtt_ha_topic: $('#mqtt_ha_topic').val(),
-          mqtt_cmd_topic: $('#mqtt_cmd_topic').val(),
-          mqtt_lwt_topic: $('#mqtt_lwt_topic').val(),
+          mqtt_domoticzin_topic: $('#mqtt_domoticzin_topic').val(),
+          mqtt_domoticzout_topic: $('#mqtt_domoticzout_topic').val(),
           mqtt_idx: $('#mqtt_idx').val(),
           sensor_idx: $('#sensor_idx').val(),
           mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val(),
@@ -412,7 +514,7 @@ $(document).ready(function () {
       update_page('mqtt');
     }
     else if ($(this).attr('id') == 'itho_llm') {
-      websock.send('{"itho_llm":true}');
+      websock_send('{"itho_llm":true}');
     }
     else if ($(this).attr('id') == 'itho_remove_remote' || $(this).attr('id') == 'itho_remove_vremote') {
       var selected = $('input[name=\'optionsRemotes\']:checked').val();
@@ -421,7 +523,7 @@ $(document).ready(function () {
       }
       else {
         var val = parseInt(selected, 10) + 1;
-        websock.send('{"' + $(this).attr('id') + '":' + val + '}');
+        websock_send('{"' + $(this).attr('id') + '":' + val + '}');
       }
     }
     else if ($(this).attr('id') == 'itho_update_remote' || $(this).attr('id') == 'itho_update_vremote') {
@@ -430,22 +532,15 @@ $(document).ready(function () {
         alert("Please select a remote.");
       }
       else {
-        var remtype = 1;
-        if ($('#type_remote-' + i).val() < 4) {
-          if ($('#type_remote-' + i).prop('checked')) {
-            remtype = 3;
-          }
-        }
-        else {
-          remtype = $('#type_remote-' + i).val();
-        }
+        var remfunc = (typeof $('#func_remote-' + i).val() === 'undefined') ? 0 : $('#func_remote-' + i).val();
+        var remtype = (typeof $('#type_remote-' + i).val() === 'undefined') ? 0 : $('#type_remote-' + i).val();
         var id = $('#id_remote-' + i).val();
         if (id == 'empty slot') id = "0,0,0";
-        if (isNaN(parseInt(id.split(",")[0], 16)) || isNaN(parseInt(id.split(",")[1], 16)) || isNaN(parseInt(id.split(",")[2], 16))) {
-          alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
+        if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
+          websock_send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc}}`);
         }
         else {
-          websock.send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype}}`);
+          alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
         }
       }
     }
@@ -456,7 +551,7 @@ $(document).ready(function () {
       }
       else {
         var val = parseInt(i, 10) + 1;
-        websock.send(`{"copy_id":true, "index":${val}}`);
+        websock_send(`{"copy_id":true, "index":${val}}`);
       }
     }
     else if ($(this).attr('id').substr(0, 15) == 'ithosetrefresh-') {
@@ -474,7 +569,7 @@ $(document).ready(function () {
           $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).removeClass('pure-button-primary');
         });
         $(`#Current-${i}, #Minimum-${i}, #Maximum-${i}`).html(`<div style='margin: auto;' class='dot-elastic'></div>`);
-        websock.send('{"ithosetrefresh":' + i + '}');
+        websock_send('{"ithosetrefresh":' + i + '}');
       }
     }
     else if ($(this).attr('id').substr(0, 14) == 'ithosetupdate-') {
@@ -488,13 +583,13 @@ $(document).ready(function () {
       }
       else {
         if (Number.isInteger(parseFloat($('#name_ithoset-' + i).val()))) {
-          websock.send(JSON.stringify({
+          websock_send(JSON.stringify({
             ithosetupdate: i,
             value: parseInt($('#name_ithoset-' + i).val())
           }));
         }
         else {
-          websock.send(JSON.stringify({
+          websock_send(JSON.stringify({
             ithosetupdate: i,
             value: parseFloat($('#name_ithoset-' + i).val())
           }));
@@ -509,94 +604,170 @@ $(document).ready(function () {
     }
     else if ($(this).attr('id') == 'resetwificonf') {
       if (confirm("This will reset the wifi config to factory default, are you sure?")) {
-        websock.send('{"resetwificonf":true}');
+        websock_send('{"resetwificonf":true}');
       }
     }
     else if ($(this).attr('id') == 'resetsysconf') {
       if (confirm("This will reset the system config to factory default, are you sure?")) {
-        websock.send('{"resetsysconf":true}');
+        websock_send('{"resetsysconf":true}');
       }
     }
     else if ($(this).attr('id') == 'reboot') {
       if (confirm("This will reboot the device, are you sure?")) {
         $('#rebootscript').append(html_reboot_script);
         if (document.getElementById("dontsaveconf") !== null) {
-          websock.send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
+          websock_send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
         }
         else {
-          websock.send('{"reboot":true}');
+          websock_send('{"reboot":true}');
         }
       }
     }
     else if ($(this).attr('id') == 'format') {
       if (confirm("This will erase all settings, are you sure?")) {
-        websock.send('{"format":true}');
+        websock_send('{"format":true}');
         $('#format').text('Formatting...');
       }
     }
     else if ($(this).attr('id') == 'wifiscan') {
       $('.ScanResults').remove();
       $('.hidden').removeClass('hidden');
-      websock.send('{"wifiscan":true}');
+      websock_send('{"wifiscan":true}');
     }
     else if ($(this).attr('id').startsWith('button_vremote-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"vremote":${items[1]}, "command":"${items[2]}"}`);
+      websock_send(`{"vremote":${items[1]}, "command":"${items[2]}"}`);
+    }
+    else if ($(this).attr('id').startsWith('button_remote-')) {
+      const items = $(this).attr('id').split('-');
+      websock_send(`{"remote":${items[1]}, "command":"${items[2]}"}`);
     }
     else if ($(this).attr('id').startsWith('ithobutton-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"ithobutton":"${items[1]}"}`);
+      websock_send(`{"ithobutton":"${items[1]}"}`);
       if (items[1] == 'shtreset') $(`#i2c_sht_reset`).text("Processing...");
     }
     else if ($(this).attr('id').startsWith('button-')) {
       const items = $(this).attr('id').split('-');
-      websock.send(`{"button":"${items[1]}"}`);
-    }    
+      websock_send(`{"button":"${items[1]}"}`);
+    }
     else if ($(this).attr('id').startsWith('rfdebug-')) {
       const items = $(this).attr('id').split('-');
       if (items[1] == 0) $('#rflog_outer').addClass('hidden');
       if (items[1] > 0) $('#rflog_outer').removeClass('hidden');
-      websock.send(`{"rfdebug":${items[1]}}`);
+      websock_send(`{"rfdebug":${items[1]}}`);
     }
     else if ($(this).attr('id').startsWith('i2csniffer-')) {
       const items = $(this).attr('id').split('-');
       if (items[1] == 0) $('#i2clog_outer').addClass('hidden');
       if (items[1] > 0) $('#i2clog_outer').removeClass('hidden');
-      websock.send(`{"i2csniffer":${items[1]}}`);
+      websock_send(`{"i2csniffer":${items[1]}}`);
     }
     else if ($(this).attr('id') == 'button2410') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 2410,
         index: parseInt($('#itho_setting_id').val())
       }));
     }
     else if ($(this).attr('id') == 'button2410set') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 24109,
         ithosetupdate: $('#itho_setting_id_set').val(),
         value: parseFloat($('#itho_setting_value_set').val())
       }));
     }
     else if ($(this).attr('id') == 'button4210') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 4210
       }));
     }
     else if ($(this).attr('id') == 'buttonCE30') {
-      websock.send(JSON.stringify({
+      websock_send(JSON.stringify({
         ithobutton: 0xCE30,
-        ithotemp: parseFloat($('#itho_ce30_temp').val()*100.),
-        ithotemptemp: parseFloat($('#itho_ce30_temptemp').val()*100.),
+        ithotemp: parseFloat($('#itho_ce30_temp').val() * 100.),
+        ithotemptemp: parseFloat($('#itho_ce30_temptemp').val() * 100.),
         ithotimestamp: $('#itho_ce30_timestamp').val()
       }));
     }
-    else if ($(this).attr('id') == 'ithogetsettings') {
-      settingIndex = 0;
+    else if ($(this).attr('id') == 'button4030') {
       websock.send(JSON.stringify({
+        ithobutton: 4030,
+        idx: Number($('#itho_4030_index').val()),
+        dt: Number($('#itho_4030_datatype').val()),
+        val: Number($('#itho_4030_value').val()),
+        chk: Number($('#itho_4030_checked').val()),
+        dryrun: ($('#itho_4030_password').val() == 'thisisunsafe') ? false : true,
+      }));
+    }
+    else if ($(this).attr('id') == 'ithogetsettings') {
+      if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
+        loadSettingsLocStor();
+        $('#settings_cache_load').removeClass('hidden');
+        $('#downloadsettingsdiv').removeClass('hidden');
+      }
+      else {
+        settingIndex = 0;
+        websock_send(JSON.stringify({
+          ithogetsetting: true,
+          index: 0,
+          update: false
+        }));
+      }
+    }
+    else if ($(this).attr('id') == 'ithoforcerefresh') {
+      $('#settings_cache_load').addClass('hidden');
+      $('#downloadsettingsdiv').addClass('hidden');
+      settingIndex = 0;
+      websock_send(JSON.stringify({
         ithogetsetting: true,
         index: 0,
         update: false
       }));
+    }
+    else if ($(this).attr('id') == 'downloadsettings') {
+      if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
+        let settings = {};
+        let setlen = localStorage.getItem("itho_setlen");
+        settings['uuid'] = uuid;
+        settings['itho_setlen'] = setlen;
+        settings['itho_devtype'] = localStorage.getItem("itho_devtype");
+        settings['itho_fwversion'] = localStorage.getItem("itho_fwversion");
+        settings['itho_hwversion'] = localStorage.getItem("itho_hwversion");
+        let errordetect = false;
+
+        for (var index = 0; index < setlen; index++) {
+          const localStorageKey = 'settingsIndex_' + index;
+          let existingData = localStorage.getItem(localStorageKey);
+          if (existingData) {
+            let obj = JSON.parse(existingData);
+            delete obj.loop;
+            delete obj.update;
+            settings[localStorageKey] = obj;
+            for (const key in obj) {
+              if (obj[key] == "ret_error") {
+                errordetect = true;
+              }
+            }
+          }
+        }
+        if (errordetect) {
+          alert("error: values with errors detected, settings load not complete!");
+        }
+        else {
+          let dataStr = JSON.stringify(settings);
+          let dataBlob = new Blob([dataStr], { type: 'application/json' });
+          let downloadLink = document.createElement('a');
+          downloadLink.href = window.URL.createObjectURL(dataBlob);
+          downloadLink.download = 'settings.json';
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+        }
+
+      }
+      else {
+        alert("error: download of settings file not possible!");
+      }
     }
     else if ($(this).attr('id') == 'updatesubmit') {
       e.preventDefault();
@@ -632,6 +803,10 @@ $(document).ready(function () {
   });
 });
 
+function websock_send(message) {
+  websock.send(message);
+  //console.log(message);
+}
 
 var timerHandle = setTimeout(function () {
   $('#message_box').hide();
@@ -651,6 +826,9 @@ function removeID(id) {
 function processElements(x) {
   for (var key in x) {
     if (x.hasOwnProperty(key)) {
+      if(Array.isArray(x[key])) {
+        x[key] = JSON.stringify(x[key]);
+      }
       var el = $(`#${key}`);
       if (el.is('input') || el.is('select')) {
         $(`#${key}`).val(x[key]);
@@ -670,6 +848,11 @@ function processElements(x) {
           radio(key, x[key]);
         }
       }
+      var elbyname = $(`[name='${key}']`).each(function () {
+        if ($(this).is('span')) {
+          $(this).text(x[key]);
+        }
+      });
     }
   }
 }
@@ -698,12 +881,9 @@ function getlog(url) {
   }
   xhr.onerror = (e) => {
     $('#dblog').html(xhr.statusText);
-  };  
+  };
   xhr.send(null);
 }
-
-var mqtt_state_topic_tmp = "";
-var mqtt_cmd_topic_tmp = "";
 
 function radio(origin, state) {
   if (origin == "dhcp") {
@@ -719,36 +899,26 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_active") {
     if (state == 1) {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', false);
-      $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', false);
-      $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', false);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_base_topic, #mqtt_ha_topic, #mqtt_domoticzin_topic, #mqtt_domoticzout_topic, #mqtt_idx, #sensor_idx').prop('readonly', false);
+      $('#option-mqtt_domoticz_active-0, #option-mqtt_domoticz_active-1, #option-mqtt_ha_active-1, #option-mqtt_ha_active-0').prop('disabled', false);
     }
     else {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_state_topic, #mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #mqtt_ha_topic, #mqtt_cmd_topic, #mqtt_lwt_topic, #mqtt_idx').prop('readonly', true);
-      $('#option-mqtt_domoticz-on, #option-mqtt_domoticz-off').prop('disabled', true);
-      $('#option-mqtt_ha-on, #option-mqtt_ha-off').prop('disabled', true);
+      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_base_topic, #mqtt_ha_topic, #mqtt_domoticzin_topic, #mqtt_domoticzout_topic, #mqtt_idx, #sensor_idx').prop('readonly', true);
+      $('#option-mqtt_domoticz_active-0, #option-mqtt_domoticz_active-1, #option-mqtt_ha_active-1, #option-mqtt_ha_active-0').prop('disabled', true);
+
     }
   }
   else if (origin == "mqtt_domoticz_active") {
     if (state == 1) {
-      $('#mqtt_idx').prop('readonly', false);
-      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').show();
-      $('#mqtt_state_topic').val("domoticz/in");
-      $('#mqtt_cmd_topic').val("domoticz/out");
-      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd, #mqtt_ha_topic, #label-mqtt_ha, #mqtt_lwt_topic, #label-lwt_topic').hide();
+      $('#mqtt_domoticzin_topic, #label-mqtt_domoticzin, #label-mqtt_domoticzout, #mqtt_domoticzout_topic, #mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').show();
     }
     else {
-      $('#mqtt_idx').prop('readonly', true);
-      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
-      $('#mqtt_state_topic').val(mqtt_state_topic_tmp);
-      $('#mqtt_cmd_topic').val(mqtt_cmd_topic_tmp);
-      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd ,#mqtt_lwt_topic, #label-lwt_topic').show();
+      $('#mqtt_domoticzin_topic, #label-mqtt_domoticzin, #label-mqtt_domoticzout, #mqtt_domoticzout_topic, #mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
     }
   }
   else if (origin == "mqtt_ha_active") {
     if (state == 1) {
-      $('#mqtt_ithostatus_topic, #mqtt_remotesinfo_topic, #mqtt_lastcmd_topic, #label-mqtt_ithostatus, #label-mqtt_remotesinfo, #label-mqtt_lastcmd, #mqtt_ha_topic, #label-mqtt_ha, #mqtt_lwt_topic, #label-lwt_topic').show();
-      $('#mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
+      $('#mqtt_ha_topic, #label-mqtt_ha').show();
     }
     else {
       $('#mqtt_ha_topic, #label-mqtt_ha').hide();
@@ -765,6 +935,12 @@ function radio(origin, state) {
       $(`#type_${origin}-${index}`).prop('disabled', true);
       if (index == state) {
         $(`#type_${origin}-${index}`).prop('disabled', false);
+      }
+    });
+    $(`[id^=func_${origin}-]`).each(function (index) {
+      $(`#func_${origin}-${index}`).prop('disabled', true);
+      if (index == state) {
+        $(`#func_${origin}-${index}`).prop('disabled', false);
       }
     });
     $(`[id^=id_${origin}-]`).each(function (index) {
@@ -786,7 +962,7 @@ function radio(origin, state) {
 
 function getSettings(pagevalue) {
   if (websock.readyState === 1) {
-    websock.send('{"' + pagevalue + '":1}');
+    websock_send('{"' + pagevalue + '":1}');
   }
   else {
     console.log("websock not open");
@@ -815,7 +991,7 @@ function tick() {
   secondsRemaining--;
 }
 function startCountdown() {
-  secondsRemaining = 20;
+  secondsRemaining = 30;
   intervalHandle = setInterval(tick, 1000);
 }
 function moveBar(nPer, element) {
@@ -830,7 +1006,7 @@ function updateSlider(value) {
   var val = parseInt(value);
   if (isNaN(val)) val = 0;
   $('#ithotextval').html(val);
-  websock.send(JSON.stringify({ 'itho': val }));
+  websock_send(JSON.stringify({ 'itho': val }));
 }
 
 //function to load html main content
@@ -838,8 +1014,11 @@ var lastPageReq = "";
 function update_page(page) {
   lastPageReq = page;
   if (page != 'status') {
-    sessionStorage.setItem("statustimer", 0);
+    localStorage.setItem("statustimer", 0);
   }
+  if (page != 'wifisetup') {
+    localStorage.setItem("wifistat", 0);
+  }  
   $('#main').empty();
   $('#main').css('max-width', '768px')
   if (page == 'index') { $('#main').append(html_index); }
@@ -910,6 +1089,29 @@ function ValidateIPaddress(ipaddress) {
     return true;
   }
   return false;
+}
+
+function isHex(hex) {
+  return typeof hex === 'string'
+    && hex.length === 2
+    && !isNaN(Number('0x' + hex))
+}
+
+function isUnsignedInteger(value) {
+  return Number.isInteger(value) && value >= 0;
+}
+
+function areAllUnsignedIntegers(array) {
+  return array.every(isUnsignedInteger);
+}
+
+function isValidJsonArray(input) {
+  try {
+      const parsed = JSON.parse(input);
+      return Array.isArray(parsed);
+  } catch (e) {
+      return false;
+  }
 }
 
 function returnMqttState(state) {
@@ -991,12 +1193,22 @@ var remotesCount;
 var remtypes = [
   ["RFT CVE", 0x22F1, ['away', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT AUTO", 0x22F3, ['auto', 'autonight', 'low', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["RFT AUTO-N", 0x22F4, ['auto', 'autonight', 'low', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT DF/QF", 0x22F8, ['low', 'high', 'cook30', 'cook60', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT RV", 0x12A0, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
-  ["RFT CO2", 0x1298, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
+  ["RFT CO2", 0x1298, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["RFT PIR", 0x2E10, ['motion_on', 'motion_off', 'join', 'leave']]
 ];
 
-function addRemoteButtons(selector, remtype, vremotenum, seperator) {
+var remfuncs = [
+  ["Receive", 1],
+  ["Monitor Only", 3],
+  ["Send", 5],
+  ["Bidirectional", 7]
+];
+
+function addRemoteButtons(selector, remfunc, remtype, vremotenum, seperator) {
+  var remfuncname = remfunc == 1 ? "remote" : "vremote";
   for (const item of remtypes) {
     if (remtype == item[1]) {
       var newinner = '';
@@ -1005,7 +1217,7 @@ function addRemoteButtons(selector, remtype, vremotenum, seperator) {
           if (i == 0 || item[2][i] == 'cook30' || item[2][i] == 'timer1' || (item[2].length == 10 && item[2][i] == 'low') || item[2][i] == 'join') { newinner += `<div style="text-align: center;margin: 2em 0 0 0;">`; }
         }
 
-        newinner += `<button value='${item[2][i]}_remote-${vremotenum}' id='button_vremote-${vremotenum}-${item[2][i]}' class='pure-button pure-button-primary'>${item[2][i].charAt(0).toUpperCase() + item[2][i].slice(1)}</button>\u00A0`;
+        newinner += `<button value='${item[2][i]}_remote-${vremotenum}' id='button_${remfuncname}-${vremotenum}-${item[2][i]}' class='pure-button pure-button-primary'>${item[2][i].charAt(0).toUpperCase() + item[2][i].slice(1)}</button>\u00A0`;
 
         if (seperator) {
           if (item[2][i] == 'high' || item[2][i] == 'cook60' || item[2][i] == 'timer3' || (item[2].length == 10 && item[2][i] == 'autonight') || item[2][i] == 'leave') {
@@ -1028,7 +1240,7 @@ function addvRemoteInterface(remtype) {
 
   var elem = $('#reminterface');
   elem.empty();
-  addRemoteButtons(elem, remtype, 0, true);
+  addRemoteButtons(elem, 2, remtype, 0, true);
 
 }
 
@@ -1064,42 +1276,49 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
       if (colIndex == 3) {
         remfunction = jsonVar[i][columns[colIndex]];
-      }
-      else if (colIndex == 4) {
-        var cellValue = jsonVar[i][columns[colIndex]];
-        if (remfunction == 1 || remfunction == 3) {
-          var checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.id = `type_remote-${i}`;
-          checkbox.value = remfunction;
-          checkbox.disabled = true;
-          if (remfunction == 3) checkbox.checked = true;
-          row$.append($('<td>').html(checkbox));
-        }
-        else if (remfunction == 2) {
+        if (remfunction != 2) { //do not add remote function is remfunction == virtual remote
           var select = document.createElement('select');
-          select.name = cellValue;
-          select.id = `type_remote-${i}`;
+          select.name = remfunction;
+          select.id = `func_remote-${i}`;
           select.disabled = true;
-          for (const item of remtypes) {
+          for (const item of remfuncs) {
             var option = document.createElement('option');
             option.value = item[1];
             option.text = item[0];
-            if (item[1] == cellValue) {
+            if (item[1] == remfunction) {
               option.selected = true;
-              remtype = cellValue;
+              remtype = remfunction;
             }
             select.appendChild(option);
           }
           row$.append($('<td>').html(select));
         }
-        else {
-          row$.append($('<td>').html(cellValue));
+      }
+      else if (colIndex == 4) {
+        var cellValue = jsonVar[i][columns[colIndex]];
+        var select = document.createElement('select');
+        select.name = cellValue;
+        select.id = `type_remote-${i}`;
+        select.disabled = true;
+        for (const item of remtypes) {
+          var option = document.createElement('option');
+          option.value = item[1];
+          option.text = item[0];
+          if (item[1] == cellValue) {
+            option.selected = true;
+            remtype = cellValue;
+          }
+          select.appendChild(option);
         }
+        row$.append($('<td>').html(select));
       }
       else if (colIndex == 5) {
-
-        if (remfunction == 1 || remfunction == 3) {
+        if (remfunction == 2 || remfunction == 5) {
+          var td$ = $('<td>');
+          addRemoteButtons(td$, remfunc, remtype, i, false);
+          row$.append(td$);
+        }
+        else {
           var str = '';
           var JSONObj = jsonVar[i][columns[colIndex]];
           if (JSONObj != null) {
@@ -1111,11 +1330,6 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
             }
           }
           row$.append($('<td>').html(str));
-        }
-        else if (remfunction == 2) {
-          var td$ = $('<td>');
-          addRemoteButtons(td$, remtype, i, false);
-          row$.append(td$);
         }
       }
       else {
@@ -1140,9 +1354,6 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
     headerTbody$.append(row$);
   }
   $(selector).append(headerTbody$);
-  if (remfunc == 1) {
-    $('#remtype').html("monitor only");
-  }
 }
 
 function buildHtmlStatusTable(selector, jsonVar) {
@@ -1242,7 +1453,7 @@ function addAllColumnHeadersPlain(jsonVar, selector) {
   return columnSet;
 }
 
-function addAllColumnHeaders(jsonVar, selector, appendRow) {
+function addAllColumnHeaders(jsonVar, selector, appendRow, remfunc) {
   var columnSet = [];
   var headerThead$ = $('<thead>');
   var headerTr$ = $('<tr>');
@@ -1253,8 +1464,8 @@ function addAllColumnHeaders(jsonVar, selector, appendRow) {
     for (var key in rowHash) {
       if ($.inArray(key, columnSet) == -1) {
         columnSet.push(key);
-        if (key == "remtype") {
-          headerTr$.append($('<th id="remtype">').html(key));
+        if (key == "remfunc" & remfunc == 1) {
+          headerTr$.append($('<th id="remfunc">').html(key));
         }
         else if (key != "remfunc") {
           headerTr$.append($('<th>').html(key));

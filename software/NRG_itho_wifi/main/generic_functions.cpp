@@ -55,19 +55,19 @@ void getIthoStatusJSON(JsonObject root)
   }
   if (!ithoMeasurements.empty() && systemConfig.itho_31da == 1)
   {
-    for (const auto &ithoMeaserment : ithoMeasurements)
+    for (const auto &ithoMeasurement : ithoMeasurements)
     {
-      if (ithoMeaserment.type == ithoDeviceMeasurements::is_int)
+      if (ithoMeasurement.type == ithoDeviceMeasurements::is_int)
       {
-        root[ithoMeaserment.name] = ithoMeaserment.value.intval;
+        root[ithoMeasurement.name] = ithoMeasurement.value.intval;
       }
-      else if (ithoMeaserment.type == ithoDeviceMeasurements::is_float)
+      else if (ithoMeasurement.type == ithoDeviceMeasurements::is_float)
       {
-        root[ithoMeaserment.name] = ithoMeaserment.value.floatval;
+        root[ithoMeasurement.name] = ithoMeasurement.value.floatval;
       }
-      else if (ithoMeaserment.type == ithoDeviceMeasurements::is_string)
+      else if (ithoMeasurement.type == ithoDeviceMeasurements::is_string)
       {
-        root[ithoMeaserment.name] = ithoMeaserment.value.stringval;
+        root[ithoMeasurement.name] = ithoMeasurement.value.stringval;
       }
     }
   }
@@ -218,6 +218,10 @@ bool ithoExecCommand(const char *command, cmdOrigin origin)
     }
   }
 
+  // snprintf(modestate, sizeof(modestate), "%s", command);
+  // updateMQTTmodeStatus = true;
+  
+  updateMQTTihtoStatus = true;
   return true;
 }
 
@@ -280,11 +284,23 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   {
     rf.sendRFCommand(remote_index, IthoCommand::IthoLeave);
   }
+  else if (strcmp(command, "motion_on") == 0)
+  {
+    rf.send2E10(remote_index, IthoCommand::IthoPIRmotionOn);
+  }
+  else if (strcmp(command, "motion_off") == 0)
+  {
+    rf.send2E10(remote_index, IthoCommand::IthoPIRmotionOff);
+  }
   else
   {
     res = false;
   }
-  
+
+  char buf[32]{};
+  snprintf(buf, sizeof(buf), "rfremotecmd:%s, idx:%d", (res ? command : "unknown"), remote_index);
+  logLastCommand(buf, origin);
+
   attachInterrupt(itho_irq_pin, ITHOinterrupt, RISING);
   return res;
 }

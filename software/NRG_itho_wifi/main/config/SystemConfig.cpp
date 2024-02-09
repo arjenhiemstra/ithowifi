@@ -13,6 +13,7 @@ SystemConfig::SystemConfig()
   syssec_api = 0;
   syssec_edit = 0;
   api_normalize = 0;
+  api_settings = 0;
   syssht30 = 0;
   mqtt_active = 0;
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
@@ -20,21 +21,19 @@ SystemConfig::SystemConfig()
   strlcpy(mqtt_password, "", sizeof(mqtt_password));
   mqtt_port = 1883;
   mqtt_version = 1;
-  strlcpy(mqtt_state_topic, "itho/state", sizeof(mqtt_state_topic));
-  strlcpy(mqtt_ithostatus_topic, "itho/ithostatus", sizeof(mqtt_ithostatus_topic));
-  strlcpy(mqtt_remotesinfo_topic, "itho/remotesinfo", sizeof(mqtt_remotesinfo_topic));
-  strlcpy(mqtt_lastcmd_topic, "itho/lastcmd", sizeof(mqtt_lastcmd_topic));
+  strlcpy(mqtt_base_topic, "itho", sizeof(mqtt_base_topic));
   strlcpy(mqtt_ha_topic, "homeassistant", sizeof(mqtt_ha_topic));
   strlcpy(mqtt_state_retain, "yes", sizeof(mqtt_state_retain));
-  strlcpy(mqtt_cmd_topic, "itho/cmd", sizeof(mqtt_cmd_topic));
-  strlcpy(mqtt_lwt_topic, "itho/lwt", sizeof(mqtt_lwt_topic));
   mqtt_domoticz_active = 0;
   mqtt_ha_active = 0;
+  strlcpy(mqtt_domoticzin_topic, "domoticz/in", sizeof(mqtt_domoticzin_topic));
+  strlcpy(mqtt_domoticzout_topic, "domoticz/out", sizeof(mqtt_domoticzout_topic));
   mqtt_idx = 1;
   sensor_idx = 1;
   mqtt_updated = false;
   get_mqtt_settings = false;
   get_sys_settings = false;
+  JsonArray arr = api_settings_activated.to<JsonArray>();
   itho_fallback = 20;
   itho_low = 20;
   itho_medium = 120;
@@ -71,7 +70,7 @@ SystemConfig::~SystemConfig()
 {
 } //~SystemConfig
 
-bool SystemConfig::set(JsonObjectConst obj)
+bool SystemConfig::set(JsonObject obj)
 {
   bool updated = false;
 
@@ -85,12 +84,12 @@ bool SystemConfig::set(JsonObjectConst obj)
   if (!obj["sys_username"].isNull())
   {
     updated = true;
-    strlcpy(sys_username, obj["sys_username"], sizeof(sys_username));
+    strlcpy(sys_username, obj["sys_username"] | "", sizeof(sys_username));
   }
   if (!obj["sys_password"].isNull())
   {
     updated = true;
-    strlcpy(sys_password, obj["sys_password"], sizeof(sys_password));
+    strlcpy(sys_password, obj["sys_password"] | "", sizeof(sys_password));
   }
   if (!obj["syssec_web"].isNull())
   {
@@ -112,6 +111,17 @@ bool SystemConfig::set(JsonObjectConst obj)
     updated = true;
     api_normalize = obj["api_normalize"];
   }
+  if (!obj["api_settings"].isNull())
+  {
+    updated = true;
+    api_settings = obj["api_settings"];
+  }
+  if (!obj["api_settings_activated"].isNull())
+  {
+    updated = true;
+    JsonArray arr = obj["api_settings_activated"].as<JsonArray>();
+    api_settings_activated.set(arr);
+  }
   if (!obj["syssht30"].isNull())
   {
     updated = true;
@@ -130,17 +140,17 @@ bool SystemConfig::set(JsonObjectConst obj)
   if (!obj["mqtt_serverName"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_serverName, obj["mqtt_serverName"], sizeof(mqtt_serverName));
+    strlcpy(mqtt_serverName, obj["mqtt_serverName"] | "", sizeof(mqtt_serverName));
   }
   if (!obj["mqtt_username"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_username, obj["mqtt_username"], sizeof(mqtt_username));
+    strlcpy(mqtt_username, obj["mqtt_username"] | "", sizeof(mqtt_username));
   }
   if (!obj["mqtt_password"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_password, obj["mqtt_password"], sizeof(mqtt_password));
+    strlcpy(mqtt_password, obj["mqtt_password"] | "", sizeof(mqtt_password));
   }
   if (!obj["mqtt_port"].isNull())
   {
@@ -152,46 +162,21 @@ bool SystemConfig::set(JsonObjectConst obj)
     updated = true;
     mqtt_version = obj["mqtt_version"];
   }
-  if (!obj["mqtt_state_topic"].isNull())
+  if (!obj["mqtt_base_topic"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_state_topic, obj["mqtt_state_topic"], sizeof(mqtt_state_topic));
-  }
-  if (!obj["mqtt_ithostatus_topic"].isNull())
-  {
-    updated = true;
-    strlcpy(mqtt_ithostatus_topic, obj["mqtt_ithostatus_topic"], sizeof(mqtt_ithostatus_topic));
-  }
-  if (!obj["mqtt_remotesinfo_topic"].isNull())
-  {
-    updated = true;
-    strlcpy(mqtt_remotesinfo_topic, obj["mqtt_remotesinfo_topic"], sizeof(mqtt_remotesinfo_topic));
-  }
-  if (!obj["mqtt_lastcmd_topic"].isNull())
-  {
-    updated = true;
-    strlcpy(mqtt_lastcmd_topic, obj["mqtt_lastcmd_topic"], sizeof(mqtt_lastcmd_topic));
+    strlcpy(mqtt_base_topic, obj["mqtt_base_topic"] | "", sizeof(mqtt_base_topic));
   }
   if (!obj["mqtt_ha_topic"].isNull())
   {
     updated = true;
     mqtt_updated = true;
-    strlcpy(mqtt_ha_topic, obj["mqtt_ha_topic"], sizeof(mqtt_ha_topic));
+    strlcpy(mqtt_ha_topic, obj["mqtt_ha_topic"] | "", sizeof(mqtt_ha_topic));
   }
   if (!obj["mqtt_state_retain"].isNull())
   {
     updated = true;
-    strlcpy(mqtt_state_retain, obj["mqtt_state_retain"], sizeof(mqtt_state_retain));
-  }
-  if (!obj["mqtt_cmd_topic"].isNull())
-  {
-    updated = true;
-    strlcpy(mqtt_cmd_topic, obj["mqtt_cmd_topic"], sizeof(mqtt_cmd_topic));
-  }
-  if (!obj["mqtt_lwt_topic"].isNull())
-  {
-    updated = true;
-    strlcpy(mqtt_lwt_topic, obj["mqtt_lwt_topic"], sizeof(mqtt_lwt_topic));
+    strlcpy(mqtt_state_retain, obj["mqtt_state_retain"] | "", sizeof(mqtt_state_retain));
   }
   if (!obj["mqtt_domoticz_active"].isNull())
   {
@@ -203,6 +188,16 @@ bool SystemConfig::set(JsonObjectConst obj)
     updated = true;
     mqtt_updated = true;
     mqtt_ha_active = obj["mqtt_ha_active"];
+  }
+  if (!obj["mqtt_domoticzin_topic"].isNull())
+  {
+    updated = true;
+    strlcpy(mqtt_domoticzin_topic, obj["mqtt_domoticzin_topic"] | "", sizeof(mqtt_domoticzin_topic));
+  }
+  if (!obj["mqtt_domoticzout_topic"].isNull())
+  {
+    updated = true;
+    strlcpy(mqtt_domoticzout_topic, obj["mqtt_domoticzout_topic"] | "", sizeof(mqtt_domoticzout_topic));
   }
   if (!obj["mqtt_idx"].isNull())
   {
@@ -381,6 +376,8 @@ void SystemConfig::get(JsonObject obj) const
     obj["i2cmenu"] = i2cmenu;
     obj["i2c_safe_guard"] = i2c_safe_guard;
     obj["i2c_sniffer"] = i2c_sniffer;
+    obj["api_settings"] = api_settings;
+    obj["api_settings_activated"].set(api_settings_activated.as<JsonArrayConst>());
   }
   if (complete || get_mqtt_settings)
   {
@@ -391,16 +388,13 @@ void SystemConfig::get(JsonObject obj) const
     obj["mqtt_password"] = mqtt_password;
     obj["mqtt_port"] = mqtt_port;
     obj["mqtt_version"] = mqtt_version;
-    obj["mqtt_state_topic"] = mqtt_state_topic;
-    obj["mqtt_ithostatus_topic"] = mqtt_ithostatus_topic;
-    obj["mqtt_remotesinfo_topic"] = mqtt_remotesinfo_topic;
-    obj["mqtt_lastcmd_topic"] = mqtt_lastcmd_topic;
+    obj["mqtt_base_topic"] = mqtt_base_topic;
     obj["mqtt_state_retain"] = mqtt_state_retain;
-    obj["mqtt_cmd_topic"] = mqtt_cmd_topic;
-    obj["mqtt_lwt_topic"] = mqtt_lwt_topic;
     obj["mqtt_domoticz_active"] = mqtt_domoticz_active;
     obj["mqtt_ha_active"] = mqtt_ha_active;
     obj["mqtt_ha_topic"] = mqtt_ha_topic;
+    obj["mqtt_domoticzin_topic"] = mqtt_domoticzin_topic;
+    obj["mqtt_domoticzout_topic"] = mqtt_domoticzout_topic;
     obj["mqtt_idx"] = mqtt_idx;
     obj["sensor_idx"] = sensor_idx;
   }

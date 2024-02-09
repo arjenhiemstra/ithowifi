@@ -88,7 +88,7 @@ extern std::vector<ithoDeviceMeasurements> ithoCounters;
 struct lastCommand
 {
   char source[30];
-  char command[20];
+  char command[32];
   time_t timestamp;
 };
 
@@ -115,14 +115,16 @@ extern ithoSettings *ithoSettingsArray;
 const char *getIthoType();
 int currentIthoDeviceGroup();
 int currentIthoDeviceID();
+uint8_t currentItho_hwversion();
 uint8_t currentItho_fwversion();
 uint16_t currentIthoSettingsLength();
 int16_t currentIthoStatusLabelLength();
 int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
+const char *getSettingLabel(const uint8_t index);
 void getSetting(const uint8_t i, const bool updateState, const bool updateweb, const bool loop = false);
 void processSettingResult(const uint8_t index, const bool loop);
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
-const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr);
+const char *getStatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr);
 void updateSetting(const uint8_t i, const int32_t value, bool webupdate);
 const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID);
 
@@ -135,8 +137,10 @@ void sendQueryStatus(bool updateweb);
 void sendQuery31DA(bool updateweb);
 void sendQuery31D9(bool updateweb);
 void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperature, uint32_t timestamp, bool updateweb);
+void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t checked, bool dryrun, bool updateweb);
 int32_t *sendQuery2410(uint8_t index, bool updateweb);
-void setSetting2410(uint8_t index, int32_t value, bool updateweb);
+bool decodeQuery2410(int32_t *, ithoSettings *, double *, double *, double *);
+bool setSetting2410(uint8_t index, int32_t value, bool updateweb);
 // void setSetting2410(bool updateweb);
 void sendQueryCounters(bool updateweb);
 void filterReset();

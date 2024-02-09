@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "nrg_watch")(type "KiCad")(uri "/Users/arjen/ownCloud/SoftwareDevelopment/ithowifi/hardware/kiCad libs/nrg_watch.pretty")(options "")(descr ""))
+)

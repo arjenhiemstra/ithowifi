@@ -101,11 +101,11 @@ int IthoRemote::registerNewRemote(const int *id, const RemoteTypes remtype)
   {
     remotes[index].ID[i] = id[i];
   }
-  // remotes[index].remtype = remtype;
+  remotes[index].remtype = remtype;
 
   this->remoteCount++;
 
-  return 1;
+  return index;
 }
 
 int IthoRemote::removeRemote(const int *id)
@@ -165,7 +165,6 @@ int IthoRemote::removeRemote(const uint8_t index)
   remotes[index].remfunc = RemoteFunctions::UNSETFUNC;
   if (instanceFunc == RemoteFunctions::RECEIVE)
   {
-    // remotes[index].remtype = RemoteTypes::NORMAL;
     remotes[index].remfunc = RemoteFunctions::RECEIVE;
   }
   if (instanceFunc == RemoteFunctions::VREMOTE)
@@ -299,11 +298,11 @@ bool IthoRemote::checkID(const int *id)
   return false;
 }
 
-void IthoRemote::Remote::set(JsonObjectConst obj)
+void IthoRemote::Remote::set(JsonObject obj)
 {
   if (!obj["name"].isNull())
   {
-    strlcpy(name, obj["name"], sizeof(name));
+    strlcpy(name, obj["name"] | "", sizeof(name));
   }
   if (!obj["id"].isNull())
   {
@@ -313,7 +312,7 @@ void IthoRemote::Remote::set(JsonObjectConst obj)
     }
     else
     {
-      copyArray(obj["id"].as<JsonArrayConst>(), ID);
+      copyArray(obj["id"].as<JsonArray>(), ID);
     }
   }
   if (!obj["remtype"].isNull())
@@ -356,7 +355,7 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
     }
   }
 
-  JsonArray id = obj.createNestedArray("id");
+  JsonArray id = obj["id"].to<JsonArray>();
   for (uint8_t y = 0; y < 3; y++)
   {
     id.add(ID[y]);
@@ -374,7 +373,7 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
   }
 }
 
-bool IthoRemote::set(JsonObjectConst obj, const char *root)
+bool IthoRemote::set(JsonObject obj, const char *root)
 {
   if (!configLoaded)
   {
@@ -389,9 +388,9 @@ bool IthoRemote::set(JsonObjectConst obj, const char *root)
   }
   if (!obj[root].isNull())
   {
-    JsonArrayConst remotesArray = obj[root];
+    JsonArray remotesArray = obj[root];
     remoteCount = 0;
-    for (JsonObjectConst remote : remotesArray)
+    for (JsonObject remote : remotesArray)
     {
       if (!remote["index"].isNull())
       {
@@ -429,11 +428,11 @@ bool IthoRemote::set(JsonObjectConst obj, const char *root)
 void IthoRemote::get(JsonObject obj, const char *root) const
 {
   // Add "remotes" object
-  JsonArray rem = obj.createNestedArray(root);
+  JsonArray rem = obj[root].to<JsonArray>();
   // Add each remote in the array
   for (int i = 0; i < maxRemotes; i++)
   {
-    remotes[i].get(rem.createNestedObject(), this->instanceFunc, i);
+    remotes[i].get(rem.add<JsonObject>(), this->instanceFunc, i);
   }
   obj["remfunc"] = this->instanceFunc;
   obj["version_of_program"] = config_struct_version;

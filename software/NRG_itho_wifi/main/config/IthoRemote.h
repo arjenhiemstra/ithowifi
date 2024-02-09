@@ -16,10 +16,12 @@
 
 enum RemoteFunctions : uint8_t
 {
-  UNSETFUNC,
-  RECEIVE,
-  VREMOTE,
-  MONITOR
+  UNSETFUNC = 0,
+  RECEIVE = 1,
+  VREMOTE = 2,
+  MONITOR = 3,
+  SEND = 5,
+  BIDIRECT = 7
 };
 
 class IthoRemote
@@ -31,8 +33,8 @@ private:
     char name[32];
     mutable RemoteTypes remtype{RemoteTypes::UNSETTYPE};
     mutable RemoteFunctions remfunc{RemoteFunctions::UNSETFUNC};
-    StaticJsonDocument<128> capabilities;
-    void set(JsonObjectConst);
+    JsonDocument capabilities;
+    void set(JsonObject);
     void get(JsonObject, RemoteFunctions instanceFunc, int index) const;
   };
   RemoteFunctions instanceFunc{RemoteFunctions::UNSETFUNC};
@@ -95,7 +97,7 @@ public:
   bool checkID(const int *id);
   bool configLoaded;
   char config_struct_version[4];
-  bool set(JsonObjectConst, const char *root);
+  bool set(JsonObject, const char *root);
   void get(JsonObject obj, const char *root) const;
   void getCapabilities(JsonObject obj) const;
   const char *rem_cmd_to_name(uint8_t code);

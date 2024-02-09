@@ -21,9 +21,9 @@
 </form>
 <script>
   $(document).ready(function () {
-    sessionStorage.setItem("statustimer", 1);
+    localStorage.setItem("statustimer", 1);
     function repeat() {
-      if (sessionStorage.getItem("statustimer") != 1) return;
+      if (localStorage.getItem("statustimer") != 1) return;
       getSettings('ithostatus');
       setTimeout(repeat, 5000);
     }

@@ -23,6 +23,9 @@
 
 #include "tasks/task_mqtt.h"
 
+#include "ApiResponse.h"
+#include "AsyncWebServerAdapter.h"
+
 #include "LittleFS.h"
 
 // globals
@@ -39,6 +42,7 @@ extern int MQTT_conn_state_new;
 extern bool dontReconnectMQTT;
 extern bool updateMQTTihtoStatus;
 extern unsigned long lastMQTTReconnectAttempt;
+extern char modestate[32];
 
 void startTaskWeb();
 void TaskWeb(void *pvParameters);
@@ -49,6 +53,9 @@ void webServerInit();
 void MDNSinit();
 
 void handleAPI(AsyncWebServerRequest *request);
+void handleAPI_new(AsyncWebServerRequest *request);
+ApiResponse::api_response_status_t checkAuthenticationAsyncWeb(AsyncWebServerRequest *request);
+
 // void handleCoreCrash(AsyncWebServerRequest *request);
 void handleCoredumpDownload(AsyncWebServerRequest *request);
 void handleCurLogDownload(AsyncWebServerRequest *request);

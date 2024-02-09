@@ -30,7 +30,9 @@ esp_vfs_littlefs_conf_t conf = {
     .base_path = "/littlefs",
     .partition_label = "spiffs",
     .format_if_mount_failed = true,
-    .dont_mount = false};
+    .read_only = false,
+    .dont_mount = false,
+    .grow_on_mount = false};
 
 bool validate_table(const char *input_table)
 {
@@ -110,14 +112,13 @@ void backup_all_configs()
     saveLogConfig("nvs");
     saveRemotesConfig("nvs");
     saveVirtualRemotesConfig("nvs");
-
 }
 
 void load_all_configs()
 {
     D_LOG("Load all configs before backup to NVS");
-    
-    //clear NVS to prevent any bogus readings
+
+    // clear NVS to prevent any bogus readings
     nvs_flash_erase();
     nvs_flash_init();
 
@@ -154,7 +155,7 @@ void change_partitions_to_coredump()
     {
 
         load_all_configs();
-        
+
         NVS.begin();
 
         NVS.setInt("partupdated", static_cast<uint8_t>(1));

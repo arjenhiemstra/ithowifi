@@ -11,23 +11,13 @@ void websocketInit()
 
 void jsonWsSend(const char *rootName)
 {
-  DynamicJsonDocument root(4000);
+  JsonDocument root;
 
   if (strcmp(rootName, "wifisettings") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
-    nested["ssid"] = wifiConfig.ssid;
-    nested["passwd"] = wifiConfig.passwd;
-    nested["dhcp"] = wifiConfig.dhcp;
-    if (strcmp(wifiConfig.dhcp, "off") == 0)
-    {
-      nested["ip"] = wifiConfig.ip;
-      nested["subnet"] = wifiConfig.subnet;
-      nested["gateway"] = wifiConfig.gateway;
-      nested["dns1"] = wifiConfig.dns1;
-      nested["dns2"] = wifiConfig.dns2;
-    }
-    else
+    JsonObject nested = root[rootName].to<JsonObject>();
+    wifiConfig.get(nested);
+    if (strcmp(wifiConfig.dhcp, "on") == 0)
     {
       nested["ip"] = WiFi.localIP().toString();
       nested["subnet"] = WiFi.subnetMask().toString();
@@ -35,19 +25,55 @@ void jsonWsSend(const char *rootName)
       nested["dns1"] = WiFi.dnsIP().toString();
       nested["dns2"] = WiFi.dnsIP(1).toString();
     }
-    nested["port"] = wifiConfig.port;
-    nested["hostname"] = hostName();
-    nested["ntpserver"] = wifiConfig.ntpserver;
-    nested["timezone"] = wifiConfig.timezone;
+    if (strcmp(wifiConfig.hostname, "") == 0) //defualt config still there
+    {
+      nested["hostname"] = hostName();
+    }
+  }
+  else if (strcmp(rootName, "wifistat") == 0)
+  {
+
+    JsonObject wifiinfo = root[rootName].to<JsonObject>();
+    IPAddress ip = WiFi.localIP();
+    char wifiip[16] = {};
+    snprintf(wifiip, sizeof(wifiip), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+
+    char apremain[16] = {};
+    long time = (millis() - APmodeTimeout) < 900000 ? (900000 - (millis() - APmodeTimeout)) / 1000 : 0;
+
+    if (wifiConfig.aptimeout == 0)
+    {
+      snprintf(apremain, sizeof(apremain), "%s", "always off");
+    }
+    else if (wifiConfig.aptimeout == 255)
+    {
+      snprintf(apremain, sizeof(apremain), "%s", "always on");
+    }
+    else
+    {
+      snprintf(apremain, sizeof(apremain), "%ld sec.", time);
+    }
+
+    static char apssid[32]{};
+
+    snprintf(apssid, sizeof(apssid), "%s%02x%02x", espName, sys.getMac(4), sys.getMac(5));
+
+    wifiinfo["wifissid"] = WiFi.SSID();
+    wifiinfo["wificonnstat"] = wifiConfig.wl_status_to_name(WiFi.status());
+    wifiinfo["wifiip"] = wifiip;
+    wifiinfo["apactive"] = wifiModeAP ? "yes" : "no";
+    wifiinfo["apremain"] = apremain;
+    wifiinfo["apssid"] = apssid;
+    wifiinfo["apip"] = "192.168.4.1";
   }
   else if (strcmp(rootName, "systemsettings") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     systemConfig.get(nested);
   }
   else if (strcmp(rootName, "logsettings") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     logConfig.get(nested);
     if (prevlog_available())
     {
@@ -56,19 +82,21 @@ void jsonWsSend(const char *rootName)
   }
   else if (strcmp(rootName, "ithodevinfo") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     nested["itho_devtype"] = getIthoType();
+    nested["itho_mfr"] = currentIthoDeviceGroup();
+    nested["itho_hwversion"] = currentItho_hwversion();
     nested["itho_fwversion"] = currentItho_fwversion();
     nested["itho_setlen"] = currentIthoSettingsLength();
   }
   else if (strcmp(rootName, "ithostatusinfo") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     getIthoStatusJSON(nested);
   }
   else if (strcmp(rootName, "debuginfo") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     nested["configversion"] = CONFIG_VERSION;
     nested["bfree"] = ACTIVE_FS.usedBytes();
     nested["btotal"] = ACTIVE_FS.totalBytes();
@@ -90,7 +118,7 @@ void jsonWsSend(const char *rootName)
   }
   else if (strcmp(rootName, "remtypeconf") == 0)
   {
-    JsonObject nested = root.createNestedObject(rootName);
+    JsonObject nested = root[rootName].to<JsonObject>();
     nested["remtype"] = static_cast<uint16_t>(virtualRemotes.getRemoteType(0));
   }
   else if (strcmp(rootName, "remotes") == 0)
@@ -107,7 +135,7 @@ void jsonWsSend(const char *rootName)
   {
     root["chkpart"] = chk_partition_res ? "partition scheme supports firmware versions from 2.4.4-beta7 and upwards" : "partion scheme supports firmware versions 2.4.4-beta6 and older";
   }
-  notifyClients(root.as<JsonObjectConst>());
+  notifyClients(root.as<JsonObject>());
 }
 
 static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
@@ -162,7 +190,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"wifisettings\"") != std::string::npos || msg.find("{\"systemsettings\"") != std::string::npos || msg.find("{\"logsettings\"") != std::string::npos)
     {
-      DynamicJsonDocument root(2048);
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -207,10 +235,14 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           }
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"wifisettings\"");
+      }
     }
     else if (msg.find("{\"button\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg);
       if (!error)
       {
@@ -243,10 +275,14 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           saveLogConfigflag = true;
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"button\"");
+      }
     }
     else if (msg.find("{\"ithobutton\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg);
       if (!error)
       {
@@ -289,6 +325,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           {
             setSettingCE30(root["ithotemptemp"].as<int16_t>(), root["ithotemp"].as<int16_t>(), root["ithotimestamp"].as<uint32_t>(), true);
           }
+          else if (val == 4030)
+          {
+            //setSetting4030(root["idx"].as<uint16_t>(), root["dt"].as<uint8_t>(), root["val"].as<int16_t>(), root["chk"].as<uint8_t>(), root["dryrun"].as<bool>(), true);
+          }          
         }
         else
         {
@@ -296,10 +336,18 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           ithoI2CCommand(0, root["ithobutton"], WEB);
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"ithobutton\"");
+      }
     }
     else if (msg.find("{\"wifisetup\"") != std::string::npos)
     {
       jsonWsSend("wifisettings");
+    }
+    else if (msg.find("{\"wifistat\"") != std::string::npos)
+    {
+      jsonWsSend("wifistat");
     }
     else if (msg.find("{\"syssetup\"") != std::string::npos)
     {
@@ -328,7 +376,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"ithogetsetting\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -336,20 +384,28 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         i2c_queue_add_cmd([root]()
                           { getSetting(root["index"].as<uint8_t>(), root["update"].as<bool>(), false, true); });
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"ithogetsetting\"");
+      }
     }
     else if (msg.find("{\"ithosetrefresh\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
         i2c_queue_add_cmd([root]()
                           { getSetting(root["ithosetrefresh"].as<uint8_t>(), true, false, false); });
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"ithosetrefresh\"");
+      }
     }
     else if (msg.find("{\"ithosetupdate\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -374,6 +430,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           }
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"ithosetupdate\"");
+      }
     }
     else if (msg.find("{\"ithoremotes\"") != std::string::npos)
     {
@@ -387,7 +447,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"vremote\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -396,10 +456,30 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           ithoI2CCommand(root["vremote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"vremote\"");
+      }
+    }
+    else if (msg.find("{\"remote\"") != std::string::npos)
+    {
+      JsonDocument root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error)
+      {
+        if (!root["remote"].isNull() && !root["command"].isNull())
+        {
+          ithoExecRFCommand(root["remote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
+        }
+      }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"remote\"");
+      }
     }
     else if (msg.find("{\"command\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -407,6 +487,10 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         {
           ithoExecCommand(root["command"].as<const char *>(), WEB);
         }
+      }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"command\"");
       }
     }
 
@@ -416,7 +500,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"copy_id\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -436,7 +520,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"itho_remove_remote\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -457,16 +541,21 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           saveRemotesflag = true;
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"itho_remove_remote\"");
+      }
     }
     else if (msg.find("{\"itho_update_remote\"") != std::string::npos)
     {
-      StaticJsonDocument<512> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
         uint8_t index = root["itho_update_remote"].as<unsigned int>();
         remotes.updateRemoteName(index, root["value"] | "");
-        remotes.updateRemoteFunction(index, root["remtype"] | 0);
+        remotes.updateRemoteFunction(index, root["remfunc"] | 0);
+        remotes.updateRemoteType(index, root["remtype"] | 0);
         uint8_t id[3] = {0, 0, 0};
         id[0] = root["id"][0].as<uint8_t>();
         id[1] = root["id"][1].as<uint8_t>();
@@ -475,14 +564,18 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         const int *current_id = remotes.getRemoteIDbyIndex(index);
         rf.removeRFDevice(*current_id, *(current_id + 1), *(current_id + 2));
         remotes.updateRemoteID(index, id);
-        rf.addRFDevice(*id, *(id + 1), *(id + 2), remotes.getRemoteType(index));
+        rf.addRFDevice(*id, *(id + 1), *(id + 2), remotes.getRemoteType(index), remotes.getRemoteFunction(index) == RemoteFunctions::BIDIRECT ? true : false);
         rf.setBindAllowed(false);
         saveRemotesflag = true;
+      }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"itho_update_remote\"");
       }
     }
     else if (msg.find("{\"itho_remove_vremote\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -499,10 +592,14 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           saveVremotesflag = true;
         }
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"itho_remove_vremote\"");
+      }
     }
     else if (msg.find("{\"itho_update_vremote\"") != std::string::npos)
     {
-      StaticJsonDocument<512> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -516,10 +613,14 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         virtualRemotes.updateRemoteID(index, ID);
         saveVremotesflag = true;
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"itho_update_vremote\"");
+      }
     }
     else if (msg.find("{\"reboot\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -541,16 +642,20 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"itho\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg);
       if (!error)
       {
         ithoSetSpeed(root["itho"].as<uint16_t>(), WEB);
       }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"itho\"");
+      }
     }
     else if (msg.find("{\"rfdebug\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
@@ -559,7 +664,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
     }
     else if (msg.find("{\"i2csniffer\"") != std::string::npos)
     {
-      StaticJsonDocument<128> root;
+      JsonDocument root;
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {

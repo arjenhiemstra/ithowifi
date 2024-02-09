@@ -28,7 +28,7 @@ void notifyClients(const char *message)
   }
 }
 
-void notifyClients(JsonObjectConst obj)
+void notifyClients(JsonObject obj)
 {
   size_t len = measureJson(obj);
   char *buffer = new char[len + 1];
@@ -52,13 +52,13 @@ void wsSendAll(void *arg, const char *message)
 
 void jsonSysmessage(const char *id, const char *message)
 {
-  StaticJsonDocument<500> root;
+  JsonDocument root;
 
-  JsonObject systemstat = root.createNestedObject("sysmessage");
+  JsonObject systemstat = root["sysmessage"].to<JsonObject>();
   systemstat["id"] = id;
   systemstat["message"] = message;
 
-  notifyClients(root.as<JsonObjectConst>());
+  notifyClients(root.as<JsonObject>());
 }
 
 void logMessagejson(const char *message, logtype type)
@@ -67,24 +67,24 @@ void logMessagejson(const char *message, logtype type)
   if (xSemaphoreTake(mutexJSONLog, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
   {
 
-    StaticJsonDocument<512> root;
+    JsonDocument root;
     JsonObject messagebox;
 
     switch (type)
     {
     case RFLOG:
-      messagebox = root.createNestedObject("rflog");
+      messagebox = root["rflog"].to<JsonObject>();
       break;
     case ITHOSETTINGS:
-      messagebox = root.createNestedObject("ithosettings");
+      messagebox = root["ithosettings"].to<JsonObject>();
       break;
     default:
-      messagebox = root.createNestedObject("messagebox");
+      messagebox = root["messagebox"].to<JsonObject>();
     }
 
     messagebox["message"] = message;
 
-    notifyClients(root.as<JsonObjectConst>());
+    notifyClients(root.as<JsonObject>());
 
     xSemaphoreGive(mutexJSONLog);
   }
@@ -96,19 +96,19 @@ void logMessagejson(JsonObject obj, logtype type)
   if (xSemaphoreTake(mutexJSONLog, (TickType_t)500 / portTICK_PERIOD_MS) == pdTRUE)
   {
 
-    StaticJsonDocument<512> root;
+    JsonDocument root;
     JsonObject messagebox = root.to<JsonObject>(); // Fill the object
 
     switch (type)
     {
     case RFLOG:
-      messagebox = root.createNestedObject("rflog");
+      messagebox = root["rflog"].to<JsonObject>();
       break;
     case ITHOSETTINGS:
-      messagebox = root.createNestedObject("ithosettings");
+      messagebox = root["ithosettings"].to<JsonObject>();
       break;
     default:
-      messagebox = root.createNestedObject("messagebox");
+      messagebox = root["messagebox"].to<JsonObject>();
     }
 
     for (JsonPair p : obj)
@@ -116,7 +116,7 @@ void logMessagejson(JsonObject obj, logtype type)
       messagebox[p.key()] = p.value();
     }
 
-    notifyClients(root.as<JsonObjectConst>());
+    notifyClients(root.as<JsonObject>());
 
     xSemaphoreGive(mutexJSONLog);
   }
@@ -130,13 +130,13 @@ void otaWSupdate(size_t prg, size_t sz)
     LastotaWsUpdate = millis();
     int newPercent = int((prg * 100) / content_len);
 
-    StaticJsonDocument<256> root;
-    JsonObject ota = root.createNestedObject("ota");
+    JsonDocument root;
+    JsonObject ota = root["ota"].to<JsonObject>();
     ota["progress"] = prg;
     ota["tsize"] = content_len;
     ota["percent"] = newPercent;
 
-    notifyClients(root.as<JsonObjectConst>());
+    notifyClients(root.as<JsonObject>());
 
 #if defined(ENABLE_SERIAL)
     D_LOG("OTA Progress: %d%%", newPercent);

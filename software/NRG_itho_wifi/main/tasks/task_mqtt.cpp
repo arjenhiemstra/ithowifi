@@ -91,7 +91,18 @@ void execMQTTTasks()
     {
       updateIthoMQTT = false;
       updateState(ithoCurrentVal);
+      mqttPublishLastcmd();
     }
+    // if (updateMQTTmodeStatus)
+    // {
+    //   updateMQTTmodeStatus = false;
+    //   if (mqttClient.connected())
+    //   {
+    //     char modestatetopic[140]{};
+    //     snprintf(modestatetopic, sizeof(modestatetopic), "%s%s", systemConfig.mqtt_base_topic, "/modestate");
+    //     mqttClient.publish(modestatetopic, modestate, true);
+    //   }
+    // }
     if (updateMQTTihtoStatus)
     {
       updateMQTTihtoStatus = false;
@@ -120,20 +131,17 @@ void execMQTTTasks()
           char svalue[32]{};
           snprintf(svalue, sizeof(svalue), "%1.1f;%1.1f;%d", ithoTemp, ithoHum, humstat);
 
-          StaticJsonDocument<512> root;
+          JsonDocument root;
           root["svalue"] = svalue;
           root["nvalue"] = 0;
           root["idx"] = systemConfig.sensor_idx;
           serializeJson(root, buffer);
-          mqttClient.publish(systemConfig.mqtt_state_topic, buffer, true);
+          mqttClient.publish(systemConfig.mqtt_domoticzin_topic, buffer, true);
         }
-        else
-        {
-          mqttSendStatus();
-          mqttSendRemotesInfo();
-          mqttPublishLastcmd();
-          // mqttSendSettingsJSON();
-        }
+        mqttSendStatus();
+        mqttSendRemotesInfo();
+        mqttPublishLastcmd();
+        // mqttSendSettingsJSON();
       }
     }
     mqttClient.loop();
@@ -174,14 +182,10 @@ void mqttInit()
 void mqttSendStatus()
 {
 
-  DynamicJsonDocument doc(6000);
+  char ihtostatustopic[140]{};
+  snprintf(ihtostatustopic, sizeof(ihtostatustopic), "%s%s", systemConfig.mqtt_base_topic, "/ithostatus");
 
-  if (doc.capacity() == 0)
-  {
-    E_LOG("MQTT: JsonDocument memory allocation failed (itho status)");
-    return;
-  }
-
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
   getIthoStatusJSON(root);
 
@@ -191,25 +195,25 @@ void mqttSendStatus()
   {
     mqttClient.setBufferSize(len);
   }
-  if (mqttClient.beginPublish(systemConfig.mqtt_ithostatus_topic, len, true))
+  if (mqttClient.beginPublish(ihtostatustopic, len, true))
   {
     serializeJson(root, mqttClient);
     if (!mqttClient.endPublish())
       E_LOG("MQTT: Failed to send payload (itho status)");
   }
-  // reset buffer
+  if (doc.overflowed())
+  {
+    E_LOG("MQTT: JsonDocument overflowed (itho status)");
+  }
+
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }
 void mqttSendRemotesInfo()
 {
-  DynamicJsonDocument doc(1000);
+  char remotesinfotopic[140]{};
+  snprintf(remotesinfotopic, sizeof(remotesinfotopic), "%s%s", systemConfig.mqtt_base_topic, "/remotesinfo");
 
-  if (doc.capacity() == 0)
-  {
-    E_LOG("MQTT: JsonDocument memory allocation failed (itho remote info)");
-    return;
-  }
-
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
   getRemotesInfoJSON(root);
@@ -220,19 +224,25 @@ void mqttSendRemotesInfo()
   {
     mqttClient.setBufferSize(len);
   }
-  if (mqttClient.beginPublish(systemConfig.mqtt_remotesinfo_topic, len, true))
+  if (mqttClient.beginPublish(remotesinfotopic, len, true))
   {
     serializeJson(root, mqttClient);
     if (!mqttClient.endPublish())
       E_LOG("MQTT: Failed to send payload (itho remote info))");
   }
-  // reset buffer
+  if (doc.overflowed())
+  {
+    E_LOG("MQTT: JsonDocument overflowed (itho remote info)");
+  }
+
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }
 
 void mqttPublishLastcmd()
 {
-  DynamicJsonDocument doc(1000);
+  char lastcmdtopic[140]{};
+  snprintf(lastcmdtopic, sizeof(lastcmdtopic), "%s%s", systemConfig.mqtt_base_topic, "/lastcmd");
+  JsonDocument doc;
 
   JsonObject root = doc.to<JsonObject>();
 
@@ -244,7 +254,7 @@ void mqttPublishLastcmd()
   {
     mqttClient.setBufferSize(len);
   }
-  if (mqttClient.beginPublish(systemConfig.mqtt_lastcmd_topic, len, true))
+  if (mqttClient.beginPublish(lastcmdtopic, len, true))
   {
     serializeJson(root, mqttClient);
     if (!mqttClient.endPublish())
@@ -256,7 +266,7 @@ void mqttPublishLastcmd()
 
 void mqttSendSettingsJSON()
 {
-  DynamicJsonDocument doc(4000);
+  JsonDocument doc;
 
   JsonObject root = doc.to<JsonObject>();
 
@@ -286,8 +296,6 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
   if (payload == NULL)
     return;
 
-  bool dtype = !systemConfig.mqtt_domoticz_active;
-
   if (length > 1023)
     length = 1023;
 
@@ -295,118 +303,144 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
   std::memcpy(s_payload, payload, length);
   s_payload[length] = '\0';
 
-  if (strcmp(topic, systemConfig.mqtt_cmd_topic) == 0)
+  char c_topic[140]{};
+  snprintf(c_topic, sizeof(c_topic), "%s%s", systemConfig.mqtt_base_topic, "/cmd");
+
+  if (strcmp(topic, c_topic) == 0)
   {
-    StaticJsonDocument<1024> root;
+    JsonDocument root;
     DeserializationError error = deserializeJson(root, s_payload);
 
     if (!error)
     {
       bool jsonCmd = false;
-      if (!root["idx"].isNull())
+      // if (!root["idx"].isNull())
+      // {
+      //   jsonCmd = true;
+      //   // printf("JSON parse -- idx match");
+      //   uint16_t idx = root["idx"].as<uint16_t>();
+      //   if (idx == systemConfig.mqtt_idx)
+      //   {
+      //     if (!root["svalue1"].isNull())
+      //     {
+      //       uint16_t invalue = root["svalue1"].as<uint16_t>();
+      //       double value = invalue * 2.54;
+      //       ithoSetSpeed((uint16_t)value, MQTTAPI);
+      //     }
+      //   }
+      // }
+      // if (!root["dtype"].isNull())
+      // {
+      //   const char *value = root["dtype"] | "";
+      //   if (strcmp(value, "ithofan") == 0)
+      //   {
+      //     dtype = true;
+      //   }
+      // }
+
+      /*
+         standard true, unless mqtt_domoticz_active == "on"
+         if mqtt_domoticz_active == "on"
+            this should be set to true first by a JSON containing key:value pair "dtype":"ithofan",
+            otherwise different commands might get processed due to domoticz general domoticz/out topic structure
+      */
+      if (!root["command"].isNull())
       {
         jsonCmd = true;
-        // printf("JSON parse -- idx match");
-        uint16_t idx = root["idx"].as<uint16_t>();
-        if (idx == systemConfig.mqtt_idx)
-        {
-          if (!root["svalue1"].isNull())
-          {
-            uint16_t invalue = root["svalue1"].as<uint16_t>();
-            double value = invalue * 2.54;
-            ithoSetSpeed((uint16_t)value, MQTTAPI);
-          }
-        }
+        const char *value = root["command"] | "";
+        ithoExecCommand(value, MQTTAPI);
       }
-      if (!root["dtype"].isNull())
+      if (!root["vremote"].isNull() || !root["vremotecmd"].isNull())
       {
-        const char *value = root["dtype"] | "";
-        if (strcmp(value, "ithofan") == 0)
-        {
-          dtype = true;
-        }
-      }
-      if (dtype)
-      {
-        /*
-           standard true, unless mqtt_domoticz_active == "on"
-           if mqtt_domoticz_active == "on"
-              this should be set to true first by a JSON containing key:value pair "dtype":"ithofan",
-              otherwise different commands might get processed due to domoticz general domoticz/out topic structure
-        */
-        if (!root["command"].isNull())
+        const char *command = root["vremote"] | "";
+        if (strcmp(command, "") == 0)
+          command = root["vremotecmd"] | "";
+
+        if (!root["vremoteindex"].isNull() && !root["vremotename"].isNull())
         {
           jsonCmd = true;
-          const char *value = root["command"] | "";
-          ithoExecCommand(value, MQTTAPI);
+          ithoI2CCommand(0, command, MQTTAPI);
         }
-        if (!root["vremote"].isNull() || !root["vremotecmd"].isNull())
+        else
         {
-          const char *command = root["vremote"] | "";
-          if (strcmp(command, "") == 0)
-            command = root["vremotecmd"] | "";
-
-          if (!root["vremoteindex"].isNull() && !root["vremotename"].isNull())
+          int index = -1;
+          if (!root["vremotename"].isNull())
+          {
+            index = virtualRemotes.getRemoteIndexbyName((const char *)root["vremotename"]);
+          }
+          else
+          {
+            index = root["vremoteindex"];
+          }
+          if (index != -1)
           {
             jsonCmd = true;
-            ithoI2CCommand(0, command, MQTTAPI);
-          }
-          else
-          {
-            int index = -1;
-            if (!root["vremotename"].isNull())
-            {
-              index = virtualRemotes.getRemoteIndexbyName((const char *)root["vremotename"]);
-            }
-            else
-            {
-              index = root["vremoteindex"];
-            }
-            if (index != -1)
-            {
-              jsonCmd = true;
-              ithoI2CCommand(index, command, MQTTAPI);
-            }
+            ithoI2CCommand(index, command, MQTTAPI);
           }
         }
-        if (!root["speed"].isNull())
+      }
+      if (!root["rfremotecmd"].isNull() || !root["rfremoteindex"].isNull())
+      {
+        uint8_t idx = 0;
+        if (!root["rfremoteindex"].isNull())
+        {
+          idx = strtoul(root["rfremoteindex"], NULL, 10);
+        }
+        if (!root["rfremotecmd"].isNull())
         {
           jsonCmd = true;
-          if (!root["timer"].isNull())
-          {
-            ithoSetSpeedTimer(root["speed"].as<uint16_t>(), root["timer"].as<uint16_t>(), MQTTAPI);
-          }
-          else
-          {
-            ithoSetSpeed(root["speed"].as<uint16_t>(), MQTTAPI);
-          }
+          ithoExecRFCommand(idx, root["rfremotecmd"], MQTTAPI);
         }
-        else if (!root["timer"].isNull())
+      }
+      if (!root["speed"].isNull())
+      {
+        jsonCmd = true;
+        if (!root["timer"].isNull())
         {
-          jsonCmd = true;
-          ithoSetTimer(root["timer"].as<uint16_t>(), MQTTAPI);
+          ithoSetSpeedTimer(root["speed"].as<uint16_t>(), root["timer"].as<uint16_t>(), MQTTAPI);
         }
-        if (!root["clearqueue"].isNull())
+        else
         {
-          jsonCmd = true;
-          const char *value = root["clearqueue"] | "";
-          if (strcmp(value, "true") == 0)
-          {
-            clearQueue = true;
-          }
+          ithoSetSpeed(root["speed"].as<uint16_t>(), MQTTAPI);
         }
-        if (!(const char *)root["outside_temp"].isNull())
+      }
+      else if (!root["timer"].isNull())
+      {
+        jsonCmd = true;
+        ithoSetTimer(root["timer"].as<uint16_t>(), MQTTAPI);
+      }
+      if (!root["clearqueue"].isNull())
+      {
+        jsonCmd = true;
+        const char *value = root["clearqueue"] | "";
+        if (strcmp(value, "true") == 0)
         {
-          jsonCmd = true;
-          float outside_temp = root["outside_temp"].as<float>();
-          float temporary_outside_temp = root["temporary_outside_temp"].as<float>();
-          uint32_t valid_until = root["valid_until"].as<uint32_t>();
-          setSettingCE30(static_cast<int16_t>(temporary_outside_temp*100), static_cast<int16_t>(outside_temp*100), valid_until, false);
+          clearQueue = true;
         }
-        if (!jsonCmd)
-        {
-          ithoSetSpeed(s_payload, MQTTAPI);
-        }
+      }
+      if (!(const char *)root["outside_temp"].isNull())
+      {
+        jsonCmd = true;
+        float outside_temp = root["outside_temp"].as<float>();
+        float temporary_outside_temp = root["temporary_outside_temp"].as<float>();
+        uint32_t valid_until = root["valid_until"].as<uint32_t>();
+        setSettingCE30(static_cast<int16_t>(temporary_outside_temp * 100), static_cast<int16_t>(outside_temp * 100), valid_until, false);
+      }
+      if (!(const char *)root["manual_operation_index"].isNull())
+      {
+        jsonCmd = true;
+        uint16_t index = root["manual_operation_index"].as<uint16_t>();
+        uint8_t datatype = root["manual_operation_datatype"].as<uint8_t>();
+        uint16_t value = root["manual_operation_value"].as<uint16_t>();
+        uint8_t checked = root["manual_operation_checked"].as<uint8_t>();
+        bool dryrun = root["manual_operation_dryrun"].as<bool>();
+        D_LOG("Manual operation MQTT. Dryrun: %d", dryrun);
+        D_LOG("index: %d dt: %d value: %d checked: %d", index, datatype, value, checked);
+        setSetting4030(index, datatype, value, checked, dryrun, false);
+      }
+      if (!jsonCmd)
+      {
+        ithoSetSpeed(s_payload, MQTTAPI);
       }
     }
     else
@@ -414,9 +448,26 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
       ithoExecCommand(s_payload, MQTTAPI);
     }
   }
-  else
+  if (strcmp(topic, systemConfig.mqtt_domoticzout_topic) == 0)
   {
-    // topic unknown
+    JsonDocument root;
+    DeserializationError error = deserializeJson(root, s_payload);
+    if (!error)
+    {
+      if (!root["idx"].isNull())
+      {
+        uint16_t idx = root["idx"].as<uint16_t>();
+        if (idx == systemConfig.mqtt_idx)
+        {
+          if (!root["svalue1"].isNull())
+          {
+            uint16_t invalue = root["svalue1"].as<uint16_t>();
+            double value = invalue * 2.55;
+            ithoSetSpeed((uint16_t)value, MQTTAPI);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -435,7 +486,7 @@ void updateState(uint16_t newState)
       double state = 0.0;
       if (newState > 0.5)
       {
-        state = (newState / 2.54) + 0.5;
+        state = (newState / 2.55) + 0.5;
       }
       else
       {
@@ -446,19 +497,19 @@ void updateState(uint16_t newState)
       char buf[10]{};
       snprintf(buf, sizeof(buf), "%d", newState);
 
-      StaticJsonDocument<512> root;
+      JsonDocument root;
       root["command"] = "switchlight";
       root["idx"] = systemConfig.mqtt_idx;
       root["nvalue"] = nvalue;
       root["switchcmd"] = "Set Level";
       root["level"] = buf;
       serializeJson(root, buffer);
+      mqttClient.publish(systemConfig.mqtt_domoticzin_topic, buffer, true);
     }
-    else
-    {
-      snprintf(buffer, sizeof(buffer), "%d", newState);
-    }
-    mqttClient.publish(systemConfig.mqtt_state_topic, buffer, true);
+
+    snprintf(buffer, sizeof(buffer), "%d", newState);
+    const std::string topic = std::string(systemConfig.mqtt_base_topic) + "/state";
+    mqttClient.publish(topic.c_str(), buffer, true);
   }
 }
 
@@ -479,65 +530,131 @@ void mqttHomeAssistantDiscovery()
 
 void HADiscoveryFan()
 {
-  DynamicJsonDocument doc(2048);
+
+  /*
+
+add:
+
+  'pr_mode_cmd_t':       'preset_mode_command_topic',
+  'pr_mode_cmd_tpl':     'preset_mode_command_template',
+  'pr_mode_stat_t':      'preset_mode_state_topic',
+  'pr_mode_val_tpl':     'preset_mode_value_template',
+  'pr_modes':            'preset_modes',
+
+  preset_mode_command_topic: itho/cmd
+      preset_mode_command_template: >
+        {%- if value == "Low" %}{{"low"}}
+        {%- elif value == "Medium" %}{{"medium"}}
+        {%- elif value == "High" %}{{"high"}}
+        {%- elif value == "Timer 10min" %}{{"timer1"}}
+        {%- elif value == "Timer 20min" %}{{"timer2"}}
+        {%- elif value == "Timer 30min" %}{{"timer3"}}
+        {%- elif value == "Max" %}{{(100*255/100)|round(0)}}
+        {%- endif -%}
+      preset_modes:
+        - "Low"
+        - "Medium"
+        - "High"
+        - "Timer 10min"
+        - "Timer 20min"
+        - "Timer 30min"
+        - "Max"
+
+  */
+  char ihtostatustopic[140]{};
+  char cmdtopic[140]{};
+  char lwttopic[140]{};
+  char statetopic[140]{};
+  char modestatetopic[140]{};
+  snprintf(ihtostatustopic, sizeof(ihtostatustopic), "%s%s", systemConfig.mqtt_base_topic, "/ithostatus");
+  snprintf(cmdtopic, sizeof(cmdtopic), "%s%s", systemConfig.mqtt_base_topic, "/cmd");
+  snprintf(lwttopic, sizeof(lwttopic), "%s%s", systemConfig.mqtt_base_topic, "/lwt");
+  snprintf(statetopic, sizeof(statetopic), "%s%s", systemConfig.mqtt_base_topic, "/state");
+  snprintf(modestatetopic, sizeof(modestatetopic), "%s%s", systemConfig.mqtt_base_topic, "/modestate");
+
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>(); // Fill the object
-  char s[160]{};
+  char s[300]{};
 
   addHADevInfo(root);
-  root["avty_t"] = (const char *)systemConfig.mqtt_lwt_topic;
+  root["avty_t"] = static_cast<const char *>(lwttopic);
   snprintf(s, sizeof(s), "%s_fan", hostName());
   root["uniq_id"] = s;
-  root["name"] = s;
-  root["stat_t"] = (const char *)systemConfig.mqtt_lwt_topic;
-  root["stat_val_tpl"] = "{% if value == 'online' %}ON{% else %}OFF{% endif %}";
-  root["json_attr_t"] = (const char *)systemConfig.mqtt_ithostatus_topic;
-  snprintf(s, sizeof(s), "%s/not_used/but_needed_for_HA", systemConfig.mqtt_cmd_topic);
+  root["name"] = "fan";
+  // root["stat_t"] = static_cast<const char *>(statetopic);
+  // root["stat_val_tpl"] = "{% if value == '0' %}OFF{% else %}ON{% endif %}";
+  root["json_attr_t"] = static_cast<const char *>(ihtostatustopic);
+  snprintf(s, sizeof(s), "%s/not_used/but_needed_for_HA", static_cast<const char *>(cmdtopic));
   root["cmd_t"] = s;
-  root["pct_cmd_t"] = (const char *)systemConfig.mqtt_cmd_topic;
-  root["pct_cmd_tpl"] = "{{ value * 2.54 }}";
-  root["pct_stat_t"] = (const char *)systemConfig.mqtt_state_topic;
-  root["pct_val_tpl"] = "{{ ((value | int) / 2.54) | round}}";
+  root["pct_cmd_t"] = static_cast<const char *>(cmdtopic);
+  root["pct_cmd_tpl"] = "{{ (value | int * 2.55) | round | int }}";
+  root["pct_stat_t"] = static_cast<const char *>(statetopic);
+  root["pct_val_tpl"] = "{{ (value | int / 2.55) | round | int }}";
+  // root["pct_val_tpl"] = "{% if {{ ((value | int) / 2.55) | round }} == '0' %}OFF{% else %}{{ ((value | int) / 2.55) | round }}{% endif %} ";
 
-  snprintf(s, sizeof(s), "%s/fan/%s/config", (const char *)systemConfig.mqtt_ha_topic, hostName());
+  JsonArray modes = root["pr_modes"].to<JsonArray>();
+  modes.add("Low");
+  modes.add("Medium");
+  modes.add("High");
+  modes.add("Timer 10min");
+  modes.add("Timer 20min");
+  modes.add("Timer 30min");
+  root["pr_mode_cmd_t"] = cmdtopic;
+  // root["pr_mode_stat_t"] = modestatetopic;
+  root["pr_mode_cmd_tpl"] = "{%- if value == 'Low' %}{{'low'}}{%- elif value == 'Medium' %}{{'medium'}}{%- elif value == 'High' %}{{'high'}}{%- elif value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- endif -%}";
+
+  snprintf(s, sizeof(s), "%s/fan/%s/config", systemConfig.mqtt_ha_topic, hostName());
 
   sendHADiscovery(root, s);
 }
 
 void HADiscoveryTemperature()
 {
-  DynamicJsonDocument doc(2048);
+  char cmdtopic[140]{};
+  char lwttopic[140]{};
+  char ihtostatustopic[140]{};
+  snprintf(cmdtopic, sizeof(cmdtopic), "%s%s", systemConfig.mqtt_base_topic, "/cmd");
+  snprintf(lwttopic, sizeof(lwttopic), "%s%s", systemConfig.mqtt_base_topic, "/lwt");
+  snprintf(ihtostatustopic, sizeof(ihtostatustopic), "%s%s", systemConfig.mqtt_base_topic, "/ithostatus");
+
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>(); // Fill the object
-  char s[160]{};
+  char s[300]{};
 
   addHADevInfo(root);
-  root["avty_t"] = static_cast<const char *>(systemConfig.mqtt_lwt_topic);
+  root["avty_t"] = static_cast<const char *>(lwttopic);
   root["dev_cla"] = "temperature";
   snprintf(s, sizeof(s), "%s_temperature", hostName());
   root["uniq_id"] = s;
-  root["name"] = s;
-  root["stat_t"] = static_cast<const char *>(systemConfig.mqtt_ithostatus_topic);
+  root["name"] = "temperature";
+  root["stat_t"] = static_cast<const char *>(ihtostatustopic);
   root["stat_cla"] = "measurement";
   root["val_tpl"] = "{{ value_json.temp }}";
   root["unit_of_meas"] = "°C";
 
-  snprintf(s, sizeof(s), "%s/sensor/%s/temp/config", static_cast<const char *>(systemConfig.mqtt_ha_topic), hostName());
+  snprintf(s, sizeof(s), "%s/sensor/%s/temp/config", systemConfig.mqtt_ha_topic, hostName());
 
   sendHADiscovery(root, s);
 }
 
 void HADiscoveryHumidity()
 {
-  DynamicJsonDocument doc(2048);
+  char lwttopic[140]{};
+  char ihtostatustopic[140]{};
+  snprintf(lwttopic, sizeof(lwttopic), "%s%s", systemConfig.mqtt_base_topic, "/lwt");
+  snprintf(ihtostatustopic, sizeof(ihtostatustopic), "%s%s", systemConfig.mqtt_base_topic, "/ithostatus");
+
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>(); // Fill the object
-  char s[160]{};
+  char s[300]{};
 
   addHADevInfo(root);
-  root["avty_t"] = static_cast<const char *>(systemConfig.mqtt_lwt_topic);
+  root["avty_t"] = static_cast<const char *>(lwttopic);
   root["dev_cla"] = "humidity";
   snprintf(s, sizeof(s), "%s_humidity", hostName());
   root["uniq_id"] = s;
-  root["name"] = s;
-  root["stat_t"] = static_cast<const char *>(systemConfig.mqtt_ithostatus_topic);
+  root["name"] = "humidity";
+  root["stat_t"] = static_cast<const char *>(ihtostatustopic);
   root["stat_cla"] = "measurement";
   root["val_tpl"] = "{{ value_json.hum }}";
   root["unit_of_meas"] = "%";
@@ -550,12 +667,12 @@ void HADiscoveryHumidity()
 void addHADevInfo(JsonObject obj)
 {
   char s[64]{};
-  JsonObject dev = obj.createNestedObject("dev");
+  JsonObject dev = obj["dev"].to<JsonObject>();
   dev["identifiers"] = hostName();
   dev["manufacturer"] = "Arjen Hiemstra";
-  dev["model"] = "ITHO Wifi Add-on";
-  snprintf(s, sizeof(s), "ITHO-WIFI(%s)", hostName());
-  dev["name"] = s;
+  dev["model"] = "Wifi add-on for Itho";
+  //snprintf(s, sizeof(s), "%s", hostName());
+  dev["name"] = hostName();
   dev["hw_version"] = hw_revision;
   dev["sw_version"] = FWVERSION;
 }
@@ -589,10 +706,13 @@ void sendHADiscovery(JsonObject obj, const char *topic)
 
 bool setupMQTTClient()
 {
+  char cmdtopic[140]{};
+  char lwttopic[140]{};
+  snprintf(cmdtopic, sizeof(cmdtopic), "%s%s", systemConfig.mqtt_base_topic, "/cmd");
+  snprintf(lwttopic, sizeof(lwttopic), "%s%s", systemConfig.mqtt_base_topic, "/lwt");
 
   if (systemConfig.mqtt_active)
   {
-
     if (strcmp(systemConfig.mqtt_serverName, "") != 0)
     {
       int connectResult;
@@ -603,11 +723,11 @@ bool setupMQTTClient()
 
       if (strcmp(systemConfig.mqtt_username, "") == 0)
       {
-        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_lwt_topic, 0, true, "offline");
+        connectResult = mqttClient.connect(hostName(), lwttopic, 0, true, "offline");
       }
       else
       {
-        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_username, systemConfig.mqtt_password, systemConfig.mqtt_lwt_topic, 0, true, "offline");
+        connectResult = mqttClient.connect(hostName(), systemConfig.mqtt_username, systemConfig.mqtt_password, lwttopic, 0, true, "offline");
       }
 
       if (!connectResult)
@@ -617,8 +737,12 @@ bool setupMQTTClient()
 
       if (mqttClient.connected())
       {
-        mqttClient.subscribe(systemConfig.mqtt_cmd_topic);
-        mqttClient.publish(systemConfig.mqtt_lwt_topic, "online", true);
+        mqttClient.subscribe(cmdtopic);
+        if (systemConfig.mqtt_domoticz_active)
+        {
+          mqttClient.subscribe(systemConfig.mqtt_domoticzout_topic);
+        }
+        mqttClient.publish(lwttopic, "online", true);
 
         return true;
       }
@@ -626,7 +750,7 @@ bool setupMQTTClient()
   }
   else
   {
-    mqttClient.publish(systemConfig.mqtt_lwt_topic, "offline", true); // set to offline in case of graceful shutdown
+    mqttClient.publish(lwttopic, "offline", true); // set to offline in case of graceful shutdown
     mqttClient.disconnect();
   }
   return false;

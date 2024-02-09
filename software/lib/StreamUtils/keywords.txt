@@ -1,0 +1,16 @@
+BufferingPrint	KEYWORD1
+EepromStream	KEYWORD1
+LoggingClient	KEYWORD1
+LoggingPrint	KEYWORD1
+LoggingStream	KEYWORD1
+ProgmemStream	KEYWORD1
+ReadBufferingClient	KEYWORD1
+ReadBufferingStream	KEYWORD1
+ReadLoggingClient	KEYWORD1
+ReadLoggingStream	KEYWORD1
+ReadThrottlingStream	KEYWORD1
+StringStream	KEYWORD1
+WriteBufferingClient	KEYWORD1
+WriteBufferingStream	KEYWORD1
+WriteLoggingClient	KEYWORD1
+WriteLoggingStream	KEYWORD1
