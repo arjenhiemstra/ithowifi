@@ -1,0 +1,41 @@
+#######################################
+# Syntax Coloring Map For Ultrasound
+#######################################
+#######################################
+# Library (KEYWORD3)
+#######################################
+
+TridentTD_ESP32NVS	KEYWORD3
+
+#######################################
+# Datatypes (KEY
+#######################################
+
+NVS	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin	KEYWORD2
+close	KEYWORD2
+
+eraseAll	KEYWORD2
+erase	KEYWORD2
+
+setInt	KEYWORD2
+setFloat	KEYWORD2
+setCharArray	KEYWORD2
+setString	KEYWORD2
+setObject	KEYWORD2
+
+getInt	KEYWORD2
+getFloat	KEYWORD2
+getCharArray	KEYWORD2
+getString	KEYWORD2
+getObject	KEYWORD2
+
+
+#######################################
+# Constants (LITERAL1)
+#######################################

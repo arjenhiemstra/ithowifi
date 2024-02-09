@@ -38,7 +38,7 @@ typedef enum
 extern size_t content_len;
 
 void notifyClients(const char *message);
-void notifyClients(JsonObjectConst obj);
+void notifyClients(JsonObject obj);
 void wsSendAll(void *arg, const char *message);
 
 void jsonSysmessage(const char *id, const char *message);

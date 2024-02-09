@@ -1,0 +1,23 @@
+#######################################
+# Syntax Coloring Map For SPIFFS File Print
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+FSFilePrint	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+FSFilePrint	KEYWORD2
+open	KEYWORD2
+close	KEYWORD2
+write	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+

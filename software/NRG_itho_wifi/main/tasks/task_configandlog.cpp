@@ -12,6 +12,7 @@ bool chkpartition = false;
 int chk_partition_res = -1;
 bool formatFileSystem = false;
 bool flashLogInitReady = false;
+char uuid[UUID_STR_LEN]{};
 
 // locals
 FSFilePrint filePrint(ACTIVE_FS, "/logfile", 2, 10000);
@@ -45,9 +46,9 @@ void TaskConfigAndLog(void *pvParameters)
   initFileSystem();
   syslog_queue_worker();
 
-  //set provisional timezone
+  // set provisional timezone
   setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
-  tzset();  
+  tzset();
 
   logInit();
   syslog_queue_worker();
@@ -125,7 +126,8 @@ void execLogAndConfigTasks()
     saveWifiConfigflag = false;
     if (saveWifiConfig("flash"))
     {
-      logMessagejson("Wifi settings saved, reboot the device", WEBINTERFACE);
+      logMessagejson("Wifi settings saved, connecting to wifi network...", WEBINTERFACE);
+      connectWiFiSTA();
     }
     else
     {
@@ -184,13 +186,13 @@ void execLogAndConfigTasks()
   {
     formatFileSystem = false;
     char logBuff[LOG_BUF_SIZE]{};
-    StaticJsonDocument<128> root;
-    JsonObject systemstat = root.createNestedObject("systemstat");
+    JsonDocument root;
+    JsonObject systemstat = root["systemstat"].to<JsonObject>();
 
     if (ACTIVE_FS.format())
     {
       systemstat["format"] = 1;
-      notifyClients(root.as<JsonObjectConst>());
+      notifyClients(root.as<JsonObject>());
       strlcpy(logBuff, "Filesystem format done", sizeof(logBuff));
       logMessagejson(logBuff, WEBINTERFACE);
       strlcpy(logBuff, "Device rebooting, connect to accesspoint to setup the device", sizeof(logBuff));
@@ -202,7 +204,7 @@ void execLogAndConfigTasks()
       systemstat["format"] = 0;
       strlcpy(logBuff, "Unable to format", sizeof(logBuff));
       logMessagejson(logBuff, WEBINTERFACE);
-      notifyClients(root.as<JsonObjectConst>());
+      notifyClients(root.as<JsonObject>());
     }
     strlcpy(logBuff, "", sizeof(logBuff));
   }
@@ -285,9 +287,9 @@ void syslog_queue_worker()
     }
 
     // Also update webinterface
-    // DynamicJsonDocument root(250);
+    // JsonDocument root;
     // root["dblog"] = inputString;
-    // notifyClients(root.as<JsonObjectConst>());
+    // notifyClients(root.as<JsonObject>());
 
     // do something
   }
@@ -299,6 +301,20 @@ bool initFileSystem()
   D_LOG("Mounting FS...");
 
   NVS.begin();
+
+  // NVS.erase("uuid");
+  std::string uuidstr = NVS.getstring("uuid");
+  if (uuidstr.empty())
+  {
+    uuid_t uu;
+
+    uuid_generate(uu);
+    uuid_unparse(uu, uuid);
+    NVS.setString("uuid", uuid);
+  }
+  else {
+    strlcpy(uuid, uuidstr.c_str(), sizeof(uuid));
+  }
 
   ACTIVE_FS.begin(true);
 
@@ -378,6 +394,8 @@ void logInit()
   }
 
   N_LOG("System boot, last reset reason: %s", buf);
+
+  N_LOG("Device UUID: %s", uuid);
 
   I_LOG("Hardware detected: 0x%02X", hardware_rev_det);
 

@@ -31,24 +31,11 @@ enum IthoCommand
 
   IthoTimerUser = 15,
 
-};
+  IthoJoinReply = 16,
 
-enum message_state
-{
-  S_START,
-  S_HEADER,
-  S_ADDR0,
-  S_ADDR1,
-  S_ADDR2,
-  S_PARAM0,
-  S_PARAM1,
-  S_OPCODE,
-  S_LEN,
-  S_PAYLOAD,
-  S_CHECKSUM,
-  S_TRAILER,
-  S_COMPLETE,
-  S_ERROR
+  IthoPIRmotionOn = 17,
+  IthoPIRmotionOff = 18,
+
 };
 
 enum RemoteTypes : uint16_t
@@ -56,9 +43,11 @@ enum RemoteTypes : uint16_t
   UNSETTYPE = 0x0000,
   RFTCVE = 0x22F1,
   RFTAUTO = 0x22F3,
+  RFTAUTON = 0x22F4,
   DEMANDFLOW = 0x22F8,
   RFTRV = 0x12A0,
   RFTCO2 = 0x1298,
+  RFTPIR = 0x2E10,
   ORCON15LF01 = 0x6710
 };
 
@@ -83,7 +72,7 @@ enum RemoteTypes : uint16_t
 #define MAX_PAYLOAD 64
 #define MAX_DECODED MAX_PAYLOAD + 18
 
-static char const *const MsgType[4] = {"RQ", "_W", "_I", "RP"};
+static char const *const MsgType[4] = {"RQ", "_I", "_W", "RP"};
 
 // General command structure:
 // < opcode 2 bytes >< len 1 byte >< command len bytes >
@@ -124,6 +113,10 @@ const uint8_t ithoMessageDFTimer3CommandBytes[] = {0x22, 0xF3, 0x05, 0x00, 0x42,
 const uint8_t ithoMessageDFCook30CommandBytes[] = {0x22, 0xF3, 0x05, 0x00, 0x02, 0x1E, 0x02, 0x03};
 const uint8_t ithoMessageDFCook60CommandBytes[] = {0x22, 0xF3, 0x05, 0x00, 0x02, 0x3C, 0x02, 0x03};
 
+// message command bytes specific for RFT PIR remote
+const uint8_t ithoMessageRFTPIRonCommandBytes[] = {0x2E, 0x10, 0x03, 0x00, 0x01, 0x00};
+const uint8_t ithoMessageRFTPIRoffCommandBytes[] = {0x2E, 0x10, 0x03, 0x00, 0x00, 0x00};
+
 // Join/Leave command structure:
 // < opcode 2 bytes >< len 1 byte >[next command + device ID block repeats len/6 times]< command 3 bytes >< device ID 3 bytes >
 
@@ -133,8 +126,13 @@ const uint8_t ithoMessageAUTORFTJoinCommandBytes[] = {0x1F, 0xC9, 0x0C, 0x63, 0x
 const uint8_t ithoMessageDFJoinCommandBytes[] = {0x1F, 0xC9, 0x0C, 0x00, 0x22, 0xF8, 0x00, 0x00, 0x00, 0x00, 0x10, 0xE0, 0x00, 0x00, 0x00};                                                                                                              // join command of DemandFlow remote (536-0146)
 const uint8_t ithoMessageRVJoinCommandBytes[] = {0x1F, 0xC9, 0x18, 0x00, 0x31, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x12, 0xA0, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00};                                      // join command of RFT-RV (04-00046)
 const uint8_t ithoMessageCO2JoinCommandBytes[] = {0x1F, 0xC9, 0x1E, 0x00, 0x31, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x12, 0x98, 0x00, 0x00, 0x00, 0x00, 0x2E, 0x10, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00}; // join command of RFT-CO2  (04-00045)
+const uint8_t ithoMessagePIRJoinCommandBytes[] = {0x1F, 0xC9, 0x06, 0x00, 0x2E, 0x10, 0x00, 0x00, 0x00};                                                                                                                      // join command of RF PIR
 const uint8_t ithoMessageLeaveCommandBytes[] = {0x1F, 0xC9, 0x06, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00};                                                                                                                                                   // standard leave command
 const uint8_t ithoMessageAUTORFTLeaveCommandBytes[] = {0x1F, 0xC9, 0x06, 0x63, 0x1F, 0xC9, 0x00, 0x00, 0x00};                                                                                                                                            // leave command of AUTO RFT (536-0150)
+const uint8_t ithoMessageAUTORFTNJoinCommandBytes[] = {0x1F, 0xC9, 0x12, 0x00, 0x22, 0xF8, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00};                                                                    // join command of Auto RFT-N (04-00161) (bi-directioal)
+
+// Join/Leave reply commands:
+const uint8_t ithoMessageJoinReplyCommandBytes[] = {0x1F, 0xC9, 0x0C, 0x00, 0x31, 0xD9, 0x00, 0x00, 0x00, 0x00, 0x31, 0xDA, 0x00, 0x00, 0x00}; // leave command of AUTO RFT (536-0150)
 
 // Orcon remote VMN-15LF01
 const uint8_t orconMessageAwayCommandBytes[] = {0x22, 0xF1, 0x03, 0x00, 0x00, 0x04};
@@ -149,8 +147,6 @@ const uint8_t orconMessageFilterCleanCommandBytes[] = {0x10, 0xD0, 0x02, 0x00, 0
 const uint8_t orconMessageJoinCommandBytes[] = {0x1F, 0xC9, 0x12, 0x00, 0x22, 0xF1, 0x00, 0x00, 0x00, 0x00, 0x22, 0xF3, 0x00, 0x00, 0x00, 0x67, 0x10, 0xE0, 0x00, 0x00, 0x00};
 const uint8_t orconMessageBatteryStatusCommandBytes[] = {0x10, 0x60, 0x03, 0x00, 0xFF, 0x01};
 
-
-
 class IthoPacket
 {
 public:
@@ -161,9 +157,11 @@ public:
     TIMER = 0x22F3,
     SETPOINT = 0x22F8,
     STATUS = 0x31DA,
+    FANSTATUS = 0x31D9,
     REMOTESTATUS = 0x31E0,
     TEMPHUM = 0x12A0,
     CO2 = 0x1298,
+    PIR = 0x2E10,
     BATTERY = 0x1060
   };
 
@@ -176,28 +174,28 @@ public:
   //<HEADER> <addr0> <addr1> <addr2> <param0> <param1> <OPCODE> <LENGTH> <PAYLOAD> <CHECKSUM>
   //<  1   > <  3  > <  3  > <  3  > <  1   > <  1   > <  2   > <  1   > <length > <   1    >
 
-  uint8_t header;
-  uint8_t type;
-  uint32_t deviceId0;
-  uint32_t deviceId1;
-  uint32_t deviceId2;
-  uint8_t param0;
-  uint8_t param1;
-  uint16_t opcode;
-  uint8_t len;
+  uint8_t header{0};
+  //uint8_t type;
+  uint32_t deviceId0{0};
+  uint32_t deviceId1{0};
+  uint32_t deviceId2{0};
+  uint8_t param0{0};
+  uint8_t param1{0};
+  uint16_t opcode{0};
+  uint8_t len{0};
 
-  uint8_t error;
+  uint8_t error{0};
 
-  uint8_t payloadPos;
+  uint8_t payloadPos{0};
   // uint8_t payload[MAX_PAYLOAD];
 
-  uint8_t dataDecoded[MAX_DECODED];
-  uint8_t length;
+  uint8_t dataDecoded[MAX_DECODED]{};
+  uint8_t length{0};
 
-  uint8_t deviceType;
-  uint8_t deviceId[3];
+  // uint8_t deviceType{0};
+  // uint8_t deviceId[3];
 
-  uint8_t counter; // 0-255, counter is increased on every remote button press
+  // uint8_t counter{0}; // 0-255, counter is increased on every remote button press
 
   // Type getType(uint16_t opcode) const;
 };

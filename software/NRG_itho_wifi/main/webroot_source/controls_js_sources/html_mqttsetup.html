@@ -2,6 +2,7 @@
   <h1>MQTT setup</h1>
 </div>
 <p>Configuration of the MQTT server to publish the status to and subscribe topic to receive commands</p>
+<p>Note: the MQTT base topic should to be unique for every add-on</p>
 <style>
   .pure-form-aligned .pure-control-group label {
     width: 15em;
@@ -41,28 +42,8 @@
       <input id="mqtt_port" maxlength="5" type="text">
     </div>
     <div class="pure-control-group">
-      <label for="mqtt_state_topic">State topic</label>
-      <input id="mqtt_state_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-mqtt_ithostatus" for="mqtt_ithostatus_topic">Itho status topic</label>
-      <input id="mqtt_ithostatus_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-mqtt_remotesinfo" for="mqtt_remotesinfo_topic">Remotes info topic</label>
-      <input id="mqtt_remotesinfo_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-mqtt_lastcmd" for="mqtt_lastcmd_topic">Last command info topic</label>
-      <input id="mqtt_lastcmd_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label for="mqtt_cmd_topic">Command topic</label>
-      <input id="mqtt_cmd_topic" maxlength="120" type="text">
-    </div>
-    <div class="pure-control-group">
-      <label id="label-lwt_topic" for="mqtt_lwt_topic">Last will topic</label>
-      <input id="mqtt_lwt_topic" maxlength="120" type="text">
+      <label id="label-mqtt_basetopic" for="mqtt_base_topic">MQTT base topic</label>
+      <input id="mqtt_base_topic" maxlength="120" type="text">
     </div>
     <br>
     <div class="pure-control-group">
@@ -85,6 +66,14 @@
         onchange='radio("mqtt_domoticz_active", 0)' value="0"> off
     </div>
     <div class="pure-control-group">
+      <label id="label-mqtt_domoticzin" for="mqtt_domoticzin_topic" style="display: none;">Domoticz in topic</label>
+      <input id="mqtt_domoticzin_topic" maxlength="120" type="text" style="display: none;">
+    </div>
+    <div class="pure-control-group">
+      <label id="label-mqtt_domoticzout" for="mqtt_domoticzout_topic" style="display: none;">Domoticz out topic</label>
+      <input id="mqtt_domoticzout_topic" maxlength="120" type="text" style="display: none;">
+    </div>
+    <div class="pure-control-group">
       <label id="label-mqtt_idx" for="mqtt_idx" style="display: none;">Device IDX</label>
       <input id="mqtt_idx" maxlength="5" type="text" style="display: none;">
     </div>
@@ -98,8 +87,63 @@
     </div>
   </fieldset>
 </form>
+<p><br>MQTT Topics:<br></p>
+<table class="pure-table pure-table-bordered">
+  <thead style="white-space: nowrap;">
+    <tr>
+      <th>Topic type:</th>
+      <th>Topic name:</th>
+      <th>Use:</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>State</td>
+      <td><span name="mqtt_base_topic"></span>/state</td>
+      <td>Contains a 0-255 value representing the PWM2I2C speed setting</td>
+    </tr>
+    <tr>
+      <td>Itho status</td>
+      <td><span name="mqtt_base_topic"></span>/ithostatus</td>
+      <td>Contains JSON with info from itho firmware (same info as under menu Itho status)</td>
+    </tr>
+    <tr>
+      <td>Remotes info</td>
+      <td><span name="mqtt_base_topic"></span>/remotesinfo</td>
+      <td>Contains JSON with info from RF devices paired to the add-on</td>
+    </tr>
+    <tr>
+      <td>Last command info</td>
+      <td><span name="mqtt_base_topic"></span>/lastcmd</td>
+      <td>Contains the last command received on the API</td>
+    </tr>
+    <tr>
+      <td>Command</td>
+      <td><span name="mqtt_base_topic"></span>/cmd</td>
+      <td>Commands posted to this topic will be processed by the MQTTAPI</td>
+    </tr>
+    <tr>
+      <td>Last will</td>
+      <td><span name="mqtt_base_topic"></span>/lwt</td>
+      <td>Last will online/offline info topic</td>
+    </tr>
+  </tbody>
+</table>
+<br><br><br>
 <script>
   $(document).ready(function () {
     getSettings('mqttsetup');
   });
+
+  var input = document.getElementById("mqtt_base_topic");
+  input.addEventListener('input', updateSpanByName);
+  input.targetName = "mqtt_base_topic";
+
+  function updateSpanByName(e) {
+
+    let elements = document.getElementsByName(e.currentTarget.targetName);
+    for (let i = 0; i < elements.length; i++) {
+      elements[i].textContent = this.value;
+    }
+  }  
 </script>

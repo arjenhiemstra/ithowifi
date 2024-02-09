@@ -1,0 +1,21 @@
+{
+  "name": "ArduinoNvs",
+  "keywords": "NVS, ESP32, Non-volatile storage",
+  "description": "Arduino wrapper for ESP32 NVS (Non-volatile storage)",
+  "homepage": "https://github.com/rpolitex/ArduinoNvs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rpolitex/ArduinoNvs"
+  },
+  "version": "2.8",
+  "authors": [
+    {
+    "name": "dRKr",
+    "email": "info@sinai.io",
+    "url": "www.sinai.io",
+    "maintainer": true 
+    }    
+  ],
+  "frameworks": "arduino",
+  "platforms": ["esp32", "espressif32"]
+}

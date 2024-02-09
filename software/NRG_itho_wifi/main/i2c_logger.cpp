@@ -64,10 +64,10 @@ const char *I2CLogger::i2c_error_state_to_name(i2c_error_state_t code) const
     return i2c_error_state_unknown_msg;
 }
 
-void I2CLogger::get(JsonObject obj, const char* rootName) const
+void I2CLogger::get(JsonObject obj, const char *rootName) const
 {
 
-    JsonArray nested = obj.createNestedArray(rootName);
+    JsonArray nested = obj[rootName].to<JsonArray>();
 
     int current_last_entry = i2c_log.get_back_pos();
 
@@ -76,12 +76,12 @@ void I2CLogger::get(JsonObject obj, const char* rootName) const
         if (i == 0)
             i = I2CLOGGER_LOG_SIZE;
 
-        JsonObject doc = nested.createNestedObject();
+        JsonObject doc = nested.add<JsonObject>();
 
         i2c_log_t elem = i2c_log.peek(i);
 
-        doc["origin"] = i2c_cmdref_to_name(elem.cmd_origin); //32
-        doc["start"] = elem.cmd_start; //11
+        doc["origin"] = i2c_cmdref_to_name(elem.cmd_origin); // 32
+        doc["start"] = elem.cmd_start;                       // 11
         doc["duration"] = elem.cmd_duration;
         doc["error"] = i2c_error_state_to_name(elem.error_state);
         doc["final"] = i2c_error_state_to_name(elem.final_state);

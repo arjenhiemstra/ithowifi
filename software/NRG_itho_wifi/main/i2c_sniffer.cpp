@@ -182,9 +182,9 @@ void i2c_sniffer_process_buf(std::string &buffer)
         {
             if (i2c_safe_guard.sniffer_web_enabled)
             {
-                DynamicJsonDocument root(len + 100);
+                JsonDocument root;
                 root["i2csniffer"] = buffer.c_str();
-                notifyClients(root.as<JsonObjectConst>());
+                notifyClients(root.as<JsonObject>());
             }
             I_LOG(buffer.c_str());
         }

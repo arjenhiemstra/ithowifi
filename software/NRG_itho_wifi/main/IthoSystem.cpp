@@ -14,6 +14,7 @@
 
 uint8_t ithoDeviceGroup = 0;
 uint8_t ithoDeviceID = 0;
+uint8_t itho_hwversion = 0;
 uint8_t itho_fwversion = 0;
 volatile uint16_t ithoCurrentVal = 0;
 const struct ihtoDeviceType *ithoDeviceptr = nullptr;
@@ -23,6 +24,7 @@ std::vector<ithoDeviceStatus> ithoStatus;
 std::vector<ithoDeviceMeasurements> ithoMeasurements;
 std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 std::vector<ithoDeviceMeasurements> ithoCounters;
+
 struct lastCommand lastCmd;
 ithoSettings *ithoSettingsArray = nullptr;
 
@@ -46,9 +48,18 @@ double ithoTemp = 0;
 
 int currentIthoDeviceGroup() { return ithoDeviceGroup; }
 int currentIthoDeviceID() { return ithoDeviceID; }
+uint8_t currentItho_hwversion() { return itho_hwversion; }
 uint8_t currentItho_fwversion() { return itho_fwversion; }
 uint16_t currentIthoSettingsLength() { return ithoSettingsLength; }
 int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
+
+struct retryItem
+{
+  int index;
+  int retries;
+};
+
+std::vector<retryItem> retryList;
 
 struct ihtoDeviceType
 {
@@ -63,32 +74,29 @@ struct ihtoDeviceType
   const struct ithoLabels *settingsStatusLabels;
 };
 
-const struct ihtoDeviceType ithoDevices[]
-{
-  {0x00, 0x01, "Air curtain", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x03, "HRU ECO-fan", ithoHRUecoFanSettingsMap, sizeof(ithoHRUecoFanSettingsMap) / sizeof(ithoHRUecoFanSettingsMap[0]), ithoHRUecoSettingsLabels, ithoHRUecoFanStatusMap, sizeof(ithoHRUecoFanStatusMap) / sizeof(ithoHRUecoFanStatusMap[0]), ithoHRUecoStatusLabels},
-      {0x00, 0x08, "LoadBoiler", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x0A, "GGBB", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x0B, "DemandFlow", ithoDemandFlowSettingsMap, sizeof(ithoDemandFlowSettingsMap) / sizeof(ithoDemandFlowSettingsMap[0]), ithoDemandFlowSettingsLabels, ithoDemandFlowStatusMap, sizeof(ithoDemandFlowStatusMap) / sizeof(ithoDemandFlowStatusMap[0]), ithoDemandFlowStatusLabels},
-      {0x00, 0x0C, "CO2 relay", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x0D, "Heatpump", ithoWPUSettingsMap, sizeof(ithoWPUSettingsMap) / sizeof(ithoWPUSettingsMap[0]), ithoWPUSettingsLabels, ithoWPUStatusMap, sizeof(ithoWPUStatusMap) / sizeof(ithoWPUStatusMap[0]), ithoWPUStatusLabels},
-      {0x00, 0x0E, "OLB Single", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x0F, "AutoTemp", ithoAutoTempSettingsMap, sizeof(ithoAutoTempSettingsMap) / sizeof(ithoAutoTempSettingsMap[0]), ithoAutoTempSettingsLabels, ithoAutoTempStatusMap, sizeof(ithoAutoTempStatusMap) / sizeof(ithoAutoTempStatusMap[0]), ithoAutoTempStatusLabels},
-      {0x00, 0x10, "OLB Double", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x11, "RF+", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x14, "CVE", itho14SettingsMap, sizeof(itho14SettingsMap) / sizeof(itho14SettingsMap[0]), ithoCVE14SettingsLabels, itho14StatusMap, sizeof(itho14StatusMap) / sizeof(itho14StatusMap[0]), ithoCVE14StatusLabels},
-      {0x00, 0x15, "Extended", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x16, "Extended Plus", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x1A, "AreaFlow", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x1B, "CVE-Silent", itho1BSettingsMap, sizeof(itho1BSettingsMap) / sizeof(itho1BSettingsMap[0]), ithoCVE1BSettingsLabels, itho1BStatusMap, sizeof(itho1BStatusMap) / sizeof(itho1BStatusMap[0]), ithoCVE1BStatusLabels},
-      {0x00, 0x1C, "CVE-SilentExt", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x1D, "CVE-SilentExtPlus", ithoHRU200SettingsMap, sizeof(ithoHRU200SettingsMap) / sizeof(ithoHRU200SettingsMap[0]), ithoHRU200SettingsLabels, ithoHRU200StatusMap, sizeof(ithoHRU200StatusMap) / sizeof(ithoHRU200StatusMap[0]), ithoHRU200StatusLabels},
-      {0x00, 0x20, "RF_CO2", nullptr, 0, nullptr, nullptr, 0, nullptr},
-      {0x00, 0x2B, "HRU 350", ithoHRU350SettingsMap, sizeof(ithoHRU350SettingsMap) / sizeof(ithoHRU350SettingsMap[0]), ithoHRU350SettingsLabels, ithoHRU350StatusMap, sizeof(ithoHRU350StatusMap) / sizeof(ithoHRU350StatusMap[0]), ithoHRU350StatusLabels},
-  {
-    0x07, 0x01, "HRU 250-300", ithoHRU250_300SettingsMap, sizeof(ithoHRU250_300SettingsMap) / sizeof(ithoHRU250_300SettingsMap[0]), ithoHRU250_300SettingsLabels, ithoHRU250_300StatusMap, sizeof(ithoHRU250_300StatusMap) / sizeof(ithoHRU250_300StatusMap[0]), ithoHRU250_300StatusLabels
-  }
-};
+const struct ihtoDeviceType ithoDevices[]{
+    {0x00, 0x01, "Air curtain", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x03, "HRU ECO-fan", ithoHRUecoFanSettingsMap, sizeof(ithoHRUecoFanSettingsMap) / sizeof(ithoHRUecoFanSettingsMap[0]), ithoHRUecoSettingsLabels, ithoHRUecoFanStatusMap, sizeof(ithoHRUecoFanStatusMap) / sizeof(ithoHRUecoFanStatusMap[0]), ithoHRUecoStatusLabels},
+    {0x00, 0x08, "LoadBoiler", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x0A, "GGBB", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x0B, "DemandFlow", ithoDemandFlowSettingsMap, sizeof(ithoDemandFlowSettingsMap) / sizeof(ithoDemandFlowSettingsMap[0]), ithoDemandFlowSettingsLabels, ithoDemandFlowStatusMap, sizeof(ithoDemandFlowStatusMap) / sizeof(ithoDemandFlowStatusMap[0]), ithoDemandFlowStatusLabels},
+    {0x00, 0x0C, "CO2 relay", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x0D, "Heatpump", ithoWPUSettingsMap, sizeof(ithoWPUSettingsMap) / sizeof(ithoWPUSettingsMap[0]), ithoWPUSettingsLabels, ithoWPUStatusMap, sizeof(ithoWPUStatusMap) / sizeof(ithoWPUStatusMap[0]), ithoWPUStatusLabels},
+    {0x00, 0x0E, "OLB Single", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x0F, "AutoTemp", ithoAutoTempSettingsMap, sizeof(ithoAutoTempSettingsMap) / sizeof(ithoAutoTempSettingsMap[0]), ithoAutoTempSettingsLabels, ithoAutoTempStatusMap, sizeof(ithoAutoTempStatusMap) / sizeof(ithoAutoTempStatusMap[0]), ithoAutoTempStatusLabels},
+    {0x00, 0x10, "OLB Double", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x11, "RF+", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x14, "CVE", itho14SettingsMap, sizeof(itho14SettingsMap) / sizeof(itho14SettingsMap[0]), ithoCVE14SettingsLabels, itho14StatusMap, sizeof(itho14StatusMap) / sizeof(itho14StatusMap[0]), ithoCVE14StatusLabels},
+    {0x00, 0x15, "Extended", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x16, "Extended Plus", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x1A, "AreaFlow", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x1B, "CVE-Silent", itho1BSettingsMap, sizeof(itho1BSettingsMap) / sizeof(itho1BSettingsMap[0]), ithoCVE1BSettingsLabels, itho1BStatusMap, sizeof(itho1BStatusMap) / sizeof(itho1BStatusMap[0]), ithoCVE1BStatusLabels},
+    {0x00, 0x1C, "CVE-SilentExt", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x1D, "CVE-SilentExtPlus", ithoHRU200SettingsMap, sizeof(ithoHRU200SettingsMap) / sizeof(ithoHRU200SettingsMap[0]), ithoHRU200SettingsLabels, ithoHRU200StatusMap, sizeof(ithoHRU200StatusMap) / sizeof(ithoHRU200StatusMap[0]), ithoHRU200StatusLabels},
+    {0x00, 0x20, "RF_CO2", nullptr, 0, nullptr, nullptr, 0, nullptr},
+    {0x00, 0x2B, "HRU 350", ithoHRU350SettingsMap, sizeof(ithoHRU350SettingsMap) / sizeof(ithoHRU350SettingsMap[0]), ithoHRU350SettingsLabels, ithoHRU350StatusMap, sizeof(ithoHRU350StatusMap) / sizeof(ithoHRU350StatusMap[0]), ithoHRU350StatusLabels},
+    {0x00, 0x30, "AutoTemp Basic", ithoAutoTempSettingsMap, sizeof(ithoAutoTempSettingsMap) / sizeof(ithoAutoTempSettingsMap[0]), ithoAutoTempSettingsLabels, ithoAutoTempStatusMap, sizeof(ithoAutoTempStatusMap) / sizeof(ithoAutoTempStatusMap[0]), ithoAutoTempStatusLabels},
+    {0x07, 0x01, "HRU 250-300", ithoHRU250_300SettingsMap, sizeof(ithoHRU250_300SettingsMap) / sizeof(ithoHRU250_300SettingsMap[0]), ithoHRU250_300SettingsLabels, ithoHRU250_300StatusMap, sizeof(ithoHRU250_300StatusMap) / sizeof(ithoHRU250_300StatusMap[0]), ithoHRU250_300StatusLabels}};
 
 const char *getIthoType()
 {
@@ -145,6 +153,76 @@ int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const u
   return -1;
 }
 
+const char *getSettingLabel(const uint8_t index)
+{
+
+  const uint8_t deviceID = currentIthoDeviceID();
+  const uint8_t version = currentItho_fwversion();
+  const uint8_t deviceGroup = currentIthoDeviceGroup();
+
+  int settingsLen = getSettingsLength(deviceGroup, deviceID, version);
+
+  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+
+  if (settingsPtr == nullptr)
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return ithoLabelErrors[0].labelFull;
+    }
+    else
+    {
+      return ithoLabelErrors[0].labelNormalized;
+    }
+  }
+  else if (settingsLen == -2) // Settings not available for this device
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return ithoLabelErrors[1].labelFull;
+    }
+    else
+    {
+      return ithoLabelErrors[1].labelNormalized;
+    }
+  }
+  else if (settingsLen == -3) // Version newer than latest version available in the firmware
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return ithoLabelErrors[2].labelFull;
+    }
+    else
+    {
+      return ithoLabelErrors[2].labelNormalized;
+    }
+  }
+  else if (settingsLen == -4) // Settings not available for this version
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return ithoLabelErrors[3].labelFull;
+    }
+    else
+    {
+      return ithoLabelErrors[3].labelNormalized;
+    }
+  }
+  else if (!(index < settingsLen)) // out of bound
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return ithoLabelErrors[4].labelFull;
+    }
+    else
+    {
+      return ithoLabelErrors[4].labelNormalized;
+    }
+  }
+
+  return settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
+}
+
 void getSetting(const uint8_t index, const bool updateState, const bool updateweb, const bool loop)
 {
 
@@ -159,13 +237,13 @@ void getSetting(const uint8_t index, const bool updateState, const bool updatewe
     return;
   }
 
-  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+  //const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
 
-  StaticJsonDocument<512> doc;
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
   root["Index"] = index;
-  root["Description"] = settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
+  root["Description"] = getSettingLabel(index);
 
   if (!updateState && !updateweb) // -> first run, just send labels and null values
   {
@@ -205,7 +283,7 @@ void processSettingResult(const uint8_t index, const bool loop)
 
   const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
 
-  StaticJsonDocument<512> doc;
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
   root["Index"] = index;
@@ -220,28 +298,21 @@ void processSettingResult(const uint8_t index, const bool loop)
   root["loop"] = loop;
   if (resultPtr2410 != nullptr && ithoSettingsArray != nullptr)
   {
-    int64_t val0, val1, val2;
-    val0 = cast_raw_bytes_to_int(resultPtr2410 + 0, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
-    val1 = cast_raw_bytes_to_int(resultPtr2410 + 1, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
-    val2 = cast_raw_bytes_to_int(resultPtr2410 + 2, ithoSettingsArray[index].length, ithoSettingsArray[index].is_signed);
+    double cur = 0.0;
+    double min = 0.0;
+    double max = 0.0;
 
-    if (*(resultPtr2410 + 0) == 0x5555AAAA && *(resultPtr2410 + 1) == 0xAAAA5555 && *(resultPtr2410 + 2) == 0xFFFFFFFF) // something went wrong, indicate error, better handling needed
+    if (decodeQuery2410(resultPtr2410, &ithoSettingsArray[index], &cur, &min, &max))
     {
-      root["Current"] = "error";
-      root["Minimum"] = "error";
-      root["Maximum"] = "error";
-    }
-    else if (ithoSettingsArray[index].type == ithoSettings::is_int)
-    {
-      root["Current"] = val0;
-      root["Minimum"] = val1;
-      root["Maximum"] = val2;
+      root["Current"] = cur;
+      root["Minimum"] = min;
+      root["Maximum"] = max;
     }
     else
     {
-      root["Current"] = static_cast<double>((int32_t)val0) / ithoSettingsArray[index].divider;
-      root["Minimum"] = static_cast<double>((int32_t)val1) / ithoSettingsArray[index].divider;
-      root["Maximum"] = static_cast<double>((int32_t)val2) / ithoSettingsArray[index].divider;
+      root["Current"] = "ret_error";
+      root["Minimum"] = "ret_error";
+      root["Maximum"] = "ret_error";
     }
   }
   else
@@ -289,7 +360,7 @@ int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, cons
   return -1;
 }
 
-const char *getSatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr)
+const char *getStatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr)
 {
   const uint8_t deviceGroup = currentIthoDeviceGroup();
   const uint8_t deviceID = currentIthoDeviceID();
@@ -603,6 +674,7 @@ void sendQueryDevicetype(bool updateweb)
 
     ithoDeviceGroup = i2cbuf[8];
     ithoDeviceID = i2cbuf[9];
+    itho_hwversion = i2cbuf[10];
     itho_fwversion = i2cbuf[11];
     ithoDeviceptr = getDevicePtr(currentIthoDeviceGroup(), currentIthoDeviceID());
     ithoSettingsLength = getSettingsLength(currentIthoDeviceGroup(), currentIthoDeviceID(), currentItho_fwversion());
@@ -656,7 +728,7 @@ void sendQueryStatusFormat(bool updateweb)
       ithoStatus.push_back(ithoDeviceStatus());
 
       //      char fStringBuf[32];
-      //      getSatusLabel(i, ithoDeviceptr, currentItho_fwversion(), fStringBuf);
+      //      getStatusLabel(i, ithoDeviceptr, currentItho_fwversion(), fStringBuf);
 
       ithoStatus.back().is_signed = get_signed_from_datatype(i2cbuf[6 + i]);
       ithoStatus.back().length = get_length_from_datatype(i2cbuf[6 + i]);
@@ -723,7 +795,7 @@ void sendQueryStatus(bool updateweb)
     {
       for (auto &ithoStat : ithoStatus)
       {
-        ithoStat.name = getSatusLabel(labelPos, ithoDeviceptr);
+        ithoStat.name = getStatusLabel(labelPos, ithoDeviceptr);
         auto tempVal = 0;
         for (int i = ithoStat.length; i > 0; i--)
         {
@@ -1378,6 +1450,41 @@ void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperatur
   }
 }
 
+void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t checked, bool dryrun, bool updateweb)
+{
+  uint8_t command[] = {0x82,0x80,0x40,0x30,0x06,0x07,0x01,0x00,0x0F,0x00,0x01,0x01,0x01,0xFF};
+  
+  command[7] = (index >> 8) & 0xFF;
+  command[8] = index & 0xFF;
+
+  command[9] = datatype & 0xFF;
+
+  command[10] = (value >> 8) & 0xFF;
+  command[11] = value & 0xFF;
+
+  command[12] = checked & 0xFF;
+
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+  
+  if (dryrun) {
+    jsonSysmessage("itho_4030_i2c_command", i2cbuf2string(command, sizeof(command)).c_str());
+    return;
+  }
+  if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_SET_CE30))
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("itho_4030_result", "failed");
+    }
+    return;
+  } 
+}
+
+
+
+
+
 int32_t *sendQuery2410(uint8_t index, bool updateweb)
 {
 
@@ -1498,6 +1605,33 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
   return values;
 }
 
+bool decodeQuery2410(int32_t *ptr, ithoSettings *setting, double *cur, double *min, double *max)
+{
+  if (*(ptr + 0) == 0x5555AAAA && *(ptr + 1) == 0xAAAA5555 && *(ptr + 2) == 0xFFFFFFFF)
+  {
+    return false;
+  }
+
+  uint8_t len = setting->length;
+  bool is_signed = setting->is_signed;
+  int64_t a = cast_raw_bytes_to_int(ptr + 0, len, is_signed);
+  int64_t b = cast_raw_bytes_to_int(ptr + 1, len, is_signed);
+  int64_t c = cast_raw_bytes_to_int(ptr + 2, len, is_signed);
+
+  *cur = static_cast<double>(static_cast<int32_t>(a));
+  *min = static_cast<double>(static_cast<int32_t>(b));
+  *max = static_cast<double>(static_cast<int32_t>(c));
+
+  if (setting->type == ithoSettings::is_float)
+  {
+    *cur = *cur / setting->divider;
+    *min = *min / setting->divider;
+    *max = *max / setting->divider;
+  }
+
+  return true;
+}
+
 // void setSetting2410(bool updateweb)
 // {
 //   uint8_t index = index2410;
@@ -1505,17 +1639,17 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
 //   setSetting2410(index, value, updateweb);
 // }
 
-void setSetting2410(uint8_t index, int32_t value, bool updateweb)
+bool setSetting2410(uint8_t index, int32_t value, bool updateweb)
 {
 
   if (index == 7 && value == 1 && (currentIthoDeviceID() == 0x14 || currentIthoDeviceID() == 0x1B || currentIthoDeviceID() == 0x1D))
   {
     logMessagejson("<br>!!Warning!! Command ignored!<br>Setting index 7 to value 1 will switch off I2C!", WEBINTERFACE);
-    return;
+    return false;
   }
 
   if (ithoSettingsArray == nullptr)
-    return;
+    return false;
 
   uint8_t command[] = {0x82, 0x80, 0x24, 0x10, 0x06, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF};
 
@@ -1543,7 +1677,7 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
     {
       jsonSysmessage("itho2410setres", "format error, first use query 2410");
     }
-    return; // unsupported value format
+    return false; // unsupported value format
   }
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
@@ -1556,7 +1690,7 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
     {
       jsonSysmessage("itho2410setres", "failed");
     }
-    return;
+    return false;
   }
 
   uint8_t i2cbuf[512] = {0};
@@ -1570,6 +1704,7 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
         if (command[6] == i2cbuf[6] && command[7] == i2cbuf[7] && command[8] == i2cbuf[8] && command[9] == i2cbuf[9] && command[23] == i2cbuf[23])
         {
           jsonSysmessage("itho2410setres", "confirmed");
+          return true;
         }
         else
         {
@@ -1582,6 +1717,8 @@ void setSetting2410(uint8_t index, int32_t value, bool updateweb)
       }
     }
   }
+
+  return false;
 }
 
 void sendQueryCounters(bool updateweb)

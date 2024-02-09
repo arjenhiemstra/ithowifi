@@ -15,6 +15,8 @@
 
 #include "tasks/task_web.h"
 
+#include "ApiResponse.h"
+
 extern TaskHandle_t xTaskMQTTHandle;
 extern uint32_t TaskMQTTHWmark;
 extern bool sysStatReq;
@@ -25,6 +27,7 @@ extern int MQTT_conn_state;
 extern int MQTT_conn_state_new;
 extern bool dontReconnectMQTT;
 extern bool updateMQTTihtoStatus;
+extern bool updateMQTTmodeStatus;
 extern PubSubClient mqttClient;
 extern Ticker TaskMQTTTimeout;
 extern bool sendHomeAssistantDiscovery;
