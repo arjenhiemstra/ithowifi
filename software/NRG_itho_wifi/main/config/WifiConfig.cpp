@@ -14,6 +14,7 @@ WifiConfig::WifiConfig()
   strlcpy(config_struct_version, WIFI_CONFIG_VERSION, sizeof(config_struct_version));
   strlcpy(ssid, "", sizeof(ssid));
   strlcpy(passwd, "", sizeof(passwd));
+  strlcpy(appasswd, "password", sizeof(appasswd));
   strlcpy(dhcp, "on", sizeof(dhcp));
   strlcpy(ip, "192.168.4.1", sizeof(ip));
   strlcpy(subnet, "255.255.255.0", sizeof(subnet));
@@ -138,6 +139,11 @@ bool WifiConfig::set(JsonObject obj)
     updated = true;
     strlcpy(passwd, obj["passwd"] | "", sizeof(passwd));
   }
+  if (!obj["appasswd"].isNull())
+  {
+    updated = true;
+    strlcpy(appasswd, obj["appasswd"] | "", sizeof(appasswd));
+  }
   if (!obj["dhcp"].isNull())
   {
     updated = true;
@@ -200,6 +206,7 @@ void WifiConfig::get(JsonObject obj) const
 {
   obj["ssid"] = ssid;
   obj["passwd"] = passwd;
+  obj["appasswd"] = appasswd;
   obj["dhcp"] = dhcp;
   obj["ip"] = ip;
   obj["subnet"] = subnet;

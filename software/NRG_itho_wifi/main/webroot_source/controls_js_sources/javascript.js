@@ -415,6 +415,7 @@ $(document).ready(function () {
         wifisettings: {
           ssid: $('#ssid').val(),
           passwd: $('#passwd').val(),
+          appasswd: $('#appasswd').val(),
           dhcp: $('input[name=\'option-dhcp\']:checked').val(),
           ip: $('#ip').val(),
           subnet: $('#subnet').val(),
@@ -432,12 +433,12 @@ $(document).ready(function () {
     }
     //syssubmit
     else if ($(this).attr('id') == 'syssumbit') {
-      if(!isValidJsonArray($('#api_settings_activated').val())) {
+      if (!isValidJsonArray($('#api_settings_activated').val())) {
         alert("error: Activated settings input value is not a valid JSON array!");
         return;
       }
       else {
-        if(!areAllUnsignedIntegers(JSON.parse($('#api_settings_activated').val()))) {
+        if (!areAllUnsignedIntegers(JSON.parse($('#api_settings_activated').val()))) {
           alert("error: Activated settings array contains non integer values!");
           return;
         }
@@ -826,15 +827,19 @@ function removeID(id) {
 function processElements(x) {
   for (var key in x) {
     if (x.hasOwnProperty(key)) {
-      if(Array.isArray(x[key])) {
+      if (Array.isArray(x[key])) {
         x[key] = JSON.stringify(x[key]);
       }
       var el = $(`#${key}`);
       if (el.is('input') || el.is('select')) {
-        $(`#${key}`).val(x[key]);
+        if ($(`#${key}`).val() != x[key]) {
+          $(`#${key}`).val(x[key]);
+        }
       }
       else if (el.is('span')) {
-        $(`#${key}`).text(x[key]);
+        if ($(`#${key}`).text() != x[key]) {
+          $(`#${key}`).text(x[key]);
+        }
       }
       else if (el.is('a')) {
         $(`#${key}`).attr("href", x[key]);
@@ -850,7 +855,9 @@ function processElements(x) {
       }
       var elbyname = $(`[name='${key}']`).each(function () {
         if ($(this).is('span')) {
-          $(this).text(x[key]);
+          if ($(this).text() != x[key]) {
+            $(this).text(x[key]);
+          }
         }
       });
     }
@@ -1018,7 +1025,7 @@ function update_page(page) {
   }
   if (page != 'wifisetup') {
     localStorage.setItem("wifistat", 0);
-  }  
+  }
   $('#main').empty();
   $('#main').css('max-width', '768px')
   if (page == 'index') { $('#main').append(html_index); }
@@ -1107,10 +1114,10 @@ function areAllUnsignedIntegers(array) {
 
 function isValidJsonArray(input) {
   try {
-      const parsed = JSON.parse(input);
-      return Array.isArray(parsed);
+    const parsed = JSON.parse(input);
+    return Array.isArray(parsed);
   } catch (e) {
-      return false;
+    return false;
   }
 }
 

@@ -39,7 +39,8 @@ void jsonWsSend(const char *rootName)
     snprintf(wifiip, sizeof(wifiip), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
     char apremain[16] = {};
-    long time = (millis() - APmodeTimeout) < 900000 ? (900000 - (millis() - APmodeTimeout)) / 1000 : 0;
+    long timeout = wifiConfig.aptimeout * 60 * 1000;
+    long time = (millis() - APmodeTimeout) < timeout ? (timeout - (millis() - APmodeTimeout)) / 1000 : 0;
 
     if (wifiConfig.aptimeout == 0)
     {

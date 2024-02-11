@@ -56,7 +56,7 @@ void failSafeBoot()
       WiFi.mode(WIFI_AP_STA);
       delay(2000);
 
-      WiFi.softAP(hostName(), WiFiAPPSK);
+      WiFi.softAP(hostName(), wifiConfig.appasswd);
       WiFi.softAPConfig(apIP, apIP, netMsk);
 
       delay(500);

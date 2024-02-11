@@ -124,10 +124,35 @@ void execLogAndConfigTasks()
   if (saveWifiConfigflag)
   {
     saveWifiConfigflag = false;
+
+    bool reconnect = false;
+    JsonDocument root;
+    File configFile = ACTIVE_FS.open("/wifi.json", "r");
+    if (configFile)
+    {
+      DeserializationError error = deserializeJson(root, configFile);
+      if (!error)
+      {
+        if ((strcmp(root["ssid"].as<const char *>(), wifiConfig.ssid) != 0 && strcmp(root["ssid"].as<const char *>(), "") != 0) || (strcmp(root["passwd"].as<const char *>(), wifiConfig.passwd) != 0))
+        {
+          reconnect = true;
+        }
+      }
+    }
+
     if (saveWifiConfig("flash"))
     {
-      logMessagejson("Wifi settings saved, connecting to wifi network...", WEBINTERFACE);
-      connectWiFiSTA();
+      
+      if (reconnect) {
+        char buf[128]{};
+        snprintf(buf, sizeof(buf), "Wifi settings changed, connecting to %s", wifiConfig.ssid);
+        logMessagejson(buf, WEBINTERFACE);
+        connectWiFiSTA();
+      }
+      else {
+        logMessagejson("Wifi settings saved...", WEBINTERFACE);
+      }
+        
     }
     else
     {
@@ -312,7 +337,8 @@ bool initFileSystem()
     uuid_unparse(uu, uuid);
     NVS.setString("uuid", uuid);
   }
-  else {
+  else
+  {
     strlcpy(uuid, uuidstr.c_str(), sizeof(uuid));
   }
 

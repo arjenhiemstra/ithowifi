@@ -39,6 +39,7 @@ private:
 public:
   char ssid[33];
   char passwd[65];
+  char appasswd[65];
   char dhcp[5];
   char ip[16];
   char subnet[16];

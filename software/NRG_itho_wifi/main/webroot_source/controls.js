@@ -416,6 +416,7 @@ $(document).ready(function () {
         wifisettings: {
           ssid: $('#ssid').val(),
           passwd: $('#passwd').val(),
+          appasswd: $('#appasswd').val(),
           dhcp: $('input[name=\'option-dhcp\']:checked').val(),
           ip: $('#ip').val(),
           subnet: $('#subnet').val(),
@@ -433,12 +434,12 @@ $(document).ready(function () {
     }
     //syssubmit
     else if ($(this).attr('id') == 'syssumbit') {
-      if(!isValidJsonArray($('#api_settings_activated').val())) {
+      if (!isValidJsonArray($('#api_settings_activated').val())) {
         alert("error: Activated settings input value is not a valid JSON array!");
         return;
       }
       else {
-        if(!areAllUnsignedIntegers(JSON.parse($('#api_settings_activated').val()))) {
+        if (!areAllUnsignedIntegers(JSON.parse($('#api_settings_activated').val()))) {
           alert("error: Activated settings array contains non integer values!");
           return;
         }
@@ -827,15 +828,19 @@ function removeID(id) {
 function processElements(x) {
   for (var key in x) {
     if (x.hasOwnProperty(key)) {
-      if(Array.isArray(x[key])) {
+      if (Array.isArray(x[key])) {
         x[key] = JSON.stringify(x[key]);
       }
       var el = $(`#${key}`);
       if (el.is('input') || el.is('select')) {
-        $(`#${key}`).val(x[key]);
+        if ($(`#${key}`).val() != x[key]) {
+          $(`#${key}`).val(x[key]);
+        }
       }
       else if (el.is('span')) {
-        $(`#${key}`).text(x[key]);
+        if ($(`#${key}`).text() != x[key]) {
+          $(`#${key}`).text(x[key]);
+        }
       }
       else if (el.is('a')) {
         $(`#${key}`).attr("href", x[key]);
@@ -851,7 +856,9 @@ function processElements(x) {
       }
       var elbyname = $(`[name='${key}']`).each(function () {
         if ($(this).is('span')) {
-          $(this).text(x[key]);
+          if ($(this).text() != x[key]) {
+            $(this).text(x[key]);
+          }
         }
       });
     }
@@ -1019,7 +1026,7 @@ function update_page(page) {
   }
   if (page != 'wifisetup') {
     localStorage.setItem("wifistat", 0);
-  }  
+  }
   $('#main').empty();
   $('#main').css('max-width', '768px')
   if (page == 'index') { $('#main').append(html_index); }
@@ -1108,10 +1115,10 @@ function areAllUnsignedIntegers(array) {
 
 function isValidJsonArray(input) {
   try {
-      const parsed = JSON.parse(input);
-      return Array.isArray(parsed);
+    const parsed = JSON.parse(input);
+    return Array.isArray(parsed);
   } catch (e) {
-      return false;
+    return false;
   }
 }
 
@@ -2085,11 +2092,15 @@ var html_wifisetup = `
       <fieldset>
         <div class="pure-control-group">
           <label for="ssid">SSID</label>
-          <input id="ssid" type="text">
+          <input id="ssid" maxlength="64" type="text"
+            oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('ssid-msg').innerHTML = 'SSID truncated to 32 characters.'; } else { document.getElementById('ssid-msg').innerHTML = ''; }">
+          <span id="ssid-msg" style="color: red;"></span>
         </div>
         <div class="pure-control-group">
           <label for="passwd">Password</label>
-          <input id="passwd" type="Password">
+          <input id="passwd" type="Password" maxlength="65" type="text"
+            oninput="if(this.value.length > 64) { this.value = this.value.substring(0, 64); document.getElementById('passwd-msg').innerHTML = 'Password truncated to 64 characters.'; } else { document.getElementById('passwd-msg').innerHTML = ''; }">
+          <span id="passwd-msg" style="color: red;"></span>
         </div>
         <div class="pure-control-group">
           <label>Show Password</label>
@@ -2205,6 +2216,13 @@ var html_wifisetup = `
           <input id="aptimeout" type="number" min="0" max="255" size="6"
             title="0-255 minutes, 0: AP always off, 255: always on">
         </div>
+        <div class="pure-control-group">
+          <label for="appasswd">AP Password</label>
+          <input id="appasswd" maxlength="65" type="text"
+            oninput="if(this.value.length > 64) { this.value = this.value.substring(0, 64); document.getElementById('appasswd-msg').innerHTML = 'AP Password truncated to 64 characters.'; } else { document.getElementById('appasswd-msg').innerHTML = ''; }">
+          <span id="appasswd-msg" style="color: red;"></span>
+        </div>
+
       </fieldset>
     </form>
     <br><br>
@@ -2245,7 +2263,7 @@ var html_wifisetup = `
         </tr>
       </tbody>
     </table>
-    <br><br><br><br>  
+    <br><br><br><br>
   </div>
   <div class="pure-u-1 pure-u-md-2-5">
     <div>
@@ -2446,11 +2464,13 @@ var html_systemsettings_start = `
     <legend><br>System security:</legend>
     <div class="pure-control-group">
       <label for="sys_username">Username</label>
-      <input id="sys_username" maxlength="20" type="text">
+      <input id="sys_username" maxlength="64" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('username-msg').innerHTML = 'Username truncated to 32 characters.'; } else { document.getElementById('username-msg').innerHTML = ''; }">
+      <span id="username-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
       <label for="sys_password">Password</label>
-      <input id="sys_password" maxlength="20" type="text">
+      <input id="sys_password" maxlength="64" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('password-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('password-msg').innerHTML = ''; }">
+      <span id="password-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
       <label for="option-syssec_web" class="pure-radio">Web interface authentication</label>
@@ -2624,6 +2644,7 @@ var html_systemsettings_start = `
     getSettings('syssetup');
   });
 </script>
+
 `;
 
 var html_mqttsetup = `
@@ -2658,11 +2679,13 @@ var html_mqttsetup = `
     </div>
     <div class="pure-control-group">
       <label for="mqtt_username">Username</label>
-      <input id="mqtt_username" maxlength="30" type="text">
+      <input id="mqtt_username" maxlength="64" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('username-msg').innerHTML = 'Username truncated to 32 characters.'; } else { document.getElementById('username-msg').innerHTML = ''; }">
+      <span id="username-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
       <label for="mqtt_password">Password</label>
-      <input id="mqtt_password" maxlength="30" type="Password">
+      <input id="mqtt_password" maxlength="64" type="Password" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('password-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('password-msg').innerHTML = ''; }">
+      <span id="password-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
       <label for="mqtt_port">Port</label>
@@ -2774,6 +2797,7 @@ var html_mqttsetup = `
     }
   }  
 </script>
+
 `;
 
 var html_systemsettings_cc1101 = `
@@ -2893,7 +2917,7 @@ var html_ithosettings = `
     <br><br>
     <button id="ithogetsettings" class="pure-button pure-button-primary">Retrieve settings</button><br><br>
     <div id="settings_cache_load" class="hidden">
-      <span>Settings loaded from browser cache. Note that changes done through the settings WebAPI might not be reflected correctly here. Force refresh the (induvidual) setting(s) to update values and cache.<br></span>
+      <span>Settings loaded from browser cache. Note that changes done through the settings WebAPI might not be reflected correctly here. Force refresh the (individual) setting(s) to update values and cache.<br></span>
       <button id="ithoforcerefresh" class="pure-button pure-button-primary">Force settings refresh</button><br><br>
     </div>
     <div id="downloadsettingsdiv" class="hidden">

@@ -1,6 +1,5 @@
 #include "globals.h"
 
-const char *WiFiAPPSK = "password"; // default AP mode password
 
 bool i2c_sniffer_capable = false;
 uint8_t hardware_rev_det = 0;
