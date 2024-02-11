@@ -30,8 +30,6 @@
 #include "cc1101/IthoPacket.h" // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "config/IthoRemote.h"
 
-extern const char *WiFiAPPSK;
-
 extern bool i2c_sniffer_capable;
 extern uint8_t hardware_rev_det;
 

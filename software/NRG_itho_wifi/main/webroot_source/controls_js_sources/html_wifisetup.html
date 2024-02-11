@@ -7,11 +7,15 @@
       <fieldset>
         <div class="pure-control-group">
           <label for="ssid">SSID</label>
-          <input id="ssid" type="text">
+          <input id="ssid" maxlength="64" type="text"
+            oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('ssid-msg').innerHTML = 'SSID truncated to 32 characters.'; } else { document.getElementById('ssid-msg').innerHTML = ''; }">
+          <span id="ssid-msg" style="color: red;"></span>
         </div>
         <div class="pure-control-group">
           <label for="passwd">Password</label>
-          <input id="passwd" type="Password">
+          <input id="passwd" type="Password" maxlength="65" type="text"
+            oninput="if(this.value.length > 64) { this.value = this.value.substring(0, 64); document.getElementById('passwd-msg').innerHTML = 'Password truncated to 64 characters.'; } else { document.getElementById('passwd-msg').innerHTML = ''; }">
+          <span id="passwd-msg" style="color: red;"></span>
         </div>
         <div class="pure-control-group">
           <label>Show Password</label>
@@ -127,6 +131,13 @@
           <input id="aptimeout" type="number" min="0" max="255" size="6"
             title="0-255 minutes, 0: AP always off, 255: always on">
         </div>
+        <div class="pure-control-group">
+          <label for="appasswd">AP Password</label>
+          <input id="appasswd" maxlength="65" type="text"
+            oninput="if(this.value.length > 64) { this.value = this.value.substring(0, 64); document.getElementById('appasswd-msg').innerHTML = 'AP Password truncated to 64 characters.'; } else { document.getElementById('appasswd-msg').innerHTML = ''; }">
+          <span id="appasswd-msg" style="color: red;"></span>
+        </div>
+
       </fieldset>
     </form>
     <br><br>
@@ -167,7 +178,7 @@
         </tr>
       </tbody>
     </table>
-    <br><br><br><br>  
+    <br><br><br><br>
   </div>
   <div class="pure-u-1 pure-u-md-2-5">
     <div>

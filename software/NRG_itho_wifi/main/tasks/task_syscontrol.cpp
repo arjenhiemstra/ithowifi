@@ -251,10 +251,10 @@ void execSystemControlTasks()
     {
       if (millis() - APmodeTimeout > (wifiConfig.aptimeout * 60 * 1000))
       {
-        // disable AP after wifiConfig.aptimeout min
-        WiFi.enableAP(false);
-        // reboot after 15 min in AP mode
-        // shouldReboot = true;
+        if (!wifiSTAconnected) // reset timout
+          APmodeTimeout = millis();
+        else // disable AP after wifiConfig.aptimeout min
+          WiFi.enableAP(false);
       }
     }
     dnsServer.processNextRequest();
@@ -737,7 +737,7 @@ void setupWiFiAP()
   IPAddress netMsk(255, 255, 255, 0);
 
   WiFi.softAPConfig(apIP, apIP, netMsk);
-  WiFi.softAP(apname, WiFiAPPSK);
+  WiFi.softAP(apname, wifiConfig.appasswd);
   WiFi.enableAP(true);
 
   delay(500);

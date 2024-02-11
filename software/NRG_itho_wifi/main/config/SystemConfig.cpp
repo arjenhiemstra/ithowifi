@@ -33,7 +33,6 @@ SystemConfig::SystemConfig()
   mqtt_updated = false;
   get_mqtt_settings = false;
   get_sys_settings = false;
-  JsonArray arr = api_settings_activated.to<JsonArray>();
   itho_fallback = 20;
   itho_low = 20;
   itho_medium = 120;

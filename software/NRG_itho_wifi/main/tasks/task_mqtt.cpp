@@ -666,12 +666,10 @@ void HADiscoveryHumidity()
 
 void addHADevInfo(JsonObject obj)
 {
-  char s[64]{};
   JsonObject dev = obj["dev"].to<JsonObject>();
   dev["identifiers"] = hostName();
   dev["manufacturer"] = "Arjen Hiemstra";
   dev["model"] = "Wifi add-on for Itho";
-  //snprintf(s, sizeof(s), "%s", hostName());
   dev["name"] = hostName();
   dev["hw_version"] = hw_revision;
   dev["sw_version"] = FWVERSION;
