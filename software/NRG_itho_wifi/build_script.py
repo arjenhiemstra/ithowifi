@@ -119,7 +119,7 @@ def make_c_header(inName, outName):
         infile = open(os.path.join(WEBROOT_SRC_DIR, inName), "rb")
         inFileBytes = infile.read()
 
-    inFileGziped = gzip.compress(inFileBytes)
+    inFileGziped = gzip.compress(inFileBytes, 9, mtime=0)
     print(
         "\twebroot_source"
         + inName
