@@ -205,7 +205,7 @@ void startTaskCC1101()
 
 void TaskCC1101(void *pvParameters)
 {
-  D_LOG("TaskCC1101 setarted");
+  D_LOG("TaskCC1101 started");
   configASSERT((uint32_t)pvParameters == 1UL);
 
   startTaskMQTT();
