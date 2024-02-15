@@ -12,7 +12,7 @@
     <a href="#" class="pure-button" onclick="$('#main').empty();$('#main').append( html_edit );">Edit
         filesystem</a><br><br>
     <p>Partition restore: </p>
-    <p>Firmware versions prior to 2.4.4-beta7 used a different partition scheme. Older version work with the new scheme
+    <p>Firmware versions prior to 2.4.4-beta7 used a different partition scheme. Older versions work with the new scheme
         but in some cases a restore might be needed.<br>
         After successful repartition, do not restart the module before the firmware flash.
     </p>
@@ -44,7 +44,7 @@
         <fieldset>
             <legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id="rfdebug-0"
                 class="pure-button pure-button-primary">Off</button><br><br><button id="rfdebug-1"
-                class="pure-button pure-button-primary">Level1</button>&nbsp;Level1 will show only known itho commands
+                class="pure-button pure-button-primary">Level1</button>&nbsp;Level1 will show only known Itho commands
             from all devices<br><br><button id="rfdebug-2"
                 class="pure-button pure-button-primary">Level2</button>&nbsp;Level2 will show all received RF messages
             from devices joined to the add-on<br><br><button id="rfdebug-3"
@@ -65,7 +65,7 @@
                 <button id="button-i2csnifferon" class="pure-button pure-button-primary">Sniffer on</button>
                 <button id="button-i2csnifferoff" class="pure-button pure-button-primary">Sniffer off</button>
                 <br><br>
-                <legend><br>Low level itho I2C commands:</legend><br>
+                <legend><br>Low level Itho I2C commands:</legend><br>
                 <button id="ithobutton-type" class="pure-button pure-button-primary">Query Devicetype</button><br>
                 <span>Result:&nbsp;</span><span id="ithotype"></span><br><br>
                 <button id="ithobutton-statusformat" class="pure-button pure-button-primary">Query Status
@@ -78,7 +78,7 @@
                 <span>Current:&nbsp;</span><span id="itho2410cur"></span><br>
                 <span>Minimum value:&nbsp;</span><span id="itho2410min"></span><br>
                 <span>Maximum value:&nbsp;</span><span id="itho2410max"></span><br><br>
-                <span style="color:red">Warning!!<br> "Set 2410" changes the settings of your itho unit<br>Use with care
+                <span style="color:red">Warning!!<br> "Set 2410" changes the settings of your Itho unit<br>Use with care
                     and
                     use only if you know what you are doing!</span><br>
                 <button id="button2410set" class="pure-button pure-button-primary">Set 2410</button>setting index:
@@ -97,7 +97,7 @@
 
                 <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
                     reset</button><br><span>Filter
-                    reset function uses virtual remote 0, this remote needs to be paired with your itho for this command
+                    reset function uses virtual remote 0, this remote needs to be paired with your Itho unit for this command
                     to
                     work</span><br><br>
                 <button id="button4210" class="pure-button pure-button-primary">Query
