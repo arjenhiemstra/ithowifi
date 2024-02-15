@@ -216,10 +216,10 @@ function processMessage(message) {
     }
     var initstatus = '';
     if (x.ithoinit == -1) {
-      initstatus = '<span style="color:#ca3c3c;">init failed - please power cycle the itho unit -</span>';
+      initstatus = '<span style="color:#ca3c3c;">init failed - please power cycle the Itho unit -</span>';
     }
     else if (x.ithoinit == -2) {
-      initstatus = '<span style="color:#ca3c3c;">i2c bus stuck - please power cycle the itho unit -</span>';
+      initstatus = '<span style="color:#ca3c3c;">i2c bus stuck - please power cycle the Itho unit -</span>';
     }
     else if (x.ithoinit == 1) {
       initstatus = '<span style="color:#1cb841;">connected</span>';

@@ -103,14 +103,14 @@
     </div>
     <legend><br>Virtual remote settings (reboot needed):</legend>
     <p>The add-on can present itself as a virtual remote. A virtual remote emulates a physical remote through software.
-      A virtual remote must be joined to the itho unit before it can be used.</p>
-    <p>A join command will only be accepted by the itho unit within the first 2 minutes after a power cycle.</p>
+      A virtual remote must be joined to the Itho unit before it can be used.</p>
+    <p>A join command will only be accepted by the Itho unit within the first 2 minutes after a power cycle.</p>
     <div class="pure-control-group">
       <label for="itho_numvrem">Number of virtual remotes</label>
       <input id="itho_numvrem" type="number" min="1" max="12" size="6">
     </div>
-    <p>A virtual remote can be used to force the itho unit in medium mode before sending a command from the add-on. This
-      way the add-on can overrule the current speed settings of the itho (ie. due to active input from a built in
+    <p>A virtual remote can be used to force the Itho unit in medium mode before sending a command from the add-on. This
+      way the add-on can overrule the current speed settings of the Itho (ie. due to active input from a built in
       humidity sensor or another remote)</p>
     <p>Received commands from RF remotes can be translated to matching virtual remote commands with the 'Map RF remotes
       to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
@@ -135,7 +135,7 @@
     <legend><br>Built-in humidity/temp sensor support (reboot needed):</legend>
     <p>The add-on firmware by default makes available the humidity/temperature data (via web page, API, MQTT) if an
       original sensor was fitted.</p>
-    <p>Additional sensor support may be enabled to disable the itho firmware sensor support (box will not respond to
+    <p>Additional sensor support may be enabled to disable the Itho firmware sensor support (box will not respond to
       humidity changes) and to access an alternative or a retrofitted SHT30 sensor.</p>
     <br>
     <div class="pure-control-group">
@@ -144,7 +144,7 @@
       <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
     </div>
     <legend><br>Enable/Disable I2C commands:</legend>
-    <p>Not all commands types are available on all itho devices. These settings make it possible to disable specific
+    <p>Not all commands types are available on all Itho devices. These settings make it possible to disable specific
       commands. <br>Disabling PWM2I2C will also change the main page user interface to use the Virtual Remote.</p>
     <br>
     <div class="pure-control-group">
