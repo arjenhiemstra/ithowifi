@@ -217,10 +217,10 @@ function processMessage(message) {
     }
     var initstatus = '';
     if (x.ithoinit == -1) {
-      initstatus = '<span style="color:#ca3c3c;">init failed - please power cycle the itho unit -</span>';
+      initstatus = '<span style="color:#ca3c3c;">init failed - please power cycle the Itho unit -</span>';
     }
     else if (x.ithoinit == -2) {
-      initstatus = '<span style="color:#ca3c3c;">i2c bus stuck - please power cycle the itho unit -</span>';
+      initstatus = '<span style="color:#ca3c3c;">i2c bus stuck - please power cycle the Itho unit -</span>';
     }
     else if (x.ithoinit == 1) {
       initstatus = '<span style="color:#1cb841;">connected</span>';
@@ -1509,7 +1509,7 @@ var html_debug = `
     <a href="#" class="pure-button" onclick="$('#main').empty();$('#main').append( html_edit );">Edit
         filesystem</a><br><br>
     <p>Partition restore: </p>
-    <p>Firmware versions prior to 2.4.4-beta7 used a different partition scheme. Older version work with the new scheme
+    <p>Firmware versions prior to 2.4.4-beta7 used a different partition scheme. Older versions work with the new scheme
         but in some cases a restore might be needed.<br>
         After successful repartition, do not restart the module before the firmware flash.
     </p>
@@ -1541,7 +1541,7 @@ var html_debug = `
         <fieldset>
             <legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id="rfdebug-0"
                 class="pure-button pure-button-primary">Off</button><br><br><button id="rfdebug-1"
-                class="pure-button pure-button-primary">Level1</button>&nbsp;Level1 will show only known itho commands
+                class="pure-button pure-button-primary">Level1</button>&nbsp;Level1 will show only known Itho commands
             from all devices<br><br><button id="rfdebug-2"
                 class="pure-button pure-button-primary">Level2</button>&nbsp;Level2 will show all received RF messages
             from devices joined to the add-on<br><br><button id="rfdebug-3"
@@ -1562,7 +1562,7 @@ var html_debug = `
                 <button id="button-i2csnifferon" class="pure-button pure-button-primary">Sniffer on</button>
                 <button id="button-i2csnifferoff" class="pure-button pure-button-primary">Sniffer off</button>
                 <br><br>
-                <legend><br>Low level itho I2C commands:</legend><br>
+                <legend><br>Low level Itho I2C commands:</legend><br>
                 <button id="ithobutton-type" class="pure-button pure-button-primary">Query Devicetype</button><br>
                 <span>Result:&nbsp;</span><span id="ithotype"></span><br><br>
                 <button id="ithobutton-statusformat" class="pure-button pure-button-primary">Query Status
@@ -1575,7 +1575,7 @@ var html_debug = `
                 <span>Current:&nbsp;</span><span id="itho2410cur"></span><br>
                 <span>Minimum value:&nbsp;</span><span id="itho2410min"></span><br>
                 <span>Maximum value:&nbsp;</span><span id="itho2410max"></span><br><br>
-                <span style="color:red">Warning!!<br> "Set 2410" changes the settings of your itho unit<br>Use with care
+                <span style="color:red">Warning!!<br> "Set 2410" changes the settings of your Itho unit<br>Use with care
                     and
                     use only if you know what you are doing!</span><br>
                 <button id="button2410set" class="pure-button pure-button-primary">Set 2410</button>setting index:
@@ -1594,7 +1594,7 @@ var html_debug = `
 
                 <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
                     reset</button><br><span>Filter
-                    reset function uses virtual remote 0, this remote needs to be paired with your itho for this command
+                    reset function uses virtual remote 0, this remote needs to be paired with your Itho unit for this command
                     to
                     work</span><br><br>
                 <button id="button4210" class="pure-button pure-button-primary">Query
@@ -1714,7 +1714,7 @@ Unless specified otherwise:<br>
     </thead>
     <tbody>
         <tr>
-            <td colspan="6"><b>Commands below this line are expected to work on all itho devices and add-on
+            <td colspan="6"><b>Commands below this line are expected to work on all Itho devices and add-on
                     versions.</b></td>
         </tr>
         <tr>
@@ -1740,7 +1740,7 @@ Unless specified otherwise:<br>
         <tr>
             <td colspan="6">Comments:<br><em>These commands emulate a normal physical remote, available commands depend
                     on type of remote configured to emulate. For these commands to work, the virtual remote needs to be
-                    activated and joined with the itho unit first. If the "vremoteindex" or "vremotename" key is not
+                    activated and joined with the Itho unit first. If the "vremoteindex" or "vremotename" key is not
                     present, the first virtual remote will be used.</em></td>
         </tr>
         <tr>
@@ -1812,7 +1812,7 @@ Unless specified otherwise:<br>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with all available sensor data, status data and system
-                    information. Available keys depend on itho device and firmware version</em></td>
+                    information. Available keys depend on Itho device and firmware version</em></td>
         </tr>
         <tr>
             <td></td>
@@ -1852,7 +1852,7 @@ Unless specified otherwise:<br>
                     comments on remotesinfo of the Web API</em></td>
         </tr>
         <tr>
-            <td colspan="6"><b>Commands below this line work on itho devices that support the PWM2IC2 protocol. Devices
+            <td colspan="6"><b>Commands below this line work on Itho devices that support the PWM2IC2 protocol. Devices
                     supported are at least the HRU200 and all CVE models. Devices known not to support these commands
                     are the HRU350, WPU, DemandFlow/QualityFlow. These commands cannot be used together with vremote
                     commands in one API call.</b></td>
@@ -1906,7 +1906,7 @@ Unless specified otherwise:<br>
             <td style="text-align:center">●</td>
         </tr>
         <tr>
-            <td colspan="6">Comments:<br><em>Returns current active itho speed setting in range 0-255</em></td>
+            <td colspan="6">Comments:<br><em>Returns current active Itho speed setting in range 0-255</em></td>
         </tr>
         <tr>
             <td></td>
@@ -1956,7 +1956,7 @@ Unless specified otherwise:<br>
                     a RF signal,
                     available commands depend
                     on type of remote configured to emulate. For these commands to work, the rf remote needs to be
-                    joined with the itho unit first. This can be done with a physical remote or with the RF remote
+                    joined with the Itho unit first. This can be done with a physical remote or with the RF remote
                     buttons on the RF devices page.
                     If the "rfremoteindex" key is not present, the first RF remote will be used.</em></td>
         </tr>
@@ -2051,11 +2051,11 @@ var html_ithostatus = `
 <div class="header">
   <h1>Itho status</h1>
 </div>
-<p>System values of the itho unit<br><br>Also available on the MQTT API topic 'itho/ithostatus' and WebAPI using
+<p>System values of the Itho unit<br><br>Also available on the MQTT API topic 'itho/ithostatus' and WebAPI using
   '/api.html?get=ithostatus'.</p>
-<p>The list of available labels depends on the itho model/firmware version and is
+<p>The list of available labels depends on the Itho model/firmware version and is
   generated
-  automatically using this itho model/firmware version information.</p>
+  automatically using this Itho model/firmware version information.</p>
 <p>A working I2C connection is needed for these
   status labels to get populated and updated.</p>
 <span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span><br><br>
@@ -2302,7 +2302,7 @@ var html_edit = `
 <div class="header">
   <h1>File editor</h1>
 </div>
-<p>Be very carefull, use only if absolutely necessary!</p>
+<p>Be very careful, use only if absolutely necessary!</p>
 <p>To activate a changed config file; go to the reset page, check the 'Don't save config' checkbox and reboot.</p><br>
 <iframe id="editor" src="/edit" width="100%" height="100%" style="border:none;padding:5px"></iframe>
 <script>
@@ -2555,14 +2555,14 @@ var html_systemsettings_start = `
     </div>
     <legend><br>Virtual remote settings (reboot needed):</legend>
     <p>The add-on can present itself as a virtual remote. A virtual remote emulates a physical remote through software.
-      A virtual remote must be joined to the itho unit before it can be used.</p>
-    <p>A join command will only be accepted by the itho unit within the first 2 minutes after a power cycle.</p>
+      A virtual remote must be joined to the Itho unit before it can be used.</p>
+    <p>A join command will only be accepted by the Itho unit within the first 2 minutes after a power cycle.</p>
     <div class="pure-control-group">
       <label for="itho_numvrem">Number of virtual remotes</label>
       <input id="itho_numvrem" type="number" min="1" max="12" size="6">
     </div>
-    <p>A virtual remote can be used to force the itho unit in medium mode before sending a command from the add-on. This
-      way the add-on can overrule the current speed settings of the itho (ie. due to active input from a built in
+    <p>A virtual remote can be used to force the Itho unit in medium mode before sending a command from the add-on. This
+      way the add-on can overrule the current speed settings of the Itho (ie. due to active input from a built in
       humidity sensor or another remote)</p>
     <p>Received commands from RF remotes can be translated to matching virtual remote commands with the 'Map RF remotes
       to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
@@ -2587,7 +2587,7 @@ var html_systemsettings_start = `
     <legend><br>Built-in humidity/temp sensor support (reboot needed):</legend>
     <p>The add-on firmware by default makes available the humidity/temperature data (via web page, API, MQTT) if an
       original sensor was fitted.</p>
-    <p>Additional sensor support may be enabled to disable the itho firmware sensor support (box will not respond to
+    <p>Additional sensor support may be enabled to disable the Itho firmware sensor support (box will not respond to
       humidity changes) and to access an alternative or a retrofitted SHT30 sensor.</p>
     <br>
     <div class="pure-control-group">
@@ -2596,7 +2596,7 @@ var html_systemsettings_start = `
       <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
     </div>
     <legend><br>Enable/Disable I2C commands:</legend>
-    <p>Not all commands types are available on all itho devices. These settings make it possible to disable specific
+    <p>Not all commands types are available on all Itho devices. These settings make it possible to disable specific
       commands. <br>Disabling PWM2I2C will also change the main page user interface to use the Virtual Remote.</p>
     <br>
     <div class="pure-control-group">
@@ -2755,7 +2755,7 @@ var html_mqttsetup = `
     <tr>
       <td>Itho status</td>
       <td><span name="mqtt_base_topic"></span>/ithostatus</td>
-      <td>Contains JSON with info from itho firmware (same info as under menu Itho status)</td>
+      <td>Contains JSON with info from Itho firmware (same info as under menu Itho status)</td>
     </tr>
     <tr>
       <td>Remotes info</td>
@@ -2907,13 +2907,13 @@ var html_ithosettings = `
 </style>
 <form class="pure-form pure-form-aligned">
   <fieldset>
-    <span>Itho device type: </span><span id="itho_devtype">retreiving...</span>
+    <span>Itho device type: </span><span id="itho_devtype">retrieving...</span>
     <br>
-    <span>Itho hw version: </span><span id="itho_hwversion">retreiving...</span>
+    <span>Itho hw version: </span><span id="itho_hwversion">retrieving...</span>
     <br>
-    <span>Itho fw version: </span><span id="itho_fwversion">retreiving...</span>
+    <span>Itho fw version: </span><span id="itho_fwversion">retrieving...</span>
     <br>
-    <span>Manufacturer: </span><span id="itho_mfr">retreiving...</span>
+    <span>Manufacturer: </span><span id="itho_mfr">retrieving...</span>
     <br><br>
     <button id="ithogetsettings" class="pure-button pure-button-primary">Retrieve settings</button><br><br>
     <div id="settings_cache_load" class="hidden">
@@ -2924,7 +2924,7 @@ var html_ithosettings = `
       <span>Download most recent settings cache as JSON file:<br></span>
       <button id="downloadsettings" class="pure-button pure-button-primary">Download</button><br><br>
     </div>
-    <span style="color:red">Warning!!<br>This controls low level settings of your itho unit, possibly damaging the
+    <span style="color:red">Warning!!<br>This controls low level settings of your Itho unit, possibly damaging the
       unit.<br>Use with care and use only if you know what you are doing!</span><br><br>
     <table id="SettingsTable" class="pure-table pure-table-bordered" style="font-size:.85em"></table><br><br>
   </fieldset>
@@ -2972,7 +2972,7 @@ var html_remotessetup = `
   of a
   RF device is always correctly represented on the add-on and within your domotica software.</p>
 <p>There is also an option
-  to monitor only. With this option checked, a RF device still paired with an itho can be monitored without influencing
+  to monitor only. With this option checked, a RF device still paired with an Itho unit can be monitored without influencing
   the commands using the add-on.</p>
 <p>Changing the remote function to "Send" will enable the user to send RF commands by using the CC1101 RF module.</p>
 <p>Last received commands (and if applicable data) received from paired RF devices is available through the MQTT API and
@@ -3016,10 +3016,10 @@ var html_vremotessetup = `
 </style>
 <br>
 <p>The add-on can present itself as one or more virtual remote(s). A virtual remote emulates a physical remote through
-  software.<br>A virtual remote must be joined to the itho unit before it can be used. A join command will only be
-  accepted by the itho unit within the first 2 minutes after a power cycle.</p>
+  software.<br>A virtual remote must be joined to the Itho unit before it can be used. A join command will only be
+  accepted by the Itho unit within the first 2 minutes after a power cycle.</p>
 <p>With the 'Copy ID' function the ID from an existing physical remote can be copied. If the remote type is supported,
-  the type will be detected automatically. If this physical remote is already joined to the itho unit a new join is not
+  the type will be detected automatically. If this physical remote is already joined to the Itho unit a new join is not
   necessary.</p>
 <p>There are multiple types of remotes that can be emulated; The RFT CVE (536-0020, 536-0024, 536-0124), RFT AUTO(-N)
   (536-0150), RFT DemandFlow/QualityFlow (536-0146).<br>Pictures of these remotes can be found here: <a
