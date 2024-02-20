@@ -25,7 +25,7 @@ void jsonWsSend(const char *rootName)
       nested["dns1"] = WiFi.dnsIP().toString();
       nested["dns2"] = WiFi.dnsIP(1).toString();
     }
-    if (strcmp(wifiConfig.hostname, "") == 0) //defualt config still there
+    if (strcmp(wifiConfig.hostname, "") == 0) // defualt config still there
     {
       nested["hostname"] = hostName();
     }
@@ -42,9 +42,9 @@ void jsonWsSend(const char *rootName)
     long timeout = wifiConfig.aptimeout * 60 * 1000;
     long time = (millis() - APmodeTimeout) < timeout ? (timeout - (millis() - APmodeTimeout)) / 1000 : 0;
 
-    if (wifiConfig.aptimeout == 0)
+    if (!wifiModeAP || wifiConfig.aptimeout == 0)
     {
-      snprintf(apremain, sizeof(apremain), "%s", "always off");
+      snprintf(apremain, sizeof(apremain), "%s", "off");
     }
     else if (wifiConfig.aptimeout == 255)
     {
@@ -328,8 +328,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
           }
           else if (val == 4030)
           {
-            //setSetting4030(root["idx"].as<uint16_t>(), root["dt"].as<uint8_t>(), root["val"].as<int16_t>(), root["chk"].as<uint8_t>(), root["dryrun"].as<bool>(), true);
-          }          
+            // setSetting4030(root["idx"].as<uint16_t>(), root["dt"].as<uint8_t>(), root["val"].as<int16_t>(), root["chk"].as<uint8_t>(), root["dryrun"].as<bool>(), true);
+          }
         }
         else
         {

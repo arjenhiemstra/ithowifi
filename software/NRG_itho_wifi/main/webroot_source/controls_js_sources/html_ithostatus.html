@@ -21,11 +21,9 @@
 </form>
 <script>
   $(document).ready(function () {
-    localStorage.setItem("statustimer", 1);
     function repeat() {
-      if (localStorage.getItem("statustimer") != 1) return;
       getSettings('ithostatus');
-      setTimeout(repeat, 5000);
+      ithostatus_to = setTimeout(repeat, 5000);
     }
     repeat();
   });

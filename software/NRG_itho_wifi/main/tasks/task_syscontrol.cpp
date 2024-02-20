@@ -548,14 +548,14 @@ void init_i2c_functions()
 
 void wifiInit()
 {
-  WiFi.onEvent(WiFiEvent);
-
-  setupWiFigeneric();
-
   if (!loadWifiConfig("flash"))
   {
     E_LOG("Setup: Wifi config load failed");
   }
+
+  WiFi.onEvent(WiFiEvent);
+  setupWiFigeneric();
+
   if (wifiConfig.aptimeout > 0)
   {
     I_LOG("Setup: starting wifi access point");
@@ -787,8 +787,16 @@ void setupWiFigeneric()
   // Begin init of actual wifi connection
 
   // Set correct mode
-  if (!WiFi.mode(WIFI_AP_STA))
-    E_LOG("Unable to set WiFi mode");
+  if (wifiConfig.aptimeout > 0)
+  {
+    if (WiFi.mode(WIFI_AP_STA))
+      I_LOG("WiFi mode WIFI_AP_STA");
+  }
+  else
+  {
+    if (WiFi.mode(WIFI_STA))
+      I_LOG("WiFi mode WIFI_STA");
+  }
 
   esp_err_t esp_wifi_set_max_tx_power(int8_t power);
   esp_err_t wifi_set_max_tx_power = esp_wifi_set_max_tx_power(78);
