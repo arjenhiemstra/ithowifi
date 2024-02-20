@@ -1,3 +1,3 @@
 #pragma once
 
-#define FWVERSION "2.7.2"
+#define FWVERSION "2.7.3"

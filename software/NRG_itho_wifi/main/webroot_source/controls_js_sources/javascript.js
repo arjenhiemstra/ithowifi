@@ -1,10 +1,13 @@
 
+var debug = false;
 var count = 0;
 var itho_low = 0;
 var itho_medium = 127;
 var itho_high = 255;
 var sensor = -1;
 var uuid = 0;
+var wifistat_to;
+var statustimer_to;
 
 localStorage.setItem("statustimer", 0);
 localStorage.setItem("wifistat", 0);
@@ -67,7 +70,9 @@ function processMessage(message) {
   } catch (error) {
     f = JSON.parse(message);
   }
-  //console.log(f);
+  if (debug) {
+    console.log(f);
+  }
   let g = document.body;
   if (f.wifisettings) {
     let x = f.wifisettings;
@@ -344,7 +349,7 @@ function updateSettingsLocStor(receivedData) {
 function loadSettingsLocStor() {
 
   let setlen = localStorage.getItem("itho_setlen");
-  if (typeof setlen == 'undefined' || setlen == null) {
+  if (typeof setlen === 'undefined' || setlen == null) {
     console.log("error: loadSettingsLocStor setting length unavailable");
     return;
   }
@@ -806,7 +811,9 @@ $(document).ready(function () {
 
 function websock_send(message) {
   websock.send(message);
-  //console.log(message);
+  if (debug) {
+    console.log(message);
+  }
 }
 
 var timerHandle = setTimeout(function () {
@@ -832,12 +839,12 @@ function processElements(x) {
       }
       var el = $(`#${key}`);
       if (el.is('input') || el.is('select')) {
-        if ($(`#${key}`).val() != x[key]) {
+        if ($(`#${key}`).val() !== x[key]) {
           $(`#${key}`).val(x[key]);
         }
       }
       else if (el.is('span')) {
-        if ($(`#${key}`).text() != x[key]) {
+        if ($(`#${key}`).text() !== x[key]) {
           $(`#${key}`).text(x[key]);
         }
       }
@@ -855,7 +862,7 @@ function processElements(x) {
       }
       var elbyname = $(`[name='${key}']`).each(function () {
         if ($(this).is('span')) {
-          if ($(this).text() != x[key]) {
+          if ($(this).text() !== x[key]) {
             $(this).text(x[key]);
           }
         }
@@ -987,6 +994,8 @@ function resetPage() {
 }
 function tick() {
   var timeDisplay = document.getElementById('time');
+  if (timeDisplay == null)
+    return;
   var sec = secondsRemaining - (Math.floor(secondsRemaining / 60) * 60);
   if (sec < 10) sec = '0' + sec;
   var message = `This page will reload to the start page in ${sec} seconds...`;
@@ -994,6 +1003,7 @@ function tick() {
   if (secondsRemaining === 0) {
     clearInterval(intervalHandle);
     resetPage();
+    return;
   }
   secondsRemaining--;
 }
@@ -1020,12 +1030,8 @@ function updateSlider(value) {
 var lastPageReq = "";
 function update_page(page) {
   lastPageReq = page;
-  if (page != 'status') {
-    localStorage.setItem("statustimer", 0);
-  }
-  if (page != 'wifisetup') {
-    localStorage.setItem("wifistat", 0);
-  }
+  clearTimeout(wifistat_to);
+  clearTimeout(statustimer_to);
   $('#main').empty();
   $('#main').css('max-width', '768px')
   if (page == 'index') { $('#main').append(html_index); }

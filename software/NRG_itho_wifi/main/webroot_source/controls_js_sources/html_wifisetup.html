@@ -201,11 +201,9 @@
   }
   $(document).ready(function () {
     getSettings('wifisetup');
-    localStorage.setItem("wifistat", 1);
     function repeat_wifistat() {
-      if (localStorage.getItem("wifistat") != 1) return;
       getSettings('wifistat');
-      setTimeout(repeat_wifistat, 1000);
+      wifistat_to = setTimeout(repeat_wifistat, 1000);
     }
     repeat_wifistat();
   });
