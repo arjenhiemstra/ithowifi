@@ -1,4 +1,0 @@
-(sym_lib_table
-  (version 7)
-  (lib (name "itho_rv_sensor-rescue")(type "KiCad")(uri "${KIPRJMOD}/itho_rv_sensor-rescue.kicad_sym")(options "")(descr ""))
-)
