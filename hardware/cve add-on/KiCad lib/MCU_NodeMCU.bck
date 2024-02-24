@@ -1,9 +1,0 @@
-EESchema-DOCLIB  Version 2.0
-#
-$CMP NodeMCU_ESP-32S
-D ESP-32S/ESP-WROOM-32 802.11 b/g/n Wi-Fi+BT+BLE Module
-K ESP32S WiFi Bluetooth microcontroller
-F https://einstronic.com/wp-content/uploads/2017/06/NodeMCU-32S-Catalogue.pdf
-$ENDCMP
-#
-#End Doc Library

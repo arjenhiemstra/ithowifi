@@ -1,7 +1,0 @@
-"Id";"Designator";"Package";"Quantity";"Designation";"Supplier and ref";
-1;"R5,R2,R1";"R_0603_1608Metric";3;"5k6";;;
-2;"R4,R3";"R_0603_1608Metric";2;"200";;;
-3;"C1";"C_0603_1608Metric";1;"C";;;
-4;"U1";"Sensirion_DFN-8-1EP_2.5x2.5mm_P0.5mm_EP1.1x1.7mm";1;"SHT30-DIS";;;
-5;"Address";"SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm";1;"SolderJumper_3_Open";;;
-6;"J1";"PinHeader_2x05_P2.54mm_Horizontal";1;"Conn_02x05_Odd_Even_MountingPin";;;

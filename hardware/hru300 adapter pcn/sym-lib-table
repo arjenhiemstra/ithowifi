@@ -1,4 +1,0 @@
-(sym_lib_table
-  (version 7)
-  (lib (name "MOLEX PCI-e conn")(type "KiCad")(uri "/Users/arjen/ownCloud/SoftwareDevelopment/ithowifi/hardware/kiCad libs/MOLEX PCI-e conn.kicad_sym")(options "")(descr ""))
-)
