@@ -289,12 +289,17 @@ Unless specified otherwise:<br>
                     example json:<br>
                     "{"manual_operation_index":1, "manual_operation_datatype":1,
                     "manual_operation_value": 1, "manual_operation_checked":1}"<br><br>
-                    info: missing keys or incorrect data will default to the value 0.
-
-                    index = 1 : asdf
-                    index = 2 : asdf
-                    etc.
-
+                    info: missing keys or incorrect data will default to the value 0.<br>
+                    <br>
+                    index = 0 : Outside temperature <br>
+                    index = 15 : High/low tariff. (0/1) (Force boiler on at low tariff) <br>
+                    index = 20 : Source pump speed (0-100) <br>
+                    index = 30 : Max relative modulation level (0-100) (total heat demand, force/block heating) <br>
+                    index = 31 : Electric element release (0/1) <br>
+                    index = 32 : CH (heating) released (0/1) <br>
+                    index = 33 : Cooling mode released (0/1) <br>
+                    index = 36 : Release tap water (boiler). 0=Eco. 2=Comfort. 3=Blocked. <br>
+                    index = 37 : Reset all faults. <br>
                 </em>
             </td>
         </tr>
