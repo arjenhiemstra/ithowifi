@@ -51,3 +51,4 @@ void addHADevInfo(JsonObject obj);
 void sendHADiscovery(JsonObject obj, const char *topic);
 bool setupMQTTClient();
 boolean reconnect();
+boolean api_cmd_allowed(const char* cmd);
