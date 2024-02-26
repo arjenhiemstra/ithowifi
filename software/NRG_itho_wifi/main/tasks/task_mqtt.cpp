@@ -443,7 +443,10 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
     }
     else
     {
-      ithoExecCommand(s_payload, MQTTAPI);
+      if (api_cmd_allowed(s_payload))
+        ithoExecCommand(s_payload, MQTTAPI);
+      else
+        D_LOG("Invalid MQTT API command");
     }
   }
   if (strcmp(topic, systemConfig.mqtt_domoticzout_topic) == 0)
@@ -756,4 +759,16 @@ boolean reconnect()
 {
   setupMQTTClient();
   return mqttClient.connected();
+}
+
+boolean api_cmd_allowed(const char *cmd)
+{
+  const char *apicmds[] = {"low", "medium", "auto", "high", "timer1", "timer2", "timer3", "away", "cook30", "cook60", "autonight", "motion_on", "motion_off", "join", "leave", "clearqueue"};
+
+  for (uint8_t i = 0; i < sizeof(apicmds) / sizeof(apicmds[0]); i++)
+  {
+    if (strcmp(cmd, apicmds[i]) == 0)
+      return true;
+  }
+  return false;
 }

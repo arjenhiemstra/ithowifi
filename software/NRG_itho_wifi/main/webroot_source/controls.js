@@ -697,14 +697,15 @@ $(document).ready(function () {
       }));
     }
     else if ($(this).attr('id') == 'button4030') {
-      websock.send(JSON.stringify({
-        ithobutton: 4030,
-        idx: Number($('#itho_4030_index').val()),
-        dt: Number($('#itho_4030_datatype').val()),
-        val: Number($('#itho_4030_value').val()),
-        chk: Number($('#itho_4030_checked').val()),
-        dryrun: ($('#itho_4030_password').val() == 'thisisunsafe') ? false : true,
-      }));
+      if ($('#itho_4030_password').val() == 'thisisunsafe') {
+        websock.send(JSON.stringify({
+          ithobutton: 4030,
+          idx: Number($('#itho_4030_index').val()),
+          dt: Number($('#itho_4030_datatype').val()),
+          val: Number($('#itho_4030_value').val()),
+          chk: Number($('#itho_4030_checked').val()),
+        }));
+      }
     }
     else if ($(this).attr('id') == 'ithogetsettings') {
       if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
@@ -1600,7 +1601,8 @@ var html_debug = `
 
                 <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
                     reset</button><br><span>Filter
-                    reset function uses virtual remote 0, this remote needs to be paired with your Itho unit for this command
+                    reset function uses virtual remote 0, this remote needs to be paired with your Itho unit for this
+                    command
                     to
                     work</span><br><br>
                 <button id="button4210" class="pure-button pure-button-primary">Query
@@ -1613,6 +1615,21 @@ var html_debug = `
                 Valid until(timestamp) <input id="itho_ce30_timestamp" type="number" min="0" max="2147483647" size="12"
                     value="0"><br>
                 <span>Result:&nbsp;</span><span id="itho_ce30_result"></span><br>
+                <br>
+                <span style="color:red">Warning!!<br>
+                    4030 is low level "manual control" of your itho unit.<br>
+                    Use with care and use only if you know what you are doing!</span><br>
+                <button id="button4030" class="pure-button pure-button-primary">Set 4030 Manual Control</button>
+                Index: <input id="itho_4030_index" type="text" size="5">
+                Datatype: <input id="itho_4030_datatype" type="text" size="5">
+                Value: <input id="itho_4030_value" type="text" size="5">
+                Checked: <input id="itho_4030_checked" ttype="text" size="2"><br>
+                Password: "thisisunsafe": <input id="itho_4030_password" type="string" size="15"><br>
+                <span>Result:&nbsp;</span><span id="itho_4030_result"></span><br>
+                <span style="color:red">
+                    WPU 5G: Make sure you set the "Max manual operation time" setting on the "Itho settings" page.<br>
+                    The itho unit will remain in manual mode until the timer expires. 0 means unlimited.<br>
+                    Warning!!<br></vr></span><br>
             </fieldset><br><br><br>
         </fieldset>
     </form>
@@ -1944,7 +1961,47 @@ Unless specified otherwise:<br>
                     passed it will fallback to <b>outside_temp</b>.
                 </em></td>
         </tr>
-
+        <tr>
+            <td>manual control</td>
+            <td>json</td>
+            <td>see comments</td>
+            <td>json</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
+            <td colspan="6">
+                Comments:<br>
+                <em>
+                    Warning!!
+                    Manual control ie. the 4030 command is low level "manual control" of your itho unit.
+                    Use with care and use only if you know what you are doing!
+                    WPU 5G: Make sure you set the "Max manual operation time" setting in the settings page.
+                    The itho unit will remain in manual mode until the timer expires. 0 means unlimited.
+                    <br>
+                    <br>
+                    json keys explaination:<br>
+                    "manual_operation_index": manual_operation_index description (dataype uint16_t)<br>
+                    "manual_operation_datatype": manual_operation_datatype description (dataype uint8_t)<br>
+                    "manual_operation_value": manual_operation_value description (dataype uint16_t)<br>
+                    "manual_operation_checked": manual_operation_checked description (dataype uint8_t)<br><br>
+                    example json:<br>
+                    "{"manual_operation_index":1, "manual_operation_datatype":1,
+                    "manual_operation_value": 1, "manual_operation_checked":1}"<br><br>
+                    info: missing keys or incorrect data will default to the value 0.<br>
+                    <br>
+                    index = 0 : Outside temperature <br>
+                    index = 15 : High/low tariff. (0/1) (Force boiler on at low tariff) <br>
+                    index = 20 : Source pump speed (0-100) <br>
+                    index = 30 : Max relative modulation level (0-100) (total heat demand, force/block heating) <br>
+                    index = 31 : Electric element release (0/1) <br>
+                    index = 32 : CH (heating) released (0/1) <br>
+                    index = 33 : Cooling mode released (0/1) <br>
+                    index = 36 : Release tap water (boiler). 0=Eco. 2=Comfort. 3=Blocked. <br>
+                    index = 37 : Reset all faults. <br>
+                </em>
+            </td>
+        </tr>
         <tr>
             <td colspan="6"><b>Commands only for devices with CC1101 module</b></td>
         </tr>
