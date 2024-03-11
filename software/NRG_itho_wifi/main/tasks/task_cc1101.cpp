@@ -10,20 +10,25 @@ uint8_t debugLevel = 0;
 
 // locals
 StaticTask_t xTaskCC1101Buffer;
-StackType_t xTaskCC1101Stack[STACK_SIZE];
+StackType_t xTaskCC1101Stack[STACK_SIZE_MEDIUM];
 
-IthoCommand RFTcommand[3] = {IthoUnknown, IthoUnknown, IthoUnknown};
-byte RFTRSSI[3] = {0, 0, 0};
-byte RFTcommandpos = 0;
-bool RFTidChk[3] = {false, false, false};
-// Ticker LogMessage;
 Ticker timerLearnLeaveMode;
 
 volatile bool ithoCheck = false;
+SemaphoreHandle_t isrSemaphore;
 
 IRAM_ATTR void ITHOinterrupt()
 {
-  ithoCheck = true;
+  // Try to take the semaphore
+  if (xSemaphoreTakeFromISR(isrSemaphore, NULL) == pdTRUE)
+  {
+    // ISR code here
+
+    ithoCheck = rf.receivePacket();
+
+    // At the end, give back the semaphore
+    xSemaphoreGiveFromISR(isrSemaphore, NULL);
+  }
 }
 
 void disableRFsupport()
@@ -31,29 +36,10 @@ void disableRFsupport()
   detachInterrupt(itho_irq_pin);
 }
 
-uint8_t findRFTlastCommand()
-{
-  if (RFTcommand[RFTcommandpos] != IthoUnknown)
-    return RFTcommandpos;
-  if ((RFTcommandpos == 0) && (RFTcommand[2] != IthoUnknown))
-    return 2;
-  if ((RFTcommandpos == 0) && (RFTcommand[1] != IthoUnknown))
-    return 1;
-  if ((RFTcommandpos == 1) && (RFTcommand[0] != IthoUnknown))
-    return 0;
-  if ((RFTcommandpos == 1) && (RFTcommand[2] != IthoUnknown))
-    return 2;
-  if ((RFTcommandpos == 2) && (RFTcommand[1] != IthoUnknown))
-    return 1;
-  if ((RFTcommandpos == 2) && (RFTcommand[0] != IthoUnknown))
-    return 0;
-  return -1;
-}
-
-void RFDebug(IthoCommand cmd)
+void RFDebug(IthoPacket *packetPtr, IthoCommand cmd)
 {
   char debugLog[400] = {0};
-  strncat(debugLog, rf.LastMessageDecoded().c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
+  strncat(debugLog, rf.LastMessageDecoded(packetPtr).c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
   // log command
   switch (cmd)
   {
@@ -195,7 +181,7 @@ void startTaskCC1101()
   xTaskCC1101Handle = xTaskCreateStaticPinnedToCore(
       TaskCC1101,
       "TaskCC1101",
-      STACK_SIZE,
+      STACK_SIZE_MEDIUM,
       (void *)1,
       TASK_CC1101_PRIO,
       xTaskCC1101Stack,
@@ -214,14 +200,14 @@ void TaskCC1101(void *pvParameters)
   {
     Ticker reboot;
 
-    // switch off rf_support
+    // switch off rf_support in case init fails
     systemConfig.itho_rf_support = 0;
     systemConfig.rfInitOK = false;
 
     // attach saveConfig and reboot script to fire after 2 sec
     reboot.attach(2, []()
                   {
-      E_LOG("Setup: init of CC1101 RF module failed");
+      E_LOG("Setup: CC1101 RF module not found");
       saveSystemConfig("flash");
       delay(1000);
       ACTIVE_FS.end();
@@ -230,19 +216,21 @@ void TaskCC1101(void *pvParameters)
     // init the RF module
     rf.init();
     pinMode(itho_irq_pin, INPUT);
+    isrSemaphore = xSemaphoreCreateBinary();
     attachInterrupt(itho_irq_pin, ITHOinterrupt, RISING);
+    xSemaphoreGive(isrSemaphore);
 
     // this portion of code will not be reached when no RF module is present: detach reboot script, switch on rf_supprt and load remotes config
     esp_task_wdt_add(NULL);
     reboot.detach();
-    N_LOG("Setup: init of CC1101 RF module successful");
+    N_LOG("Setup: CC1101 RF module activated");
     rf.setDeviceIDsend(sys.getMac(3), sys.getMac(4), sys.getMac(5) - 1);
     systemConfig.itho_rf_support = 1;
     loadRemotesConfig("flash");
     // rf.setBindAllowed(true);
     for (int i = 0; i < remotes.getRemoteCount(); i++)
     {
-      const int *id = remotes.getRemoteIDbyIndex(i);
+      const uint8_t *id = remotes.getRemoteIDbyIndex(i);
       rf.updateRFDeviceID(*id, *(id + 1), *(id + 2), i);
       rf.updateRFDeviceType(remotes.getRemoteType(i), i);
       rf.setRFDeviceBidirectional(i, remotes.getRemoteFunction(i) == RemoteFunctions::BIDIRECT ? true : false);
@@ -263,41 +251,38 @@ void TaskCC1101(void *pvParameters)
       if (ithoCheck)
       {
         ithoCheck = false;
-        if (rf.checkForNewPacket())
+
+        D_LOG("getpacketBufferCount: %d", rf.getpacketBufferCount());
+
+        while (rf.getpacketBufferCount() > 0)
         {
-          int *lastID = rf.getLastID();
-          int id[3];
-          for (uint8_t i = 0; i < 3; i++)
-          {
-            id[i] = *(&lastID[0] + i);
-          }
-          IthoCommand cmd = rf.getLastCommand();
-          RemoteTypes remtype = rf.getLastRemType();
-          if (++RFTcommandpos > 2)
-            RFTcommandpos = 0; // store information in next entry of ringbuffers
-          RFTcommand[RFTcommandpos] = cmd;
-          RFTRSSI[RFTcommandpos] = rf.ReadRSSI();
-          // int *lastID = rf.getLastID();
-          bool chk = remotes.checkID(id);
-          // bool chk = rf.checkID(RFTid);
-          RFTidChk[RFTcommandpos] = chk;
+          IthoPacket packet = rf.checkForNewPacket();
+          rf.parseMessage(&packet);
+
+          uint8_t *lastID = rf.getLastID(&packet);
+
+          IthoCommand cmd = rf.getLastCommand(&packet);
+          RemoteTypes remtype = rf.getLastRemType(&packet);
+          bool chk = remotes.checkID(*(lastID + 0), *(lastID + 1), *(lastID + 2));
+          D_LOG("id:%02X,%02X,%02X chk: %d", *(lastID + 0), *(lastID + 1), *(lastID + 2), chk);
           if (debugLevel >= 2)
           {
             if (chk || debugLevel == 3)
             {
-              RFDebug(cmd);
+              RFDebug(&packet, cmd);
             }
           }
+
           if (cmd != IthoUnknown)
           { // only act on good cmd
             if (debugLevel == 1)
             {
-              RFDebug(cmd);
+              RFDebug(&packet, cmd);
             }
             if (cmd == IthoLeave && remotes.remoteLearnLeaveStatus())
             {
               D_LOG("Leave command received. Trying to remove remote...");
-              int result = remotes.removeRemote(id);
+              int result = remotes.removeRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2));
               switch (result)
               {
               case -1: // failed! - remote not registered
@@ -312,28 +297,32 @@ void TaskCC1101(void *pvParameters)
             if (cmd == IthoJoin)
             {
               D_LOG("Join command received. Trying to join remote...");
-              D_LOG("ID:%02X,%02X,%02X", id[0], id[1], id[2]);
+              D_LOG("ID:%02X,%02X,%02X", *(lastID + 0), *(lastID + 1), *(lastID + 2));
               if (remotes.remoteLearnLeaveStatus())
               {
-                int result = remotes.registerNewRemote(id, remtype);
+                D_LOG("Join allowed...");
+
+                int result = remotes.registerNewRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2), remtype);
                 if (result >= 0)
                 {
+                  D_LOG("registerNewRemote success, index:%d", result);
                   if (remotes.getRemoteFunction(result) == RemoteFunctions::BIDIRECT)
                   {
-                    // delay(500);
-                    // rf.setSendTries(1);
-                    // rf.sendJoinReply(id[0],id[1],id[2]);
-                    // D_LOG("Join reply send");
-                    // delay(100);
-                    // rf.send10E0();
-                    // D_LOG("10E0 send");
-                    // rf.setSendTries(3);
+                    delay(500);
+                    rf.setSendTries(1);
+                    rf.sendJoinReply(*(lastID + 0), *(lastID + 1), *(lastID + 2));
+                    D_LOG("Join reply send");
+                    delay(100);
+                    rf.send10E0();
+                    D_LOG("10E0 send");
+                    rf.setSendTries(3);
                   }
 
                   saveRemotesflag = true;
                 }
                 else
                 {
+                  D_LOG("registerNewRemote failed, code:%d", result);
                   // error
                   // case -1: // failed! - remote already registered
                   //   break;
@@ -342,7 +331,7 @@ void TaskCC1101(void *pvParameters)
               }
               if (virtualRemotes.remoteLearnLeaveStatus())
               {
-                int result = virtualRemotes.registerNewRemote(id, remtype);
+                int result = virtualRemotes.registerNewRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2), remtype);
                 if (result >= 0)
                 {
                   saveVremotesflag = true;
@@ -361,8 +350,8 @@ void TaskCC1101(void *pvParameters)
             }
             if (chk)
             {
-              remotes.lastRemoteName = remotes.getRemoteNamebyIndex(remotes.remoteIndex(id));
-              if (remotes.getRemoteFunction(remotes.remoteIndex(id)) != RemoteFunctions::MONITOR)
+              remotes.lastRemoteName = remotes.getRemoteNamebyIndex(remotes.remoteIndex(*(lastID + 0), *(lastID + 1), *(lastID + 2)));
+              if (remotes.getRemoteFunction(remotes.remoteIndex(*(lastID + 0), *(lastID + 1), *(lastID + 2))) != RemoteFunctions::MONITOR)
               {
                 if (cmd == IthoLow)
                 {
@@ -426,9 +415,9 @@ void TaskCC1101(void *pvParameters)
           const ithoRFDevices &rfDevices = rf.getRFdevices();
           for (auto &item : rfDevices.device)
           {
-            if (item.deviceId == 0)
+            if (item.deviceId[0] == 0 && item.deviceId[1] == 0 && item.deviceId[2] == 0)
               continue;
-            int remIndex = remotes.remoteIndex(item.deviceId);
+            int remIndex = remotes.remoteIndex(item.deviceId[0], item.deviceId[1], item.deviceId[2]);
             if (remIndex != -1)
             {
               remotes.addCapabilities(remIndex, "timestamp", item.timestamp);

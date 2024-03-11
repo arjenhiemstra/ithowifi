@@ -42,4 +42,4 @@ void getLastCMDinfoJSON(JsonObject root);
 void updateItho();
 void add2queue();
 void setRFdebugLevel(uint8_t level);
-double round(double value, int precision);
+float round(float value, int precision);
