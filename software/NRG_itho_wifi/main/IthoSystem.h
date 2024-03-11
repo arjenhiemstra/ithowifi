@@ -34,8 +34,8 @@ extern int32_t *resultPtr2410;
 extern bool i2c_result_updateweb;
 
 extern bool itho_internal_hum_temp;
-extern double ithoHum;
-extern double ithoTemp;
+extern float ithoHum;
+extern float ithoTemp;
 
 struct ithoDeviceStatus
 {
@@ -53,7 +53,7 @@ struct ithoDeviceStatus
     byte byteval;
     int32_t intval;
     uint32_t uintval;
-    double floatval;
+    float floatval;
     const char *stringval;
   } value;
   uint32_t divider;
@@ -74,7 +74,7 @@ struct ithoDeviceMeasurements
   union
   {
     int32_t intval;
-    double floatval;
+    float floatval;
     const char *stringval;
   } value;
   uint8_t updated;
@@ -139,7 +139,7 @@ void sendQuery31D9(bool updateweb);
 void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperature, uint32_t timestamp, bool updateweb);
 void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t checked, bool updateweb);
 int32_t *sendQuery2410(uint8_t index, bool updateweb);
-bool decodeQuery2410(int32_t *, ithoSettings *, double *, double *, double *);
+bool decodeQuery2410(int32_t *, ithoSettings *, float *, float *, float *);
 bool setSetting2410(uint8_t index, int32_t value, bool updateweb);
 // void setSetting2410(bool updateweb);
 void sendQueryCounters(bool updateweb);

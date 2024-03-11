@@ -944,9 +944,9 @@ ApiResponse::api_response_status_t processGetsettingCommands(JsonObject params, 
   // present the up-to-date settings in the response.
   resultPtr2410 = sendQuery2410(idx, true);
   ithoSettings *setting = &ithoSettingsArray[idx];
-  double cur = 0.0;
-  double min = 0.0;
-  double max = 0.0;
+  float cur = 0.0;
+  float min = 0.0;
+  float max = 0.0;
 
   if (resultPtr2410 == nullptr)
   {
@@ -1067,9 +1067,9 @@ ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, 
 
   ithoSettings *setting = &ithoSettingsArray[idx];
   resultPtr2410 = sendQuery2410(idx, true);
-  double cur = 0.0;
-  double min = 0.0;
-  double max = 0.0;
+  float cur = 0.0;
+  float min = 0.0;
+  float max = 0.0;
 
   if (resultPtr2410 == nullptr)
   {
@@ -1090,7 +1090,7 @@ ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, 
 
   int32_t new_val = 0;
   int32_t new_ival = 0;
-  double new_dval = 0.0;
+  float new_dval = 0.0;
 
   if (setting->type == ithoSettings::is_int)
   {
@@ -1155,7 +1155,7 @@ ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, 
       response["failreason"] = "The specified value falls outside of the allowed range";
       return ApiResponse::status::FAIL;
     }
-    double dval = new_dval * setting->divider;
+    float dval = new_dval * setting->divider;
 
     switch (ithoSettingsArray[idx].length)
     {

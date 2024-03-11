@@ -460,8 +460,8 @@ void setRFdebugLevel(uint8_t level)
   logMessagejson(logBuff, WEBINTERFACE);
 }
 
-double round(double value, int precision)
+float round(float value, int precision)
 {
-  double pow10 = pow(10.0, precision);
+  float pow10 = pow(10.0, precision);
   return static_cast<int>(value * pow10 + 0.5) / pow10;
 }

@@ -324,7 +324,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
       //     if (!root["svalue1"].isNull())
       //     {
       //       uint16_t invalue = root["svalue1"].as<uint16_t>();
-      //       double value = invalue * 2.54;
+      //       float value = invalue * 2.54;
       //       ithoSetSpeed((uint16_t)value, MQTTAPI);
       //     }
       //   }
@@ -463,7 +463,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           if (!root["svalue1"].isNull())
           {
             uint16_t invalue = root["svalue1"].as<uint16_t>();
-            double value = invalue * 2.55;
+            float value = invalue * 2.55;
             ithoSetSpeed((uint16_t)value, MQTTAPI);
           }
         }
@@ -484,7 +484,7 @@ void updateState(uint16_t newState)
     if (systemConfig.mqtt_domoticz_active)
     {
       int nvalue = 1;
-      double state = 0.0;
+      float state = 0.0;
       if (newState > 0.5)
       {
         state = (newState / 2.55) + 0.5;
@@ -755,13 +755,13 @@ bool setupMQTTClient()
   return false;
 }
 
-boolean reconnect()
+bool reconnect()
 {
   setupMQTTClient();
   return mqttClient.connected();
 }
 
-boolean api_cmd_allowed(const char *cmd)
+bool api_cmd_allowed(const char *cmd)
 {
   const char *apicmds[] = {"low", "medium", "auto", "high", "timer1", "timer2", "timer3", "away", "cook30", "cook60", "autonight", "motion_on", "motion_off", "join", "leave", "clearqueue"};
 

@@ -31,8 +31,7 @@ extern uint8_t debugLevel;
 
 IRAM_ATTR void ITHOinterrupt();
 void disableRFsupport();
-uint8_t findRFTlastCommand();
-void RFDebug(IthoCommand cmd);
+void RFDebug(IthoPacket *packetPtr, IthoCommand cmd);
 void toggleRemoteLLmode(const char *remotetype);
 void setllModeTimer();
 void startTaskCC1101();
