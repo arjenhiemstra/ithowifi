@@ -174,7 +174,7 @@ void setllModeTimer()
     sysStatReq = true;
     if (remotes.getllModeTime() == 0)
     {
-      timerLearnLeaveMode.detach();
+      toggleRemoteLLmode("remote");
     }
     return;
   }
@@ -184,7 +184,7 @@ void setllModeTimer()
     sysStatReq = true;
     if (virtualRemotes.getllModeTime() == 0)
     {
-      timerLearnLeaveMode.detach();
+      toggleRemoteLLmode("vremote");
     }
     return;
   }
