@@ -22,7 +22,6 @@
 
 #include "LittleFS.h"
 
-
 // globals
 extern Ticker TaskCC1101Timeout;
 extern TaskHandle_t xTaskCC1101Handle;
@@ -31,7 +30,8 @@ extern uint8_t debugLevel;
 
 IRAM_ATTR void ITHOinterrupt();
 void disableRFsupport();
-void RFDebug(IthoPacket *packetPtr, IthoCommand cmd);
+uint8_t findRFTlastCommand();
+void RFDebug(IthoCommand cmd);
 void toggleRemoteLLmode(const char *remotetype);
 void setllModeTimer();
 void startTaskCC1101();

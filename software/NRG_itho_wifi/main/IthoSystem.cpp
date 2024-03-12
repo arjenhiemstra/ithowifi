@@ -237,7 +237,7 @@ void getSetting(const uint8_t index, const bool updateState, const bool updatewe
     return;
   }
 
-  //const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+  // const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
 
   JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
@@ -521,7 +521,7 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command)
   i2c_header[8] = (curtime >> 8) & 0xFF;
   i2c_header[9] = curtime & 0xFF;
 
-  const uint8_t *id = virtualRemotes.getRemoteIDbyIndex(remoteIndex);
+  const int *id = virtualRemotes.getRemoteIDbyIndex(remoteIndex);
   i2c_header[11] = *id;
   i2c_header[12] = *(id + 1);
   i2c_header[13] = *(id + 2);
@@ -1452,8 +1452,8 @@ void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperatur
 
 void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t checked, bool updateweb)
 {
-  uint8_t command[] = {0x82,0x80,0x40,0x30,0x06,0x07,0x01,0x00,0x0F,0x00,0x01,0x01,0x01,0xFF};
-  
+  uint8_t command[] = {0x82, 0x80, 0x40, 0x30, 0x06, 0x07, 0x01, 0x00, 0x0F, 0x00, 0x01, 0x01, 0x01, 0xFF};
+
   command[7] = (index >> 8) & 0xFF;
   command[8] = index & 0xFF;
 
@@ -1467,8 +1467,9 @@ void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t ch
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
   D_LOG("Sending 4030: %s", i2cbuf2string(command, sizeof(command)).c_str());
-  if (updateweb) jsonSysmessage("itho_4030_result", i2cbuf2string(command, sizeof(command)).c_str());
-  
+  if (updateweb)
+    jsonSysmessage("itho_4030_result", i2cbuf2string(command, sizeof(command)).c_str());
+
   if (!i2c_sendBytes(command, sizeof(command), I2C_CMD_SET_CE30))
   {
     if (updateweb)
@@ -1477,7 +1478,7 @@ void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t ch
       jsonSysmessage("itho_4030_result", "failed");
     }
     return;
-  } 
+  }
 }
 
 int32_t *sendQuery2410(uint8_t index, bool updateweb)
@@ -1796,7 +1797,7 @@ void filterReset()
   command[8] = (curtime >> 8) & 0xFF;
   command[9] = curtime & 0xFF;
 
-  const uint8_t *id = virtualRemotes.getRemoteIDbyIndex(0);
+  const int *id = virtualRemotes.getRemoteIDbyIndex(0);
   command[11] = *id;
   command[12] = *(id + 1);
   command[13] = *(id + 2);
