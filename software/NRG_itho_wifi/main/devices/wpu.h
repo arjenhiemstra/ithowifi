@@ -587,7 +587,7 @@ const struct ithoLabels ithoWPUStatusLabels[]{
     {"Error_retry", "error_retry"},
     {"Task active", "task-active"},
     {"UTC time", "utc-time"},
-    {"UTC time", "utc-time"},
+    {"UTC time valid", "utc-time-valid"},
     {"Element blocked during retry", "element-blocked-during-retry"},
     {"Spare input", "spare-input"},
     {"Electr element DHW blocked", "electr-element-dhw-blocked"},
