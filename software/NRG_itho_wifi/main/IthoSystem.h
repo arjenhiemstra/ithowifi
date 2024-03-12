@@ -52,7 +52,6 @@ struct ithoDeviceStatus
   {
     byte byteval;
     int32_t intval;
-    uint32_t uintval;
     float floatval;
     const char *stringval;
   } value;
