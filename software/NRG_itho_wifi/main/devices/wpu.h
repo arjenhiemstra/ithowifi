@@ -324,164 +324,164 @@ const uint8_t itho_WPUstatus37[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 1
 const uint8_t itho_WPUstatus41[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 104, 155, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 156, 157, 98, 99, 100, 45, 47, 48, 49, 50, 51, 52, 54, 53, 55, 56, 57, 58, 59, 60, 61, 69, 70, 108, 109, 110, 64, 101, 66, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 105, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 111, 136, 137, 138, 139, 143, 103, 114, 115, 116, 122, 123, 124, 125, 126, 127, 128, 129, 147, 131, 130, 132, 134, 140, 141, 142, 144, 145, 146, 102, 148, 149, 150, 151, 152, 153, 154, 255};
 
 const struct ithoLabels ithoWPUStatusLabels[]{
-    {"Outside temp (°C)", "outside-temp_c"},
-    {"Boiler temp down (°C)", "boilertemp-down_c"},
-    {"Boiler temp up (°C)", "boilertemp-up_c"},
-    {"Evaporator temp (°C)", "evaporator-temp_c"},
-    {"Suction gas temp (°C)", "suction-gas-temp_c"},
-    {"Compressed gas temp (°C)", "compressed-gas-temp_c"},
-    {"Liquid temp (°C)", "liquid-temp_c"},
-    {"Temp to source (°C)", "temp-to-source_c"},
-    {"Temp from source (°C)", "temp-from-source_c"},
-    {"CV supply temp (°C)", "cv-supply-temp_c"},
-    {"CV return temp (°C)", "cv-return-temp_c"},
-    {"CV pressure (Bar)", "cv-pressure_bar"},
-    {"Compressor current (A)", "current-compressor_a"},
-    {"Current e-element (A)", "current-e-element_a"},
-    {"Pressure switch", "pressure-switch"},
-    {"Tariff", "tariff"},
-    {"Condensation protection", "condensation-protection"},
-    {"Pulse counter", "pulse-counter"},
-    {"Flow sensor (lt_hr)", "flow-sensor_lthr"},
-    {"Phase detection", "phase-detection"},
-    {"Cv pump (%)", "cv-pump_perc"},
-    {"Well pump (%)", "well-pump_perc"},
-    {"Boiler pump (%)", "boiler-pump_perc"},
-    {"Free cooling valve (%)", "free-cooling-valve_perc"},
-    {"CV_DHW or cooling temp valve (%)", "cv_dhw-or-cooling-temp-valve_perc"},
-    {"Compressor", "compressor"},
-    {"Element", "element"},
-    {"Trickle heating", "trickle-heating"},
-    {"Error", "error"},
-    {"Free cooling", "free-cooling"},
-    {"Expansion valve (pls)", "expansion-valve_pls"},
-    {"Room temp (°C)", "room-temp_c"},
-    {"Requested room temp (°C)", "requested-roomemp_c"},
-    {"Heat demand thermost. (%)", "heat-demand-thermost._perc"},
-    {"Status", "status"},
-    {"Sub_status", "sub_status"},
-    {"Blockage", "blockage"},
-    {"Calculated evaporation temp CV (°C)", "calculated-evaporation-temp-cv_c"},
-    {"Calculated CV condensation temp (°C)", "calculated-condensation-temp-cv_c"},
-    {"Error code byte 5", "error-code-byte-5"},
-    {"Error code byte 4", "error-code-byte-4"},
-    {"Error code byte 3", "error-code-byte-3"},
-    {"Error code byte 2", "error-code-byte-2"},
-    {"Error code byte 1", "error-code-byte-1"},
-    {"Error code byte 0", "error-code-byte-0"},
-    {"Manual operation", "manual-operation"},
-    {"Logging (sec)", "logging_sec"},
-    {"Compr block (sec)", "compr-block_sec"},
-    {"Elek block (sec)", "elek-block_sec"},
-    {"Cv for _ naddraai (sec)", "cv-for_-naddraai_sec"},
-    {"Source for _ nadraai (sec)", "source-for_-nadraai_sec"},
-    {"Boiler for _ nadraai (sec)", "boiler-for_-nadraai_sec"},
-    {"Delay electr (sec)", "delay-electr_sec"},
-    {"Drain time (sec)", "Drain-time_sec"},
-    {"Min running time compr (sec)", "min-running-time-compr_sec"},
-    {"EV pressure offset (sec)", "ev-pressure-offset_sec"},
-    {"EV adjust (sec)", "ev-adjust_sec"},
-    {"Free cooling interval (sec)", "free-cooling-interval_sec"},
-    {"Manual control (sec)", "manual_sec"},
-    {"Low pressure timer (sec)", "low-pressure-timer_sec"},
-    {"Compressor start (sec)", "compressor-start_sec"},
-    {"Compr power on delay (sec)", "compr-power-on-delay_sec"},
-    {"Cv start delay (sec)", "cv-start-delay_sec"},
-    {"Cv stop delay (sec)", "cv-stop-delay_sec"},
-    {"Fault highest priority", "fault-highest-priority"},
-    {"time for error history (sec)", "time-for-error_sec"},
-    {"Max CV return temp (°C)", "max-cv-return-temp_c"},
-    {"FlowHardware", "flowhardware"},
-    {"Fault highest priority", "fault-highest-priority"},
-    {"Delay cv start (sec)", "delay-cv-start_sec"},
-    {"Delay cv stop (sec)", "delay-cv-stop_sec"},
-    {"Source pump speed free cooling mode", "source-pump-speed-free-cooling-mode"},
-    {"Compressor in Cv mode", "compressor-in-cv-mode"},
-    {"Compressor in boiler mode", "compressor-in-boiler-mode"},
-    {"Element in CV mode", "element-in-CV-mode"},
-    {"Element in boiler mode", "element-in-boiler-mode"},
-    {"CV mode blocked", "cv-mode-blocked"},
-    {"Boiler mode blocked", "boiler-mode-blocked"},
-    {"Free cooling mode blocked", "free-cooling-mode-blocked"},
-    {"Bleeding mode blocked", "bleeding-mode-blocked"},
-    {"Electr element blocked", "electr-element-blocked"},
-    {"Compressor blocked", "compressor-blocked"},
-    {"Off mode active", "off-mode-active"},
-    {"CV mode active", "cv-mode-active"},
-    {"Boiler mode active", "boiler-mode-active"},
-    {"Free cooling mode active", "free-cooling-mode-active"},
-    {"CV pump prime", "cv-pump-prime"},
-    {"Well pump prime", "well-pump-prime"},
-    {"Element released", "element-released"},
-    {"Additional cooling release", "additional-cooling-release"},
-    {"CV enabled", "cv-enabled"},
-    {"Free cooling enabled", "free-cooling-enabled"},
-    {"Tariff low from thermostat", "tariff-low-from-thermostat"},
-    {"Venting from thermostat", "venting-from-thermostat"},
-    {"ECO selected on thermostat", "eco-selected-on-thermostat"},
-    {"Comfort selected on thermostat", "comfort-selected-on-thermostat"},
-    {"Boiler blocked from thermostat", "boiler-blocked-from-thermostat"},
-    {"Boiler boost from thermostat", "boiler-boost-from-thermostat"},
-    {"Error_found", "error_found"},
-    {"Error_retry", "error_retry"},
-    {"Task active", "task-active"},
-    {"UTC time", "utc-time"},
-    {"UTC time valid", "utc-time-valid"},
-    {"Element blocked during retry", "element-blocked-during-retry"},
-    {"Spare input", "spare-input"},
-    {"Electr element DHW blocked", "electr-element-dhw-blocked"},
-    {"Calculated evaporation temp DHW (°C)", "calculated-evaporation-temp-dhw_c"},
-    {"Calculated condensation temp DHW (°C)", "calculated-condensation-temp-dhw_c"},
-    {"Adaptive timer (sec)", "adaptive-timer_sec"},
-    {"Adaptive overheat (K)", "adaptive-overheat_k"},
-    {"adaptive fifo index", "adaptive-fifo-index"},
-    {"Heat demand total (%)", "heat-demand-total_perc"},
-    {"P source flow error", "p-source-flow-error"},
-    {"I error sourceflow", "i-error-sourceflow"},
-    {"Pi error sourceflow", "pi-error-sourceflow"},
-    {"Current source valve position (%)", "current-source-valve-position_perc"},
-    {"Utc Time offset (min)", "utc-time-offset_min"},
-    {"Gateway Time Receive", "gateway-time-receive"},
-    {"OT time valid", "ot-time-valid"},
-    {"Time hours (hrs)", "time-hours_hours"},
-    {"Time minutes (min)", "time-minutes_min"},
-    {"time seconds (sec)", "time-seconds_sec"},
-    {"Free cooling block time (min)", "free-cooling-block-time_min"},
-    {"Cooling temp control valve setpoint (%)", "cooling-temp-control-valve-setpoint_perc"},
-    {"CO valve position (%)", "co-valve-position_perc"},
-    {"HRU blowout temp (°C)", "hru-blowout-temp_c"},
-    {"HRU blowout flow (m3_h)", "hru-blowout-flow_m3h"},
-    {"Regeneration active", "regeneration-active"},
-    {"Latest valid source supply temp. (°C)", "latest-valid-source-supply-temp._c"},
-    {"Source pump flow setpoint (l_h)", "source-pump-flow-setpoint_lh"},
-    {"Well pump speed at airreg (%)", "well-pump-speed-at-airreg_perc"},
-    {"Source pump speed at free cooling (%)", "source-pump-speed-at-free-cooling_perc"},
-    {"Free cooling mode", "free-cooling-mode"},
-    {"Free cooling on time (sec)", "free-cooling-on-time_sec"},
-    {"Time CO valve start position (sec)", "time-co-valve-start-position_sec"},
-    {"Reserve", "reserve"},
-    {"E-consumption during stand-by (kWh)", "e-consumption-during-stand-by_kwh"},
-    {"E-consumption during heating (kWh)", "e-consumption-during-heating_kwh"},
-    {"E-consumption during DHW (kWh)", "e-consumption-during-dhw_kwh"},
-    {"E-consumption during cooling (kWh)", "e-consumption-during-cooling_kwh"},
-    {"Minimum release time external cooling (sec)", "minimum-release-time-external-cooling_sec"},
-    {"Block time-release external cooling (sec)", "block-time-release-external-cooling_sec"},
-    {"External heating release time (sec)", "external-heating-release-time_sec"},
-    {"Preheat tap water", "preheat-tap-water"},
-    {"Blocking time trickle low after power-up (sec.)", "blocking-time-trickle-low-after-power-up_sec"},
-    {"Blocking time trickle low after CV operation (sec)", "blocking-time-trickle-low-after-cv-operation_sec"},
-    {"Block time pre-heating tap water (sec)", "block-time-pre-heating-tap-water_sec"},
-    {"Well pump speed at compr (%)", "well-pump-speed-at-compr_perc"},
-    {"Slow start well pump (sec)", "slow-start-well-pump_sec"},
-    {"Source return temperature too low (sec.)", "source-return-temperature-too-low_sec"},
-    {"Source flow control period (sec)", "source-flow-control-period_sec"},
-    {"Stabilisation waiting time-free cooling (sec.)", "stabilisation-waiting-time-free-cooling_sec"},
-    {"Minimum time for preheating potable water (sec)", "minimum-time-for-preheating-potable-water_sec"},
-    {"Maximum time for preheating potable water (sec)", "maximum-time-for-preheating-potable-water_sec"},
-    {"Electrical element release (min)", "electrical-element-release_min"},
-    {"Correction measurement delta source temperature (K)", "correction-measurement-delta-source-temperature_k"},
-    {"Waiting time permanently released element (sec)", "waiting-time-permanently-released-element-sec"},
-    {"Source flow glycol compensation (l_h)", "source-flow-glycol-compensation-l-h"}}; 
+    {"Outside temp (°C)", "outside-temp_c"},                                                                            //0
+    {"Boiler temp down (°C)", "boilertemp-down_c"},                                                                     //1
+    {"Boiler temp up (°C)", "boilertemp-up_c"},                                                                         //2
+    {"Evaporator temp (°C)", "evaporator-temp_c"},                                                                      //3
+    {"Suction gas temp (°C)", "suction-gas-temp_c"},                                                                    //4
+    {"Compressed gas temp (°C)", "compressed-gas-temp_c"},                                                              //5
+    {"Liquid temp (°C)", "liquid-temp_c"},                                                                              //6
+    {"Temp to source (°C)", "temp-to-source_c"},                                                                        //7
+    {"Temp from source (°C)", "temp-from-source_c"},                                                                    //8
+    {"CV supply temp (°C)", "cv-supply-temp_c"},                                                                        //9
+    {"CV return temp (°C)", "cv-return-temp_c"},                                                                        //10
+    {"CV pressure (Bar)", "cv-pressure_bar"},                                                                           //11
+    {"Compressor current (A)", "current-compressor_a"},                                                                 //12
+    {"Current e-element (A)", "current-e-element_a"},                                                                   //13
+    {"Pressure switch", "pressure-switch"},                                                                             //14
+    {"Tariff", "tariff"},                                                                                               //15
+    {"Condensation protection", "condensation-protection"},                                                             //16
+    {"Pulse counter", "pulse-counter"},                                                                                 //17
+    {"Flow sensor (lt_hr)", "flow-sensor_lthr"},                                                                        //18
+    {"Phase detection", "phase-detection"},                                                                             //19
+    {"Cv pump (%)", "cv-pump_perc"},                                                                                    //20
+    {"Well pump (%)", "well-pump_perc"},                                                                                //21
+    {"Boiler pump (%)", "boiler-pump_perc"},                                                                            //22
+    {"Free cooling valve (%)", "free-cooling-valve_perc"},                                                              //23
+    {"CV_DHW or cooling temp valve (%)", "cv_dhw-or-cooling-temp-valve_perc"},                                          //24
+    {"Compressor", "compressor"},                                                                                       //25
+    {"Element", "element"},                                                                                             //26
+    {"Trickle heating", "trickle-heating"},                                                                             //27
+    {"Error", "error"},                                                                                                 //28
+    {"Free cooling", "free-cooling"},                                                                                   //29
+    {"Expansion valve (pls)", "expansion-valve_pls"},                                                                   //30
+    {"Room temp (°C)", "room-temp_c"},                                                                                  //31
+    {"Requested room temp (°C)", "requested-roomemp_c"},                                                                //32
+    {"Heat demand thermost. (%)", "heat-demand-thermost._perc"},                                                        //33
+    {"Status", "status"},                                                                                               //34
+    {"Sub_status", "sub_status"},                                                                                       //35
+    {"Blockage", "blockage"},                                                                                           //36
+    {"Calculated evaporation temp CV (°C)", "calculated-evaporation-temp-cv_c"},                                        //37
+    {"Calculated CV condensation temp (°C)", "calculated-condensation-temp-cv_c"},                                      //38
+    {"Error code byte 5", "error-code-byte-5"},                                                                         //39
+    {"Error code byte 4", "error-code-byte-4"},                                                                         //40
+    {"Error code byte 3", "error-code-byte-3"},                                                                         //41
+    {"Error code byte 2", "error-code-byte-2"},                                                                         //42
+    {"Error code byte 1", "error-code-byte-1"},                                                                         //43
+    {"Error code byte 0", "error-code-byte-0"},                                                                         //44
+    {"Manual operation", "manual-operation"},                                                                           //45
+    {"Logging (sec)", "logging_sec"},                                                                                   //46
+    {"Compr block (sec)", "compr-block_sec"},                                                                           //47
+    {"Elek block (sec)", "elek-block_sec"},                                                                             //48
+    {"Cv for _ naddraai (sec)", "cv-for_-naddraai_sec"},                                                                //49
+    {"Source for _ nadraai (sec)", "source-for_-nadraai_sec"},                                                          //50
+    {"Boiler for _ nadraai (sec)", "boiler-for_-nadraai_sec"},                                                          //51
+    {"Delay electr (sec)", "delay-electr_sec"},                                                                         //52
+    {"Drain time (sec)", "Drain-time_sec"},                                                                             //53
+    {"Min running time compr (sec)", "min-running-time-compr_sec"},                                                     //54
+    {"EV pressure offset (sec)", "ev-pressure-offset_sec"},                                                             //55
+    {"EV adjust (sec)", "ev-adjust_sec"},                                                                               //56
+    {"Free cooling interval (sec)", "free-cooling-interval_sec"},                                                       //57
+    {"Manual control (sec)", "manual_sec"},                                                                             //58
+    {"Low pressure timer (sec)", "low-pressure-timer_sec"},                                                             //59
+    {"Compressor start (sec)", "compressor-start_sec"},                                                                 //60
+    {"Compr power on delay (sec)", "compr-power-on-delay_sec"},                                                         //61
+    {"Cv start delay (sec)", "cv-start-delay_sec"},                                                                     //62
+    {"Cv stop delay (sec)", "cv-stop-delay_sec"},                                                                       //63
+    {"Fault highest priority", "fault-highest-priority"},                                                               //64
+    {"time for error history (sec)", "time-for-error_sec"},                                                             //65
+    {"Max CV return temp (°C)", "max-cv-return-temp_c"},                                                                //66
+    {"FlowHardware", "flowhardware"},                                                                                   //67
+    {"Fault highest priority", "fault-highest-priority"},                                                               //68
+    {"Delay cv start (sec)", "delay-cv-start_sec"},                                                                     //69
+    {"Delay cv stop (sec)", "delay-cv-stop_sec"},                                                                       //70
+    {"Source pump speed free cooling mode", "source-pump-speed-free-cooling-mode"},                                     //71
+    {"Compressor in Cv mode", "compressor-in-cv-mode"},                                                                 //72
+    {"Compressor in boiler mode", "compressor-in-boiler-mode"},                                                         //73
+    {"Element in CV mode", "element-in-CV-mode"},                                                                       //74
+    {"Element in boiler mode", "element-in-boiler-mode"},                                                               //75
+    {"CV mode blocked", "cv-mode-blocked"},                                                                             //76
+    {"Boiler mode blocked", "boiler-mode-blocked"},                                                                     //77
+    {"Free cooling mode blocked", "free-cooling-mode-blocked"},                                                         //78
+    {"Bleeding mode blocked", "bleeding-mode-blocked"},                                                                 //79
+    {"Electr element blocked", "electr-element-blocked"},                                                               //80
+    {"Compressor blocked", "compressor-blocked"},                                                                       //81
+    {"Off mode active", "off-mode-active"},                                                                             //82
+    {"CV mode active", "cv-mode-active"},                                                                               //83
+    {"Boiler mode active", "boiler-mode-active"},                                                                       //84
+    {"Free cooling mode active", "free-cooling-mode-active"},                                                           //85
+    {"CV pump prime", "cv-pump-prime"},                                                                                 //86
+    {"Well pump prime", "well-pump-prime"},                                                                             //87
+    {"Element released", "element-released"},                                                                           //88
+    {"Additional cooling release", "additional-cooling-release"},                                                       //89
+    {"CV enabled", "cv-enabled"},                                                                                       //90
+    {"Free cooling enabled", "free-cooling-enabled"},                                                                   //91
+    {"Tariff low from thermostat", "tariff-low-from-thermostat"},                                                       //92
+    {"Venting from thermostat", "venting-from-thermostat"},                                                             //93
+    {"ECO selected on thermostat", "eco-selected-on-thermostat"},                                                       //94
+    {"Comfort selected on thermostat", "comfort-selected-on-thermostat"},                                               //95
+    {"Boiler blocked from thermostat", "boiler-blocked-from-thermostat"},                                               //96
+    {"Boiler boost from thermostat", "boiler-boost-from-thermostat"},                                                   //97
+    {"Error_found", "error_found"},                                                                                     //98
+    {"Error_retry", "error_retry"},                                                                                     //99
+    {"Task active", "task-active"},                                                                                     //100
+    {"UTC time", "utc-time"},                                                                                           //101
+    {"UTC time valid", "utc-time-valid"},                                                                               //102
+    {"Element blocked during retry", "element-blocked-during-retry"},                                                   //103
+    {"Spare input", "spare-input"},                                                                                     //104
+    {"Electr element DHW blocked", "electr-element-dhw-blocked"},                                                       //105
+    {"Calculated evaporation temp DHW (°C)", "calculated-evaporation-temp-dhw_c"},                                      //106
+    {"Calculated condensation temp DHW (°C)", "calculated-condensation-temp-dhw_c"},                                    //107
+    {"Adaptive timer (sec)", "adaptive-timer_sec"},                                                                     //108
+    {"Adaptive overheat (K)", "adaptive-overheat_k"},                                                                   //109
+    {"adaptive fifo index", "adaptive-fifo-index"},                                                                     //110
+    {"Heat demand total (%)", "heat-demand-total_perc"},                                                                //111
+    {"P source flow error", "p-source-flow-error"},                                                                     //112
+    {"I error sourceflow", "i-error-sourceflow"},                                                                       //113
+    {"Pi error sourceflow", "pi-error-sourceflow"},                                                                     //114
+    {"Current source valve position (%)", "current-source-valve-position_perc"},                                        //115
+    {"Utc Time offset (min)", "utc-time-offset_min"},                                                                   //116
+    {"Gateway Time Receive", "gateway-time-receive"},                                                                   //117
+    {"OT time valid", "ot-time-valid"},                                                                                 //118
+    {"Time hours (hrs)", "time-hours_hours"},                                                                           //119
+    {"Time minutes (min)", "time-minutes_min"},                                                                         //120
+    {"time seconds (sec)", "time-seconds_sec"},                                                                         //121
+    {"Free cooling block time (min)", "free-cooling-block-time_min"},                                                   //122
+    {"Cooling temp control valve setpoint (%)", "cooling-temp-control-valve-setpoint_perc"},                            //123
+    {"CO valve position (%)", "co-valve-position_perc"},                                                                //124
+    {"HRU blowout temp (°C)", "hru-blowout-temp_c"},                                                                    //125
+    {"HRU blowout flow (m3_h)", "hru-blowout-flow_m3h"},                                                                //126
+    {"Regeneration active", "regeneration-active"},                                                                     //127
+    {"Latest valid source supply temp. (°C)", "latest-valid-source-supply-temp._c"},                                    //128
+    {"Source pump flow setpoint (l_h)", "source-pump-flow-setpoint_lh"},                                                //129
+    {"Well pump speed at airreg (%)", "well-pump-speed-at-airreg_perc"},                                                //130
+    {"Source pump speed at free cooling (%)", "source-pump-speed-at-free-cooling_perc"},                                //131
+    {"Free cooling mode", "free-cooling-mode"},                                                                         //132
+    {"Free cooling on time (sec)", "free-cooling-on-time_sec"},                                                         //133
+    {"Time CO valve start position (sec)", "time-co-valve-start-position_sec"},                                         //134
+    {"Reserve", "reserve"},                                                                                             //135
+    {"E-consumption during stand-by (kWh)", "e-consumption-during-stand-by_kwh"},                                       //136
+    {"E-consumption during heating (kWh)", "e-consumption-during-heating_kwh"},                                         //137
+    {"E-consumption during DHW (kWh)", "e-consumption-during-dhw_kwh"},                                                 //138
+    {"E-consumption during cooling (kWh)", "e-consumption-during-cooling_kwh"},                                         //139
+    {"Minimum release time external cooling (sec)", "minimum-release-time-external-cooling_sec"},                       //140
+    {"Block time-release external cooling (sec)", "block-time-release-external-cooling_sec"},                           //141
+    {"External heating release time (sec)", "external-heating-release-time_sec"},                                       //142
+    {"Preheat tap water", "preheat-tap-water"},                                                                         //143
+    {"Blocking time trickle low after power-up (sec.)", "blocking-time-trickle-low-after-power-up_sec"},                //144
+    {"Blocking time trickle low after CV operation (sec)", "blocking-time-trickle-low-after-cv-operation_sec"},         //145
+    {"Block time pre-heating tap water (sec)", "block-time-pre-heating-tap-water_sec"},                                 //146
+    {"Well pump speed at compr (%)", "well-pump-speed-at-compr_perc"},                                                  //147
+    {"Slow start well pump (sec)", "slow-start-well-pump_sec"},                                                         //148
+    {"Source return temperature too low (sec.)", "source-return-temperature-too-low_sec"},                              //149
+    {"Source flow control period (sec)", "source-flow-control-period_sec"},                                             //150
+    {"Stabilisation waiting time-free cooling (sec.)", "stabilisation-waiting-time-free-cooling_sec"},                  //151
+    {"Minimum time for preheating potable water (sec)", "minimum-time-for-preheating-potable-water_sec"},               //152
+    {"Maximum time for preheating potable water (sec)", "maximum-time-for-preheating-potable-water_sec"},               //153
+    {"Electrical element release (min)", "electrical-element-release_min"},                                             //154
+    {"Correction measurement delta source temperature (K)", "correction-measurement-delta-source-temperature_k"},       //155
+    {"Waiting time permanently released element (sec)", "waiting-time-permanently-released-element-sec"},               //156
+    {"Source flow glycol compensation (l_h)", "source-flow-glycol-compensation-l-h"}};                                  //157
 
 const uint16_t *ithoWPUSettingsMap[] = {nullptr, nullptr, itho_WPUsetting2, nullptr, itho_WPUsetting4, itho_WPUsetting5, itho_WPUsetting6, itho_WPUsetting7, itho_WPUsetting8, itho_WPUsetting9, itho_WPUsetting10, itho_WPUsetting11, itho_WPUsetting12, itho_WPUsetting13, itho_WPUsetting14, nullptr, itho_WPUsetting16, itho_WPUsetting17, itho_WPUsetting18, itho_WPUsetting19, itho_WPUsetting20, itho_WPUsetting21, itho_WPUsetting22, itho_WPUsetting23, itho_WPUsetting24, itho_WPUsetting25, nullptr, itho_WPUsetting27, nullptr, nullptr, nullptr, itho_WPUsetting31, nullptr, itho_WPUsetting33, itho_WPUsetting34, nullptr, nullptr, itho_WPUsetting37, nullptr, nullptr, nullptr, itho_WPUsetting41};
 
