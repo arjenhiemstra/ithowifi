@@ -541,7 +541,7 @@ $(document).ready(function () {
         var remfunc = (typeof $('#func_remote-' + i).val() === 'undefined') ? 0 : $('#func_remote-' + i).val();
         var remtype = (typeof $('#type_remote-' + i).val() === 'undefined') ? 0 : $('#type_remote-' + i).val();
         var id = $('#id_remote-' + i).val();
-        if (id == 'empty slot') id = "0,0,0";
+        if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
           websock_send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc}}`);
         }
@@ -1106,9 +1106,14 @@ function ValidateIPaddress(ipaddress) {
 }
 
 function isHex(hex) {
-  return typeof hex === 'string'
-    && hex.length === 2
-    && !isNaN(Number('0x' + hex))
+  if (typeof hex === 'string') {
+    if (hex.length === 1)
+      hex = "0" + hex;
+
+    return hex.length === 2
+      && !isNaN(Number('0x' + hex))
+  }
+  return false;
 }
 
 function isUnsignedInteger(value) {
