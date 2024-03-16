@@ -45,7 +45,7 @@ void getIthoStatusJSON(JsonObject root)
       }
       else if (internalMeasurement.type == ithoDeviceMeasurements::is_float)
       {
-        root[internalMeasurement.name] = internalMeasurement.value.floatval;
+        root[internalMeasurement.name] = round(internalMeasurement.value.floatval, 2);
       }
       else
       {
@@ -63,7 +63,7 @@ void getIthoStatusJSON(JsonObject root)
       }
       else if (ithoMeasurement.type == ithoDeviceMeasurements::is_float)
       {
-        root[ithoMeasurement.name] = ithoMeasurement.value.floatval;
+        root[ithoMeasurement.name] = round(ithoMeasurement.value.floatval, 2);
       }
       else if (ithoMeasurement.type == ithoDeviceMeasurements::is_string)
       {
@@ -85,7 +85,7 @@ void getIthoStatusJSON(JsonObject root)
       }
       else if (ithoStat.type == ithoDeviceStatus::is_float)
       {
-        root[ithoStat.name] = ithoStat.value.floatval;
+        root[ithoStat.name] = round(ithoStat.value.floatval, 2);
       }
       else if (ithoStat.type == ithoDeviceStatus::is_string)
       {
@@ -103,7 +103,7 @@ void getIthoStatusJSON(JsonObject root)
       }
       else if (Counter.type == ithoDeviceMeasurements::is_float)
       {
-        root[Counter.name] = Counter.value.floatval;
+        root[Counter.name] = round(Counter.value.floatval, 2);
       }
       else
       {

@@ -944,9 +944,9 @@ ApiResponse::api_response_status_t processGetsettingCommands(JsonObject params, 
   // present the up-to-date settings in the response.
   resultPtr2410 = sendQuery2410(idx, true);
   ithoSettings *setting = &ithoSettingsArray[idx];
-  float cur = 0.0;
-  float min = 0.0;
-  float max = 0.0;
+  double cur = 0.0;
+  double min = 0.0;
+  double max = 0.0;
 
   if (resultPtr2410 == nullptr)
   {
@@ -1067,9 +1067,9 @@ ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, 
 
   ithoSettings *setting = &ithoSettingsArray[idx];
   resultPtr2410 = sendQuery2410(idx, true);
-  float cur = 0.0;
-  float min = 0.0;
-  float max = 0.0;
+  double cur = 0.0;
+  double min = 0.0;
+  double max = 0.0;
 
   if (resultPtr2410 == nullptr)
   {

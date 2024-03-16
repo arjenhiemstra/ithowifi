@@ -298,9 +298,9 @@ void processSettingResult(const uint8_t index, const bool loop)
   root["loop"] = loop;
   if (resultPtr2410 != nullptr && ithoSettingsArray != nullptr)
   {
-    float cur = 0.0;
-    float min = 0.0;
-    float max = 0.0;
+    double cur = 0.0; //use doubles instead of float here because ArduinoJson uses double precision internally which would otherwise result in rounding issues. issue #241
+    double min = 0.0;
+    double max = 0.0;
 
     if (decodeQuery2410(resultPtr2410, &ithoSettingsArray[index], &cur, &min, &max))
     {
@@ -1577,9 +1577,9 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
       }
       else
       {
-        snprintf(tempbuffer0, sizeof(tempbuffer0), "%.1f", static_cast<float>((int32_t)val0) / ithoSettingsArray[index].divider);
-        snprintf(tempbuffer1, sizeof(tempbuffer1), "%.1f", static_cast<float>((int32_t)val1) / ithoSettingsArray[index].divider);
-        snprintf(tempbuffer2, sizeof(tempbuffer2), "%.1f", static_cast<float>((int32_t)val2) / ithoSettingsArray[index].divider);
+        snprintf(tempbuffer0, sizeof(tempbuffer0), "%.1f", static_cast<double>((int32_t)val0) / ithoSettingsArray[index].divider);
+        snprintf(tempbuffer1, sizeof(tempbuffer1), "%.1f", static_cast<double>((int32_t)val1) / ithoSettingsArray[index].divider);
+        snprintf(tempbuffer2, sizeof(tempbuffer2), "%.1f", static_cast<double>((int32_t)val2) / ithoSettingsArray[index].divider);
       }
       jsonSysmessage("itho2410cur", tempbuffer0);
       jsonSysmessage("itho2410min", tempbuffer1);
@@ -1601,7 +1601,7 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
   return values;
 }
 
-bool decodeQuery2410(int32_t *ptr, ithoSettings *setting, float *cur, float *min, float *max)
+bool decodeQuery2410(int32_t *ptr, ithoSettings *setting, double *cur, double *min, double *max)
 {
   if (*(ptr + 0) == 0x5555AAAA && *(ptr + 1) == 0xAAAA5555 && *(ptr + 2) == 0xFFFFFFFF)
   {
@@ -1614,9 +1614,9 @@ bool decodeQuery2410(int32_t *ptr, ithoSettings *setting, float *cur, float *min
   int64_t b = cast_raw_bytes_to_int(ptr + 1, len, is_signed);
   int64_t c = cast_raw_bytes_to_int(ptr + 2, len, is_signed);
 
-  *cur = static_cast<float>(static_cast<int32_t>(a));
-  *min = static_cast<float>(static_cast<int32_t>(b));
-  *max = static_cast<float>(static_cast<int32_t>(c));
+  *cur = static_cast<double>(static_cast<int32_t>(a));
+  *min = static_cast<double>(static_cast<int32_t>(b));
+  *max = static_cast<double>(static_cast<int32_t>(c));
 
   if (setting->type == ithoSettings::is_float)
   {
