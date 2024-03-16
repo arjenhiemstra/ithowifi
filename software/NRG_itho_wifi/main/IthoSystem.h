@@ -138,7 +138,7 @@ void sendQuery31D9(bool updateweb);
 void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperature, uint32_t timestamp, bool updateweb);
 void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t checked, bool updateweb);
 int32_t *sendQuery2410(uint8_t index, bool updateweb);
-bool decodeQuery2410(int32_t *, ithoSettings *, float *, float *, float *);
+bool decodeQuery2410(int32_t *, ithoSettings *, double *, double *, double *);
 bool setSetting2410(uint8_t index, int32_t value, bool updateweb);
 // void setSetting2410(bool updateweb);
 void sendQueryCounters(bool updateweb);
