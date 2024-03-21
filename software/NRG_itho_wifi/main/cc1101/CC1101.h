@@ -116,6 +116,10 @@
 #define CC1101_BITS_RX_BYTES_IN_FIFO 0x7F
 #define CC1101_BITS_MARCSTATE 0x1F
 
+#define CC1101_VERSION_LEGACY 0x04
+#define CC1101_VERSION_CURRENT 0x14
+#define CC1101_VERSION_CLONE 0x17
+
 /* Marc states */
 enum CC1101MarcStates
 {
@@ -166,9 +170,6 @@ public:
 	CC1101();
 	~CC1101();
 
-	// spi
-	void spi_waitMiso();
-
 	// cc1101
 	void init();
 
@@ -179,6 +180,8 @@ public:
 
 	void writeBurstRegister(const uint8_t address, const uint8_t *data, const uint8_t length);
 	void readBurstRegister(uint8_t *buffer, const uint8_t address, const uint8_t length);
+
+	uint8_t getChipVersion();
 
 	void sendData(CC1101Packet *packet);
 	size_t readData(CC1101Packet *packet, size_t len);

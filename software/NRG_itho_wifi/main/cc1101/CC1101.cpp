@@ -28,12 +28,6 @@ inline void CC1101::deselect(void)
   digitalWrite(SS, HIGH);
 }
 
-void CC1101::spi_waitMiso()
-{
-  while (digitalRead(MISO) == HIGH)
-    yield();
-}
-
 void CC1101::init()
 {
   reset();
@@ -44,16 +38,11 @@ void CC1101::reset()
   deselect();
   delayMicroseconds(5);
   select();
+  delayMicroseconds(40);
+  deselect();
   delayMicroseconds(10);
-  deselect();
-  delayMicroseconds(45);
-  select();
 
-  spi_waitMiso();
-  SPI.transfer(CC1101_SRES);
-  delay(10);
-  spi_waitMiso();
-  deselect();
+  writeCommand(CC1101_SRES);
 }
 
 uint8_t CC1101::writeCommand(uint8_t command)
@@ -61,8 +50,11 @@ uint8_t CC1101::writeCommand(uint8_t command)
   uint8_t result;
 
   select();
-  spi_waitMiso();
+
+  SPI.beginTransaction(SPISettings());
   result = SPI.transfer(command);
+  SPI.endTransaction();
+
   deselect();
 
   return result;
@@ -71,9 +63,12 @@ uint8_t CC1101::writeCommand(uint8_t command)
 void CC1101::writeRegister(uint8_t address, uint8_t data)
 {
   select();
-  spi_waitMiso();
+
+  SPI.beginTransaction(SPISettings());
   SPI.transfer(address);
   SPI.transfer(data);
+  SPI.endTransaction();
+
   deselect();
 }
 
@@ -82,9 +77,12 @@ uint8_t CC1101::readRegister(uint8_t address)
   uint8_t val;
 
   select();
-  spi_waitMiso();
+
+  SPI.beginTransaction(SPISettings());
   SPI.transfer(address);
   val = SPI.transfer(0);
+  SPI.endTransaction();
+
   deselect();
 
   return val;
@@ -94,15 +92,10 @@ uint8_t CC1101::readRegisterMedian3(uint8_t address)
 {
   uint8_t val, val1, val2, val3;
 
-  select();
-  spi_waitMiso();
-  SPI.transfer(address);
-  val1 = SPI.transfer(0);
-  SPI.transfer(address);
-  val2 = SPI.transfer(0);
-  SPI.transfer(address);
-  val3 = SPI.transfer(0);
-  deselect();
+  val1 = readRegister(address);
+  val2 = readRegister(address);
+  val3 = readRegister(address);
+
   // reverse sort (largest in val1) because this is te expected order for TX_BUFFER
   if (val3 > val2)
   {
@@ -171,12 +164,15 @@ void CC1101::writeBurstRegister(const uint8_t address, const uint8_t *data, cons
   uint8_t i;
 
   select();
-  spi_waitMiso();
+
+  SPI.beginTransaction(SPISettings());
   SPI.transfer(address | CC1101_WRITE_BURST);
   for (i = 0; i < length; i++)
   {
     SPI.transfer(data[i]);
   }
+  SPI.endTransaction();
+
   deselect();
 }
 
@@ -185,15 +181,22 @@ void CC1101::readBurstRegister(uint8_t *buffer, const uint8_t address, const uin
   uint8_t i;
 
   select();
-  spi_waitMiso();
+
+  SPI.beginTransaction(SPISettings());
   SPI.transfer(address | CC1101_READ_BURST);
 
   for (i = 0; i < length; i++)
   {
     buffer[i] = SPI.transfer(0x00);
   }
+  SPI.endTransaction();
 
   deselect();
+}
+
+uint8_t CC1101::getChipVersion()
+{
+  return readRegister(CC1101_VERSION, CC1101_STATUS_REGISTER);
 }
 
 size_t CC1101::readData(CC1101Packet *packet, size_t maxLen)
