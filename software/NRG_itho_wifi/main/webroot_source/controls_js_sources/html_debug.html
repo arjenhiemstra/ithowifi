@@ -31,6 +31,10 @@
     <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br>
     <span>Loop task memory: </span><span id='looptaskmem'></span><span> bytes free</span><br><br>
 
+    <p>JavaScript console debug:</p>
+    <button id="jsdebug" class="pure-button pure-button-primary">Toggle</button>
+    <span>Status: </span><span id='jsdebug_status'>unknown</span>
+    <br><br>
     <div id="rflog_outer" class="hidden">
         <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
         <div id="rflog"
@@ -134,5 +138,10 @@
     $(document).ready(function () {
         getSettings('debugvalues');
         getSettings('sysstat');
+        $("#jsdebug_status").text(debug ? "on" : "off");
     });
+    $("#jsdebug").click(function () {
+        debug = !debug;
+        $("#jsdebug_status").text(debug ? "on" : "off");
+    });    
 </script>
