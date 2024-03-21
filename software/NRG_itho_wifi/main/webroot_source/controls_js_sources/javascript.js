@@ -19,7 +19,7 @@ let messageQueue = [];
 let websock;
 
 function startWebsock(websocketServerLocation) {
-  console.log(websocketServerLocation);
+  if (debug) console.log(websocketServerLocation);
   messageQueue = [];
   websock = new WebSocket(websocketServerLocation);
   websock.addEventListener('message', event => {
@@ -27,7 +27,7 @@ function startWebsock(websocketServerLocation) {
     messageQueue.push(event.data);
   });
   websock.onopen = function (a) {
-    console.log('websock open');
+    if (debug) console.log('websock open');
     document.getElementById("layout").style.opacity = 1;
     document.getElementById("loader").style.display = "none";
     if (lastPageReq !== "") {
@@ -37,7 +37,7 @@ function startWebsock(websocketServerLocation) {
   };
 
   websock.onclose = function (a) {
-    console.log('websock close');
+    if (debug) console.log('websock close');
     // Try to reconnect in 200 milliseconds
     websock = null;
     document.getElementById("layout").style.opacity = 0.3;
@@ -47,9 +47,9 @@ function startWebsock(websocketServerLocation) {
 
   websock.onerror = function (a) {
     try {
-      console.log(a);
+      if (debug) console.log(a);
     } catch (error) {
-      console.warn(error);
+      if (debug) console.log(error);
     }
   };
 }
@@ -70,9 +70,7 @@ function processMessage(message) {
   } catch (error) {
     f = JSON.parse(message);
   }
-  if (debug) {
-    console.log(f);
-  }
+  if (debug) console.log(f);
   let g = document.body;
   if (f.wifisettings) {
     let x = f.wifisettings;
@@ -350,7 +348,7 @@ function loadSettingsLocStor() {
 
   let setlen = localStorage.getItem("itho_setlen");
   if (typeof setlen === 'undefined' || setlen == null) {
-    console.log("error: loadSettingsLocStor setting length unavailable");
+    if(debug) console.log("error: loadSettingsLocStor setting length unavailable");
     return;
   }
   for (var index = 0; index < setlen; index++) {
@@ -377,7 +375,7 @@ function loadSettingsLocStor() {
       updateRowTableIthoSettings(existingData);
     }
     else {
-      console.log("error: no cached setting info for index:" + index);
+      if(debug) console.log("error: no cached setting info for index:" + index);
     }
   }
 
@@ -812,9 +810,7 @@ $(document).ready(function () {
 
 function websock_send(message) {
   websock.send(message);
-  if (debug) {
-    console.log(message);
-  }
+  if (debug) console.log(message);
 }
 
 var timerHandle = setTimeout(function () {
@@ -980,7 +976,7 @@ function getSettings(pagevalue) {
     websock_send('{"' + pagevalue + '":1}');
   }
   else {
-    console.log("websock not open");
+    if(debug) console.log("websock not open");
     setTimeout(getSettings, 250, pagevalue);
   }
 }
