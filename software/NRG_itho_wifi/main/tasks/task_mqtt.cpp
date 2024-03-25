@@ -372,7 +372,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           {
             index = root["vremoteindex"];
           }
-          if (index != -1)
+          if (index >= 0)
           {
             jsonCmd = true;
             ithoI2CCommand(index, command, MQTTAPI);
@@ -534,34 +534,20 @@ void HADiscoveryFan()
 
   /*
 
-add:
-
-  'pr_mode_cmd_t':       'preset_mode_command_topic',
-  'pr_mode_cmd_tpl':     'preset_mode_command_template',
-  'pr_mode_stat_t':      'preset_mode_state_topic',
-  'pr_mode_val_tpl':     'preset_mode_value_template',
-  'pr_modes':            'preset_modes',
-
-  preset_mode_command_topic: itho/cmd
-      preset_mode_command_template: >
-        {%- if value == "Low" %}{{"low"}}
-        {%- elif value == "Medium" %}{{"medium"}}
-        {%- elif value == "High" %}{{"high"}}
-        {%- elif value == "Timer 10min" %}{{"timer1"}}
-        {%- elif value == "Timer 20min" %}{{"timer2"}}
-        {%- elif value == "Timer 30min" %}{{"timer3"}}
-        {%- elif value == "Max" %}{{(100*255/100)|round(0)}}
-        {%- endif -%}
-      preset_modes:
-        - "Low"
-        - "Medium"
-        - "High"
-        - "Timer 10min"
-        - "Timer 20min"
-        - "Timer 30min"
-        - "Max"
-
-  */
+    HRU 300 EXAMPLE
+        - fan:
+          name: "Itho HRU 300 "
+          device:
+            identifiers: "mv"
+            name: "Itho Box"
+            manufacturer: "Itho Daalderop"
+            model: "HRU 300"
+            # ip adress of the wifi add-on
+            configuration_url: "http://nrg-itho-fc00.local"
+          unique_id: "Itho_hru_Fan"
+          state_topic: "itho/lwt"
+          state_value_template: "{% if value == 'online' %}ON{% else %}OFF{% endif %}"
+    */
   char ihtostatustopic[140]{};
   char cmdtopic[140]{};
   char lwttopic[140]{};
@@ -580,29 +566,122 @@ add:
   addHADevInfo(root);
   root["avty_t"] = static_cast<const char *>(lwttopic);
   snprintf(s, sizeof(s), "%s_fan", hostName());
-  root["uniq_id"] = s;
+  root["uniq_id"] = s; // unique_id
+
   root["name"] = "fan";
-  root["stat_t"] = static_cast<const char *>(statetopic);
-  root["stat_val_tpl"] = "{% if value == '0' %}OFF{% else %}ON{% endif %}";
-  root["json_attr_t"] = static_cast<const char *>(ihtostatustopic);
-  snprintf(s, sizeof(s), "%s/not_used/but_needed_for_HA", static_cast<const char *>(cmdtopic));
-  root["cmd_t"] = s;
-  root["pct_cmd_t"] = static_cast<const char *>(cmdtopic);
-  root["pct_cmd_tpl"] = "{{ (value | int * 2.55) | round | int }}";
-  root["pct_stat_t"] = static_cast<const char *>(statetopic);
-  root["pct_val_tpl"] = "{{ (value | int / 2.55) | round | int }}";
+  root["stat_t"] = static_cast<const char *>(statetopic);                   // state_topic
+  root["stat_val_tpl"] = "{% if value == '0' %}OFF{% else %}ON{% endif %}"; // state_value_template
+  root["json_attr_t"] = static_cast<const char *>(ihtostatustopic);         // json_attributes_topic
+  // snprintf(s, sizeof(s), "%s/not_used/but_needed_for_HA", static_cast<const char *>(cmdtopic));
+  // root["cmd_t"] = s;
+  root["cmd_t"] = static_cast<const char *>(cmdtopic);        // command_topic
+  root["pct_cmd_t"] = static_cast<const char *>(cmdtopic);    // percentage_command_topic
+  root["pct_stat_t"] = static_cast<const char *>(statetopic); // percentage_state_topic
   // root["pct_val_tpl"] = "{% if {{ ((value | int) / 2.55) | round }} == '0' %}OFF{% else %}{{ ((value | int) / 2.55) | round }}{% endif %} ";
 
-  JsonArray modes = root["pr_modes"].to<JsonArray>();
+  JsonArray modes = root["pr_modes"].to<JsonArray>(); // preset_modes
   modes.add("Low");
   modes.add("Medium");
   modes.add("High");
+  modes.add("Auto");
+  modes.add("AutoNight");
   modes.add("Timer 10min");
   modes.add("Timer 20min");
   modes.add("Timer 30min");
-  root["pr_mode_cmd_t"] = cmdtopic;
-  // root["pr_mode_stat_t"] = modestatetopic;
-  root["pr_mode_cmd_tpl"] = "{%- if value == 'Low' %}{{'low'}}{%- elif value == 'Medium' %}{{'medium'}}{%- elif value == 'High' %}{{'high'}}{%- elif value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- endif -%}";
+  root["pr_mode_cmd_t"] = static_cast<const char *>(cmdtopic);         // preset_mode_command_topic
+  root["pr_mode_stat_t"] = static_cast<const char *>(ihtostatustopic); // preset_mode_state_topic
+
+  std::string actualSpeedLabel;
+
+  const uint8_t deviceID = currentIthoDeviceID();
+  // const uint8_t version = currentItho_fwversion();
+  const uint8_t deviceGroup = currentIthoDeviceGroup();
+
+  char pr_mode_val_tpl[400]{};
+  char pct_cmd_tpl[300]{};
+  char pct_val_tpl[100]{};
+  int pr_mode_val_tpl_ver = 0;
+
+  if (deviceGroup == 0x07 && deviceID == 0x01) // HRU250-300
+  {
+    actualSpeedLabel = getStatusLabel(10, ithoDeviceptr);      //-> {"Absolute speed of the fan (%)", "absolute-speed-of-the-fan_perc"}, of hru250_300.h
+    root["pr_mode_cmd_tpl"] = "{\"rfremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
+
+    strncpy(pct_cmd_tpl, "{%% if value > 90 %%}{\"rfremotecmd\":\"high\"}{%% elif value > 40 %%}{\"rfremotecmd\":\"medium\"}{%% elif value > 20 %%}{\"rfremotecmd\":\"low\"}{%% else %%}{\"rfremotecmd\":\"auto\"}{%% endif %%}", sizeof(pct_cmd_tpl));
+    
+    snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
+    root["pl_off"] = "{\"rfremotecmd\":\"auto\"}"; // payload_off
+    pr_mode_val_tpl_ver = 1;
+  }
+  else if (deviceGroup == 0x00 && deviceID == 0x03) // HRU350
+  {
+    actualSpeedLabel = getStatusLabel(0, ithoDeviceptr);      //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hru350.h
+    root["pr_mode_cmd_tpl"] = "{\"vremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
+    strncpy(pct_cmd_tpl, "{%% if value > 90 %%}{\"vremotecmd\":\"high\"}{%% elif value > 40 %%}{\"vremotecmd\":\"medium\"}{%% elif value > 20 %%}{\"vremotecmd\":\"low\"}{%% else %%}{\"vremotecmd\":\"auto\"}{%% endif %%}", sizeof(pct_cmd_tpl));
+
+    snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
+    root["pl_off"] = "{\"vremotecmd\":\"auto\"}"; // payload_off
+    pr_mode_val_tpl_ver = 1;
+  }
+  else if (deviceGroup == 0x00 && deviceID == 0x0D) // WPU
+  {
+    // pr_mode_val_tpl_ver = ?
+  }
+  else if (deviceGroup == 0x00 && (deviceID == 0x0F || deviceID == 0x30)) // Autotemp
+  {
+    // pr_mode_val_tpl_ver = ?
+  }
+  else if (deviceGroup == 0x00 && deviceID == 0x0B) // DemandFlow
+  {
+    // pr_mode_val_tpl_ver = ?
+  }
+  else if (deviceGroup == 0x00 && (deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B)) // assume CVE and HRU200 / or PWM2I2C is off
+  {
+
+    if (deviceID == 0x1D) // hru200
+    {
+      actualSpeedLabel = getStatusLabel(0, ithoDeviceptr); //-> {"Ventilation setpoint (%)", "ventilation-setpoint_perc"}, of hru200.h
+    }
+    else if (deviceID == 0x14) // cve 0x14
+    {
+      actualSpeedLabel = getStatusLabel(0, ithoDeviceptr); //-> {"Ventilation level (%)", "ventilation-level_perc"}, of cve14.h
+    }
+    else if (deviceID == 0x1B) // cve 0x1B
+    {
+      actualSpeedLabel = getStatusLabel(0, ithoDeviceptr); //-> {"Ventilation setpoint (%)", "ventilation-setpoint_perc"}, of cve1b.h
+    }
+    if (systemConfig.itho_pwm2i2c != 1)
+    {
+      pr_mode_val_tpl_ver = 1;
+    snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
+      strncpy(pct_cmd_tpl, "{% if value > 90 %}{\"vremotecmd\":\"high\"}{% elif value > 40 %}{ \"vremotecmd\":\"medium\"}{% elif value > 20 %}{\"vremotecmd\":\"low\"}{% else %}{\"vremotecmd\":\"auto\"}{% endif %}", sizeof(pct_cmd_tpl));
+      root["pr_mode_cmd_tpl"] = "{\"vremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
+      root["pl_off"] = "{\"vremotecmd\":\"auto\"}"; // payload_off
+    }
+    else
+    {
+      strncpy(pct_val_tpl, "{{ (value | int / 2.55) | round | int }}", sizeof(pct_val_tpl));
+      strncpy(pct_cmd_tpl, "{{ (value | int * 2.55) | round | int }}", sizeof(pct_cmd_tpl));
+      root["pl_off"] = "0"; // payload_off
+    }
+  }
+
+  if (pr_mode_val_tpl_ver == 0)
+  {
+    root["pr_mode_cmd_tpl"] = "{%- if value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- else %}{{value.lower()}}{%- endif -%}";
+    //snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 219 %%}high{%%- elif speed > 119 %%}medium{%%- elif speed > 19 %%}low{%%- else %%}auto{%%- endif -%%}", actualSpeedLabel.c_str());
+    snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 90 %%}high{%%- elif speed > 35 %%}medium{%%- elif speed > 10 %%}low{%%- else %%}auto{%%- endif -%%}", actualSpeedLabel.c_str());
+
+    //strncpy(pr_mode_val_tpl, "{%- if value == 'Low' %}{{'low'}}{%- elif value == 'Medium' %}{{'medium'}}{%- elif value == 'High' %}{{'high'}}{%- elif value == 'Auto' %}{{'auto'}}{%- elif value == 'AutoNight' %}{{'autonight'}}{%- elif value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- endif -%}", sizeof(pr_mode_val_tpl));
+  }
+  else if (pr_mode_val_tpl_ver == 1)
+  {
+    snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 90 %%}high{%%- elif speed > 35 %%}medium{%%- elif speed > 10 %%}low{%%- else %%}auto{%%- endif -%%}", actualSpeedLabel.c_str());
+  }
+
+  root["pct_cmd_tpl"] = pct_cmd_tpl;         // percentage_command_template
+  root["pr_mode_val_tpl"] = pr_mode_val_tpl; // preset_mode_value_template
+  root["pct_val_tpl"] = pct_val_tpl;         // percentage_value_template
 
   snprintf(s, sizeof(s), "%s/fan/%s/config", systemConfig.mqtt_ha_topic, hostName());
 
@@ -667,13 +746,16 @@ void HADiscoveryHumidity()
 
 void addHADevInfo(JsonObject obj)
 {
+  char cu[50]{};
+  snprintf(cu, sizeof(cu), "http://%s.local", hostName());
   JsonObject dev = obj["dev"].to<JsonObject>();
-  dev["identifiers"] = hostName();
-  dev["manufacturer"] = "Arjen Hiemstra";
-  dev["model"] = "Wifi add-on for Itho";
-  dev["name"] = hostName();
-  dev["hw_version"] = hw_revision;
-  dev["sw_version"] = FWVERSION;
+  dev["ids"] = hostName();             // identifiers
+  dev["mf"] = "Arjen Hiemstra";        // manufacturer
+  dev["mdl"] = "Wifi add-on for Itho"; // model
+  dev["name"] = hostName();            // name
+  dev["hw"] = hw_revision;             // hw_version
+  dev["sw"] = FWVERSION;               // sw_version
+  dev["cu"] = cu;                      // configuration_url
 }
 
 void sendHADiscovery(JsonObject obj, const char *topic)
