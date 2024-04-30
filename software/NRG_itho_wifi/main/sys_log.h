@@ -17,16 +17,15 @@
 #include <queue>
 
 #include <Arduino.h>
-#include <Ticker.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <ArduinoLog.h> // https://github.com/thijse/Arduino-Log [1.0.3]
+// #include <freertos/FreeRTOS.h>
+// #include <freertos/task.h>
+#include <ArduinoLog.h> // https://github.com/thijse/Arduino-Log
 #include <FSFilePrint.h>
 #include <FS.h>
 #include <Syslog.h>
 #include "WiFiUdp.h"
 
-#include "LittleFS.h"
+// #include "LittleFS.h"
 
 // #include "config/LogConfig.h"
 
@@ -53,6 +52,7 @@ typedef struct
 extern WiFiUDP udpClient;
 extern Syslog syslog;
 extern std::deque<log_msg> syslog_queue;
+extern SemaphoreHandle_t syslog_queueSemaphore;
 
 void printTimestamp(Print *_logOutput, int logLevel);
 void LogPrefixESP(Print *_logOutput, int logLevel);

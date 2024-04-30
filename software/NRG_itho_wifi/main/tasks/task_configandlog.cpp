@@ -41,6 +41,9 @@ void TaskConfigAndLog(void *pvParameters)
 {
   configASSERT((uint32_t)pvParameters == 1UL);
 
+  syslog_queueSemaphore = xSemaphoreCreateBinary();
+  xSemaphoreGive(syslog_queueSemaphore);
+
   syslog_queue_worker();
 
   initFileSystem();
@@ -142,17 +145,18 @@ void execLogAndConfigTasks()
 
     if (saveWifiConfig("flash"))
     {
-      
-      if (reconnect) {
+
+      if (reconnect)
+      {
         char buf[128]{};
         snprintf(buf, sizeof(buf), "Wifi settings changed, connecting to %s", wifiConfig.ssid);
         logMessagejson(buf, WEBINTERFACE);
         connectWiFiSTA();
       }
-      else {
+      else
+      {
         logMessagejson("Wifi settings saved...", WEBINTERFACE);
       }
-        
     }
     else
     {
@@ -258,7 +262,7 @@ void syslog_queue_worker()
 
     if (flashLogInitReady)
     {
-      yield();
+      // yield();
 
       if (input.code <= SYSLOG_CRIT && logConfig.loglevel >= SYSLOG_CRIT)
       {
@@ -284,11 +288,13 @@ void syslog_queue_worker()
         Log.noticeln(input.msg.c_str());
         filePrint.close();
       }
-      // Do not log INFO en DEBUG levels to Flash to prevent excessive wear
-      // else if (input.code == SYSLOG_INFO && logConfig.loglevel >= SYSLOG_INFO)
-      // {
-      //   Log.traceln(input.msg.c_str());
-      // }
+      else if (input.code == SYSLOG_INFO && logConfig.loglevel >= SYSLOG_INFO)
+      {
+        filePrint.open();
+        Log.infoln(input.msg.c_str());
+        filePrint.close();        
+      }
+      // Do not log DEBUG level to Flash to prevent excessive wear
       // else if (input.code == SYSLOG_DEBUG && logConfig.loglevel >= SYSLOG_DEBUG)
       // {
       //   Log.verboseln(input.msg.c_str());
@@ -361,9 +367,9 @@ void logInit()
 
   filePrint.close();
 
-  flashLogInitReady = true;
-
   delay(100);
+
+  flashLogInitReady = true;
 
   uint8_t reason = esp_reset_reason();
   char buf[32]{};
