@@ -35,9 +35,6 @@ public:
   char mqtt_domoticzout_topic[128];
   uint16_t mqtt_idx;
   uint16_t sensor_idx;
-  mutable bool mqtt_updated;
-  mutable bool get_mqtt_settings;
-  mutable bool get_sys_settings;
   uint8_t itho_fallback;
   uint8_t itho_low;
   uint8_t itho_medium;
@@ -57,16 +54,24 @@ public:
   uint8_t itho_forcemedium;
   uint8_t itho_vremoteapi;
   uint8_t itho_rf_support;
+  uint8_t module_rf_id[3]{0,0,0};
   uint8_t i2cmenu;
   uint8_t i2c_safe_guard;
   uint8_t i2c_sniffer;
+  uint8_t fw_check;
   uint8_t api_settings;
   uint8_t api_version;
   JsonDocument api_settings_activated;
   mutable bool rfInitOK;
   uint8_t nonQ_cmd_clearsQ;
+
   mutable bool itho_updated;
+  mutable bool mqtt_updated;
+  mutable bool get_mqtt_settings;
+  mutable bool get_sys_settings;
   mutable bool get_itho_settings;
+  mutable bool get_rf_settings;
+
   char config_struct_version[4];
   mutable bool configLoaded;
 

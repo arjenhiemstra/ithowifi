@@ -366,6 +366,11 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       jsonWsSend("systemsettings");
       sysStatReq = true;
     }
+    else if (msg.find("{\"rfsetup\"") != std::string::npos)
+    {
+      systemConfig.get_rf_settings = true;
+      jsonWsSend("systemsettings");
+    }
     else if (msg.find("{\"ithosetup\"") != std::string::npos)
     {
       jsonWsSend("ithodevinfo");
@@ -618,6 +623,38 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       else
       {
         E_LOG("websocket: JSON parse failed, key:\"itho_update_vremote\"");
+      }
+    }
+    else if (msg.find("{\"update_rf_id\"") != std::string::npos)
+    {
+      JsonDocument root;
+      DeserializationError error = deserializeJson(root, msg.c_str());
+      if (!error)
+      {
+        uint8_t ID[3] = {0, 0, 0};
+        ID[0] = root["update_rf_id"][0].as<uint8_t>();
+        ID[1] = root["update_rf_id"][1].as<uint8_t>();
+        ID[2] = root["update_rf_id"][2].as<uint8_t>();
+
+        if (ID[0] == 0 && ID[1] == 0 && ID[2] == 0)
+        {
+          systemConfig.module_rf_id[0] = sys.getMac(3);
+          systemConfig.module_rf_id[1] = sys.getMac(4);
+          systemConfig.module_rf_id[2] = sys.getMac(5 - 1);
+        }
+        else
+        {
+          systemConfig.module_rf_id[0] = ID[0];
+          systemConfig.module_rf_id[1] = ID[1];
+          systemConfig.module_rf_id[2] = ID[2];
+        }
+        rf.setDefaultID(systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
+
+        saveSystemConfigflag = true;
+      }
+      else
+      {
+        E_LOG("websocket: JSON parse failed, key:\"update_rf_id\"");
       }
     }
     else if (msg.find("{\"reboot\"") != std::string::npos)
