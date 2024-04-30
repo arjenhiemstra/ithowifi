@@ -511,6 +511,14 @@ void MDNSinit()
 
 void handleAPI(AsyncWebServerRequest *request)
 {
+  if (systemConfig.api_version == 1)
+    handleAPIv1(request);
+  else if (systemConfig.api_version == 2)
+    handleAPIv2(request);
+}
+
+void handleAPIv1(AsyncWebServerRequest *request)
+{
   bool parseOK = false;
 
   int params = request->params();
@@ -630,12 +638,12 @@ void handleAPI(AsyncWebServerRequest *request)
     }
     else if (strcmp(p->name().c_str(), "getsetting") == 0)
     {
-      handleAPI_new(request);
+      handleAPIv2(request);
       return;
     }
     else if (strcmp(p->name().c_str(), "setsetting") == 0)
     {
-      handleAPI_new(request);
+      handleAPIv2(request);
       return;
     }
     else if (strcmp(p->name().c_str(), "command") == 0)
@@ -1478,7 +1486,27 @@ ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonD
   return ApiResponse::status::FAIL;
 }
 
-void handleAPI_new(AsyncWebServerRequest *request)
+/*
+This WebAPI implementation follows the JSend specification
+More information can be found on github: https://github.com/omniti-labs/jsend
+
+General information:
+The WebAPI always returns a JSON which will at least contain a key "status".
+The value of the status key indicates the result of the API call. This can either be "success", "fail" or "error"
+
+In case of "success" or "fail":
+- the returned JSON will always have a "data" key containing the resulting data of the request.
+- the value can be a string or a JSON object or array.
+- the returned JSON should contain a key "result" that contains a string with a short human readable API call result
+- the returned JSON should contain a key "cmdkey" that conains a string copy of the given command when a URL encoded key/value pair is present in the API call
+- the returned JSON should contain a key "cmdval" that conains a string copy of the given value when a URL encoded key/value pair is present in the API call
+
+In case of "error":
+- the returned JSON will at least contain a key "message" with a value of type string, explaining what went wrong.
+- the returned JSON could also include a key "code" which contains a status code that should adhere to rfc9110
+
+*/
+void handleAPIv2(AsyncWebServerRequest *request)
 {
 
   JsonDocument doc;
@@ -1504,14 +1532,14 @@ void handleAPI_new(AsyncWebServerRequest *request)
   response["timestamp"] = now;
   ApiResponse::api_response_status_t response_status = ApiResponse::status::CONTINUE;
 
-  // if (checkAuthentication(paramsJson, response) != ApiResponse::status::CONTINUE)
-  // {
-  //   apiresponse.sendFail(response);
-  //   return; // Authentication failed, exit early.
-  // }
+  if (checkAuthentication(paramsJson, response) != ApiResponse::status::CONTINUE)
+  {
+    apiresponse.sendFail(response);
+    return; // Authentication failed, exit early.
+  }
 
-  // if (response_status == ApiResponse::status::CONTINUE)
-  //   response_status = processGetCommands(paramsJson, response);
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processGetCommands(paramsJson, response);
 
   if (response_status == ApiResponse::status::CONTINUE)
     response_status = processGetsettingCommands(paramsJson, response);
@@ -1519,23 +1547,23 @@ void handleAPI_new(AsyncWebServerRequest *request)
   if (response_status == ApiResponse::status::CONTINUE)
     response_status = processSetsettingCommands(paramsJson, response);
 
-  // if (response_status == ApiResponse::status::CONTINUE)
-  //   response_status = processCommand(paramsJson, response);
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processCommand(paramsJson, response);
 
-  // if (response_status == ApiResponse::status::CONTINUE)
-  //   response_status = processRFremoteCommands(paramsJson, response);
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processRFremoteCommands(paramsJson, response);
 
-  // if (response_status == ApiResponse::status::CONTINUE)
-  //   response_status = processVremoteCommands(paramsJson, response);
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processVremoteCommands(paramsJson, response);
 
-  // if (response_status == ApiResponse::status::CONTINUE)
-  //   response_status = processPWMSpeedTimerCommands(paramsJson, response);
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processPWMSpeedTimerCommands(paramsJson, response);
 
-  // if (response_status == ApiResponse::status::CONTINUE)
-  //   response_status = processi2csnifferCommands(paramsJson, response);
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processi2csnifferCommands(paramsJson, response);
 
-  // if (response_status == ApiResponse::status::CONTINUE)
-  //   response_status = processDebugCommands(paramsJson, response);
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processDebugCommands(paramsJson, response);
 
   if (response_status == ApiResponse::status::SUCCESS)
   {

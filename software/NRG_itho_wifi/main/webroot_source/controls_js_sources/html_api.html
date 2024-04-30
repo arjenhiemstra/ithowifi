@@ -2,18 +2,20 @@
     <h1>IthoWifi - API</h1>
 </div>
 <h3>API Description</h3>
-<strong>General information Web API</strong><br><br>
-A simple Web API is available at the following URL: <a href='api.html' target='_blank'>api.html</a><br><br>
+<strong>General information WebAPI</strong><br><br>
+A simple WebAPI is available at the following URL: <a href='api.html' target='_blank'>api.html</a><br><br>
 The request should be formatted as follows: <br>http://[DNS or IP]/api.html?[param]=[value]<br><br>
 ie. http://192.168.4.1/api.html?command=medium<br>
 or<br>
 http://192.168.4.1/api.html?speed=150&timer=15<br><br>
 Unless specified otherwise:<br>
-<ul>
-    <li>A successful command will return 'OK', an unsuccessful command will return 'NOK'</li>
-    <li>String params/values are supplied without quote marks</li>
-    <li>Values outside specified values/ranges will be ignored or 0 in case of an overflow</li>
-</ul>
+<div id="webapitxt">
+    <ul>
+        <li>A successful command will return 'OK', an unsuccessful command will return 'NOK'</li>
+        <li>String params/values are supplied without quote marks</li>
+        <li>Values outside specified values/ranges will be ignored or 0 in case of an overflow</li>
+    </ul>
+</div>
 <br>
 <strong>General information MQTT API</strong><br><br>
 Unless specified otherwise:<br>
@@ -403,3 +405,14 @@ Unless specified otherwise:<br>
     </tbody>
 </table>
 <p><br><br></p>
+<script>
+    $(document).ready(function () {
+        getSettings('syssetup');
+        setTimeout(function () {
+            if (localStorage.getItem("api_version") == "2") {
+                //$('#webapitxt').html("");
+                $('#webapitxt').html(webapihtml);
+            }
+        }, 500);
+    });
+</script>
