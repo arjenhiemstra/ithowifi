@@ -7,7 +7,7 @@ typedef enum
     ACK = 0x100,
     START = 0x200,
     STOP = 0x400
-} state_t;
+} i2c_state_t;
 
 typedef uint16_t gpdata_t;
 static xQueueHandle gpio_evt_queue;
@@ -186,7 +186,7 @@ void i2c_sniffer_process_buf(std::string &buffer)
                 root["i2csniffer"] = buffer.c_str();
                 notifyClients(root.as<JsonObject>());
             }
-            I_LOG(buffer.c_str());
+            D_LOG(buffer.c_str());
         }
     }
 
