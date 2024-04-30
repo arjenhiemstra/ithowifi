@@ -1495,7 +1495,29 @@ function addAllColumnHeaders(jsonVar, selector, appendRow, remfunc) {
   return columnSet;
 }
 
-
+var webapihtml = `
+                                                                            <p>The WebAPI implementation follows the JSend specification.<br>
+                                                                              More information about JSend can be found on github: <a href="https://github.com/omniti-labs/jsend" target="_blank" rel="noopener noreferrer">https://github.com/omniti-labs/jsend</a>
+                                                                            </p>
+                                                                            <p>The WebAPI always returns a JSON which will at least contain a key "status".<br>
+                                                                              The value of the status key indicates the result of the API call. This can either be "success", "fail" or "error".
+                                                                            </p>
+                                                                            <p>In case of "success" or "fail":<br>
+                                                                              <ul>
+                                                                                <li>the returned JSON will always have a "data" key containing the resulting data of the request</li>
+                                                                                <li>the value can be a string or a JSON object/array</li>
+                                                                                <li>the returned JSON should contain a key "result" that contains a string with a short human readable API call result</li>
+                                                                                <li>the returned JSON should contain a key "cmdkey" that conains a string copy of the given command when a URL encoded key/value pair is present in the API call</li>
+                                                                              </ul>
+                                                                            </p>
+                                                                            <p>In case of "error": <br></p>
+                                                                            <p>
+                                                                              <ul>
+                                                                                <li>the returned JSON will at least contain a key "message" with a value of type string, explaining what went wrong</li>
+                                                                                <li>the returned JSON could also include a key "code" which contains a status code that should adhere to rfc9110</li>
+                                                                              </ul>
+                                                                            </p>
+                                                                            `;
 
 //
 // HTML string literals
@@ -1701,18 +1723,20 @@ var html_api = `
     <h1>IthoWifi - API</h1>
 </div>
 <h3>API Description</h3>
-<strong>General information Web API</strong><br><br>
-A simple Web API is available at the following URL: <a href='api.html' target='_blank'>api.html</a><br><br>
+<strong>General information WebAPI</strong><br><br>
+A simple WebAPI is available at the following URL: <a href='api.html' target='_blank'>api.html</a><br><br>
 The request should be formatted as follows: <br>http://[DNS or IP]/api.html?[param]=[value]<br><br>
 ie. http://192.168.4.1/api.html?command=medium<br>
 or<br>
 http://192.168.4.1/api.html?speed=150&timer=15<br><br>
 Unless specified otherwise:<br>
-<ul>
-    <li>A successful command will return 'OK', an unsuccessful command will return 'NOK'</li>
-    <li>String params/values are supplied without quote marks</li>
-    <li>Values outside specified values/ranges will be ignored or 0 in case of an overflow</li>
-</ul>
+<div id="webapitxt">
+    <ul>
+        <li>A successful command will return 'OK', an unsuccessful command will return 'NOK'</li>
+        <li>String params/values are supplied without quote marks</li>
+        <li>Values outside specified values/ranges will be ignored or 0 in case of an overflow</li>
+    </ul>
+</div>
 <br>
 <strong>General information MQTT API</strong><br><br>
 Unless specified otherwise:<br>
@@ -2102,6 +2126,17 @@ Unless specified otherwise:<br>
     </tbody>
 </table>
 <p><br><br></p>
+<script>
+    $(document).ready(function () {
+        getSettings('syssetup');
+        setTimeout(function () {
+            if (localStorage.getItem("api_version") == "2") {
+                //$('#webapitxt').html("");
+                $('#webapitxt').html(webapihtml);
+            }
+        }, 500);
+    });
+</script>
 `;
 
 var html_systemsettings_end = `
@@ -2547,6 +2582,12 @@ var html_systemsettings_start = `
       <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
     </div>
     <legend><br>API settings:</legend>
+    <p>WebAPI version</p>
+    <div class="pure-control-group">
+      <label for="option-api_version" class="pure-radio">WebAPI version</label>
+      <input id="option-api_version-1" type="radio" name="option-api_version" value="1"> 1
+      <input id="option-api_version-2" type="radio" name="option-api_version" value="2"> 2
+    </div>
     <p>Have api keys on the WebAPI, MQTT API and Itho Status page normlized (all lowercase, no spaces and special
       characters).</p>
     <div class="pure-control-group">
@@ -2562,7 +2603,8 @@ var html_systemsettings_start = `
     </div>
     <div class="pure-control-group">
       <label for="api_settings_activated">Activate settings indexes</label>
-      <input id="api_settings_activated" title="Must be a valid JSON array ie.: [12,34]" type="text" maxlength="1024" size="20">
+      <input id="api_settings_activated" title="Must be a valid JSON array ie.: [12,34]" type="text" maxlength="1024"
+        size="20">
     </div>
     <p>
       <b style="color: red">Warning:</b>

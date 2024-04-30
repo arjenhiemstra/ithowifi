@@ -53,6 +53,7 @@ SystemConfig::SystemConfig()
   itho_forcemedium = 0;
   itho_vremoteapi = 0;
   itho_rf_support = 0;
+  api_version = 1;
   i2cmenu = 0;
   i2c_safe_guard = 2;
   i2c_sniffer = 0;

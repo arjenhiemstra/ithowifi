@@ -53,7 +53,8 @@ void webServerInit();
 void MDNSinit();
 
 void handleAPI(AsyncWebServerRequest *request);
-void handleAPI_new(AsyncWebServerRequest *request);
+void handleAPIv1(AsyncWebServerRequest *request);
+void handleAPIv2(AsyncWebServerRequest *request);
 ApiResponse::api_response_status_t checkAuthenticationAsyncWeb(AsyncWebServerRequest *request);
 
 // void handleCoreCrash(AsyncWebServerRequest *request);
