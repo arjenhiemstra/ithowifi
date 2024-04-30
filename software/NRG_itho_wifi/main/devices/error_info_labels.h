@@ -2,8 +2,8 @@
 
 struct ithoLabels
 {
-  const char *labelFull;
-  const char *labelNormalized;
+    const char *labelFull;
+    const char *labelNormalized;
 };
 
 static const std::map<uint8_t, const char *> fanInfo = {
@@ -85,22 +85,22 @@ struct ithoLabels itho31D9Labels[]{
     {"Filter dirty", "filter-dirty"}};
 
 struct ithoLabels itho31DALabels[]{
-    {"AirQuality (%)", "airquality_perc"},
-    {"AirQbased on", "airq-based-on"},
-    {"CO2level (ppm)", "co2level_ppm"},
-    {"Indoorhumidity (%)", "indoor-humidity_perc"},
-    {"Outdoorhumidity (%)", "outdoor-humidity_perc"},
-    {"Exhausttemp (°C)", "exhausttemp_c"},
-    {"SupplyTemp (°C)", "supply-temp_c"},
-    {"IndoorTemp (°C)", "indoor-temp_c"},
-    {"OutdoorTemp (°C)", "outdoor-temp_c"},
-    {"SpeedCap", "speed-cap"},
-    {"BypassPos (%)", "bypass-pos_perc"},
-    {"FanInfo", "fan-info"},
-    {"ExhFanSpeed (%)", "exh-fan-speed_perc"},
-    {"InFanSpeed (%)", "in-fan-speed_perc"},
-    {"RemainingTime (min)", "remaining-time_min"},
-    {"PostHeat (%)", "post-heat_perc"},
-    {"PreHeat (%)", "pre-heat_perc"},
-    {"InFlow (l sec)", "in-flow-l_sec"},
-    {"ExhFlow (l sec)", "exh-flow-l_sec"}};
+    {"AirQuality (%)", "airquality_perc"},            // 0
+    {"AirQbased on", "airq-based-on"},                // 1
+    {"CO2level (ppm)", "co2level_ppm"},               // 2
+    {"Indoorhumidity (%)", "indoor-humidity_perc"},   // 3
+    {"Outdoorhumidity (%)", "outdoor-humidity_perc"}, // 4
+    {"Exhausttemp (°C)", "exhausttemp_c"},            // 5
+    {"SupplyTemp (°C)", "supply-temp_c"},             // 6
+    {"IndoorTemp (°C)", "indoor-temp_c"},             // 7
+    {"OutdoorTemp (°C)", "outdoor-temp_c"},           // 8
+    {"SpeedCap", "speed-cap"},                        // 9
+    {"BypassPos (%)", "bypass-pos_perc"},             // 10
+    {"FanInfo", "fan-info"},                          // 11
+    {"ExhFanSpeed (%)", "exh-fan-speed_perc"},        // 12
+    {"InFanSpeed (%)", "in-fan-speed_perc"},          // 13
+    {"RemainingTime (min)", "remaining-time_min"},    // 13
+    {"PostHeat (%)", "post-heat_perc"},               // 14
+    {"PreHeat (%)", "pre-heat_perc"},                 // 15
+    {"InFlow (l sec)", "in-flow-l_sec"},              // 16
+    {"ExhFlow (l sec)", "exh-flow-l_sec"}};           // 17
