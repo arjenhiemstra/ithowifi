@@ -351,7 +351,7 @@ function loadSettingsLocStor() {
 
   let setlen = localStorage.getItem("itho_setlen");
   if (typeof setlen === 'undefined' || setlen == null) {
-    if(debug) console.log("error: loadSettingsLocStor setting length unavailable");
+    if (debug) console.log("error: loadSettingsLocStor setting length unavailable");
     return;
   }
   for (var index = 0; index < setlen; index++) {
@@ -378,7 +378,7 @@ function loadSettingsLocStor() {
       updateRowTableIthoSettings(existingData);
     }
     else {
-      if(debug) console.log("error: no cached setting info for index:" + index);
+      if (debug) console.log("error: no cached setting info for index:" + index);
     }
   }
 
@@ -998,7 +998,7 @@ function getSettings(pagevalue) {
     websock_send('{"' + pagevalue + '":1}');
   }
   else {
-    if(debug) console.log("websock not open");
+    if (debug) console.log("websock not open");
     setTimeout(getSettings, 250, pagevalue);
   }
 }
@@ -1234,7 +1234,8 @@ var remtypes = [
   ["RFT DF/QF", 0x22F8, ['low', 'high', 'cook30', 'cook60', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT RV", 0x12A0, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT CO2", 0x1298, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
-  ["RFT PIR", 0x2E10, ['motion_on', 'motion_off', 'join', 'leave']]
+  ["RFT PIR", 0x2E10, ['motion_on', 'motion_off', 'join', 'leave']],
+  ["RFT Spider", 0x22F2, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
 ];
 
 var remfuncs = [
@@ -1285,11 +1286,11 @@ function buildHtmlTablePlain(selector, jsonVar) {
   var columns = addAllColumnHeadersPlain(jsonVar, selector);
 
   for (var i = 0; i < jsonVar.length; i++) {
-    var row$ = $('<tr/>');
+    var row$ = $('<tr />');
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
       var cellValue = jsonVar[i][columns[colIndex]];
       if (cellValue == null) cellValue = "";
-      row$.append($('<td/>').html(cellValue));
+      row$.append($('<td />').html(cellValue));
     }
     $(selector).append(row$);
   }
@@ -1303,7 +1304,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
     var remtype = 0;
     var remfunction = 0;
     var row$ = $('<tr>');
-    row$.append($('<td>').html(`<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}'/>`));
+    row$.append($('<td>').html(`<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}' />`));
     //colIndex 0 = index
     //colIndex 1 = id
     //colIndex 2 = name
@@ -1381,7 +1382,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
           if (colIndex == 1) {
             idval = `id_remote-${i}`;
           }
-          row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly=''/>`));
+          row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly='' />`));
         }
         else {
           row$.append($('<td>').html(cellValue));
@@ -1417,7 +1418,7 @@ function buildHtmlStatusTable(selector, jsonVar) {
 function addRowTableIthoSettings(selector, jsonVar) {
   var i = jsonVar.Index;
   var row$ = $(`<tr>`);
-  row$.append($(`<td class='ithoset' style='text-align: center;vertical-align: middle;'>`).html(`<input type='radio' id='option-select_ithoset-${i}' name='options-ithoset' onchange='radio("ithoset",${i})' value='${i}'/>`));
+  row$.append($(`<td class='ithoset' style='text-align: center;vertical-align: middle;'>`).html(`<input type='radio' id='option-select_ithoset-${i}' name='options-ithoset' onchange='radio("ithoset",${i})' value='${i}' />`));
   for (var key in jsonVar) {
     if (key == "update") { continue; }
     if (key == "loop") { continue; }
@@ -1473,14 +1474,14 @@ function addColumnHeader(jsonVar, selector, appendRow) {
 function addAllColumnHeadersPlain(jsonVar, selector) {
   var columnSet = [];
   var headerThead$ = $('<thead>');
-  var headerTr$ = $('<tr/>');
+  var headerTr$ = $('<tr />');
 
   for (var i = 0; i < jsonVar.length; i++) {
     var rowHash = jsonVar[i];
     for (var key in rowHash) {
       if ($.inArray(key, columnSet) == -1) {
         columnSet.push(key);
-        headerTr$.append($('<th/>').html(key));
+        headerTr$.append($('<th />').html(key));
       }
     }
   }
