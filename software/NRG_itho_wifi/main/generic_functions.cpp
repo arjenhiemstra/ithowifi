@@ -230,7 +230,7 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   bool res = true;
 
   D_LOG("EXEC RF COMMAND:%s, idx: %d", command, remote_index);
-  detachInterrupt(itho_irq_pin);
+  disableRF_ISR();
 
   if (strcmp(command, "away") == 0)
   {
@@ -301,7 +301,7 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   snprintf(buf, sizeof(buf), "rfremotecmd:%s, idx:%d", (res ? command : "unknown"), remote_index);
   logLastCommand(buf, origin);
 
-  attachInterrupt(itho_irq_pin, ITHOinterrupt, RISING);
+  enableRF_ISR();
   return res;
 }
 

@@ -160,7 +160,7 @@ void ArduinoOTAinit()
 
                  if (xTaskCC1101Handle != NULL)
                  {
-                   detachInterrupt(itho_irq_pin);
+                   disableRF_ISR();
                    TaskCC1101Timeout.detach();
                    vTaskSuspend(xTaskCC1101Handle);
                    esp_task_wdt_delete(xTaskCC1101Handle);
@@ -400,7 +400,7 @@ void webServerInit()
 
           if (xTaskCC1101Handle != NULL)
           {
-            detachInterrupt(itho_irq_pin);
+            disableRF_ISR();
             TaskCC1101Timeout.detach();
             vTaskSuspend(xTaskCC1101Handle);
             esp_task_wdt_delete(xTaskCC1101Handle);
