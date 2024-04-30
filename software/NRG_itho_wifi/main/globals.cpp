@@ -9,7 +9,7 @@ gpio_num_t status_pin = GPIO_NUM_16;
 gpio_num_t itho_irq_pin = GPIO_NUM_4;
 gpio_num_t boot_state_pin = GPIO_NUM_0;
 gpio_num_t fail_save_pin = GPIO_NUM_0;
-gpio_num_t itho_status_pin = GPIO_NUM_0;
+// gpio_num_t itho_status_pin = GPIO_NUM_0;
 
 const char *cve2 = "2";
 const char *non_cve1 = "NON-CVE 1";

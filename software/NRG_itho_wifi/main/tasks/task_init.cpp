@@ -31,7 +31,6 @@ void TaskInit(void *pvParameters)
   vTaskDelete(NULL);
 }
 
-
 void failSafeBoot()
 {
 
@@ -149,7 +148,6 @@ void failSafeBoot()
   digitalWrite(wifi_led_pin, HIGH);
 }
 
-
 void hardwareInit()
 {
   delay(1000);
@@ -210,7 +208,7 @@ void hardwareInit()
   {
     boot_state_pin = GPIO_NUM_27;
     fail_save_pin = GPIO_NUM_14;
-    itho_status_pin = GPIO_NUM_13;
+    status_pin = GPIO_NUM_13;
     hw_revision = cve2;
   }
   else // NON-CVE
@@ -224,16 +222,10 @@ void hardwareInit()
 
   if (hardware_rev_det == 0x3F || hardware_rev_det == 0x03) // CVE
   {
-    pinMode(status_pin, INPUT_PULLUP);
-    pinMode(itho_status_pin, OUTPUT);
-    digitalWrite(itho_status_pin, LOW);
+    pinMode(GPIO_NUM_16, INPUT_PULLUP);
   }
-  else // NON-CVE
-  {
-    pinMode(status_pin, OUTPUT);
-    digitalWrite(status_pin, LOW);
-  }
-
+  pinMode(status_pin, OUTPUT);
+  digitalWrite(status_pin, LOW);
   pinMode(fail_save_pin, INPUT);
   failSafeBoot();
 

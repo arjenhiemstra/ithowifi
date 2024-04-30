@@ -417,12 +417,16 @@ void init_i2c_functions()
       ithoInitResult = 1;
       i2c_init_functions_done = true;
 
-      if (hardware_rev_det == 0x3F || hardware_rev_det == 0x03) // CVE
+      digitalWrite(status_pin, HIGH);
+      if (systemConfig.rfInitOK)
       {
-        digitalWrite(itho_status_pin, HIGH);
-      }
-      else // NON-CVE
-      {
+        delay(250);
+        digitalWrite(status_pin, LOW);
+        delay(250);
+        digitalWrite(status_pin, HIGH);
+        delay(250);
+        digitalWrite(status_pin, LOW);
+        delay(250);
         digitalWrite(status_pin, HIGH);
       }
       if (systemConfig.syssht30 > 0)

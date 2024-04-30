@@ -38,7 +38,7 @@ extern gpio_num_t status_pin;
 extern gpio_num_t boot_state_pin;
 extern gpio_num_t itho_irq_pin;
 extern gpio_num_t fail_save_pin;
-extern gpio_num_t itho_status_pin;
+// extern gpio_num_t itho_status_pin;
 
 extern const char *cve2;
 extern const char *non_cve1;
