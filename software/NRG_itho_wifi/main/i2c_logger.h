@@ -24,14 +24,13 @@ typedef enum
     I2C_CMD_FILTER_RESET,
     I2C_CMD_TEMP_READ_ITHO,
     I2C_CMD_TEMP_READ_SLAVE,
-    I2C_CMD_TEMP_READ_CMD
+    I2C_CMD_TEMP_READ_CMD,
+    I2C_CMD_OTHER
 } i2c_cmdref_t;
 
 class I2CLogger
 {
 public:
-
-
     typedef enum
     {
         EMPTY_STATE,
@@ -71,7 +70,7 @@ private:
         const char *msg;
     } i2c_error_state_msg;
 
-    const i2c_cmdref_msg i2c_cmdref_msg_table[17]{
+    const i2c_cmdref_msg i2c_cmdref_msg_table[18]{
         {I2C_CMD_EMPTY_CMDREF, ""},
         {I2C_CMD_UNKOWN, "UNKOWN"},
         {I2C_CMD_PWM_INIT, "PWM_INIT"},
@@ -88,7 +87,8 @@ private:
         {I2C_CMD_FILTER_RESET, "FILTER_RESET"},
         {I2C_CMD_TEMP_READ_ITHO, "TEMP_READ_FROM_ITHO"},
         {I2C_CMD_TEMP_READ_SLAVE, "TEMP_READ_SLAVE"},
-        {I2C_CMD_TEMP_READ_CMD, "TEMP_READ_CMD"}};
+        {I2C_CMD_TEMP_READ_CMD, "TEMP_READ_CMD"},
+        {I2C_CMD_OTHER, "I2C_CMD_OTHER"}};
     const char *i2c_cmdref_unknown_msg = "UNKNOWN ERROR";
 
     const i2c_error_state_msg i2c_error_state_msg_table[13]{
@@ -102,7 +102,7 @@ private:
         {I2C_ERROR_REQEUST_FAILED, "I2C_ERROR_REQEUST_FAILED"},
         {I2C_ERROR_MASTER_INIT_FAIL, "I2C_ERROR_MASTER_INIT_FAIL"},
         {I2C_ERROR_LEN, "I2C_ERROR_LEN"},
-        {I2C_ERROR_CLEARED_BUS, "I2C_ERROR_CLEARED_BUS"}, 
+        {I2C_ERROR_CLEARED_BUS, "I2C_ERROR_CLEARED_BUS"},
         {I2C_ERROR_CLEARED_OK, "I2C_ERROR_CLEARED_OK"},
         {I2C_ERROR_UNKNOWN, "I2C_ERROR_UNKNOWN"}};
     const char *i2c_error_state_unknown_msg = "UNKNOWN ERROR";
@@ -119,7 +119,7 @@ public:
     int i2c_log_start(i2c_cmdref_t cmd_ref);
     void i2c_log_err_state(int log_entry_idx, i2c_error_state_t err_state);
     void i2c_log_final(int log_entry_idx, i2c_error_state_t finalstate);
-    void get(JsonObject obj, const char* rootName) const;
+    void get(JsonObject obj, const char *rootName) const;
 
 protected:
 }; // I2CLogger
