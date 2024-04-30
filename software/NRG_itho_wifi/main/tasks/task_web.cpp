@@ -1211,6 +1211,18 @@ ApiResponse::api_response_status_t processCommand(JsonObject params, JsonDocumen
 
   response["cmdkey"] = "command";
   response["cmdvalue"] = value;
+  if (systemConfig.itho_pwm2i2c != 1)
+  {
+    response["code"] = 400;
+    response["failreason"] = "pwm2i2c protocol not enabled";
+    return ApiResponse::status::FAIL;
+  }
+  else if (currentIthoDeviceID() != 0x14 || currentIthoDeviceID() != 0x1B || currentIthoDeviceID() != 0x1D) // CVE or HRU200 are the only devices that support the pwm2i2c command
+  {
+    response["code"] = 400;
+    response["failreason"] = "device does not support pwm2i2c commands, use virtual remote instead";
+    return ApiResponse::status::FAIL;
+  }
   if (systemConfig.itho_vremoteapi)
   {
     response["cmdtype"] = "i2c_cmd, idx defaulted to 0";
