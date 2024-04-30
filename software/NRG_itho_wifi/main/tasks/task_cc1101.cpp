@@ -229,6 +229,20 @@ void TaskCC1101(void *pvParameters)
 
     // init the RF module
     rf.init();
+    if (systemConfig.module_rf_id[0] == 0 && systemConfig.module_rf_id[1] == 0 && systemConfig.module_rf_id[2] == 0)
+    {
+      systemConfig.module_rf_id[0] = sys.getMac(3);
+      systemConfig.module_rf_id[1] = sys.getMac(4);
+      systemConfig.module_rf_id[2] = sys.getMac(5 - 1);
+      I_LOG("rfsetup: module_rf_id default 0x%02X,0x%02X,0x%02X", systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
+      saveSystemConfigflag = true;
+    }
+    else
+    {
+      I_LOG("rfsetup: module_rf_id 0x%02X,0x%02X,0x%02X", systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
+    }
+
+    rf.setDefaultID(systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
     pinMode(itho_irq_pin, INPUT);
     attachInterrupt(itho_irq_pin, ITHOinterrupt, RISING);
 

@@ -30,10 +30,7 @@ SystemConfig::SystemConfig()
   strlcpy(mqtt_domoticzout_topic, "domoticz/out", sizeof(mqtt_domoticzout_topic));
   mqtt_idx = 1;
   sensor_idx = 1;
-  mqtt_updated = false;
-  get_mqtt_settings = false;
-  get_sys_settings = false;
-  JsonArray arr = api_settings_activated.to<JsonArray>();
+  JsonArray arr __attribute__((unused)) = api_settings_activated.to<JsonArray>();
   itho_fallback = 20;
   itho_low = 20;
   itho_medium = 120;
@@ -52,16 +49,22 @@ SystemConfig::SystemConfig()
   itho_4210 = 0;
   itho_forcemedium = 0;
   itho_vremoteapi = 0;
-  itho_rf_support = 0;
+  itho_rf_support = 1;
   api_version = 1;
   i2cmenu = 0;
   i2c_safe_guard = 2;
   i2c_sniffer = 0;
+  fw_check = 1;
   rfInitOK = false;
   nonQ_cmd_clearsQ = 1;
 
   itho_updated = false;
+  mqtt_updated = false;
+  get_mqtt_settings = false;
+  get_sys_settings = false;
   get_itho_settings = false;
+  get_rf_settings = false;
+
   configLoaded = false;
 
 } // SystemConfig
@@ -307,6 +310,10 @@ bool SystemConfig::set(JsonObject obj)
     updated = true;
     itho_rf_support = obj["itho_rf_support"];
   }
+  if (!obj["module_rf_id"].isNull())
+  {
+    copyArray(obj["module_rf_id"].as<JsonArray>(), module_rf_id);
+  }
   if (!obj["i2cmenu"].isNull())
   {
     updated = true;
@@ -321,6 +328,16 @@ bool SystemConfig::set(JsonObject obj)
   {
     updated = true;
     i2c_sniffer = obj["i2c_sniffer"];
+  }
+  if (!obj["fw_check"].isNull())
+  {
+    updated = true;
+    fw_check = obj["fw_check"];
+  }
+  if (!obj["api_version"].isNull())
+  {
+    updated = true;
+    api_version = obj["api_version"];
   }
   if (!obj["rfInitOK"].isNull())
   {
@@ -339,7 +356,7 @@ void SystemConfig::get(JsonObject obj) const
 {
 
   bool complete = true;
-  if (get_mqtt_settings || get_sys_settings || get_itho_settings)
+  if (get_mqtt_settings || get_sys_settings || get_itho_settings || get_rf_settings)
   {
     complete = false;
   }
@@ -377,8 +394,10 @@ void SystemConfig::get(JsonObject obj) const
     obj["i2cmenu"] = i2cmenu;
     obj["i2c_safe_guard"] = i2c_safe_guard;
     obj["i2c_sniffer"] = i2c_sniffer;
+    obj["fw_check"] = fw_check;
     obj["api_settings"] = api_settings;
     obj["api_settings_activated"].set(api_settings_activated.as<JsonArrayConst>());
+    obj["api_version"] = api_version;
   }
   if (complete || get_mqtt_settings)
   {
@@ -398,6 +417,19 @@ void SystemConfig::get(JsonObject obj) const
     obj["mqtt_domoticzout_topic"] = mqtt_domoticzout_topic;
     obj["mqtt_idx"] = mqtt_idx;
     obj["sensor_idx"] = sensor_idx;
+  }
+  if (complete || get_rf_settings)
+  {
+    obj["itho_rf_support"] = itho_rf_support;
+    obj["rfInitOK"] = rfInitOK;
+    JsonArray id = obj["module_rf_id"].to<JsonArray>();
+    for (uint8_t y = 0; y < 3; y++)
+    {
+      id.add(module_rf_id[y]);
+    }
+    char module_rf_id_str[9];
+    snprintf(module_rf_id_str, sizeof(module_rf_id_str), "%02X,%02X,%02X", module_rf_id[0], module_rf_id[1], module_rf_id[2]);
+    obj["module_rf_id_str"] = module_rf_id_str;
   }
   if (complete || get_itho_settings)
   {

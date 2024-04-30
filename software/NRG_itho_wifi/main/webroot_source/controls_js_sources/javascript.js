@@ -552,6 +552,15 @@ $(document).ready(function () {
         }
       }
     }
+    else if ($(this).attr('id') == 'update_rf_id') {
+      var id = $('#module_rf_id_str').val();
+      if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
+        websock_send(`{"update_rf_id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}]}`);
+      }
+      else {
+        alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
+      }
+    }
     else if ($(this).attr('id') == 'itho_copyid_vremote') {
       var i = $('input[name=\'optionsRemotes\']:checked').val();
       if (i == null) {
@@ -663,7 +672,16 @@ $(document).ready(function () {
       const items = $(this).attr('id').split('-');
       if (items[1] == 0) $('#rflog_outer').addClass('hidden');
       if (items[1] > 0) $('#rflog_outer').removeClass('hidden');
-      websock_send(`{"rfdebug":${items[1]}}`);
+      if (items[1] == 12762) {
+        websock_send(`{"rfdebug":${items[1]}, "faninfo":${$('#rfdebug-12762-faninfo').val()}, "timer":${$('#rfdebug-12762-timer').val()}}`);
+      }
+      else if (items[1] == 12761) {
+        websock_send(`{"rfdebug":${items[1]}, "status":${$('#rfdebug-12761-status').val()}, "fault":${$('#rfdebug-12761-fault').val()}, "frost":${$('#rfdebug-12761-frost').val()}, "filter":${$('#rfdebug-12761-filter').val()}}`);
+
+      }
+      else {
+        websock_send(`{"rfdebug":${items[1]}}`);
+      }
     }
     else if ($(this).attr('id').startsWith('i2csniffer-')) {
       const items = $(this).attr('id').split('-');
