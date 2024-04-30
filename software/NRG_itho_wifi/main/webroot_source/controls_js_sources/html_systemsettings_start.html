@@ -12,12 +12,14 @@
     <legend><br>System security:</legend>
     <div class="pure-control-group">
       <label for="sys_username">Username</label>
-      <input id="sys_username" maxlength="64" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('username-msg').innerHTML = 'Username truncated to 32 characters.'; } else { document.getElementById('username-msg').innerHTML = ''; }">
+      <input id="sys_username" maxlength="64" type="text"
+        oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('username-msg').innerHTML = 'Username truncated to 32 characters.'; } else { document.getElementById('username-msg').innerHTML = ''; }">
       <span id="username-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
       <label for="sys_password">Password</label>
-      <input id="sys_password" maxlength="64" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('password-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('password-msg').innerHTML = ''; }">
+      <input id="sys_password" maxlength="64" type="text"
+        oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('password-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('password-msg').innerHTML = ''; }">
       <span id="password-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
@@ -57,7 +59,8 @@
     </div>
     <div class="pure-control-group">
       <label for="api_settings_activated">Activate settings indexes</label>
-      <input id="api_settings_activated" title="Must be a valid JSON array ie.: [12,34]" type="text" maxlength="1024" size="20">
+      <input id="api_settings_activated" title="Must be a valid JSON array ie.: [12,34]" type="text" maxlength="1024"
+        size="20">
     </div>
     <p>
       <b style="color: red">Warning:</b>
