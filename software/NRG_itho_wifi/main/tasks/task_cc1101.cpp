@@ -20,18 +20,30 @@ bool RFTidChk[3] = {false, false, false};
 Ticker timerLearnLeaveMode;
 
 volatile bool ithoCheck = false;
+SemaphoreHandle_t isrSemaphore = NULL;
 
 IRAM_ATTR void ITHOinterrupt()
 {
   ithoCheck = true;
+  // Try to take the semaphore
+  if (xSemaphoreTakeFromISR(isrSemaphore, NULL) == pdTRUE)
+  {
+    // ISR code here
+
+    ithoCheck = rf.receivePacket();
+
+    // At the end, give back the semaphore
+    xSemaphoreGiveFromISR(isrSemaphore, NULL);
+  }
 }
 
-void disableRFsupport()
+void disableRF_ISR()
 {
   detachInterrupt(itho_irq_pin);
 }
 
 uint8_t findRFTlastCommand()
+void enableRF_ISR()
 {
   if (RFTcommand[RFTcommandpos] != IthoUnknown)
     return RFTcommandpos;
@@ -48,6 +60,7 @@ uint8_t findRFTlastCommand()
   if ((RFTcommandpos == 2) && (RFTcommand[0] != IthoUnknown))
     return 0;
   return -1;
+  attachInterrupt(itho_irq_pin, ITHOinterrupt, RISING);
 }
 
 void RFDebug(IthoCommand cmd)
@@ -244,7 +257,7 @@ void TaskCC1101(void *pvParameters)
 
     rf.setDefaultID(systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
     pinMode(itho_irq_pin, INPUT);
-    attachInterrupt(itho_irq_pin, ITHOinterrupt, RISING);
+    enableRF_ISR();
 
     // this portion of code will not be reached when no RF module is present: detach reboot script, switch on rf_supprt and load remotes config
     esp_task_wdt_add(NULL);
