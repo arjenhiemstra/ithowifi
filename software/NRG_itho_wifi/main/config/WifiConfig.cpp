@@ -371,10 +371,12 @@ void logWifiInfo()
   I_LOG("  Mode:%s", modes[WiFi.getMode()]);
   I_LOG("  Status:%s", wifiConfig.wl_status_to_name(WiFi.status()));
   I_LOG("  IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+  I_LOG("  MAC:%s", WiFi.macAddress().c_str());
 }
 
 JsonDocument wifiInfoJson()
 {
+
   IPAddress ip = WiFi.localIP();
   char ipstr[16] = {};
   snprintf(ipstr, sizeof(ipstr), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
@@ -384,6 +386,7 @@ JsonDocument wifiInfoJson()
   wifiinfo["wifissid"] = WiFi.SSID();
   wifiinfo["wificonnstat"] = wifiConfig.wl_status_to_name(WiFi.status());
   wifiinfo["wifiip"] = ipstr;
+  wifiinfo["wifimac"] = WiFi.macAddress();
 
   return wifiinfo;
 }

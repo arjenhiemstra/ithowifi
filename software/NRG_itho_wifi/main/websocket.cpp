@@ -60,6 +60,7 @@ void jsonWsSend(const char *rootName)
     snprintf(apssid, sizeof(apssid), "%s%02x%02x", espName, sys.getMac(4), sys.getMac(5));
 
     wifiinfo["wifissid"] = WiFi.SSID();
+    wifiinfo["wifimac"] = WiFi.macAddress();
     wifiinfo["wificonnstat"] = wifiConfig.wl_status_to_name(WiFi.status());
     wifiinfo["wifiip"] = wifiip;
     wifiinfo["apactive"] = wifiModeAP ? "yes" : "no";
