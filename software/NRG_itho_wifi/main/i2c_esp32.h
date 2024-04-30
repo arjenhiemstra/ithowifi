@@ -80,7 +80,7 @@ bool i2c_sendBytes(const uint8_t *buf, size_t len);
 bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len, i2c_cmdref_t origin);
 bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len);
 
-size_t i2c_slave_receive(uint8_t i2c_receive_buf[]);
+size_t i2c_slave_receive(uint8_t *i2c_receive_buf);
 void i2c_slave_deinit();
 bool checkI2Cbus(int log_entry_idx);
 int I2C_ClearBus();

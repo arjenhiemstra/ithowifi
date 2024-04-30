@@ -225,7 +225,7 @@ bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len)
   return i2c_sendCmd(addr, cmd, len, I2C_CMD_UNKOWN);
 }
 
-size_t i2c_slave_receive(uint8_t i2c_receive_buf[])
+size_t i2c_slave_receive(uint8_t *i2c_receive_buf)
 {
 
   // typedef struct
