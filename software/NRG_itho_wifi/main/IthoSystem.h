@@ -17,6 +17,7 @@
 #include "sys_log.h"
 #include "notifyClients.h"
 #include "i2c_esp32.h"
+#include "i2c_logger.h"
 #include "tasks/task_mqtt.h"
 #include "IthoQueue.h"
 #include "enum.h"
@@ -32,6 +33,8 @@ extern const struct ihtoDeviceType *ithoDeviceptr;
 // extern int32_t value2410;
 extern int32_t *resultPtr2410;
 extern bool i2c_result_updateweb;
+extern bool i2c_31d9_done;
+
 
 extern bool itho_internal_hum_temp;
 extern float ithoHum;
@@ -134,7 +137,9 @@ void sendQueryDevicetype(bool updateweb);
 void sendQueryStatusFormat(bool updateweb);
 void sendQueryStatus(bool updateweb);
 void sendQuery31DA(bool updateweb);
+size_t sendQuery31DA(uint8_t *receive_buffer);
 void sendQuery31D9(bool updateweb);
+size_t sendQuery31D9(uint8_t *receive_buffer);
 void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperature, uint32_t timestamp, bool updateweb);
 void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t checked, bool updateweb);
 int32_t *sendQuery2410(uint8_t index, bool updateweb);
@@ -144,6 +149,7 @@ bool setSetting2410(uint8_t index, int32_t value, bool updateweb);
 void sendQueryCounters(bool updateweb);
 void filterReset();
 void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
+size_t send_i2c_query(uint8_t *i2c_command, size_t i2c_command_length, uint8_t *receive_buffer, i2c_cmdref_t origin);
 int quick_pow10(int n);
 std::string i2cbuf2string(const uint8_t *data, size_t len);
 bool check_i2c_reply(const uint8_t *buf, size_t buflen, const uint16_t opcode);
