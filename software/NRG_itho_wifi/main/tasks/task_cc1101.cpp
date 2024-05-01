@@ -247,7 +247,7 @@ void TaskCC1101(void *pvParameters)
     {
       systemConfig.module_rf_id[0] = sys.getMac(3);
       systemConfig.module_rf_id[1] = sys.getMac(4);
-      systemConfig.module_rf_id[2] = sys.getMac(5 - 1);
+      systemConfig.module_rf_id[2] = sys.getMac(5) - 1;
       I_LOG("rfsetup: module_rf_id default 0x%02X,0x%02X,0x%02X", systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
       saveSystemConfigflag = true;
     }
@@ -551,10 +551,6 @@ void TaskCC1101(void *pvParameters)
               {
                 send10E0 = true;
               }
-              if (remfunc == RemoteFunctions::BIDIRECT && (cmd != IthoJoin && cmd != IthoLeave))
-              {
-                // send31D9 = true;
-              }
             }
           }
           else
@@ -572,6 +568,10 @@ void TaskCC1101(void *pvParameters)
         {
           if (item.remoteID[0] == 0 && item.remoteID[1] == 0 && item.remoteID[2] == 0)
             continue;
+          if(item.bidirectional && (cmd != IthoJoin && cmd != IthoLeave)) { //trigger fan status update if there is a bi-directional remote in the known list of remotes
+            send31D9 = true;
+            send31DA = true;
+          }
           int remIndex = remotes.remoteIndex(item.remoteID[0], item.remoteID[1], item.remoteID[2]);
           if (remIndex >= 0)
           {

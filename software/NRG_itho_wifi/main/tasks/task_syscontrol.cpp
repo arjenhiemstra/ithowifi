@@ -1028,6 +1028,8 @@ void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
   D_LOG("EXEC VREMOTE BUTTON COMMAND:%s remote:%d", command, remoteIndex);
 
   bool updateweb = false;
+  bool updatefanstatus = false;
+
   if (origin == WEB)
     updateweb = true;
 
@@ -1035,66 +1037,79 @@ void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoAway); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "low") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoLow); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "medium") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoMedium); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "high") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoHigh); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "timer1") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoTimer1); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "timer2") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoTimer2); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "timer3") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoTimer3); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "cook30") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoCook30); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "cook60") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoCook60); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "auto") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoAuto); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "autonight") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoAutoNight); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "join") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoJoin); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "leave") == 0)
   {
     i2c_queue_add_cmd([remoteIndex]()
                       { sendRemoteCmd(remoteIndex, IthoLeave); });
+    updatefanstatus = true;
   }
   else if (strcmp(command, "type") == 0)
   {
@@ -1129,6 +1144,16 @@ void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
   else if (strcmp(command, "shtreset") == 0)
   {
     reset_sht_sensor = true;
+  }
+
+  if (updatefanstatus)
+  {
+    i2c_queue_add_cmd([]()
+                      { sendQuery31DA(false); });
+    i2c_queue_add_cmd([]()
+                      { sendQuery31D9(false); });
+    i2c_queue_add_cmd([]()
+                      { updateMQTTihtoStatus = true; });
   }
 
   const char *source;

@@ -632,7 +632,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         {
           systemConfig.module_rf_id[0] = sys.getMac(3);
           systemConfig.module_rf_id[1] = sys.getMac(4);
-          systemConfig.module_rf_id[2] = sys.getMac(5 - 1);
+          systemConfig.module_rf_id[2] = sys.getMac(5) - 1;
         }
         else
         {
