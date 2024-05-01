@@ -34,7 +34,10 @@ void getIthoStatusJSON(JsonObject root)
     auto ppmw = b / (101325 - b) * ithoHum / 100 * 0.62145 * 1000000;
     root["ppmw"] = static_cast<int>(ppmw + 0.5);
   }
-
+  if (systemConfig.fw_check && fw_update_available >= 0)
+  {
+    root["firmware_update_available"] = fw_update_available ? "true" : "false";
+  }
   if (!ithoInternalMeasurements.empty() && systemConfig.itho_31d9 == 1)
   {
     for (const auto &internalMeasurement : ithoInternalMeasurements)
@@ -220,7 +223,7 @@ bool ithoExecCommand(const char *command, cmdOrigin origin)
 
   // snprintf(modestate, sizeof(modestate), "%s", command);
   // updateMQTTmodeStatus = true;
-  
+
   updateMQTTihtoStatus = true;
   return true;
 }
