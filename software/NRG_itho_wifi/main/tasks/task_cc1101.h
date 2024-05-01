@@ -27,10 +27,19 @@ extern Ticker TaskCC1101Timeout;
 extern TaskHandle_t xTaskCC1101Handle;
 extern uint32_t TaskCC1101HWmark;
 extern uint8_t debugLevel;
+extern bool send31D9;
+extern bool send31D9debug;
+extern bool send31DAdebug;
+extern uint8_t status31D9;
+extern bool fault31D9;
+extern bool frost31D9;
+extern bool filter31D9;
+
+extern bool send31DA;
+extern uint8_t faninfo31DA;
+extern uint8_t timer31DA;
 
 IRAM_ATTR void ITHOinterrupt();
-void disableRFsupport();
-uint8_t findRFTlastCommand();
 void disableRF_ISR();
 void enableRF_ISR();
 void RFDebug(IthoCommand cmd);

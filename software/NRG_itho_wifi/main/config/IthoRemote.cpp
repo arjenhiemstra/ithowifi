@@ -45,13 +45,20 @@ const IthoRemote::remote_command_char IthoRemote::remote_command_msg_table[]{
     {IthoAuto, "IthoAuto"},
     {IthoAutoNight, "IthoAutoNight"},
     {IthoCook30, "IthoCook30"},
-    {IthoCook60, "IthoCook60"}};
+    {IthoCook60, "IthoCook60"},
+    {IthoTimerUser, "IthoTimerUser"},
+    {IthoJoinReply, "IthoJoinReply"},
+    {IthoPIRmotionOn, "IthoPIRmotionOn"},
+    {IthoPIRmotionOff, "IthoPIRmotionOff"},
+    {Itho31D9, "Itho31D9"},
+    {Itho31DA, "Itho31DA"},
+    {IthoDeviceInfo, "IthoDeviceInfo"}};    
 
 const char *IthoRemote::remote_unknown_msg = "CMD UNKNOWN ERROR";
 
 int IthoRemote::getRemoteCount()
 {
-  return this->remoteCount;
+  return remoteCount;
 }
 
 bool IthoRemote::toggleLearnLeaveMode()
@@ -72,54 +79,53 @@ void IthoRemote::updatellModeTimer()
   }
 }
 
-int IthoRemote::registerNewRemote(const int *id, const RemoteTypes remtype)
+int IthoRemote::registerNewRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2, const RemoteTypes remtype)
 {
-  if (this->checkID(id))
+  if (checkID(byte0, byte1, byte2))
   {
     return -1; // remote already registered
   }
   if (activeRemote != -1 && activeRemote < maxRemotes)
   {
-    for (uint8_t i = 0; i < 3; i++)
-    {
-      remotes[activeRemote].ID[i] = id[i];
-    }
+    remotes[activeRemote].ID[0] = byte0;
+    remotes[activeRemote].ID[1] = byte1;
+    remotes[activeRemote].ID[2] = byte2;
     remotes[activeRemote].remtype = remtype;
     return 1;
   }
-  if (this->remoteCount >= maxRemotes - 1)
+  if (remoteCount >= maxRemotes - 1)
   {
     return -2;
   }
-  int zeroID[] = {0, 0, 0};
-  int index = this->remoteIndex(zeroID); // find first index with no remote ID set
+
+  int index = remoteIndex(0, 0, 0); // find first index with no remote ID set
   if (index < 0)
   {
     return index;
   }
-  for (uint8_t i = 0; i < 3; i++)
-  {
-    remotes[index].ID[i] = id[i];
-  }
+  remotes[index].ID[0] = byte0;
+  remotes[index].ID[1] = byte1;
+  remotes[index].ID[2] = byte2;
+
   remotes[index].remtype = remtype;
 
-  this->remoteCount++;
+  remoteCount++;
 
   return index;
 }
 
-int IthoRemote::removeRemote(const int *id)
+int IthoRemote::removeRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2)
 {
-  if (!this->checkID(id))
+  if (!checkID(byte0, byte1, byte2))
   {
     return -1; // remote not registered
   }
-  if (this->remoteCount < 1)
+  if (remoteCount < 1)
   {
     return -2;
   }
 
-  int index = this->remoteIndex(id);
+  int index = remoteIndex(byte0, byte1, byte2);
 
   if (index < 0)
     return -1;
@@ -134,7 +140,7 @@ int IthoRemote::removeRemote(const int *id)
   remotes[index].remfunc = RemoteFunctions::UNSETFUNC;
   remotes[index].capabilities = nullptr;
 
-  this->remoteCount--;
+  remoteCount--;
 
   return 1;
 }
@@ -151,8 +157,8 @@ int IthoRemote::removeRemote(const uint8_t index)
     {
       remotes[index].ID[i] = 0;
     }
-    this->remoteCount--;
-    if (this->instanceFunc == RemoteFunctions::VREMOTE)
+    remoteCount--;
+    if (instanceFunc == RemoteFunctions::VREMOTE)
     {
       remotes[index].ID[0] = sys.getMac(3);
       remotes[index].ID[1] = sys.getMac(4);
@@ -186,12 +192,11 @@ void IthoRemote::updateRemoteType(const uint8_t index, const uint16_t type)
 {
   remotes[index].remtype = static_cast<RemoteTypes>(type);
 }
-void IthoRemote::updateRemoteID(const uint8_t index, const uint8_t *id)
+void IthoRemote::updateRemoteID(const uint8_t index, uint8_t byte0, uint8_t byte1, uint8_t byte2)
 {
-  for (uint8_t i = 0; i < 3; i++)
-  {
-    remotes[index].ID[i] = id[i];
-  }
+  remotes[index].ID[0] = byte0;
+  remotes[index].ID[1] = byte1;
+  remotes[index].ID[2] = byte2;
 }
 void IthoRemote::updateRemoteFunction(const uint8_t index, const uint8_t remfunc)
 {
@@ -200,7 +205,7 @@ void IthoRemote::updateRemoteFunction(const uint8_t index, const uint8_t remfunc
 
 void IthoRemote::addCapabilities(uint8_t remoteIndex, const char *name, int32_t value)
 {
-  if (strcmp(name, "temp") == 0 || strcmp(name, "dewpoint") == 0)
+  if (strcmp(name, "temp") == 0 || strcmp(name, "dewpoint") == 0 || strcmp(name, "setpoint") == 0)
   {
     remotes[remoteIndex].capabilities[name] = static_cast<int>((value / 100.0) * 10 + 0.5) / 10.0;
   }
@@ -214,46 +219,36 @@ void IthoRemote::addCapabilities(uint8_t remoteIndex, const char *name, int32_t 
   }
 }
 
-int IthoRemote::remoteIndex(const int32_t id)
-{
-  if (id < 0)
-    return -1;
-  int tempID[3];
-  tempID[0] = (id >> 16) & 0xFF;
-  tempID[1] = (id >> 8) & 0xFF;
-  tempID[2] = id & 0xFF;
-  return remoteIndex(tempID);
-}
+// int IthoRemote::remoteIndex(const int32_t id)
+// {
+//   if (id < 0)
+//     return -1;
+//   int tempID[3];
+//   tempID[0] = (id >> 16) & 0xFF;
+//   tempID[1] = (id >> 8) & 0xFF;
+//   tempID[2] = id & 0xFF;
+//   return remoteIndex(tempID);
+// }
 
-int IthoRemote::remoteIndex(const int *id)
+int IthoRemote::remoteIndex(uint8_t byte0, uint8_t byte1, uint8_t byte2)
 {
-  int noKnown = 0;
   for (uint8_t i = 0; i < maxRemotes; i++)
   {
-    for (uint8_t y = 0; y < 3; y++)
-    {
-      if (id[y] == remotes[i].ID[y])
-      {
-        noKnown++;
-      }
-    }
-    if (noKnown == 3)
-    {
+    if (byte0 == remotes[i].ID[0] && byte1 == remotes[i].ID[1] && byte2 == remotes[i].ID[2])
       return i;
-    }
-    noKnown = 0;
   }
   return -1;
 }
 
-const int *IthoRemote::getRemoteIDbyIndex(const int index)
+void IthoRemote::getRemoteIDbyIndex(const int index, uint8_t *id)
 {
-  static int id[3];
+  if (!id)
+    return;
+
   for (uint8_t i = 0; i < 3; i++)
   {
     id[i] = remotes[index].ID[i];
   }
-  return id;
 }
 
 const char *IthoRemote::getRemoteNamebyIndex(const int index)
@@ -276,25 +271,16 @@ int IthoRemote::getRemoteIndexbyName(const char *name)
   return -1;
 }
 
-bool IthoRemote::checkID(const int *id)
+bool IthoRemote::checkID(uint8_t byte0, uint8_t byte1, uint8_t byte2)
 {
-  int noKnown = 0;
+  if (byte0 == 0 && byte1 == 0 && byte2 == 0)
+    return false;
+
   for (uint8_t i = 0; i < maxRemotes; i++)
   {
-    for (uint8_t y = 0; y < 3; y++)
-    {
-      if (id[y] == remotes[i].ID[y])
-      {
-        noKnown++;
-      }
-    }
-    if (noKnown == 3)
-    {
+    if (byte0 == remotes[i].ID[0] && byte1 == remotes[i].ID[1] && byte2 == remotes[i].ID[2])
       return true;
-    }
-    noKnown = 0;
   }
-
   return false;
 }
 
@@ -432,9 +418,9 @@ void IthoRemote::get(JsonObject obj, const char *root) const
   // Add each remote in the array
   for (int i = 0; i < maxRemotes; i++)
   {
-    remotes[i].get(rem.add<JsonObject>(), this->instanceFunc, i);
+    remotes[i].get(rem.add<JsonObject>(), instanceFunc, i);
   }
-  obj["remfunc"] = this->instanceFunc;
+  obj["remfunc"] = instanceFunc;
   obj["version_of_program"] = config_struct_version;
 }
 

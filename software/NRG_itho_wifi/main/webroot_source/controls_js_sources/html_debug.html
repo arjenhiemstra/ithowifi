@@ -54,6 +54,20 @@
             from devices joined to the add-on<br><br><button id="rfdebug-3"
                 class="pure-button pure-button-primary">Level3</button>&nbsp;Level3 will show all received RF messages
             from all devices<br><br>
+            <button id="rfdebug-12761" class="pure-button pure-button-primary">Send 31D9</button>&nbsp;speed:
+            <input id="rfdebug-12761-status" type="number" min="0" max="100" size="6" value="0">&nbsp;
+            &nbsp;fault:
+            <input id="rfdebug-12761-fault" type="number" min="0" max="1" size="6" value="0">&nbsp;
+            &nbsp;frost:
+            <input id="rfdebug-12761-frost" type="number" min="0" max="1" size="6" value="0">&nbsp;
+            &nbsp;filter:
+            <input id="rfdebug-12761-filter" type="number" min="0" max="1" size="6" value="0">&nbsp;
+            <br><br>
+            <button id="rfdebug-12762" class="pure-button pure-button-primary">Send 31DA</button>&nbsp;faninfo:
+            <input id="rfdebug-12762-faninfo" type="number" min="0" max="255" size="6"
+                value="0">&nbsp;timer:&nbsp;<input id="rfdebug-12762-timer" type="number" min="0" max="255" size="6"
+                value="0">&nbsp;//faninfo:0=off,1=low,2=medium,3=high,13=timer3,21=away,24=auto
+            <br><br>
             <fieldset>
                 <legend><br>I2C extra debug functionality:</legend>
                 <p>This option enables an extra menu where more I2C options and logging is available. <br>Enabling the
