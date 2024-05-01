@@ -20,7 +20,7 @@ let messageQueue = [];
 let websock;
 
 function startWebsock(websocketServerLocation) {
-  console.log(websocketServerLocation);
+  if (debug) console.log(websocketServerLocation);
   messageQueue = [];
   websock = new WebSocket(websocketServerLocation);
   websock.addEventListener('message', event => {
@@ -28,7 +28,7 @@ function startWebsock(websocketServerLocation) {
     messageQueue.push(event.data);
   });
   websock.onopen = function (a) {
-    console.log('websock open');
+    if (debug) console.log('websock open');
     document.getElementById("layout").style.opacity = 1;
     document.getElementById("loader").style.display = "none";
     if (lastPageReq !== "") {
@@ -38,7 +38,7 @@ function startWebsock(websocketServerLocation) {
   };
 
   websock.onclose = function (a) {
-    console.log('websock close');
+    if (debug) console.log('websock close');
     // Try to reconnect in 200 milliseconds
     websock = null;
     document.getElementById("layout").style.opacity = 0.3;
@@ -48,9 +48,9 @@ function startWebsock(websocketServerLocation) {
 
   websock.onerror = function (a) {
     try {
-      console.log(a);
+      if (debug) console.log(a);
     } catch (error) {
-      console.warn(error);
+      if (debug) console.log(error);
     }
   };
 }
@@ -71,9 +71,7 @@ function processMessage(message) {
   } catch (error) {
     f = JSON.parse(message);
   }
-  if (debug) {
-    console.log(f);
-  }
+  if (debug) console.log(f);
   let g = document.body;
   if (f.wifisettings) {
     let x = f.wifisettings;
@@ -117,6 +115,9 @@ function processMessage(message) {
       else {
         $('#i2cmenu').addClass('hidden');
       }
+    }
+    if ("api_version" in x) {
+      localStorage.setItem("api_version", x.api_version);
     }
   }
   else if (f.remotes) {
@@ -351,7 +352,7 @@ function loadSettingsLocStor() {
 
   let setlen = localStorage.getItem("itho_setlen");
   if (typeof setlen === 'undefined' || setlen == null) {
-    console.log("error: loadSettingsLocStor setting length unavailable");
+    if (debug) console.log("error: loadSettingsLocStor setting length unavailable");
     return;
   }
   for (var index = 0; index < setlen; index++) {
@@ -378,7 +379,7 @@ function loadSettingsLocStor() {
       updateRowTableIthoSettings(existingData);
     }
     else {
-      console.log("error: no cached setting info for index:" + index);
+      if (debug) console.log("error: no cached setting info for index:" + index);
     }
   }
 
@@ -456,6 +457,7 @@ $(document).ready(function () {
           syssec_web: $('input[name=\'option-syssec_web\']:checked').val(),
           syssec_api: $('input[name=\'option-syssec_api\']:checked').val(),
           syssec_edit: $('input[name=\'option-syssec_edit\']:checked').val(),
+          api_version: $('input[name=\'option-api_version\']:checked').val(),
           api_normalize: $('input[name=\'option-api_normalize\']:checked').val(),
           api_settings: $('input[name=\'option-api_settings\']:checked').val(),
           api_settings_activated: JSON.parse($('#api_settings_activated').val()),
@@ -542,13 +544,22 @@ $(document).ready(function () {
         var remfunc = (typeof $('#func_remote-' + i).val() === 'undefined') ? 0 : $('#func_remote-' + i).val();
         var remtype = (typeof $('#type_remote-' + i).val() === 'undefined') ? 0 : $('#type_remote-' + i).val();
         var id = $('#id_remote-' + i).val();
-        if (id == 'empty slot') id = "0,0,0";
+        if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
           websock_send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc}}`);
         }
         else {
           alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
         }
+      }
+    }
+    else if ($(this).attr('id') == 'update_rf_id') {
+      var id = $('#module_rf_id_str').val();
+      if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
+        websock_send(`{"update_rf_id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}]}`);
+      }
+      else {
+        alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
       }
     }
     else if ($(this).attr('id') == 'itho_copyid_vremote') {
@@ -662,7 +673,16 @@ $(document).ready(function () {
       const items = $(this).attr('id').split('-');
       if (items[1] == 0) $('#rflog_outer').addClass('hidden');
       if (items[1] > 0) $('#rflog_outer').removeClass('hidden');
-      websock_send(`{"rfdebug":${items[1]}}`);
+      if (items[1] == 12762) {
+        websock_send(`{"rfdebug":${items[1]}, "faninfo":${$('#rfdebug-12762-faninfo').val()}, "timer":${$('#rfdebug-12762-timer').val()}}`);
+      }
+      else if (items[1] == 12761) {
+        websock_send(`{"rfdebug":${items[1]}, "status":${$('#rfdebug-12761-status').val()}, "fault":${$('#rfdebug-12761-fault').val()}, "frost":${$('#rfdebug-12761-frost').val()}, "filter":${$('#rfdebug-12761-filter').val()}}`);
+
+      }
+      else {
+        websock_send(`{"rfdebug":${items[1]}}`);
+      }
     }
     else if ($(this).attr('id').startsWith('i2csniffer-')) {
       const items = $(this).attr('id').split('-');
@@ -813,9 +833,7 @@ $(document).ready(function () {
 
 function websock_send(message) {
   websock.send(message);
-  if (debug) {
-    console.log(message);
-  }
+  if (debug) console.log(message);
 }
 
 var timerHandle = setTimeout(function () {
@@ -981,7 +999,7 @@ function getSettings(pagevalue) {
     websock_send('{"' + pagevalue + '":1}');
   }
   else {
-    console.log("websock not open");
+    if (debug) console.log("websock not open");
     setTimeout(getSettings, 250, pagevalue);
   }
 }
@@ -1107,9 +1125,14 @@ function ValidateIPaddress(ipaddress) {
 }
 
 function isHex(hex) {
-  return typeof hex === 'string'
-    && hex.length === 2
-    && !isNaN(Number('0x' + hex))
+  if (typeof hex === 'string') {
+    if (hex.length === 1)
+      hex = "0" + hex;
+
+    return hex.length === 2
+      && !isNaN(Number('0x' + hex))
+  }
+  return false;
 }
 
 function isUnsignedInteger(value) {
@@ -1212,7 +1235,8 @@ var remtypes = [
   ["RFT DF/QF", 0x22F8, ['low', 'high', 'cook30', 'cook60', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT RV", 0x12A0, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT CO2", 0x1298, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
-  ["RFT PIR", 0x2E10, ['motion_on', 'motion_off', 'join', 'leave']]
+  ["RFT PIR", 0x2E10, ['motion_on', 'motion_off', 'join', 'leave']],
+  ["RFT Spider", 0x22F2, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
 ];
 
 var remfuncs = [
@@ -1263,11 +1287,11 @@ function buildHtmlTablePlain(selector, jsonVar) {
   var columns = addAllColumnHeadersPlain(jsonVar, selector);
 
   for (var i = 0; i < jsonVar.length; i++) {
-    var row$ = $('<tr/>');
+    var row$ = $('<tr />');
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
       var cellValue = jsonVar[i][columns[colIndex]];
       if (cellValue == null) cellValue = "";
-      row$.append($('<td/>').html(cellValue));
+      row$.append($('<td />').html(cellValue));
     }
     $(selector).append(row$);
   }
@@ -1281,7 +1305,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
     var remtype = 0;
     var remfunction = 0;
     var row$ = $('<tr>');
-    row$.append($('<td>').html(`<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}'/>`));
+    row$.append($('<td>').html(`<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}' />`));
     //colIndex 0 = index
     //colIndex 1 = id
     //colIndex 2 = name
@@ -1359,7 +1383,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
           if (colIndex == 1) {
             idval = `id_remote-${i}`;
           }
-          row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly=''/>`));
+          row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly='' />`));
         }
         else {
           row$.append($('<td>').html(cellValue));
@@ -1395,7 +1419,7 @@ function buildHtmlStatusTable(selector, jsonVar) {
 function addRowTableIthoSettings(selector, jsonVar) {
   var i = jsonVar.Index;
   var row$ = $(`<tr>`);
-  row$.append($(`<td class='ithoset' style='text-align: center;vertical-align: middle;'>`).html(`<input type='radio' id='option-select_ithoset-${i}' name='options-ithoset' onchange='radio("ithoset",${i})' value='${i}'/>`));
+  row$.append($(`<td class='ithoset' style='text-align: center;vertical-align: middle;'>`).html(`<input type='radio' id='option-select_ithoset-${i}' name='options-ithoset' onchange='radio("ithoset",${i})' value='${i}' />`));
   for (var key in jsonVar) {
     if (key == "update") { continue; }
     if (key == "loop") { continue; }
@@ -1451,14 +1475,14 @@ function addColumnHeader(jsonVar, selector, appendRow) {
 function addAllColumnHeadersPlain(jsonVar, selector) {
   var columnSet = [];
   var headerThead$ = $('<thead>');
-  var headerTr$ = $('<tr/>');
+  var headerTr$ = $('<tr />');
 
   for (var i = 0; i < jsonVar.length; i++) {
     var rowHash = jsonVar[i];
     for (var key in rowHash) {
       if ($.inArray(key, columnSet) == -1) {
         columnSet.push(key);
-        headerTr$.append($('<th/>').html(key));
+        headerTr$.append($('<th />').html(key));
       }
     }
   }
@@ -1557,6 +1581,10 @@ var html_debug = `
     <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br>
     <span>Loop task memory: </span><span id='looptaskmem'></span><span> bytes free</span><br><br>
 
+    <p>JavaScript console debug:</p>
+    <button id="jsdebug" class="pure-button pure-button-primary">Toggle</button>
+    <span>Status: </span><span id='jsdebug_status'>unknown</span>
+    <br><br>
     <div id="rflog_outer" class="hidden">
         <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
         <div id="rflog"
@@ -1576,6 +1604,20 @@ var html_debug = `
             from devices joined to the add-on<br><br><button id="rfdebug-3"
                 class="pure-button pure-button-primary">Level3</button>&nbsp;Level3 will show all received RF messages
             from all devices<br><br>
+            <button id="rfdebug-12761" class="pure-button pure-button-primary">Send 31D9</button>&nbsp;speed:
+            <input id="rfdebug-12761-status" type="number" min="0" max="100" size="6" value="0">&nbsp;
+            &nbsp;fault:
+            <input id="rfdebug-12761-fault" type="number" min="0" max="1" size="6" value="0">&nbsp;
+            &nbsp;frost:
+            <input id="rfdebug-12761-frost" type="number" min="0" max="1" size="6" value="0">&nbsp;
+            &nbsp;filter:
+            <input id="rfdebug-12761-filter" type="number" min="0" max="1" size="6" value="0">&nbsp;
+            <br><br>
+            <button id="rfdebug-12762" class="pure-button pure-button-primary">Send 31DA</button>&nbsp;faninfo:
+            <input id="rfdebug-12762-faninfo" type="number" min="0" max="255" size="6"
+                value="0">&nbsp;timer:&nbsp;<input id="rfdebug-12762-timer" type="number" min="0" max="255" size="6"
+                value="0">&nbsp;//faninfo:0=off,1=low,2=medium,3=high,13=timer3,21=away,24=auto
+            <br><br>
             <fieldset>
                 <legend><br>I2C extra debug functionality:</legend>
                 <p>This option enables an extra menu where more I2C options and logging is available. <br>Enabling the
@@ -1660,7 +1702,12 @@ var html_debug = `
     $(document).ready(function () {
         getSettings('debugvalues');
         getSettings('sysstat');
+        $("#jsdebug_status").text(debug ? "on" : "off");
     });
+    $("#jsdebug").click(function () {
+        debug = !debug;
+        $("#jsdebug_status").text(debug ? "on" : "off");
+    });    
 </script>
 `;
 
@@ -2468,6 +2515,7 @@ var html_update = `
     <div id="updateBar" style="border-radius: 20px;width: 10%;height: 20px;background-color: #999;"></div>
   </div>
   <p id="time" style="display: none;">This page will reload to the start page in... </p>
+  <br><br>
 </form>
 <script>
   $('#firmware_ver').text(fw_version);
@@ -2558,12 +2606,14 @@ var html_systemsettings_start = `
     <legend><br>System security:</legend>
     <div class="pure-control-group">
       <label for="sys_username">Username</label>
-      <input id="sys_username" maxlength="64" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('username-msg').innerHTML = 'Username truncated to 32 characters.'; } else { document.getElementById('username-msg').innerHTML = ''; }">
+      <input id="sys_username" maxlength="64" type="text"
+        oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('username-msg').innerHTML = 'Username truncated to 32 characters.'; } else { document.getElementById('username-msg').innerHTML = ''; }">
       <span id="username-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
       <label for="sys_password">Password</label>
-      <input id="sys_password" maxlength="64" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('password-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('password-msg').innerHTML = ''; }">
+      <input id="sys_password" maxlength="64" type="text"
+        oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('password-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('password-msg').innerHTML = ''; }">
       <span id="password-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
@@ -2745,7 +2795,6 @@ var html_systemsettings_start = `
     getSettings('syssetup');
   });
 </script>
-
 `;
 
 var html_mqttsetup = `
@@ -3073,7 +3122,8 @@ var html_remotessetup = `
   of a
   RF device is always correctly represented on the add-on and within your domotica software.</p>
 <p>There is also an option
-  to monitor only. With this option checked, a RF device still paired with an Itho unit can be monitored without influencing
+  to monitor only. With this option checked, a RF device still paired with an Itho unit can be monitored without
+  influencing
   the commands using the add-on.</p>
 <p>Changing the remote function to "Send" will enable the user to send RF commands by using the CC1101 RF module.</p>
 <p>Last received commands (and if applicable data) received from paired RF devices is available through the MQTT API and
@@ -3084,6 +3134,12 @@ var html_remotessetup = `
     <div class="pure-control-group">
       <label for="itho_llm">Learn/Leave mode</label>
       <button id="itho_llm" class="pure-button">Unknown</button>
+    </div>
+    <br><br>
+    <div class="pure-control-group">
+      <label for="module_rf_id_str">Module RF ID</label>
+      <input id="module_rf_id_str" maxlength="8" type="text">
+      <button id="update_rf_id" onclick="update_rf_setup()" class="pure-button button-secondary">Update</button>
     </div>
   </fieldset>
   <fieldset>
@@ -3102,7 +3158,13 @@ var html_remotessetup = `
   $(document).ready(function () {
     $('#main').css('max-width', '1400px')
     getSettings('ithoremotes');
+    getSettings('rfsetup');
   });
+  function update_rf_setup() {
+    setTimeout(function () {
+      getSettings('rfsetup');
+    }, 1000);
+  }
 </script>
 `;
 

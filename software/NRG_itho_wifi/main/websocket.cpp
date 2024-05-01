@@ -532,19 +532,15 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       if (!error)
       {
         bool parseOK = false;
-        int number = root["itho_remove_remote"];
-        if (number > 0 && number < remotes.getMaxRemotes() + 1)
+        int index = root["itho_remove_remote"];
+        if (index > 0 && index < remotes.getMaxRemotes() + 1)
         {
           parseOK = true;
-          number--; //+1 was added earlier to offset index from 0
+          index--; //+1 was added earlier to offset index from 0
         }
         if (parseOK)
         {
-          remotes.removeRemote(number);
-          const int *id = remotes.getRemoteIDbyIndex(number);
-          rf.setBindAllowed(true);
-          rf.removeRFDevice(*id, *(id + 1), *(id + 2));
-          rf.setBindAllowed(false);
+          remotes.removeRemote(index);
           saveRemotesflag = true;
         }
       }
@@ -567,12 +563,8 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         id[0] = root["id"][0].as<uint8_t>();
         id[1] = root["id"][1].as<uint8_t>();
         id[2] = root["id"][2].as<uint8_t>();
-        rf.setBindAllowed(true);
-        const int *current_id = remotes.getRemoteIDbyIndex(index);
-        rf.removeRFDevice(*current_id, *(current_id + 1), *(current_id + 2));
-        remotes.updateRemoteID(index, id);
-        rf.addRFDevice(*id, *(id + 1), *(id + 2), remotes.getRemoteType(index), remotes.getRemoteFunction(index) == RemoteFunctions::BIDIRECT ? true : false);
-        rf.setBindAllowed(false);
+        remotes.updateRemoteID(index, id[0], id[1], id[2]);
+        rf.updateRFDevice(index, id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteFunction(index) == RemoteFunctions::BIDIRECT ? true : false);
         saveRemotesflag = true;
       }
       else
@@ -587,15 +579,15 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       if (!error)
       {
         bool parseOK = false;
-        int number = root["itho_remove_vremote"];
-        if (number > 0 && number < virtualRemotes.getMaxRemotes() + 1)
+        int index = root["itho_remove_vremote"];
+        if (index > 0 && index < virtualRemotes.getMaxRemotes() + 1)
         {
           parseOK = true;
-          number--; //+1 was added earlier to offset index from 0
+          index--; //+1 was added earlier to offset index from 0
         }
         if (parseOK)
         {
-          virtualRemotes.removeRemote(number);
+          virtualRemotes.removeRemote(index);
           saveVremotesflag = true;
         }
       }
@@ -617,7 +609,7 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
         ID[0] = root["id"][0].as<uint8_t>();
         ID[1] = root["id"][1].as<uint8_t>();
         ID[2] = root["id"][2].as<uint8_t>();
-        virtualRemotes.updateRemoteID(index, ID);
+        virtualRemotes.updateRemoteID(index, ID[0], ID[1], ID[2]);
         saveVremotesflag = true;
       }
       else
@@ -698,7 +690,24 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
       DeserializationError error = deserializeJson(root, msg.c_str());
       if (!error)
       {
-        setRFdebugLevel(root["rfdebug"].as<uint8_t>());
+        if (root["rfdebug"].as<uint16_t>() == 0x31DA)
+        {
+          faninfo31DA = root["faninfo"].as<uint8_t>();
+          timer31DA = root["timer"].as<uint8_t>();
+          send31DAdebug = true;
+        }
+        else if (root["rfdebug"].as<uint16_t>() == 0x31D9)
+        {
+          status31D9 = root["status"].as<uint8_t>() * 2;
+          fault31D9 = root["fault"].as<bool>();
+          frost31D9 = root["frost"].as<bool>();
+          filter31D9 = root["filter"].as<bool>();
+          send31D9debug = true;
+        }
+        else
+        {
+          setRFdebugLevel(root["rfdebug"].as<uint16_t>());
+        }
       }
     }
     else if (msg.find("{\"i2csniffer\"") != std::string::npos)

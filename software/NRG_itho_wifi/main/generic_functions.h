@@ -41,5 +41,5 @@ void logLastCommand(const char *command, const char *source);
 void getLastCMDinfoJSON(JsonObject root);
 void updateItho();
 void add2queue();
-void setRFdebugLevel(uint8_t level);
+void setRFdebugLevel(uint16_t level);
 double round(float value, int precision);
