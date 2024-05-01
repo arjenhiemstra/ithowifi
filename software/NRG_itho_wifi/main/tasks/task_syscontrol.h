@@ -15,6 +15,8 @@
 #include "SHTSensor.h"
 #include "tasks/task_mqtt.h"
 #include "enum.h"
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 
 #include "LittleFS.h"
 
@@ -38,6 +40,7 @@ extern bool wifiModeAP;
 extern unsigned long APmodeTimeout;
 extern bool reset_sht_sensor;
 extern bool restest;
+extern int fw_update_available;
 
 void startTaskSysControl();
 void TaskSysControl(void *pvParameters);
@@ -58,3 +61,4 @@ bool ithoInitCheck();
 void update_queue();
 bool writeIthoVal(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
 void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin);
+void check_firmware_update();

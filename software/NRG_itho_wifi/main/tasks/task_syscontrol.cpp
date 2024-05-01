@@ -3,7 +3,7 @@
 #include "tasks/task_syscontrol.h"
 
 #define TASK_SYS_CONTROL_PRIO 6
-
+#define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 1500 // firmware json response should be smaller than this
 // globals
 uint32_t TaskSysControlHWmark = 0;
 DNSServer dnsServer;
@@ -26,7 +26,9 @@ bool wifiSTAconnected = false;
 bool wifiSTAconnecting = false;
 bool reset_sht_sensor = false;
 bool restest = false;
+int fw_update_available = -1;
 bool i2c_safe_guard_log = true;
+unsigned long getFWupdateInfo = 0;
 
 // locals
 StaticTask_t xTaskSysControlBuffer;
@@ -347,6 +349,11 @@ void execSystemControlTasks()
     sysStatReq = true;
     N_LOG("SHT3x sensor reset: executed");
     jsonSysmessage("i2c_sht_reset", "Done");
+  }
+  if (WiFi.status() == WL_CONNECTED && systemConfig.fw_check && (millis() - getFWupdateInfo > 24 * 60 * 60 * 1000)) // 24hr
+  {
+    getFWupdateInfo = millis();
+    check_firmware_update();
   }
 }
 
@@ -1135,4 +1142,77 @@ void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
   snprintf(originchar, sizeof(originchar), "%s-vremote-%d", source, remoteIndex);
 
   logLastCommand(command, originchar);
+}
+
+std::vector<int> splitVersion(const std::string &version)
+{
+  std::vector<int> numbers;
+  std::string segment;
+  size_t pos = 0, found;
+
+  while ((found = version.find('.', pos)) != std::string::npos)
+  {
+    segment = version.substr(pos, found - pos);
+    numbers.push_back(std::stoi(segment));
+    pos = found + 1; // Move past the '.'
+  }
+
+  // Add the last segment
+  segment = version.substr(pos);
+  numbers.push_back(std::stoi(segment));
+
+  return numbers;
+}
+
+int compareVersions(const std::string &v1, const std::string &v2)
+{
+  std::vector<int> nums1 = splitVersion(v1);
+  std::vector<int> nums2 = splitVersion(v2);
+
+  for (int i = 0; i < std::max(nums1.size(), nums2.size()); ++i)
+  {
+    int num1 = i < nums1.size() ? nums1[i] : 0;
+    int num2 = i < nums2.size() ? nums2[i] : 0;
+
+    if (num1 > num2)
+      return 1;
+    if (num1 < num2)
+      return -1;
+  }
+
+  return 0; // The versions are equal
+}
+
+void check_firmware_update()
+{
+  // WiFiClientSecure *client = new WiFiClientSecure;
+  // if (client)
+  // {
+  //   client->setInsecure(); // set secure client without certificate
+
+  //   HTTPClient https;
+
+  //   if (https.begin(*client, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
+  //   { // HTTPS
+  //     int httpCode = https.GET();
+  //     if (httpCode > 0)
+  //     {
+  //       if (httpCode == HTTP_CODE_OK && https.getSize() < MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
+  //       {
+  //         String payloadString = https.getString().c_str();
+  //         const char *payload = payloadString.c_str();
+
+  //         JsonDocument root;
+  //         DeserializationError error = deserializeJson(root, payload);
+  //         if (!error)
+  //         {
+  //           const char *fwver = root["hw_rev"][hw_revision]["latest_fw"] | "error";
+  //           fw_update_available = compareVersions(fwver, FWVERSION);
+  //           D_LOG("fw_update_available:%d", fw_update_available);
+  //         }
+  //       }
+  //     }
+  //     https.end();
+  //   }
+  // }
 }
