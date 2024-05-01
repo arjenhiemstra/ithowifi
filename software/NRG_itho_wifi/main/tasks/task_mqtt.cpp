@@ -604,18 +604,18 @@ void HADiscoveryFan()
 
   if (deviceGroup == 0x07 && deviceID == 0x01) // HRU250-300
   {
-    actualSpeedLabel = getStatusLabel(10, ithoDeviceptr);      //-> {"Absolute speed of the fan (%)", "absolute-speed-of-the-fan_perc"}, of hru250_300.h
+    actualSpeedLabel = getStatusLabel(10, ithoDeviceptr);                //-> {"Absolute speed of the fan (%)", "absolute-speed-of-the-fan_perc"}, of hru250_300.h
     root["pr_mode_cmd_tpl"] = "{\"rfremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
 
     strncpy(pct_cmd_tpl, "{%% if value > 90 %%}{\"rfremotecmd\":\"high\"}{%% elif value > 40 %%}{\"rfremotecmd\":\"medium\"}{%% elif value > 20 %%}{\"rfremotecmd\":\"low\"}{%% else %%}{\"rfremotecmd\":\"auto\"}{%% endif %%}", sizeof(pct_cmd_tpl));
-    
+
     snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
     root["pl_off"] = "{\"rfremotecmd\":\"auto\"}"; // payload_off
     pr_mode_val_tpl_ver = 1;
   }
   else if (deviceGroup == 0x00 && deviceID == 0x03) // HRU350
   {
-    actualSpeedLabel = getStatusLabel(0, ithoDeviceptr);      //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hru350.h
+    actualSpeedLabel = getStatusLabel(0, ithoDeviceptr);                //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hru350.h
     root["pr_mode_cmd_tpl"] = "{\"vremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
     strncpy(pct_cmd_tpl, "{%% if value > 90 %%}{\"vremotecmd\":\"high\"}{%% elif value > 40 %%}{\"vremotecmd\":\"medium\"}{%% elif value > 20 %%}{\"vremotecmd\":\"low\"}{%% else %%}{\"vremotecmd\":\"auto\"}{%% endif %%}", sizeof(pct_cmd_tpl));
 
@@ -625,17 +625,17 @@ void HADiscoveryFan()
   }
   else if (deviceGroup == 0x00 && deviceID == 0x0D) // WPU
   {
-    // pr_mode_val_tpl_ver = ?
+    // tbd
   }
   else if (deviceGroup == 0x00 && (deviceID == 0x0F || deviceID == 0x30)) // Autotemp
   {
-    // pr_mode_val_tpl_ver = ?
+    // tbd
   }
   else if (deviceGroup == 0x00 && deviceID == 0x0B) // DemandFlow
   {
-    // pr_mode_val_tpl_ver = ?
+    // tbd
   }
-  else if (deviceGroup == 0x00 && (deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B)) // assume CVE and HRU200 / or PWM2I2C is off
+  else if ((deviceGroup == 0x00 && (deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B)) || systemConfig.itho_pwm2i2c != 1) // assume CVE and HRU200 / or PWM2I2C is off
   {
 
     if (deviceID == 0x1D) // hru200
@@ -653,10 +653,10 @@ void HADiscoveryFan()
     if (systemConfig.itho_pwm2i2c != 1)
     {
       pr_mode_val_tpl_ver = 1;
-    snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
+      snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
       strncpy(pct_cmd_tpl, "{% if value > 90 %}{\"vremotecmd\":\"high\"}{% elif value > 40 %}{ \"vremotecmd\":\"medium\"}{% elif value > 20 %}{\"vremotecmd\":\"low\"}{% else %}{\"vremotecmd\":\"auto\"}{% endif %}", sizeof(pct_cmd_tpl));
       root["pr_mode_cmd_tpl"] = "{\"vremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
-      root["pl_off"] = "{\"vremotecmd\":\"auto\"}"; // payload_off
+      root["pl_off"] = "{\"vremotecmd\":\"auto\"}";                       // payload_off
     }
     else
     {
@@ -669,10 +669,10 @@ void HADiscoveryFan()
   if (pr_mode_val_tpl_ver == 0)
   {
     root["pr_mode_cmd_tpl"] = "{%- if value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- else %}{{value.lower()}}{%- endif -%}";
-    //snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 219 %%}high{%%- elif speed > 119 %%}medium{%%- elif speed > 19 %%}low{%%- else %%}auto{%%- endif -%%}", actualSpeedLabel.c_str());
+    // snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 219 %%}high{%%- elif speed > 119 %%}medium{%%- elif speed > 19 %%}low{%%- else %%}auto{%%- endif -%%}", actualSpeedLabel.c_str());
     snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 90 %%}high{%%- elif speed > 35 %%}medium{%%- elif speed > 10 %%}low{%%- else %%}auto{%%- endif -%%}", actualSpeedLabel.c_str());
 
-    //strncpy(pr_mode_val_tpl, "{%- if value == 'Low' %}{{'low'}}{%- elif value == 'Medium' %}{{'medium'}}{%- elif value == 'High' %}{{'high'}}{%- elif value == 'Auto' %}{{'auto'}}{%- elif value == 'AutoNight' %}{{'autonight'}}{%- elif value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- endif -%}", sizeof(pr_mode_val_tpl));
+    // strncpy(pr_mode_val_tpl, "{%- if value == 'Low' %}{{'low'}}{%- elif value == 'Medium' %}{{'medium'}}{%- elif value == 'High' %}{{'high'}}{%- elif value == 'Auto' %}{{'auto'}}{%- elif value == 'AutoNight' %}{{'autonight'}}{%- elif value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- endif -%}", sizeof(pr_mode_val_tpl));
   }
   else if (pr_mode_val_tpl_ver == 1)
   {

@@ -2520,12 +2520,8 @@ var html_update = `
 <script>
   $('#firmware_ver').text(fw_version);
   $('#hardware_rev').text(hw_revision);
-  if (hw_revision.startsWith('NON-CVE ')) {
-    $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/non-cve_rev_1">link</a>');
-  }
-  else if (hw_revision == '2') {
-    $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/hardware_rev_2">link</a>');
-  }
+  $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/unified_hw2_noncve">link</a>');
+  
   function process(key, value) {
     if (key == hw_revision) {
       let latest_fw = value.latest_fw;
