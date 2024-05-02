@@ -1498,6 +1498,63 @@ ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonD
   return ApiResponse::status::FAIL;
 }
 
+ApiResponse::api_response_status_t processSetOutsideTemperature(JsonObject params, JsonDocument &response)
+{
+  const char *value = params["outside_temp"];
+
+  if (value == nullptr)
+    return ApiResponse::status::CONTINUE;
+
+  if (systemConfig.api_settings == 0)
+  {
+    response["code"] = 403;
+    response["failreason"] = "The settings API is disabled";
+    return ApiResponse::status::FAIL;
+  }
+
+  response["cmdkey"] = "outside_temp";
+  response["cmdvalue"] = value;
+
+  const std::string str = value;
+  int temp;
+  try
+  {
+    size_t pos;
+    temp = std::stoi(str, &pos);
+
+    if (pos != str.size())
+    {
+      throw std::invalid_argument("extra characters after the temperature");
+    }
+  }
+  catch (const std::invalid_argument &ia)
+  {
+    response["code"] = 400;
+    std::string err = "Invalid temperature value: ";
+    err += ia.what();
+    response["failreason"] = err;
+    return ApiResponse::status::FAIL;
+  }
+  catch (const std::out_of_range &oor)
+  {
+    response["code"] = 400;
+    response["failreason"] = "Temperature value out of range";
+    return ApiResponse::status::FAIL;
+  }
+
+  // Temperature values outside of this range are likely to be wrong, so we
+  // check for this just to be safe.
+  if (temp <= -100 || temp >= 100)
+  {
+    response["code"] = 400;
+    response["failreason"] = "The temperature must be between -100 and 100C";
+    return ApiResponse::status::FAIL;
+  }
+
+  setSettingCE30(0, static_cast<uint16_t>(temp * 100), 0, true);
+  return ApiResponse::status::SUCCESS;
+}
+
 /*
 This WebAPI implementation follows the JSend specification
 More information can be found on github: https://github.com/omniti-labs/jsend
@@ -1576,6 +1633,9 @@ void handleAPIv2(AsyncWebServerRequest *request)
 
   if (response_status == ApiResponse::status::CONTINUE)
     response_status = processDebugCommands(paramsJson, response);
+
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processSetOutsideTemperature(paramsJson, response);
 
   if (response_status == ApiResponse::status::SUCCESS)
   {

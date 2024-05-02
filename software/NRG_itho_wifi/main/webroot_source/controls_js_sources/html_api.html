@@ -255,14 +255,22 @@ Unless specified otherwise:<br>
             <td>outside_temp,temporary_outside_temp,valid_until</td>
             <td>number</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">◌</td>
+            <td style="text-align:center">●</td>
         </tr>
         <tr>
-            <td colspan="6">Comments:<br><em>With this command an outside temperature can be send to a WPU. Unset values
-                    will default to 0. <b>valid_until</b> = epoch now + valid time. <b>temporary_outside_temp</b> will
-                    be used by the WPU during this valid time. After the valid time has
-                    passed it will fallback to <b>outside_temp</b>.
-                </em></td>
+            <td colspan="6">
+              Comments:<br>
+              <em>
+                With this command an outside temperature can be send to a WPU. Unset values
+                will default to 0. <b>valid_until</b> = epoch now + valid time. <b>temporary_outside_temp</b> will
+                be used by the WPU during this valid time. After the valid time has
+                passed it will fallback to <b>outside_temp</b>.
+              </em>
+              <br><br>
+              <em>
+                The web API only supports the <b>outside_temp</b> setting.
+              </em>
+            </td>
         </tr>
         <tr>
             <td>manual control</td>
