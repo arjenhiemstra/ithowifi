@@ -94,7 +94,8 @@ void jsonWsSend(const char *rootName)
   else if (strcmp(rootName, "ithostatusinfo") == 0)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
-    getIthoStatusJSON(nested);
+    uint8_t count = getIthoStatusJSON(nested);
+    root["count"] = count;
   }
   else if (strcmp(rootName, "debuginfo") == 0)
   {
