@@ -31,6 +31,7 @@ extern bool updateMQTTmodeStatus;
 extern PubSubClient mqttClient;
 extern Ticker TaskMQTTTimeout;
 extern bool sendHomeAssistantDiscovery;
+extern bool sendHADiscoveryIthoStatusItems;
 extern bool updateIthoMQTT;
 
 void startTaskMQTT();
@@ -47,6 +48,7 @@ void mqttHomeAssistantDiscovery();
 void HADiscoveryFan();
 void HADiscoveryTemperature();
 void HADiscoveryHumidity();
+void HADiscoveryIthoStatusItems();
 void addHADevInfo(JsonObject obj);
 void sendHADiscovery(JsonObject obj, const char *topic);
 bool setupMQTTClient();

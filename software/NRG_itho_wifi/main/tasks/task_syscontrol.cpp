@@ -541,6 +541,7 @@ void init_i2c_functions()
         }
       }
       sendHomeAssistantDiscovery = true;
+      sendHADiscoveryIthoStatusItems = true;
     }
     else
     {

@@ -23,20 +23,24 @@ const char *hostName()
   return hostName;
 }
 
-void getIthoStatusJSON(JsonObject root)
+uint8_t getIthoStatusJSON(JsonObject root)
 {
+  uint8_t index = 0;
   if (SHT3x_original || SHT3x_alternative || itho_internal_hum_temp)
   {
     root["temp"] = round(ithoTemp, 1);
+    index++;
     root["hum"] = round(ithoHum, 1);
-
+    index++;
     auto b = 611.21 * pow(2.7183, ((18.678 - ithoTemp / 234.5) * ithoTemp) / (257.14 + ithoTemp));
     auto ppmw = b / (101325 - b) * ithoHum / 100 * 0.62145 * 1000000;
     root["ppmw"] = static_cast<int>(ppmw + 0.5);
+    index++;
   }
   if (systemConfig.fw_check && fw_update_available >= 0)
   {
     root["firmware_update_available"] = fw_update_available ? "true" : "false";
+    index++;
   }
   if (!ithoInternalMeasurements.empty() && systemConfig.itho_31d9 == 1)
   {
@@ -54,6 +58,7 @@ void getIthoStatusJSON(JsonObject root)
       {
         root["error"] = 0;
       }
+      index++;
     }
   }
   if (!ithoMeasurements.empty() && systemConfig.itho_31da == 1)
@@ -72,6 +77,7 @@ void getIthoStatusJSON(JsonObject root)
       {
         root[ithoMeasurement.name] = ithoMeasurement.value.stringval;
       }
+      index++;
     }
   }
   if (!ithoStatus.empty() && systemConfig.itho_2401 == 1)
@@ -94,6 +100,7 @@ void getIthoStatusJSON(JsonObject root)
       {
         root[ithoStat.name] = ithoStat.value.stringval;
       }
+      index++;
     }
   }
   if (!ithoCounters.empty() && systemConfig.itho_4210 == 1)
@@ -112,8 +119,61 @@ void getIthoStatusJSON(JsonObject root)
       {
         root["error"] = 0;
       }
+      index++;
     }
   }
+  return index;
+}
+
+bool itho_status_ready()
+{
+
+  bool ithoInternalMeasurements_ready = false;
+  bool ithoMeasurements_ready = false;
+  bool ithoStatus_ready = false;
+  bool ithoCounters_ready = false;
+
+  if (systemConfig.itho_31d9 == 1)
+  {
+    if (!ithoInternalMeasurements.empty())
+      ithoInternalMeasurements_ready = true;
+  }
+  else
+  {
+    ithoInternalMeasurements_ready = true;
+  }
+  if (systemConfig.itho_31da == 1)
+  {
+    if (!ithoMeasurements.empty())
+      ithoMeasurements_ready = true;
+  }
+  else
+  {
+    ithoMeasurements_ready = true;
+  }
+  if (systemConfig.itho_2401 == 1)
+  {
+    if (!ithoStatus.empty())
+      ithoStatus_ready = true;
+  }
+  else
+  {
+    ithoStatus_ready = true;
+  }
+  if (systemConfig.itho_4210 == 1)
+  {
+    if (!ithoCounters.empty())
+      ithoCounters_ready = true;
+  }
+  else
+  {
+    ithoCounters_ready = true;
+  }
+
+  if (ithoInternalMeasurements_ready && ithoMeasurements_ready && ithoStatus_ready && ithoCounters_ready)
+    return true;
+  else
+    return false;
 }
 
 void getRemotesInfoJSON(JsonObject root)

@@ -25,7 +25,8 @@
 extern const char *espName;
 
 const char *hostName();
-void getIthoStatusJSON(JsonObject root);
+uint8_t getIthoStatusJSON(JsonObject root);
+bool itho_status_ready();
 void getRemotesInfoJSON(JsonObject root);
 void getIthoSettingsBackupJSON(JsonObject root);
 bool ithoExecCommand(const char *command, cmdOrigin origin);

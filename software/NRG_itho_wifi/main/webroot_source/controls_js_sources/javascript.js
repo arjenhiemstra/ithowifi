@@ -501,6 +501,10 @@ $(document).ready(function () {
     }
     //mqttsubmit
     else if ($(this).attr('id') == 'mqttsubmit') {
+      if (!isValidJsonArray($('#ithostatus_ha_autodiscovery').val())) {
+        alert("error: Autodiscover Itho status items input value is not a valid JSON array!");
+        return;
+      }
       websock_send(JSON.stringify({
         systemsettings: {
           mqtt_active: $('input[name=\'option-mqtt_active\']:checked').val(),
@@ -511,6 +515,7 @@ $(document).ready(function () {
           mqtt_version: $('#mqtt_version').val(),
           mqtt_base_topic: $('#mqtt_base_topic').val(),
           mqtt_ha_topic: $('#mqtt_ha_topic').val(),
+          ithostatus_ha_autodiscovery: JSON.parse($('#ithostatus_ha_autodiscovery').val()),
           mqtt_domoticzin_topic: $('#mqtt_domoticzin_topic').val(),
           mqtt_domoticzout_topic: $('#mqtt_domoticzout_topic').val(),
           mqtt_idx: $('#mqtt_idx').val(),
@@ -1397,6 +1402,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
 function buildHtmlStatusTable(selector, jsonVar) {
   var headerThead$ = $('<thead>');
   var headerTr$ = $('<tr>');
+  headerTr$.append($('<th>').html('Index'));
   headerTr$.append($('<th>').html('Label'));
   headerTr$.append($('<th>').html('Value'));
   headerThead$.append(headerTr$);
@@ -1404,12 +1410,13 @@ function buildHtmlStatusTable(selector, jsonVar) {
 
   var headerTbody$ = $('<tbody>');
 
-  for (var key in jsonVar) {
+  Object.entries(jsonVar).forEach(([key, value], index) => {
     var row$ = $('<tr>');
-    row$.append($('<td>').html(key));
-    row$.append($('<td>').html(jsonVar[key]));
+    row$.append($('<td>').text(index));
+    row$.append($('<td>').text(key));
+    row$.append($('<td>').text(value));
     headerTbody$.append(row$);
-  }
+  });
 
   $(selector).append(headerTbody$);
 

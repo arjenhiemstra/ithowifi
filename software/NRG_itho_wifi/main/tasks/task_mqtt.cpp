@@ -11,6 +11,7 @@ PubSubClient mqttClient(client);
 StaticTask_t xTaskMQTTBuffer;
 StackType_t xTaskMQTTStack[STACK_SIZE_MEDIUM];
 bool sendHomeAssistantDiscovery = false;
+bool sendHADiscoveryIthoStatusItems = false;
 bool updateIthoMQTT = false;
 
 Ticker TaskMQTTTimeout;
@@ -87,6 +88,10 @@ void execMQTTTasks()
     {
       mqttHomeAssistantDiscovery();
     }
+    if (sendHADiscoveryIthoStatusItems)
+    {
+      HADiscoveryIthoStatusItems();
+    }
     if (updateIthoMQTT)
     {
       updateIthoMQTT = false;
@@ -158,6 +163,7 @@ void execMQTTTasks()
       if (reconnect())
       {
         sendHomeAssistantDiscovery = true;
+        sendHADiscoveryIthoStatusItems = true;
         lastMQTTReconnectAttempt = 0;
       }
     }
@@ -523,10 +529,11 @@ void mqttHomeAssistantDiscovery()
 
   HADiscoveryFan();
 
-  if (!SHT3x_original && !SHT3x_alternative && !itho_internal_hum_temp)
-    return;
-  HADiscoveryHumidity();
-  HADiscoveryTemperature();
+  if (SHT3x_original || SHT3x_alternative || itho_internal_hum_temp)
+  {
+    HADiscoveryHumidity();
+    HADiscoveryTemperature();
+  }
 }
 
 void HADiscoveryFan()
@@ -742,6 +749,135 @@ void HADiscoveryHumidity()
   snprintf(s, sizeof(s), "%s/sensor/%s/hum/config", static_cast<const char *>(systemConfig.mqtt_ha_topic), hostName());
 
   sendHADiscovery(root, s);
+}
+
+void HADiscoveryIthoStatusItems()
+{
+  if (!itho_status_ready())
+    return;
+
+  sendHADiscoveryIthoStatusItems = false;
+
+  D_LOG("HADiscoveryIthoStatusItems");
+  JsonDocument statusitemsdoc;
+  JsonObject statusitems = statusitemsdoc.to<JsonObject>();
+
+  uint8_t count = getIthoStatusJSON(statusitems);
+
+  JsonArray arr = systemConfig.ithostatus_ha_autodiscovery.as<JsonArray>();
+  if (arr.size() > 0)
+  {
+    for (JsonVariant el : arr)
+    {
+      bool val_tpl_present = false;
+      bool index_present = false;
+      bool name_present = false;
+      bool reset_key_present = false;
+
+      char sensortopic[180]{};
+      char lwttopic[140]{};
+      char ihtostatustopic[140]{};
+      snprintf(lwttopic, sizeof(lwttopic), "%s%s", systemConfig.mqtt_base_topic, "/lwt");
+      snprintf(ihtostatustopic, sizeof(ihtostatustopic), "%s%s", systemConfig.mqtt_base_topic, "/ithostatus");
+
+      JsonDocument doc;
+      JsonObject root = doc.to<JsonObject>(); // Fill the object
+      char s[300]{};
+      root["stat_t"] = static_cast<const char *>(ihtostatustopic); // state_topic
+
+      addHADevInfo(root);
+      JsonObject item = el.as<JsonObject>();
+      // for (JsonPair kv : root) {
+      //     Serial.println(kv.key().c_str());
+      //     Serial.println(kv.value().as<const char*>());
+      // }
+      uint8_t index = 0;
+      for (JsonPair p : item)
+      {
+
+        if (strcmp(p.key().c_str(), "index") == 0)
+        {
+          index = p.value().as<uint8_t>();
+          if (index >= count)
+          {
+            continue;
+          }
+          index_present = true;
+          snprintf(sensortopic, sizeof(sensortopic), "%s/sensor/%s/sensor_index_%d/config", static_cast<const char *>(systemConfig.mqtt_ha_topic), hostName(), index);
+        }
+      }
+      if (!index_present)
+      {
+        E_LOG("HA AutoDiscovery config error; key index not present", index);
+        continue;
+      }
+
+      for (JsonPair p : item)
+      {
+
+        root["avty_t"] = static_cast<const char *>(lwttopic); // availability_topic
+        if (strcmp(p.key().c_str(), "dev_cla") == 0 || strcmp(p.key().c_str(), "device_class") == 0)
+        {
+          root["dev_cla"] = p.value().as<const char *>(); // device_class
+        }
+        snprintf(s, sizeof(s), "%s_sensor_index_%d", hostName(), index);
+        root["uniq_id"] = s; // unique_id
+        if (strcmp(p.key().c_str(), "name") == 0)
+        {
+          root["name"] = p.value().as<const char *>(); // name
+          name_present = true;
+        }
+        if (strcmp(p.key().c_str(), "stat_cla") == 0 || strcmp(p.key().c_str(), "state_class") == 0)
+        {
+          root["stat_cla"] = p.value().as<const char *>(); // state_class
+        }
+        if ((strcmp(p.key().c_str(), "val_tpl") == 0 || strcmp(p.key().c_str(), "value_template") == 0) && strcmp(p.value().as<const char *>(), "") != 0)
+        {
+          root["val_tpl"] = p.value().as<const char *>();
+          val_tpl_present = true;
+        }
+        if (strcmp(p.key().c_str(), "unit_of_meas") == 0 || strcmp(p.key().c_str(), "unit_of_measurement") == 0)
+        {
+          root["unit_of_meas"] = p.value().as<const char *>(); // name
+        }
+        if (strcmp(p.key().c_str(), "reset") == 0)
+        {
+          if (p.value().as<uint8_t>() == 1)
+          {
+            reset_key_present = true;
+          }
+        }
+      }
+
+      if (!name_present)
+      {
+        JsonObject::iterator it = statusitemsdoc.as<JsonObject>().begin();
+
+        for (int i = 0; i < index; i++)
+          ++it;
+
+        root["name"] = it->key().c_str();
+      }
+      if (!val_tpl_present)
+      {
+        JsonObject::iterator it = statusitemsdoc.as<JsonObject>().begin();
+
+        for (int i = 0; i < index; i++)
+          ++it;
+
+        char val_tpl_buf[140]{};
+        snprintf(val_tpl_buf, sizeof(val_tpl_buf), "{{ value_json['%s'] }}", it->key().c_str());
+
+        root["val_tpl"] = val_tpl_buf;
+      }
+      if (reset_key_present)
+      {
+        doc.clear();
+        root = doc.to<JsonObject>(); // create empty object
+      }
+      sendHADiscovery(root, sensortopic);
+    }
+  }
 }
 
 void addHADevInfo(JsonObject obj)

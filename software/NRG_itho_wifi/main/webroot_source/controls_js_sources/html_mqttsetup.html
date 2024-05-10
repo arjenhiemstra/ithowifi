@@ -59,6 +59,12 @@
     </div>
     <br>
     <div class="pure-control-group">
+      <label for="ithostatus_ha_autodiscovery">Autodiscover Itho status items</label>
+      <input id="ithostatus_ha_autodiscovery" title="Must be a valid JSON array with object(s) ie.: [{},{}]" type="text" maxlength="1024"
+        size="20">
+    </div>
+    <br>
+    <div class="pure-control-group">
       <label for="option-mqtt_domoticz_active" class="pure-radio">Domoticz MQTT</label>
       <input id="option-mqtt_domoticz_active-1" type="radio" name="option-mqtt_domoticz_active"
         onchange='radio("mqtt_domoticz_active", 1)' value="1"> on
