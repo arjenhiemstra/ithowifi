@@ -46,7 +46,7 @@ The cve add-on is able to control the itho unit in standard or medium mode setti
 ## Hardware:
 
 A sample hardware design (KiCad) is included, this module can be plugged on the Itho main PCB directly without extra components.
-The design files and BOM can be found in the hardware folder.
+The design files and BOM can be found in the [hardware repo](https://github.com/arjenhiemstra/ithowifi_hardware).
 
 ## Further information:
 
