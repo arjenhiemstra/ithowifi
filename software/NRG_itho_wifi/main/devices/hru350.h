@@ -85,8 +85,8 @@ const char *ithoHRU350SettingsLabels[] = {
     "Max time High speed (Min)",
     "Max time other speeds (Min)",
     "Fallback previous speeds (-)",
-    "PoorCo2Quality (ppm)",
-    "GoodCo2Quality (ppm)",
+    "Poor Co2 Quality (ppm)",
+    "Good Co2 Quality (ppm)",
     "Inhabitants (inhab)",
     "Night min vent speed 1 person (%)",
     "Night min vent speed 2 persons (%)",
@@ -95,7 +95,7 @@ const char *ithoHRU350SettingsLabels[] = {
     "Debug only (sec)",
     "Debug only (min)",
     "Debug only (K_min)",
-    "BypassTimer (min)",
+    "Bypass Timer (min)",
     "MaximumOpenCounter (min)",
     "FilterUsagePerMin (-)",
     "Balance (%)",
@@ -120,8 +120,8 @@ const char *ithoHRU350SettingsLabels[] = {
     "Summer night boost ventilation level (%)",
     "Summer night max area degree hours (-)",
     "FrostTimer (sec)",
-    "StartupCounter (sec)",
-    "BoilerTestTimer (min)",
+    "Startup Counter (sec)",
+    "Boiler Test Timer (min)",
     "SummerCounter (K_min)"};
 
 const uint8_t itho_HRU350status1_4[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 255};

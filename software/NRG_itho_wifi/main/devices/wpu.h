@@ -36,10 +36,10 @@ const char *ithoWPUSettingsLabels[] = {
     "Hardware configuration",                                         //1
     "Year of commissioning",                                          //2
     "Date of commissioning",                                          //3
-    "Max manaul opeation time (min)",                                 //4
+    "Max manual operation time (min)",                                //4
     "Frost temp (°C)",                                                //5
-    "Offset for forst temp (K)",                                      //6
-    "Differential vorst temp electrical element (K)",                 //7
+    "Offset for frost temp (K)",                                      //6
+    "Differential frost temp electrical element (K)",                 //7
     "Error reset time (min)",                                         //8
     "Log interval (sec)",                                             //9
     "Switch-on delay (sec)",                                          //10
@@ -64,9 +64,9 @@ const char *ithoWPUSettingsLabels[] = {
     "Min deviation for adjustment (K)",                               //29
     "Max gain",                                                       //30
     "Min gain",                                                       //31
-    "Corretion measured evaporation temperature (K)",                 //32
-    "Undercooling corretion 20 °c (K)",                               //33
-    "Undercooling corretion 60 °c (K)",                               //34
+    "Correction measured evaporation temperature (K)",                //32
+    "Undercooling correction 20 °c (K)",                              //33
+    "Undercooling correction 60 °c (K)",                              //34
     "Min evaporation temperature pumping off (°C)",                   //35
     "Minimum evaporation temperature (°C)",                           //36
     "Maximum condensation temperature (°C)",                          //37
@@ -89,7 +89,7 @@ const char *ithoWPUSettingsLabels[] = {
     "Max compressor current (Amp)",                                   //54
     "Min compressor current (Amp)",                                   //55
     "Start-up time (new hardware) (sec)",                             //56
-    "Ch-reqeust when compresoor stops (%)",                           //57
+    "Ch-reqeust when compressor stops (%)",                           //57
     "Switch-on differential on ch (%)",                               //58
     "Normal compressor temp trickle heating (°C)",                    //59
     "Anti-shuttle time compressor (sec)",                             //60
@@ -98,9 +98,9 @@ const char *ithoWPUSettingsLabels[] = {
     "Low pressure by-pass time (sec)",                                //63
     "Max current element (Amp)",                                      //64
     "Min current element (Amp)",                                      //65
-    "Min reqeust te start element (%)",                               //66
+    "Min reqeust to start element (%)",                               //66
     "Differential ch-reqeust element (%)",                            //67
-    "Max outsidetemp when element starts (°C)",                       //68
+    "Max outside temp when element starts (°C)",                      //68
     "Differential outside temp for element (K)",                      //69
     "Max refrigerant liquid temp (°C)",                               //70
     "Max temp electrical element (°C)",                               //71
@@ -127,14 +127,14 @@ const char *ithoWPUSettingsLabels[] = {
     "Delta compressor (K)",                                           //92
     "Min room temp thermostat (°C)",                                  //93
     "Max room temp thermostat (°C)",                                  //94
-    "Vorstbewaking autotemp <v23 (°C)",                               //95
-    "Koel setpoint tijdens “uit” (°C)",                               //96
+    "Frost monitoring autotemp <v23 (°C)",                            //95
+    "Cooling setpoint when “Off” (°C)",                               //96
     "Offset cooling (K)",                                             //97
     "Differential offset cooling (K)",                                //98
-    "Max time extra cooling (uur)",                                   //99
+    "Max time extra cooling (Hour)",                                  //99
     "Differential stop extra cooling (K)",                            //100
-    "Max release time element (24 hour) (uur)",                       //101
-    "Blocking time heating to cooling (uur)",                         //102
+    "Max release time element (24 hour) (Hour)",                      //101
+    "Blocking time heating to cooling (Hour)",                        //102
     "P-band mft (K)",                                                 //103
     "I-time mft (min)",                                               //104
     "Differential for free cooling mode (K)",                         //105
@@ -142,7 +142,7 @@ const char *ithoWPUSettingsLabels[] = {
     "Division factor element current measure",                        //107
     "Alternatieve drukvereffening",                                   //108
     "Heatpump capacity (kW)",                                         //109
-    "Period time ch mode (uur)",                                      //110
+    "Period time ch mode (Hour)",                                     //110
     "Start-up time (old hardware)",                                   //111
     "Ch reqeust compressor continuously running (%)",                 //112
     "After-run time dhw pump (sec)",                                  //113
@@ -152,9 +152,9 @@ const char *ithoWPUSettingsLabels[] = {
     "High ch pump speed (%)",                                         //117
     "High dhw pump speed (%)",                                        //118
     "High source pump speed (%)",                                     //119
-    "Oem code",                                                       //120
-    "Historie log interval",                                          //121
-    "Max tijd live data (Sec)",                                       //122
+    "OEM code",                                                       //120
+    "History log interval",                                           //121
+    "Max time live data (Sec)",                                       //122
     "Niet gebruikt",                                                  //123
     "Max ch temp mft",                                                //124
     "Type current measure circuit",                                   //125
@@ -165,11 +165,11 @@ const char *ithoWPUSettingsLabels[] = {
     "Not used",                                                       //130
     "Calculate start opening expansion valve",                        //131
     "Invloed extra oververhitting als brontemp < 8 °c (K)",           //132
-    "Eindtemp extra oververhitting tgv brontemperatuur (°C)",         //133
+    "End temp extra oververhitting tgv brontemperatuur (°C)",         //133
     "Free cooling dhw mode",                                          //134
     "Ch pump during boiler mode",                                     //135
     "Ch restart dhw mode",                                            //136
-    "Functie free cooling valve",                                     //137
+    "Function free cooling valve",                                    //137
     "Electrical element setup",                                       //138
     "Pre-run time dhw pump (Sec)",                                    //139
     "Time venting mode (Sec)",                                        //140
@@ -244,8 +244,8 @@ const char *ithoWPUSettingsLabels[] = {
     "Co source return temp setpoint winter (°C)",                     //209
     "Co source return temp setpoint summer (°C)",                     //210
     "Duration co-valve (Sec)",                                        //211
-    "P-band co-valve compresoor running (K)",                         //212
-    "I-factor co-valve compresoor running",                           //213
+    "P-band co-valve compressor running (K)",                         //212
+    "I-factor co-valve compressor running",                           //213
     "P-band co-valve cooling mode (K)",                               //214
     "I-factor co-valve cooling mode",                                 //215
     "Maximum co source flow cooling (l_h)",                           //216
@@ -268,16 +268,16 @@ const char *ithoWPUSettingsLabels[] = {
     "Maximum time remote control (min)",                              //233
     "Bounded ch-power (%)",                                           //234
     "Reduced compressor temp trickle heating (°C)",                   //235
-    "Minimum time normale trickle heating (uur)",                     //236
+    "Minimum time normal trickle heating (hour)",                     //236
     "Low boilertemperature reduced trickle heating (°C)",             //237
     "Differential dhw weekly (K)",                                    //238
     "Setpoint dhw weekly (°C)",                                       //239
-    "Max time boiler (uur)",                                          //240
+    "Max time boiler (hour)",                                         //240
     "Second boiler",                                                  //241
     "Interval per-heating dhw (min)",                                 //242
     "Differential stop pre-heating dhw (K)",                          //243
     "Pre-heating dhw",                                                //244
-    "Blocking time cooling to heating (uur)",                         //245
+    "Blocking time cooling to heating (hour)",                        //245
     "Ch pump on cooling break",                                       //246
     "Max time sourcepump slow start (sec)",                           //247
     "Stop rampup flow (%)",                                           //248
@@ -287,7 +287,7 @@ const char *ithoWPUSettingsLabels[] = {
     "Stabilization time freecooling (sec)",                           //252
     "Max time pre heat dhw (min)",                                    //253
     "Min time pre heat dhw (sec)",                                    //254
-    "Updatetime logging data (min)",                                  //255
+    "Update time logging data (min)",                                 //255
     "Spare",                                                          //256
     "Permanent release electric element",                             //257
     "Maximum outdoor temp release permanent element (°C)",            //258
