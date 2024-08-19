@@ -85,22 +85,22 @@ struct ithoLabels itho31D9Labels[]{
     {"Filter dirty", "filter-dirty"}};
 
 struct ithoLabels itho31DALabels[]{
-    {"AirQuality (%)", "airquality_perc"},            // 0
-    {"AirQbased on", "airq-based-on"},                // 1
-    {"CO2level (ppm)", "co2level_ppm"},               // 2
-    {"Indoorhumidity (%)", "indoor-humidity_perc"},   // 3
-    {"Outdoorhumidity (%)", "outdoor-humidity_perc"}, // 4
-    {"Exhausttemp (°C)", "exhausttemp_c"},            // 5
-    {"SupplyTemp (°C)", "supply-temp_c"},             // 6
-    {"IndoorTemp (°C)", "indoor-temp_c"},             // 7
-    {"OutdoorTemp (°C)", "outdoor-temp_c"},           // 8
-    {"SpeedCap", "speed-cap"},                        // 9
-    {"BypassPos (%)", "bypass-pos_perc"},             // 10
+    {"Air Quality (%)", "airquality_perc"},            // 0
+    {"AirQ Based on", "airq-based-on"},                // 1
+    {"CO2 level (ppm)", "co2level_ppm"},               // 2
+    {"Indoor Humidity (%)", "indoor-humidity_perc"},   // 3
+    {"Outdoor Humidity (%)", "outdoor-humidity_perc"}, // 4
+    {"Exhaust Temp (°C)", "exhausttemp_c"},            // 5
+    {"Supply Temp (°C)", "supply-temp_c"},             // 6
+    {"Indoor Temp (°C)", "indoor-temp_c"},             // 7
+    {"Outdoor Temp (°C)", "outdoor-temp_c"},           // 8
+    {"Speed Cap", "speed-cap"},                        // 9
+    {"Bypass Pos (%)", "bypass-pos_perc"},             // 10
     {"FanInfo", "fan-info"},                          // 11
-    {"ExhFanSpeed (%)", "exh-fan-speed_perc"},        // 12
-    {"InFanSpeed (%)", "in-fan-speed_perc"},          // 13
-    {"RemainingTime (min)", "remaining-time_min"},    // 13
-    {"PostHeat (%)", "post-heat_perc"},               // 14
-    {"PreHeat (%)", "pre-heat_perc"},                 // 15
-    {"InFlow (l sec)", "in-flow-l_sec"},              // 16
-    {"ExhFlow (l sec)", "exh-flow-l_sec"}};           // 17
+    {"Exh Fan Speed (%)", "exh-fan-speed_perc"},      // 12
+    {"In Fan Speed (%)", "in-fan-speed_perc"},        // 13
+    {"Remaining Time (min)", "remaining-time_min"},   // 13
+    {"Post-Heat (%)", "post-heat_perc"},              // 14
+    {"Pre-Heat (%)", "pre-heat_perc"},                // 15
+    {"In-Flow (l sec)", "in-flow-l_sec"},             // 16
+    {"Exh-Flow (l sec)", "exh-flow-l_sec"}};          // 17
