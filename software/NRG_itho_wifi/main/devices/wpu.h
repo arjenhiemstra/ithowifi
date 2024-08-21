@@ -344,7 +344,7 @@ const struct ithoLabels ithoWPUStatusLabels[]{
     {"Pulse counter", "pulse-counter"},                                                                                 //17
     {"Flow sensor (lt_hr)", "flow-sensor_lthr"},                                                                        //18
     {"Phase detection", "phase-detection"},                                                                             //19
-    {"Cv pump (%)", "cv-pump_perc"},                                                                                    //20
+    {"CV pump (%)", "cv-pump_perc"},                                                                                    //20
     {"Well pump (%)", "well-pump_perc"},                                                                                //21
     {"Boiler pump (%)", "boiler-pump_perc"},                                                                            //22
     {"Free cooling valve (%)", "free-cooling-valve_perc"},                                                              //23
@@ -359,7 +359,7 @@ const struct ithoLabels ithoWPUStatusLabels[]{
     {"Requested room temp (°C)", "requested-roomemp_c"},                                                                //32
     {"Heat demand thermost. (%)", "heat-demand-thermost._perc"},                                                        //33
     {"Status", "status"},                                                                                               //34
-    {"Sub_status", "sub_status"},                                                                                       //35
+    {"Sub status", "sub_status"},                                                                                       //35
     {"Blockage", "blockage"},                                                                                           //36
     {"Calculated evaporation temp CV (°C)", "calculated-evaporation-temp-cv_c"},                                        //37
     {"Calculated CV condensation temp (°C)", "calculated-condensation-temp-cv_c"},                                      //38
@@ -371,32 +371,32 @@ const struct ithoLabels ithoWPUStatusLabels[]{
     {"Error code byte 0", "error-code-byte-0"},                                                                         //44
     {"Manual operation", "manual-operation"},                                                                           //45
     {"Logging (sec)", "logging_sec"},                                                                                   //46
-    {"Compr block (sec)", "compr-block_sec"},                                                                           //47
+    {"Compressor block (sec)", "compr-block_sec"},                                                                      //47
     {"Elek block (sec)", "elek-block_sec"},                                                                             //48
-    {"Cv for _ naddraai (sec)", "cv-for_-naddraai_sec"},                                                                //49
+    {"CV for _ naddraai (sec)", "cv-for_-naddraai_sec"},                                                                //49
     {"Source for _ nadraai (sec)", "source-for_-nadraai_sec"},                                                          //50
     {"Boiler for _ nadraai (sec)", "boiler-for_-nadraai_sec"},                                                          //51
     {"Delay electr (sec)", "delay-electr_sec"},                                                                         //52
     {"Drain time (sec)", "Drain-time_sec"},                                                                             //53
-    {"Min running time compr (sec)", "min-running-time-compr_sec"},                                                     //54
+    {"Min running time compressor (sec)", "min-running-time-compr_sec"},                                                //54
     {"EV pressure offset (sec)", "ev-pressure-offset_sec"},                                                             //55
     {"EV adjust (sec)", "ev-adjust_sec"},                                                                               //56
     {"Free cooling interval (sec)", "free-cooling-interval_sec"},                                                       //57
     {"Manual control (sec)", "manual_sec"},                                                                             //58
     {"Low pressure timer (sec)", "low-pressure-timer_sec"},                                                             //59
     {"Compressor start (sec)", "compressor-start_sec"},                                                                 //60
-    {"Compr power on delay (sec)", "compr-power-on-delay_sec"},                                                         //61
-    {"Cv start delay (sec)", "cv-start-delay_sec"},                                                                     //62
-    {"Cv stop delay (sec)", "cv-stop-delay_sec"},                                                                       //63
+    {"Compressor power on delay (sec)", "compr-power-on-delay_sec"},                                                    //61
+    {"CV start delay (sec)", "cv-start-delay_sec"},                                                                     //62
+    {"CV stop delay (sec)", "cv-stop-delay_sec"},                                                                       //63
     {"Fault highest priority", "fault-highest-priority"},                                                               //64
     {"time for error history (sec)", "time-for-error_sec"},                                                             //65
     {"Max CV return temp (°C)", "max-cv-return-temp_c"},                                                                //66
-    {"FlowHardware", "flowhardware"},                                                                                   //67
+    {"Flow Hardware", "flowhardware"},                                                                                   //67
     {"Fault highest priority", "fault-highest-priority"},                                                               //68
-    {"Delay cv start (sec)", "delay-cv-start_sec"},                                                                     //69
-    {"Delay cv stop (sec)", "delay-cv-stop_sec"},                                                                       //70
+    {"Delay CV start (sec)", "delay-cv-start_sec"},                                                                     //69
+    {"Delay CV stop (sec)", "delay-cv-stop_sec"},                                                                       //70
     {"Source pump speed free cooling mode", "source-pump-speed-free-cooling-mode"},                                     //71
-    {"Compressor in Cv mode", "compressor-in-cv-mode"},                                                                 //72
+    {"Compressor in CV mode", "compressor-in-cv-mode"},                                                                 //72
     {"Compressor in boiler mode", "compressor-in-boiler-mode"},                                                         //73
     {"Element in CV mode", "element-in-CV-mode"},                                                                       //74
     {"Element in boiler mode", "element-in-boiler-mode"},                                                               //75
@@ -422,30 +422,30 @@ const struct ithoLabels ithoWPUStatusLabels[]{
     {"Comfort selected on thermostat", "comfort-selected-on-thermostat"},                                               //95
     {"Boiler blocked from thermostat", "boiler-blocked-from-thermostat"},                                               //96
     {"Boiler boost from thermostat", "boiler-boost-from-thermostat"},                                                   //97
-    {"Error_found", "error_found"},                                                                                     //98
-    {"Error_retry", "error_retry"},                                                                                     //99
+    {"Error found", "error_found"},                                                                                     //98
+    {"Error retry", "error_retry"},                                                                                     //99
     {"Task active", "task-active"},                                                                                     //100
     {"UTC time", "utc-time"},                                                                                           //101
     {"UTC time valid", "utc-time-valid"},                                                                               //102
     {"Element blocked during retry", "element-blocked-during-retry"},                                                   //103
     {"Spare input", "spare-input"},                                                                                     //104
-    {"Electr element DHW blocked", "electr-element-dhw-blocked"},                                                       //105
+    {"Electric element DHW blocked", "electr-element-dhw-blocked"},                                                     //105
     {"Calculated evaporation temp DHW (°C)", "calculated-evaporation-temp-dhw_c"},                                      //106
     {"Calculated condensation temp DHW (°C)", "calculated-condensation-temp-dhw_c"},                                    //107
     {"Adaptive timer (sec)", "adaptive-timer_sec"},                                                                     //108
     {"Adaptive overheat (K)", "adaptive-overheat_k"},                                                                   //109
-    {"adaptive fifo index", "adaptive-fifo-index"},                                                                     //110
+    {"Adaptive fifo index", "adaptive-fifo-index"},                                                                     //110
     {"Heat demand total (%)", "heat-demand-total_perc"},                                                                //111
     {"P source flow error", "p-source-flow-error"},                                                                     //112
     {"I error sourceflow", "i-error-sourceflow"},                                                                       //113
     {"Pi error sourceflow", "pi-error-sourceflow"},                                                                     //114
     {"Current source valve position (%)", "current-source-valve-position_perc"},                                        //115
-    {"Utc Time offset (min)", "utc-time-offset_min"},                                                                   //116
+    {"UTC Time offset (min)", "utc-time-offset_min"},                                                                   //116
     {"Gateway Time Receive", "gateway-time-receive"},                                                                   //117
     {"OT time valid", "ot-time-valid"},                                                                                 //118
     {"Time hours (hrs)", "time-hours_hours"},                                                                           //119
     {"Time minutes (min)", "time-minutes_min"},                                                                         //120
-    {"time seconds (sec)", "time-seconds_sec"},                                                                         //121
+    {"Time seconds (sec)", "time-seconds_sec"},                                                                         //121
     {"Free cooling block time (min)", "free-cooling-block-time_min"},                                                   //122
     {"Cooling temp control valve setpoint (%)", "cooling-temp-control-valve-setpoint_perc"},                            //123
     {"CO valve position (%)", "co-valve-position_perc"},                                                                //124
@@ -471,7 +471,7 @@ const struct ithoLabels ithoWPUStatusLabels[]{
     {"Blocking time trickle low after power-up (sec.)", "blocking-time-trickle-low-after-power-up_sec"},                //144
     {"Blocking time trickle low after CV operation (sec)", "blocking-time-trickle-low-after-cv-operation_sec"},         //145
     {"Block time pre-heating tap water (sec)", "block-time-pre-heating-tap-water_sec"},                                 //146
-    {"Well pump speed at compr (%)", "well-pump-speed-at-compr_perc"},                                                  //147
+    {"Well pump speed at compressor (%)", "well-pump-speed-at-compr_perc"},                                             //147
     {"Slow start well pump (sec)", "slow-start-well-pump_sec"},                                                         //148
     {"Source return temperature too low (sec.)", "source-return-temperature-too-low_sec"},                              //149
     {"Source flow control period (sec)", "source-flow-control-period_sec"},                                             //150
