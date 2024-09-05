@@ -1,0 +1,57 @@
+openapi: 3.0.0
+info:
+  title: IthoWifi API
+  description: API for controlling IthoWifi devices
+  version: 1.0.0
+servers:
+  - url: 'http://[DNS or IP]'
+paths:
+  /api.html:
+    get:
+      summary: WebAPI call
+      parameters:
+        - name: param
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: value
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'OK'
+  /api.html:
+    post:
+      summary: MQTT API call
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                command:
+                  type: string
+                  example: 'medium'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'OK'
