@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <string>
 
-#include "mongoose.h"
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
@@ -11,9 +10,16 @@
 #include <freertos/task.h>
 #include "sys_log.h"
 
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
+#include "mongoose.h"
 extern struct mg_mgr mgr;
 extern const char *s_listen_on_ws;
 extern const char *s_listen_on_http;
+#else
+extern AsyncWebSocket ws;
+#endif
+
+
 
 // extern AsyncWebSocket ws;
 extern SemaphoreHandle_t mutexJSONLog;

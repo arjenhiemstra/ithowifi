@@ -26,7 +26,10 @@ bool updateMQTTmodeStatus = false;
 bool webauth_ok = false;
 char modestate[32];
 
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
+#else
 AsyncWebServer server(80);
+#endif
 
 // locals
 StaticTask_t xTaskWebBuffer;
@@ -104,7 +107,11 @@ void TaskWeb(void *pvParameters)
     TaskWebHWmark = uxTaskGetStackHighWaterMark(NULL);
     vTaskDelay(25 / portTICK_PERIOD_MS);
   }
+
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
   mg_mgr_free(&mgr);
+#else
+#endif
   // else delete task
   vTaskDelete(NULL);
 }
@@ -112,8 +119,13 @@ void TaskWeb(void *pvParameters)
 void execWebTasks()
 {
   ArduinoOTA.handle();
-
+  
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
   mg_mgr_poll(&mgr, 500);
+#else
+  ws.cleanupClients();
+#endif
+
   if (millis() - previousUpdate >= 5000 || sysStatReq)
   {
     if (millis() - lastSysMessage >= 1000 && !onOTA)
@@ -240,22 +252,22 @@ void webServerInit()
         // Handle upload
       });
 
-  server.on("/edit", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/edit.html", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     if (systemConfig.syssec_edit) {
       if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
       return request->requestAuthentication();
     }
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", edit_html_gz, edit_html_gz_len);
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", edit_html_gz, edit_html_gz_len, nullptr);
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); });
 
-  server.on("/edit", HTTP_PUT, handleFileCreate);
-  server.on("/edit", HTTP_DELETE, handleFileDelete);
+  server.on("/edit.html", HTTP_PUT, handleFileCreate);
+  server.on("/edit.html", HTTP_DELETE, handleFileDelete);
 
   // run handleUpload function when any file is uploaded
   server.on(
-      "/edit", HTTP_POST, [](AsyncWebServerRequest *request)
+      "/edit.html", HTTP_POST, [](AsyncWebServerRequest *request)
       { request->send(200); },
       handleUpload);
 
@@ -268,20 +280,20 @@ void webServerInit()
   // css_code
   server.on("/pure-min.css", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", pure_min_css_gz, pure_min_css_gz_len);
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/css", pure_min_css_gz, pure_min_css_gz_len, nullptr);
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); });
 
   // javascript files
   server.on("/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", jquery_min_js_gz, jquery_min_js_gz_len);
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/javascript", jquery_min_js_gz, jquery_min_js_gz_len, nullptr);
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); });
 
   server.on("/controls.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", controls_js_gz, controls_js_gz_len);
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/javascript", controls_js_gz, controls_js_gz_len, nullptr);
     response->addHeader("Server", "Itho WiFi Web Server");
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); });
@@ -324,7 +336,7 @@ void webServerInit()
 
   server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "image/png", favicon_png_gz, favicon_png_gz_len);
+    AsyncWebServerResponse *response = request->beginResponse(200, "image/png", favicon_png_gz, favicon_png_gz_len, nullptr);
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); });
 
@@ -341,7 +353,7 @@ void webServerInit()
         webauth_ok = true;
       }
     }
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", index_html_gz, index_html_gz_len);
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", index_html_gz, index_html_gz_len, nullptr);
     response->addHeader("Server", "Itho WiFi Web Server");
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); });
@@ -508,7 +520,8 @@ void MDNSinit()
 
   N_LOG("Hostname: %s", hostName());
 }
-
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
+#else
 void handleAPI(AsyncWebServerRequest *request)
 {
   if (systemConfig.api_version == 1)
@@ -530,7 +543,7 @@ void handleAPIv1(AsyncWebServerRequest *request)
 
     for (int i = 0; i < params; i++)
     {
-      AsyncWebParameter *p = request->getParam(i);
+      const AsyncWebParameter *p = request->getParam(i);
       if (strcmp(p->name().c_str(), "username") == 0)
       {
         if (strcmp(p->value().c_str(), systemConfig.sys_username) == 0)
@@ -563,11 +576,11 @@ void handleAPIv1(AsyncWebServerRequest *request)
 
   for (int i = 0; i < params; i++)
   {
-    AsyncWebParameter *p = request->getParam(i);
+    const AsyncWebParameter *p = request->getParam(i);
 
     if (strcmp(p->name().c_str(), "get") == 0)
     {
-      AsyncWebParameter *q = request->getParam("get");
+      const AsyncWebParameter *q = request->getParam("get");
       if (strcmp(q->value().c_str(), "currentspeed") == 0)
       {
         char ithoval[10]{};
@@ -807,6 +820,7 @@ void handleAPIv1(AsyncWebServerRequest *request)
     request->send(200, "text/html", "NOK");
   }
 }
+#endif
 
 ApiResponse::api_response_status_t checkAuthentication(JsonObject params, JsonDocument &response)
 {
@@ -1555,6 +1569,9 @@ ApiResponse::api_response_status_t processSetOutsideTemperature(JsonObject param
   return ApiResponse::status::SUCCESS;
 }
 
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
+#else
+
 /*
 This WebAPI implementation follows the JSend specification
 More information can be found on github: https://github.com/omniti-labs/jsend
@@ -1585,7 +1602,7 @@ void handleAPIv2(AsyncWebServerRequest *request)
 
   for (int i = 0; i < params; i++)
   {
-    AsyncWebParameter *p = request->getParam(i);
+    const AsyncWebParameter *p = request->getParam(i);
     if (p->name().length() > 0 && !p->isFile())
     {
       paramsJson[p->name().c_str()] = p->value().c_str();
@@ -1618,6 +1635,9 @@ void handleAPIv2(AsyncWebServerRequest *request)
 
   if (response_status == ApiResponse::status::CONTINUE)
     response_status = processCommand(paramsJson, response);
+
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processSetRFremote(paramsJson, response);
 
   if (response_status == ApiResponse::status::CONTINUE)
     response_status = processRFremoteCommands(paramsJson, response);
@@ -1697,7 +1717,7 @@ void handleCoredumpDownload(AsyncWebServerRequest *request)
   int maxLen = 1024;
   char buffer[maxLen];
 
-  AsyncWebServerResponse *response = request->beginChunkedResponse("application/octet-stream", [partition, file_size, &buffer](uint8_t *buffer, size_t maxLen, size_t alreadySent) -> size_t
+  AsyncWebServerResponse *response = request->beginChunkedResponse("application/octet-stream", [partition, file_size, &buffer](uint8_t *buffer2, size_t maxLen, size_t alreadySent) -> size_t
                                                                    {
       if (file_size - alreadySent >= maxLen) {
         ESP_ERROR_CHECK(
@@ -1770,7 +1790,7 @@ void handleFileCreate(AsyncWebServerRequest *request)
   int params = request->params();
   for (int i = 0; i < params; i++)
   {
-    AsyncWebParameter *p = request->getParam(i);
+    const AsyncWebParameter *p = request->getParam(i);
 
     if (strcmp(p->name().c_str(), "path") == 0)
     {
@@ -1876,7 +1896,7 @@ void handleFileDelete(AsyncWebServerRequest *request)
   int params = request->params();
   for (int i = 0; i < params; i++)
   {
-    AsyncWebParameter *p = request->getParam(i);
+    const AsyncWebParameter *p = request->getParam(i);
 
     if (strcmp(p->name().c_str(), "path") == 0)
     {
@@ -2058,6 +2078,8 @@ void handleFileList(AsyncWebServerRequest *request)
   output = String();
 }
 
+#endif
+
 bool prevlog_available()
 {
   if (ACTIVE_FS.exists("/logfile0.log") || ACTIVE_FS.exists("/logfile1.log"))
@@ -2146,13 +2168,13 @@ void jsonSystemstat()
 //   return flags;
 // }
 
-// void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+// void httpEvent(struct mg_connection *c, int ev, void *ev_data)
 // {
 
 //   if (ev == MG_EV_HTTP_MSG)
 //   {
 //     struct mg_http_message *hm = (mg_http_message *)ev_data;
-//     if (mg_http_match_uri(hm, "/curlog"))
+//     if (mg_match(hm->uri, mg_str("/curlog"), nullptr))
 //     {
 
 //       char url[24]{};
@@ -2168,12 +2190,12 @@ void jsonSystemstat()
 //       }
 
 //       struct mg_http_message mg;
-//       mg.uri.ptr = &url[0];
+//       mg.uri.buf = &url[0];
 //       mg.uri.len = len;
 
 //       char buf[64]{};
 //       int urilen = mg.uri.len + 1;
-//       strlcpy(buf, mg.uri.ptr, urilen > sizeof(buf) ? sizeof(buf) : urilen);
+//       strlcpy(buf, mg.uri.buf, urilen > sizeof(buf) ? sizeof(buf) : urilen);
 //       D_LOG("File '%s' requested", buf);
 //     }
 //     else
@@ -2190,19 +2212,18 @@ void jsonSystemstat()
 //     }
 //   }
 
-//   (void)fn_data;
 // }
 
 #if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+void httpEvent(struct mg_connection *c, int ev, void *ev_data)
 {
   if (ev == MG_EV_HTTP_MSG)
   {
-    D_LOG("MG_EV_HTTP_MSG");
+    // D_LOG("MG_EV_HTTP_MSG");
     struct mg_http_message *hm = (struct mg_http_message *)ev_data;
-    if (mg_http_match_uri(hm, "/general.js"))
+    if (mg_match(hm->uri, mg_str("/general.js"), nullptr))
     {
-      D_LOG("URI /general.js");
+      // D_LOG("URI /general.js");
       mg_http_reply(c, 200, "Content-Type: application/javascript\r\n",
                     "var on_ap = %s; var hostname = '%s'; var fw_version = '%s'; var hw_revision = '%s'; var itho_pwm2i2c = '%d'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });\n ",
                     wifiModeAP
@@ -2210,24 +2231,24 @@ void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
                         : "false",
                     hostName(), FWVERSION, hw_revision, systemConfig.itho_pwm2i2c);
     }
-    else if (mg_http_match_uri(hm, "/list"))
+    else if (mg_match(hm->uri, mg_str("/list"), nullptr))
     {
-      D_LOG("URI /list");
-      mg_handleFileList(c, ev, ev_data, fn_data);
+      // D_LOG("URI /list");
+      mg_handleFileList(c, ev, ev_data);
     }
-    else if (mg_http_match_uri(hm, "/status"))
+    else if (mg_match(hm->uri, mg_str("/status"), nullptr))
     {
-      D_LOG("URI /status");
-      mg_handleStatus(c, ev, ev_data, fn_data);
+      // D_LOG("URI /status");
+      mg_handleStatus(c, ev, ev_data);
     }
-    else if (mg_http_match_uri(hm, "/api.html"))
+    else if (mg_match(hm->uri, mg_str("/api.html"), nullptr))
     {
       D_LOG("URI /api.html");
       // handleAPI
     }
-    else if (mg_http_match_uri(hm, "/curlog"))
+    else if (mg_match(hm->uri, mg_str("/curlog"), nullptr))
     {
-      D_LOG("URI /curlog");
+      // D_LOG("URI /curlog");
       char url[24]{};
 
       if (ACTIVE_FS.exists("/logfile0.current.log"))
@@ -2240,19 +2261,19 @@ void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
       }
 
       struct mg_http_message mg;
-      mg.uri.ptr = &url[0];
+      mg.uri.buf = &url[0];
       mg.uri.len = strlen(url);
 
       char buf[64]{};
       int urilen = mg.uri.len + 1;
-      strlcpy(buf, mg.uri.ptr, urilen > sizeof(buf) ? sizeof(buf) : urilen);
-      D_LOG("File '%s' requested", buf);
+      strlcpy(buf, mg.uri.buf, urilen > sizeof(buf) ? sizeof(buf) : urilen);
+      // D_LOG("File '%s' requested", buf);
 
       mg_serve_fs(c, (void *)&mg, true);
     }
-    else if (mg_http_match_uri(hm, "/prevlog"))
+    else if (mg_match(hm->uri, mg_str("/prevlog"), nullptr))
     {
-      D_LOG("URI /prevlog");
+      // D_LOG("URI /prevlog");
 
       char url[24]{};
       size_t len;
@@ -2267,19 +2288,19 @@ void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
       }
 
       struct mg_http_message mg;
-      mg.uri.ptr = &url[0];
+      mg.uri.buf = &url[0];
       mg.uri.len = len;
 
       char buf[64]{};
       int urilen = mg.uri.len + 1;
-      strlcpy(buf, mg.uri.ptr, urilen > sizeof(buf) ? sizeof(buf) : urilen);
-      D_LOG("File '%s' requested", buf);
+      strlcpy(buf, mg.uri.buf, urilen > sizeof(buf) ? sizeof(buf) : urilen);
+      // D_LOG("File '%s' requested", buf);
 
       mg_serve_fs(c, (void *)&mg, true);
     }
-    else if (mg_http_match_uri(hm, "/reset"))
+    else if (mg_match(hm->uri, mg_str("/reset"), nullptr))
     {
-      D_LOG("URI /reset");
+      // D_LOG("URI /reset");
 
       // add handle auth
       logMessagejson("Reset requested. Device will reboot in a few seconds...", WEBINTERFACE);
@@ -2287,35 +2308,23 @@ void httpEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
       delay(200);
       shouldReboot = true;
     }
-    else if (mg_http_match_uri(hm, "/edit"))
+    else if (mg_match(hm->uri, mg_str("/edit.html"), nullptr) && ((strncmp(hm->method.buf, "PUT", hm->method.len) == 0) || (strncmp(hm->method.buf, "DELETE", hm->method.len) == 0)))
     {
-      if (strncmp(hm->method.ptr, "GET", hm->method.len) == 0)
+      if (strncmp(hm->method.buf, "PUT", hm->method.len) == 0)
       {
-        const char url[] = "/edit.html";
-        const size_t len = sizeof(url) / sizeof(url[0]);
-        struct mg_http_message mg;
-        mg.uri.ptr = &url[0];
-        mg.uri.len = len;
-
-        mg_serve_fs(c, (void *)&mg, false);
+        mg_handleFileCreate(c, ev, ev_data);
       }
-      else if (strncmp(hm->method.ptr, "PUT", hm->method.len) == 0)
+      else if (strncmp(hm->method.buf, "DELETE", hm->method.len) == 0)
       {
-        mg_handleFileCreate(c, ev, ev_data, fn_data);
-      }
-      else if (strncmp(hm->method.ptr, "DELETE", hm->method.len) == 0)
-      {
-        mg_handleFileDelete(c, ev, ev_data, fn_data);
+        mg_handleFileDelete(c, ev, ev_data);
       }
     }
     else
     {
-      D_LOG("URI else -> mg_serve_fs");
+      // D_LOG("URI else -> mg_serve_fs");
 
       mg_serve_fs(c, ev_data, false);
     }
-
-    (void)fn_data;
   }
 }
 
@@ -2325,7 +2334,7 @@ bool mg_packed_file_exists(void *ev_data)
   const struct packed_files_lst *ptr = packed_files_list;
   while (strcmp(ptr->name, "") != 0)
   {
-    if (strncmp(ptr->name, hm->uri.ptr, hm->uri.len) == 0)
+    if (strncmp(ptr->name, hm->uri.buf, hm->uri.len) == 0)
     {
       return true;
     }
@@ -2342,29 +2351,35 @@ void mg_serve_fs(struct mg_connection *c, void *ev_data, bool download)
     return;
 
   struct mg_http_message *hm = (struct mg_http_message *)ev_data;
-  if (hm->uri.ptr == nullptr)
+  if (hm->uri.buf == nullptr)
     return;
+
+  if (!hm->uri.len)
+  {
+    D_LOG("hm->uri.len has no length");
+    return;
+  }
 
   char buf[64]{};
   int urilen = hm->uri.len + 1;
-  strlcpy(buf, hm->uri.ptr, urilen > sizeof(buf) ? sizeof(buf) : urilen);
-  D_LOG("File '%s' requested", buf);
+  strlcpy(buf, hm->uri.buf, urilen > sizeof(buf) ? sizeof(buf) : urilen);
+  // D_LOG("File '%s' requested", buf);
 
-  if (mg_packed_file_exists(ev_data))
+  if (mg_packed_file_exists(hm))
   {
-    D_LOG("File '%s' found on Packed file system", buf);
+    // D_LOG("File '%s' found on Packed file system", buf);
     struct mg_http_serve_opts opts;
     opts.root_dir = "/web_root";
     opts.fs = &mg_fs_packed;
 
-    mg_http_serve_dir(c, (struct mg_http_message *)ev_data, &opts);
+    mg_http_serve_dir(c, hm, &opts);
   }
-  else if (mg_handleFileRead(c, ev_data, download))
+  else if (mg_handleFileRead(c, hm, download))
   {
 
     // char buf[64]{};
-    // strlcpy(buf, hm->uri.ptr, hm->uri.len + 1);
-    D_LOG("File '%s' found on LittleFS file system", buf);
+    // strlcpy(buf, hm->uri.buf, hm->uri.len + 1);
+    // D_LOG("File '%s' found on LittleFS file system", buf);
   }
   else
   {
@@ -2373,12 +2388,13 @@ void mg_serve_fs(struct mg_connection *c, void *ev_data, bool download)
     int len = hm->uri.len + 1;
     if (len > sizeof(buf))
       len = sizeof(buf);
-    strlcpy(buf, hm->uri.ptr, len);
+    strlcpy(buf, hm->uri.buf, len);
     D_LOG("File '%s' not found on any file system", buf);
+    mg_http_reply(c, 404, "", "%s", "File not found");
   }
 }
 
-void mg_handleFileList(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+void mg_handleFileList(struct mg_connection *c, int ev, void *ev_data)
 {
   // add handle auth
 
@@ -2426,40 +2442,40 @@ void mg_handleFileList(struct mg_connection *c, int ev, void *ev_data, void *fn_
 bool mg_handleFileRead(struct mg_connection *c, void *ev_data, bool download)
 {
   // handle authentication
-  D_LOG("mg_handleFileRead called");
+  // D_LOG("mg_handleFileRead called");
   struct mg_http_message *hm = (struct mg_http_message *)ev_data;
 
-  // if (hm->query.ptr != NULL)
+  // if (hm->query.buf != NULL)
   // {
   //   char buf[128]{};
-  //   strlcpy(buf, hm->query.ptr, sizeof(buf));
+  //   strlcpy(buf, hm->query.buf, sizeof(buf));
   //   D_LOG("hm->query: %s, len: %d", buf, hm->query.len);
   // }
 
-  // if (hm->body.ptr != NULL)
+  // if (hm->body.buf != NULL)
   // {
   //   char body[265]{};
-  //   strlcpy(body, hm->body.ptr, sizeof(body));
+  //   strlcpy(body, hm->body.buf, sizeof(body));
   //   D_LOG("hm->body: %s, len: %d", body, hm->body.len);
   // }
 
-  // if (hm->uri.ptr != NULL)
+  // if (hm->uri.buf != NULL)
   // {
   //   char uri[128]{};
-  //   strlcpy(uri, hm->uri.ptr, sizeof(uri));
+  //   strlcpy(uri, hm->uri.buf, sizeof(uri));
   //   D_LOG("hm->uri: %s, len: %d", uri, hm->uri.len);
   // }
   // mg_http_reply(c, 200, "", "HTTP OK");
   // return false;
 
   char buf[64]{};
-  strlcpy(buf, hm->uri.ptr, hm->uri.len + 1);
+  strlcpy(buf, hm->uri.buf, hm->uri.len + 1);
   String path = buf;
 
   String pathWithGz = path + ".gz";
   if (ACTIVE_FS.exists(pathWithGz) || ACTIVE_FS.exists(path))
   {
-    D_LOG("file found ('%s')", path.c_str());
+    // D_LOG("file found ('%s')", path.c_str());
 
     if (ACTIVE_FS.exists(pathWithGz))
     {
@@ -2492,10 +2508,10 @@ bool mg_handleFileRead(struct mg_connection *c, void *ev_data, bool download)
   return false;
 }
 
-void mg_handleStatus(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+void mg_handleStatus(struct mg_connection *c, int ev, void *ev_data)
 {
   // handle auth
-  D_LOG("mg_handleStatus called");
+  // D_LOG("mg_handleStatus called");
 
   size_t totalBytes = ACTIVE_FS.totalBytes();
   size_t usedBytes = ACTIVE_FS.usedBytes();
@@ -2513,48 +2529,48 @@ void mg_handleStatus(struct mg_connection *c, int ev, void *ev_data, void *fn_da
   json += ",\"unsupportedFiles\":\"\"}";
 
   mg_http_reply(c, 200, "Content-Type: application/json\r\n", "%s\n", json.c_str());
-  json = String();
+  // json = String();
 }
 
-void mg_handleFileDelete(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+void mg_handleFileDelete(struct mg_connection *c, int ev, void *ev_data)
 {
 }
 
-void mg_handleFileCreate(struct mg_connection *c, int ev, void *ev_data, void *fn_data)
+void mg_handleFileCreate(struct mg_connection *c, int ev, void *ev_data)
 {
 
   // handle auth
-  D_LOG("handleFileCreate called");
+  // D_LOG("handleFileCreate called");
 
   struct mg_http_message *hm = (struct mg_http_message *)ev_data;
 
-  if (hm->query.ptr != NULL)
-  {
-    char buf[128]{};
-    strlcpy(buf, hm->query.ptr, sizeof(buf));
-    D_LOG("hm->query: %s, len: %d", buf, hm->query.len);
-  }
+  // if (hm->query.buf != NULL)
+  // {
+  //   char buf[128]{};
+  //   strlcpy(buf, hm->query.buf, sizeof(buf));
+  //   D_LOG("hm->query: %s, len: %d", buf, hm->query.len);
+  // }
 
-  if (hm->body.ptr != NULL)
-  {
-    char body[265]{};
-    strlcpy(body, hm->body.ptr, sizeof(body));
-    D_LOG("hm->body: %s, len: %d", body, hm->body.len);
-  }
+  // if (hm->body.buf != NULL)
+  // {
+  //   char body[265]{};
+  //   strlcpy(body, hm->body.buf, sizeof(body));
+  //   D_LOG("hm->body: %s, len: %d", body, hm->body.len);
+  // }
 
-  if (hm->uri.ptr != NULL)
-  {
-    char uri[128]{};
-    strlcpy(uri, hm->uri.ptr, sizeof(uri));
-    D_LOG("hm->uri: %s, len: %d", uri, hm->uri.len);
-  }
+  // if (hm->uri.buf != NULL)
+  // {
+  //   char uri[128]{};
+  //   strlcpy(uri, hm->uri.buf, sizeof(uri));
+  //   D_LOG("hm->uri: %s, len: %d", uri, hm->uri.len);
+  // }
 
-  if (hm->head.ptr != NULL)
-  {
-    char head[128]{};
-    strlcpy(head, hm->head.ptr, sizeof(head));
-    D_LOG("hm->head: %s, len: %d", head, hm->head.len);
-  }
+  // if (hm->head.buf != NULL)
+  // {
+  //   char head[128]{};
+  //   strlcpy(head, hm->head.buf, sizeof(head));
+  //   D_LOG("hm->head: %s, len: %d", head, hm->head.len);
+  // }
   char path[64]{};
   char src[64]{};
   // const char pathname[] = "path";
@@ -2566,32 +2582,32 @@ void mg_handleFileCreate(struct mg_connection *c, int ev, void *ev_data, void *f
   while ((pos = mg_http_next_multipart(hm->body, pos, &part)) > 0)
   {
     D_LOG("POS:%d", pos);
-    if (part.name.ptr != NULL)
+    if (part.name.buf != NULL)
     {
-      D_LOG("Chunk name:%s len:%d", part.name.ptr, (int)part.name.len);
+      D_LOG("Chunk name:%s len:%d", part.name.buf, (int)part.name.len);
     }
-    if (part.filename.ptr != NULL)
+    if (part.filename.buf != NULL)
     {
-      D_LOG("filename:%s len:%d", part.filename.ptr, (int)part.filename.len);
+      D_LOG("filename:%s len:%d", part.filename.buf, (int)part.filename.len);
     }
-    if (part.body.ptr != NULL)
+    if (part.body.buf != NULL)
     {
-      D_LOG("body:%s len:%d", part.body.ptr, (int)part.body.len);
+      D_LOG("body:%s len:%d", part.body.buf, (int)part.body.len);
     }
-    if (part.name.ptr != NULL || part.filename.ptr != NULL || part.body.ptr != NULL)
+    if (part.name.buf != NULL || part.filename.buf != NULL || part.body.buf != NULL)
     {
       D_LOG("");
     }
-    if (part.name.ptr != NULL && part.body.ptr != NULL)
+    if (part.name.buf != NULL && part.body.buf != NULL)
     {
-      if (String(part.name.ptr).startsWith("path"))
+      if (String(part.name.buf).startsWith("path"))
       {
-        strlcpy(path, part.body.ptr, part.body.len + 1);
+        strlcpy(path, part.body.buf, part.body.len + 1);
         D_LOG("Path name found:[%s]", path);
       }
-      if (String(part.name.ptr).startsWith("src"))
+      if (String(part.name.buf).startsWith("src"))
       {
-        strlcpy(src, part.body.ptr, part.body.len + 1);
+        strlcpy(src, part.body.buf, part.body.len + 1);
         D_LOG("Src name found:[%s]", src);
       }
     }
