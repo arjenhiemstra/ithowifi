@@ -4,9 +4,29 @@ static void wsEvent(struct mg_connection *c, int ev, void *ev_data, void *fn_dat
 
 void websocketInit()
 {
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
   mg_log_set(0);
   mg_mgr_init(&mgr);                                   // Initialise event manager
   mg_http_listen(&mgr, s_listen_on_ws, wsEvent, &mgr); // Create WS listener
+#else
+  // attach AsyncWebSocket
+  ws.onEvent(onWsEvent);
+  wsserver.addHandler(&ws);
+  wsserver.begin();
+  WebSerial.onMessage([](const String &msg)
+                      { Serial.println(msg); });
+
+  if (systemConfig.syssec_web)
+  {
+    WebSerial.setAuthentication(systemConfig.sys_username, systemConfig.sys_password);
+  }
+  //if enable a web based serial terminal will be available at http://IP:8000/webserial
+  if (logConfig.webserial_active)
+  {
+    WebSerial.begin(&wsserver);
+  }  
+  
+#endif
 }
 
 void jsonWsSend(const char *rootName)
