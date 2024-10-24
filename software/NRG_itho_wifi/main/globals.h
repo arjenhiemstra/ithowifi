@@ -25,6 +25,7 @@
 
 #include "esp_wifi.h"
 #include "WiFiClient.h"
+#include "WiFiClientSecure.h"
 
 #include "cc1101/IthoCC1101.h" // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "cc1101/IthoPacket.h" // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
@@ -44,7 +45,8 @@ extern const char *cve2;
 extern const char *non_cve1;
 extern const char *hw_revision;
 
-extern WiFiClient client;
+extern WiFiClientSecure client;
+//extern WiFiClient client;
 
 extern IthoCC1101 rf;
 extern IthoPacket packet;
