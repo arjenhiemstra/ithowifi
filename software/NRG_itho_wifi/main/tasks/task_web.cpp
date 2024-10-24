@@ -1379,7 +1379,7 @@ ApiResponse::api_response_status_t processPWMSpeedTimerCommands(JsonObject param
   const char *speed = params["speed"];
   const char *timer = params["timer"];
 
-  if (speed == nullptr && speed == nullptr)
+  if (speed == nullptr && timer == nullptr)
     return ApiResponse::status::CONTINUE;
 
   bool cmd_result = false;
