@@ -102,6 +102,8 @@ void TaskSysControl(void *pvParameters)
   Ticker TaskTimeout;
   Ticker queueUpdater;
 
+  client.setInsecure(); // skip CA verification
+
   delay(2000);
   wifiInit();
   delay(2000);

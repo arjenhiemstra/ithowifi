@@ -15,7 +15,6 @@
 #include "SHTSensor.h"
 #include "tasks/task_mqtt.h"
 #include "enum.h"
-#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 
 #include "LittleFS.h"
