@@ -514,13 +514,13 @@
         function p(e, t) {
             setLoading(!0, "Renaming '" + e + "' to '" + t + "'..."), t.startsWith("/") || (t = "/" + t), xmlHttp = new XMLHttpRequest, xmlHttp.onload = o(xmlHttp, t);
             var n = new FormData;
-            n.append("path", t), n.append("src", e), xmlHttp.open("PUT", "/edit"), xmlHttp.send(n)
+            n.append("path", t), n.append("src", e), xmlHttp.open("PUT", "/edit.html"), xmlHttp.send(n)
         }
 
         function h(e) {
             setLoading(!0, "Deleting '" + e + "'..."), xmlHttp = new XMLHttpRequest, xmlHttp.onload = o(xmlHttp);
             var t = new FormData;
-            t.append("path", e), xmlHttp.open("DELETE", "/edit"), xmlHttp.send(t)
+            t.append("path", e), xmlHttp.open("DELETE", "/edit.html"), xmlHttp.send(t)
         }
         return t.className = "css-treeview", t.id = "/", document.getElementById(e).appendChild(t), this.clearMainPanel = function () {
             document.getElementById("editor").style.display = "none", document.getElementById("editorButtons").style.display = "none", n.style.display = "block", n.innerHTML = "<div style='text-align:center'>(file not found or format not supported)</div>"
@@ -536,11 +536,11 @@
         }, this.httpUpload = function (e, t) {
             setLoading(!0, "Uploading '" + t + "'..."), t.startsWith("/") || (t = "/" + t), xmlHttp = new XMLHttpRequest, xmlHttp.onload = o(xmlHttp, t);
             var n = new FormData;
-            n.append("data", e, t), xmlHttp.open("POST", "/edit"), xmlHttp.send(n)
+            n.append("data", e, t), xmlHttp.open("POST", "/edit.html"), xmlHttp.send(n)
         }, this.httpCreate = function (e) {
             setLoading(!0, "Creating '" + e + "'..."), e.startsWith("/") || (e = "/" + e), xmlHttp = new XMLHttpRequest, xmlHttp.onload = o(xmlHttp, e);
             var t = new FormData;
-            t.append("path", e), xmlHttp.open("PUT", "/edit"), xmlHttp.send(t)
+            t.append("path", e), xmlHttp.open("PUT", "/edit.html"), xmlHttp.send(t)
         }, m("/"), this
     }
 
@@ -618,7 +618,7 @@
                     var o = new FormData;
                     o.append("data", new Blob([t], {
                         type: n
-                    }), e), l.open("POST", "/edit"), l.send(o)
+                    }), e), l.open("POST", "/edit.html"), l.send(o)
                 }(t, s.getValue() + "", a)
         }, s.discard = function () {
             s.loadUrl(t), enableSaveDiscardBtns(!1)

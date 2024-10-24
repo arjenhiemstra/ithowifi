@@ -1,16 +1,17 @@
 #include <Arduino.h> //fix to prevent INADDR_NONE preprocessor issues
 #include "notifyClients.h"
 
+
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
 struct mg_mgr mgr;
 const char *s_listen_on_ws = "ws://0.0.0.0:8000";
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
 const char *s_listen_on_http = "http://0.0.0.0";
+#else
+AsyncWebSocket ws("/ws");
 #endif
 
 SemaphoreHandle_t mutexJSONLog;
 SemaphoreHandle_t mutexWSsend;
-
-// AsyncWebSocket ws("/ws");
 
 unsigned long LastotaWsUpdate = 0;
 size_t content_len = 0;
@@ -21,8 +22,11 @@ void notifyClients(const char *message)
   if (xSemaphoreTake(mutexWSsend, (TickType_t)100 / portTICK_PERIOD_MS) == pdTRUE)
   {
 
-    // ws.textAll(message);
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
     wsSendAll(&mgr, message);
+#else
+    ws.textAll(message);
+#endif
 
     xSemaphoreGive(mutexWSsend);
   }
@@ -31,8 +35,9 @@ void notifyClients(const char *message)
 void notifyClients(JsonObject obj)
 {
   size_t len = measureJson(obj);
+
   char *buffer = new char[len + 1];
-  // AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
+
   if (buffer)
   {
     serializeJson(obj, buffer, len + 1);
@@ -43,11 +48,14 @@ void notifyClients(JsonObject obj)
 
 void wsSendAll(void *arg, const char *message)
 {
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
   struct mg_mgr *mgr = (struct mg_mgr *)arg;
   for (struct mg_connection *c = mgr->conns; c != NULL; c = c->next)
   {
     mg_ws_send(c, message, strlen(message), WEBSOCKET_OP_TEXT);
   }
+#else
+#endif
 }
 
 void jsonSysmessage(const char *id, const char *message)

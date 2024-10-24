@@ -79,6 +79,9 @@ void failSafeBoot()
       dnsServer.start(53, "*", apIP);
 
       // Simple Firmware Update Form
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
+// implement mongoose based ota
+#else
       server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request)
                 { request->send(200, "text/html", "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>"); });
 
@@ -121,7 +124,7 @@ void failSafeBoot()
             }
           });
       server.begin();
-
+#endif
       for (;;)
       {
         yield();
