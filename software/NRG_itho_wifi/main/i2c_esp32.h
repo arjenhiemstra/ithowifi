@@ -63,7 +63,6 @@ struct cmd_queue_data
     bool *updateIthoMQTT{};
 };
 
-char toHex(uint8_t c);
 void i2c_queue_add_cmd(const std::function<void()> func);
 
 void i2c_master_setpins(gpio_num_t sda, gpio_num_t scl);

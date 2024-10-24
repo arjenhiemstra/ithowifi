@@ -15,11 +15,6 @@ void i2c_queue_add_cmd(const std::function<void()> func)
   i2c_cmd_queue.push_back(func);
 }
 
-char toHex(uint8_t c)
-{
-  return c < 10 ? c + '0' : c + 'A' - 10;
-}
-
 uint8_t i2cbuf[I2C_SLAVE_RX_BUF_LEN];
 static size_t buflen;
 
@@ -90,7 +85,7 @@ esp_err_t i2c_master_send(const char *buf, uint32_t len, int log_entry_idx)
   i2c_master_start(link);
   i2c_master_write(link, (uint8_t *)buf, len, true);
   i2c_master_stop(link);
-  rc = i2c_master_cmd_begin(I2C_MASTER_NUM, link, 200 / portTICK_RATE_MS);
+  rc = i2c_master_cmd_begin(I2C_MASTER_NUM, link, 200 / portTICK_PERIOD_MS);
   i2c_cmd_link_delete(link);
 
   i2c_master_deinit();
@@ -113,7 +108,7 @@ esp_err_t i2c_master_send_command(uint8_t addr, const uint8_t *cmd, uint32_t len
   i2c_master_write_byte(link, (addr << 1) | WRITE_BIT, ACK_CHECK_EN);
   i2c_master_write(link, (uint8_t *)cmd, len, true);
   i2c_master_stop(link);
-  rc = i2c_master_cmd_begin(I2C_MASTER_NUM, link, 200 / portTICK_RATE_MS);
+  rc = i2c_master_cmd_begin(I2C_MASTER_NUM, link, 200 / portTICK_PERIOD_MS);
 
   i2c_cmd_link_delete(link);
 
@@ -277,7 +272,7 @@ size_t i2c_slave_receive(uint8_t *i2c_receive_buf)
 
   while (1)
   {
-    int len1 = i2c_slave_read_buffer(I2C_SLAVE_NUM, i2cbuf + buflen, sizeof(i2cbuf) - buflen, 50 / portTICK_RATE_MS);
+    int len1 = i2c_slave_read_buffer(I2C_SLAVE_NUM, i2cbuf + buflen, sizeof(i2cbuf) - buflen, 50 / portTICK_PERIOD_MS);
     if (len1 <= 0)
       break;
     buflen += len1;

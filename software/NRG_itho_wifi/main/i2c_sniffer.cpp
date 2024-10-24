@@ -10,7 +10,7 @@ typedef enum
 } i2c_state_t;
 
 typedef uint16_t gpdata_t;
-static xQueueHandle gpio_evt_queue;
+static QueueHandle_t gpio_evt_queue;
 
 #define SCL(pin) (1 << pin)
 #define SDA(pin) (1 << pin)
@@ -146,7 +146,7 @@ static void sniffer_task(void *arg)
                 snprintf(buf, sizeof(buf), "%02X/%d%c", (x & 0xFF), (x >> 16), (x & ACK ? ',' : '-'));
 
 #else
-                snprintf(buf, sizeof(buf), "%02X%c", (x & 0xFF), (x & ACK ? ',' : '-'));
+                snprintf(buf, sizeof(buf), "%02X%c", static_cast<uint8_t>((x & 0xFF)), (x & ACK ? ',' : '-'));
 #endif
                 buffer += buf;
                 if (buffer.length() == 4)

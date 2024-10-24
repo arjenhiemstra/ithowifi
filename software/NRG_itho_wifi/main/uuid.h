@@ -9,6 +9,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "esp_random.h"
 
 typedef uint8_t uuid_t[16];
 
