@@ -39,6 +39,7 @@ extern bool wifiModeAP;
 extern unsigned long APmodeTimeout;
 extern bool reset_sht_sensor;
 extern bool restest;
+extern bool forceFWcheck;
 extern int fw_update_available;
 
 void startTaskSysControl();
