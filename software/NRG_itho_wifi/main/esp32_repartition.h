@@ -10,6 +10,7 @@
 #include "freertos/FreeRTOS.h"
 #include "esp_ota_ops.h"
 #include "esp_err.h"
+#include "esp_flash.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include <esp_log.h>

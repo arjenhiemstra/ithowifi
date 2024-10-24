@@ -1,5 +1,7 @@
 #pragma once
 #include <driver/gpio.h>
+#include "hal/gpio_ll.h"
+#include "soc/gpio_struct.h"
 #include <esp32/rom/ets_sys.h>
 #include <esp_log.h>
 #include <esp_system.h>

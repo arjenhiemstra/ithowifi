@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "esp_mac.h"
 
 /**
   System Class.

@@ -1,5 +1,7 @@
 #include "tasks/task_init.h"
 
+#define TWDT_TIMEOUT_MS 60000
+
 // globals
 bool TaskInitReady = false;
 
@@ -25,8 +27,18 @@ void TaskInit(void *pvParameters)
     yield();
   }
 
+#include "esp_idf_version.h"
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  const esp_task_wdt_config_t twdt_config = {
+      .timeout_ms = TWDT_TIMEOUT_MS,
+      .idle_core_mask = (1 << portNUM_PROCESSORS) - 1, // Bitmask of all cores
+      .trigger_panic = true,
+  };
+  esp_task_wdt_init(&twdt_config);
+#else
   esp_task_wdt_init(60, true);
-  I_LOG("Setup: done");
+#endif
 
   vTaskDelete(NULL);
 }
