@@ -11,11 +11,13 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h> // rand(), strtol(), atoi()
+#include <stdlib.h>  // rand(), strtol(), atoi()
 #include <string.h>
 #if defined(__ARMCC_VERSION)
 #define mode_t size_t
+#include <alloca.h>
 #include <time.h>
+#elif defined(__CCRH__)
 #else
 #include <sys/stat.h>
 #endif
@@ -30,7 +32,7 @@
 #define calloc(a, b) mg_calloc(a, b)
 #define free(a) vPortFree(a)
 #define malloc(a) pvPortMalloc(a)
-#define strdup(s) ((char *) mg_strdup(mg_str(s)).ptr)
+#define strdup(s) ((char *) mg_strdup(mg_str(s)).buf)
 
 // Re-route calloc/free to the FreeRTOS's functions, don't use stdlib
 static inline void *mg_calloc(size_t cnt, size_t size) {
