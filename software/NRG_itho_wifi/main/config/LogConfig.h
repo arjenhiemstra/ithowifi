@@ -17,6 +17,7 @@ public:
     char logserver[64];
     uint16_t logport;
     char logref[64];
+    uint8_t webserial_active;
     char config_struct_version[4];
 
     mutable bool configLoaded;

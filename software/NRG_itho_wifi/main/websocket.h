@@ -13,5 +13,10 @@
 #include "config/SystemConfig.h"
 #include "config/WifiConfig.h"
 
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
+#else
+#include <MycilaWebSerial.h>
+#endif
+
 void websocketInit();
 void jsonWsSend(const char *rootName);

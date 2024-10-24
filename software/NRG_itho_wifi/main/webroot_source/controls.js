@@ -493,6 +493,7 @@ $(document).ready(function () {
           loglevel: $('#loglevel').val(),
           syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
           esplog_active: $('input[name=\'option-esplog_active\']:checked').val(),
+          webserial_active: $('input[name=\'option-webserial_active\']:checked').val(),
           logserver: $('#logserver').val(),
           logport: $('#logport').val(),
           logref: $('#logref').val()
@@ -3247,6 +3248,13 @@ var html_syslog = `
                 onchange='radio("esplog_active", 1)' value="1"> on
             <input id="option-esplog_active-0" type="radio" name="option-esplog_active"
                 onchange='radio("esplog_active", 0)' value="0"> off
+        </div>
+        <div class="pure-control-group">
+            <label for="option-webserial_active" class="pure-radio">Webserial active (reboot needed)</label>
+            <input id="option-webserial_active-1" type="radio" name="option-webserial_active"
+                onchange='radio("webserial_active", 1)' value="1"> on
+            <input id="option-webserial_active-0" type="radio" name="option-webserial_active"
+                onchange='radio("webserial_active", 0)' value="0"> off
         </div>
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">

@@ -316,6 +316,11 @@ void syslog_queue_worker()
     {
       syslog.log(input.code, input.msg.c_str());
     }
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      WebSerial.print(input.msg.c_str());
+    }    
+    
 
     // Also update webinterface
     // JsonDocument root;

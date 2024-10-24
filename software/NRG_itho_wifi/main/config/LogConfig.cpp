@@ -19,6 +19,7 @@ LogConfig::LogConfig()
     logport = 514;
     strlcpy(logref, "nrgitho", sizeof(logref));
     strlcpy(config_struct_version, LOG_CONFIG_VERSION, sizeof(config_struct_version));
+    webserial_active = 0;
 
     configLoaded = false;
 
@@ -38,15 +39,20 @@ bool LogConfig::set(JsonObject obj)
         updated = true;
         loglevel = obj["loglevel"];
     }
+    if (!obj["syslog_active"].isNull())
+    {
+        updated = true;
+        syslog_active = obj["syslog_active"];
+    }
     if (!obj["esplog_active"].isNull())
     {
         updated = true;
         esplog_active = obj["esplog_active"];
     }
-    if (!obj["syslog_active"].isNull())
+    if (!obj["webserial_active"].isNull())
     {
         updated = true;
-        syslog_active = obj["syslog_active"];
+        webserial_active = obj["webserial_active"];
     }
     if (!obj["logserver"].isNull())
     {
@@ -71,6 +77,7 @@ void LogConfig::get(JsonObject obj) const
     obj["loglevel"] = loglevel;
     obj["syslog_active"] = syslog_active;
     obj["esplog_active"] = esplog_active;
+    obj["webserial_active"] = webserial_active;
     obj["logserver"] = logserver;
     obj["logport"] = logport;
     obj["logref"] = logref;
