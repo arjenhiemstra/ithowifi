@@ -14,7 +14,9 @@ enum { MG_FS_READ = 1, MG_FS_WRITE = 2, MG_FS_DIR = 4 };
 // stat(), write(), read() calls.
 struct mg_fs {
   int (*st)(const char *path, size_t *size, time_t *mtime);  // stat file
-  void (*ls)(const char *path, void (*fn)(const char *, void *), void *);
+  void (*ls)(const char *path, void (*fn)(const char *, void *),
+             void *);  // List directory entries: call fn(file_name, fn_data)
+                       // for each directory entry
   void *(*op)(const char *path, int flags);             // Open file
   void (*cl)(void *fd);                                 // Close file
   size_t (*rd)(void *fd, void *buf, size_t len);        // Read file
@@ -37,7 +39,8 @@ struct mg_fd {
 
 struct mg_fd *mg_fs_open(struct mg_fs *fs, const char *path, int flags);
 void mg_fs_close(struct mg_fd *fd);
-char *mg_file_read(struct mg_fs *fs, const char *path, size_t *size);
+bool mg_fs_ls(struct mg_fs *fs, const char *path, char *buf, size_t len);
+struct mg_str mg_file_read(struct mg_fs *fs, const char *path);
 bool mg_file_write(struct mg_fs *fs, const char *path, const void *, size_t);
 bool mg_file_printf(struct mg_fs *fs, const char *path, const char *fmt, ...);
 

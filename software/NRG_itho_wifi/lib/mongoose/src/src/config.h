@@ -110,19 +110,15 @@
 #endif
 
 #ifndef MG_SOCK_LISTEN_BACKLOG_SIZE
-#define MG_SOCK_LISTEN_BACKLOG_SIZE 3
+#define MG_SOCK_LISTEN_BACKLOG_SIZE 128
 #endif
 
 #ifndef MG_DIRSEP
 #define MG_DIRSEP '/'
 #endif
 
-#ifndef MG_ENABLE_FILE
-#if defined(FOPEN_MAX)
-#define MG_ENABLE_FILE 1
-#else
-#define MG_ENABLE_FILE 0
-#endif
+#ifndef MG_ENABLE_POSIX_FS
+#define MG_ENABLE_POSIX_FS 0
 #endif
 
 #ifndef MG_INVALID_SOCKET
@@ -152,4 +148,32 @@
 #else
 #define MG_EPOLL_ADD(c)
 #define MG_EPOLL_MOD(c, wr)
+#endif
+
+#ifndef MG_ENABLE_PROFILE
+#define MG_ENABLE_PROFILE 0
+#endif
+
+#ifndef MG_ENABLE_TCPIP_DRIVER_INIT    // mg_mgr_init() will also initialize
+#define MG_ENABLE_TCPIP_DRIVER_INIT 1  // enabled built-in driver for
+#endif                                 // Mongoose built-in network stack
+
+#ifndef MG_TCPIP_IP                      // e.g. MG_IPV4(192, 168, 0, 223)
+#define MG_TCPIP_IP MG_IPV4(0, 0, 0, 0)  // Default is 0.0.0.0 (DHCP)
+#endif
+
+#ifndef MG_TCPIP_MASK
+#define MG_TCPIP_MASK MG_IPV4(0, 0, 0, 0)  // Default is 0.0.0.0 (DHCP)
+#endif
+
+#ifndef MG_TCPIP_GW
+#define MG_TCPIP_GW MG_IPV4(0, 0, 0, 0)  // Default is 0.0.0.0 (DHCP)
+#endif
+
+#ifndef MG_SET_MAC_ADDRESS
+#define MG_SET_MAC_ADDRESS(mac)
+#endif
+
+#ifndef MG_ENABLE_TCPIP_PRINT_DEBUG_STATS
+#define MG_ENABLE_TCPIP_PRINT_DEBUG_STATS 0
 #endif

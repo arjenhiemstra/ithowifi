@@ -17,9 +17,9 @@ static int mg_mbed_rng(void *ctx, unsigned char *buf, size_t len) {
 
 static bool mg_load_cert(struct mg_str str, mbedtls_x509_crt *p) {
   int rc;
-  if (str.ptr == NULL || str.ptr[0] == '\0' || str.ptr[0] == '*') return true;
-  if (str.ptr[0] == '-') str.len++;  // PEM, include trailing NUL
-  if ((rc = mbedtls_x509_crt_parse(p, (uint8_t *) str.ptr, str.len)) != 0) {
+  if (str.buf == NULL || str.buf[0] == '\0' || str.buf[0] == '*') return true;
+  if (str.buf[0] == '-') str.len++;  // PEM, include trailing NUL
+  if ((rc = mbedtls_x509_crt_parse(p, (uint8_t *) str.buf, str.len)) != 0) {
     MG_ERROR(("cert err %#x", -rc));
     return false;
   }
@@ -28,9 +28,9 @@ static bool mg_load_cert(struct mg_str str, mbedtls_x509_crt *p) {
 
 static bool mg_load_key(struct mg_str str, mbedtls_pk_context *p) {
   int rc;
-  if (str.ptr == NULL || str.ptr[0] == '\0' || str.ptr[0] == '*') return true;
-  if (str.ptr[0] == '-') str.len++;  // PEM, include trailing NUL
-  if ((rc = mbedtls_pk_parse_key(p, (uint8_t *) str.ptr, str.len, NULL,
+  if (str.buf == NULL || str.buf[0] == '\0' || str.buf[0] == '*') return true;
+  if (str.buf[0] == '-') str.len++;  // PEM, include trailing NUL
+  if ((rc = mbedtls_pk_parse_key(p, (uint8_t *) str.buf, str.len, NULL,
                                  0 MG_MBEDTLS_RNG_GET)) != 0) {
     MG_ERROR(("key err %#x", -rc));
     return false;
@@ -104,6 +104,11 @@ void mg_tls_init(struct mg_connection *c, const struct mg_tls_opts *opts) {
   }
   if (c->is_listening) goto fail;
   MG_DEBUG(("%lu Setting TLS", c->id));
+  MG_PROF_ADD(c, "mbedtls_init_start");
+#if defined(MBEDTLS_VERSION_NUMBER) && MBEDTLS_VERSION_NUMBER >= 0x03000000 && \
+    defined(MBEDTLS_PSA_CRYPTO_C)
+  psa_crypto_init();  // https://github.com/Mbed-TLS/mbedtls/issues/9072#issuecomment-2084845711
+#endif
   mbedtls_ssl_init(&tls->ssl);
   mbedtls_ssl_config_init(&tls->conf);
   mbedtls_x509_crt_init(&tls->ca);
@@ -122,13 +127,15 @@ void mg_tls_init(struct mg_connection *c, const struct mg_tls_opts *opts) {
   }
   mbedtls_ssl_conf_rng(&tls->conf, mg_mbed_rng, c);
 
-  if (opts->ca.len == 0 || mg_vcmp(&opts->ca, "*") == 0) {
+  if (opts->ca.len == 0 || mg_strcmp(opts->ca, mg_str("*")) == 0) {
+    // NOTE: MBEDTLS_SSL_VERIFY_NONE is not supported for TLS1.3 on client side
+    // See https://github.com/Mbed-TLS/mbedtls/issues/7075
     mbedtls_ssl_conf_authmode(&tls->conf, MBEDTLS_SSL_VERIFY_NONE);
   } else {
     if (mg_load_cert(opts->ca, &tls->ca) == false) goto fail;
     mbedtls_ssl_conf_ca_chain(&tls->conf, &tls->ca, NULL);
-    if (c->is_client && opts->name.ptr != NULL && opts->name.ptr[0] != '\0') {
-      char *host = mg_mprintf("%.*s", opts->name.len, opts->name.ptr);
+    if (c->is_client && opts->name.buf != NULL && opts->name.buf[0] != '\0') {
+      char *host = mg_mprintf("%.*s", opts->name.len, opts->name.buf);
       mbedtls_ssl_set_hostname(&tls->ssl, host);
       MG_DEBUG(("%lu hostname verification: %s", c->id, host));
       free(host);
@@ -156,6 +163,7 @@ void mg_tls_init(struct mg_connection *c, const struct mg_tls_opts *opts) {
   c->is_tls = 1;
   c->is_tls_hs = 1;
   mbedtls_ssl_set_bio(&tls->ssl, c, mg_net_send, mg_net_recv, 0);
+  MG_PROF_ADD(c, "mbedtls_init_end");
   if (c->is_client && c->is_resolving == 0 && c->is_connecting == 0) {
     mg_tls_handshake(c);
   }
@@ -174,6 +182,11 @@ long mg_tls_recv(struct mg_connection *c, void *buf, size_t len) {
   long n = mbedtls_ssl_read(&tls->ssl, (unsigned char *) buf, len);
   if (n == MBEDTLS_ERR_SSL_WANT_READ || n == MBEDTLS_ERR_SSL_WANT_WRITE)
     return MG_IO_WAIT;
+#if defined(MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET)
+  if (n == MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET) {
+    return MG_IO_WAIT;
+  }
+#endif
   if (n <= 0) return MG_IO_ERR;
   return n;
 }
