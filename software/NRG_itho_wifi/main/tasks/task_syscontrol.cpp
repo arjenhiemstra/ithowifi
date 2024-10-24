@@ -236,7 +236,7 @@ void execSystemControlTasks()
 
     if (writeIthoVal(speed, &ithoCurrentVal, &updateIthoMQTT))
     {
-      if (lastCmd.source == nullptr)
+      if (strcmp(lastCmd.source, "") == 0)
         logLastCommand(buf, "ithoQueue");
       sysStatReq = true;
     }
