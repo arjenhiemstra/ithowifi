@@ -37,7 +37,7 @@ uint8_t getIthoStatusJSON(JsonObject root)
     root["ppmw"] = static_cast<int>(ppmw + 0.5);
     index++;
   }
-  if (systemConfig.fw_check && fw_update_available >= 0)
+  if (systemConfig.fw_check && fw_update_available > 0)
   {
     root["firmware_update_available"] = fw_update_available ? "true" : "false";
     index++;
@@ -529,4 +529,61 @@ double round(float value, int precision)
 {
   double pow10 = pow(10.0, precision);
   return static_cast<int>(value * pow10 + 0.5) / pow10;
+}
+
+char toHex(uint8_t c)
+{
+  return c < 10 ? c + '0' : c + 'A' - 10;
+}
+
+// Function to convert a hex string to an integer
+int hexStringToInt(const std::string &hexStr) // throw(std::invalid_argument)
+{
+  int result = 0;
+  for (char c : hexStr)
+  {
+    result *= 16;
+    if (c >= '0' && c <= '9')
+    {
+      result += (c - '0');
+    }
+    else if (c >= 'A' && c <= 'F')
+    {
+      result += (c - 'A' + 10);
+    }
+    else if (c >= 'a' && c <= 'f')
+    {
+      result += (c - 'a' + 10);
+    }
+    // else
+    // {
+    //   throw std::invalid_argument("Invalid character in hex string: " + hexStr);
+    // }
+  }
+  return result;
+}
+
+// Function to parse the comma-separated hex string ie "3A,D1,F1"
+std::vector<int> parseHexString(const std::string &input) // throw(std::invalid_argument)
+{
+  std::vector<int> result;
+  size_t start = 0;
+  size_t end = input.find(',');
+
+  while (end != std::string::npos)
+  {
+    std::string hexStr = input.substr(start, end - start);
+
+    // Convert hex string to integer and add to the result vector
+    result.push_back(hexStringToInt(hexStr));
+
+    start = end + 1;
+    end = input.find(',', start);
+  }
+
+  // Add the last hex value
+  std::string hexStr = input.substr(start);
+  result.push_back(hexStringToInt(hexStr));
+
+  return result;
 }

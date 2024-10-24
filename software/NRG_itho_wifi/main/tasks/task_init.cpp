@@ -40,6 +40,8 @@ void TaskInit(void *pvParameters)
   esp_task_wdt_init(60, true);
 #endif
 
+  I_LOG("Setup: done");
+  forceFWcheck = true;
   vTaskDelete(NULL);
 }
 

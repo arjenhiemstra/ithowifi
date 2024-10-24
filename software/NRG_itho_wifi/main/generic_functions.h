@@ -44,3 +44,5 @@ void updateItho();
 void add2queue();
 void setRFdebugLevel(uint16_t level);
 double round(float value, int precision);
+char toHex(uint8_t c);
+std::vector<int> parseHexString(const std::string &input);

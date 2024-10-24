@@ -26,6 +26,7 @@ bool wifiSTAconnected = false;
 bool wifiSTAconnecting = false;
 bool reset_sht_sensor = false;
 bool restest = false;
+bool forceFWcheck = false;
 int fw_update_available = -1;
 bool i2c_safe_guard_log = true;
 unsigned long getFWupdateInfo = 0;
@@ -351,6 +352,11 @@ void execSystemControlTasks()
     sysStatReq = true;
     N_LOG("SHT3x sensor reset: executed");
     jsonSysmessage("i2c_sht_reset", "Done");
+  }
+  if (forceFWcheck)
+  {
+    forceFWcheck = false;
+    check_firmware_update();
   }
   if (WiFi.status() == WL_CONNECTED && systemConfig.fw_check && (millis() - getFWupdateInfo > 24 * 60 * 60 * 1000)) // 24hr
   {
@@ -1213,34 +1219,36 @@ int compareVersions(const std::string &v1, const std::string &v2)
 
 void check_firmware_update()
 {
-  // WiFiClientSecure *client = new WiFiClientSecure;
-  // if (client)
-  // {
-  //   client->setInsecure(); // set secure client without certificate
 
-  //   HTTPClient https;
+  WiFiClientSecure *secclient = new WiFiClientSecure;
+  if (secclient)
+  {
+    secclient->setInsecure(); // set secure client without certificate
 
-  //   if (https.begin(*client, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
-  //   { // HTTPS
-  //     int httpCode = https.GET();
-  //     if (httpCode > 0)
-  //     {
-  //       if (httpCode == HTTP_CODE_OK && https.getSize() < MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
-  //       {
-  //         String payloadString = https.getString().c_str();
-  //         const char *payload = payloadString.c_str();
+    HTTPClient https;
 
-  //         JsonDocument root;
-  //         DeserializationError error = deserializeJson(root, payload);
-  //         if (!error)
-  //         {
-  //           const char *fwver = root["hw_rev"][hw_revision]["latest_fw"] | "error";
-  //           fw_update_available = compareVersions(fwver, FWVERSION);
-  //           D_LOG("fw_update_available:%d", fw_update_available);
-  //         }
-  //       }
-  //     }
-  //     https.end();
-  //   }
-  // }
+    if (https.begin(*secclient, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
+    { // HTTPS
+      int httpCode = https.GET();
+      if (httpCode > 0)
+      {
+        if (httpCode == HTTP_CODE_OK && https.getSize() < MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
+        {
+          String payloadString = https.getString().c_str();
+          const char *payload = payloadString.c_str();
+
+          JsonDocument root;
+          DeserializationError error = deserializeJson(root, payload);
+          if (!error)
+          {
+            const char *fwver = root["hw_rev"][hw_revision]["latest_fw"] | "error";
+            fw_update_available = compareVersions(fwver, FWVERSION);
+            // 1: newer version available online, 0: no new version available, -1: current version is newer than online version
+            D_LOG("fw_update_available:%d", fw_update_available);
+          }
+        }
+      }
+      https.end();
+    }
+  }
 }
