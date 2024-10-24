@@ -32,6 +32,7 @@ static const std::map<uint8_t, const char *> fanInfo = {
     {0X16, "absolute minimum"},
     {0X17, "absolute maximum"},
     {0x18, "auto"},
+    {0x19, "autonight"},
     {0xFF, "unknown"}};
 
 const std::map<uint8_t, const char *> fanSensorErrors = {
