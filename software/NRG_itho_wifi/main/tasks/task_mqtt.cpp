@@ -751,6 +751,50 @@ void HADiscoveryHumidity()
   sendHADiscovery(root, s);
 }
 
+/*
+Auto discovery of Itho Status items by configuring an JSON array
+
+The basic syntax of this array is as follows:
+[{},{}]
+
+Each Status Item to auto discover by HA needs to be represented by an object in the array containing at least either the index of a status item or the label name.
+ie. {"index":3} or {"label":"BypassPos (%)"}
+Both can be found on the itho status page of the web interface.
+
+Details send to HA for auto discovery can be enriched by adding keys to the object. These keys can be the abbriviated or full length versions of supported auto discovery keys, equal to the HA implementation, see "Supported abbreviations" on: https://www.home-assistant.io/integrations/mqtt/
+for details.
+
+The following keys are supported (all are optional):
+"device_class" : set the sensor type, ie.: motion, temperature, humidity
+"name" : name to be displayed for the sensor in HA, if not defined this defaults to <label name>
+"value_template" : Value template to use, if not defined this defaults to "{{ value_json['<label name>'] }}"
+"unit_of_measurement" : ie. %, °C etc
+
+There is one special key:
+"reset" : this sends and empty object as HA auto discovery if the value is set to 1, removing prior auto discovery config from HA. This can be used to remove or reset a discovered item in HA.
+
+usage example:
+
+[
+    {
+        "index": 3,
+        "reset": 1
+    },
+    {
+        "label": "FanInfo"
+    },
+    {
+        "index": 4
+    },
+    {
+        "index": 10,
+        "name": "vochtsensor",
+        "unit_of_meas": "%",
+        "device_class": "humidity"
+    }
+]
+
+*/
 void HADiscoveryIthoStatusItems()
 {
   if (!itho_status_ready())
@@ -803,44 +847,63 @@ void HADiscoveryIthoStatusItems()
             continue;
           }
           index_present = true;
-          snprintf(sensortopic, sizeof(sensortopic), "%s/sensor/%s/sensor_index_%d/config", static_cast<const char *>(systemConfig.mqtt_ha_topic), hostName(), index);
+        }
+        else if (strcmp(p.key().c_str(), "label") == 0)
+        {
+          // find index based on label
+          JsonObject::iterator it = statusitemsdoc.as<JsonObject>().begin();
+
+          for (int i = 0; i < count; i++)
+          {
+            if (strcmp(p.value().as<const char *>(), it->key().c_str()) == 0)
+            {
+              index_present = true;
+              index = i;
+              break;
+            }
+            ++it;
+          }
         }
       }
       if (!index_present)
       {
-        E_LOG("HA AutoDiscovery config error; key index not present", index);
+        E_LOG("HA AutoDiscovery config error; key index not present");
         continue;
       }
+
+      snprintf(sensortopic, sizeof(sensortopic), "%s/sensor/%s/sensor_index_%d/config", static_cast<const char *>(systemConfig.mqtt_ha_topic), hostName(), index);
+
+      root["avty_t"] = static_cast<const char *>(lwttopic); // availability_topic
+
+      snprintf(s, sizeof(s), "%s_sensor_index_%d", hostName(), index);
+      root["uniq_id"] = s; // unique_id
 
       for (JsonPair p : item)
       {
 
-        root["avty_t"] = static_cast<const char *>(lwttopic); // availability_topic
         if (strcmp(p.key().c_str(), "dev_cla") == 0 || strcmp(p.key().c_str(), "device_class") == 0)
         {
           root["dev_cla"] = p.value().as<const char *>(); // device_class
         }
-        snprintf(s, sizeof(s), "%s_sensor_index_%d", hostName(), index);
-        root["uniq_id"] = s; // unique_id
-        if (strcmp(p.key().c_str(), "name") == 0)
+        else if (strcmp(p.key().c_str(), "name") == 0)
         {
           root["name"] = p.value().as<const char *>(); // name
           name_present = true;
         }
-        if (strcmp(p.key().c_str(), "stat_cla") == 0 || strcmp(p.key().c_str(), "state_class") == 0)
+        else if (strcmp(p.key().c_str(), "stat_cla") == 0 || strcmp(p.key().c_str(), "state_class") == 0)
         {
           root["stat_cla"] = p.value().as<const char *>(); // state_class
         }
-        if ((strcmp(p.key().c_str(), "val_tpl") == 0 || strcmp(p.key().c_str(), "value_template") == 0) && strcmp(p.value().as<const char *>(), "") != 0)
+        else if ((strcmp(p.key().c_str(), "val_tpl") == 0 || strcmp(p.key().c_str(), "value_template") == 0) && strcmp(p.value().as<const char *>(), "") != 0)
         {
           root["val_tpl"] = p.value().as<const char *>();
           val_tpl_present = true;
         }
-        if (strcmp(p.key().c_str(), "unit_of_meas") == 0 || strcmp(p.key().c_str(), "unit_of_measurement") == 0)
+        else if (strcmp(p.key().c_str(), "unit_of_meas") == 0 || strcmp(p.key().c_str(), "unit_of_measurement") == 0)
         {
-          root["unit_of_meas"] = p.value().as<const char *>(); // name
+          root["unit_of_meas"] = p.value().as<const char *>(); // unit_of_measurement
         }
-        if (strcmp(p.key().c_str(), "reset") == 0)
+        else if (strcmp(p.key().c_str(), "reset") == 0)
         {
           if (p.value().as<uint8_t>() == 1)
           {
@@ -914,7 +977,7 @@ void sendHADiscovery(JsonObject obj, const char *topic)
   }
   else
   {
-    E_LOG("MQTT: Failed to start building message (HA discovery)");
+    E_LOG("MQTT: Failed to start building message (HA discovery) topic[%s] size [%d]", topic, payloadSize);
   }
 
   // reset buffer
