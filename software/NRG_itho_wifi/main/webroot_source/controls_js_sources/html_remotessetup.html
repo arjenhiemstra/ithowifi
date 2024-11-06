@@ -31,12 +31,17 @@
       <input id="module_rf_id_str" maxlength="8" type="text">
       <button id="update_rf_id" onclick="update_rf_setup()" class="pure-button button-secondary">Update</button>
     </div>
+    <div class="pure-control-group">
+      <label for="itho_numrfrem">Number of RF remotes</label>
+      <input id="itho_numrfrem" type="number" min="1" max="12" size="6">
+    <button id="update_num_rf" onclick="update_rf_setup()" class="pure-button button-secondary">Update</button>
+    </div>    
   </fieldset>
   <fieldset>
     <br>
     <legend><br>RF remotes:</legend>
     <br>
-    <table id="RemotesTable" class="pure-table pure-table-bordered" style="text-align: center; white-space:nowrap;">
+    <table id="RemotesTable" class="pure-table pure-table-bordered" style="text-align: center;">
     </table>
     <div class="pure-control-group">
       <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote"

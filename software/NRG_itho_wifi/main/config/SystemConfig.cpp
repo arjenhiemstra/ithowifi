@@ -41,6 +41,7 @@ SystemConfig::SystemConfig()
   itho_timer2 = 20;
   itho_timer3 = 30;
   itho_numvrem = 1;
+  itho_numrfrem = 10;
   itho_updatefreq = 60;
   itho_counter_updatefreq = 3600;
   itho_sendjoin = 0;
@@ -273,6 +274,11 @@ bool SystemConfig::set(JsonObject obj)
     updated = true;
     itho_numvrem = obj["itho_numvrem"];
   }
+  if (!obj["itho_numrfrem"].isNull())
+  {
+    updated = true;
+    itho_numrfrem = obj["itho_numrfrem"];
+  }
   if (!obj["itho_sendjoin"].isNull())
   {
     updated = true;
@@ -390,6 +396,7 @@ void SystemConfig::get(JsonObject obj) const
     obj["itho_updatefreq"] = itho_updatefreq;
     obj["itho_counter_updatefreq"] = itho_counter_updatefreq;
     obj["itho_numvrem"] = itho_numvrem;
+    obj["itho_numrfrem"] = itho_numrfrem;
     obj["itho_sendjoin"] = itho_sendjoin;
     obj["itho_pwm2i2c"] = itho_pwm2i2c;
     obj["itho_31da"] = itho_31da;
@@ -439,6 +446,7 @@ void SystemConfig::get(JsonObject obj) const
     char module_rf_id_str[9];
     snprintf(module_rf_id_str, sizeof(module_rf_id_str), "%02X,%02X,%02X", module_rf_id[0], module_rf_id[1], module_rf_id[2]);
     obj["module_rf_id_str"] = module_rf_id_str;
+    obj["itho_numrfrem"] = itho_numrfrem;
   }
   if (complete || get_itho_settings)
   {

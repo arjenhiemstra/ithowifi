@@ -1,6 +1,6 @@
 #pragma once
 
-#define MAX_NUMBER_OF_REMOTES 12
+// #define MAX_NUM_OF_REMOTES 12
 #define REMOTE_CONFIG_VERSION "002"
 
 #include <cstdio>
@@ -38,7 +38,7 @@ private:
     void get(JsonObject, RemoteFunctions instanceFunc, int index) const;
   };
   RemoteFunctions instanceFunc{RemoteFunctions::UNSETFUNC};
-  Remote remotes[MAX_NUMBER_OF_REMOTES];
+  Remote remotes[MAX_NUM_OF_REMOTES];
   int remoteCount{0};
   int maxRemotes{MAX_NUM_OF_REMOTES};
   mutable bool llMode = false;
@@ -77,6 +77,7 @@ public:
   };
   int activeRemote{-1};
   int setMaxRemotes(unsigned int number) { return (maxRemotes < MAX_NUMBER_OF_REMOTES + 1) ? (maxRemotes = number) : (maxRemotes = MAX_NUMBER_OF_REMOTES); };
+  int setMaxRemotes(unsigned int number) { return (maxRemotes < MAX_NUM_OF_REMOTES + 1) ? (maxRemotes = number) : (maxRemotes = MAX_NUM_OF_REMOTES); };
   int getMaxRemotes() { return maxRemotes; };
   int registerNewRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2, const RemoteTypes remtype);
   int removeRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2);
