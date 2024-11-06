@@ -566,6 +566,13 @@ $(document).ready(function () {
         alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
       }
     }
+    else if ($(this).attr('id') == 'update_num_rf') {
+      websock_send(JSON.stringify({
+        systemsettings: {
+          itho_numrfrem: $('#itho_numrfrem').val()
+        }
+      }));
+    }
     else if ($(this).attr('id') == 'itho_copyid_vremote') {
       var i = $('input[name=\'optionsRemotes\']:checked').val();
       if (i == null) {

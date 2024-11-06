@@ -16,7 +16,7 @@ IthoRemote::IthoRemote(RemoteFunctions initFunc)
   instanceFunc = initFunc;
   strlcpy(config_struct_version, REMOTE_CONFIG_VERSION, sizeof(config_struct_version));
 
-  for (uint8_t i = 0; i < MAX_NUMBER_OF_REMOTES; i++)
+  for (uint8_t i = 0; i < MAX_NUM_OF_REMOTES; i++)
   {
     snprintf(remotes[i].name, sizeof(remotes[i].name), "remote%d", i);
   }
@@ -84,14 +84,6 @@ int IthoRemote::registerNewRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2, c
   if (checkID(byte0, byte1, byte2))
   {
     return -1; // remote already registered
-  }
-  if (activeRemote != -1 && activeRemote < maxRemotes)
-  {
-    remotes[activeRemote].ID[0] = byte0;
-    remotes[activeRemote].ID[1] = byte1;
-    remotes[activeRemote].ID[2] = byte2;
-    remotes[activeRemote].remtype = remtype;
-    return 1;
   }
   if (remoteCount >= maxRemotes - 1)
   {
