@@ -9,6 +9,7 @@
 #define STACK_SIZE 4096
 #define STACK_SIZE_MEDIUM 6144
 #define STACK_SIZE_LARGE 8192
+#define STACK_SIZE_XLARGE 16384
 
 #if defined(ESP32)
 #else
@@ -46,7 +47,7 @@ extern const char *non_cve1;
 extern const char *hw_revision;
 
 extern WiFiClientSecure client;
-//extern WiFiClient client;
+extern WiFiClient defaultclient;
 
 extern IthoCC1101 rf;
 extern IthoPacket packet;
