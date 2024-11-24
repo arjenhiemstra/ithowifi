@@ -3,10 +3,16 @@
 </div>
 <p>Be very careful, use only if absolutely necessary!</p>
 <p>To activate a changed config file; go to the reset page, check the 'Don't save config' checkbox and reboot.</p><br>
-<iframe id="editor" src="/edit" width="100%" height="100%" style="border:none;padding:5px"></iframe>
+<iframe id="editor" width="100%" height="100%" style="border:none;padding:5px" srcdoc="<p>Loading...</p>"></iframe>
 <script>
   $(document).ready(function () {
     $('#main').css('max-width', '1200px');
-    $('#editor').height(500);
+    setTimeout(function () {
+      var iframe = document.getElementById('editor');
+      iframe.style.height = '500px';
+      iframe.removeAttribute('srcdoc');
+      iframe.src = '/edit.html';
+    }, 500);
+
   });
 </script>
