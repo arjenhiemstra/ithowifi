@@ -480,11 +480,97 @@ uint8_t checksum(const uint8_t *buf, size_t buflen)
 void sendI2CPWMinit()
 {
 
-  uint8_t command[] = {0x82, 0xEF, 0xC0, 0x00, 0x01, 0x06, 0x00, 0x00, 0x09, 0x00, 0x09, 0x00, 0xB6};
+  // uint8_t command[] = {0x82, 0xEF, 0xC0, 0x00, 0x01, 0x06, 0x00, 0x00, 0x09, 0x00, 0x09, 0x00, 0xB6};
+  // 82 EF CO 00 01 06 00 00 13 00 13 00 A2
+  uint8_t command[] = {0x82, 0xEF, 0xC0, 0x00, 0x01, 0x06, 0x00, 0x00, 0x13, 0x00, 0x13, 0x00, 0xB6};
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
   i2c_sendBytes(command, sizeof(command), I2C_CMD_PWM_INIT);
+}
+
+// init 82 EF CO 00 01 06 00 00 13 00 13 00 A2
+void sendCO2init()
+{
+  uint8_t command[] = {0x82, 0xEF, 0xC0, 0x00, 0x01, 0x06, 0x00, 0x00, 0x13, 0x00, 0x13, 0x00, 0xA2};
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+  i2c_sendBytes(command, sizeof(command), I2C_CMD_CO2_INIT);
+}
+
+void sendCO2query(bool updateweb)
+{
+  uint8_t command[] = {0x82, 0xEF, 0xC0, 0x00, 0x01, 0x06, 0x00, 0x00, 0x13, 0x00, 0x13, 0x00, 0xA2};
+  uint8_t i2cbuf[512]{};
+
+  size_t result = send_i2c_query(command, sizeof(command), i2cbuf, I2C_CMD_QUERY_DEVICE_TYPE);
+  if (!result)
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("sendCO2init", "failed");
+    }
+
+    return;
+  }
+  else
+  {
+    if (updateweb)
+    {
+      updateweb = false;
+      jsonSysmessage("sendCO2init", i2cbuf2string(i2cbuf, result).c_str());
+    }
+  }
+}
+
+// 60 B1 E0 01 03 00 66 02 A3
+
+void sendCO2speed(uint8_t speed1, uint8_t speed2)
+{
+  //                    0     1     2     3     4     5     6     7     8     9     10    11    12    13    14    15    16    17    18   19    20    21
+  uint8_t command[] = {0x82, 0xC1, 0x00, 0x01, 0x10, 0x14, 0x51, 0x13, 0x2D, 0x31, 0xE0, 0x08, 0x00, 0x00, 0xFF, 0x01, 0x01, 0x00, 0xFF, 0x01, 0xFF, 0xAC};
+  //                   0x82, 0xC1, 0x00, 0x01, 0x10, 0x14, 0x51, 0x13, 0x2D, 0x31, 0xE0, 0x08, 0x00, 0x00, 0x12, 0x01, 0x01, 0x00, 0x0A, 0x01, 0x23, 0xAC
+  command[14] = speed1;
+  command[18] = speed2;
+
+  // calculate chk2 val
+  uint8_t i2c_command_tmp[32] = {0};
+  // command[11] == 9;
+
+  uint8_t i2c_command_startpos = 5;
+  uint8_t i2c_command_endpos = sizeof(command) - 2;
+
+  for (int i = i2c_command_startpos; i < i2c_command_endpos; i++)
+  {
+    i2c_command_tmp[(i - i2c_command_startpos)] = command[i];
+  }
+  command[sizeof(command) - 2] = checksum(i2c_command_tmp, i2c_command_endpos - i2c_command_startpos); // FIXME: check set correct byte, last or second last?
+
+  for (int i = 0; i < sizeof(command); i++)
+  {
+    D_LOG("0x%02X, ", command[i]);
+  }
+
+  i2c_sendBytes(command, sizeof(command), I2C_CMD_CO2_CMD);
+}
+void sendCO2value(uint16_t value)
+{
+  //                    0     1     2     3     4     5     6     7
+  uint8_t command[] = {0x60, 0x92, 0x98, 0x01, 0x02, 0xFF, 0xFF, 0xFF};
+  //                  {0x60, 0x92, 0x98, 0x01, 0x02, 0x03, 0x25, 0x4B}; 805ppm
+  command[5] = value >> 8;
+  command[6] = value & 0xFF;
+
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+
+  D_LOG("sendCO2value:%d", value);
+  for (int i = 0; i < sizeof(command); i++)
+  {
+    D_LOG("0x%02X, ", command[i]);
+  }
+
+  i2c_sendBytes(command, sizeof(command), I2C_CMD_CO2_CMD);
 }
 
 uint8_t cmdCounter = 0;

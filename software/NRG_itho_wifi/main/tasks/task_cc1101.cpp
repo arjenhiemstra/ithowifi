@@ -15,6 +15,8 @@ bool fault31D9 = false;
 bool frost31D9 = false;
 bool filter31D9 = false;
 bool send31DA = false;
+bool sendJoinReply = false;
+bool send10E0 = false;
 uint8_t faninfo31DA{0};
 uint8_t timer31DA{0};
 
@@ -24,6 +26,7 @@ StackType_t xTaskCC1101Stack[STACK_SIZE];
 
 // Ticker LogMessage;
 Ticker timerLearnLeaveMode;
+Ticker rf_message;
 
 volatile bool ithoCheck = false;
 SemaphoreHandle_t isrSemaphore = NULL;
@@ -126,9 +129,11 @@ void RFDebug(IthoPacket *packet)
     strncat(debugLog, " (cmd:ithodeviceinfo)", sizeof(debugLog) - strlen(debugLog) - 1);
     break;
   }
+  // strncat(debugLog, "\n", sizeof(debugLog) - strlen(debugLog) - 1);
+
   D_LOG(debugLog);
   //  LogMessage.once_ms(150, []() {
-  logMessagejson(debugLog, RFLOG);
+  // logMessagejson(debugLog, RFLOG);
   //    } );
 }
 
@@ -170,7 +175,7 @@ void toggleRemoteLLmode(const char *remotetype)
     {
       timerLearnLeaveMode.detach();
       virtualRemotes.setllModeTime(0);
-      virtualRemotes.activeRemote = -1;
+      virtualRemotes.copy_id_remote_idx = -1;
       sysStatReq = true;
     }
   }
@@ -201,6 +206,18 @@ void setllModeTimer()
   }
 }
 
+void set_send10E0_true()
+{
+  send10E0 = true;
+}
+void set_send31D9_true()
+{
+  send31D9 = true;
+}
+void set_send31DA_true()
+{
+  send31DA = true;
+}
 void startTaskCC1101()
 {
   xTaskCC1101Handle = xTaskCreateStaticPinnedToCore(
@@ -256,6 +273,8 @@ void TaskCC1101(void *pvParameters)
       I_LOG("rfsetup: module_rf_id 0x%02X,0x%02X,0x%02X", systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
     }
 
+    remotes.setMaxRemotes(systemConfig.itho_numrfrem);
+
     rf.setDefaultID(systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
     rf.setBindAllowed(false);
     rf.setAllowAll(false);
@@ -269,12 +288,9 @@ void TaskCC1101(void *pvParameters)
     {
       uint8_t id[3]{};
       remotes.getRemoteIDbyIndex(index, &id[0]);
-      rf.updateRFDevice(index, id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteFunction(index) == RemoteFunctions::BIDIRECT ? true : false);
+      rf.updateRFDevice(index, id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteBidirectional(index));
     }
     systemConfig.rfInitOK = true;
-    saveSystemConfigflag = true;
-    bool sendJoinReply = false;
-    bool send10E0 = false;
 
     uint8_t joinReplyRemIndex{255};
     // uint8_t remIndex10E0{255};
@@ -294,23 +310,55 @@ void TaskCC1101(void *pvParameters)
         disableRF_ISR();
         rf.send10E0();
         enableRF_ISR();
-        N_LOG("send10E0 send");
+        D_LOG("send10E0 send");
         rf.setSendTries(3);
+        rf_message.once_ms(100, set_send31D9_true);
       }
       if (sendJoinReply && !ithoCheck)
       {
+        /*
+
+        H:18 _I P0:-- P1:-- 94,11,A9 --,--,-- 94,11,A9 1FC9 12:00,22,F8,94,11,A9,01,10,E0,94,11,A9,00,1F,C9,94,11,A9 (cmd:join)
+        Join command received. Trying to join remote...
+        ?? 13-10-2024, 15:55:59: H:1C _I P0:-- P1:-- 94,11,A9 96,C8,B6 --,--,-- 1FC9 01:00 (cmd:unknown)
+        Send join reply
+        H:2C _W P0:-- P1:-- 96,C8,B6 94,11,A9 --,--,-- 1FC9 0C:00,31,D9,96,C8,B6,00,31,DA,96,C8,B6 (cmd:unknown)
+        receive battery
+        H:18 _I P0:-- P1:-- 94,11,A9 --,--,-- 94,11,A9 1060 03:00,FF,01 (cmd:unknown)
+        H:18 _I P0:-- P1:-- 94,11,A9 --,--,-- 94,11,A9 1060 03:00,FF,01 (cmd:unknown)
+        send 10E0
+        H:18 _I P0:-- P1:-- 96,C8,B6 --,--,-- 96,C8,B6 10E0 26:00,00,01,00,1B,31,19,01,FE,FF,FF,FF,FF,FF,0E,05,07,E2,43,56,45,2D,52,46,00,00,00,00,00,00,00,00,00,00,00,00,00,00 (cmd:unknown)
+        send 31D9
+        H:1A _I P0:02  P1:-- 96,C8,B6 --,--,-- 96,C8,B6 31D9 11:00,06,9A,00,20,20,20,20,20,20,20,20,20,20,20,20,00 (cmd:unknown)
+        send 31D9
+        H:1A _I P0:03  P1:-- 96,C8,B6 --,--,-- 96,C8,B6 31D9 11:00,06,C7,00,20,20,20,20,20,20,20,20,20,20,20,20,00 (cmd:unknown)
+        receive command low
+        H:1C _I P0:-- P1:-- 94,11,A9 96,C8,B6 --,--,-- 22F1 03:00,02,04 (cmd:low)
+        send 31D9
+        H:1A _I P0:04  P1:-- 96,C8,B6 --,--,-- 96,C8,B6 31D9 11:00,06,99,00,20,20,20,20,20,20,20,20,20,20,20,20,00 (cmd:unknown)
+        send 31D9
+        H:1A _I P0:05  P1:-- 96,C8,B6 --,--,-- 96,C8,B6 31D9 11:00,06,1F,00,20,20,20,20,20,20,20,20,20,20,20,20,00 (cmd:unknown)
+        H:18 _I P0:-- P1:-- 96,C8,B6 --,--,-- 96,C8,B6 042F 01:00 (cmd:unknown)
+        H:18 _I P0:-- P1:-- 96,C8,B6 --,--,-- 96,C8,B6 042F 09:00,FF,EA,21,D1,02,01,1B,70 (cmd:unknown)
+        H:18 _I P0:-- P1:-- 96,C8,B6 --,--,-- 96,C8,B6 3120 07:00,70,B0,00,00,E9,FF (cmd:unknown)
+        H:18 _I P0:-- P1:-- 96,C8,B6 --,--,-- 96,C8,B6 10E0 26:00,00,01,00,1B,31,19,01,FE,FF,FF,FF,FF,FF,0E,05,07,E2,43,56,45,2D,52,46,00,00,00,00,00,00,00,00,00,00,00,00,00,00 (cmd:unknown)
+        H:18 _I P0:-- P1:-- 96,C8,B6 --,--,-- 96,C8,B6 04FF FF:18,96,C8,B6,96,C8,B6,04,FF,FF,FF,BE,F7,7F,FF,FF,FF,FF,F7,BD,FB,FB,FF,FF,9F,FF,FB,C6,FF,FF,DF,EE,FF,FF,FB,FF,DF,FF,FF,BF,5F,DF,F7,ED,F3,E7,DD,7F,F7,FB,FE,F7,F7,FF,FF,7D,FF,36,BE,D7,FE,F7,FF,FF,67,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,40,00,00,FD,97,E7,00,00,00,00,00,00,00,00,00,00,C0,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00
+        H:18 _I P0:-- P1:-- 96,C8,B6 --,--,-- 96,C8,B0 0000 0F:FF,EF,FF,FF,7F,FF,FF,F7,FF,D7,DF,FF,BF,F7,FF (cmd:unknown)
+
+        */
         sendJoinReply = false;
         rf.setSendTries(1);
         disableRF_ISR();
         int res = rf.sendJoinReply(joinReplyRemIndex);
         enableRF_ISR();
-        N_LOG("Join reply send, result:%d", res);
+        D_LOG("Join reply send, result:%d", res);
         rf.setSendTries(3);
         joinReplyRemIndex = 255;
+        rf_message.once_ms(100, set_send10E0_true);
       }
       if ((send31D9 || send31D9debug) && !ithoCheck)
       {
-        N_LOG("send31D9");
+        D_LOG("send31D9");
         // 80 82 B1 D9 01 10 86 05 0A 20 20 20 20 20 20 20 20 20 20 20 20 00 4E
         uint8_t command[] = {0x31, 0xD9, 0x11, 0x00, 0x06, 0x00, 0x0A, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00};
 
@@ -348,7 +396,7 @@ void TaskCC1101(void *pvParameters)
       }
       if ((send31DA || send31DAdebug) && !ithoCheck)
       {
-        N_LOG("send31DA");
+        D_LOG("send31DA");
         uint8_t command[] = {0x31, 0xDA, 0x1D, 0x00, 0xC8, 0x40, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0xEF, 0xF8, 0x08, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEF, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF};
 
         if (send31DA)
@@ -378,7 +426,6 @@ void TaskCC1101(void *pvParameters)
 
           command[21] = faninfo31DA;
           command[24] = timer31DA;
-          
         }
 
         rf.setSendTries(1);
@@ -402,6 +449,7 @@ void TaskCC1101(void *pvParameters)
         IthoCommand cmd = rf.getLastCommand(packet);
         RemoteTypes remtype = rf.getLastRemType(packet);
         bool chk = remotes.checkID(*(lastID + 0), *(lastID + 1), *(lastID + 2));
+        // D_LOG("checkID: %d", chk);
         if (debugLevel >= 2)
         {
           if (chk || debugLevel == 3)
@@ -440,18 +488,23 @@ void TaskCC1101(void *pvParameters)
             if (remotes.remoteLearnLeaveStatus())
             {
               int index = remotes.registerNewRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2), remtype);
-              rf.updateRFDevice(index, *(lastID + 0), *(lastID + 1), *(lastID + 2), remotes.getRemoteType(index), remotes.getRemoteFunction(index) == RemoteFunctions::BIDIRECT ? true : false);
+              bool bidirectional = remotes.getRemoteBidirectional(index);
+              // bool bidirectional = (remtype == RemoteTypes::RFTAUTON || remtype == RemoteTypes::RFTN || remtype == RemoteTypes::RFTCO2 || remtype == RemoteTypes::RFTRV || remtype == RemoteTypes::RFTSPIDER) ? ((remotes.getRemoteFunction(index) != RemoteFunctions::MONITOR) ? true : false) : false;
+              // remotes.updateRemoteBidirectional(index, bidirectional);
+              rf.updateRFDevice(index, *(lastID + 0), *(lastID + 1), *(lastID + 2), remotes.getRemoteType(index), bidirectional);
               if (index >= 0)
               {
                 // int rfresult = rf.getRemoteIndexByID(*(lastID + 0), *(lastID + 1), *(lastID + 2));
-                if (remotes.getRemoteFunction(index) == RemoteFunctions::BIDIRECT)
+                if (bidirectional)
                 {
-                  // rf.updateRFDestinationID(sys.getMac(3), sys.getMac(4), sys.getMac(5) - 1, index);
-                  if (index >= 0)
-                  {
-                    joinReplyRemIndex = index;
-                    sendJoinReply = true;
-                  }
+                  // rf.updateSourceID(sys.getMac(3), sys.getMac(4), sys.getMac(5) - 1, index);
+                  // if (index >= 0)
+                  // {
+                  joinReplyRemIndex = index;
+                  //D_LOG("sendJoinReply:true");
+
+                  sendJoinReply = true;
+                  // }
                 }
 
                 saveRemotesflag = true;
@@ -489,9 +542,10 @@ void TaskCC1101(void *pvParameters)
             int index = remotes.remoteIndex(*(lastID + 0), *(lastID + 1), *(lastID + 2));
             remotes.lastRemoteName = remotes.getRemoteNamebyIndex(index);
             RemoteFunctions remfunc = remotes.getRemoteFunction(index);
+            bool bidirect = remotes.getRemoteBidirectional(index);
             if (remfunc != RemoteFunctions::MONITOR)
             {
-              D_LOG("remfunc:%d", remfunc);
+              D_LOG("remfunc:%d, bidirect:%s", remfunc, bidirect ? "yes" : "no");
               if (cmd == IthoLow)
               {
                 ithoExecCommand("low", REMOTE);
@@ -541,15 +595,22 @@ void TaskCC1101(void *pvParameters)
               }
               if (cmd == Itho31D9)
               {
-                send31D9 = true;
+                // send31D9 = true;
               }
               if (cmd == Itho31DA)
               {
-                send31DA = true;
+                // send31DA = true;
               }
               if (cmd == IthoDeviceInfo)
               {
-                send10E0 = true;
+                // send10E0 = true;
+              }
+              if (bidirect && (cmd != IthoJoin && cmd != IthoLeave))
+              { // trigger fan status update if there is a bi-directional remote in the known list of remotes
+                // rf_message.once_ms(100, set_send31D9_true);
+                rf_message.once_ms(150, set_send31DA_true);
+                // send31D9 = true;
+                // send31DA = true;
               }
             }
           }
@@ -566,13 +627,14 @@ void TaskCC1101(void *pvParameters)
         const ithoRFDevices &rfDevices = rf.getRFdevices();
         for (auto &item : rfDevices.device)
         {
-          if (item.remoteID[0] == 0 && item.remoteID[1] == 0 && item.remoteID[2] == 0)
+          if (item.sourceID[0] == 0 && item.sourceID[1] == 0 && item.sourceID[2] == 0)
             continue;
-          if(item.bidirectional && (cmd != IthoJoin && cmd != IthoLeave)) { //trigger fan status update if there is a bi-directional remote in the known list of remotes
-            send31D9 = true;
-            send31DA = true;
-          }
-          int remIndex = remotes.remoteIndex(item.remoteID[0], item.remoteID[1], item.remoteID[2]);
+          // if (item.bidirectional && (cmd != IthoJoin && cmd != IthoLeave))
+          // { // trigger fan status update if there is a bi-directional remote in the known list of remotes
+          //   send31D9 = true;
+          //   send31DA = true;
+          // }
+          int remIndex = remotes.remoteIndex(item.sourceID[0], item.sourceID[1], item.sourceID[2]);
           if (remIndex >= 0)
           {
             remotes.addCapabilities(remIndex, "timestamp", item.timestamp);
