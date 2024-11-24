@@ -47,6 +47,7 @@ enum RemoteTypes : uint16_t
   UNSETTYPE = 0x0000,
   RFTCVE = 0x22F1,
   RFTAUTO = 0x22F3,
+  RFTN = 0x22F5,
   RFTAUTON = 0x22F4,
   DEMANDFLOW = 0x22F8,
   RFTRV = 0x12A0,
@@ -139,7 +140,9 @@ const uint8_t ithoMessageCO2JoinCommandBytes[] = {0x1F, 0xC9, 0x1E, 0x00, 0x31, 
 const uint8_t ithoMessagePIRJoinCommandBytes[] = {0x1F, 0xC9, 0x06, 0x00, 0x2E, 0x10, 0x00, 0x00, 0x00};                                                                                                                                                 // join command of RF PIR
 const uint8_t ithoMessageLeaveCommandBytes[] = {0x1F, 0xC9, 0x06, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00};                                                                                                                                                   // standard leave command
 const uint8_t ithoMessageAUTORFTLeaveCommandBytes[] = {0x1F, 0xC9, 0x06, 0x63, 0x1F, 0xC9, 0x00, 0x00, 0x00};                                                                                                                                            // leave command of AUTO RFT (536-0150)
-const uint8_t ithoMessageAUTORFTNJoinCommandBytes[] = {0x1F, 0xC9, 0x12, 0x00, 0x22, 0xF8, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00};                                                                    // join command of Auto RFT-N (04-00161) (bi-directioal)
+const uint8_t ithoMessageAUTORFTNJoinCommandBytes[] = {0x1F, 0xC9, 0x12, 0x00, 0x22, 0xF8, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00};      
+//0x1F, 0xC9, 0x12, 0x00, 0x22, 0xF8, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00
+                                                              // join command of Auto RFT-N (04-00161) (bi-directioal)
 const uint8_t ithoMessageSpiderJoinCommandBytes[] = {0x1F, 0xC9, 0x12, 0x00, 0x22, 0xF1, 0x00, 0x00, 0x00, 0x01, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00};                                                                      // join command of Auto RFT-N (04-00161) (bi-directioal)
 
 // Join/Leave reply commands:
@@ -188,7 +191,7 @@ public:
   //<HEADER> <addr0> <addr1> <addr2> <param0> <param1> <OPCODE> <LENGTH> <PAYLOAD> <CHECKSUM>
   //<  1   > <  3  > <  3  > <  3  > <  1   > <  1   > <  2   > <  1   > <length > <   1    >
 
-  uint8_t header{0};
+  uint8_t header{0xC0};
   // uint8_t type;
   uint32_t deviceId0{0};
   uint32_t deviceId1{0};

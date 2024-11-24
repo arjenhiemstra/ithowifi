@@ -13,12 +13,12 @@
 #include "sys_log.h"
 
 #if !defined(MAX_NUM_OF_REMOTES)
-#define MAX_NUM_OF_REMOTES 10
+#define MAX_NUM_OF_REMOTES 12
 #endif
 struct ithoRFDevice
 {
-  uint8_t ownDeviceID[3]{};
-  uint8_t remoteID[3]{};
+  uint8_t sourceID[3]{};      // ID of the remote the software is emulating
+  uint8_t destinationID[3]{}; // ID of the destination RF device (ie. CVE), only used for bi-directional communication
   RemoteTypes remType{RemoteTypes::RFTCVE};
   //  char name[16];
   IthoCommand lastCommand{IthoUnknown};
@@ -136,9 +136,12 @@ public:
   bool addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2, RemoteTypes deviceType, bool bidirectional = false);
   bool updateRFDevice(uint8_t remote_index, uint8_t byte0, uint8_t byte1, uint8_t byte2, RemoteTypes deviceType, bool bidirectional = false);
   // updateRFSourceID
-  bool updateRFOwnDeviceID(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t remote_index);
+  bool updateSourceID(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t remote_index);
   // updateRFDestinationID
-  bool updateRFRemoteID(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t remote_index);
+  bool updateDestinationID(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t remote_index);
+  String getSourceID(uint8_t remote_index);
+  String getDestinationID(uint8_t remote_index);
+
   bool updateRFDeviceType(RemoteTypes deviceType, uint8_t remote_index);
   bool removeRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2);
   bool removeRFDevice(uint8_t remote_index);
