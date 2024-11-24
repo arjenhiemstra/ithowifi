@@ -25,6 +25,9 @@ typedef enum
     I2C_CMD_TEMP_READ_ITHO,
     I2C_CMD_TEMP_READ_SLAVE,
     I2C_CMD_TEMP_READ_CMD,
+    I2C_CMD_CO2_INIT,
+    I2C_CMD_CO2_CMD,
+    I2C_CMD_CO2_VAL,
     I2C_CMD_OTHER
 } i2c_cmdref_t;
 
@@ -70,7 +73,7 @@ private:
         const char *msg;
     } i2c_error_state_msg;
 
-    const i2c_cmdref_msg i2c_cmdref_msg_table[18]{
+    const i2c_cmdref_msg i2c_cmdref_msg_table[21]{
         {I2C_CMD_EMPTY_CMDREF, ""},
         {I2C_CMD_UNKOWN, "UNKOWN"},
         {I2C_CMD_PWM_INIT, "PWM_INIT"},
@@ -88,6 +91,9 @@ private:
         {I2C_CMD_TEMP_READ_ITHO, "TEMP_READ_FROM_ITHO"},
         {I2C_CMD_TEMP_READ_SLAVE, "TEMP_READ_SLAVE"},
         {I2C_CMD_TEMP_READ_CMD, "TEMP_READ_CMD"},
+        {I2C_CMD_CO2_INIT, "I2C_CMD_CO2_INIT"},
+        {I2C_CMD_CO2_CMD, "I2C_CMD_CO2_CMD"},
+        {I2C_CMD_CO2_VAL, "I2C_CMD_CO2_VAL"},
         {I2C_CMD_OTHER, "I2C_CMD_OTHER"}};
     const char *i2c_cmdref_unknown_msg = "UNKNOWN ERROR";
 

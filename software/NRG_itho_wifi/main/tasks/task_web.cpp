@@ -1265,6 +1265,91 @@ ApiResponse::api_response_status_t processCommand(JsonObject params, JsonDocumen
   return ApiResponse::status::FAIL;
 }
 
+ApiResponse::api_response_status_t processSetRFremote(JsonObject params, JsonDocument &response)
+{
+  const char *setrfremote = params["setrfremote"];
+  const char *setting = params["setting"];
+  const char *settingvalue = params["settingvalue"];
+
+  if (setrfremote == nullptr)
+    return ApiResponse::status::CONTINUE;
+
+  response["cmdkey"] = "setrfremote";
+  response["settingvalue"] = settingvalue;
+
+  uint8_t idx = 0;
+  if (setrfremote != nullptr)
+    idx = strtoul(setrfremote, NULL, 10);
+
+  response["idx"] = idx;
+
+  if (idx > remotes.getRemoteCount() - 1)
+  {
+    response["failreason"] = "remote index number higher than configured number of remotes";
+    return ApiResponse::status::FAIL;
+  }
+
+  if (settingvalue == nullptr)
+  {
+    response["code"] = 400;
+    response["failreason"] = "param settingvalue not present";
+    return ApiResponse::status::FAIL;
+  }
+  if (setting == nullptr)
+  {
+    response["code"] = 400;
+    response["failreason"] = "param setting not present";
+    return ApiResponse::status::FAIL;
+  }
+
+  if (strcmp("setrfdevicebidirectional", setting) == 0)
+  {
+
+    if (strcmp(settingvalue, "true") == 0)
+    {
+      rf.setRFDeviceBidirectional(idx, true);
+      response["result"] = "setRFDeviceBidirectional to true";
+      response["check"] = rf.getRFDeviceBidirectional(idx);
+    }
+    else
+    {
+      rf.setRFDeviceBidirectional(idx, false);
+      response["result"] = "setRFDeviceBidirectional to false";
+      response["check"] = rf.getRFDeviceBidirectional(idx);
+    }
+    return ApiResponse::status::SUCCESS;
+  }
+  else if (strcmp("setrfdevicesourceid", setting) == 0 || strcmp("  ", setting) == 0)
+  {
+    std::vector<int> id = parseHexString(settingvalue);
+
+    if (id.size() != 3)
+    {
+      response["code"] = 400;
+      response["failreason"] = "ID string should be 3 HEX decimals long formatted like: 3A,D1,FD";
+      return ApiResponse::status::FAIL;
+    }
+    if (strcmp("setrfdevicesourceid", setting) == 0)
+    {
+      rf.updateSourceID(static_cast<uint8_t>(id[0]), static_cast<uint8_t>(id[1]), static_cast<uint8_t>(id[2]), idx);
+      response["result"] = "source ID updated";
+      response["check"] = rf.getSourceID(idx);
+    }
+    else
+    {
+      rf.updateDestinationID(static_cast<uint8_t>(id[0]), static_cast<uint8_t>(id[1]), static_cast<uint8_t>(id[2]), idx);
+      response["result"] = "destination ID updated";
+      response["check"] = rf.getDestinationID(idx);
+    }
+
+    return ApiResponse::status::SUCCESS;
+  }
+
+  response["code"] = 400;
+  response["failreason"] = "settingvalue not valid";
+  return ApiResponse::status::FAIL;
+}
+
 ApiResponse::api_response_status_t processRFremoteCommands(JsonObject params, JsonDocument &response)
 {
 

@@ -132,6 +132,10 @@ const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8
 
 uint8_t checksum(const uint8_t *buf, size_t buflen);
 void sendI2CPWMinit();
+void sendCO2init();
+void sendCO2query(bool updateweb);
+void sendCO2speed(uint8_t speed1 = 0, uint8_t speed2 = 0);
+void sendCO2value(uint16_t value);
 void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command);
 void sendQueryDevicetype(bool updateweb);
 void sendQueryStatusFormat(bool updateweb);
