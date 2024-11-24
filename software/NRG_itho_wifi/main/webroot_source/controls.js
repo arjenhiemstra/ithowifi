@@ -65,13 +65,13 @@ function startWebsock(websocketServerLocation) {
 })();
 
 function processMessage(message) {
+  if (debug) console.log(message);
   let f;
   try {
     f = JSON.parse(decodeURIComponent(message));
   } catch (error) {
     f = JSON.parse(message);
   }
-  if (debug) console.log(f);
   let g = document.body;
   if (f.wifisettings) {
     let x = f.wifisettings;
@@ -124,13 +124,13 @@ function processMessage(message) {
     let x = f.remotes;
     let remfunc = f.remfunc;
     $('#RemotesTable').empty();
-    buildHtmlTable('#RemotesTable', remfunc, x);
+    buildHtmlTableRemotes('#RemotesTable', remfunc, x);
   }
   else if (f.vremotes) {
     let x = f.vremotes;
     let remfunc = f.remfunc;
     $('#vremotesTable').empty();
-    buildHtmlTable('#vremotesTable', remfunc, x);
+    buildHtmlTableRemotes('#vremotesTable', remfunc, x);
   }
   else if (f.ithostatusinfo) {
     let x = f.ithostatusinfo;
@@ -473,6 +473,7 @@ $(document).ready(function () {
           itho_updatefreq: $('#itho_updatefreq').val(),
           itho_counter_updatefreq: $('#itho_counter_updatefreq').val(),
           itho_numvrem: $('#itho_numvrem').val(),
+          //itho_numrfrem: $('#iitho_numrfrem').val(),
           itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
           itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
           itho_vremoteapi: $('input[name=\'option-itho_vremoteapi\']:checked').val(),
@@ -503,6 +504,10 @@ $(document).ready(function () {
     }
     //mqttsubmit
     else if ($(this).attr('id') == 'mqttsubmit') {
+      if (!isValidJsonArray($('#ithostatus_ha_autodiscovery').val())) {
+        alert("error: Autodiscover Itho status items input value is not a valid JSON array!");
+        return;
+      }
       websock_send(JSON.stringify({
         systemsettings: {
           mqtt_active: $('input[name=\'option-mqtt_active\']:checked').val(),
@@ -513,6 +518,7 @@ $(document).ready(function () {
           mqtt_version: $('#mqtt_version').val(),
           mqtt_base_topic: $('#mqtt_base_topic').val(),
           mqtt_ha_topic: $('#mqtt_ha_topic').val(),
+          ithostatus_ha_autodiscovery: JSON.parse($('#ithostatus_ha_autodiscovery').val()),
           mqtt_domoticzin_topic: $('#mqtt_domoticzin_topic').val(),
           mqtt_domoticzout_topic: $('#mqtt_domoticzout_topic').val(),
           mqtt_idx: $('#mqtt_idx').val(),
@@ -544,10 +550,11 @@ $(document).ready(function () {
       else {
         var remfunc = (typeof $('#func_remote-' + i).val() === 'undefined') ? 0 : $('#func_remote-' + i).val();
         var remtype = (typeof $('#type_remote-' + i).val() === 'undefined') ? 0 : $('#type_remote-' + i).val();
+        var bidirectional = (typeof $('input[id=\'bidirect_remote-' + i + '\']:checked').val() === 'undefined') ? 0 : 1;
         var id = $('#id_remote-' + i).val();
         if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
-          websock_send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc}}`);
+          websock_send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc},"bidirectional":${bidirectional}}`);
         }
         else {
           alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
@@ -562,6 +569,13 @@ $(document).ready(function () {
       else {
         alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
       }
+    }
+    else if ($(this).attr('id') == 'update_num_rf') {
+      websock_send(JSON.stringify({
+        systemsettings: {
+          itho_numrfrem: $('#itho_numrfrem').val()
+        }
+      }));
     }
     else if ($(this).attr('id') == 'itho_copyid_vremote') {
       var i = $('input[name=\'optionsRemotes\']:checked').val();
@@ -715,6 +729,19 @@ $(document).ready(function () {
         ithotemp: parseFloat($('#itho_ce30_temp').val() * 100.),
         ithotemptemp: parseFloat($('#itho_ce30_temptemp').val() * 100.),
         ithotimestamp: $('#itho_ce30_timestamp').val()
+      }));
+    }
+    else if ($(this).attr('id') == 'buttonC000') { //CO2
+      websock_send(JSON.stringify({
+        ithobutton: 0xC000,
+        itho_c000_speed1: Number($('#itho_c000_speed1').val()),
+        itho_c000_speed2: Number($('#itho_c000_speed2').val())
+      }));
+    }
+    else if ($(this).attr('id') == 'button9298') { //CO2 value
+      websock_send(JSON.stringify({
+        ithobutton: 0x9298,
+        itho_9298_val: Number($('#itho_9298_val').val())
       }));
     }
     else if ($(this).attr('id') == 'button4030') {
@@ -953,10 +980,10 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_ha_active") {
     if (state == 1) {
-      $('#mqtt_ha_topic, #label-mqtt_ha').show();
+      $('#mqtt_ha_topic, #label-mqtt_ha, #ithostatus_ha_autodiscovery, #label-ithostatus_ha_autodiscovery, #ithostatus_ha_autodiscovery-help').show();
     }
     else {
-      $('#mqtt_ha_topic, #label-mqtt_ha').hide();
+      $('#mqtt_ha_topic, #label-mqtt_ha, #ithostatus_ha_autodiscovery, #label-ithostatus_ha_autodiscovery, #ithostatus_ha_autodiscovery-help').hide();
     }
   }
   else if (origin == "remote" || origin == "ithoset") {
@@ -982,6 +1009,12 @@ function radio(origin, state) {
       $(`#id_${origin}-${index}`).prop('readonly', true);
       if (index == state) {
         $(`#id_${origin}-${index}`).prop('readonly', false);
+      }
+    });
+    $(`[id^=bidirect_${origin}-]`).each(function (index) {
+      $(`#bidirect_${origin}-${index}`).prop("disabled", true);
+      if (index == state) {
+        remfunction_validation(index);
       }
     });
     if (origin == "ithoset") {
@@ -1232,6 +1265,7 @@ var remotesCount;
 var remtypes = [
   ["RFT CVE", 0x22F1, ['away', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT AUTO", 0x22F3, ['auto', 'autonight', 'low', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["RFT-N", 0x22F5, ['away', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT AUTO-N", 0x22F4, ['auto', 'autonight', 'low', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT DF/QF", 0x22F8, ['low', 'high', 'cook30', 'cook60', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT RV", 0x12A0, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
@@ -1243,8 +1277,7 @@ var remtypes = [
 var remfuncs = [
   ["Receive", 1],
   ["Monitor Only", 3],
-  ["Send", 5],
-  ["Bidirectional", 7]
+  ["Send", 5]
 ];
 
 function addRemoteButtons(selector, remfunc, remtype, vremotenum, seperator) {
@@ -1285,7 +1318,20 @@ function addvRemoteInterface(remtype) {
 }
 
 function buildHtmlTablePlain(selector, jsonVar) {
-  var columns = addAllColumnHeadersPlain(jsonVar, selector);
+  //var columns = addAllColumnHeadersPlain(jsonVar, selector);
+  var columns = [];
+  var headerThead$ = $('<thead>');
+  var headerTr$ = $('<tr />');
+
+  for (var key in jsonVar[0]) {
+    if ($.inArray(key, columnSet) == -1) {
+      columnSet.push(key);
+      headerTr$.append($('<th />').html(key));
+    }
+  }
+
+  headerThead$.append(headerTr$);
+  $(selector).append(headerThead$);
 
   for (var i = 0; i < jsonVar.length; i++) {
     var row$ = $('<tr />');
@@ -1298,28 +1344,85 @@ function buildHtmlTablePlain(selector, jsonVar) {
   }
 }
 
-function buildHtmlTable(selector, remfunc, jsonVar) {
-  var columns = addAllColumnHeaders(jsonVar, selector, true, remfunc);
+function remfunction_validation(i) {
+  if ($('#func_remote-' + i).val() == 5) $(`#bidirect_remote-${i}`).prop("disabled", false);
+  else $(`#bidirect_remote-${i}`).prop("disabled", true);
+}
+
+function buildHtmlTableRemotes(selector, remfunc, jsonVar) {
+
+  var headerThead$ = $('<thead>');
+  var headerTr$ = $('<tr>');
+  headerTr$.append($('<th>').html('Select'));
+
+  for (var key in jsonVar[0]) {
+    var append = [];
+    if (key === "index") {
+      append = ["Index", true];
+    }
+    else if (key === "id") {
+      append = ["ID", true];
+    }
+    else if (key === "name") {
+      append = ["Name", true];
+    }
+    else if (key === "remfunc" && remfunc == 1) { //unly show on rf remote page
+      append = ["Remote function", true];
+    }
+    else if (key === "remtype") {
+      append = ["Remote model", true];
+    }
+    else if (key === "capabilities") {
+      append = ["Capabilities", true];
+    }
+    else if (key === "bidirectional" && remfunc == 1) { //unly show on rf remote page
+      append = ["Bidirectional", true];
+    }
+    if (append[1]) { headerTr$.append($('<th>').html(append[0])); }
+  }
+
+  headerThead$.append(headerTr$);
+
+  $(selector).append(headerThead$);
+
   var headerTbody$ = $('<tbody>');
   remotesCount = jsonVar.length;
-  for (var i = 0; i < remotesCount; i++) {
+
+  for (const remote of jsonVar) {
+    var i = 0;
+    if (remote["index"]) i = remote["index"];
     var remtype = 0;
     var remfunction = 0;
     var row$ = $('<tr>');
     row$.append($('<td>').html(`<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}' />`));
-    //colIndex 0 = index
-    //colIndex 1 = id
-    //colIndex 2 = name
-    //colIndex 3 = remfunc
-    //colIndex 4 = remtype
-    //colIndex 5 = capabilities
-    for (var colIndex = 0; colIndex < columns.length; colIndex++) {
-      if (colIndex == 3) {
-        remfunction = jsonVar[i][columns[colIndex]];
+
+    for (const key in remote) {
+      const value = remote[key];
+
+      if (key === "index") {
+        row$.append($('<td>').html(value.toString()));
+      }
+      else if (key === "id") {
+        var cellValue = value.toString();
+        if (cellValue == null) cellValue = '';
+        cellValue = `${value[0].toString(16).toUpperCase()},${value[1].toString(16).toUpperCase()},${value[2].toString(16).toUpperCase()}`;
+        if (cellValue == "0,0,0") cellValue = "empty slot";
+        var idval = `id_remote-${i}`;
+        row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly='' />`));
+      }
+      else if (key === "name") {
+        var cellValue = value.toString();
+        if (cellValue == null) cellValue = '';
+        var idval = `name_remote-${i}`;
+        row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly='' />`));
+      }
+      else if (key === "remfunc") {
+        remfunction = value;
         if (remfunction != 2) { //do not add remote function is remfunction == virtual remote
           var select = document.createElement('select');
           select.name = remfunction;
           select.id = `func_remote-${i}`;
+          select.setAttribute('onChange', `remfunction_validation(${i});`);
           select.disabled = true;
           for (const item of remfuncs) {
             var option = document.createElement('option');
@@ -1334,8 +1437,8 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
           row$.append($('<td>').html(select));
         }
       }
-      else if (colIndex == 4) {
-        var cellValue = jsonVar[i][columns[colIndex]];
+      else if (key === "remtype") {
+        var cellValue = value;
         var select = document.createElement('select');
         select.name = cellValue;
         select.id = `type_remote-${i}`;
@@ -1352,7 +1455,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
         }
         row$.append($('<td>').html(select));
       }
-      else if (colIndex == 5) {
+      else if (key === "capabilities") {
         if (remfunction == 2 || remfunction == 5) {
           var td$ = $('<td>');
           addRemoteButtons(td$, remfunc, remtype, i, false);
@@ -1360,7 +1463,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
         }
         else {
           var str = '';
-          var JSONObj = jsonVar[i][columns[colIndex]];
+          var JSONObj = value;
           if (JSONObj != null) {
             for (let value in JSONObj) {
               if (JSONObj.hasOwnProperty(value)) {
@@ -1372,26 +1475,23 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
           row$.append($('<td>').html(str));
         }
       }
-      else {
-        var cellValue = jsonVar[i][columns[colIndex]].toString();
-        if (cellValue == null) cellValue = '';
-        if (colIndex == 1) {
-          cellValue = `${jsonVar[i][columns[colIndex]][0].toString(16).toUpperCase()},${jsonVar[i][columns[colIndex]][1].toString(16).toUpperCase()},${jsonVar[i][columns[colIndex]][2].toString(16).toUpperCase()}`;
-          if (cellValue == "0,0,0") cellValue = "empty slot";
-        }
-        if (colIndex == 1 || colIndex == 2) {
-          var idval = `name_remote-${i}`;
-          if (colIndex == 1) {
-            idval = `id_remote-${i}`;
-          }
-          row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly='' />`));
-        }
-        else {
-          row$.append($('<td>').html(cellValue));
+      else if (key === "bidirectional") {
+        if (remfunc != 2) { //do not add remote function is remfunction == virtual remote
+          var checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.id = `bidirect_remote-${i}`;
+          checkbox.checked = jsonVar[i]["bidirectional"];
+          checkbox.disabled = true;
+          row$.append($('<td>').html(checkbox));
         }
       }
+      else {
+        var cellValue = value.toString();
+        if (cellValue == null) cellValue = '';
+        row$.append(cellValue);
+      }
+      headerTbody$.append(row$);
     }
-    headerTbody$.append(row$);
   }
   $(selector).append(headerTbody$);
 }
@@ -1399,6 +1499,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
 function buildHtmlStatusTable(selector, jsonVar) {
   var headerThead$ = $('<thead>');
   var headerTr$ = $('<tr>');
+  headerTr$.append($('<th>').html('Index'));
   headerTr$.append($('<th>').html('Label'));
   headerTr$.append($('<th>').html('Value'));
   headerThead$.append(headerTr$);
@@ -1406,12 +1507,13 @@ function buildHtmlStatusTable(selector, jsonVar) {
 
   var headerTbody$ = $('<tbody>');
 
-  for (var key in jsonVar) {
+  Object.entries(jsonVar).forEach(([key, value], index) => {
     var row$ = $('<tr>');
-    row$.append($('<td>').html(key));
-    row$.append($('<td>').html(jsonVar[key]));
+    row$.append($('<td>').text(index));
+    row$.append($('<td>').text(key));
+    row$.append($('<td>').text(value));
     headerTbody$.append(row$);
-  }
+  });
 
   $(selector).append(headerTbody$);
 
@@ -1466,53 +1568,6 @@ function addColumnHeader(jsonVar, selector, appendRow) {
   headerTr$.append($(`<th class='ithoset'>`).html('&nbsp;'));
   headerTr$.append($(`<th class='ithoset'>`).html('&nbsp;'));
 
-  headerThead$.append(headerTr$);
-  if (appendRow) {
-    $(selector).append(headerThead$);
-  }
-  return columnSet;
-}
-
-function addAllColumnHeadersPlain(jsonVar, selector) {
-  var columnSet = [];
-  var headerThead$ = $('<thead>');
-  var headerTr$ = $('<tr />');
-
-  for (var i = 0; i < jsonVar.length; i++) {
-    var rowHash = jsonVar[i];
-    for (var key in rowHash) {
-      if ($.inArray(key, columnSet) == -1) {
-        columnSet.push(key);
-        headerTr$.append($('<th />').html(key));
-      }
-    }
-  }
-  headerThead$.append(headerTr$);
-  $(selector).append(headerThead$);
-
-  return columnSet;
-}
-
-function addAllColumnHeaders(jsonVar, selector, appendRow, remfunc) {
-  var columnSet = [];
-  var headerThead$ = $('<thead>');
-  var headerTr$ = $('<tr>');
-  headerTr$.append($('<th>').html('select'));
-
-  for (var i = 0; i < jsonVar.length; i++) {
-    var rowHash = jsonVar[i];
-    for (var key in rowHash) {
-      if ($.inArray(key, columnSet) == -1) {
-        columnSet.push(key);
-        if (key == "remfunc" & remfunc == 1) {
-          headerTr$.append($('<th id="remfunc">').html(key));
-        }
-        else if (key != "remfunc") {
-          headerTr$.append($('<th>').html(key));
-        }
-      }
-    }
-  }
   headerThead$.append(headerTr$);
   if (appendRow) {
     $(selector).append(headerThead$);
@@ -1670,6 +1725,12 @@ var html_debug = `
                     command
                     to
                     work</span><br><br>
+
+                <button id="buttonC000" class="pure-button pure-button-primary">Send CO2 speed</button>
+                Speed1: <input id="itho_c000_speed1" type="number" min="0" max="255" size="4" value="0">&nbsp;Speed2:
+                <input id="itho_c000_speed2" type="number" min="0" max="255" size="4" value="0"><br><br>
+                <button id="button9298" class="pure-button pure-button-primary">Send CO2 value</button>
+                Value: <input id="itho_9298_val" type="number" min="0" max="65535" size="4" value="0"><br><br>
                 <button id="button4210" class="pure-button pure-button-primary">Query
                     Counters</button><br><span>Result:&nbsp;</span><span id="ithocounters"></span><br><br>
                 <button id="buttonCE30" class="pure-button pure-button-primary">Send CE30</button>
@@ -2024,14 +2085,22 @@ Unless specified otherwise:<br>
             <td>outside_temp,temporary_outside_temp,valid_until</td>
             <td>number</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">◌</td>
+            <td style="text-align:center">●</td>
         </tr>
         <tr>
-            <td colspan="6">Comments:<br><em>With this command an outside temperature can be send to a WPU. Unset values
-                    will default to 0. <b>valid_until</b> = epoch now + valid time. <b>temporary_outside_temp</b> will
-                    be used by the WPU during this valid time. After the valid time has
-                    passed it will fallback to <b>outside_temp</b>.
-                </em></td>
+            <td colspan="6">
+              Comments:<br>
+              <em>
+                With this command an outside temperature can be send to a WPU. Unset values
+                will default to 0. <b>valid_until</b> = epoch now + valid time. <b>temporary_outside_temp</b> will
+                be used by the WPU during this valid time. After the valid time has
+                passed it will fallback to <b>outside_temp</b>.
+              </em>
+              <br><br>
+              <em>
+                The web API only supports the <b>outside_temp</b> setting.
+              </em>
+            </td>
         </tr>
         <tr>
             <td>manual control</td>
@@ -2185,6 +2254,7 @@ Unless specified otherwise:<br>
         }, 500);
     });
 </script>
+
 `;
 
 var html_systemsettings_end = `
@@ -2446,11 +2516,17 @@ var html_edit = `
 </div>
 <p>Be very careful, use only if absolutely necessary!</p>
 <p>To activate a changed config file; go to the reset page, check the 'Don't save config' checkbox and reboot.</p><br>
-<iframe id="editor" src="/edit" width="100%" height="100%" style="border:none;padding:5px"></iframe>
+<iframe id="editor" width="100%" height="100%" style="border:none;padding:5px" srcdoc="<p>Loading...</p>"></iframe>
 <script>
   $(document).ready(function () {
     $('#main').css('max-width', '1200px');
-    $('#editor').height(500);
+    setTimeout(function () {
+      var iframe = document.getElementById('editor');
+      iframe.style.height = '500px';
+      iframe.removeAttribute('srcdoc');
+      iframe.src = '/edit.html';
+    }, 500);
+
   });
 </script>
 `;
@@ -2826,12 +2902,14 @@ var html_mqttsetup = `
     </div>
     <div class="pure-control-group">
       <label for="mqtt_username">Username</label>
-      <input id="mqtt_username" maxlength="64" type="text" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('username-msg').innerHTML = 'Username truncated to 32 characters.'; } else { document.getElementById('username-msg').innerHTML = ''; }">
+      <input id="mqtt_username" maxlength="64" type="text"
+        oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('username-msg').innerHTML = 'Username truncated to 32 characters.'; } else { document.getElementById('username-msg').innerHTML = ''; }">
       <span id="username-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
       <label for="mqtt_password">Password</label>
-      <input id="mqtt_password" maxlength="64" type="Password" oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('password-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('password-msg').innerHTML = ''; }">
+      <input id="mqtt_password" maxlength="64" type="Password"
+        oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('password-msg').innerHTML = 'Password truncated to 32 characters.'; } else { document.getElementById('password-msg').innerHTML = ''; }">
       <span id="password-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
@@ -2853,6 +2931,13 @@ var html_mqttsetup = `
     <div class="pure-control-group">
       <label id="label-mqtt_ha" for="mqtt_ha_topic">Home Assistant Discovery topic prefix</label>
       <input id="mqtt_ha_topic" maxlength="120" type="text">
+    </div>
+    <br>
+    <div class="pure-control-group">
+      <label id="label-ithostatus_ha_autodiscovery" for="ithostatus_ha_autodiscovery">Autodiscover Itho status
+        items</label>
+      <input style="resize:both;overflow:auto;" id="ithostatus_ha_autodiscovery"
+        title="Must be a valid JSON array with object(s) ie.: [{},{}]" type="text" maxlength="1024" size="20">
     </div>
     <br>
     <div class="pure-control-group">
@@ -2926,7 +3011,78 @@ var html_mqttsetup = `
     </tr>
   </tbody>
 </table>
-<br><br><br>
+<br><br>
+<div id="ithostatus_ha_autodiscovery-help">
+  <p><br>Explainer: Auto discovery of Itho Status items by configuring a JSON array<br></p>
+  <div>
+    <p>The basic syntax of this array is as follows:</p>
+    <pre>[{},{}]</pre>
+    <p>
+      Each Status Item to auto discover by Home Assistant (HA) needs to be represented by an object in the array
+      containing at least either the index of a status item or the label name.
+      <br>
+      Example: <code>{"index":3}</code> or <code>{"label":"BypassPos (%)"}</code>
+      <br>
+      Both can be found on the Itho status page of the web interface.
+    </p>
+    <p>
+      Details sent to HA for auto discovery can be enriched by adding keys to the object. These keys can be the
+      abbreviated or full-length versions of supported auto discovery keys, equal to the HA implementation.
+      See "Supported abbreviations" on:
+      <a href="https://www.home-assistant.io/integrations/mqtt/" target="_blank">
+        Home Assistant MQTT Integration
+      </a> for details.
+    </p>
+    <p>The following keys are supported (all are optional):</p>
+    <ul>
+      <li>
+        <code>"device_class"</code>: Set the sensor type, e.g., <code>motion</code>, <code>temperature</code>,
+        <code>humidity</code>.
+      </li>
+      <li>
+        <code>"name"</code>: Name to be displayed for the sensor in HA, if not defined this defaults to
+        <code>&lt;label name&gt;</code>.
+      </li>
+      <li>
+        <code>"value_template"</code>: Value template to use, if not defined this defaults to
+        <code>{{ value_json['&lt;label name&gt;'] }}</code>.
+      </li>
+      <li>
+        <code>"unit_of_measurement"</code>: Unit of measurement, e.g., %, °C, etc.
+      </li>
+    </ul>
+    <p>There is one special key:</p>
+    <ul>
+      <li>
+        <code>"reset"</code>: This sends an empty object as HA auto discovery if the value is set to <code>1</code>,
+        removing prior auto discovery config from HA. This can be used to remove or reset a discovered item in HA.
+      </li>
+    </ul>
+    <h4>Usage Example:</h4>
+    <pre>
+  [
+      {
+          "index": 3,
+          "reset": 1
+      },
+      {
+          "label": "FanInfo"
+      },
+      {
+          "index": 4
+      },
+      {
+          "index": 10,
+          "name": "vochtsensor",
+          "unit_of_meas": "%",
+          "device_class": "humidity"
+      }
+  ]
+    </pre>
+  </div>
+
+</div>
+<br>
 <script>
   $(document).ready(function () {
     getSettings('mqttsetup');
@@ -2944,12 +3100,11 @@ var html_mqttsetup = `
     }
   }  
 </script>
-
 `;
 
 var html_systemsettings_cc1101 = `
 <legend><br>Autodetect CC1101 RF module (reboot needed):</legend>
-<p>Activate the CC1101 RF module. If autodetect fails this setting will be automatically switched off again.</p>
+<p>Activate the CC1101 RF module. If autodetect fails, this setting will be automatically switched off again.</p>
 <div class="pure-control-group">
   <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
   <input id="option-itho_remotes-1" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 1)'
@@ -3138,12 +3293,17 @@ var html_remotessetup = `
       <input id="module_rf_id_str" maxlength="8" type="text">
       <button id="update_rf_id" onclick="update_rf_setup()" class="pure-button button-secondary">Update</button>
     </div>
+    <div class="pure-control-group">
+      <label for="itho_numrfrem">Number of RF remotes</label>
+      <input id="itho_numrfrem" type="number" min="1" max="12" size="6">
+    <button id="update_num_rf" onclick="update_rf_setup()" class="pure-button button-secondary">Update</button>
+    </div>    
   </fieldset>
   <fieldset>
     <br>
     <legend><br>RF remotes:</legend>
     <br>
-    <table id="RemotesTable" class="pure-table pure-table-bordered" style="text-align: center; white-space:nowrap;">
+    <table id="RemotesTable" class="pure-table pure-table-bordered" style="text-align: center;">
     </table>
     <div class="pure-control-group">
       <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote"

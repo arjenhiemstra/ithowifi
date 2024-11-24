@@ -64,13 +64,13 @@ function startWebsock(websocketServerLocation) {
 })();
 
 function processMessage(message) {
+  if (debug) console.log(message);
   let f;
   try {
     f = JSON.parse(decodeURIComponent(message));
   } catch (error) {
     f = JSON.parse(message);
   }
-  if (debug) console.log(f);
   let g = document.body;
   if (f.wifisettings) {
     let x = f.wifisettings;
@@ -123,13 +123,13 @@ function processMessage(message) {
     let x = f.remotes;
     let remfunc = f.remfunc;
     $('#RemotesTable').empty();
-    buildHtmlTable('#RemotesTable', remfunc, x);
+    buildHtmlTableRemotes('#RemotesTable', remfunc, x);
   }
   else if (f.vremotes) {
     let x = f.vremotes;
     let remfunc = f.remfunc;
     $('#vremotesTable').empty();
-    buildHtmlTable('#vremotesTable', remfunc, x);
+    buildHtmlTableRemotes('#vremotesTable', remfunc, x);
   }
   else if (f.ithostatusinfo) {
     let x = f.ithostatusinfo;
@@ -472,6 +472,7 @@ $(document).ready(function () {
           itho_updatefreq: $('#itho_updatefreq').val(),
           itho_counter_updatefreq: $('#itho_counter_updatefreq').val(),
           itho_numvrem: $('#itho_numvrem').val(),
+          //itho_numrfrem: $('#iitho_numrfrem').val(),
           itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
           itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
           itho_vremoteapi: $('input[name=\'option-itho_vremoteapi\']:checked').val(),
@@ -492,6 +493,7 @@ $(document).ready(function () {
           loglevel: $('#loglevel').val(),
           syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
           esplog_active: $('input[name=\'option-esplog_active\']:checked').val(),
+          webserial_active: $('input[name=\'option-webserial_active\']:checked').val(),
           logserver: $('#logserver').val(),
           logport: $('#logport').val(),
           logref: $('#logref').val()
@@ -547,10 +549,11 @@ $(document).ready(function () {
       else {
         var remfunc = (typeof $('#func_remote-' + i).val() === 'undefined') ? 0 : $('#func_remote-' + i).val();
         var remtype = (typeof $('#type_remote-' + i).val() === 'undefined') ? 0 : $('#type_remote-' + i).val();
+        var bidirectional = (typeof $('input[id=\'bidirect_remote-' + i + '\']:checked').val() === 'undefined') ? 0 : 1;
         var id = $('#id_remote-' + i).val();
         if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
-          websock_send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc}}`);
+          websock_send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc},"bidirectional":${bidirectional}}`);
         }
         else {
           alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
@@ -725,6 +728,19 @@ $(document).ready(function () {
         ithotemp: parseFloat($('#itho_ce30_temp').val() * 100.),
         ithotemptemp: parseFloat($('#itho_ce30_temptemp').val() * 100.),
         ithotimestamp: $('#itho_ce30_timestamp').val()
+      }));
+    }
+    else if ($(this).attr('id') == 'buttonC000') { //CO2
+      websock_send(JSON.stringify({
+        ithobutton: 0xC000,
+        itho_c000_speed1: Number($('#itho_c000_speed1').val()),
+        itho_c000_speed2: Number($('#itho_c000_speed2').val())
+      }));
+    }
+    else if ($(this).attr('id') == 'button9298') { //CO2 value
+      websock_send(JSON.stringify({
+        ithobutton: 0x9298,
+        itho_9298_val: Number($('#itho_9298_val').val())
       }));
     }
     else if ($(this).attr('id') == 'button4030') {
@@ -963,10 +979,10 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_ha_active") {
     if (state == 1) {
-      $('#mqtt_ha_topic, #label-mqtt_ha').show();
+      $('#mqtt_ha_topic, #label-mqtt_ha, #ithostatus_ha_autodiscovery, #label-ithostatus_ha_autodiscovery, #ithostatus_ha_autodiscovery-help').show();
     }
     else {
-      $('#mqtt_ha_topic, #label-mqtt_ha').hide();
+      $('#mqtt_ha_topic, #label-mqtt_ha, #ithostatus_ha_autodiscovery, #label-ithostatus_ha_autodiscovery, #ithostatus_ha_autodiscovery-help').hide();
     }
   }
   else if (origin == "remote" || origin == "ithoset") {
@@ -992,6 +1008,12 @@ function radio(origin, state) {
       $(`#id_${origin}-${index}`).prop('readonly', true);
       if (index == state) {
         $(`#id_${origin}-${index}`).prop('readonly', false);
+      }
+    });
+    $(`[id^=bidirect_${origin}-]`).each(function (index) {
+      $(`#bidirect_${origin}-${index}`).prop("disabled", true);
+      if (index == state) {
+        remfunction_validation(index);
       }
     });
     if (origin == "ithoset") {
@@ -1242,6 +1264,7 @@ var remotesCount;
 var remtypes = [
   ["RFT CVE", 0x22F1, ['away', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT AUTO", 0x22F3, ['auto', 'autonight', 'low', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["RFT-N", 0x22F5, ['away', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT AUTO-N", 0x22F4, ['auto', 'autonight', 'low', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT DF/QF", 0x22F8, ['low', 'high', 'cook30', 'cook60', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT RV", 0x12A0, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
@@ -1253,8 +1276,7 @@ var remtypes = [
 var remfuncs = [
   ["Receive", 1],
   ["Monitor Only", 3],
-  ["Send", 5],
-  ["Bidirectional", 7]
+  ["Send", 5]
 ];
 
 function addRemoteButtons(selector, remfunc, remtype, vremotenum, seperator) {
@@ -1295,7 +1317,20 @@ function addvRemoteInterface(remtype) {
 }
 
 function buildHtmlTablePlain(selector, jsonVar) {
-  var columns = addAllColumnHeadersPlain(jsonVar, selector);
+  //var columns = addAllColumnHeadersPlain(jsonVar, selector);
+  var columns = [];
+  var headerThead$ = $('<thead>');
+  var headerTr$ = $('<tr />');
+
+  for (var key in jsonVar[0]) {
+    if ($.inArray(key, columnSet) == -1) {
+      columnSet.push(key);
+      headerTr$.append($('<th />').html(key));
+    }
+  }
+
+  headerThead$.append(headerTr$);
+  $(selector).append(headerThead$);
 
   for (var i = 0; i < jsonVar.length; i++) {
     var row$ = $('<tr />');
@@ -1308,28 +1343,85 @@ function buildHtmlTablePlain(selector, jsonVar) {
   }
 }
 
-function buildHtmlTable(selector, remfunc, jsonVar) {
-  var columns = addAllColumnHeaders(jsonVar, selector, true, remfunc);
+function remfunction_validation(i) {
+  if ($('#func_remote-' + i).val() == 5) $(`#bidirect_remote-${i}`).prop("disabled", false);
+  else $(`#bidirect_remote-${i}`).prop("disabled", true);
+}
+
+function buildHtmlTableRemotes(selector, remfunc, jsonVar) {
+
+  var headerThead$ = $('<thead>');
+  var headerTr$ = $('<tr>');
+  headerTr$.append($('<th>').html('Select'));
+
+  for (var key in jsonVar[0]) {
+    var append = [];
+    if (key === "index") {
+      append = ["Index", true];
+    }
+    else if (key === "id") {
+      append = ["ID", true];
+    }
+    else if (key === "name") {
+      append = ["Name", true];
+    }
+    else if (key === "remfunc" && remfunc == 1) { //unly show on rf remote page
+      append = ["Remote function", true];
+    }
+    else if (key === "remtype") {
+      append = ["Remote model", true];
+    }
+    else if (key === "capabilities") {
+      append = ["Capabilities", true];
+    }
+    else if (key === "bidirectional" && remfunc == 1) { //unly show on rf remote page
+      append = ["Bidirectional", true];
+    }
+    if (append[1]) { headerTr$.append($('<th>').html(append[0])); }
+  }
+
+  headerThead$.append(headerTr$);
+
+  $(selector).append(headerThead$);
+
   var headerTbody$ = $('<tbody>');
   remotesCount = jsonVar.length;
-  for (var i = 0; i < remotesCount; i++) {
+
+  for (const remote of jsonVar) {
+    var i = 0;
+    if (remote["index"]) i = remote["index"];
     var remtype = 0;
     var remfunction = 0;
     var row$ = $('<tr>');
     row$.append($('<td>').html(`<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}' />`));
-    //colIndex 0 = index
-    //colIndex 1 = id
-    //colIndex 2 = name
-    //colIndex 3 = remfunc
-    //colIndex 4 = remtype
-    //colIndex 5 = capabilities
-    for (var colIndex = 0; colIndex < columns.length; colIndex++) {
-      if (colIndex == 3) {
-        remfunction = jsonVar[i][columns[colIndex]];
+
+    for (const key in remote) {
+      const value = remote[key];
+
+      if (key === "index") {
+        row$.append($('<td>').html(value.toString()));
+      }
+      else if (key === "id") {
+        var cellValue = value.toString();
+        if (cellValue == null) cellValue = '';
+        cellValue = `${value[0].toString(16).toUpperCase()},${value[1].toString(16).toUpperCase()},${value[2].toString(16).toUpperCase()}`;
+        if (cellValue == "0,0,0") cellValue = "empty slot";
+        var idval = `id_remote-${i}`;
+        row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly='' />`));
+      }
+      else if (key === "name") {
+        var cellValue = value.toString();
+        if (cellValue == null) cellValue = '';
+        var idval = `name_remote-${i}`;
+        row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly='' />`));
+      }
+      else if (key === "remfunc") {
+        remfunction = value;
         if (remfunction != 2) { //do not add remote function is remfunction == virtual remote
           var select = document.createElement('select');
           select.name = remfunction;
           select.id = `func_remote-${i}`;
+          select.setAttribute('onChange', `remfunction_validation(${i});`);
           select.disabled = true;
           for (const item of remfuncs) {
             var option = document.createElement('option');
@@ -1344,8 +1436,8 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
           row$.append($('<td>').html(select));
         }
       }
-      else if (colIndex == 4) {
-        var cellValue = jsonVar[i][columns[colIndex]];
+      else if (key === "remtype") {
+        var cellValue = value;
         var select = document.createElement('select');
         select.name = cellValue;
         select.id = `type_remote-${i}`;
@@ -1362,7 +1454,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
         }
         row$.append($('<td>').html(select));
       }
-      else if (colIndex == 5) {
+      else if (key === "capabilities") {
         if (remfunction == 2 || remfunction == 5) {
           var td$ = $('<td>');
           addRemoteButtons(td$, remfunc, remtype, i, false);
@@ -1370,7 +1462,7 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
         }
         else {
           var str = '';
-          var JSONObj = jsonVar[i][columns[colIndex]];
+          var JSONObj = value;
           if (JSONObj != null) {
             for (let value in JSONObj) {
               if (JSONObj.hasOwnProperty(value)) {
@@ -1382,26 +1474,23 @@ function buildHtmlTable(selector, remfunc, jsonVar) {
           row$.append($('<td>').html(str));
         }
       }
-      else {
-        var cellValue = jsonVar[i][columns[colIndex]].toString();
-        if (cellValue == null) cellValue = '';
-        if (colIndex == 1) {
-          cellValue = `${jsonVar[i][columns[colIndex]][0].toString(16).toUpperCase()},${jsonVar[i][columns[colIndex]][1].toString(16).toUpperCase()},${jsonVar[i][columns[colIndex]][2].toString(16).toUpperCase()}`;
-          if (cellValue == "0,0,0") cellValue = "empty slot";
-        }
-        if (colIndex == 1 || colIndex == 2) {
-          var idval = `name_remote-${i}`;
-          if (colIndex == 1) {
-            idval = `id_remote-${i}`;
-          }
-          row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly='' />`));
-        }
-        else {
-          row$.append($('<td>').html(cellValue));
+      else if (key === "bidirectional") {
+        if (remfunc != 2) { //do not add remote function is remfunction == virtual remote
+          var checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.id = `bidirect_remote-${i}`;
+          checkbox.checked = jsonVar[i]["bidirectional"];
+          checkbox.disabled = true;
+          row$.append($('<td>').html(checkbox));
         }
       }
+      else {
+        var cellValue = value.toString();
+        if (cellValue == null) cellValue = '';
+        row$.append(cellValue);
+      }
+      headerTbody$.append(row$);
     }
-    headerTbody$.append(row$);
   }
   $(selector).append(headerTbody$);
 }
@@ -1478,53 +1567,6 @@ function addColumnHeader(jsonVar, selector, appendRow) {
   headerTr$.append($(`<th class='ithoset'>`).html('&nbsp;'));
   headerTr$.append($(`<th class='ithoset'>`).html('&nbsp;'));
 
-  headerThead$.append(headerTr$);
-  if (appendRow) {
-    $(selector).append(headerThead$);
-  }
-  return columnSet;
-}
-
-function addAllColumnHeadersPlain(jsonVar, selector) {
-  var columnSet = [];
-  var headerThead$ = $('<thead>');
-  var headerTr$ = $('<tr />');
-
-  for (var i = 0; i < jsonVar.length; i++) {
-    var rowHash = jsonVar[i];
-    for (var key in rowHash) {
-      if ($.inArray(key, columnSet) == -1) {
-        columnSet.push(key);
-        headerTr$.append($('<th />').html(key));
-      }
-    }
-  }
-  headerThead$.append(headerTr$);
-  $(selector).append(headerThead$);
-
-  return columnSet;
-}
-
-function addAllColumnHeaders(jsonVar, selector, appendRow, remfunc) {
-  var columnSet = [];
-  var headerThead$ = $('<thead>');
-  var headerTr$ = $('<tr>');
-  headerTr$.append($('<th>').html('select'));
-
-  for (var i = 0; i < jsonVar.length; i++) {
-    var rowHash = jsonVar[i];
-    for (var key in rowHash) {
-      if ($.inArray(key, columnSet) == -1) {
-        columnSet.push(key);
-        if (key == "remfunc" & remfunc == 1) {
-          headerTr$.append($('<th id="remfunc">').html(key));
-        }
-        else if (key != "remfunc") {
-          headerTr$.append($('<th>').html(key));
-        }
-      }
-    }
-  }
   headerThead$.append(headerTr$);
   if (appendRow) {
     $(selector).append(headerThead$);
