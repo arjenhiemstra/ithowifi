@@ -34,6 +34,29 @@
 // #define SYNC0 149
 // #define MDMCFG2 0x03 //32bit sync word / 30bit specific
 
+//
+// Header field (1 byte)
+// The bits are used as follows <00TTAAPP> where
+
+// TT specifies the type of the message
+// TT
+// 00 RQ
+// 01  I
+// 10  W
+// 11 RP
+
+// AA specifies which address fields are present
+// AA
+// 00 addr0 + addr1 + addr2
+// 01 addr2
+// 10 addr0 + addr2
+// 11 addr0 + addr1
+
+// PP which params are present PP
+// 1x Param 0 is present
+// x1 Param 1 is present
+//
+
 #define DEVICEID_MASK 0xC
 
 #define MESSAGE_TYPE_RQ_MASK 0x0
@@ -44,12 +67,14 @@
 #define OPT0_MASK 0x2
 #define OPT1_MASK 0x1
 
-#define HEADER_REMOTE_CMD 0x16 // message type: I, addr2, param0
-#define HEADER_JOIN_REPLY 0x2C // message type: W, addr0+addr1
-#define HEADER_10E0 0x18       // message type: 1, addr0+addr2
-#define HEADER_31D9 0x1A       // message type: I, addr0+addr2, param0
-#define HEADER_31DA 0x18       // message type: I, addr0+addr2
-#define HEADER_2E10 0x14       // message type: I, addr2
+#define HEADER_REMOTE_CMD 0x16        // message type: I, addr2, param0
+#define HEADER_REMOTE_1FC9 0x18       // message type: I,addr0+addr2
+#define HEADER_RFT_BIDIRECTIONAL 0x1C // message type: I, addr0+addr1
+#define HEADER_JOIN_REPLY 0x2C        // message type: W, addr0+addr1
+#define HEADER_10E0 0x18              // message type: 1, addr0+addr2
+#define HEADER_31D9 0x1A              // message type: I, addr0+addr2, param0
+#define HEADER_31DA 0x18              // message type: I, addr0+addr2
+#define HEADER_2E10 0x14              // message type: I, addr2
 
 // default constructor
 IthoCC1101::IthoCC1101() : CC1101()
@@ -61,9 +86,9 @@ IthoCC1101::IthoCC1101() : CC1101()
   cc_freq[1] = 0x65;
   cc_freq[2] = 0x21;
 
-  // ithoRF.device[0].ownDeviceID[0] = defaultID[0];
-  // ithoRF.device[0].ownDeviceID[1] = defaultID[1];
-  // ithoRF.device[0].ownDeviceID[2] = defaultID[2];
+  // ithoRF.device[0].sourceID[0] = defaultID[0];
+  // ithoRF.device[0].sourceID[1] = defaultID[1];
+  // ithoRF.device[0].sourceID[2] = defaultID[2];
 
   bindAllowed = false;
   allowAll = true;
@@ -78,6 +103,7 @@ IthoCC1101::~IthoCC1101()
 //                                  { IthoUnknown,  IthoJoin, IthoLeave,  IthoAway, IthoLow, IthoMedium,  IthoHigh,  IthoFull, IthoTimer1,  IthoTimer2,  IthoTimer3,  IthoAuto,  IthoAutoNight, IthoCook30,  IthoCook60, IthoTimerUser, IthoJoinReply, IthoPIRmotionOn, IthoPIRmotionOff }
 const uint8_t *RFTCVE_Remote_Map[] = {nullptr, ithoMessageCVERFTJoinCommandBytes, ithoMessageLeaveCommandBytes, ithoMessageAwayCommandBytes, ithoMessageLowCommandBytes, ithoMessageMediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageTimer1CommandBytes, ithoMessageTimer2CommandBytes, ithoMessageTimer3CommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 const uint8_t *RFTAUTO_Remote_Map[] = {nullptr, ithoMessageAUTORFTJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes, nullptr, ithoMessageAUTORFTLowCommandBytes, nullptr, ithoMessageAUTORFTHighCommandBytes, nullptr, ithoMessageAUTORFTTimer1CommandBytes, ithoMessageAUTORFTTimer2CommandBytes, ithoMessageAUTORFTTimer3CommandBytes, ithoMessageAUTORFTAutoCommandBytes, ithoMessageAUTORFTAutoNightCommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+const uint8_t *RFTN_Remote_Map[] = {nullptr, ithoMessageAUTORFTNJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes, ithoMessageAwayCommandBytes, ithoMessageLowCommandBytes, ithoMessageMediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageTimer1CommandBytes, ithoMessageTimer2CommandBytes, ithoMessageTimer3CommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 const uint8_t *RFTAUTON_Remote_Map[] = {nullptr, ithoMessageAUTORFTNJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes, nullptr, ithoMessageAUTORFTLowCommandBytes, nullptr, ithoMessageAUTORFTHighCommandBytes, nullptr, ithoMessageAUTORFTTimer1CommandBytes, ithoMessageAUTORFTTimer2CommandBytes, ithoMessageAUTORFTTimer3CommandBytes, ithoMessageAUTORFTAutoCommandBytes, ithoMessageAUTORFTAutoNightCommandBytes, nullptr, nullptr, nullptr, ithoMessageJoinReplyCommandBytes, nullptr, nullptr};
 const uint8_t *DEMANDFLOW_Remote_Map[] = {nullptr, ithoMessageDFJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageDFLowCommandBytes, nullptr, ithoMessageDFHighCommandBytes, nullptr, ithoMessageDFTimer1CommandBytes, ithoMessageDFTimer2CommandBytes, ithoMessageDFTimer3CommandBytes, nullptr, nullptr, ithoMessageDFCook30CommandBytes, ithoMessageDFCook60CommandBytes, nullptr, nullptr, nullptr, nullptr};
 const uint8_t *RFTRV_Remote_Map[] = {nullptr, ithoMessageRVJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageLowCommandBytes, ithoMessageRV_CO2MediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageRV_CO2Timer1CommandBytes, ithoMessageRV_CO2Timer2CommandBytes, ithoMessageRV_CO2Timer3CommandBytes, ithoMessageRV_CO2AutoCommandBytes, ithoMessageRV_CO2AutoNightCommandBytes, nullptr, nullptr, nullptr, ithoMessageJoinReplyCommandBytes, nullptr, nullptr};
@@ -94,6 +120,7 @@ struct ihtoRemoteCmdMap
 const struct ihtoRemoteCmdMap ihtoRemoteCmdMapping[]{
     {RFTCVE, RFTCVE_Remote_Map},
     {RFTAUTO, RFTAUTO_Remote_Map},
+    {RFTN, RFTN_Remote_Map},
     {RFTAUTON, RFTAUTON_Remote_Map},
     {DEMANDFLOW, DEMANDFLOW_Remote_Map},
     {RFTRV, RFTRV_Remote_Map},
@@ -562,10 +589,9 @@ void IthoCC1101::createMessageStart(IthoPacket *itho, CC1101Packet *packet)
 void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
 {
   RFmessage message;
-  message.header = HEADER_REMOTE_CMD; // header of regular itho remote commands seems always to be 0x16 (message type: I, addr2, opt0)
 
   uint8_t sourceId[3]{};
-  if (ithoRF.device[remote_index].ownDeviceID[0] == 0 && ithoRF.device[remote_index].ownDeviceID[1] == 0 && ithoRF.device[remote_index].ownDeviceID[2] == 0)
+  if (ithoRF.device[remote_index].sourceID[0] == 0 && ithoRF.device[remote_index].sourceID[1] == 0 && ithoRF.device[remote_index].sourceID[2] == 0)
   {
     sourceId[0] = defaultID[0];
     sourceId[1] = defaultID[1];
@@ -573,17 +599,45 @@ void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
   }
   else
   {
-    sourceId[0] = ithoRF.device[remote_index].ownDeviceID[0];
-    sourceId[1] = ithoRF.device[remote_index].ownDeviceID[1];
-    sourceId[2] = ithoRF.device[remote_index].ownDeviceID[2];
+    sourceId[0] = ithoRF.device[remote_index].sourceID[0];
+    sourceId[1] = ithoRF.device[remote_index].sourceID[1];
+    sourceId[2] = ithoRF.device[remote_index].sourceID[2];
   }
 
-  message.deviceid2[0] = sourceId[0];
-  message.deviceid2[1] = sourceId[1];
-  message.deviceid2[2] = sourceId[2];
+  message.deviceid0[0] = sourceId[0];
+  message.deviceid0[1] = sourceId[1];
+  message.deviceid0[2] = sourceId[2];
 
-  ithoRF.device[remote_index].counter += 1;
-  message.opt0 = ithoRF.device[remote_index].counter;
+  if (ithoRF.device[remote_index].bidirectional)
+  {
+
+    if (command == IthoCommand::IthoJoin || command == IthoCommand::IthoLeave)
+    {
+      message.header = HEADER_REMOTE_1FC9;
+      message.deviceid2[0] = sourceId[0];
+      message.deviceid2[1] = sourceId[1];
+      message.deviceid2[2] = sourceId[2];
+    }
+    else
+    {
+
+      message.header = HEADER_RFT_BIDIRECTIONAL;
+      message.deviceid1[0] = ithoRF.device[remote_index].destinationID[0];
+      message.deviceid1[1] = ithoRF.device[remote_index].destinationID[1];
+      message.deviceid1[2] = ithoRF.device[remote_index].destinationID[2];
+    }
+  }
+  else
+  {
+    message.header = HEADER_REMOTE_CMD; // header of regular itho remote commands seems always to be 0x16 (message type: I, addr2, opt0)
+
+    message.deviceid2[0] = sourceId[0];
+    message.deviceid2[1] = sourceId[1];
+    message.deviceid2[2] = sourceId[2];
+
+    ithoRF.device[remote_index].counter += 1;
+    message.opt0 = ithoRF.device[remote_index].counter;
+  }
 
   message.command = getRemoteCmd(ithoRF.device[remote_index].remType, command);
 
@@ -600,18 +654,18 @@ int8_t IthoCC1101::sendJoinReply(uint8_t remote_index)
     return -1;
 
   uint8_t sourceId[3]{};
-  // if (ithoRF.device[remote_index].ownDeviceID[0] == 0 && ithoRF.device[remote_index].ownDeviceID[1] == 0 && ithoRF.device[remote_index].ownDeviceID[2] == 0)
-  // {
-  sourceId[0] = defaultID[0];
-  sourceId[1] = defaultID[1];
-  sourceId[2] = defaultID[2];
-  // }
-  // else
-  // {
-  //   sourceId[0] = ithoRF.device[remote_index].ownDeviceID[0];
-  //   sourceId[1] = ithoRF.device[remote_index].ownDeviceID[1];
-  //   sourceId[2] = ithoRF.device[remote_index].ownDeviceID[2];
-  // }
+  if (ithoRF.device[remote_index].sourceID[0] == 0 && ithoRF.device[remote_index].sourceID[1] == 0 && ithoRF.device[remote_index].sourceID[2] == 0)
+  {
+    sourceId[0] = defaultID[0];
+    sourceId[1] = defaultID[1];
+    sourceId[2] = defaultID[2];
+  }
+  else
+  {
+    sourceId[0] = ithoRF.device[remote_index].sourceID[0];
+    sourceId[1] = ithoRF.device[remote_index].sourceID[1];
+    sourceId[2] = ithoRF.device[remote_index].sourceID[2];
+  }
 
   RFmessage message;
 
@@ -621,9 +675,9 @@ int8_t IthoCC1101::sendJoinReply(uint8_t remote_index)
   message.deviceid0[1] = sourceId[1];
   message.deviceid0[2] = sourceId[2];
 
-  message.deviceid1[0] = ithoRF.device[remote_index].remoteID[0];
-  message.deviceid1[1] = ithoRF.device[remote_index].remoteID[1];
-  message.deviceid1[2] = ithoRF.device[remote_index].remoteID[2];
+  message.deviceid1[0] = ithoRF.device[remote_index].destinationID[0];
+  message.deviceid1[1] = ithoRF.device[remote_index].destinationID[1];
+  message.deviceid1[2] = ithoRF.device[remote_index].destinationID[2];
 
   message.command = getRemoteCmd(ithoRF.device[remote_index].remType, IthoCommand::IthoJoinReply);
 
@@ -641,18 +695,18 @@ void IthoCC1101::send2E10(uint8_t remote_index, IthoCommand command)
   //   return;
 
   uint8_t sourceId[3]{};
-  // if (ithoRF.device[remote_index].ownDeviceID[0] == 0 && ithoRF.device[remote_index].ownDeviceID[1] == 0 && ithoRF.device[remote_index].ownDeviceID[2] == 0)
-  // {
-  sourceId[0] = defaultID[0];
-  sourceId[1] = defaultID[1];
-  sourceId[2] = defaultID[2];
-  // }
-  // else
-  // {
-  //   sourceId[0] = ithoRF.device[remote_index].ownDeviceID[0];
-  //   sourceId[1] = ithoRF.device[remote_index].ownDeviceID[1];
-  //   sourceId[2] = ithoRF.device[remote_index].ownDeviceID[2];
-  // }
+  if (ithoRF.device[remote_index].sourceID[0] == 0 && ithoRF.device[remote_index].sourceID[1] == 0 && ithoRF.device[remote_index].sourceID[2] == 0)
+  {
+    sourceId[0] = defaultID[0];
+    sourceId[1] = defaultID[1];
+    sourceId[2] = defaultID[2];
+  }
+  else
+  {
+    sourceId[0] = ithoRF.device[remote_index].sourceID[0];
+    sourceId[1] = ithoRF.device[remote_index].sourceID[1];
+    sourceId[2] = ithoRF.device[remote_index].sourceID[2];
+  }
 
   RFmessage message;
   message.header = HEADER_2E10; // header of regular itho remote commands seems always to be 0x16 (message type: I, addr2, opt0)
@@ -676,7 +730,7 @@ void IthoCC1101::send10E0()
   //   return;
 
   uint8_t sourceId[3]{};
-  // if (ithoRF.device[remote_index].ownDeviceID[0] == 0 && ithoRF.device[remote_index].ownDeviceID[1] == 0 && ithoRF.device[remote_index].ownDeviceID[2] == 0)
+  // if (ithoRF.device[remote_index].sourceID[0] == 0 && ithoRF.device[remote_index].sourceID[1] == 0 && ithoRF.device[remote_index].sourceID[2] == 0)
   // {
   sourceId[0] = defaultID[0];
   sourceId[1] = defaultID[1];
@@ -684,9 +738,9 @@ void IthoCC1101::send10E0()
   // }
   // else
   // {
-  //   sourceId[0] = ithoRF.device[remote_index].ownDeviceID[0];
-  //   sourceId[1] = ithoRF.device[remote_index].ownDeviceID[1];
-  //   sourceId[2] = ithoRF.device[remote_index].ownDeviceID[2];
+  //   sourceId[0] = ithoRF.device[remote_index].sourceID[0];
+  //   sourceId[1] = ithoRF.device[remote_index].sourceID[1];
+  //   sourceId[2] = ithoRF.device[remote_index].sourceID[2];
   // }
 
   RFmessage message;
@@ -783,7 +837,7 @@ void IthoCC1101::send31DA(uint8_t *command)
 {
 
   RFmessage message;
-  message.header = HEADER_31DA; // header of regular itho remote commands seems always to be 0x16 (message type: I, addr2, opt0)
+  message.header = HEADER_31DA; // 31DA request has a different structure ie.: H:0C RQ P0:-- P1:-- 97,28,55 96,A4,3B --,--,-- 31DA 01:00 (cmd:unknown)
 
   message.deviceid0[0] = defaultID[0];
   message.deviceid0[1] = defaultID[1];
@@ -864,7 +918,7 @@ void IthoCC1101::sendRFMessage(RFmessage *message)
       sourceId[1] = message->deviceid2[1];
       sourceId[2] = message->deviceid2[2];
     }
-    else if (message->header == HEADER_JOIN_REPLY)
+    else if (message->header == HEADER_JOIN_REPLY || message->header == HEADER_REMOTE_1FC9)
     {
       sourceId[0] = message->deviceid0[0];
       sourceId[1] = message->deviceid0[1];
@@ -1267,7 +1321,7 @@ String IthoCC1101::LastMessageDecoded(IthoPacket *packetPtr)
     {
       str += " ";
       char buf[10]{};
-      snprintf(buf, sizeof(buf), "%02X,%02X,%02X", packetPtr->deviceId0 >> 16 & 0xFF, packetPtr->deviceId0 >> 8 & 0xFF, packetPtr->deviceId0 & 0xFF);
+      snprintf(buf, sizeof(buf), "%02X,%02X,%02X", static_cast<uint8_t>(packetPtr->deviceId0 >> 16 & 0xFF), static_cast<uint8_t>(packetPtr->deviceId0 >> 8 & 0xFF), static_cast<uint8_t>(packetPtr->deviceId0 & 0xFF));
       str += String(buf);
     }
     if (packetPtr->deviceId1 == 0)
@@ -1278,7 +1332,7 @@ String IthoCC1101::LastMessageDecoded(IthoPacket *packetPtr)
     {
       str += " ";
       char buf[10]{};
-      snprintf(buf, sizeof(buf), "%02X,%02X,%02X", packetPtr->deviceId1 >> 16 & 0xFF, packetPtr->deviceId1 >> 8 & 0xFF, packetPtr->deviceId1 & 0xFF);
+      snprintf(buf, sizeof(buf), "%02X,%02X,%02X", static_cast<uint8_t>(packetPtr->deviceId1 >> 16 & 0xFF), static_cast<uint8_t>(packetPtr->deviceId1 >> 8 & 0xFF), static_cast<uint8_t>(packetPtr->deviceId1 & 0xFF));
       str += String(buf);
     }
     if (packetPtr->deviceId2 == 0)
@@ -1289,7 +1343,7 @@ String IthoCC1101::LastMessageDecoded(IthoPacket *packetPtr)
     {
       str += " ";
       char buf[10]{};
-      snprintf(buf, sizeof(buf), "%02X,%02X,%02X", packetPtr->deviceId2 >> 16 & 0xFF, packetPtr->deviceId2 >> 8 & 0xFF, packetPtr->deviceId2 & 0xFF);
+      snprintf(buf, sizeof(buf), "%02X,%02X,%02X", static_cast<uint8_t>(packetPtr->deviceId2 >> 16 & 0xFF), static_cast<uint8_t>(packetPtr->deviceId2 >> 8 & 0xFF), static_cast<uint8_t>(packetPtr->deviceId2 & 0xFF));
       str += String(buf);
     }
 
@@ -1313,7 +1367,7 @@ String IthoCC1101::LastMessageDecoded(IthoPacket *packetPtr)
         str += ",";
       }
     }
-    str += "\n";
+    //str += "\n";
   }
   else
   {
@@ -1326,7 +1380,7 @@ String IthoCC1101::LastMessageDecoded(IthoPacket *packetPtr)
         str += ",";
     }
   }
-  str += "\n";
+  //str += "\n";
   return str;
 }
 
@@ -1339,11 +1393,11 @@ bool IthoCC1101::addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2, Remote
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == 0 && item.remoteID[1] == 0 && item.remoteID[2] == 0)
+    if (item.destinationID[0] == 0 && item.destinationID[1] == 0 && item.destinationID[2] == 0)
     { // pick the first available slot
-      item.remoteID[0] = byte0;
-      item.remoteID[1] = byte1;
-      item.remoteID[2] = byte2;
+      item.destinationID[0] = byte0;
+      item.destinationID[1] = byte1;
+      item.destinationID[2] = byte2;
       item.remType = remType;
       item.bidirectional = bidirectional;
       ithoRF.count++;
@@ -1353,28 +1407,61 @@ bool IthoCC1101::addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2, Remote
   return false;
 }
 
-bool IthoCC1101::updateRFOwnDeviceID(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t remote_index)
+bool IthoCC1101::updateSourceID(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t remote_index)
 {
   if (remote_index > MAX_NUM_OF_REMOTES - 1)
     return false;
 
-  ithoRF.device[remote_index].ownDeviceID[0] = byte0;
-  ithoRF.device[remote_index].ownDeviceID[1] = byte1;
-  ithoRF.device[remote_index].ownDeviceID[2] = byte2;
+  ithoRF.device[remote_index].sourceID[0] = byte0;
+  ithoRF.device[remote_index].sourceID[1] = byte1;
+  ithoRF.device[remote_index].sourceID[2] = byte2;
 
   return true;
 }
 
-bool IthoCC1101::updateRFRemoteID(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t remote_index)
+bool IthoCC1101::updateDestinationID(uint8_t byte0, uint8_t byte1, uint8_t byte2, uint8_t remote_index)
 {
   if (remote_index > MAX_NUM_OF_REMOTES - 1)
     return false;
 
-  ithoRF.device[remote_index].remoteID[0] = byte0;
-  ithoRF.device[remote_index].remoteID[1] = byte1;
-  ithoRF.device[remote_index].remoteID[2] = byte2;
+  ithoRF.device[remote_index].destinationID[0] = byte0;
+  ithoRF.device[remote_index].destinationID[1] = byte1;
+  ithoRF.device[remote_index].destinationID[2] = byte2;
 
   return true;
+}
+
+String IthoCC1101::getSourceID(uint8_t remote_index)
+{
+  if (remote_index > MAX_NUM_OF_REMOTES - 1)
+    return "remote_index out of bounds";
+
+  String str;
+
+  for (uint8_t i = 0; i < 3; i++)
+  {
+    str += String(ithoRF.device[remote_index].sourceID[i], HEX);
+
+    if (i < 2)
+      str += ",";
+  }
+  return str;
+}
+
+String IthoCC1101::getDestinationID(uint8_t remote_index)
+{
+  if (remote_index > MAX_NUM_OF_REMOTES - 1)
+    return "remote_index out of bounds";
+
+  String str;
+  for (uint8_t i = 0; i < 3; i++)
+  {
+    str += String(ithoRF.device[remote_index].destinationID[i], HEX);
+
+    if (i < 2)
+      str += ",";
+  }
+  return str;
 }
 
 bool IthoCC1101::updateRFDevice(uint8_t remote_index, uint8_t byte0, uint8_t byte1, uint8_t byte2, RemoteTypes deviceType, bool bidirectional)
@@ -1382,9 +1469,9 @@ bool IthoCC1101::updateRFDevice(uint8_t remote_index, uint8_t byte0, uint8_t byt
   if (remote_index > MAX_NUM_OF_REMOTES - 1)
     return false;
 
-  ithoRF.device[remote_index].remoteID[0] = byte0;
-  ithoRF.device[remote_index].remoteID[1] = byte1;
-  ithoRF.device[remote_index].remoteID[2] = byte2;
+  ithoRF.device[remote_index].destinationID[0] = byte0;
+  ithoRF.device[remote_index].destinationID[1] = byte1;
+  ithoRF.device[remote_index].destinationID[2] = byte2;
   ithoRF.device[remote_index].remType = deviceType;
   ithoRF.device[remote_index].bidirectional = bidirectional;
   ithoRF.device[remote_index].lastCommand = IthoUnknown;
@@ -1417,17 +1504,18 @@ bool IthoCC1101::removeRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
-      item.ownDeviceID[0] = 0;
-      item.ownDeviceID[1] = 0;
-      item.ownDeviceID[2] = 0;
-      item.remoteID[0] = 0;
-      item.remoteID[1] = 0;
-      item.remoteID[2] = 0;
+      item.sourceID[0] = 0;
+      item.sourceID[1] = 0;
+      item.sourceID[2] = 0;
+      item.destinationID[0] = 0;
+      item.destinationID[1] = 0;
+      item.destinationID[2] = 0;
 
       //      strlcpy(item.name, "", sizeof(item.name));
       item.remType = RemoteTypes::UNSETTYPE;
+      item.bidirectional = false;
       item.lastCommand = IthoUnknown;
       item.timestamp = (time_t)0;
       item.co2 = 0xEFFF;
@@ -1447,12 +1535,12 @@ bool IthoCC1101::removeRFDevice(uint8_t remote_index)
 {
   if (remote_index > MAX_NUM_OF_REMOTES - 1)
     return false;
-  ithoRF.device[remote_index].ownDeviceID[0] = 0;
-  ithoRF.device[remote_index].ownDeviceID[1] = 0;
-  ithoRF.device[remote_index].ownDeviceID[2] = 0;
-  ithoRF.device[remote_index].remoteID[0] = 0;
-  ithoRF.device[remote_index].remoteID[1] = 0;
-  ithoRF.device[remote_index].remoteID[2] = 0;
+  ithoRF.device[remote_index].sourceID[0] = 0;
+  ithoRF.device[remote_index].sourceID[1] = 0;
+  ithoRF.device[remote_index].sourceID[2] = 0;
+  ithoRF.device[remote_index].destinationID[0] = 0;
+  ithoRF.device[remote_index].destinationID[1] = 0;
+  ithoRF.device[remote_index].destinationID[2] = 0;
   ithoRF.device[remote_index].remType = RemoteTypes::UNSETTYPE;
   ithoRF.device[remote_index].bidirectional = false;
   ithoRF.device[remote_index].lastCommand = IthoUnknown;
@@ -1470,7 +1558,7 @@ bool IthoCC1101::checkRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2)
 {
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       return true;
     }
@@ -1507,7 +1595,7 @@ int8_t IthoCC1101::getRemoteIndexByID(uint8_t byte0, uint8_t byte1, uint8_t byte
   int8_t index = 0;
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       return index;
     }
@@ -1589,7 +1677,7 @@ void IthoCC1101::handleBind(IthoPacket *packetPtr)
     packetPtr->remType = RemoteTypes::RFTCO2;
     if (bindAllowed)
     {
-      addRFDevice(byte0, byte1, byte2, RemoteTypes::RFTCO2);
+      addRFDevice(byte0, byte1, byte2, RemoteTypes::RFTCO2, true);
     }
     // TODO: handle join handshake
   }
@@ -1599,7 +1687,7 @@ void IthoCC1101::handleBind(IthoPacket *packetPtr)
     packetPtr->remType = RemoteTypes::RFTRV;
     if (bindAllowed)
     {
-      addRFDevice(byte0, byte1, byte2, RemoteTypes::RFTRV);
+      addRFDevice(byte0, byte1, byte2, RemoteTypes::RFTRV, true);
     }
     // TODO: handle join handshake
   }
@@ -1618,7 +1706,7 @@ void IthoCC1101::handleBind(IthoPacket *packetPtr)
     packetPtr->remType = RemoteTypes::RFTSPIDER;
     if (bindAllowed)
     {
-      addRFDevice(byte0, byte1, byte2, RemoteTypes::RFTSPIDER);
+      addRFDevice(byte0, byte1, byte2, RemoteTypes::RFTSPIDER, true);
     }
   }
   else if (checkIthoCommand(packetPtr, orconMessageJoinCommandBytes))
@@ -1634,7 +1722,7 @@ void IthoCC1101::handleBind(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       item.lastCommand = packetPtr->command;
       return;
@@ -1671,7 +1759,7 @@ void IthoCC1101::handleLevel(IthoPacket *packetPtr)
   }
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       remtype = item.remType;
     }
@@ -1741,7 +1829,7 @@ void IthoCC1101::handleLevel(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       item.lastCommand = packetPtr->command;
       item.timestamp = now;
@@ -1772,7 +1860,7 @@ void IthoCC1101::handleTimer(IthoPacket *packetPtr)
   }
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       remtype = item.remType;
     }
@@ -1821,7 +1909,7 @@ void IthoCC1101::handleTimer(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       item.lastCommand = packetPtr->command;
       item.timestamp = now;
@@ -1864,7 +1952,7 @@ void IthoCC1101::handle31D9(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       item.lastCommand = packetPtr->command;
       item.timestamp = now;
@@ -1907,11 +1995,11 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
-      // item.remoteID[0] = (packetPtr->deviceId1 >> 16) & 0xFF;
-      // item.remoteID[1] = (packetPtr->deviceId1) >> 8 & 0xFF;
-      // item.remoteID[2] = (packetPtr->deviceId1) & 0xFF;
+      // item.destinationID[0] = (packetPtr->deviceId1 >> 16) & 0xFF;
+      // item.destinationID[1] = (packetPtr->deviceId1) >> 8 & 0xFF;
+      // item.destinationID[2] = (packetPtr->deviceId1) & 0xFF;
       item.lastCommand = packetPtr->command;
       item.timestamp = now;
       D_LOG("IthoStatus remote ID match");
@@ -1939,7 +2027,7 @@ void IthoCC1101::handleRemotestatus(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       // store last command
       return;
@@ -1979,7 +2067,7 @@ void IthoCC1101::handleTemphum(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       item.temp = tempTemp;
       item.hum = tempHum;
@@ -2018,7 +2106,7 @@ void IthoCC1101::handleCo2(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       item.co2 = tempVal;
       return;
@@ -2063,7 +2151,7 @@ void IthoCC1101::handleBattery(IthoPacket *packetPtr)
   }
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       item.battery = tempVal;
       return;
@@ -2101,7 +2189,7 @@ void IthoCC1101::handlePIR(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       item.pir = tempVal;
       return;
@@ -2138,7 +2226,7 @@ void IthoCC1101::handleZoneTemp(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       item.temp = tempTemp;
       return;
@@ -2176,7 +2264,7 @@ void IthoCC1101::handleZoneSetpoint(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       item.setpoint = tempSetpoint;
       return;
@@ -2217,7 +2305,7 @@ void IthoCC1101::handleDeviceInfo(IthoPacket *packetPtr)
 
   for (auto &item : ithoRF.device)
   {
-    if (item.remoteID[0] == byte0 && item.remoteID[1] == byte1 && item.remoteID[2] == byte2)
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       item.lastCommand = packetPtr->command;
       item.timestamp = now;
