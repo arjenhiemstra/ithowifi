@@ -20,8 +20,7 @@ enum RemoteFunctions : uint8_t
   RECEIVE = 1,
   VREMOTE = 2,
   MONITOR = 3,
-  SEND = 5,
-  BIDIRECT = 7
+  SEND = 5
 };
 
 class IthoRemote
@@ -33,6 +32,7 @@ private:
     char name[32];
     mutable RemoteTypes remtype{RemoteTypes::UNSETTYPE};
     mutable RemoteFunctions remfunc{RemoteFunctions::UNSETFUNC};
+    bool bidirectional{false};
     JsonDocument capabilities;
     void set(JsonObject);
     void get(JsonObject, RemoteFunctions instanceFunc, int index) const;
@@ -43,7 +43,7 @@ private:
   int maxRemotes{MAX_NUM_OF_REMOTES};
   mutable bool llMode = false;
 
-  volatile uint8_t llModeTime{0};
+  uint8_t llModeTime{0};
 
   typedef struct
   {
@@ -75,8 +75,7 @@ public:
   {
     llModeTime = timeVal;
   };
-  int activeRemote{-1};
-  int setMaxRemotes(unsigned int number) { return (maxRemotes < MAX_NUMBER_OF_REMOTES + 1) ? (maxRemotes = number) : (maxRemotes = MAX_NUMBER_OF_REMOTES); };
+  int copy_id_remote_idx{-1};
   int setMaxRemotes(unsigned int number) { return (maxRemotes < MAX_NUM_OF_REMOTES + 1) ? (maxRemotes = number) : (maxRemotes = MAX_NUM_OF_REMOTES); };
   int getMaxRemotes() { return maxRemotes; };
   int registerNewRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2, const RemoteTypes remtype);
@@ -86,14 +85,16 @@ public:
   void updateRemoteName(const uint8_t index, const char *remoteName);
   void updateRemoteType(const uint8_t index, const uint16_t type);
   void updateRemoteID(const uint8_t index, uint8_t byte0, uint8_t byte1, uint8_t byte2);
+  void updateRemoteBidirectional(const uint8_t index, bool bidirectional);
   void updateRemoteFunction(const uint8_t index, const uint8_t remfunc);
-  //int remoteIndex(const int32_t id);
+  // int remoteIndex(const int32_t id);
   int remoteIndex(uint8_t byte0, uint8_t byte1, uint8_t byte2);
   void getRemoteIDbyIndex(const int index, uint8_t *id);
   const char *getRemoteNamebyIndex(const int index);
   int getRemoteIndexbyName(const char *name);
   RemoteTypes getRemoteType(const int index) { return remotes[index].remtype; };
   RemoteFunctions getRemoteFunction(const int index) { return remotes[index].remfunc; };
+  bool getRemoteBidirectional(const int index) { return remotes[index].bidirectional; };
   const char *lastRemoteName;
   bool checkID(uint8_t byte0, uint8_t byte1, uint8_t byte2);
   bool configLoaded;

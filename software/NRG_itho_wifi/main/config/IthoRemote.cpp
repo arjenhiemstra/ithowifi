@@ -52,7 +52,7 @@ const IthoRemote::remote_command_char IthoRemote::remote_command_msg_table[]{
     {IthoPIRmotionOff, "IthoPIRmotionOff"},
     {Itho31D9, "Itho31D9"},
     {Itho31DA, "Itho31DA"},
-    {IthoDeviceInfo, "IthoDeviceInfo"}};    
+    {IthoDeviceInfo, "IthoDeviceInfo"}};
 
 const char *IthoRemote::remote_unknown_msg = "CMD UNKNOWN ERROR";
 
@@ -91,7 +91,13 @@ int IthoRemote::registerNewRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2, c
   }
 
   int index = remoteIndex(0, 0, 0); // find first index with no remote ID set
-  if (index < 0)
+
+  if (copy_id_remote_idx != -1 && copy_id_remote_idx < maxRemotes)
+  {
+    index = copy_id_remote_idx;
+  }
+
+  if (index < 0) // no valid spot found
   {
     return index;
   }
@@ -101,7 +107,14 @@ int IthoRemote::registerNewRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2, c
 
   remotes[index].remtype = remtype;
 
-  remoteCount++;
+  if (copy_id_remote_idx > 0) // existing remote updated, reset copy_id_remote_idx;
+  {
+    copy_id_remote_idx = -1;
+  }
+  else // new remote added, update remote count
+  {
+    remoteCount++;
+  }
 
   return index;
 }
@@ -131,6 +144,7 @@ int IthoRemote::removeRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2)
   remotes[index].remtype = RemoteTypes::UNSETTYPE;
   remotes[index].remfunc = RemoteFunctions::UNSETFUNC;
   remotes[index].capabilities = nullptr;
+  remotes[index].bidirectional = false;
 
   remoteCount--;
 
@@ -171,6 +185,7 @@ int IthoRemote::removeRemote(const uint8_t index)
     remotes[index].remfunc = RemoteFunctions::VREMOTE;
   }
   remotes[index].capabilities = nullptr;
+  remotes[index].bidirectional = false;
 
   return 1;
 }
@@ -193,6 +208,11 @@ void IthoRemote::updateRemoteID(const uint8_t index, uint8_t byte0, uint8_t byte
 void IthoRemote::updateRemoteFunction(const uint8_t index, const uint8_t remfunc)
 {
   remotes[index].remfunc = static_cast<RemoteFunctions>(remfunc);
+}
+
+void IthoRemote::updateRemoteBidirectional(const uint8_t index, bool bidirectional)
+{
+  remotes[index].bidirectional = bidirectional;
 }
 
 void IthoRemote::addCapabilities(uint8_t remoteIndex, const char *name, int32_t value)
@@ -301,6 +321,10 @@ void IthoRemote::Remote::set(JsonObject obj)
   {
     remfunc = static_cast<RemoteFunctions>(obj["remfunc"]);
   }
+  if (!obj["bidirectional"].isNull())
+  {
+    bidirectional = obj["bidirectional"];
+  }
 }
 
 void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index) const
@@ -349,6 +373,7 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
   {
     obj["capabilities"] = capabilities;
   }
+  obj["bidirectional"] = bidirectional;
 }
 
 bool IthoRemote::set(JsonObject obj, const char *root)
