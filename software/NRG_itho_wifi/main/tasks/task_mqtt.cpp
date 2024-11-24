@@ -5,7 +5,7 @@
 // globals
 TaskHandle_t xTaskMQTTHandle = NULL;
 uint32_t TaskMQTTHWmark = 0;
-PubSubClient mqttClient(client);
+PubSubClient mqttClient(defaultclient);
 
 // locals
 StaticTask_t xTaskMQTTBuffer;
