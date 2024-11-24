@@ -29,12 +29,12 @@ void websocketInit()
   {
     WebSerial.setAuthentication(systemConfig.sys_username, systemConfig.sys_password);
   }
-  //if enable a web based serial terminal will be available at http://IP:8000/webserial
+  // if enable a web based serial terminal will be available at http://IP:8000/webserial
   if (logConfig.webserial_active)
   {
     WebSerial.begin(&wsserver);
-  }  
-  
+  }
+
 #endif
 }
 
@@ -151,7 +151,7 @@ void jsonWsSend(const char *rootName)
   else if (strcmp(rootName, "remtypeconf") == 0)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
-    nested["remtype"] = static_cast<uint16_t>(virtualRemotes.getRemoteType(0));
+    nested["remtype"] = static_cast<uint16_t>(virtualRemotes.getRemoteType(0)); // FIXME, should also support remotes on other positions than only index 0
   }
   else if (strcmp(rootName, "remotes") == 0)
   {
@@ -332,6 +332,14 @@ void handle_ws_message(std::string &&msg)
         else if (val == 0xCE30)
         {
           setSettingCE30(root["ithotemptemp"].as<int16_t>(), root["ithotemp"].as<int16_t>(), root["ithotimestamp"].as<uint32_t>(), true);
+        }
+        else if (val == 0xC000)
+        {
+          sendCO2speed(root["itho_c000_speed1"].as<uint8_t>(), root["itho_c000_speed2"].as<uint8_t>());
+        }
+        else if (val == 0x9298)
+        {
+          sendCO2value(root["itho_9298_val"].as<uint16_t>());
         }
         else if (val == 4030)
         {
@@ -567,10 +575,9 @@ void handle_ws_message(std::string &&msg)
       remotes.updateRemoteFunction(index, remfunc);
       RemoteTypes type = static_cast<RemoteTypes>(root["remtype"].as<uint16_t>() | 0);
       remotes.updateRemoteType(index, type);
-
-      bool bidirectional = (type == RemoteTypes::RFTAUTON || type == RemoteTypes::RFTN || type == RemoteTypes::RFTCO2 || type == RemoteTypes::RFTRV || type == RemoteTypes::RFTSPIDER) ? (remfunc != RemoteFunctions::MONITOR ? true : false) : false;
+      bool bidirectional = root["bidirectional"] | 0;
       remotes.updateRemoteBidirectional(index, bidirectional);
-
+      // bool bidirectional = (type == RemoteTypes::RFTAUTON || type == RemoteTypes::RFTN || type == RemoteTypes::RFTCO2 || type == RemoteTypes::RFTRV || type == RemoteTypes::RFTSPIDER) ? (remfunc != RemoteFunctions::MONITOR ? true : false) : false;
       uint8_t id[3] = {0, 0, 0};
       id[0] = root["id"][0].as<uint8_t>();
       id[1] = root["id"][1].as<uint8_t>();

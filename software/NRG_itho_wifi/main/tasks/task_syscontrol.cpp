@@ -1004,6 +1004,7 @@ bool ithoInitCheck()
     if (systemConfig.itho_pwm2i2c)
     {
       sendI2CPWMinit();
+      // sendCO2init();
     }
   }
   return false;
