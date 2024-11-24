@@ -24,7 +24,6 @@ uint8_t timer31DA{0};
 StaticTask_t xTaskCC1101Buffer;
 StackType_t xTaskCC1101Stack[STACK_SIZE];
 
-// Ticker LogMessage;
 Ticker timerLearnLeaveMode;
 Ticker rf_message;
 
@@ -132,9 +131,8 @@ void RFDebug(IthoPacket *packet)
   // strncat(debugLog, "\n", sizeof(debugLog) - strlen(debugLog) - 1);
 
   D_LOG(debugLog);
-  //  LogMessage.once_ms(150, []() {
-  // logMessagejson(debugLog, RFLOG);
-  //    } );
+
+  logMessagejson(debugLog, RFLOG);
 }
 
 void toggleRemoteLLmode(const char *remotetype)
