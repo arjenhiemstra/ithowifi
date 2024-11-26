@@ -17,42 +17,66 @@ var settingIndex = -1;
 var websocketServerLocation = location.protocol.indexOf("https") > -1 ? 'wss://' + window.location.hostname + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
 
 let messageQueue = [];
+let connectTimeout, pingTimeout;
 let websock;
 
 function startWebsock(websocketServerLocation) {
-  if (debug) console.log(websocketServerLocation);
   messageQueue = [];
+  clearTimeout(connectTimeout);
+  clearTimeout(pingTimeout);
+  pingTimeout = !1;
+  connectTimeout = setTimeout((() => {
+    if (debug) console.log("websock connect timeout."),
+      //websock.close(),
+      startWebsock(websocketServerLocation);
+  }), 1000);
+  websock = null;
   websock = new WebSocket(websocketServerLocation);
-  websock.addEventListener('message', event => {
-    // Add message to the queue
-    messageQueue.push(event.data);
-  });
-  websock.onopen = function (a) {
+
+  websock.addEventListener('open', function (event) {
     if (debug) console.log('websock open');
+    clearTimeout(connectTimeout);
     document.getElementById("layout").style.opacity = 1;
     document.getElementById("loader").style.display = "none";
     if (lastPageReq !== "") {
       update_page(lastPageReq);
     }
     getSettings('syssetup');
-  };
-
-  websock.onclose = function (a) {
+  });
+  websock.addEventListener('message', function (event) {
+    "pong" == event.data ? (clearTimeout(pingTimeout),
+      pingTimeout = !1) : messageQueue.push(event.data);
+  });
+  websock.addEventListener('close', function (event) {
     if (debug) console.log('websock close');
-    // Try to reconnect in 200 milliseconds
-    websock = null;
     document.getElementById("layout").style.opacity = 0.3;
     document.getElementById("loader").style.display = "block";
-    setTimeout(function () { startWebsock(websocketServerLocation) }, 200);
-  };
-
-  websock.onerror = function (a) {
-    try {
-      if (debug) console.log(a);
-    } catch (error) {
-      if (debug) console.log(error);
+    // setTimeout(startWebsock, 200, websocketServerLocation);
+  });
+  websock.addEventListener('error', function (event) {
+    if (debug) console.log("websock Error!", event);
+    startWebsock(websocketServerLocation);
+    //websock.close();
+  });
+  setInterval((() => {
+    pingTimeout || websock.readyState != WebSocket.OPEN || (pingTimeout = setTimeout((() => {
+      if (debug) console.log("websock ping timeout.");
+      startWebsock(websocketServerLocation);
     }
-  };
+    ), 3e3),
+      websock_send("ping"))
+  }
+  ), 2e3)
+}
+
+function websock_send(message) {
+  if (websock.readyState === 1) {
+    if (debug) console.log(message);
+    websock.send(message);
+  }
+  else {
+    if (debug) console.log("websock.readyState != open");
+  }
 }
 
 (async function processMessages() {
@@ -304,6 +328,18 @@ function processMessage(message) {
     processElements(f);
   }
 
+}
+
+function initButton() {
+  document.getElementById("command-button").addEventListener("click", sendCommand)
+}
+function trapKeyPress() {
+  document.getElementById("command-text").addEventListener("keypress", (e => {
+    "Enter" === e.code && (e.preventDefault(), document.getElementById("command-button").click())
+  })),
+    document.addEventListener("keydown", (e => {
+      document.activeElement && "command-text" === document.activeElement.id && ("ArrowUp" === e.code ? (commandHistoryIdx--, commandHistoryIdx < 0 && (commandHistoryIdx = commandHistory.length > 0 ? commandHistory.length - 1 : 0), commandHistoryIdx >= 0 && commandHistoryIdx < commandHistory.length && (document.getElementById("command-text").value = commandHistory[commandHistoryIdx])) : "ArrowDown" === e.code && (commandHistoryIdx++, commandHistoryIdx >= commandHistory.length && (commandHistoryIdx = 0), commandHistoryIdx >= 0 && commandHistoryIdx < commandHistory.length && (document.getElementById("command-text").value = commandHistory[commandHistoryIdx])))
+    }))
 }
 
 function clearSettingsLocStor() {
@@ -858,11 +894,6 @@ $(document).ready(function () {
     }
   });
 });
-
-function websock_send(message) {
-  websock.send(message);
-  if (debug) console.log(message);
-}
 
 var timerHandle = setTimeout(function () {
   $('#message_box').hide();
@@ -1755,7 +1786,7 @@ var html_debug = `
                 <span style="color:red">
                     WPU 5G: Make sure you set the "Max manual operation time" setting on the "Itho settings" page.<br>
                     The itho unit will remain in manual mode until the timer expires. 0 means unlimited.<br>
-                    Warning!!<br></vr></span><br>
+                    Warning!!<br></span><br>
             </fieldset><br><br><br>
         </fieldset>
     </form>

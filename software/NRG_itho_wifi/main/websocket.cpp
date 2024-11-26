@@ -789,8 +789,8 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 {
   if (type == WS_EVT_CONNECT)
   {
-    // Serial.printf("ws[%s][%u] connect\n", server->url(), client->id());
-    client->ping();
+    client->setCloseClientOnQueueFull(false);
+    return;
   }
   else if (type == WS_EVT_DISCONNECT)
   {
@@ -806,14 +806,11 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
   }
   else if (type == WS_EVT_DATA)
   {
-    AwsFrameInfo *info = (AwsFrameInfo *)arg;
     std::string msg;
+    AwsFrameInfo *info = (AwsFrameInfo *)arg;
 
     if (info->final && info->index == 0 && info->len == len)
     {
-      // the whole message is in a single frame and we got all of it's data
-      // Serial.printf("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len);
-
       if (info->opcode == WS_TEXT)
       {
         for (size_t i = 0; i < info->len; i++)
@@ -830,8 +827,14 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
           msg += buff;
         }
       }
+    }
+    if (strcmp(msg.c_str(), "ping") == 0)
+    {
+      client->text("pong");
+    }
+    else
+    {
       handle_ws_message(std::move(msg));
-      // Serial.printf("%s\n",msg.c_str());
     }
   }
 }
