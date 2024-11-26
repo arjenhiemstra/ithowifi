@@ -286,7 +286,9 @@ void TaskCC1101(void *pvParameters)
     {
       uint8_t id[3]{};
       remotes.getRemoteIDbyIndex(index, &id[0]);
-      rf.updateRFDevice(index, id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteBidirectional(index));
+      rf.setBindAllowed(true);
+      rf.addRFDevice(id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteBidirectional(index));
+      rf.setBindAllowed(false);
     }
     systemConfig.rfInitOK = true;
 
@@ -625,14 +627,14 @@ void TaskCC1101(void *pvParameters)
         const ithoRFDevices &rfDevices = rf.getRFdevices();
         for (auto &item : rfDevices.device)
         {
-          if (item.sourceID[0] == 0 && item.sourceID[1] == 0 && item.sourceID[2] == 0)
+          if (item.destinationID[0] == 0 && item.destinationID[1] == 0 && item.destinationID[2] == 0)
             continue;
           // if (item.bidirectional && (cmd != IthoJoin && cmd != IthoLeave))
           // { // trigger fan status update if there is a bi-directional remote in the known list of remotes
           //   send31D9 = true;
           //   send31DA = true;
           // }
-          int remIndex = remotes.remoteIndex(item.sourceID[0], item.sourceID[1], item.sourceID[2]);
+          int remIndex = remotes.remoteIndex(item.destinationID[0], item.destinationID[1], item.destinationID[2]);
           if (remIndex >= 0)
           {
             remotes.addCapabilities(remIndex, "timestamp", item.timestamp);

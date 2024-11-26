@@ -1367,7 +1367,7 @@ String IthoCC1101::LastMessageDecoded(IthoPacket *packetPtr)
         str += ",";
       }
     }
-    //str += "\n";
+    // str += "\n";
   }
   else
   {
@@ -1380,7 +1380,7 @@ String IthoCC1101::LastMessageDecoded(IthoPacket *packetPtr)
         str += ",";
     }
   }
-  //str += "\n";
+  // str += "\n";
   return str;
 }
 
@@ -1400,6 +1400,8 @@ bool IthoCC1101::addRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2, Remote
       item.destinationID[2] = byte2;
       item.remType = remType;
       item.bidirectional = bidirectional;
+      item.timestamp = (time_t)0;
+
       ithoRF.count++;
       return true;
     }
@@ -1481,6 +1483,9 @@ bool IthoCC1101::updateRFDevice(uint8_t remote_index, uint8_t byte0, uint8_t byt
   ithoRF.device[remote_index].hum = 0xEFFF;
   ithoRF.device[remote_index].dewpoint = 0xEFFF;
   ithoRF.device[remote_index].battery = 0xEFFF;
+
+  if (remote_index > ithoRF.count)
+    ithoRF.count = remote_index;
 
   return true;
 }
@@ -2002,7 +2007,6 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
       // item.destinationID[2] = (packetPtr->deviceId1) & 0xFF;
       item.lastCommand = packetPtr->command;
       item.timestamp = now;
-      D_LOG("IthoStatus remote ID match");
       return;
     }
   }
@@ -2025,11 +2029,15 @@ void IthoCC1101::handleRemotestatus(IthoPacket *packetPtr)
   if (!checkRFDevice(byte0, byte1, byte2))
     return;
 
+  time_t now;
+  time(&now);
+
   for (auto &item : ithoRF.device)
   {
     if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
       // store last command
+      // item.timestamp = now;
       return;
     }
   }
@@ -2065,10 +2073,14 @@ void IthoCC1101::handleTemphum(IthoPacket *packetPtr)
   int32_t tempTemp = packetPtr->dataDecoded[packetPtr->payloadPos + 2] << 8 | packetPtr->dataDecoded[packetPtr->payloadPos + 3];
   int32_t tempDewp = packetPtr->dataDecoded[packetPtr->payloadPos + 4] << 8 | packetPtr->dataDecoded[packetPtr->payloadPos + 5];
 
+  time_t now;
+  time(&now);
+
   for (auto &item : ithoRF.device)
   {
     if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
+      item.timestamp = now;
       item.temp = tempTemp;
       item.hum = tempHum;
       item.dewpoint = tempDewp;
@@ -2104,10 +2116,14 @@ void IthoCC1101::handleCo2(IthoPacket *packetPtr)
     return;
   int32_t tempVal = packetPtr->dataDecoded[packetPtr->payloadPos + 1] << 8 | packetPtr->dataDecoded[packetPtr->payloadPos + 2];
 
+  time_t now;
+  time(&now);
+
   for (auto &item : ithoRF.device)
   {
     if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
+      item.timestamp = now;
       item.co2 = tempVal;
       return;
     }
@@ -2149,10 +2165,15 @@ void IthoCC1101::handleBattery(IthoPacket *packetPtr)
   {
     tempVal = (int32_t)packetPtr->dataDecoded[packetPtr->payloadPos + 1] / 2;
   }
+
+  time_t now;
+  time(&now);
+
   for (auto &item : ithoRF.device)
   {
     if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
+      item.timestamp = now;
       item.battery = tempVal;
       return;
     }
@@ -2187,10 +2208,14 @@ void IthoCC1101::handlePIR(IthoPacket *packetPtr)
     return;
   int32_t tempVal = packetPtr->dataDecoded[packetPtr->payloadPos + 1];
 
+  time_t now;
+  time(&now);
+
   for (auto &item : ithoRF.device)
   {
     if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
+      item.timestamp = now;
       item.pir = tempVal;
       return;
     }
@@ -2224,10 +2249,14 @@ void IthoCC1101::handleZoneTemp(IthoPacket *packetPtr)
   // int32_t tempZone = packetPtr->dataDecoded[packetPtr->payloadPos + 0];
   int32_t tempTemp = packetPtr->dataDecoded[packetPtr->payloadPos + 1] << 8 | packetPtr->dataDecoded[packetPtr->payloadPos + 2];
 
+  time_t now;
+  time(&now);
+
   for (auto &item : ithoRF.device)
   {
     if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
+      item.timestamp = now;
       item.temp = tempTemp;
       return;
     }
@@ -2262,10 +2291,14 @@ void IthoCC1101::handleZoneSetpoint(IthoPacket *packetPtr)
   // int32_t tempZone = packetPtr->dataDecoded[packetPtr->payloadPos + 0];
   int32_t tempSetpoint = packetPtr->dataDecoded[packetPtr->payloadPos + 1] << 8 | packetPtr->dataDecoded[packetPtr->payloadPos + 2];
 
+  time_t now;
+  time(&now);
+
   for (auto &item : ithoRF.device)
   {
     if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
+      item.timestamp = now;
       item.setpoint = tempSetpoint;
       return;
     }
@@ -2309,7 +2342,6 @@ void IthoCC1101::handleDeviceInfo(IthoPacket *packetPtr)
     {
       item.lastCommand = packetPtr->command;
       item.timestamp = now;
-      D_LOG("IthoDeviceInfo remote ID match");
       return;
     }
   }
