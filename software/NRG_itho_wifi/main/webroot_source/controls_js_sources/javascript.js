@@ -1097,7 +1097,7 @@ function startCountdown() {
 }
 function moveBar(nPer, element) {
   var elem = document.getElementById(element);
-  elem.style.width = nPer + '%';
+  if(elem !== null) elem.style.width = nPer + '%';
 }
 //
 //
