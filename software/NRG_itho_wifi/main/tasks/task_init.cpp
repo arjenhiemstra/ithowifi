@@ -41,7 +41,6 @@ void TaskInit(void *pvParameters)
 #endif
 
   I_LOG("Setup: done");
-  forceFWcheck = true;
   vTaskDelete(NULL);
 }
 

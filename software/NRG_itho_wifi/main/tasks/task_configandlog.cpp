@@ -68,7 +68,7 @@ void TaskConfigAndLog(void *pvParameters)
 
   loadSystemConfig("flash");
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
-
+  if(systemConfig.fw_check) getFWupdateInfo= 25*60*60*1000; //trigger firmware update check after boot
   syslog_queue_worker();
 
   startTaskSysControl();

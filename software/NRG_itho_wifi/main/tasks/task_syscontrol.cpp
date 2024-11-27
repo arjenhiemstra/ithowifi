@@ -26,10 +26,9 @@ bool wifiSTAconnected = false;
 bool wifiSTAconnecting = false;
 bool reset_sht_sensor = false;
 bool restest = false;
-bool forceFWcheck = false;
-int fw_update_available = -1;
 bool i2c_safe_guard_log = true;
 unsigned long getFWupdateInfo = 0;
+struct firmwareinfo firmwareInfo;
 
 // locals
 StaticTask_t xTaskSysControlBuffer;
@@ -352,11 +351,6 @@ void execSystemControlTasks()
     sysStatReq = true;
     N_LOG("SHT3x sensor reset: executed");
     jsonSysmessage("i2c_sht_reset", "Done");
-  }
-  if (forceFWcheck)
-  {
-    forceFWcheck = false;
-    check_firmware_update();
   }
   if (WiFi.status() == WL_CONNECTED && systemConfig.fw_check && (millis() - getFWupdateInfo > 24 * 60 * 60 * 1000)) // 24hr
   {
@@ -1201,6 +1195,11 @@ std::vector<int> splitVersion(const std::string &version)
 
 int compareVersions(const std::string &v1, const std::string &v2)
 {
+  if(v1.empty())
+    return -2;
+  if(v2.empty())
+    return -2;
+
   std::vector<int> nums1 = splitVersion(v1);
   std::vector<int> nums2 = splitVersion(v2);
 
@@ -1242,10 +1241,11 @@ void check_firmware_update()
           DeserializationError error = deserializeJson(root, payload);
           if (!error)
           {
-            const char *fwver = root["hw_rev"][hw_revision]["latest_fw"] | "error";
-            fw_update_available = compareVersions(fwver, FWVERSION);
-            // 1: newer version available online, 0: no new version available, -1: current version is newer than online version
-            D_LOG("fw_update_available:%d", fw_update_available);
+            strncpy(firmwareInfo.latest_fw, root["hw_rev"][hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
+            strncpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));     
+            firmwareInfo.fw_update_available = compareVersions(firmwareInfo.latest_fw, FWVERSION);
+            // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -2: compare unsuccessful
+            D_LOG("fw_update_available:%d", firmwareInfo.fw_update_available);
           }
         }
       }
