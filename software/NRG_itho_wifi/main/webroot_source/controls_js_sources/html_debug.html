@@ -34,26 +34,10 @@
     <p>JavaScript console debug:</p>
     <button id="jsdebug" class="pure-button pure-button-primary">Toggle</button>
     <span>Status: </span><span id='jsdebug_status'>unknown</span>
-    <br><br>
-    <div id="rflog_outer" class="hidden">
-        <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
-        <div id="rflog"
-            style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
-        </div>
-        <div style="padding-top:5px;">
-            <a href="#" class="pure-button" onclick="$('#rflog').empty()">Clear</a>
-        </div>
-    </div>
+
     <form class="pure-form pure-form-aligned">
         <fieldset>
-            <legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id="rfdebug-0"
-                class="pure-button pure-button-primary">Off</button><br><br><button id="rfdebug-1"
-                class="pure-button pure-button-primary">Level1</button>&nbsp;Level1 will show only known Itho commands
-            from all devices<br><br><button id="rfdebug-2"
-                class="pure-button pure-button-primary">Level2</button>&nbsp;Level2 will show all received RF messages
-            from devices joined to the add-on<br><br><button id="rfdebug-3"
-                class="pure-button pure-button-primary">Level3</button>&nbsp;Level3 will show all received RF messages
-            from all devices<br><br>
+            <legend><br>RF debug (only functional with active CC1101 RF module):</legend><br>
             <button id="rfdebug-12761" class="pure-button pure-button-primary">Send 31D9</button>&nbsp;speed:
             <input id="rfdebug-12761-status" type="number" min="0" max="100" size="6" value="0">&nbsp;
             &nbsp;fault:

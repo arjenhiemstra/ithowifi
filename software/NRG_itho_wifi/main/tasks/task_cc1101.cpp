@@ -6,7 +6,6 @@
 Ticker TaskCC1101Timeout;
 TaskHandle_t xTaskCC1101Handle = nullptr;
 uint32_t TaskCC1101HWmark = 0;
-uint8_t debugLevel = 0;
 bool send31D9 = false;
 bool send31D9debug = false;
 bool send31DAdebug = false;
@@ -277,6 +276,8 @@ void TaskCC1101(void *pvParameters)
     rf.setBindAllowed(false);
     rf.setAllowAll(false);
 
+    setRFdebugLevel(logConfig.rfloglevel);
+
     pinMode(itho_irq_pin, INPUT);
     enableRF_ISR();
 
@@ -450,16 +451,16 @@ void TaskCC1101(void *pvParameters)
         RemoteTypes remtype = rf.getLastRemType(packet);
         bool chk = remotes.checkID(*(lastID + 0), *(lastID + 1), *(lastID + 2));
         // D_LOG("checkID: %d", chk);
-        if (debugLevel >= 2)
+        if (logConfig.rfloglevel >= 2)
         {
-          if (chk || debugLevel == 3)
+          if (chk || logConfig.rfloglevel == 3)
           {
             RFDebug(packet);
           }
         }
         if (cmd != IthoUnknown)
         { // only act on good cmd
-          if (debugLevel == 1)
+          if (logConfig.rfloglevel == 1)
           {
             RFDebug(packet);
           }
@@ -501,7 +502,7 @@ void TaskCC1101(void *pvParameters)
                   // if (index >= 0)
                   // {
                   joinReplyRemIndex = index;
-                  //D_LOG("sendJoinReply:true");
+                  // D_LOG("sendJoinReply:true");
 
                   sendJoinReply = true;
                   // }

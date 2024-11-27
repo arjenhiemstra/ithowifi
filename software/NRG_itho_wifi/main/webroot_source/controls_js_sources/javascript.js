@@ -103,6 +103,7 @@ function processMessage(message) {
   else if (f.logsettings) {
     let x = f.logsettings;
     processElements(x);
+    if (x.rfloglevel > 0) $('#rflog_outer').removeClass('hidden');
   }
   else if (f.wifistat) {
     let x = f.wifistat;
@@ -530,6 +531,7 @@ $(document).ready(function () {
           syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
           esplog_active: $('input[name=\'option-esplog_active\']:checked').val(),
           webserial_active: $('input[name=\'option-webserial_active\']:checked').val(),
+          rfloglevel: $('#rfloglevel').val(),
           logserver: $('#logserver').val(),
           logport: $('#logport').val(),
           logref: $('#logref').val()
@@ -1082,8 +1084,7 @@ function tick() {
     return;
   var sec = secondsRemaining - (Math.floor(secondsRemaining / 60) * 60);
   if (sec < 10) sec = '0' + sec;
-  var message = `This page will reload to the start page in ${sec} seconds...`;
-  timeDisplay.innerHTML = message;
+  timeDisplay.innerText = `This page will reload to the start page in ${sec} seconds...`;
   if (secondsRemaining === 0) {
     clearInterval(intervalHandle);
     resetPage();
@@ -1097,7 +1098,7 @@ function startCountdown() {
 }
 function moveBar(nPer, element) {
   var elem = document.getElementById(element);
-  if(elem !== null) elem.style.width = nPer + '%';
+  if (elem !== null) elem.style.width = nPer + '%';
 }
 //
 //

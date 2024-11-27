@@ -22,8 +22,8 @@ void websocketInit()
   ws.onEvent(onWsEvent);
   wsserver.addHandler(&ws);
   wsserver.begin();
-  WebSerial.onMessage([](const String &msg)
-                      { Serial.println(msg); });
+  WebSerial.onMessage([](const std::string &msg)
+                      { Serial.println(msg.c_str()); });
 
   if (systemConfig.syssec_web)
   {
@@ -227,6 +227,7 @@ void handle_ws_message(std::string &&msg)
             {
               saveLogConfigflag = true;
             }
+            setRFdebugLevel(logConfig.rfloglevel);
           }
         }
         if (strcmp(p.key().c_str(), "wifisettings") == 0)
@@ -722,10 +723,6 @@ void handle_ws_message(std::string &&msg)
         frost31D9 = root["frost"].as<bool>();
         filter31D9 = root["filter"].as<bool>();
         send31D9debug = true;
-      }
-      else
-      {
-        setRFdebugLevel(root["rfdebug"].as<uint16_t>());
       }
     }
   }

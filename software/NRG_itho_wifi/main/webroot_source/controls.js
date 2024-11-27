@@ -104,6 +104,7 @@ function processMessage(message) {
   else if (f.logsettings) {
     let x = f.logsettings;
     processElements(x);
+    if (x.rfloglevel > 0) $('#rflog_outer').removeClass('hidden');
   }
   else if (f.wifistat) {
     let x = f.wifistat;
@@ -531,6 +532,7 @@ $(document).ready(function () {
           syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
           esplog_active: $('input[name=\'option-esplog_active\']:checked').val(),
           webserial_active: $('input[name=\'option-webserial_active\']:checked').val(),
+          rfloglevel: $('#rfloglevel').val(),
           logserver: $('#logserver').val(),
           logport: $('#logport').val(),
           logref: $('#logref').val()
@@ -1083,8 +1085,7 @@ function tick() {
     return;
   var sec = secondsRemaining - (Math.floor(secondsRemaining / 60) * 60);
   if (sec < 10) sec = '0' + sec;
-  var message = `This page will reload to the start page in ${sec} seconds...`;
-  timeDisplay.innerHTML = message;
+  timeDisplay.innerText = `This page will reload to the start page in ${sec} seconds...`;
   if (secondsRemaining === 0) {
     clearInterval(intervalHandle);
     resetPage();
@@ -1098,7 +1099,7 @@ function startCountdown() {
 }
 function moveBar(nPer, element) {
   var elem = document.getElementById(element);
-  if(elem !== null) elem.style.width = nPer + '%';
+  if (elem !== null) elem.style.width = nPer + '%';
 }
 //
 //
@@ -1671,26 +1672,10 @@ var html_debug = `
     <p>JavaScript console debug:</p>
     <button id="jsdebug" class="pure-button pure-button-primary">Toggle</button>
     <span>Status: </span><span id='jsdebug_status'>unknown</span>
-    <br><br>
-    <div id="rflog_outer" class="hidden">
-        <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
-        <div id="rflog"
-            style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
-        </div>
-        <div style="padding-top:5px;">
-            <a href="#" class="pure-button" onclick="$('#rflog').empty()">Clear</a>
-        </div>
-    </div>
+
     <form class="pure-form pure-form-aligned">
         <fieldset>
-            <legend><br>RF debug mode (only functional with active CC1101 RF module):</legend><br><button id="rfdebug-0"
-                class="pure-button pure-button-primary">Off</button><br><br><button id="rfdebug-1"
-                class="pure-button pure-button-primary">Level1</button>&nbsp;Level1 will show only known Itho commands
-            from all devices<br><br><button id="rfdebug-2"
-                class="pure-button pure-button-primary">Level2</button>&nbsp;Level2 will show all received RF messages
-            from devices joined to the add-on<br><br><button id="rfdebug-3"
-                class="pure-button pure-button-primary">Level3</button>&nbsp;Level3 will show all received RF messages
-            from all devices<br><br>
+            <legend><br>RF debug (only functional with active CC1101 RF module):</legend><br>
             <button id="rfdebug-12761" class="pure-button pure-button-primary">Send 31D9</button>&nbsp;speed:
             <input id="rfdebug-12761-status" type="number" min="0" max="100" size="6" value="0">&nbsp;
             &nbsp;fault:
@@ -3408,6 +3393,17 @@ var html_syslog = `
         <a id='prevlog' class="pure-button" href="javascript:alert('Not available!');">Download previous logfile</a>
     </div>
 </div><br><br>
+
+<div id="rflog_outer" class="hidden">
+    <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
+    <div id="rflog"
+        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+    </div>
+    <div style="padding-top:5px;">
+        <a href="#" class="pure-button" onclick="$('#rflog').empty()">Clear</a>
+    </div>
+</div><br><br>
+
 <form class="pure-form pure-form-aligned">
     <fieldset>
         <legend><br>Log Settings:</legend>
@@ -3431,6 +3427,7 @@ var html_syslog = `
             <input id="option-esplog_active-0" type="radio" name="option-esplog_active"
                 onchange='radio("esplog_active", 0)' value="0"> off
         </div>
+        <br>
         <div class="pure-control-group">
             <label for="option-webserial_active" class="pure-radio">Webserial active (reboot needed)</label>
             <input id="option-webserial_active-1" type="radio" name="option-webserial_active"
@@ -3438,6 +3435,22 @@ var html_syslog = `
             <input id="option-webserial_active-0" type="radio" name="option-webserial_active"
                 onchange='radio("webserial_active", 0)' value="0"> off
         </div>
+        <p>The web serial terminal can be reached at http://[IP]:8000/webserial</p>
+        <br>
+        <div class="pure-control-group">
+            <label for="rfloglevel">RF Debug log level:</label>
+            <select id="rfloglevel" name="rfloglevel">
+                <option value="0">Off</option>
+                <option value="1">Level1</option>
+                <option value="2">Level2</option>
+                <option value="3">Level3</option>
+            </select>
+        </div>
+        <p>RF Debug logging works only with an activated CC1101 module.</p>
+        <p>- Level1 will show only known Itho commands from all devices</p>
+        <p>- Level2 will show all received RF messages from devices joined to the add-on</p>
+        <p>- Level3 will show all received RF messages from all devices</p>
+        <br>
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">
             <label for="option-syslog_active" class="pure-radio">Syslog Active</label>

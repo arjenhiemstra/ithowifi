@@ -26,7 +26,6 @@
 extern Ticker TaskCC1101Timeout;
 extern TaskHandle_t xTaskCC1101Handle;
 extern uint32_t TaskCC1101HWmark;
-extern uint8_t debugLevel;
 extern bool send31D9;
 extern bool send31D9debug;
 extern bool send31DAdebug;
