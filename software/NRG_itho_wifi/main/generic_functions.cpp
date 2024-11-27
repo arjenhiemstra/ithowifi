@@ -37,11 +37,6 @@ uint8_t getIthoStatusJSON(JsonObject root)
     root["ppmw"] = static_cast<int>(ppmw + 0.5);
     index++;
   }
-  if (systemConfig.fw_check)
-  {
-    root["firmware_update_available"] = fw_update_available ? "true" : "false";
-    index++;
-  }
   if (!ithoInternalMeasurements.empty() && systemConfig.itho_31d9 == 1)
   {
     for (const auto &internalMeasurement : ithoInternalMeasurements)

@@ -1993,51 +1993,38 @@ Unless specified otherwise:<br>
             <td>get</td>
             <td>string</td>
             <td>ithostatus</td>
-            <td>string</td>
-            <td style="text-align:center">◌</td>
+            <td>JSON</td>
+            <td style="text-align:center">●</td>
             <td style="text-align:center">●</td>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with all available sensor data, status data and system
-                    information. Available keys depend on Itho device and firmware version</em></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
-            <td>variable keys</td>
-            <td>JSON</td>
-            <td style="text-align:center">●</td>
-            <td style="text-align:center">◌</td>
-        </tr>
-        <tr>
-            <td colspan="6">Comments:<br><em>Return type present on MQTT "Itho status topic", see for more info the
-                    comments on ithostatus of the Web API</em></td>
+                    information. Available keys depend on Itho device and firmware version. Return type present on MQTT "Itho status topic"</em></td>
         </tr>
         <tr>
             <td>get</td>
             <td>string</td>
             <td>remotesinfo</td>
-            <td>string</td>
-            <td style="text-align:center">◌</td>
+            <td>JSON</td>
+            <td style="text-align:center">●</td>
             <td style="text-align:center">●</td>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key=remote name, value is
                     JSON with all received capabilities of the remote. Depending on make and model this can be the last
-                    command, temperature, humidity, battery and/or co2 levels.</em></td>
+                    command, temperature, humidity, battery and/or co2 levels. Return type present on MQTT "Remotes info topic".</em></td>
         </tr>
         <tr>
-            <td></td>
-            <td></td>
-            <td>variable keys</td>
+            <td>get</td>
+            <td>string</td>
+            <td>deviceinfo</td>
             <td>JSON</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">◌</td>
+            <td style="text-align:center">●</td>
         </tr>
         <tr>
-            <td colspan="6">Comments:<br><em>Return type present on MQTT "Remotes info topic", see for more info the
-                    comments on remotesinfo of the Web API</em></td>
-        </tr>
+            <td colspan="6">Comments:<br><em>Returns JSON with device information on the add-on and itho device connected (as of WebAPIv2). Return type present on MQTT "Device info topic".</em></td>
+        </tr>            
         <tr>
             <td colspan="6"><b>Commands below this line work on Itho devices that support the PWM2IC2 protocol. Devices
                     supported are at least the HRU200 and all CVE models. Devices known not to support these commands
@@ -2105,8 +2092,7 @@ Unless specified otherwise:<br>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td>
-        </tr>
-
+        </tr>        
         <tr>
             <td colspan="6"><b>Commands only for WPU devices</b></td>
         </tr>
@@ -3023,7 +3009,7 @@ var html_mqttsetup = `
     <tr>
       <td>Remotes info</td>
       <td><span name="mqtt_base_topic"></span>/remotesinfo</td>
-      <td>Contains JSON with info from RF devices paired to the add-on</td>
+      <td>Contains JSON with info on RF devices paired to the add-on</td>
     </tr>
     <tr>
       <td>Last command info</td>
@@ -3035,6 +3021,11 @@ var html_mqttsetup = `
       <td><span name="mqtt_base_topic"></span>/cmd</td>
       <td>Commands posted to this topic will be processed by the MQTTAPI</td>
     </tr>
+    <tr>
+      <td>Device info</td>
+      <td><span name="mqtt_base_topic"></span>/deviceinfo</td>
+      <td>Contains device information on the add-on and itho device connected</td>
+    </tr>    
     <tr>
       <td>Last will</td>
       <td><span name="mqtt_base_topic"></span>/lwt</td>

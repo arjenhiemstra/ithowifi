@@ -41,6 +41,7 @@ void mqttInit();
 void mqttSendStatus();
 void mqttSendRemotesInfo();
 void mqttPublishLastcmd();
+void mqttPublishDeviceInfo();
 void mqttSendSettingsJSON();
 void mqttCallback(const char *topic, const byte *payload, unsigned int length);
 void updateState(uint16_t newState);
