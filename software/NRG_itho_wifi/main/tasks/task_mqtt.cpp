@@ -146,6 +146,7 @@ void execMQTTTasks()
         mqttSendStatus();
         mqttSendRemotesInfo();
         mqttPublishLastcmd();
+        mqttPublishDeviceInfo();
         // mqttSendSettingsJSON();
       }
     }
@@ -267,6 +268,40 @@ void mqttPublishLastcmd()
       E_LOG("MQTT: Failed to send payload (last cmd info))");
   }
   // reset buffer
+  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+}
+
+void mqttPublishDeviceInfo()
+{
+  char deviceinfotopic[140]{};
+  snprintf(deviceinfotopic, sizeof(deviceinfotopic), "%s%s", systemConfig.mqtt_base_topic, "/deviceinfo");
+  JsonDocument doc;
+
+  JsonObject root = doc.to<JsonObject>();
+
+  root["itho_devtype"] = getIthoType();
+  root["itho_mfr"] = currentIthoDeviceGroup();
+  root["itho_hwversion"] = currentItho_hwversion();
+  root["itho_fwversion"] = currentItho_fwversion();
+  root["itho_setlen"] = currentIthoSettingsLength();
+  root["add-on_fwversion"] = FWVERSION;
+  if (systemConfig.fw_check)
+  {
+    root["firmware_update_available"] = fw_update_available == 1 ? "true" : "false";
+  }
+
+  size_t len = measureJson(root);
+
+  if (mqttClient.getBufferSize() < len)
+  {
+    mqttClient.setBufferSize(len);
+  }
+  if (mqttClient.beginPublish(deviceinfotopic, len, true))
+  {
+    serializeJson(root, mqttClient);
+    if (!mqttClient.endPublish())
+      E_LOG("MQTT: Failed to send payload (itho device info))");
+  }
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }
 

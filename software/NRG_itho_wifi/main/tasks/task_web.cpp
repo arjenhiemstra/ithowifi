@@ -119,7 +119,7 @@ void TaskWeb(void *pvParameters)
 void execWebTasks()
 {
   ArduinoOTA.handle();
-  
+
 #if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
   mg_mgr_poll(&mgr, 500);
 #else
@@ -860,6 +860,25 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDoc
     char ithoval[10]{};
     snprintf(ithoval, sizeof(ithoval), "%d", ithoCurrentVal);
     response["currentspeed"] = ithoval;
+    return ApiResponse::status::SUCCESS;
+  }
+  else if (strcmp(value, "deviceinfo") == 0)
+  {
+    JsonObject obj = response["deviceinfo"].to<JsonObject>();
+
+    obj["itho_devtype"] = getIthoType();
+    obj["itho_mfr"] = currentIthoDeviceGroup();
+    obj["itho_hwversion"] = currentItho_hwversion();
+    obj["itho_fwversion"] = currentItho_fwversion();
+    obj["itho_setlen"] = currentIthoSettingsLength();
+    obj["add-on_fwversion"] = FWVERSION;
+    if (systemConfig.fw_check)
+    {
+      obj["firmware_update_available"] = fw_update_available == 1 ? "true" : "false";
+    }
+
+    response.add(obj);
+
     return ApiResponse::status::SUCCESS;
   }
   else if (strcmp(value, "queue") == 0)
