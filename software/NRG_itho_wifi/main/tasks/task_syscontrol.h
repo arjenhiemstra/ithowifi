@@ -39,8 +39,17 @@ extern bool wifiModeAP;
 extern unsigned long APmodeTimeout;
 extern bool reset_sht_sensor;
 extern bool restest;
-extern bool forceFWcheck;
-extern int fw_update_available;
+extern unsigned long getFWupdateInfo;
+
+
+struct firmwareinfo
+{
+    int fw_update_available{0};
+    char latest_fw[16]{};
+    char latest_beta_fw[16]{};
+};
+
+extern firmwareinfo firmwareInfo;
 
 void startTaskSysControl();
 void TaskSysControl(void *pvParameters);

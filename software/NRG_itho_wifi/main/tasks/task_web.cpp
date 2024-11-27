@@ -850,12 +850,14 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDoc
     obj["itho_mfr"] = currentIthoDeviceGroup();
     obj["itho_hwversion"] = currentItho_hwversion();
     obj["itho_fwversion"] = currentItho_fwversion();
-    obj["itho_setlen"] = currentIthoSettingsLength();
+    obj["add-on_hwid"] = WiFi.macAddress();
     obj["add-on_fwversion"] = FWVERSION;
-    if (systemConfig.fw_check)
-    {
-      obj["firmware_update_available"] = fw_update_available == 1 ? "true" : "false";
-    }
+  if (systemConfig.fw_check)
+  {
+    obj["add-on_fwupdate_available"] = firmwareInfo.fw_update_available == 1 ? "true" : "false";
+    obj["add-on_latest_fw"] = firmwareInfo.latest_fw;
+    obj["add-on_latest_beta_fw"] = firmwareInfo.latest_beta_fw;
+  }
 
     response.add(obj);
 

@@ -283,11 +283,13 @@ void mqttPublishDeviceInfo()
   root["itho_mfr"] = currentIthoDeviceGroup();
   root["itho_hwversion"] = currentItho_hwversion();
   root["itho_fwversion"] = currentItho_fwversion();
-  root["itho_setlen"] = currentIthoSettingsLength();
+  root["add-on_hwid"] = WiFi.macAddress();
   root["add-on_fwversion"] = FWVERSION;
   if (systemConfig.fw_check)
   {
-    root["firmware_update_available"] = fw_update_available == 1 ? "true" : "false";
+    root["add-on_fwupdate_available"] = firmwareInfo.fw_update_available == 1 ? "true" : "false";
+    root["add-on_latest_fw"] = firmwareInfo.latest_fw;
+    root["add-on_latest_beta_fw"] = firmwareInfo.latest_beta_fw;
   }
 
   size_t len = measureJson(root);
