@@ -505,19 +505,14 @@ void add2queue()
   ithoQueue.add2queue(nextIthoVal, nextIthoTimer, systemConfig.nonQ_cmd_clearsQ);
 }
 
-void setRFdebugLevel(uint16_t level)
+void setRFdebugLevel(uint8_t level)
 {
-  char logBuff[LOG_BUF_SIZE]{};
-
-  debugLevel = level;
   rf.setAllowAll(true);
   if (level == 2)
   {
     rf.setAllowAll(false);
   }
-  snprintf(logBuff, sizeof(logBuff), "RF debug level = %d", debugLevel);
-
-  logMessagejson(logBuff, WEBINTERFACE);
+  I_LOG("RF debug level = %d", level);
 }
 
 double round(float value, int precision)

@@ -715,26 +715,6 @@ void handleAPIv1(AsyncWebServerRequest *request)
     }
     else if (strcmp(p->name().c_str(), "debug") == 0)
     {
-      if (strcmp(p->value().c_str(), "level0") == 0)
-      {
-        setRFdebugLevel(0);
-        parseOK = true;
-      }
-      if (strcmp(p->value().c_str(), "level1") == 0)
-      {
-        setRFdebugLevel(1);
-        parseOK = true;
-      }
-      if (strcmp(p->value().c_str(), "level2") == 0)
-      {
-        setRFdebugLevel(2);
-        parseOK = true;
-      }
-      if (strcmp(p->value().c_str(), "level3") == 0)
-      {
-        setRFdebugLevel(3);
-        parseOK = true;
-      }
       if (strcmp(p->value().c_str(), "reboot") == 0)
       {
         shouldReboot = true;

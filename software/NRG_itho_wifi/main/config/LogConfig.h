@@ -18,6 +18,7 @@ public:
     uint16_t logport;
     char logref[64];
     uint8_t webserial_active;
+    uint8_t rfloglevel;
     char config_struct_version[4];
 
     mutable bool configLoaded;
