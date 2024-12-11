@@ -334,7 +334,7 @@ void webServerInit()
     request->send(response); })
       .setFilter(ON_AP_FILTER);
 
-  server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/favicon.png", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     AsyncWebServerResponse *response = request->beginResponse(200, "image/png", favicon_png_gz, favicon_png_gz_len, nullptr);
     response->addHeader("Content-Encoding", "gzip");
