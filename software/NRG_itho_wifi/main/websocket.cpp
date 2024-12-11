@@ -266,22 +266,22 @@ void handle_ws_message(std::string &&msg)
       else if (strcmp(root["button"].as<const char *>(), "i2cdebugon") == 0)
       {
         systemConfig.i2cmenu = 1;
-        saveLogConfigflag = true;
+        saveSystemConfigflag = true;
       }
       else if (strcmp(root["button"].as<const char *>(), "i2cdebugoff") == 0)
       {
         systemConfig.i2cmenu = 0;
-        saveLogConfigflag = true;
+        saveSystemConfigflag = true;
       }
       else if (strcmp(root["button"].as<const char *>(), "i2csnifferon") == 0)
       {
         systemConfig.i2c_sniffer = 1;
-        saveLogConfigflag = true;
+        saveSystemConfigflag = true;
       }
       else if (strcmp(root["button"].as<const char *>(), "i2csnifferoff") == 0)
       {
         systemConfig.i2c_sniffer = 0;
-        saveLogConfigflag = true;
+        saveSystemConfigflag = true;
       }
     }
     else
