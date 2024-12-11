@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 
 #include "sys_log.h"
