@@ -16,7 +16,7 @@ bool updateIthoMQTT = false;
 
 Ticker TaskMQTTTimeout;
 
-#include <cmath>
+// #include <cmath>
 
 void startTaskMQTT()
 {

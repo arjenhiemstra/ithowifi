@@ -3,7 +3,7 @@
 #include <string>
 
 #include <Arduino.h>
-#include <stdio.h>
+#include <cstdio>
 #include <driver/i2c.h>
 #include <esp_log.h>
 #include <esp_system.h>
@@ -11,7 +11,7 @@
 #include <freertos/queue.h>
 #include <freertos/task.h>
 #include <queue>
-#include <functional>
+//#include <functional>
 
 #include "IthoSystem.h"
 #include "i2c_logger.h"
