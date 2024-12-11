@@ -255,7 +255,7 @@ def update_releaseinfo():
         latest_fw_key = "latest_fw" if release == "release" else "latest_beta_fw"
         latest_link_key = "link" if release == "release" else "link_beta"
         latest_fw_file = "nrgitho" + hwrev + "-v" + fwversion + ".bin"
-
+        release_notes = "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-"
         releasefile = os.path.join(PROJECT_COMPILED_DIR, "firmware.json")
         with open(releasefile) as f:
             data = json.load(f)
@@ -265,6 +265,13 @@ def update_releaseinfo():
             + latest_fw_file
         )
         data["hw_rev"]["2"][latest_fw_key] = fwversion
+
+        if release == "release":
+            data["hw_rev"]["2"]["release_notes"] = (release_notes+ fwversion)
+            data["hw_rev"]["NON-CVE 1"]["release_notes"] = (release_notes+ fwversion)
+        else:
+            data["hw_rev"]["2"]["beta_release_notes"] = (release_notes+ fwversion)
+            data["hw_rev"]["NON-CVE 1"]["beta_release_notes"] = (release_notes+ fwversion)
 
         data["hw_rev"]["NON-CVE 1"][latest_link_key] = (
             "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/"+ HW_BIN_DIR +"/"
