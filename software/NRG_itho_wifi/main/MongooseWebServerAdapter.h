@@ -1,6 +1,8 @@
 // MongooseWebServerAdapter.h
 #pragma once
 
+#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
+
 #include <mongoose.h>
 #include "IWebServerHandler.h"
 
@@ -28,3 +30,4 @@ public:
     }
 };
 
+#endif
