@@ -436,7 +436,7 @@ void logInit()
 
   I_LOG("Hardware detected: 0x%02X", hardware_rev_det);
 
-  N_LOG("HW rev: %s, FW ver.: %s", hw_revision, FWVERSION);
+  N_LOG("HW rev: %s, FW ver.: %s", hw_revision, fw_version);
 
   N_LOG("I2C sniffer capable hardware: %s", i2c_sniffer_capable ? "yes" : "no");
 
