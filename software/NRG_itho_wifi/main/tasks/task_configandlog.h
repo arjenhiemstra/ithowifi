@@ -34,6 +34,12 @@ extern bool formatFileSystem;
 extern bool flashLogInitReady;
 extern char uuid[UUID_STR_LEN];
 
+inline bool RemotesConfigLoaded = false;
+inline bool VirtualRemotesConfigLoaded = false;
+inline bool WifiConfigLoaded = false;
+inline bool SystemConfigLoaded = false;
+inline bool logConfigLoaded = false;
+
 void startTaskConfigAndLog();
 void TaskConfigAndLog(void *pvParameters);
 void execLogAndConfigTasks();

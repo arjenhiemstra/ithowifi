@@ -14,6 +14,12 @@ bool formatFileSystem = false;
 bool flashLogInitReady = false;
 char uuid[UUID_STR_LEN]{};
 
+// bool RemotesConfigLoaded = false;
+// bool VirtualRemotesConfigLoaded = false;
+// bool WifiConfigLoaded = false;
+// bool SystemConfigLoaded = false;
+// bool logConfigLoaded = false;
+
 // locals
 FSFilePrint filePrint(ACTIVE_FS, "/logfile", 2, 10000);
 
@@ -68,7 +74,7 @@ void TaskConfigAndLog(void *pvParameters)
 
   loadSystemConfig("flash");
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
-  if(systemConfig.fw_check) getFWupdateInfo= 25*60*60*1000; //trigger firmware update check after boot
+  if (systemConfig.fw_check)
   syslog_queue_worker();
 
   startTaskSysControl();
@@ -100,7 +106,7 @@ void execLogAndConfigTasks()
 {
   syslog_queue_worker();
   // Logging and config tasks
-  if (saveSystemConfigflag)
+  if (saveSystemConfigflag && SystemConfigLoaded)
   {
     saveSystemConfigflag = false;
     if (saveSystemConfig("flash"))
@@ -112,7 +118,7 @@ void execLogAndConfigTasks()
       logMessagejson("Failed saving System settings: Unable to write config file", WEBINTERFACE);
     }
   }
-  if (saveLogConfigflag)
+  if (saveLogConfigflag && logConfigLoaded)
   {
     saveLogConfigflag = false;
     if (saveLogConfig("flash"))
@@ -124,7 +130,7 @@ void execLogAndConfigTasks()
       logMessagejson("Failed saving Log settings: Unable to write config file", WEBINTERFACE);
     }
   }
-  if (saveWifiConfigflag)
+  if (saveWifiConfigflag && WifiConfigLoaded)
   {
     saveWifiConfigflag = false;
 
@@ -164,7 +170,7 @@ void execLogAndConfigTasks()
     }
   }
 
-  if (saveRemotesflag)
+  if (saveRemotesflag && RemotesConfigLoaded)
   {
     saveRemotesflag = false;
     DelayedSave.once_ms(150, []()
@@ -172,7 +178,7 @@ void execLogAndConfigTasks()
       saveRemotesConfig("flash");
       jsonWsSend("remotes"); });
   }
-  if (saveVremotesflag)
+  if (saveVremotesflag && VirtualRemotesConfigLoaded)
   {
     saveVremotesflag = false;
     DelayedSave.once_ms(150, []()
