@@ -306,7 +306,7 @@ void webServerInit()
     response->print("var on_ap = false; var hostname = '");
     response->print(hostName());
     response->print("'; var fw_version = '");
-    response->print(FWVERSION);
+    response->print(fw_version);
     response->print("'; var hw_revision = '");
     response->print(hw_revision);
     response->print("'; var itho_pwm2i2c = '");
@@ -324,7 +324,7 @@ void webServerInit()
     response->print("var on_ap = true; var hostname = '");
     response->print(hostName());
     response->print("'; var fw_version = '");
-    response->print(FWVERSION);
+    response->print(fw_version);
     response->print("'; var hw_revision = '");
     response->print(hw_revision);
     response->print("'; var itho_pwm2i2c = '");
@@ -2315,7 +2315,7 @@ void httpEvent(struct mg_connection *c, int ev, void *ev_data)
                     wifiModeAP
                         ? "true"
                         : "false",
-                    hostName(), FWVERSION, hw_revision, systemConfig.itho_pwm2i2c);
+                    hostName(), fw_version, hw_revision, systemConfig.itho_pwm2i2c);
     }
     else if (mg_match(hm->uri, mg_str("/list"), nullptr))
     {

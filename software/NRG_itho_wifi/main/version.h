@@ -1,3 +1,3 @@
 #pragma once
 
-#define FWVERSION "2.9.0-beta4"
+inline const char * fw_version = "2.9.0-beta5";

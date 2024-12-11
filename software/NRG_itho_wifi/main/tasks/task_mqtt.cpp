@@ -990,7 +990,7 @@ void addHADevInfo(JsonObject obj)
   dev["mdl"] = "Wifi add-on for Itho"; // model
   dev["name"] = hostName();            // name
   dev["hw"] = hw_revision;             // hw_version
-  dev["sw"] = FWVERSION;               // sw_version
+  dev["sw"] = fw_version;              // sw_version
   dev["cu"] = cu;                      // configuration_url
 }
 

@@ -76,7 +76,7 @@ else:
 
 def export_version():
     outfile = open(os.path.join(PROJECT_SRC_DIR, "version.h"), "w", encoding="utf-8")
-    outfile.write('#pragma once\n\n#define FWVERSION "' + fwversion + '"\n')
+    outfile.write('#pragma once\n\ninline const char * fw_version = "' + fwversion + '";\n')
 
 
 def concat_controls_js():
