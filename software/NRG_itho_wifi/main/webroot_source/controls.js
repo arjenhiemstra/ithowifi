@@ -9,9 +9,10 @@ var sensor = -1;
 var uuid = 0;
 var wifistat_to;
 var statustimer_to;
-
+var saved_status_count = 0;
+var current_status_count = 0;
 localStorage.setItem("statustimer", 0);
-localStorage.setItem("wifistat", 0);
+localStorage.setItem("statustimer", 0);
 var settingIndex = -1;
 
 var websocketServerLocation = location.protocol.indexOf("https") > -1 ? 'wss://' + window.location.hostname + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
@@ -63,10 +64,10 @@ function startWebsock(websocketServerLocation) {
       if (debug) console.log("websock ping timeout.");
       startWebsock(websocketServerLocation);
     }
-    ), 3e3),
+    ), 6e4),
       websock_send("ping"))
   }
-  ), 2e3)
+  ), 5.5e4)
 }
 
 function websock_send(message) {
@@ -126,13 +127,11 @@ function processMessage(message) {
           websock_send('{"reboot":true}');
         }
       }
-      if (x.itho_rf_support == 1 && x.rfInitOK == true) {
-        $('#remotemenu').removeClass('hidden');
-      }
-      else {
-        $('#remotemenu').addClass('hidden');
-      }
+      if (x.itho_rf_support == 1 && x.rfInitOK == true) $('#remotemenu').removeClass('hidden');
+      else $('#remotemenu').addClass('hidden');
     }
+    if (x.mqtt_ha_active == 1) $('#hadiscmenu').removeClass('hidden');
+    else $('#hadiscmenu').addClass('hidden');
     if ("i2cmenu" in x) {
       if (x.i2cmenu == 1) {
         $('#i2cmenu').removeClass('hidden');
@@ -160,7 +159,37 @@ function processMessage(message) {
   else if (f.ithostatusinfo) {
     let x = f.ithostatusinfo;
     $('#StatusTable').empty();
-    buildHtmlStatusTable('#StatusTable', x);
+    if (f.target == "hadisc") {
+      if (f.itho_status_ready) {
+        current_status_count = f.count;
+        status_items_loaded = true;
+        $("#HADiscForm, #save_update_had").removeClass('hidden');
+        buildHtmlHADiscTable(x);
+      }
+      else {
+        $("#ithostatusrdy").html("Itho status items not (completely) loaded yet, reload to try again...<br><button id='hadreload' class='pure-button pure-button-primary'>Reload</button><br>");
+        $("#ithostatusrdy").removeClass('hidden');
+        $("#HADiscForm, #save_update_had").addClass('hidden');
+      }
+    }
+    else {
+      buildHtmlStatusTable('#StatusTable', x);
+    }
+  }
+  else if (f.hadiscsettings) {
+    let x = f.hadiscsettings;
+    saved_status_count = x.sscnt;
+    if ((current_status_count !== saved_status_count) && (saved_status_count > 0)) {
+      localStorage.setItem("ithostatus", JSON.stringify(x));
+      $("#ithostatusrdy").html("The stored number of HA Discovery items does not match the current number of detected Itho status items. Activating/deactivating I2C functions can be a source of this discrepancy. Please check if configured items are still correct and click 'Save and update' to update the stored items.<br><button id='hadignore' class='pure-button pure-button-primary'>Ignore</button>");
+      $("#ithostatusrdy").removeClass('hidden');
+    }
+    else {
+      $("#ithostatusrdy").addClass('hidden');
+      $("#ithostatusrdy").html('');
+      updateStatusTableFromCompactJson(x);
+    }
+
   }
   else if (f.i2cdebuglog) {
     let x = f.i2cdebuglog;
@@ -542,10 +571,6 @@ $(document).ready(function () {
     }
     //mqttsubmit
     else if ($(this).attr('id') == 'mqttsubmit') {
-      if (!isValidJsonArray($('#ithostatus_ha_autodiscovery').val())) {
-        alert("error: Autodiscover Itho status items input value is not a valid JSON array!");
-        return;
-      }
       websock_send(JSON.stringify({
         systemsettings: {
           mqtt_active: $('input[name=\'option-mqtt_active\']:checked').val(),
@@ -556,7 +581,6 @@ $(document).ready(function () {
           mqtt_version: $('#mqtt_version').val(),
           mqtt_base_topic: $('#mqtt_base_topic').val(),
           mqtt_ha_topic: $('#mqtt_ha_topic').val(),
-          ithostatus_ha_autodiscovery: JSON.parse($('#ithostatus_ha_autodiscovery').val()),
           mqtt_domoticzin_topic: $('#mqtt_domoticzin_topic').val(),
           mqtt_domoticzout_topic: $('#mqtt_domoticzout_topic').val(),
           mqtt_idx: $('#mqtt_idx').val(),
@@ -881,6 +905,24 @@ $(document).ready(function () {
       $('#uploadProgress, #updateProgress, #uploadprg, #updateprg').show();
       $.ajax({ url: '/update', type: 'POST', data: data, contentType: false, processData: false, xhr: function () { var xhr = new window.XMLHttpRequest(); xhr.upload.addEventListener('progress', function (evt) { if (evt.lengthComputable) { var per = Math.round(10 + (((evt.loaded / evt.total) * 100) * 0.9)); $('#uploadprg').html('File upload progress: ' + per + '%'); moveBar(per, "uploadBar"); } }, false); return xhr; }, success: function (d, s) { moveBar(100, "updateBar"); $('#updateprg').html('Firmware update progress: 100%'); $('#updatesubmit').text("Update finished"); $('#time').show(); startCountdown(); }, error: function () { $('#updatesubmit').text("Update failed"); $('#time').show(); startCountdown(); } });
     }
+    else if ($(this).attr('id') == 'hadreload') {
+      $("#ithostatusrdy, #HADiscForm, #save_update_had").addClass('hidden');
+      $("#ithostatusrdy").html('');
+      setTimeout(function () { getSettings('hadiscinfo'); }, 1000);
+    }
+    else if ($(this).attr('id') == 'hadignore') {
+      $("#ithostatusrdy").addClass('hidden');
+      $("#ithostatusrdy").html('');
+      let obj = localStorage.getItem("ithostatus");
+      updateStatusTableFromCompactJson(JSON.parse(obj));
+      localStorage.removeItem("ithostatus");
+    }
+    else if ($(this).attr('id') == 'save_update_had') {
+      var jsonvar = generateCompactJson();
+      websock_send(JSON.stringify({
+        hadiscsettings: jsonvar
+      }));
+    }
     e.preventDefault();
     return false;
   });
@@ -1013,10 +1055,10 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_ha_active") {
     if (state == 1) {
-      $('#mqtt_ha_topic, #label-mqtt_ha, #ithostatus_ha_autodiscovery, #label-ithostatus_ha_autodiscovery, #ithostatus_ha_autodiscovery-help').show();
+      $('#mqtt_ha_topic, #label-mqtt_ha').show();
     }
     else {
-      $('#mqtt_ha_topic, #label-mqtt_ha, #ithostatus_ha_autodiscovery, #label-ithostatus_ha_autodiscovery, #ithostatus_ha_autodiscovery-help').hide();
+      $('#mqtt_ha_topic, #label-mqtt_ha').hide();
     }
   }
   else if (origin == "remote" || origin == "ithoset") {
@@ -1139,6 +1181,7 @@ function update_page(page) {
   if (page == 'update') { $('#main').append(html_update); }
   if (page == 'debug') { $('#main').append(html_debug); $('#main').css('max-width', '1600px') }
   if (page == 'i2cdebug') { $('#main').append(html_i2cdebug); }
+  if (page == 'hadiscovery') { $('#main').append(html_hadiscovery); }
 
 
 }
@@ -1605,6 +1648,90 @@ function addColumnHeader(jsonVar, selector, appendRow) {
     $(selector).append(headerThead$);
   }
   return columnSet;
+}
+
+function buildHtmlHADiscTable(ithostatusinfo) {
+  const advancedToggleId = "advancedModeToggle";
+
+  // Set default value for device type input field
+  document.getElementById("hadevicename").value = ha_dev_name;
+
+  const headerThead$ = $("<thead>");
+  const headerTr$ = $("<tr>");
+  headerTr$.append($("<th>").html("Include"));
+  headerTr$.append($("<th>").html("Label"));
+  headerTr$.append($("<th>").html("HA Name"));
+  headerTr$.append($("<th>").addClass("advanced hidden").html("Device Class"));
+  headerTr$.append($("<th>").addClass("advanced hidden").html("Value Template"));
+  headerTr$.append($("<th>").addClass("advanced hidden").html("Unit of Measurement"));
+  headerThead$.append(headerTr$);
+  $("#HADiscTable").append(headerThead$);
+
+  const headerTbody$ = $("<tbody>");
+
+  // Build table rows from ithostatusinfo
+  Object.entries(ithostatusinfo).forEach(([key, value], index) => {
+    const row$ = $("<tr>");
+    const isDisabled = value === "not available";
+
+    // Include checkbox (default unchecked)
+    const includeCheckbox$ = $("<input>", {
+      type: "checkbox",
+      checked: false,
+    });
+    const includeTd$ = $("<td>").append(includeCheckbox$);
+    row$.append(includeTd$);
+
+    // Label (non-editable)
+    row$.append($("<td>").text(key));
+
+    // HA Name (editable, unit of measurement removed)
+    const unitMatch = key.match(/\(([^)]+)\)$/); // Extract unit in parentheses
+    const cleanName = key.replace(/\s*\([^)]+\)$/, ""); // Remove unit from name
+    const nameInput$ = $("<input>", {
+      type: "text",
+      value: cleanName,
+      placeholder: "Name",
+    });
+    row$.append($("<td>").append(nameInput$));
+
+    // Device Class (editable, advanced)
+    const deviceClassInput$ = $("<input>", {
+      type: "text",
+      class: "advanced hidden",
+      placeholder: "Device Class",
+    });
+    row$.append($("<td>").addClass("advanced hidden").append(deviceClassInput$));
+
+    // Value Template (editable, advanced, retains unit)
+    const valueTemplateInput$ = $("<input>", {
+      type: "text",
+      class: "advanced hidden",
+      placeholder: `{{ value_json['${key}'] }}`,
+      value: `{{ value_json['${key}'] }}`,
+      "data-default": `{{ value_json['${key}'] }}`, // Store the default value
+    });
+    row$.append($("<td>").addClass("advanced hidden").append(valueTemplateInput$));
+
+    // Unit of Measurement (editable, advanced, pre-filled if present)
+    const unitInput$ = $("<input>", {
+      type: "text",
+      class: "advanced hidden",
+      placeholder: "Unit of Measurement",
+      value: unitMatch ? unitMatch[1] : "",
+    });
+    row$.append($("<td>").addClass("advanced hidden").append(unitInput$));
+
+    headerTbody$.append(row$);
+  });
+
+  $("#HADiscTable").append(headerTbody$);
+
+  // Advanced toggle
+  $("#" + advancedToggleId).on("change", function () {
+    const showAdvanced = $(this).is(":checked");
+    $(".advanced").toggleClass("hidden", !showAdvanced);
+  });
 }
 
 var webapihtml = `
@@ -2872,6 +2999,166 @@ var html_systemsettings_start = `
 </script>
 `;
 
+var html_hadiscovery = `
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+
+    .hidden {
+        display: none;
+    }
+</style>
+<div class="header">
+    <h1>Home Automation discovery configuration</h1>
+</div>
+<br><br>
+<div id="ithostatusrdy" class="hidden"></div>
+<form class="pure-form" id="HADiscForm">
+    <fieldset>
+        <label>
+            <input type="checkbox" id="advancedModeToggle">
+            Advanced Mode
+        </label>
+        <label style="margin-left: 20px;">
+            HA Device Name:
+            <input type="text" id="hadevicename" class="pure-input-1-4" maxlength="31">
+        </label>
+    </fieldset>
+</form>
+
+<table id="HADiscTable" class="pure-table pure-table-bordered">
+    <!-- content dynamically generated -->
+</table>
+
+<br>
+
+<button id="save_update_had" class="pure-button pure-button-primary">Save and update</button>
+<pre id="output"></pre>
+
+<script>
+    var ha_dev_name = "Loading...";
+    var status_items_loaded = false;
+    var hastatus_to;
+    getSettings('hadiscinfo')
+
+    $(document).ready(function () {
+        function repeat() {
+            if (!status_items_loaded) hastatus_to = setTimeout(repeat, 100);
+            else {
+                $("#ithostatusrdy").addClass('hidden');
+                $("#ithostatusrdy").html('');
+                clearTimeout(hastatus_to);
+                getSettings('gethadiscsettings');
+            }
+        }
+        repeat();
+    });
+
+
+    function updateStatusTableFromCompactJson(compactJson) {
+        ha_dev_name = compactJson.d;
+
+        // Update HA Device Name
+        document.getElementById("hadevicename").value = ha_dev_name;
+
+
+        const rows = $("#HADiscTable tbody tr");
+
+        if (rows.length == 0)
+            return;
+
+        if (!compactJson.c || !Array.isArray(compactJson.c) || compactJson.c.length === 0)
+            return;
+
+        compactJson.c.forEach((component) => {
+            const index = component.i;
+            const row$ = rows.eq(index);
+
+            // Update Include checkbox
+            const includeCheckbox$ = row$.find("td:nth-child(1) input[type='checkbox']");
+            includeCheckbox$.prop("checked", true);
+
+            // Update Name
+            const nameInput$ = row$.find("td:nth-child(3) input");
+            nameInput$.val(component.n);
+
+            // Update Device Class
+            const deviceClassInput$ = row$.find("td:nth-child(4) input");
+            if (component.dc) {
+                deviceClassInput$.val(component.dc);
+            }
+
+            // Update Value Template
+            const valueTemplateInput$ = row$.find("td:nth-child(5) input");
+            if (component.vt) {
+                valueTemplateInput$.val(component.vt);
+            }
+
+            // Update Unit of Measurement
+            const unitInput$ = row$.find("td:nth-child(6) input");
+            if (component.um) {
+                unitInput$.val(component.um);
+            }
+        });
+
+
+
+    }
+
+    function generateCompactJson() {
+        const rows = $("#HADiscTable tbody tr");
+        const components = [];
+
+        rows.each(function (index) {
+            const include = $(this).find("input[type='checkbox']").is(":checked");
+            if (!include) return;
+
+            const label = $(this).find("td:nth-child(2)").text().trim();
+            const name = $(this).find("td:nth-child(3) input").val().trim();
+            const deviceClass = $(this).find("td:nth-child(4) input").val().trim();
+            const valueTemplateInput$ = $(this).find("td:nth-child(5) input");
+            const valueTemplate = valueTemplateInput$.val().trim();
+            const unitOfMeasurement = $(this).find("td:nth-child(6) input").val().trim();
+
+            const component = {
+                i: index,
+                n: name,
+            };
+
+            // Only include dc if changed
+            if (deviceClass) component.dc = deviceClass;
+
+            // Only include vt if different from the default
+            if (valueTemplate !== valueTemplateInput$.data("default")) {
+                component.vt = valueTemplate;
+            }
+
+            // Include unit_of_measurement if provided
+            if (unitOfMeasurement) {
+                component.um = unitOfMeasurement;
+            }
+
+            components.push(component);
+        });
+
+        const deviceType = document.getElementById("hadevicename").value.trim();
+
+        const compactJson = {
+            sscnt: current_status_count,
+            d: deviceType,
+            c: components,
+        };
+        if (debug) console.log(JSON.stringify(compactJson));
+        return compactJson;
+    }
+
+
+
+</script>
+`;
+
 var html_mqttsetup = `
 <div class="header">
   <h1>MQTT setup</h1>
@@ -2933,13 +3220,6 @@ var html_mqttsetup = `
     <div class="pure-control-group">
       <label id="label-mqtt_ha" for="mqtt_ha_topic">Home Assistant Discovery topic prefix</label>
       <input id="mqtt_ha_topic" maxlength="120" type="text">
-    </div>
-    <br>
-    <div class="pure-control-group">
-      <label id="label-ithostatus_ha_autodiscovery" for="ithostatus_ha_autodiscovery">Autodiscover Itho status
-        items</label>
-      <input style="resize:both;overflow:auto;" id="ithostatus_ha_autodiscovery"
-        title="Must be a valid JSON array with object(s) ie.: [{},{}]" type="text" maxlength="1024" size="20">
     </div>
     <br>
     <div class="pure-control-group">
@@ -3019,77 +3299,6 @@ var html_mqttsetup = `
   </tbody>
 </table>
 <br><br>
-<div id="ithostatus_ha_autodiscovery-help">
-  <p><br>Explainer: Auto discovery of Itho Status items by configuring a JSON array<br></p>
-  <div>
-    <p>The basic syntax of this array is as follows:</p>
-    <pre>[{},{}]</pre>
-    <p>
-      Each Status Item to auto discover by Home Assistant (HA) needs to be represented by an object in the array
-      containing at least either the index of a status item or the label name.
-      <br>
-      Example: <code>{"index":3}</code> or <code>{"label":"BypassPos (%)"}</code>
-      <br>
-      Both can be found on the Itho status page of the web interface.
-    </p>
-    <p>
-      Details sent to HA for auto discovery can be enriched by adding keys to the object. These keys can be the
-      abbreviated or full-length versions of supported auto discovery keys, equal to the HA implementation.
-      See "Supported abbreviations" on:
-      <a href="https://www.home-assistant.io/integrations/mqtt/" target="_blank">
-        Home Assistant MQTT Integration
-      </a> for details.
-    </p>
-    <p>The following keys are supported (all are optional):</p>
-    <ul>
-      <li>
-        <code>"device_class"</code>: Set the sensor type, e.g., <code>motion</code>, <code>temperature</code>,
-        <code>humidity</code>.
-      </li>
-      <li>
-        <code>"name"</code>: Name to be displayed for the sensor in HA, if not defined this defaults to
-        <code>&lt;label name&gt;</code>.
-      </li>
-      <li>
-        <code>"value_template"</code>: Value template to use, if not defined this defaults to
-        <code>{{ value_json['&lt;label name&gt;'] }}</code>.
-      </li>
-      <li>
-        <code>"unit_of_measurement"</code>: Unit of measurement, e.g., %, °C, etc.
-      </li>
-    </ul>
-    <p>There is one special key:</p>
-    <ul>
-      <li>
-        <code>"reset"</code>: This sends an empty object as HA auto discovery if the value is set to <code>1</code>,
-        removing prior auto discovery config from HA. This can be used to remove or reset a discovered item in HA.
-      </li>
-    </ul>
-    <h4>Usage Example:</h4>
-    <pre>
-  [
-      {
-          "index": 3,
-          "reset": 1
-      },
-      {
-          "label": "FanInfo"
-      },
-      {
-          "index": 4
-      },
-      {
-          "index": 10,
-          "name": "vochtsensor",
-          "unit_of_meas": "%",
-          "device_class": "humidity"
-      }
-  ]
-    </pre>
-  </div>
-
-</div>
-<br>
 <script>
   $(document).ready(function () {
     getSettings('mqttsetup');

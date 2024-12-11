@@ -41,6 +41,7 @@ void notifyClients(JsonObject obj)
   if (buffer)
   {
     serializeJson(obj, buffer, len + 1);
+    obj.clear();
     notifyClients(buffer);
   }
   delete[] buffer;

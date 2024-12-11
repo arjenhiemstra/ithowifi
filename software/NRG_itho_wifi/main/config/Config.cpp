@@ -169,6 +169,21 @@ bool resetLogConfig()
   return resetConfigFile("/syslog.json");
 }
 
+bool loadHADiscConfig(const char *location)
+{
+  return loadConfigFile(location, "usehsdiscconfb", "/hadisc.json", 2048, "hadiscconfig", haDiscConfig);
+}
+
+bool saveHADiscConfig(const char *location)
+{
+  return saveConfigFile(location, "/hadisc.json", 2048, "hadiscconfig", haDiscConfig);
+}
+
+bool resetHADiscConfig()
+{
+  return resetConfigFile("/hadisc.json");
+}
+
 template <typename TDst>
 uint16_t serializeRemotes(const char *filename, const IthoRemote &remotes, TDst &dst)
 {

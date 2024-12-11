@@ -31,7 +31,6 @@ SystemConfig::SystemConfig()
   mqtt_idx = 1;
   sensor_idx = 1;
   JsonArray arr __attribute__((unused)) = api_settings_activated.to<JsonArray>();
-  JsonArray arr_iha __attribute__((unused)) = ithostatus_ha_autodiscovery.to<JsonArray>();
 
   itho_fallback = 20;
   itho_low = 20;
@@ -128,12 +127,6 @@ bool SystemConfig::set(JsonObject obj)
     updated = true;
     JsonArray arr = obj["api_settings_activated"].as<JsonArray>();
     api_settings_activated.set(arr);
-  }
-  if (!obj["ithostatus_ha_autodiscovery"].isNull())
-  {
-    updated = true;
-    JsonArray arr = obj["ithostatus_ha_autodiscovery"].as<JsonArray>();
-    ithostatus_ha_autodiscovery.set(arr);
   }
   if (!obj["syssht30"].isNull())
   {
@@ -426,9 +419,7 @@ void SystemConfig::get(JsonObject obj) const
     obj["mqtt_base_topic"] = mqtt_base_topic;
     obj["mqtt_state_retain"] = mqtt_state_retain;
     obj["mqtt_domoticz_active"] = mqtt_domoticz_active;
-    obj["mqtt_ha_active"] = mqtt_ha_active;
     obj["mqtt_ha_topic"] = mqtt_ha_topic;
-    obj["ithostatus_ha_autodiscovery"].set(ithostatus_ha_autodiscovery.as<JsonArrayConst>());
     obj["mqtt_domoticzin_topic"] = mqtt_domoticzin_topic;
     obj["mqtt_domoticzout_topic"] = mqtt_domoticzout_topic;
     obj["mqtt_idx"] = mqtt_idx;
@@ -452,5 +443,6 @@ void SystemConfig::get(JsonObject obj) const
   {
     get_itho_settings = false;
   }
+  obj["mqtt_ha_active"] = mqtt_ha_active;
   obj["version_of_program"] = config_struct_version;
 }

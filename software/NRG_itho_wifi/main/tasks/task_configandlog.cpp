@@ -19,6 +19,7 @@ char uuid[UUID_STR_LEN]{};
 // bool WifiConfigLoaded = false;
 // bool SystemConfigLoaded = false;
 // bool logConfigLoaded = false;
+// bool HADiscConfigLoaded = false;
 
 // locals
 FSFilePrint filePrint(ACTIVE_FS, "/logfile", 2, 10000);
@@ -75,7 +76,11 @@ void TaskConfigAndLog(void *pvParameters)
   loadSystemConfig("flash");
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
   if (systemConfig.fw_check)
+    getFWupdateInfo = 25 * 60 * 60 * 1000; // trigger firmware update check after boot
   syslog_queue_worker();
+
+  HADiscConfigLoaded = loadHADiscConfig("flash");
+  D_LOG("HADiscConfigLoaded:%d", HADiscConfigLoaded);
 
   startTaskSysControl();
   syslog_queue_worker();
@@ -128,6 +133,19 @@ void execLogAndConfigTasks()
     else
     {
       logMessagejson("Failed saving Log settings: Unable to write config file", WEBINTERFACE);
+    }
+  }
+  if (saveHADiscConfigflag && HADiscConfigLoaded)
+  {
+    saveHADiscConfigflag = false;
+    if (saveHADiscConfig("flash"))
+    {
+      logMessagejson("HA Discovery settings saved", WEBINTERFACE);
+      sendHomeAssistantDiscovery = true;
+    }
+    else
+    {
+      logMessagejson("Failed saving HA Discovery settings: Unable to write config file", WEBINTERFACE);
     }
   }
   if (saveWifiConfigflag && WifiConfigLoaded)
@@ -298,7 +316,7 @@ void syslog_queue_worker()
       {
         filePrint.open();
         Log.infoln(input.msg.c_str());
-        filePrint.close();        
+        filePrint.close();
       }
       // Do not log DEBUG level to Flash to prevent excessive wear
       // else if (input.code == SYSLOG_DEBUG && logConfig.loglevel >= SYSLOG_DEBUG)
@@ -325,8 +343,7 @@ void syslog_queue_worker()
     if (WiFi.status() == WL_CONNECTED)
     {
       WebSerial.print(input.msg.c_str());
-    }    
-    
+    }
 
     // Also update webinterface
     // JsonDocument root;

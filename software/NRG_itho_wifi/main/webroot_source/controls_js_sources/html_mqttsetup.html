@@ -61,13 +61,6 @@
     </div>
     <br>
     <div class="pure-control-group">
-      <label id="label-ithostatus_ha_autodiscovery" for="ithostatus_ha_autodiscovery">Autodiscover Itho status
-        items</label>
-      <input style="resize:both;overflow:auto;" id="ithostatus_ha_autodiscovery"
-        title="Must be a valid JSON array with object(s) ie.: [{},{}]" type="text" maxlength="1024" size="20">
-    </div>
-    <br>
-    <div class="pure-control-group">
       <label for="option-mqtt_domoticz_active" class="pure-radio">Domoticz MQTT</label>
       <input id="option-mqtt_domoticz_active-1" type="radio" name="option-mqtt_domoticz_active"
         onchange='radio("mqtt_domoticz_active", 1)' value="1"> on
@@ -144,77 +137,6 @@
   </tbody>
 </table>
 <br><br>
-<div id="ithostatus_ha_autodiscovery-help">
-  <p><br>Explainer: Auto discovery of Itho Status items by configuring a JSON array<br></p>
-  <div>
-    <p>The basic syntax of this array is as follows:</p>
-    <pre>[{},{}]</pre>
-    <p>
-      Each Status Item to auto discover by Home Assistant (HA) needs to be represented by an object in the array
-      containing at least either the index of a status item or the label name.
-      <br>
-      Example: <code>{"index":3}</code> or <code>{"label":"BypassPos (%)"}</code>
-      <br>
-      Both can be found on the Itho status page of the web interface.
-    </p>
-    <p>
-      Details sent to HA for auto discovery can be enriched by adding keys to the object. These keys can be the
-      abbreviated or full-length versions of supported auto discovery keys, equal to the HA implementation.
-      See "Supported abbreviations" on:
-      <a href="https://www.home-assistant.io/integrations/mqtt/" target="_blank">
-        Home Assistant MQTT Integration
-      </a> for details.
-    </p>
-    <p>The following keys are supported (all are optional):</p>
-    <ul>
-      <li>
-        <code>"device_class"</code>: Set the sensor type, e.g., <code>motion</code>, <code>temperature</code>,
-        <code>humidity</code>.
-      </li>
-      <li>
-        <code>"name"</code>: Name to be displayed for the sensor in HA, if not defined this defaults to
-        <code>&lt;label name&gt;</code>.
-      </li>
-      <li>
-        <code>"value_template"</code>: Value template to use, if not defined this defaults to
-        <code>{{ value_json['&lt;label name&gt;'] }}</code>.
-      </li>
-      <li>
-        <code>"unit_of_measurement"</code>: Unit of measurement, e.g., %, °C, etc.
-      </li>
-    </ul>
-    <p>There is one special key:</p>
-    <ul>
-      <li>
-        <code>"reset"</code>: This sends an empty object as HA auto discovery if the value is set to <code>1</code>,
-        removing prior auto discovery config from HA. This can be used to remove or reset a discovered item in HA.
-      </li>
-    </ul>
-    <h4>Usage Example:</h4>
-    <pre>
-  [
-      {
-          "index": 3,
-          "reset": 1
-      },
-      {
-          "label": "FanInfo"
-      },
-      {
-          "index": 4
-      },
-      {
-          "index": 10,
-          "name": "vochtsensor",
-          "unit_of_meas": "%",
-          "device_class": "humidity"
-      }
-  ]
-    </pre>
-  </div>
-
-</div>
-<br>
 <script>
   $(document).ready(function () {
     getSettings('mqttsetup');
