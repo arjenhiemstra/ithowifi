@@ -35,7 +35,6 @@ extern int32_t *resultPtr2410;
 extern bool i2c_result_updateweb;
 extern bool i2c_31d9_done;
 
-
 extern bool itho_internal_hum_temp;
 extern float ithoHum;
 extern float ithoTemp;
@@ -61,7 +60,7 @@ struct ithoDeviceStatus
   uint32_t divider;
   uint8_t updated;
   bool is_signed;
-  ithoDeviceStatus() : updated(0){};
+  ithoDeviceStatus() : updated(0) {};
 };
 
 struct ithoDeviceMeasurements

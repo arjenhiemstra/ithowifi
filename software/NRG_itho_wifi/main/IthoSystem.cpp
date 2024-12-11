@@ -755,6 +755,8 @@ void sendQueryDevicetype(bool updateweb)
   uint8_t i2cbuf[512]{};
 
   size_t result = send_i2c_query(command, sizeof(command), i2cbuf, I2C_CMD_QUERY_DEVICE_TYPE);
+  // example send_i2c_query reply: 80 82 90 E0 01 25 00 01 00 1B 39 1B 01 FE FF FF FF FF FF 04 0B 07 E5 43 56 45 2D 52 46 00 00 00 00 00 00 00 00 00 00 00 00 00 00 60
+
   if (!result)
   {
     if (updateweb)
@@ -790,7 +792,7 @@ void sendQueryStatusFormat(bool updateweb)
   uint8_t i2cbuf[512]{};
 
   size_t result = send_i2c_query(&command[0], sizeof(command), &i2cbuf[0], I2C_CMD_QUERY_STATUS_FORMAT);
-
+  // example send_i2c_query reply: 80 82 A4 00 01 0C 80 10 10 10 00 10 20 10 10 00 92 92 29
   if (!result)
   {
     if (updateweb)
@@ -855,6 +857,7 @@ void sendQueryStatus(bool updateweb)
   uint8_t i2cbuf[512]{};
 
   size_t result = send_i2c_query(&command[0], sizeof(command), &i2cbuf[0], I2C_CMD_QUERY_STATUS);
+  // example send_i2c_query reply: 80 82 A4 01 01 17 02 03 2C 03 2E 00 80 07 01 2A 00 00 13 2A 00 00 82 00 2C 11 6C 09 16 A6
 
   if (!result)
   {
@@ -995,7 +998,7 @@ void sendQuery31DA(bool updateweb)
 {
   uint8_t i2cbuf[512]{};
   size_t result = sendQuery31DA(&i2cbuf[0]);
-
+  // example send_i2c_query reply: 80 82 B1 DA 01 1D EF 00 7F FF 2C EF 7F FF 7F FF 7F FF 7F FF F8 08 EF 98 05 00 00 00 EF EF 7F FF 7F FF 00 6F
   if (!result)
   {
     if (updateweb)
@@ -1381,8 +1384,8 @@ void sendQuery31D9(bool updateweb)
   i2c_31d9_done = false;
 
   uint8_t i2cbuf[512]{};
-
   size_t result = sendQuery31D9(&i2cbuf[0]);
+  // example send_i2c_query reply: 80 82 B1 D9 01 10 86 04 0A 20 20 20 20 20 20 20 20 20 20 20 20 00 4F
 
   if (!result)
   {
