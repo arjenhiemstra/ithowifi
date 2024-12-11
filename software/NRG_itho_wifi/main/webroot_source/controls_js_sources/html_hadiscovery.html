@@ -1,0 +1,157 @@
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+
+    .hidden {
+        display: none;
+    }
+</style>
+<div class="header">
+    <h1>Home Automation discovery configuration</h1>
+</div>
+<br><br>
+<div id="ithostatusrdy" class="hidden"></div>
+<form class="pure-form" id="HADiscForm">
+    <fieldset>
+        <label>
+            <input type="checkbox" id="advancedModeToggle">
+            Advanced Mode
+        </label>
+        <label style="margin-left: 20px;">
+            HA Device Name:
+            <input type="text" id="hadevicename" class="pure-input-1-4" maxlength="31">
+        </label>
+    </fieldset>
+</form>
+
+<table id="HADiscTable" class="pure-table pure-table-bordered">
+    <!-- content dynamically generated -->
+</table>
+
+<br>
+
+<button id="save_update_had" class="pure-button pure-button-primary">Save and update</button>
+<pre id="output"></pre>
+
+<script>
+    var ha_dev_name = "Loading...";
+    var status_items_loaded = false;
+    var hastatus_to;
+    getSettings('hadiscinfo')
+
+    $(document).ready(function () {
+        function repeat() {
+            if (!status_items_loaded) hastatus_to = setTimeout(repeat, 100);
+            else {
+                $("#ithostatusrdy").addClass('hidden');
+                $("#ithostatusrdy").html('');
+                clearTimeout(hastatus_to);
+                getSettings('gethadiscsettings');
+            }
+        }
+        repeat();
+    });
+
+
+    function updateStatusTableFromCompactJson(compactJson) {
+        ha_dev_name = compactJson.d;
+
+        // Update HA Device Name
+        document.getElementById("hadevicename").value = ha_dev_name;
+
+
+        const rows = $("#HADiscTable tbody tr");
+
+        if (rows.length == 0)
+            return;
+
+        if (!compactJson.c || !Array.isArray(compactJson.c) || compactJson.c.length === 0)
+            return;
+
+        compactJson.c.forEach((component) => {
+            const index = component.i;
+            const row$ = rows.eq(index);
+
+            // Update Include checkbox
+            const includeCheckbox$ = row$.find("td:nth-child(1) input[type='checkbox']");
+            includeCheckbox$.prop("checked", true);
+
+            // Update Name
+            const nameInput$ = row$.find("td:nth-child(3) input");
+            nameInput$.val(component.n);
+
+            // Update Device Class
+            const deviceClassInput$ = row$.find("td:nth-child(4) input");
+            if (component.dc) {
+                deviceClassInput$.val(component.dc);
+            }
+
+            // Update Value Template
+            const valueTemplateInput$ = row$.find("td:nth-child(5) input");
+            if (component.vt) {
+                valueTemplateInput$.val(component.vt);
+            }
+
+            // Update Unit of Measurement
+            const unitInput$ = row$.find("td:nth-child(6) input");
+            if (component.um) {
+                unitInput$.val(component.um);
+            }
+        });
+
+
+
+    }
+
+    function generateCompactJson() {
+        const rows = $("#HADiscTable tbody tr");
+        const components = [];
+
+        rows.each(function (index) {
+            const include = $(this).find("input[type='checkbox']").is(":checked");
+            if (!include) return;
+
+            const label = $(this).find("td:nth-child(2)").text().trim();
+            const name = $(this).find("td:nth-child(3) input").val().trim();
+            const deviceClass = $(this).find("td:nth-child(4) input").val().trim();
+            const valueTemplateInput$ = $(this).find("td:nth-child(5) input");
+            const valueTemplate = valueTemplateInput$.val().trim();
+            const unitOfMeasurement = $(this).find("td:nth-child(6) input").val().trim();
+
+            const component = {
+                i: index,
+                n: name,
+            };
+
+            // Only include dc if changed
+            if (deviceClass) component.dc = deviceClass;
+
+            // Only include vt if different from the default
+            if (valueTemplate !== valueTemplateInput$.data("default")) {
+                component.vt = valueTemplate;
+            }
+
+            // Include unit_of_measurement if provided
+            if (unitOfMeasurement) {
+                component.um = unitOfMeasurement;
+            }
+
+            components.push(component);
+        });
+
+        const deviceType = document.getElementById("hadevicename").value.trim();
+
+        const compactJson = {
+            sscnt: current_status_count,
+            d: deviceType,
+            c: components,
+        };
+        if (debug) console.log(JSON.stringify(compactJson));
+        return compactJson;
+    }
+
+
+
+</script>

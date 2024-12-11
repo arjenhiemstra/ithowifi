@@ -17,6 +17,7 @@
 #include "tasks/task_syscontrol.h"
 #include "config/Config.h"
 #include "config/LogConfig.h"
+#include "config/HADiscConfig.h"
 #include "esp32_repartition.h"
 
 #include "LittleFS.h"
@@ -39,6 +40,7 @@ inline bool VirtualRemotesConfigLoaded = false;
 inline bool WifiConfigLoaded = false;
 inline bool SystemConfigLoaded = false;
 inline bool logConfigLoaded = false;
+inline bool HADiscConfigLoaded = false;
 
 void startTaskConfigAndLog();
 void TaskConfigAndLog(void *pvParameters);

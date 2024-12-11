@@ -1,5 +1,7 @@
 #include "generic_functions.h"
 
+#define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 1500 // firmware json response should be smaller than this
+
 // locals
 Ticker IthoCMD;
 const char *espName = "nrg-itho-";
@@ -118,6 +120,22 @@ uint8_t getIthoStatusJSON(JsonObject root)
     }
   }
   return index;
+}
+
+void getDeviceInfoJSON(JsonObject root)
+{
+  root["itho_devtype"] = getIthoType();
+  root["itho_mfr"] = currentIthoDeviceGroup();
+  root["itho_hwversion"] = currentItho_hwversion();
+  root["itho_fwversion"] = currentItho_fwversion();
+  root["add-on_hwid"] = WiFi.macAddress();
+  root["add-on_fwversion"] = fw_version;
+  if (systemConfig.fw_check)
+  {
+    root["add-on_fwupdate_available"] = firmwareInfo.fw_update_available == 1 ? "true" : "false";
+    root["add-on_latest_fw"] = firmwareInfo.latest_fw;
+    root["add-on_latest_beta_fw"] = firmwareInfo.latest_beta_fw;
+  }
 }
 
 bool itho_status_ready()
@@ -576,4 +594,111 @@ std::vector<int> parseHexString(const std::string &input) // throw(std::invalid_
   result.push_back(hexStringToInt(hexStr));
 
   return result;
+}
+
+std::vector<int> splitVersion(const std::string &version)
+{
+  std::vector<int> numbers;
+  std::string segment;
+  size_t pos = 0, found;
+
+  while ((found = version.find('.', pos)) != std::string::npos)
+  {
+    segment = version.substr(pos, found - pos);
+    numbers.push_back(std::stoi(segment));
+    pos = found + 1; // Move past the '.'
+  }
+
+  // Add the last segment
+  segment = version.substr(pos);
+  numbers.push_back(std::stoi(segment));
+
+  return numbers;
+}
+
+int compareVersions(const std::string &v1, const std::string &v2)
+{
+  if (v1.empty())
+    return -2;
+  if (v2.empty())
+    return -2;
+
+  std::vector<int> nums1 = splitVersion(v1);
+  std::vector<int> nums2 = splitVersion(v2);
+
+  for (int i = 0; i < std::max(nums1.size(), nums2.size()); ++i)
+  {
+    int num1 = i < nums1.size() ? nums1[i] : 0;
+    int num2 = i < nums2.size() ? nums2[i] : 0;
+
+    if (num1 > num2)
+      return 1;
+    if (num1 < num2)
+      return -1;
+  }
+
+  return 0; // The versions are equal
+}
+
+void get_firmware_info(JsonObject output)
+{
+
+  WiFiClientSecure *secclient = new WiFiClientSecure;
+  if (secclient)
+  {
+    secclient->setInsecure(); // set secure client without certificate
+
+    HTTPClient https;
+
+    if (https.begin(*secclient, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
+    { // HTTPS
+      int httpCode = https.GET();
+      if (httpCode > 0)
+      {
+        if (httpCode == HTTP_CODE_OK && https.getSize() < MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
+        {
+          String payloadString = https.getString().c_str();
+          const char *payload = payloadString.c_str();
+
+          JsonDocument root;
+          DeserializationError error = deserializeJson(root, payload);
+          if (!error)
+          {
+
+            /*
+            "latest_fw": "2.8.0",
+            "link": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v2.8.0.bin",
+            "latest_beta_fw": "2.9.0-beta4",
+            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v2.9.0-beta4.bin"
+            */
+            output["latest_fw"] = root["hw_rev"][hw_revision]["latest_fw"] | "error";
+            output["link"] = root["hw_rev"][hw_revision]["link"] | "error";
+            output["latest_beta_fw"] = root["hw_rev"][hw_revision]["latest_beta_fw"] | "error";
+            output["link_beta"] = root["hw_rev"][hw_revision]["link_beta"] | "error";
+            output["compare_result"] = compareVersions(output["latest_fw"], fw_version);
+            output["compare_result_beta"] = compareVersions(output["latest_beta_fw"], fw_version);
+            output["update_avail"] = compareVersions(output["latest_fw"], fw_version) == 1 ? true : false;
+            output["update_avail_beta"] = compareVersions(output["latest_beta_fw"], fw_version) == 1 ? true : false;
+            // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -2: compare unsuccessful
+          }
+        }
+      }
+      https.end();
+    }
+  }
+}
+
+void check_firmware_update()
+{
+
+  JsonDocument fwDoc;
+  JsonObject fwObj = fwDoc.to<JsonObject>();
+
+  get_firmware_info(fwObj);
+
+  firmwareInfo.fw_update_available = fwObj["compare_result"];
+  strncpy(firmwareInfo.latest_fw, fwObj["latest_fw"], sizeof(firmwareInfo.latest_fw));
+  strncpy(firmwareInfo.latest_beta_fw, fwObj["latest_beta_fw"], sizeof(firmwareInfo.latest_beta_fw));
+
+  D_LOG("fw_update_available:%d", firmwareInfo.fw_update_available);
 }

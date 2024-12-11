@@ -8,9 +8,10 @@ var sensor = -1;
 var uuid = 0;
 var wifistat_to;
 var statustimer_to;
-
+var saved_status_count = 0;
+var current_status_count = 0;
 localStorage.setItem("statustimer", 0);
-localStorage.setItem("wifistat", 0);
+localStorage.setItem("statustimer", 0);
 var settingIndex = -1;
 
 var websocketServerLocation = location.protocol.indexOf("https") > -1 ? 'wss://' + window.location.hostname + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
@@ -62,10 +63,10 @@ function startWebsock(websocketServerLocation) {
       if (debug) console.log("websock ping timeout.");
       startWebsock(websocketServerLocation);
     }
-    ), 3e3),
+    ), 6e4),
       websock_send("ping"))
   }
-  ), 2e3)
+  ), 5.5e4)
 }
 
 function websock_send(message) {
@@ -125,13 +126,11 @@ function processMessage(message) {
           websock_send('{"reboot":true}');
         }
       }
-      if (x.itho_rf_support == 1 && x.rfInitOK == true) {
-        $('#remotemenu').removeClass('hidden');
-      }
-      else {
-        $('#remotemenu').addClass('hidden');
-      }
+      if (x.itho_rf_support == 1 && x.rfInitOK == true) $('#remotemenu').removeClass('hidden');
+      else $('#remotemenu').addClass('hidden');
     }
+    if (x.mqtt_ha_active == 1) $('#hadiscmenu').removeClass('hidden');
+    else $('#hadiscmenu').addClass('hidden');
     if ("i2cmenu" in x) {
       if (x.i2cmenu == 1) {
         $('#i2cmenu').removeClass('hidden');
@@ -159,7 +158,37 @@ function processMessage(message) {
   else if (f.ithostatusinfo) {
     let x = f.ithostatusinfo;
     $('#StatusTable').empty();
-    buildHtmlStatusTable('#StatusTable', x);
+    if (f.target == "hadisc") {
+      if (f.itho_status_ready) {
+        current_status_count = f.count;
+        status_items_loaded = true;
+        $("#HADiscForm, #save_update_had").removeClass('hidden');
+        buildHtmlHADiscTable(x);
+      }
+      else {
+        $("#ithostatusrdy").html("Itho status items not (completely) loaded yet, reload to try again...<br><button id='hadreload' class='pure-button pure-button-primary'>Reload</button><br>");
+        $("#ithostatusrdy").removeClass('hidden');
+        $("#HADiscForm, #save_update_had").addClass('hidden');
+      }
+    }
+    else {
+      buildHtmlStatusTable('#StatusTable', x);
+    }
+  }
+  else if (f.hadiscsettings) {
+    let x = f.hadiscsettings;
+    saved_status_count = x.sscnt;
+    if ((current_status_count !== saved_status_count) && (saved_status_count > 0)) {
+      localStorage.setItem("ithostatus", JSON.stringify(x));
+      $("#ithostatusrdy").html("The stored number of HA Discovery items does not match the current number of detected Itho status items. Activating/deactivating I2C functions can be a source of this discrepancy. Please check if configured items are still correct and click 'Save and update' to update the stored items.<br><button id='hadignore' class='pure-button pure-button-primary'>Ignore</button>");
+      $("#ithostatusrdy").removeClass('hidden');
+    }
+    else {
+      $("#ithostatusrdy").addClass('hidden');
+      $("#ithostatusrdy").html('');
+      updateStatusTableFromCompactJson(x);
+    }
+
   }
   else if (f.i2cdebuglog) {
     let x = f.i2cdebuglog;
@@ -541,10 +570,6 @@ $(document).ready(function () {
     }
     //mqttsubmit
     else if ($(this).attr('id') == 'mqttsubmit') {
-      if (!isValidJsonArray($('#ithostatus_ha_autodiscovery').val())) {
-        alert("error: Autodiscover Itho status items input value is not a valid JSON array!");
-        return;
-      }
       websock_send(JSON.stringify({
         systemsettings: {
           mqtt_active: $('input[name=\'option-mqtt_active\']:checked').val(),
@@ -555,7 +580,6 @@ $(document).ready(function () {
           mqtt_version: $('#mqtt_version').val(),
           mqtt_base_topic: $('#mqtt_base_topic').val(),
           mqtt_ha_topic: $('#mqtt_ha_topic').val(),
-          ithostatus_ha_autodiscovery: JSON.parse($('#ithostatus_ha_autodiscovery').val()),
           mqtt_domoticzin_topic: $('#mqtt_domoticzin_topic').val(),
           mqtt_domoticzout_topic: $('#mqtt_domoticzout_topic').val(),
           mqtt_idx: $('#mqtt_idx').val(),
@@ -880,6 +904,24 @@ $(document).ready(function () {
       $('#uploadProgress, #updateProgress, #uploadprg, #updateprg').show();
       $.ajax({ url: '/update', type: 'POST', data: data, contentType: false, processData: false, xhr: function () { var xhr = new window.XMLHttpRequest(); xhr.upload.addEventListener('progress', function (evt) { if (evt.lengthComputable) { var per = Math.round(10 + (((evt.loaded / evt.total) * 100) * 0.9)); $('#uploadprg').html('File upload progress: ' + per + '%'); moveBar(per, "uploadBar"); } }, false); return xhr; }, success: function (d, s) { moveBar(100, "updateBar"); $('#updateprg').html('Firmware update progress: 100%'); $('#updatesubmit').text("Update finished"); $('#time').show(); startCountdown(); }, error: function () { $('#updatesubmit').text("Update failed"); $('#time').show(); startCountdown(); } });
     }
+    else if ($(this).attr('id') == 'hadreload') {
+      $("#ithostatusrdy, #HADiscForm, #save_update_had").addClass('hidden');
+      $("#ithostatusrdy").html('');
+      setTimeout(function () { getSettings('hadiscinfo'); }, 1000);
+    }
+    else if ($(this).attr('id') == 'hadignore') {
+      $("#ithostatusrdy").addClass('hidden');
+      $("#ithostatusrdy").html('');
+      let obj = localStorage.getItem("ithostatus");
+      updateStatusTableFromCompactJson(JSON.parse(obj));
+      localStorage.removeItem("ithostatus");
+    }
+    else if ($(this).attr('id') == 'save_update_had') {
+      var jsonvar = generateCompactJson();
+      websock_send(JSON.stringify({
+        hadiscsettings: jsonvar
+      }));
+    }
     e.preventDefault();
     return false;
   });
@@ -1012,10 +1054,10 @@ function radio(origin, state) {
   }
   else if (origin == "mqtt_ha_active") {
     if (state == 1) {
-      $('#mqtt_ha_topic, #label-mqtt_ha, #ithostatus_ha_autodiscovery, #label-ithostatus_ha_autodiscovery, #ithostatus_ha_autodiscovery-help').show();
+      $('#mqtt_ha_topic, #label-mqtt_ha').show();
     }
     else {
-      $('#mqtt_ha_topic, #label-mqtt_ha, #ithostatus_ha_autodiscovery, #label-ithostatus_ha_autodiscovery, #ithostatus_ha_autodiscovery-help').hide();
+      $('#mqtt_ha_topic, #label-mqtt_ha').hide();
     }
   }
   else if (origin == "remote" || origin == "ithoset") {
@@ -1138,6 +1180,7 @@ function update_page(page) {
   if (page == 'update') { $('#main').append(html_update); }
   if (page == 'debug') { $('#main').append(html_debug); $('#main').css('max-width', '1600px') }
   if (page == 'i2cdebug') { $('#main').append(html_i2cdebug); }
+  if (page == 'hadiscovery') { $('#main').append(html_hadiscovery); }
 
 
 }
@@ -1604,6 +1647,90 @@ function addColumnHeader(jsonVar, selector, appendRow) {
     $(selector).append(headerThead$);
   }
   return columnSet;
+}
+
+function buildHtmlHADiscTable(ithostatusinfo) {
+  const advancedToggleId = "advancedModeToggle";
+
+  // Set default value for device type input field
+  document.getElementById("hadevicename").value = ha_dev_name;
+
+  const headerThead$ = $("<thead>");
+  const headerTr$ = $("<tr>");
+  headerTr$.append($("<th>").html("Include"));
+  headerTr$.append($("<th>").html("Label"));
+  headerTr$.append($("<th>").html("HA Name"));
+  headerTr$.append($("<th>").addClass("advanced hidden").html("Device Class"));
+  headerTr$.append($("<th>").addClass("advanced hidden").html("Value Template"));
+  headerTr$.append($("<th>").addClass("advanced hidden").html("Unit of Measurement"));
+  headerThead$.append(headerTr$);
+  $("#HADiscTable").append(headerThead$);
+
+  const headerTbody$ = $("<tbody>");
+
+  // Build table rows from ithostatusinfo
+  Object.entries(ithostatusinfo).forEach(([key, value], index) => {
+    const row$ = $("<tr>");
+    const isDisabled = value === "not available";
+
+    // Include checkbox (default unchecked)
+    const includeCheckbox$ = $("<input>", {
+      type: "checkbox",
+      checked: false,
+    });
+    const includeTd$ = $("<td>").append(includeCheckbox$);
+    row$.append(includeTd$);
+
+    // Label (non-editable)
+    row$.append($("<td>").text(key));
+
+    // HA Name (editable, unit of measurement removed)
+    const unitMatch = key.match(/\(([^)]+)\)$/); // Extract unit in parentheses
+    const cleanName = key.replace(/\s*\([^)]+\)$/, ""); // Remove unit from name
+    const nameInput$ = $("<input>", {
+      type: "text",
+      value: cleanName,
+      placeholder: "Name",
+    });
+    row$.append($("<td>").append(nameInput$));
+
+    // Device Class (editable, advanced)
+    const deviceClassInput$ = $("<input>", {
+      type: "text",
+      class: "advanced hidden",
+      placeholder: "Device Class",
+    });
+    row$.append($("<td>").addClass("advanced hidden").append(deviceClassInput$));
+
+    // Value Template (editable, advanced, retains unit)
+    const valueTemplateInput$ = $("<input>", {
+      type: "text",
+      class: "advanced hidden",
+      placeholder: `{{ value_json['${key}'] }}`,
+      value: `{{ value_json['${key}'] }}`,
+      "data-default": `{{ value_json['${key}'] }}`, // Store the default value
+    });
+    row$.append($("<td>").addClass("advanced hidden").append(valueTemplateInput$));
+
+    // Unit of Measurement (editable, advanced, pre-filled if present)
+    const unitInput$ = $("<input>", {
+      type: "text",
+      class: "advanced hidden",
+      placeholder: "Unit of Measurement",
+      value: unitMatch ? unitMatch[1] : "",
+    });
+    row$.append($("<td>").addClass("advanced hidden").append(unitInput$));
+
+    headerTbody$.append(row$);
+  });
+
+  $("#HADiscTable").append(headerTbody$);
+
+  // Advanced toggle
+  $("#" + advancedToggleId).on("change", function () {
+    const showAdvanced = $(this).is(":checked");
+    $(".advanced").toggleClass("hidden", !showAdvanced);
+  });
 }
 
 var webapihtml = `

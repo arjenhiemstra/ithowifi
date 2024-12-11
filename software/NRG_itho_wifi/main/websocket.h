@@ -10,8 +10,11 @@
 
 #include "LittleFS.h"
 
+#include "HADiscovery.h"
+
 #include "config/SystemConfig.h"
 #include "config/WifiConfig.h"
+#include "config/HADiscConfig.h"
 
 #if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
 #else

@@ -126,6 +126,20 @@ void jsonWsSend(const char *rootName)
     uint8_t count = getIthoStatusJSON(nested);
     root["count"] = count;
   }
+  else if (strcmp(rootName, "hadiscinfo") == 0)
+  {
+    JsonObject nested = root["ithostatusinfo"].to<JsonObject>();
+    uint8_t count = getIthoStatusJSON(nested);
+    root["count"] = count;
+    root["target"] = "hadisc";
+    root["itho_status_ready"] = itho_status_ready();
+  }
+  else if (strcmp(rootName, "hadiscsettings") == 0)
+  {
+    D_LOG("hadiscsettings request recieved2");
+    JsonObject nested = root[rootName].to<JsonObject>();
+    haDiscConfig.get(nested);
+  }
   else if (strcmp(rootName, "debuginfo") == 0)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
@@ -196,7 +210,7 @@ void handle_ws_message(std::string &&msg)
   {
     jsonWsSend("i2cdebuglog");
   }
-  else if (msg.find("{\"wifisettings\"") != std::string::npos || msg.find("{\"systemsettings\"") != std::string::npos || msg.find("{\"logsettings\"") != std::string::npos)
+  else if (msg.find("{\"wifisettings\"") != std::string::npos || msg.find("{\"systemsettings\"") != std::string::npos || msg.find("{\"logsettings\"") != std::string::npos || msg.find("{\"hadiscsettings\"") != std::string::npos)
   {
     JsonDocument root;
     DeserializationError error = deserializeJson(root, msg.c_str());
@@ -239,6 +253,18 @@ void handle_ws_message(std::string &&msg)
             if (wifiConfig.set(value))
             {
               saveWifiConfigflag = true;
+            }
+          }
+        }
+        if (strcmp(p.key().c_str(), "hadiscsettings") == 0)
+        {
+          if (p.value().is<JsonObject>())
+          {
+
+            JsonObject value = p.value();
+            if (haDiscConfig.set(value))
+            {
+              saveHADiscConfigflag = true;
             }
           }
         }
@@ -394,6 +420,16 @@ void handle_ws_message(std::string &&msg)
   else if (msg.find("{\"ithostatus\"") != std::string::npos)
   {
     jsonWsSend("ithostatusinfo");
+    sysStatReq = true;
+  }
+  else if (msg.find("{\"hadiscinfo\"") != std::string::npos)
+  {
+    jsonWsSend("hadiscinfo");
+    sysStatReq = true;
+  }
+  else if (msg.find("{\"gethadiscsettings\"") != std::string::npos)
+  {
+    jsonWsSend("hadiscsettings");
     sysStatReq = true;
   }
   else if (msg.find("{\"ithogetsetting\"") != std::string::npos)

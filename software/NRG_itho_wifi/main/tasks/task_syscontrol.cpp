@@ -3,7 +3,6 @@
 #include "tasks/task_syscontrol.h"
 
 #define TASK_SYS_CONTROL_PRIO 6
-#define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 1500 // firmware json response should be smaller than this
 // globals
 uint32_t TaskSysControlHWmark = 0;
 DNSServer dnsServer;
@@ -14,6 +13,7 @@ bool dontSaveConfig = false;
 bool saveSystemConfigflag = false;
 bool saveLogConfigflag = false;
 bool saveWifiConfigflag = false;
+bool saveHADiscConfigflag = false;
 bool resetWifiConfigflag = false;
 bool resetSystemConfigflag = false;
 bool clearQueue = false;
@@ -542,8 +542,16 @@ void init_i2c_functions()
           i2c_sniffer_enable();
         }
       }
+      if (HADiscConfigLoaded && (strcmp(haDiscConfig.d, "unset") == 0))
+      {
+        strncpy(haDiscConfig.d, getIthoType(), sizeof(haDiscConfig.d));
+        D_LOG("haDiscConfig.d updated to:%s", haDiscConfig.d);
+      }
+      else
+      {
+        D_LOG("haDiscConfig.d not updated, HADiscConfigLoaded:%d, val:%s", HADiscConfigLoaded, haDiscConfig.d);
+      }
       sendHomeAssistantDiscovery = true;
-      sendHADiscoveryIthoStatusItems = true;
     }
     else
     {
@@ -1171,85 +1179,4 @@ void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin)
   snprintf(originchar, sizeof(originchar), "%s-vremote-%d", source, remoteIndex);
 
   logLastCommand(command, originchar);
-}
-
-std::vector<int> splitVersion(const std::string &version)
-{
-  std::vector<int> numbers;
-  std::string segment;
-  size_t pos = 0, found;
-
-  while ((found = version.find('.', pos)) != std::string::npos)
-  {
-    segment = version.substr(pos, found - pos);
-    numbers.push_back(std::stoi(segment));
-    pos = found + 1; // Move past the '.'
-  }
-
-  // Add the last segment
-  segment = version.substr(pos);
-  numbers.push_back(std::stoi(segment));
-
-  return numbers;
-}
-
-int compareVersions(const std::string &v1, const std::string &v2)
-{
-  if(v1.empty())
-    return -2;
-  if(v2.empty())
-    return -2;
-
-  std::vector<int> nums1 = splitVersion(v1);
-  std::vector<int> nums2 = splitVersion(v2);
-
-  for (int i = 0; i < std::max(nums1.size(), nums2.size()); ++i)
-  {
-    int num1 = i < nums1.size() ? nums1[i] : 0;
-    int num2 = i < nums2.size() ? nums2[i] : 0;
-
-    if (num1 > num2)
-      return 1;
-    if (num1 < num2)
-      return -1;
-  }
-
-  return 0; // The versions are equal
-}
-
-void check_firmware_update()
-{
-
-  WiFiClientSecure *secclient = new WiFiClientSecure;
-  if (secclient)
-  {
-    secclient->setInsecure(); // set secure client without certificate
-
-    HTTPClient https;
-
-    if (https.begin(*secclient, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
-    { // HTTPS
-      int httpCode = https.GET();
-      if (httpCode > 0)
-      {
-        if (httpCode == HTTP_CODE_OK && https.getSize() < MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
-        {
-          String payloadString = https.getString().c_str();
-          const char *payload = payloadString.c_str();
-
-          JsonDocument root;
-          DeserializationError error = deserializeJson(root, payload);
-          if (!error)
-          {
-            strncpy(firmwareInfo.latest_fw, root["hw_rev"][hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
-            strncpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));     
-            firmwareInfo.fw_update_available = compareVersions(firmwareInfo.latest_fw, FWVERSION);
-            // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -2: compare unsuccessful
-            D_LOG("fw_update_available:%d", firmwareInfo.fw_update_available);
-          }
-        }
-      }
-      https.end();
-    }
-  }
 }

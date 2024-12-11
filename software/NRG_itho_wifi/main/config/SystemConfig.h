@@ -63,7 +63,6 @@ public:
   uint8_t api_settings;
   uint8_t api_version;
   JsonDocument api_settings_activated;
-  JsonDocument ithostatus_ha_autodiscovery;
   mutable bool rfInitOK;
   uint8_t nonQ_cmd_clearsQ;
 
