@@ -47,5 +47,4 @@ void setRFdebugLevel(uint8_t level);
 double round(float value, int precision);
 char toHex(uint8_t c);
 std::vector<int> parseHexString(const std::string &input);
-void get_firmware_info(JsonObject output);
 void check_firmware_update();

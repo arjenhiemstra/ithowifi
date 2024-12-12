@@ -9,17 +9,17 @@
         "2": {
             "latest_fw": "2.8.0",
             "link": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v2.8.0.bin",
-            "latest_beta_fw": "2.9.0-beta5",
-            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v2.9.0-beta5.bin",
-            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-2.9.0-beta5",
+            "latest_beta_fw": "2.9.0-beta6",
+            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v2.9.0-beta6.bin",
+            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-2.9.0-beta6",
             "release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-2.8.0"
         },
         "NON-CVE 1": {
             "latest_fw": "2.8.0",
             "link": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v2.8.0.bin",
-            "latest_beta_fw": "2.9.0-beta5",
-            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v2.9.0-beta5.bin",
-            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-2.9.0-beta5",
+            "latest_beta_fw": "2.9.0-beta6",
+            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v2.9.0-beta6.bin",
+            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-2.9.0-beta6",
             "release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-2.8.0"
         }
     }
