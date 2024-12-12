@@ -1,6 +1,6 @@
 #include "generic_functions.h"
 
-#define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 1500 // firmware json response should be smaller than this
+#define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 2000 // firmware json response should be smaller than this
 
 // locals
 Ticker IthoCMD;
@@ -596,35 +596,59 @@ std::vector<int> parseHexString(const std::string &input) // throw(std::invalid_
   return result;
 }
 
-std::vector<int> splitVersion(const std::string &version)
+bool isNumeric(const std::string &str)
 {
-  std::vector<int> numbers;
-  std::string segment;
-  size_t pos = 0, found;
+  return std::all_of(str.begin(), str.end(), ::isdigit);
+}
 
-  while ((found = version.find('.', pos)) != std::string::npos)
+// Parses a version string into numeric and optional pre-release components
+// Returns false if parsing fails due to invalid format
+bool parseVersion(const std::string &version, std::vector<int> &numbers, std::string &prerelease)
+{
+  size_t pos = 0, found;
+  size_t hyphen = version.find('-');
+  std::string numericPart = (hyphen != std::string::npos) ? version.substr(0, hyphen) : version;
+  prerelease = (hyphen != std::string::npos) ? version.substr(hyphen + 1) : "";
+
+  while ((found = numericPart.find('.', pos)) != std::string::npos)
   {
-    segment = version.substr(pos, found - pos);
-    numbers.push_back(std::stoi(segment));
-    pos = found + 1; // Move past the '.'
+    std::string segment = numericPart.substr(pos, found - pos);
+    if (!segment.empty() && isNumeric(segment))
+    {
+      numbers.push_back(stoi(segment));
+    }
+    else
+    {
+      return false; // Invalid numeric segment
+    }
+    pos = found + 1;
   }
 
-  // Add the last segment
-  segment = version.substr(pos);
-  numbers.push_back(std::stoi(segment));
+  if (pos < numericPart.length())
+  {
+    std::string lastSegment = numericPart.substr(pos);
+    if (!lastSegment.empty() && isNumeric(lastSegment))
+    {
+      numbers.push_back(stoi(lastSegment));
+    }
+    else
+    {
+      return false; // Invalid last segment
+    }
+  }
 
-  return numbers;
+  return true; // Successfully parsed
 }
 
 int compareVersions(const std::string &v1, const std::string &v2)
 {
-  if (v1.empty())
-    return -2;
-  if (v2.empty())
-    return -2;
+  std::vector<int> nums1, nums2;
+  std::string pre1, pre2;
 
-  std::vector<int> nums1 = splitVersion(v1);
-  std::vector<int> nums2 = splitVersion(v2);
+  if (!parseVersion(v1, nums1, pre1) || !parseVersion(v2, nums2, pre2))
+  {
+    return -99; // Return error code for invalid input format
+  }
 
   for (int i = 0; i < std::max(nums1.size(), nums2.size()); ++i)
   {
@@ -637,12 +661,18 @@ int compareVersions(const std::string &v1, const std::string &v2)
       return -1;
   }
 
-  return 0; // The versions are equal
+  if (pre1.empty() && !pre2.empty())
+    return 1; // No pre-release is higher than any pre-release
+  if (!pre1.empty() && pre2.empty())
+    return -1;
+  if (pre1.empty() && pre2.empty())
+    return 0;
+
+  return pre1.compare(pre2); // Compare pre-releases if both are not empty
 }
 
-void get_firmware_info(JsonObject output)
+void check_firmware_update()
 {
-
   WiFiClientSecure *secclient = new WiFiClientSecure;
   if (secclient)
   {
@@ -664,41 +694,19 @@ void get_firmware_info(JsonObject output)
           DeserializationError error = deserializeJson(root, payload);
           if (!error)
           {
+            firmwareInfo.fw_update_available = compareVersions(root["hw_rev"][hw_revision]["latest_fw"] | "error", fw_version);
 
-            /*
-            "latest_fw": "2.8.0",
-            "link": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v2.8.0.bin",
-            "latest_beta_fw": "2.9.0-beta4",
-            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v2.9.0-beta4.bin"
-            */
-            output["latest_fw"] = root["hw_rev"][hw_revision]["latest_fw"] | "error";
-            output["link"] = root["hw_rev"][hw_revision]["link"] | "error";
-            output["latest_beta_fw"] = root["hw_rev"][hw_revision]["latest_beta_fw"] | "error";
-            output["link_beta"] = root["hw_rev"][hw_revision]["link_beta"] | "error";
-            output["compare_result"] = compareVersions(output["latest_fw"], fw_version);
-            output["compare_result_beta"] = compareVersions(output["latest_beta_fw"], fw_version);
-            output["update_avail"] = compareVersions(output["latest_fw"], fw_version) == 1 ? true : false;
-            output["update_avail_beta"] = compareVersions(output["latest_beta_fw"], fw_version) == 1 ? true : false;
-            // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -2: compare unsuccessful
+            strncpy(firmwareInfo.latest_fw, root["hw_rev"][hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
+            Serial.printf("latest_fw:%s\n",root["hw_rev"][hw_revision]["latest_fw"] | "error");
+            strncpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
+            Serial.printf("latest_beta_fw:%s\n",root["hw_rev"][hw_revision]["latest_beta_fw"] | "error");
+
+            D_LOG("fw_update_available:%d", firmwareInfo.fw_update_available);
+            // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful
           }
         }
       }
       https.end();
     }
   }
-}
-
-void check_firmware_update()
-{
-
-  JsonDocument fwDoc;
-  JsonObject fwObj = fwDoc.to<JsonObject>();
-
-  get_firmware_info(fwObj);
-
-  firmwareInfo.fw_update_available = fwObj["compare_result"];
-  strncpy(firmwareInfo.latest_fw, fwObj["latest_fw"], sizeof(firmwareInfo.latest_fw));
-  strncpy(firmwareInfo.latest_beta_fw, fwObj["latest_beta_fw"], sizeof(firmwareInfo.latest_beta_fw));
-
-  D_LOG("fw_update_available:%d", firmwareInfo.fw_update_available);
 }

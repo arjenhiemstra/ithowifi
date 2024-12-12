@@ -177,11 +177,6 @@ void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
     snprintf(statetopic, sizeof(statetopic), "%s%s", systemConfig.mqtt_base_topic, "/state");
     snprintf(ithodevicetopic, sizeof(ithodevicetopic), "%s%s", systemConfig.mqtt_base_topic, "/deviceinfo");
 
-    JsonDocument fwDoc;
-    JsonObject fwObj = fwDoc.to<JsonObject>();
-
-    get_firmware_info(fwObj);
-
     std::string uniqueId = normalizeUniqueId(std::string(name) + "_fwupdate");
     JsonObject componentJson = obj[const_cast<char *>(uniqueId.c_str())].to<JsonObject>();
     componentJson["name"] = "Firmware Update";
