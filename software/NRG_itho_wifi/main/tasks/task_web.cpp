@@ -502,12 +502,20 @@ void MDNSinit()
     return;
   }
 
-  // set hostname
-  mdns_hostname_set(hostName());
-  // set default instance
-  char inst_name[64]{};
-  snprintf(inst_name, sizeof(inst_name), "%s Web Interface", hostName());
+  char hostname[32]{};
+  snprintf(hostname, sizeof(hostname), "%s", hostName());
+  for (int i = 0; i < strlen(hostname); i++)
+  {
+    hostname[i] = tolower(hostname[i]);
+  }
 
+  // set hostname
+  mdns_hostname_set(hostname);
+
+  char inst_name[sizeof(hostname)+14]{}; // " Web Interface" == 14 chars
+  snprintf(inst_name, sizeof(inst_name), "%s Web Interface", hostname);
+  
+  // set default instance
   mdns_instance_name_set(inst_name);
 
   // add our services
