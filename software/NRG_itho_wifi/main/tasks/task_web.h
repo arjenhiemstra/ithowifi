@@ -14,7 +14,6 @@
 #endif
 
 #include "esp_wifi.h"
-//#include <SPIFFSEditor.h>
 
 #include "config/SystemConfig.h"
 #include "config/WifiConfig.h"
@@ -57,6 +56,12 @@ void execWebTasks();
 
 void ArduinoOTAinit();
 void webServerInit();
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 1, 0)
+/* CONFIG_LWIP_IPV4 was introduced in IDF v5.1, set CONFIG_LWIP_IPV4 to 1 by default for IDF v5.0 */
+#ifndef CONFIG_LWIP_IPV4
+#define CONFIG_LWIP_IPV4 1
+#endif // CONFIG_LWIP_IPV4
+#endif // ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 1, 0)
 void MDNSinit();
 #if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
 #else
