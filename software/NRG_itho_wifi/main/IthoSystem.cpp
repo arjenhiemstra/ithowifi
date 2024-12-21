@@ -1921,23 +1921,18 @@ size_t send_i2c_query(uint8_t *i2c_command, size_t i2c_command_length, uint8_t *
   if (i2c_command == nullptr)
     return 0;
   if (receive_buffer == nullptr)
-  {
-    E_LOG("send_i2c_query, receive_buffer == nullptr, origin:%s", i2cLogger.i2c_cmdref_to_name(origin));
     return 0;
   if (!i2c_sendBytes(i2c_command, i2c_command_length, origin))
     return 0;
-  }
+
   size_t len = i2c_slave_receive(receive_buffer);
   if (!len)
-  {
     return 0;
-  }
 
   uint16_t opcode = (i2c_command[2] << 8 | i2c_command[3]);
   if (len > 1 && receive_buffer[len - 1] == checksum(receive_buffer, len - 1) && check_i2c_reply(receive_buffer, len, opcode))
-  {
     return len;
-  }
+
   return 0;
 }
 int quick_pow10(int n)
