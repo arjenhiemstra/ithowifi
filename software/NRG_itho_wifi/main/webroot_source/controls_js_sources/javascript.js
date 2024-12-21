@@ -553,7 +553,7 @@ $(document).ready(function () {
       }));
       update_page('system');
     }
-    else if ($(this).attr('id') == 'syslogsumbit') {
+    else if ($(this).attr('id') == 'syslogsubmit') {
       websock_send(JSON.stringify({
         logsettings: {
           loglevel: $('#loglevel').val(),
