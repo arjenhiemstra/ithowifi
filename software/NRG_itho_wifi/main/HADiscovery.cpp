@@ -23,19 +23,18 @@ std::string normalizeUniqueId(const std::string &input)
     return normalized;
 }
 
-
 void addHADevInfo(JsonObject obj)
 {
-  char cu[50]{};
-  snprintf(cu, sizeof(cu), "http://%s.local", hostName());
-  JsonObject dev = obj["dev"].to<JsonObject>();
-  dev["ids"] = hostName();             // identifiers
-  dev["mf"] = "Arjen Hiemstra";        // manufacturer
-  dev["mdl"] = "Wifi add-on for Itho"; // model
-  dev["name"] = hostName();            // name
-  dev["hw"] = hw_revision;             // hw_version
-  dev["sw"] = fw_version;              // sw_version
-  dev["cu"] = cu;                      // configuration_url
+    char cu[50]{};
+    snprintf(cu, sizeof(cu), "http://%s.local", hostName());
+    JsonObject dev = obj["dev"].to<JsonObject>();
+    dev["ids"] = hostName();             // identifiers
+    dev["mf"] = "Arjen Hiemstra";        // manufacturer
+    dev["mdl"] = "Wifi add-on for Itho"; // model
+    dev["name"] = hostName();            // name
+    dev["hw"] = hw_revision;             // hw_version
+    dev["sw"] = fw_version;              // sw_version
+    dev["cu"] = cu;                      // configuration_url
 }
 
 void addHADiscoveryFan(JsonObject obj, const char *name)
@@ -316,7 +315,8 @@ void generateHADiscoveryJson(JsonObject compactJson)
     }
     else
     {
-        E_LOG("Error: HA Discovery Config does not match no. of status items, please update the config HA Discovery config");
+        if (compactJson["sscnt"] != 0)
+            E_LOG("Error: HA Discovery Config does not match no. of status items, please update the config HA Discovery config");
     }
     addHADiscoveryFan(components, output["dev"]["name"].as<const char *>());
     addHADiscoveryFWUpdate(components, output["dev"]["name"].as<const char *>());
