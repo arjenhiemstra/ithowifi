@@ -554,7 +554,7 @@ $(document).ready(function () {
       }));
       update_page('system');
     }
-    else if ($(this).attr('id') == 'syslogsumbit') {
+    else if ($(this).attr('id') == 'syslogsubmit') {
       websock_send(JSON.stringify({
         logsettings: {
           loglevel: $('#loglevel').val(),
@@ -3681,7 +3681,7 @@ var html_syslog = `
             <input id="logref" maxlength="63" type="text">
         </div>
         <div class="pure-controls">
-            <button id="syslogsumbit" class="pure-button pure-button-primary">Save</button>
+            <button id="syslogsubmit" class="pure-button pure-button-primary">Save</button>
         </div>
     </fieldset>
 
