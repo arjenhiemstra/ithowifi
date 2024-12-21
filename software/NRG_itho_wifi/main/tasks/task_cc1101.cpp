@@ -282,7 +282,7 @@ void TaskCC1101(void *pvParameters)
     enableRF_ISR();
 
     systemConfig.itho_rf_support = 1;
-    loadRemotesConfig("flash");
+    RemotesConfigLoaded = loadRemotesConfig("flash");
     for (int index = 0; index < remotes.getRemoteCount(); index++)
     {
       uint8_t id[3]{};
