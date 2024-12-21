@@ -15,9 +15,6 @@ void i2c_queue_add_cmd(const std::function<void()> func)
   i2c_cmd_queue.push_back(func);
 }
 
-uint8_t i2cbuf[I2C_SLAVE_RX_BUF_LEN];
-static size_t buflen;
-
 gpio_num_t master_sda_pin = GPIO_NUM_0;
 gpio_num_t master_scl_pin = GPIO_NUM_0;
 
@@ -222,31 +219,6 @@ bool i2c_sendCmd(uint8_t addr, const uint8_t *cmd, size_t len)
 
 size_t i2c_slave_receive(uint8_t *i2c_receive_buf)
 {
-
-  // typedef struct
-  // {
-  //   i2c_mode_t mode;    /*!< I2C mode */
-  //   int sda_io_num;     /*!< GPIO number for I2C sda signal */
-  //   int scl_io_num;     /*!< GPIO number for I2C scl signal */
-  //   bool sda_pullup_en; /*!< Internal GPIO pull mode for I2C sda signal*/
-  //   bool scl_pullup_en; /*!< Internal GPIO pull mode for I2C scl signal*/
-
-  //   union
-  //   {
-  //     struct
-  //     {
-  //       uint32_t clk_speed; /*!< I2C clock frequency for master mode, (no higher than 1MHz for now) */
-  //     } master;             /*!< I2C master config */
-  //     struct
-  //     {
-  //       uint8_t addr_10bit_en;  /*!< I2C 10bit address mode enable for slave mode */
-  //       uint16_t slave_addr;    /*!< I2C address for slave mode */
-  //       uint32_t maximum_speed; /*!< I2C expected clock speed from SCL. */
-  //     } slave;                  /*!< I2C slave config */
-  //   };
-  //   uint32_t clk_flags; /*!< Bitwise of ``I2C_SCLK_SRC_FLAG_**FOR_DFS**`` for clk source choice*/
-  // } i2c_config_t;
-
   i2c_config_t conf_slave = {
       .mode = I2C_MODE_SLAVE,
       .sda_io_num = slave_sda_pin,
@@ -262,30 +234,28 @@ size_t i2c_slave_receive(uint8_t *i2c_receive_buf)
   };
 
   i2c_param_config(I2C_SLAVE_NUM, &conf_slave);
-
   i2c_driver_install(I2C_SLAVE_NUM, conf_slave.mode, I2C_SLAVE_RX_BUF_LEN, I2C_SLAVE_TX_BUF_LEN, 0);
-
   i2c_set_timeout(I2C_SLAVE_NUM, 0xFFFFF);
 
-  i2cbuf[0] = I2C_SLAVE_ADDRESS << 1;
-  buflen = 1;
+  i2c_receive_buf[0] = I2C_SLAVE_ADDRESS << 1;
 
-  while (1)
-  {
-    int len1 = i2c_slave_read_buffer(I2C_SLAVE_NUM, i2cbuf + buflen, sizeof(i2cbuf) - buflen, 50 / portTICK_PERIOD_MS);
-    if (len1 <= 0)
-      break;
-    buflen += len1;
-  }
-  if (buflen > 1)
-  {
-    for (uint16_t i = 0; i < buflen; i++)
-    {
-      i2c_receive_buf[i] = i2cbuf[i];
-    }
-  }
+  // uint8_t byte = 0;
+  // int len_rec = 0;
+  // attempt to read in bytes one by one
+  // while (true)
+  // {
+  //   int len = i2c_slave_read_buffer(I2C_SLAVE_NUM, &byte, 1, 200 / portTICK_PERIOD_MS);
+  //   if (len <= 0)
+  //     break;
+  //   i2c_receive_buf[len_rec++] = byte;
+  // }
+
+  int len_rec = i2c_slave_read_buffer(I2C_SLAVE_NUM, &i2c_receive_buf[1], I2C_SLAVE_RX_BUF_LEN - 1, 200 / portTICK_PERIOD_MS);
+  if (len_rec <= 0)
+    return 0;
+
   i2c_slave_deinit();
-  return buflen;
+  return len_rec + 1; // add 1 because i2c_receive_buf[0] = I2C_SLAVE_ADDRESS
 }
 
 void i2c_slave_deinit()
@@ -423,7 +393,7 @@ int I2C_ClearBus()
   // IDE a chance to start uploaded the program
   // before existing sketch confuses the IDE by sending Serial data.
 
-  //i2c_master_clear_bus(I2C_MASTER_NUM);
+  // i2c_master_clear_bus(I2C_MASTER_NUM);
 
   bool SCL_LOW = (digitalRead(master_scl_pin) == LOW); // Check is SCL is Low.
   if (SCL_LOW)
@@ -432,7 +402,7 @@ int I2C_ClearBus()
   }
 
   bool SDA_LOW = (digitalRead(master_sda_pin) == LOW); // vi. Check SDA input.
-  int clockCount = 20;                                    // > 2x9 clock
+  int clockCount = 20;                                 // > 2x9 clock
 
   while (SDA_LOW && (clockCount > 0))
   { //  vii. If SDA is Low,
