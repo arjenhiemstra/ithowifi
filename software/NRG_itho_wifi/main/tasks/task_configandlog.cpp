@@ -63,7 +63,7 @@ void TaskConfigAndLog(void *pvParameters)
   logInit();
   syslog_queue_worker();
 
-  loadLogConfig("flash");
+  logConfigLoaded = loadLogConfig("flash");
   syslog_queue_worker();
   if (logConfig.esplog_active == 1)
   {
@@ -73,7 +73,7 @@ void TaskConfigAndLog(void *pvParameters)
     log_e("loge_e test %d", 1);
   }
 
-  loadSystemConfig("flash");
+  SystemConfigLoaded = loadSystemConfig("flash");
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
   if (systemConfig.fw_check)
     getFWupdateInfo = 25 * 60 * 60 * 1000; // trigger firmware update check after boot
@@ -195,6 +195,7 @@ void execLogAndConfigTasks()
                         {
       saveRemotesConfig("flash");
       jsonWsSend("remotes"); });
+    logMessagejson("RF Config saved", WEBINTERFACE);
   }
   if (saveVremotesflag && VirtualRemotesConfigLoaded)
   {
@@ -203,6 +204,7 @@ void execLogAndConfigTasks()
                         {
       saveVirtualRemotesConfig("flash");
       jsonWsSend("vremotes"); });
+    logMessagejson("Virtual remotes config saved", WEBINTERFACE);
   }
   if (resetWifiConfigflag)
   {

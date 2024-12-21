@@ -570,7 +570,8 @@ void init_i2c_functions()
 
 void wifiInit()
 {
-  if (!loadWifiConfig("flash"))
+  WifiConfigLoaded = loadWifiConfig("flash");
+  if (!WifiConfigLoaded)
   {
     E_LOG("Setup: Wifi config load failed");
   }
@@ -992,7 +993,7 @@ void init_vRemote()
   I_LOG("Setup: Virtual remotes, start ID: %02X,%02X,%02X - No.: %d", sys.getMac(3), sys.getMac(4), sys.getMac(5), systemConfig.itho_numvrem);
 
   virtualRemotes.setMaxRemotes(systemConfig.itho_numvrem);
-  loadVirtualRemotesConfig("flash");
+  VirtualRemotesConfigLoaded = loadVirtualRemotesConfig("flash");
 }
 
 bool ithoInitCheck()
