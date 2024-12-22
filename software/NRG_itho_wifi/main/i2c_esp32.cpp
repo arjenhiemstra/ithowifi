@@ -251,10 +251,12 @@ size_t i2c_slave_receive(uint8_t *i2c_receive_buf)
   // }
 
   int len_rec = i2c_slave_read_buffer(I2C_SLAVE_NUM, &i2c_receive_buf[1], I2C_SLAVE_RX_BUF_LEN - 1, 200 / portTICK_PERIOD_MS);
+
+  i2c_slave_deinit();
+
   if (len_rec <= 0)
     return 0;
 
-  i2c_slave_deinit();
   return len_rec + 1; // add 1 because i2c_receive_buf[0] = I2C_SLAVE_ADDRESS
 }
 
