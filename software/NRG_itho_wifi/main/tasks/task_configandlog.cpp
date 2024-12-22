@@ -221,7 +221,8 @@ void execLogAndConfigTasks()
   if (resetSystemConfigflag)
   {
     resetSystemConfigflag = false;
-    if (resetSystemConfig())
+
+    if (resetSystemConfigs())
     {
       logMessagejson("System settings restored, reboot the device", WEBINTERFACE);
     }
@@ -230,6 +231,19 @@ void execLogAndConfigTasks()
       logMessagejson("Failed restoring System settings, please try again", WEBINTERFACE);
     }
   }
+  if (saveAllConfigsflag)
+  {
+    saveAllConfigsflag = false;
+
+    if (saveSystemConfigs())
+    {
+      logMessagejson("All system config files saved", WEBINTERFACE);
+    }
+    else
+    {
+      logMessagejson("Failed saving system config files, please try again", WEBINTERFACE);
+    }
+  }  
 
   if (millis() - lastLog > LOGGING_INTERVAL)
   {

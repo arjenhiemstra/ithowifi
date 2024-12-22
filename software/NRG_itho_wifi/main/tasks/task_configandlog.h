@@ -41,6 +41,7 @@ inline bool WifiConfigLoaded = false;
 inline bool SystemConfigLoaded = false;
 inline bool logConfigLoaded = false;
 inline bool HADiscConfigLoaded = false;
+inline bool saveAllConfigsflag = false;
 
 void startTaskConfigAndLog();
 void TaskConfigAndLog(void *pvParameters);

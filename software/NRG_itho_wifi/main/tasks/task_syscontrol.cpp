@@ -9,7 +9,6 @@ DNSServer dnsServer;
 bool SHT3x_original = false;
 bool SHT3x_alternative = false;
 bool runscan = false;
-bool dontSaveConfig = false;
 bool saveSystemConfigflag = false;
 bool saveLogConfigflag = false;
 bool saveWifiConfigflag = false;
@@ -136,10 +135,6 @@ void TaskSysControl(void *pvParameters)
     {
       TaskTimeout.detach();
       N_LOG("Reboot requested");
-      if (!dontSaveConfig)
-      {
-        saveSystemConfig("flash");
-      }
       delay(1000);
       ACTIVE_FS.end();
       esp_restart();

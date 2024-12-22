@@ -118,7 +118,6 @@ bool resetConfigFile(const char *filename)
   }
   if (!ACTIVE_FS.exists(filename))
   {
-    dontSaveConfig = true;
     return true;
   }
   return false;
@@ -149,9 +148,31 @@ bool saveSystemConfig(const char *location)
   return saveConfigFile(location, "/config.json", 2048, "systemconfig", systemConfig);
 }
 
+bool saveSystemConfigs()
+{
+  bool res = false;
+  res = saveConfigFile("flash", "/config.json", 2048, "systemconfig", systemConfig);
+  res = saveConfigFile("flash", "/syslog.json", 2048, "logconfig", logConfig);
+  res = saveConfigFile("flash", "/hadisc.json", 2048, "hadiscconfig", haDiscConfig);
+  res = saveFileRemotes("flash", "/remotes.json", "remotesconfig", remotes);
+  res = saveFileRemotes("flash", "/vremotes.json", "vremotesconfig", virtualRemotes);
+  return res;
+}
+
 bool resetSystemConfig()
 {
   return resetConfigFile("/config.json");
+}
+
+bool resetSystemConfigs()
+{
+  bool res = false;
+  res = resetConfigFile("/config.json");
+  res = resetConfigFile("/syslog.json");
+  res = resetConfigFile("/hadisc.json");
+  res = resetConfigFile("/remotes.json");
+  res = resetConfigFile("/vremotes.json");
+  return res;
 }
 
 bool loadLogConfig(const char *location)
