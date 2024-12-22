@@ -166,7 +166,6 @@ void ArduinoOTAinit()
 
                  ACTIVE_FS.end();
                  onOTA = true;
-                 dontSaveConfig = true;
                  dontReconnectMQTT = true;
                  mqttClient.disconnect();
 
@@ -400,7 +399,6 @@ void webServerInit()
         {
           D_LOG("Begin OTA update");
           onOTA = true;
-          dontSaveConfig = true;
           dontReconnectMQTT = true;
           mqttClient.disconnect();
           i2c_sniffer_unload();

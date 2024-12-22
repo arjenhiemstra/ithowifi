@@ -25,7 +25,6 @@ extern DNSServer dnsServer;
 extern bool SHT3x_original;
 extern bool SHT3x_alternative;
 extern bool runscan;
-extern bool dontSaveConfig;
 extern bool saveSystemConfigflag;
 extern bool saveLogConfigflag;
 extern bool saveHADiscConfigflag;

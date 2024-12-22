@@ -707,15 +707,15 @@ $(document).ready(function () {
         websock_send('{"resetsysconf":true}');
       }
     }
+    else if ($(this).attr('id') == 'saveallconfigs') {
+      if (confirm("This will reset the system configs files to factory default, are you sure?")) {
+        websock_send('{"saveallconfigs":true}');
+      }
+    }
     else if ($(this).attr('id') == 'reboot') {
       if (confirm("This will reboot the device, are you sure?")) {
         $('#rebootscript').append(html_reboot_script);
-        if (document.getElementById("dontsaveconf") !== null) {
-          websock_send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
-        }
-        else {
-          websock_send('{"reboot":true}');
-        }
+        websock_send('{"reboot":true}');
       }
     }
     else if ($(this).attr('id') == 'format') {
@@ -3465,10 +3465,10 @@ var html_reset = `
 </div><br><br>
 <form class="pure-form">
   <fieldset>
-    <button id="reboot" class="pure-button">Restart device</button>&nbsp;&nbsp;<input type="checkbox"
-      id="dontsaveconf"><label for="dontsaveconf"> Don't save config</label><br><br>
-    <button id="resetwificonf" class="pure-button">Restore wifi config</button>&nbsp;&nbsp;<button id="resetsysconf"
-      class="pure-button">Restore system config</button><br><br>
+    <button id="reboot" class="pure-button">Restart add-on</button><br><br>
+    <button id="saveallconfigs" class="pure-button">Save all configs</button><br><br>
+    <button id="resetsysconf" class="pure-button">Reset system configs</button>&nbsp;&nbsp;<button id="resetwificonf"
+      class="pure-button">Reset wifi config</button><br><br>
     <button id="format" class="pure-button">Format filesystem</button>
     <div id="rebootscript"></div>
   </fieldset>

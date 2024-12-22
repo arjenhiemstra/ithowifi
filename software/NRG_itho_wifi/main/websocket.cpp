@@ -712,9 +712,12 @@ void handle_ws_message(std::string &&msg)
     if (!error)
     {
       shouldReboot = root["reboot"];
-      dontSaveConfig = root["dontsaveconf"];
     }
   }
+  else if (msg.find("{\"saveallconfigs\"") != std::string::npos)
+  {
+    saveAllConfigsflag = true;
+  }  
   else if (msg.find("{\"resetwificonf\"") != std::string::npos)
   {
     resetWifiConfigflag = true;

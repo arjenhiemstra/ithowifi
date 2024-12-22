@@ -702,19 +702,17 @@ $(document).ready(function () {
       }
     }
     else if ($(this).attr('id') == 'resetsysconf') {
-      if (confirm("This will reset the system config to factory default, are you sure?")) {
+      if (confirm("This will reset the system configs files to factory default, are you sure?")) {
         websock_send('{"resetsysconf":true}');
       }
+    }
+    else if ($(this).attr('id') == 'saveallconfigs') {
+      websock_send('{"saveallconfigs":true}');
     }
     else if ($(this).attr('id') == 'reboot') {
       if (confirm("This will reboot the device, are you sure?")) {
         $('#rebootscript').append(html_reboot_script);
-        if (document.getElementById("dontsaveconf") !== null) {
-          websock_send('{"reboot":true,"dontsaveconf":' + document.getElementById("dontsaveconf").checked + '}');
-        }
-        else {
-          websock_send('{"reboot":true}');
-        }
+        websock_send('{"reboot":true}');
       }
     }
     else if ($(this).attr('id') == 'format') {
