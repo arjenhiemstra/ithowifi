@@ -193,7 +193,7 @@ void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
     componentJson["val_tpl"] = const_cast<char *>(tmpstr.c_str());
 }
 
-void generateHADiscoveryJson(JsonObject compactJson)
+void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
 {
 
     // Example output
@@ -238,8 +238,6 @@ void generateHADiscoveryJson(JsonObject compactJson)
     int count = getIthoStatusJSON(statusitemsobj);
 
     std::string outputbuf;
-    JsonDocument outputDoc;
-    JsonObject output = outputDoc.to<JsonObject>();
 
     char ihtostatustopic[140]{};
     char lwttopic[140]{};
@@ -249,23 +247,24 @@ void generateHADiscoveryJson(JsonObject compactJson)
     const char *deviceName = compactJson["d"]; // Retrieve device name from compact JSON
 
     // generic status topics, can be overiden per component
-    output["avty_t"] = const_cast<char *>(lwttopic);
-    output["stat_t"] = const_cast<char *>(ihtostatustopic); // state_topic
+    outputJson["avty_t"] = const_cast<char *>(lwttopic);
+    outputJson["stat_t"] = const_cast<char *>(ihtostatustopic); // state_topic
 
     // Static device information
-    addHADevInfo(output);
-    // Update name from config FIXME add config value
-    output["dev"]["name"] = const_cast<char *>(deviceName);
+    addHADevInfo(outputJson);
+
+    // Update name from config
+    outputJson["dev"]["name"] = const_cast<char *>(deviceName);
 
     // Origin object
-    JsonObject origin = output["o"].to<JsonObject>();
+    JsonObject origin = outputJson["o"].to<JsonObject>();
 
     origin["name"] = const_cast<char *>(deviceName);
     origin["sw"] = fw_version;
     origin["url"] = "https://www.nrgwatch.nl/support-ondersteuning/";
 
     // Components object
-    JsonObject components = output["cmps"].to<JsonObject>();
+    JsonObject components = outputJson["cmps"].to<JsonObject>();
 
     // Process each component from compact JSON
     JsonArray componentsArray = compactJson["c"].as<JsonArray>();
@@ -280,7 +279,7 @@ void generateHADiscoveryJson(JsonObject compactJson)
             const char *name = component["n"];
             const char *platform = component["p"].is<const char *>() ? component["p"].as<const char *>() : "sensor";
             // Generate normalized unique ID
-            std::string uniqueId = normalizeUniqueId(std::string(output["dev"]["ids"] | "default_name") + "_" + platform + "_i_" + std::to_string(index));
+            std::string uniqueId = normalizeUniqueId(std::string(outputJson["dev"]["ids"] | "default_name") + "_" + platform + "_i_" + std::to_string(index));
             // Create component object using uniqueID
             JsonObject componentJson = components[const_cast<char *>(uniqueId.c_str())].to<JsonObject>();
             componentJson["name"] = const_cast<char *>(name);
@@ -318,14 +317,6 @@ void generateHADiscoveryJson(JsonObject compactJson)
         if (compactJson["sscnt"] != 0)
             E_LOG("Error: HA Discovery Config does not match no. of status items, please update the config HA Discovery config");
     }
-    addHADiscoveryFan(components, output["dev"]["name"].as<const char *>());
-    addHADiscoveryFWUpdate(components, output["dev"]["name"].as<const char *>());
-
-    char devicetopic[160]{};
-
-    snprintf(devicetopic, sizeof(devicetopic), "%s%s%s%s", systemConfig.mqtt_ha_topic, "/device/", hostName(), "/config");
-
-    if (outputDoc.overflowed())
-        D_LOG("generateHADiscoveryJson overflowed!");
-    sendHADiscovery(output, devicetopic);
+    addHADiscoveryFan(components, outputJson["dev"]["name"].as<const char *>());
+    addHADiscoveryFWUpdate(components, outputJson["dev"]["name"].as<const char *>());
 }
