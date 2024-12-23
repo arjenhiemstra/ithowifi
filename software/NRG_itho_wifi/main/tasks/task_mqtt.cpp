@@ -1,4 +1,5 @@
 #include "tasks/task_mqtt.h"
+#include <StreamUtils.h>
 
 #define TASK_MQTT_PRIO 5
 
@@ -554,14 +555,32 @@ void mqttHomeAssistantDiscovery()
   JsonObject configObj = configDoc.to<JsonObject>();
 
   haDiscConfig.get(configObj);
-  serializeJson(configDoc, Serial);
 
-  generateHADiscoveryJson(configObj);
+  JsonDocument outputDoc;
+  JsonObject outputObj = outputDoc.to<JsonObject>();
 
+  generateHADiscoveryJson(configObj, outputObj);
+
+  // config doc is no longer needed, manually clear memory before next step
+  configDoc.clear();
+
+  char devicetopic[160]{};
+
+  snprintf(devicetopic, sizeof(devicetopic), "%s%s%s%s", systemConfig.mqtt_ha_topic, "/device/", hostName(), "/config");
+
+  if (outputDoc.overflowed())
+    E_LOG("generateHADiscoveryJson overflowed!");
+
+  mqttClient.beginPublish(devicetopic, measureJson(outputObj), true);
+  BufferingPrint bufferedClient(mqttClient, 32);
+  serializeJson(outputDoc, bufferedClient);
+  bufferedClient.flush();
+  mqttClient.endPublish();
 }
 
 void sendHADiscovery(JsonObject obj, const char *topic)
 {
+
   D_LOG("sendHADiscovery, topic:%s", topic);
   size_t payloadSize = measureJson(obj);
   // max header + topic + content. Copied logic from PubSubClien::publish(), PubSubClient.cpp:482
@@ -569,8 +588,9 @@ void sendHADiscovery(JsonObject obj, const char *topic)
 
   if (mqttClient.getBufferSize() < packetSize)
   {
-    E_LOG("MQTT: buffer too small, resizing... (HA discovery)");
-    mqttClient.setBufferSize(packetSize);
+    bool res = mqttClient.setBufferSize(packetSize);
+    if (!res)
+      E_LOG("MQTT: buffer could not be allocated (HA discovery), needed %d", packetSize);
   }
 
   if (mqttClient.beginPublish(topic, payloadSize, true))
