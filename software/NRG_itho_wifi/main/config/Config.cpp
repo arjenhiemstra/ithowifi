@@ -153,7 +153,7 @@ bool saveSystemConfigs()
   bool res = false;
   res = saveConfigFile("flash", "/config.json", 2048, "systemconfig", systemConfig);
   res = saveConfigFile("flash", "/syslog.json", 2048, "logconfig", logConfig);
-  res = saveConfigFile("flash", "/hadisc.json", 2048, "hadiscconfig", haDiscConfig);
+  res = saveConfigFile("flash", "/hadisc.json", 8192, "hadiscconfig", haDiscConfig);
   res = saveFileRemotes("flash", "/remotes.json", "remotesconfig", remotes);
   res = saveFileRemotes("flash", "/vremotes.json", "vremotesconfig", virtualRemotes);
   return res;
@@ -192,12 +192,12 @@ bool resetLogConfig()
 
 bool loadHADiscConfig(const char *location)
 {
-  return loadConfigFile(location, "usehsdiscconfb", "/hadisc.json", 2048, "hadiscconfig", haDiscConfig);
+  return loadConfigFile(location, "usehsdiscconfb", "/hadisc.json", 8192, "hadiscconfig", haDiscConfig);
 }
 
 bool saveHADiscConfig(const char *location)
 {
-  return saveConfigFile(location, "/hadisc.json", 2048, "hadiscconfig", haDiscConfig);
+  return saveConfigFile(location, "/hadisc.json", 8192, "hadiscconfig", haDiscConfig);
 }
 
 bool resetHADiscConfig()

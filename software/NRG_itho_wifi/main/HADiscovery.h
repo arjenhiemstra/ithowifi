@@ -2,4 +2,4 @@
 
 #include "config/HADiscConfig.h"
 
-void generateHADiscoveryJson(JsonObject compactJson);
+void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson);

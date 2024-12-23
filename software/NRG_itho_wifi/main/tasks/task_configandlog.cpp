@@ -80,7 +80,6 @@ void TaskConfigAndLog(void *pvParameters)
   syslog_queue_worker();
 
   HADiscConfigLoaded = loadHADiscConfig("flash");
-  D_LOG("HADiscConfigLoaded:%d", HADiscConfigLoaded);
 
   startTaskSysControl();
   syslog_queue_worker();
@@ -243,7 +242,7 @@ void execLogAndConfigTasks()
     {
       logMessagejson("Failed saving system config files, please try again", WEBINTERFACE);
     }
-  }  
+  }
 
   if (millis() - lastLog > LOGGING_INTERVAL)
   {
