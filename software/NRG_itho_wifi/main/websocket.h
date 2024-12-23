@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include <string.h>
+#include <unordered_map>
 
 #include <ArduinoJson.h>
 

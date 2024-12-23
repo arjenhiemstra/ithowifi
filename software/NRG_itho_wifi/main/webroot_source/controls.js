@@ -1103,7 +1103,7 @@ function radio(origin, state) {
 
 function getSettings(pagevalue) {
   if (websock.readyState === 1) {
-    websock_send('{"' + pagevalue + '":1}');
+    websock_send('{"' + pagevalue + '":true}');
   }
   else {
     if (debug) console.log("websock not open");
