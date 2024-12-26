@@ -23,6 +23,7 @@
 
 // globals
 extern const char *espName;
+inline uint8_t itho_init_status = 0;
 
 const char *hostName();
 uint8_t getIthoStatusJSON(JsonObject root);

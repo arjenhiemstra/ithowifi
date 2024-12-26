@@ -134,6 +134,7 @@ void jsonWsSend(const char *rootName)
     root["count"] = count;
     root["target"] = "hadisc";
     root["itho_status_ready"] = itho_status_ready();
+    root["iis"] = itho_init_status;
   }
   else if (strcmp(rootName, "hadiscsettings") == 0)
   {
