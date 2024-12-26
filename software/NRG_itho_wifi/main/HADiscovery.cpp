@@ -7,6 +7,7 @@
 #include "notifyClients.h"
 #include "sys_log.h"
 #include "generic_functions.h"
+#include <unordered_set>
 
 // Function to normalize the unique ID
 std::string normalizeUniqueId(const std::string &input)
@@ -195,49 +196,9 @@ void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
 
 void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
 {
-
-    // Example output
-    //   {
-    //    "dev": {
-    //      "ids": "ea334450945afc",
-    //      "name": "Kitchen",
-    //      "mf": "Bla electronics",
-    //      "mdl": "xya",
-    //      "sw": "1.0",
-    //      "sn": "ea334450945afc",
-    //      "hw": "1.0rev2",
-    //    },
-    //    "o": {
-    //      "name":"bla2mqtt",
-    //      "sw": "2.1",
-    //      "url": "https://bla2mqtt.example.com/support",
-    //    },
-    //    "cmps": {
-    //      "some_unique_component_id1": {
-    //        "p": "sensor",
-    //        "device_class":"temperature",
-    //        "unit_of_measurement":"°C",
-    //        "value_template":"{{ value_json.temperature}}",
-    //        "unique_id":"temp01ae_t",
-    //      },
-    //      "some_unique_id2": {
-    //        "p": "sensor",
-    //        "device_class":"humidity",
-    //        "unit_of_measurement":"%",
-    //        "value_template":"{{ value_json.humidity}}",
-    //        "unique_id":"temp01ae_h",
-    //      }
-    //    },
-    //    "stat_t": "ithocve/ithostatus",
-    //    "avty_t": "ithocve/lwt",
-    //    "qos": 2,
-    //  }
-
     JsonDocument statusitemsdoc;
     JsonObject statusitemsobj = statusitemsdoc.to<JsonObject>();
     int count = getIthoStatusJSON(statusitemsobj);
-
-    std::string outputbuf;
 
     char ihtostatustopic[140]{};
     char lwttopic[140]{};
@@ -271,11 +232,15 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
 
     if (!compactJson["sscnt"].isNull() && compactJson["sscnt"] != 0 && compactJson["sscnt"] == count)
     {
+        std::unordered_set<uint8_t> configuredIndices;
+
         for (JsonObject component : componentsArray)
         {
             // each object needs to be copied into the JSON to prevent dangling pointers to be inserted, therefor const_cast<char *>() is applied
-            uint8_t index = component["i"].as<uint8_t>();
 
+            configuredIndices.insert(component["i"].as<uint8_t>());
+
+            uint8_t index = component["i"].as<uint8_t>();
             const char *name = component["n"];
             const char *platform = component["p"].is<const char *>() ? component["p"].as<const char *>() : "sensor";
             // Generate normalized unique ID
@@ -311,12 +276,29 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
                 componentJson["dev_cla"] = const_cast<char *>(deviceClass);
             }
         }
+
+        // Add unconfigured items as empty components
+        int index = 0;
+        for (JsonObject::iterator it = statusitemsobj.begin(); it != statusitemsobj.end(); ++it, ++index)
+        {
+            if (configuredIndices.find(index) == configuredIndices.end())
+            {
+                // Generate unique ID for unconfigured component
+                std::string uniqueId = normalizeUniqueId(std::string(outputJson["dev"]["ids"] | "default_name") + "_sensor_i_" + std::to_string(index));
+
+                // Create empty component
+                JsonObject componentJson = components[const_cast<char *>(uniqueId.c_str())].to<JsonObject>();
+                componentJson["p"] = "sensor"; // Default platform
+            }
+        }
     }
     else
     {
         if (compactJson["sscnt"] != 0)
             E_LOG("Error: HA Discovery Config does not match no. of status items, please update the config HA Discovery config");
     }
+
+    // Add extra components (fan and firmware updates)
     addHADiscoveryFan(components, outputJson["dev"]["name"].as<const char *>());
     addHADiscoveryFWUpdate(components, outputJson["dev"]["name"].as<const char *>());
 }
