@@ -54,6 +54,14 @@
         repeat();
     });
 
+    function showItho(i) {
+        let s = document.getElementById("iis"), f = ["31d9", "31da", "2401", "4210"];
+        s.innerHTML = "";
+        for (let x = 0; x < 4; x++) {
+            let p = (i >> (2 * x)) & 3;
+            if ((p & 1) && !(p & 2)) s.innerHTML += "I2C command " + f[x] + " activated but not ready<br>";
+        }
+    }
 
     function updateStatusTableFromCompactJson(compactJson) {
         ha_dev_name = compactJson.d;

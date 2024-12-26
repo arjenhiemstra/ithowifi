@@ -166,9 +166,10 @@ function processMessage(message) {
         buildHtmlHADiscTable(x);
       }
       else {
-        $("#ithostatusrdy").html("Itho status items not (completely) loaded yet, reload to try again...<br><button id='hadreload' class='pure-button pure-button-primary'>Reload</button><br>");
+        $("#ithostatusrdy").html("Itho status items not (completely) loaded yet:<br><br><div id='iis'></div><br><br>Reload to try again or disable I2C commands which might be unsupported for your device.<br><br><button id='hadreload' class='pure-button pure-button-primary'>Reload</button><br>");
         $("#ithostatusrdy").removeClass('hidden');
         $("#HADiscForm, #save_update_had").addClass('hidden');
+        showItho(f.iis);
       }
     }
     else {

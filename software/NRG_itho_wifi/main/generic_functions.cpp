@@ -140,53 +140,24 @@ void getDeviceInfoJSON(JsonObject root)
 
 bool itho_status_ready()
 {
+  auto bp = [&](bool a, bool b)
+  { return (a ? 1 : 0) | ((b ? 1 : 0) << 1); };
 
-  bool ithoInternalMeasurements_ready = false;
-  bool ithoMeasurements_ready = false;
-  bool ithoStatus_ready = false;
-  bool ithoCounters_ready = false;
+  // Build itho_init_status as 2 bits per feature:
+  itho_init_status =
+      bp(systemConfig.itho_31d9 == 1, !ithoInternalMeasurements.empty())  // bits 0..1
+      | (bp(systemConfig.itho_31da == 1, !ithoMeasurements.empty()) << 2) // bits 2..3
+      | (bp(systemConfig.itho_2401 == 1, !ithoStatus.empty()) << 4)       // bits 4..5
+      | (bp(systemConfig.itho_4210 == 1, !ithoCounters.empty()) << 6);    // bits 6..7
 
-  if (systemConfig.itho_31d9 == 1)
+  // Check if any feature is “activated but not filled”
+  for (int i = 0; i < 4; i++)
   {
-    if (!ithoInternalMeasurements.empty())
-      ithoInternalMeasurements_ready = true;
+    uint8_t p = (itho_init_status >> (2 * i)) & 3; // extract 2 bits
+    if ((p & 1) && !(p & 2))
+      return false; // bit0=activated, bit1=filled?
   }
-  else
-  {
-    ithoInternalMeasurements_ready = true;
-  }
-  if (systemConfig.itho_31da == 1)
-  {
-    if (!ithoMeasurements.empty())
-      ithoMeasurements_ready = true;
-  }
-  else
-  {
-    ithoMeasurements_ready = true;
-  }
-  if (systemConfig.itho_2401 == 1)
-  {
-    if (!ithoStatus.empty())
-      ithoStatus_ready = true;
-  }
-  else
-  {
-    ithoStatus_ready = true;
-  }
-  if (systemConfig.itho_4210 == 1)
-  {
-    if (!ithoCounters.empty())
-      ithoCounters_ready = true;
-  }
-  else
-  {
-    ithoCounters_ready = true;
-  }
-
-  if (ithoInternalMeasurements_ready && ithoMeasurements_ready && ithoStatus_ready && ithoCounters_ready)
-    return true;
-  else
-    return false;
+  return true;
 }
 
 void getRemotesInfoJSON(JsonObject root)
@@ -697,9 +668,9 @@ void check_firmware_update()
             firmwareInfo.fw_update_available = compareVersions(root["hw_rev"][hw_revision]["latest_fw"] | "error", fw_version);
 
             strncpy(firmwareInfo.latest_fw, root["hw_rev"][hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
-            Serial.printf("latest_fw:%s\n",root["hw_rev"][hw_revision]["latest_fw"] | "error");
+            Serial.printf("latest_fw:%s\n", root["hw_rev"][hw_revision]["latest_fw"] | "error");
             strncpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
-            Serial.printf("latest_beta_fw:%s\n",root["hw_rev"][hw_revision]["latest_beta_fw"] | "error");
+            Serial.printf("latest_beta_fw:%s\n", root["hw_rev"][hw_revision]["latest_beta_fw"] | "error");
 
             D_LOG("fw_update_available:%d", firmwareInfo.fw_update_available);
             // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful

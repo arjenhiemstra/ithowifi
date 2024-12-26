@@ -167,9 +167,10 @@ function processMessage(message) {
         buildHtmlHADiscTable(x);
       }
       else {
-        $("#ithostatusrdy").html("Itho status items not (completely) loaded yet, reload to try again...<br><button id='hadreload' class='pure-button pure-button-primary'>Reload</button><br>");
+        $("#ithostatusrdy").html("Itho status items not (completely) loaded yet:<br><br><div id='iis'></div><br><br>Reload to try again or disable I2C commands which might be unsupported for your device.<br><br><button id='hadreload' class='pure-button pure-button-primary'>Reload</button><br>");
         $("#ithostatusrdy").removeClass('hidden');
         $("#HADiscForm, #save_update_had").addClass('hidden');
+        showItho(f.iis);
       }
     }
     else {
@@ -3054,6 +3055,14 @@ var html_hadiscovery = `
         repeat();
     });
 
+    function showItho(i) {
+        let s = document.getElementById("iis"), f = ["31d9", "31da", "2401", "4210"];
+        s.innerHTML = "";
+        for (let x = 0; x < 4; x++) {
+            let p = (i >> (2 * x)) & 3;
+            if ((p & 1) && !(p & 2)) s.innerHTML += "I2C command " + f[x] + " activated but not ready<br>";
+        }
+    }
 
     function updateStatusTableFromCompactJson(compactJson) {
         ha_dev_name = compactJson.d;
