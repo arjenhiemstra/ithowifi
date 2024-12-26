@@ -60,6 +60,15 @@ void TaskMQTT(void *pvParameters)
   vTaskDelete(xTempTask);
 }
 
+void MQTTSendBuffered(JsonDocument doc, const char *topic)
+{
+  mqttClient.beginPublish(topic, measureJson(doc), true);
+  BufferingPrint bufferedClient(mqttClient, 32);
+  serializeJson(doc, bufferedClient);
+  bufferedClient.flush();
+  mqttClient.endPublish();
+}
+
 void execMQTTTasks()
 {
 
@@ -143,7 +152,6 @@ void execMQTTTasks()
         mqttSendRemotesInfo();
         mqttPublishLastcmd();
         mqttPublishDeviceInfo();
-        // mqttSendSettingsJSON();
       }
     }
     mqttClient.loop();
@@ -220,24 +228,10 @@ void mqttSendRemotesInfo()
 
   getRemotesInfoJSON(root);
 
-  size_t len = measureJson(root);
-
-  if (mqttClient.getBufferSize() < len)
-  {
-    mqttClient.setBufferSize(len);
-  }
-  if (mqttClient.beginPublish(remotesinfotopic, len, true))
-  {
-    serializeJson(root, mqttClient);
-    if (!mqttClient.endPublish())
-      E_LOG("MQTT: Failed to send payload (itho remote info))");
-  }
   if (doc.overflowed())
-  {
-    E_LOG("MQTT: JsonDocument overflowed (itho remote info)");
-  }
+    E_LOG("mqttSendRemotesInfo overflowed!");
 
-  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+  MQTTSendBuffered(doc, remotesinfotopic);
 }
 
 void mqttPublishLastcmd()
@@ -250,20 +244,10 @@ void mqttPublishLastcmd()
 
   getLastCMDinfoJSON(root);
 
-  size_t len = measureJson(root);
+  if (doc.overflowed())
+    E_LOG("mqttSendRemotesInfo overflowed!");
 
-  if (mqttClient.getBufferSize() < len)
-  {
-    mqttClient.setBufferSize(len);
-  }
-  if (mqttClient.beginPublish(lastcmdtopic, len, true))
-  {
-    serializeJson(root, mqttClient);
-    if (!mqttClient.endPublish())
-      E_LOG("MQTT: Failed to send payload (last cmd info))");
-  }
-  // reset buffer
-  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+  MQTTSendBuffered(doc, lastcmdtopic);
 }
 
 void mqttPublishDeviceInfo()
@@ -276,43 +260,10 @@ void mqttPublishDeviceInfo()
 
   getDeviceInfoJSON(root);
 
-  size_t len = measureJson(root);
+  if (doc.overflowed())
+    E_LOG("mqttSendRemotesInfo overflowed!");
 
-  if (mqttClient.getBufferSize() < len)
-  {
-    mqttClient.setBufferSize(len);
-  }
-  if (mqttClient.beginPublish(deviceinfotopic, len, true))
-  {
-    serializeJson(root, mqttClient);
-    if (!mqttClient.endPublish())
-      E_LOG("MQTT: Failed to send payload (itho device info))");
-  }
-  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
-}
-
-void mqttSendSettingsJSON()
-{
-  JsonDocument doc;
-
-  JsonObject root = doc.to<JsonObject>();
-
-  getIthoSettingsBackupJSON(root);
-
-  size_t len = measureJson(root);
-
-  if (mqttClient.getBufferSize() < len)
-  {
-    mqttClient.setBufferSize(len);
-  }
-  if (mqttClient.beginPublish("itho/settingstest", len, true))
-  {
-    serializeJson(root, mqttClient);
-    if (!mqttClient.endPublish())
-      E_LOG("MQTT: Failed to send payload (itho remote info))");
-  }
-  // reset buffer
-  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+  MQTTSendBuffered(doc, deviceinfotopic);
 }
 
 void mqttCallback(const char *topic, const byte *payload, unsigned int length)
@@ -571,41 +522,7 @@ void mqttHomeAssistantDiscovery()
   if (outputDoc.overflowed())
     E_LOG("generateHADiscoveryJson overflowed!");
 
-  mqttClient.beginPublish(devicetopic, measureJson(outputObj), true);
-  BufferingPrint bufferedClient(mqttClient, 32);
-  serializeJson(outputDoc, bufferedClient);
-  bufferedClient.flush();
-  mqttClient.endPublish();
-}
-
-void sendHADiscovery(JsonObject obj, const char *topic)
-{
-
-  D_LOG("sendHADiscovery, topic:%s", topic);
-  size_t payloadSize = measureJson(obj);
-  // max header + topic + content. Copied logic from PubSubClien::publish(), PubSubClient.cpp:482
-  size_t packetSize = MQTT_MAX_HEADER_SIZE + 2 + strlen(topic) + payloadSize;
-
-  if (mqttClient.getBufferSize() < packetSize)
-  {
-    bool res = mqttClient.setBufferSize(packetSize);
-    if (!res)
-      E_LOG("MQTT: buffer could not be allocated (HA discovery), needed %d", packetSize);
-  }
-
-  if (mqttClient.beginPublish(topic, payloadSize, true))
-  {
-    serializeJson(obj, mqttClient);
-    if (!mqttClient.endPublish())
-      E_LOG("MQTT: Failed to send payload (HA discovery)");
-  }
-  else
-  {
-    E_LOG("MQTT: Failed to start building message (HA discovery) topic[%s] size [%d]", topic, payloadSize);
-  }
-
-  // reset buffer
-  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+  MQTTSendBuffered(outputDoc, devicetopic);
 }
 
 bool setupMQTTClient()
