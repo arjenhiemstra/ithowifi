@@ -2,7 +2,7 @@
 
 #include "error_info_labels.h"
 
-const uint16_t itho_HRU350setting1[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 999};
+const uint16_t itho_HRU350setting1[]  {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 999};
 const uint16_t itho_HRU350setting3_4[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 76, 77, 78, 79, 80, 93, 81, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 89, 90, 91, 92, 999};
 
 const char *ithoHRU350SettingsLabels[] = {
@@ -85,8 +85,8 @@ const char *ithoHRU350SettingsLabels[] = {
     "Max time High speed (Min)",
     "Max time other speeds (Min)",
     "Fallback previous speeds (-)",
-    "PoorCo2Quality (ppm)",
-    "GoodCo2Quality (ppm)",
+    "Poor Co2 Quality (ppm)",
+    "Good Co2 Quality (ppm)",
     "Inhabitants (inhab)",
     "Night min vent speed 1 person (%)",
     "Night min vent speed 2 persons (%)",
@@ -95,9 +95,9 @@ const char *ithoHRU350SettingsLabels[] = {
     "Debug only (sec)",
     "Debug only (min)",
     "Debug only (K_min)",
-    "BypassTimer (min)",
-    "MaximumOpenCounter (min)",
-    "FilterUsagePerMin (-)",
+    "Bypass Timer (min)",
+    "Maximum Open Counter (min)",
+    "Filter Usage Per Min (-)",
     "Balance (%)",
     "Number of floors (floor)",
     "Min ventilation level multi-floor (%)",
@@ -119,10 +119,10 @@ const char *ithoHRU350SettingsLabels[] = {
     "Summer night setpoint (°C)",
     "Summer night boost ventilation level (%)",
     "Summer night max area degree hours (-)",
-    "FrostTimer (sec)",
-    "StartupCounter (sec)",
-    "BoilerTestTimer (min)",
-    "SummerCounter (K_min)"};
+    "Frost Timer (sec)",
+    "Startup Counter (sec)",
+    "Boiler Test Timer (min)",
+    "Summer Counter (K_min)"};
 
 const uint8_t itho_HRU350status1_4[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 255};
 

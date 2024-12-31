@@ -36,10 +36,10 @@ const char *ithoWPUSettingsLabels[] = {
     "Hardware configuration",                                         //1
     "Year of commissioning",                                          //2
     "Date of commissioning",                                          //3
-    "Max manaul opeation time (min)",                                 //4
+    "Max manual operation time (min)",                                //4
     "Frost temp (°C)",                                                //5
-    "Offset for forst temp (K)",                                      //6
-    "Differential vorst temp electrical element (K)",                 //7
+    "Offset for frost temp (K)",                                      //6
+    "Differential frost temp electrical element (K)",                 //7
     "Error reset time (min)",                                         //8
     "Log interval (sec)",                                             //9
     "Switch-on delay (sec)",                                          //10
@@ -64,9 +64,9 @@ const char *ithoWPUSettingsLabels[] = {
     "Min deviation for adjustment (K)",                               //29
     "Max gain",                                                       //30
     "Min gain",                                                       //31
-    "Corretion measured evaporation temperature (K)",                 //32
-    "Undercooling corretion 20 °c (K)",                               //33
-    "Undercooling corretion 60 °c (K)",                               //34
+    "Correction measured evaporation temperature (K)",                //32
+    "Undercooling correction 20 °c (K)",                              //33
+    "Undercooling correction 60 °c (K)",                              //34
     "Min evaporation temperature pumping off (°C)",                   //35
     "Minimum evaporation temperature (°C)",                           //36
     "Maximum condensation temperature (°C)",                          //37
@@ -89,7 +89,7 @@ const char *ithoWPUSettingsLabels[] = {
     "Max compressor current (Amp)",                                   //54
     "Min compressor current (Amp)",                                   //55
     "Start-up time (new hardware) (sec)",                             //56
-    "Ch-reqeust when compresoor stops (%)",                           //57
+    "Ch-reqeust when compressor stops (%)",                           //57
     "Switch-on differential on ch (%)",                               //58
     "Normal compressor temp trickle heating (°C)",                    //59
     "Anti-shuttle time compressor (sec)",                             //60
@@ -98,9 +98,9 @@ const char *ithoWPUSettingsLabels[] = {
     "Low pressure by-pass time (sec)",                                //63
     "Max current element (Amp)",                                      //64
     "Min current element (Amp)",                                      //65
-    "Min reqeust te start element (%)",                               //66
+    "Min reqeust to start element (%)",                               //66
     "Differential ch-reqeust element (%)",                            //67
-    "Max outsidetemp when element starts (°C)",                       //68
+    "Max outside temp when element starts (°C)",                      //68
     "Differential outside temp for element (K)",                      //69
     "Max refrigerant liquid temp (°C)",                               //70
     "Max temp electrical element (°C)",                               //71
@@ -127,14 +127,14 @@ const char *ithoWPUSettingsLabels[] = {
     "Delta compressor (K)",                                           //92
     "Min room temp thermostat (°C)",                                  //93
     "Max room temp thermostat (°C)",                                  //94
-    "Vorstbewaking autotemp <v23 (°C)",                               //95
-    "Koel setpoint tijdens “uit” (°C)",                               //96
+    "Frost monitoring autotemp <v23 (°C)",                            //95
+    "Cooling setpoint when “Off” (°C)",                               //96
     "Offset cooling (K)",                                             //97
     "Differential offset cooling (K)",                                //98
-    "Max time extra cooling (uur)",                                   //99
+    "Max time extra cooling (Hour)",                                  //99
     "Differential stop extra cooling (K)",                            //100
-    "Max release time element (24 hour) (uur)",                       //101
-    "Blocking time heating to cooling (uur)",                         //102
+    "Max release time element (24 hour) (Hour)",                      //101
+    "Blocking time heating to cooling (Hour)",                        //102
     "P-band mft (K)",                                                 //103
     "I-time mft (min)",                                               //104
     "Differential for free cooling mode (K)",                         //105
@@ -142,7 +142,7 @@ const char *ithoWPUSettingsLabels[] = {
     "Division factor element current measure",                        //107
     "Alternatieve drukvereffening",                                   //108
     "Heatpump capacity (kW)",                                         //109
-    "Period time ch mode (uur)",                                      //110
+    "Period time ch mode (Hour)",                                     //110
     "Start-up time (old hardware)",                                   //111
     "Ch reqeust compressor continuously running (%)",                 //112
     "After-run time dhw pump (sec)",                                  //113
@@ -152,9 +152,9 @@ const char *ithoWPUSettingsLabels[] = {
     "High ch pump speed (%)",                                         //117
     "High dhw pump speed (%)",                                        //118
     "High source pump speed (%)",                                     //119
-    "Oem code",                                                       //120
-    "Historie log interval",                                          //121
-    "Max tijd live data (Sec)",                                       //122
+    "OEM code",                                                       //120
+    "History log interval",                                           //121
+    "Max time live data (Sec)",                                       //122
     "Niet gebruikt",                                                  //123
     "Max ch temp mft",                                                //124
     "Type current measure circuit",                                   //125
@@ -165,11 +165,11 @@ const char *ithoWPUSettingsLabels[] = {
     "Not used",                                                       //130
     "Calculate start opening expansion valve",                        //131
     "Invloed extra oververhitting als brontemp < 8 °c (K)",           //132
-    "Eindtemp extra oververhitting tgv brontemperatuur (°C)",         //133
+    "End temp extra oververhitting tgv brontemperatuur (°C)",         //133
     "Free cooling dhw mode",                                          //134
     "Ch pump during boiler mode",                                     //135
     "Ch restart dhw mode",                                            //136
-    "Functie free cooling valve",                                     //137
+    "Function free cooling valve",                                    //137
     "Electrical element setup",                                       //138
     "Pre-run time dhw pump (Sec)",                                    //139
     "Time venting mode (Sec)",                                        //140
@@ -244,8 +244,8 @@ const char *ithoWPUSettingsLabels[] = {
     "Co source return temp setpoint winter (°C)",                     //209
     "Co source return temp setpoint summer (°C)",                     //210
     "Duration co-valve (Sec)",                                        //211
-    "P-band co-valve compresoor running (K)",                         //212
-    "I-factor co-valve compresoor running",                           //213
+    "P-band co-valve compressor running (K)",                         //212
+    "I-factor co-valve compressor running",                           //213
     "P-band co-valve cooling mode (K)",                               //214
     "I-factor co-valve cooling mode",                                 //215
     "Maximum co source flow cooling (l_h)",                           //216
@@ -268,16 +268,16 @@ const char *ithoWPUSettingsLabels[] = {
     "Maximum time remote control (min)",                              //233
     "Bounded ch-power (%)",                                           //234
     "Reduced compressor temp trickle heating (°C)",                   //235
-    "Minimum time normale trickle heating (uur)",                     //236
+    "Minimum time normal trickle heating (hour)",                     //236
     "Low boilertemperature reduced trickle heating (°C)",             //237
     "Differential dhw weekly (K)",                                    //238
     "Setpoint dhw weekly (°C)",                                       //239
-    "Max time boiler (uur)",                                          //240
+    "Max time boiler (hour)",                                         //240
     "Second boiler",                                                  //241
     "Interval per-heating dhw (min)",                                 //242
     "Differential stop pre-heating dhw (K)",                          //243
     "Pre-heating dhw",                                                //244
-    "Blocking time cooling to heating (uur)",                         //245
+    "Blocking time cooling to heating (hour)",                        //245
     "Ch pump on cooling break",                                       //246
     "Max time sourcepump slow start (sec)",                           //247
     "Stop rampup flow (%)",                                           //248
@@ -287,7 +287,7 @@ const char *ithoWPUSettingsLabels[] = {
     "Stabilization time freecooling (sec)",                           //252
     "Max time pre heat dhw (min)",                                    //253
     "Min time pre heat dhw (sec)",                                    //254
-    "Updatetime logging data (min)",                                  //255
+    "Update time logging data (min)",                                 //255
     "Spare",                                                          //256
     "Permanent release electric element",                             //257
     "Maximum outdoor temp release permanent element (°C)",            //258
@@ -344,7 +344,7 @@ const struct ithoLabels ithoWPUStatusLabels[]{
     {"Pulse counter", "pulse-counter"},                                                                                 //17
     {"Flow sensor (lt_hr)", "flow-sensor_lthr"},                                                                        //18
     {"Phase detection", "phase-detection"},                                                                             //19
-    {"Cv pump (%)", "cv-pump_perc"},                                                                                    //20
+    {"CV pump (%)", "cv-pump_perc"},                                                                                    //20
     {"Well pump (%)", "well-pump_perc"},                                                                                //21
     {"Boiler pump (%)", "boiler-pump_perc"},                                                                            //22
     {"Free cooling valve (%)", "free-cooling-valve_perc"},                                                              //23
@@ -359,7 +359,7 @@ const struct ithoLabels ithoWPUStatusLabels[]{
     {"Requested room temp (°C)", "requested-roomemp_c"},                                                                //32
     {"Heat demand thermost. (%)", "heat-demand-thermost._perc"},                                                        //33
     {"Status", "status"},                                                                                               //34
-    {"Sub_status", "sub_status"},                                                                                       //35
+    {"Sub status", "sub_status"},                                                                                       //35
     {"Blockage", "blockage"},                                                                                           //36
     {"Calculated evaporation temp CV (°C)", "calculated-evaporation-temp-cv_c"},                                        //37
     {"Calculated CV condensation temp (°C)", "calculated-condensation-temp-cv_c"},                                      //38
@@ -371,32 +371,32 @@ const struct ithoLabels ithoWPUStatusLabels[]{
     {"Error code byte 0", "error-code-byte-0"},                                                                         //44
     {"Manual operation", "manual-operation"},                                                                           //45
     {"Logging (sec)", "logging_sec"},                                                                                   //46
-    {"Compr block (sec)", "compr-block_sec"},                                                                           //47
+    {"Compressor block (sec)", "compr-block_sec"},                                                                      //47
     {"Elek block (sec)", "elek-block_sec"},                                                                             //48
-    {"Cv for _ naddraai (sec)", "cv-for_-naddraai_sec"},                                                                //49
+    {"CV for _ naddraai (sec)", "cv-for_-naddraai_sec"},                                                                //49
     {"Source for _ nadraai (sec)", "source-for_-nadraai_sec"},                                                          //50
     {"Boiler for _ nadraai (sec)", "boiler-for_-nadraai_sec"},                                                          //51
     {"Delay electr (sec)", "delay-electr_sec"},                                                                         //52
     {"Drain time (sec)", "Drain-time_sec"},                                                                             //53
-    {"Min running time compr (sec)", "min-running-time-compr_sec"},                                                     //54
+    {"Min running time compressor (sec)", "min-running-time-compr_sec"},                                                //54
     {"EV pressure offset (sec)", "ev-pressure-offset_sec"},                                                             //55
     {"EV adjust (sec)", "ev-adjust_sec"},                                                                               //56
     {"Free cooling interval (sec)", "free-cooling-interval_sec"},                                                       //57
     {"Manual control (sec)", "manual_sec"},                                                                             //58
     {"Low pressure timer (sec)", "low-pressure-timer_sec"},                                                             //59
     {"Compressor start (sec)", "compressor-start_sec"},                                                                 //60
-    {"Compr power on delay (sec)", "compr-power-on-delay_sec"},                                                         //61
-    {"Cv start delay (sec)", "cv-start-delay_sec"},                                                                     //62
-    {"Cv stop delay (sec)", "cv-stop-delay_sec"},                                                                       //63
+    {"Compressor power on delay (sec)", "compr-power-on-delay_sec"},                                                    //61
+    {"CV start delay (sec)", "cv-start-delay_sec"},                                                                     //62
+    {"CV stop delay (sec)", "cv-stop-delay_sec"},                                                                       //63
     {"Fault highest priority", "fault-highest-priority"},                                                               //64
     {"time for error history (sec)", "time-for-error_sec"},                                                             //65
     {"Max CV return temp (°C)", "max-cv-return-temp_c"},                                                                //66
-    {"FlowHardware", "flowhardware"},                                                                                   //67
+    {"Flow Hardware", "flowhardware"},                                                                                   //67
     {"Fault highest priority", "fault-highest-priority"},                                                               //68
-    {"Delay cv start (sec)", "delay-cv-start_sec"},                                                                     //69
-    {"Delay cv stop (sec)", "delay-cv-stop_sec"},                                                                       //70
+    {"Delay CV start (sec)", "delay-cv-start_sec"},                                                                     //69
+    {"Delay CV stop (sec)", "delay-cv-stop_sec"},                                                                       //70
     {"Source pump speed free cooling mode", "source-pump-speed-free-cooling-mode"},                                     //71
-    {"Compressor in Cv mode", "compressor-in-cv-mode"},                                                                 //72
+    {"Compressor in CV mode", "compressor-in-cv-mode"},                                                                 //72
     {"Compressor in boiler mode", "compressor-in-boiler-mode"},                                                         //73
     {"Element in CV mode", "element-in-CV-mode"},                                                                       //74
     {"Element in boiler mode", "element-in-boiler-mode"},                                                               //75
@@ -422,30 +422,30 @@ const struct ithoLabels ithoWPUStatusLabels[]{
     {"Comfort selected on thermostat", "comfort-selected-on-thermostat"},                                               //95
     {"Boiler blocked from thermostat", "boiler-blocked-from-thermostat"},                                               //96
     {"Boiler boost from thermostat", "boiler-boost-from-thermostat"},                                                   //97
-    {"Error_found", "error_found"},                                                                                     //98
-    {"Error_retry", "error_retry"},                                                                                     //99
+    {"Error found", "error_found"},                                                                                     //98
+    {"Error retry", "error_retry"},                                                                                     //99
     {"Task active", "task-active"},                                                                                     //100
     {"UTC time", "utc-time"},                                                                                           //101
     {"UTC time valid", "utc-time-valid"},                                                                               //102
     {"Element blocked during retry", "element-blocked-during-retry"},                                                   //103
     {"Spare input", "spare-input"},                                                                                     //104
-    {"Electr element DHW blocked", "electr-element-dhw-blocked"},                                                       //105
+    {"Electric element DHW blocked", "electr-element-dhw-blocked"},                                                     //105
     {"Calculated evaporation temp DHW (°C)", "calculated-evaporation-temp-dhw_c"},                                      //106
     {"Calculated condensation temp DHW (°C)", "calculated-condensation-temp-dhw_c"},                                    //107
     {"Adaptive timer (sec)", "adaptive-timer_sec"},                                                                     //108
     {"Adaptive overheat (K)", "adaptive-overheat_k"},                                                                   //109
-    {"adaptive fifo index", "adaptive-fifo-index"},                                                                     //110
+    {"Adaptive fifo index", "adaptive-fifo-index"},                                                                     //110
     {"Heat demand total (%)", "heat-demand-total_perc"},                                                                //111
     {"P source flow error", "p-source-flow-error"},                                                                     //112
     {"I error sourceflow", "i-error-sourceflow"},                                                                       //113
     {"Pi error sourceflow", "pi-error-sourceflow"},                                                                     //114
     {"Current source valve position (%)", "current-source-valve-position_perc"},                                        //115
-    {"Utc Time offset (min)", "utc-time-offset_min"},                                                                   //116
+    {"UTC Time offset (min)", "utc-time-offset_min"},                                                                   //116
     {"Gateway Time Receive", "gateway-time-receive"},                                                                   //117
     {"OT time valid", "ot-time-valid"},                                                                                 //118
     {"Time hours (hrs)", "time-hours_hours"},                                                                           //119
     {"Time minutes (min)", "time-minutes_min"},                                                                         //120
-    {"time seconds (sec)", "time-seconds_sec"},                                                                         //121
+    {"Time seconds (sec)", "time-seconds_sec"},                                                                         //121
     {"Free cooling block time (min)", "free-cooling-block-time_min"},                                                   //122
     {"Cooling temp control valve setpoint (%)", "cooling-temp-control-valve-setpoint_perc"},                            //123
     {"CO valve position (%)", "co-valve-position_perc"},                                                                //124
@@ -471,7 +471,7 @@ const struct ithoLabels ithoWPUStatusLabels[]{
     {"Blocking time trickle low after power-up (sec.)", "blocking-time-trickle-low-after-power-up_sec"},                //144
     {"Blocking time trickle low after CV operation (sec)", "blocking-time-trickle-low-after-cv-operation_sec"},         //145
     {"Block time pre-heating tap water (sec)", "block-time-pre-heating-tap-water_sec"},                                 //146
-    {"Well pump speed at compr (%)", "well-pump-speed-at-compr_perc"},                                                  //147
+    {"Well pump speed at compressor (%)", "well-pump-speed-at-compr_perc"},                                             //147
     {"Slow start well pump (sec)", "slow-start-well-pump_sec"},                                                         //148
     {"Source return temperature too low (sec.)", "source-return-temperature-too-low_sec"},                              //149
     {"Source flow control period (sec)", "source-flow-control-period_sec"},                                             //150
