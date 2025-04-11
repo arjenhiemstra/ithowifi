@@ -51,17 +51,17 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
     snprintf(modestatetopic, sizeof(modestatetopic), "%s%s", systemConfig.mqtt_base_topic, "/modestate");
 
     std::string uniqueId = normalizeUniqueId(std::string(name) + "_fan");
-    JsonObject componentJson = obj[const_cast<char *>(uniqueId.c_str())].to<JsonObject>();
+    JsonObject componentJson = obj[uniqueId].to<JsonObject>();
     componentJson["name"] = "Fan";
     componentJson["p"] = "fan";
-    componentJson["uniq_id"] = const_cast<char *>(uniqueId.c_str());
-    componentJson["json_attr_t"] = const_cast<char *>(ihtostatustopic);                // json_attributes_topic
-    componentJson["cmd_t"] = const_cast<char *>(cmdtopic);                             // command_topic
-    componentJson["pct_cmd_t"] = const_cast<char *>(cmdtopic);                         // percentage_command_topic
-    componentJson["pct_stat_t"] = const_cast<char *>(statetopic);                      // percentage_state_topic
+    componentJson["uniq_id"] = uniqueId;
+    componentJson["json_attr_t"] = ihtostatustopic;                                    // json_attributes_topic
+    componentJson["cmd_t"] = cmdtopic;                                                 // command_topic
+    componentJson["pct_cmd_t"] = cmdtopic;                                             // percentage_command_topic
+    componentJson["pct_stat_t"] = statetopic;                                          // percentage_state_topic
     componentJson["stat_val_tpl"] = "{% if value == '0' %}OFF{% else %}ON{% endif %}"; // state_value_template
-    componentJson["pr_mode_cmd_t"] = const_cast<char *>(cmdtopic);                     // preset_mode_command_topic
-    componentJson["pr_mode_stat_t"] = const_cast<char *>(ihtostatustopic);             // preset_mode_state_topic
+    componentJson["pr_mode_cmd_t"] = cmdtopic;                                         // preset_mode_command_topic
+    componentJson["pr_mode_stat_t"] = ihtostatustopic;                                 // preset_mode_state_topic
 
     JsonArray modes = componentJson["pr_modes"].to<JsonArray>(); // preset_modes
     modes.add("Low");
@@ -126,7 +126,7 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
         else if (deviceID == 0x4) // cve eco2 0x4
         {
             actualSpeedLabel = getSpeedLabel(); //-> {"Speed status", "speed-status"}, of error_info_labels.h
-        }        
+        }
         else if (deviceID == 0x14) // cve 0x14
         {
             actualSpeedLabel = getStatusLabel(0, ithoDeviceptr); //-> {"Ventilation level (%)", "ventilation-level_perc"}, of cve14.h
@@ -182,20 +182,20 @@ void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
     snprintf(ithodevicetopic, sizeof(ithodevicetopic), "%s%s", systemConfig.mqtt_base_topic, "/deviceinfo");
 
     std::string uniqueId = normalizeUniqueId(std::string(name) + "_fwupdate");
-    JsonObject componentJson = obj[const_cast<char *>(uniqueId.c_str())].to<JsonObject>();
+    JsonObject componentJson = obj[uniqueId].to<JsonObject>();
     componentJson["name"] = "Firmware Update";
     componentJson["p"] = "update";
-    componentJson["uniq_id"] = const_cast<char *>(uniqueId.c_str());
+    componentJson["uniq_id"] = uniqueId;
     componentJson["dev_cla"] = "firmware";
 
     std::string tmpstr = "http://" + std::string(WiFi.localIP().toString().c_str()) + "/favicon.png";
-    componentJson["ent_pic"] = const_cast<char *>(tmpstr.c_str());
+    componentJson["ent_pic"] = tmpstr;
     // componentJson["icon"] = "mdi:update";
 
     componentJson["stat_t"] = ithodevicetopic;
 
     tmpstr = "{{ {'installed_version': value_json['add-on_fwversion'], 'latest_version': value_json['add-on_latest_fw'], 'title': 'Add-on Firmware', 'release_url': 'https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + std::string(firmwareInfo.latest_fw) + "' } | to_json }}";
-    componentJson["val_tpl"] = const_cast<char *>(tmpstr.c_str());
+    componentJson["val_tpl"] = tmpstr;
 }
 
 void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
@@ -212,20 +212,21 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
     const char *deviceName = compactJson["d"]; // Retrieve device name from compact JSON
 
     // generic status topics, can be overiden per component
-    outputJson["avty_t"] = const_cast<char *>(lwttopic);
-    outputJson["stat_t"] = const_cast<char *>(ihtostatustopic); // state_topic
+    outputJson["avty_t"] = lwttopic;
+    outputJson["stat_t"] = ihtostatustopic; // state_topic
 
     // Static device information
     addHADevInfo(outputJson);
 
     // Update name from config
-    outputJson["dev"]["name"] = const_cast<char *>(deviceName);
+    outputJson["dev"]["name"] = deviceName;
 
     // Origin object
     JsonObject origin = outputJson["o"].to<JsonObject>();
 
-    origin["name"] = const_cast<char *>(deviceName);
-    origin["sw"] = fw_version;
+    origin["name"] = deviceName;
+    // origin["sw"] = fw_version;
+    origin["sw"] = JsonString(fw_version, true);
     origin["url"] = "https://www.nrgwatch.nl/support-ondersteuning/";
 
     // Components object
@@ -240,7 +241,6 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
 
         for (JsonObject component : componentsArray)
         {
-            // each object needs to be copied into the JSON to prevent dangling pointers to be inserted, therefor const_cast<char *>() is applied
 
             configuredIndices.insert(component["i"].as<uint8_t>());
 
@@ -250,10 +250,10 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
             // Generate normalized unique ID
             std::string uniqueId = normalizeUniqueId(std::string(outputJson["dev"]["ids"] | "default_name") + "_" + platform + "_i_" + std::to_string(index));
             // Create component object using uniqueID
-            JsonObject componentJson = components[const_cast<char *>(uniqueId.c_str())].to<JsonObject>();
-            componentJson["name"] = const_cast<char *>(name);
-            componentJson["p"] = const_cast<char *>(platform);
-            componentJson["uniq_id"] = const_cast<char *>(uniqueId.c_str()); // Add unique_id
+            JsonObject componentJson = components[uniqueId].to<JsonObject>();
+            componentJson["name"] = name;
+            componentJson["p"] = platform;
+            componentJson["uniq_id"] = uniqueId; // Add unique_id
             if (component["vt"].isNull())
             {
                 JsonObject::iterator it = statusitemsdoc.as<JsonObject>().begin();
@@ -265,19 +265,25 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
             }
             else
             {
-                componentJson["val_tpl"] = const_cast<char *>(component["vt"].as<const char *>());
+                componentJson["val_tpl"] = component["vt"].as<const char *>();
             }
             const char *unitOfMeasurement = component["um"].is<const char *>() ? component["um"].as<const char *>() : nullptr;
             const char *deviceClass = component["dc"].is<const char *>() ? component["dc"].as<const char *>() : nullptr;
+            const char *stateClass = component["sc"].is<const char *>() ? component["sc"].as<const char *>() : nullptr;
 
             if (unitOfMeasurement)
             {
-                componentJson["unit_of_meas"] = const_cast<char *>(unitOfMeasurement);
+                componentJson["unit_of_meas"] = unitOfMeasurement;
             }
 
             if (deviceClass)
             {
-                componentJson["dev_cla"] = const_cast<char *>(deviceClass);
+                componentJson["dev_cla"] = deviceClass;
+            }
+
+            if (stateClass)
+            {
+                componentJson["stat_cla"] = stateClass; // Use "sc" from compact JSON
             }
         }
 
@@ -291,7 +297,7 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
                 std::string uniqueId = normalizeUniqueId(std::string(outputJson["dev"]["ids"] | "default_name") + "_sensor_i_" + std::to_string(index));
 
                 // Create empty component
-                JsonObject componentJson = components[const_cast<char *>(uniqueId.c_str())].to<JsonObject>();
+                JsonObject componentJson = components[uniqueId].to<JsonObject>();
                 componentJson["p"] = "sensor"; // Default platform
             }
         }

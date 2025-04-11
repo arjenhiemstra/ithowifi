@@ -510,9 +510,9 @@ void MDNSinit()
   // set hostname
   mdns_hostname_set(hostname);
 
-  char inst_name[sizeof(hostname)+14]{}; // " Web Interface" == 14 chars
+  char inst_name[sizeof(hostname) + 14]{}; // " Web Interface" == 14 chars
   snprintf(inst_name, sizeof(inst_name), "%s Web Interface", hostname);
-  
+
   // set default instance
   mdns_instance_name_set(inst_name);
 

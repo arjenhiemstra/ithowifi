@@ -96,14 +96,20 @@
                 deviceClassInput$.val(component.dc);
             }
 
+            // Update State Class
+            const stateClassInput$ = row$.find("td:nth-child(5) input");
+            if (component.sc) {
+                stateClassInput$.val(component.sc);
+            }
+
             // Update Value Template
-            const valueTemplateInput$ = row$.find("td:nth-child(5) input");
+            const valueTemplateInput$ = row$.find("td:nth-child(6) input");
             if (component.vt) {
                 valueTemplateInput$.val(component.vt);
             }
 
             // Update Unit of Measurement
-            const unitInput$ = row$.find("td:nth-child(6) input");
+            const unitInput$ = row$.find("td:nth-child(7) input");
             if (component.um) {
                 unitInput$.val(component.um);
             }
@@ -124,9 +130,10 @@
             const label = $(this).find("td:nth-child(2)").text().trim();
             const name = $(this).find("td:nth-child(3) input").val().trim();
             const deviceClass = $(this).find("td:nth-child(4) input").val().trim();
-            const valueTemplateInput$ = $(this).find("td:nth-child(5) input");
+            const stateClass = $(this).find("td:nth-child(5) input").val().trim();;
+            const valueTemplateInput$ = $(this).find("td:nth-child(6) input");
             const valueTemplate = valueTemplateInput$.val().trim();
-            const unitOfMeasurement = $(this).find("td:nth-child(6) input").val().trim();
+            const unitOfMeasurement = $(this).find("td:nth-child(7) input").val().trim();
 
             const component = {
                 i: index,
@@ -135,6 +142,9 @@
 
             // Only include dc if changed
             if (deviceClass) component.dc = deviceClass;
+
+            // Only include sc if different from the default
+            if (stateClass) component.sc = stateClass;
 
             // Only include vt if different from the default
             if (valueTemplate !== valueTemplateInput$.data("default")) {
