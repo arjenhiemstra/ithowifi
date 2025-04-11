@@ -1660,6 +1660,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
   headerTr$.append($("<th>").html("Label"));
   headerTr$.append($("<th>").html("HA Name"));
   headerTr$.append($("<th>").addClass("advanced hidden").html("Device Class"));
+  headerTr$.append($("<th>").addClass("advanced hidden").html("State Class"));
   headerTr$.append($("<th>").addClass("advanced hidden").html("Value Template"));
   headerTr$.append($("<th>").addClass("advanced hidden").html("Unit of Measurement"));
   headerThead$.append(headerTr$);
@@ -1700,6 +1701,14 @@ function buildHtmlHADiscTable(ithostatusinfo) {
       placeholder: "Device Class",
     });
     row$.append($("<td>").addClass("advanced hidden").append(deviceClassInput$));
+
+    // State Class (editable, advanced)
+    const stateClassInput$ = $("<input>", {
+      type: "text",
+      class: "advanced hidden",
+      placeholder: "State Class",
+    });
+    row$.append($("<td>").addClass("advanced hidden").append(stateClassInput$));
 
     // Value Template (editable, advanced, retains unit)
     const valueTemplateInput$ = $("<input>", {

@@ -613,7 +613,7 @@ $(document).ready(function () {
       else {
         var remfunc = (typeof $('#func_remote-' + i).val() === 'undefined') ? 0 : $('#func_remote-' + i).val();
         var remtype = (typeof $('#type_remote-' + i).val() === 'undefined') ? 0 : $('#type_remote-' + i).val();
-        var bidirectional = (typeof $('input[id=\'bidirect_remote-' + i + '\']:checked').val() === 'undefined') ? 0 : 1;
+        var bidirectional = (typeof $('input[id=\'bidirect_remote-' + i + '\']:checked').val() === 'undefined') ? false : true;
         var id = $('#id_remote-' + i).val();
         if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
@@ -775,7 +775,7 @@ $(document).ready(function () {
     else if ($(this).attr('id') == 'button2410set') {
       websock_send(JSON.stringify({
         ithobutton: 24109,
-        ithosetupdate: $('#itho_setting_id_set').val(),
+        ithosetupdate: parseInt($('#itho_setting_id_set').val()),
         value: parseFloat($('#itho_setting_value_set').val())
       }));
     }
@@ -1661,6 +1661,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
   headerTr$.append($("<th>").html("Label"));
   headerTr$.append($("<th>").html("HA Name"));
   headerTr$.append($("<th>").addClass("advanced hidden").html("Device Class"));
+  headerTr$.append($("<th>").addClass("advanced hidden").html("State Class"));
   headerTr$.append($("<th>").addClass("advanced hidden").html("Value Template"));
   headerTr$.append($("<th>").addClass("advanced hidden").html("Unit of Measurement"));
   headerThead$.append(headerTr$);
@@ -1701,6 +1702,14 @@ function buildHtmlHADiscTable(ithostatusinfo) {
       placeholder: "Device Class",
     });
     row$.append($("<td>").addClass("advanced hidden").append(deviceClassInput$));
+
+    // State Class (editable, advanced)
+    const stateClassInput$ = $("<input>", {
+      type: "text",
+      class: "advanced hidden",
+      placeholder: "State Class",
+    });
+    row$.append($("<td>").addClass("advanced hidden").append(stateClassInput$));
 
     // Value Template (editable, advanced, retains unit)
     const valueTemplateInput$ = $("<input>", {
@@ -3097,14 +3106,20 @@ var html_hadiscovery = `
                 deviceClassInput$.val(component.dc);
             }
 
+            // Update State Class
+            const stateClassInput$ = row$.find("td:nth-child(5) input");
+            if (component.sc) {
+                stateClassInput$.val(component.sc);
+            }
+
             // Update Value Template
-            const valueTemplateInput$ = row$.find("td:nth-child(5) input");
+            const valueTemplateInput$ = row$.find("td:nth-child(6) input");
             if (component.vt) {
                 valueTemplateInput$.val(component.vt);
             }
 
             // Update Unit of Measurement
-            const unitInput$ = row$.find("td:nth-child(6) input");
+            const unitInput$ = row$.find("td:nth-child(7) input");
             if (component.um) {
                 unitInput$.val(component.um);
             }
@@ -3125,9 +3140,10 @@ var html_hadiscovery = `
             const label = $(this).find("td:nth-child(2)").text().trim();
             const name = $(this).find("td:nth-child(3) input").val().trim();
             const deviceClass = $(this).find("td:nth-child(4) input").val().trim();
-            const valueTemplateInput$ = $(this).find("td:nth-child(5) input");
+            const stateClass = $(this).find("td:nth-child(5) input").val().trim();;
+            const valueTemplateInput$ = $(this).find("td:nth-child(6) input");
             const valueTemplate = valueTemplateInput$.val().trim();
-            const unitOfMeasurement = $(this).find("td:nth-child(6) input").val().trim();
+            const unitOfMeasurement = $(this).find("td:nth-child(7) input").val().trim();
 
             const component = {
                 i: index,
@@ -3136,6 +3152,9 @@ var html_hadiscovery = `
 
             // Only include dc if changed
             if (deviceClass) component.dc = deviceClass;
+
+            // Only include sc if different from the default
+            if (stateClass) component.sc = stateClass;
 
             // Only include vt if different from the default
             if (valueTemplate !== valueTemplateInput$.data("default")) {
