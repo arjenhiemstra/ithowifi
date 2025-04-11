@@ -55,7 +55,7 @@ public:
   uint8_t itho_forcemedium;
   uint8_t itho_vremoteapi;
   uint8_t itho_rf_support;
-  uint8_t module_rf_id[3]{0,0,0};
+  uint8_t module_rf_id[3]{0, 0, 0};
   uint8_t i2cmenu;
   uint8_t i2c_safe_guard;
   uint8_t i2c_sniffer;
@@ -70,7 +70,6 @@ public:
   mutable bool mqtt_updated;
   mutable bool get_mqtt_settings;
   mutable bool get_sys_settings;
-  mutable bool get_itho_settings;
   mutable bool get_rf_settings;
 
   char config_struct_version[4];

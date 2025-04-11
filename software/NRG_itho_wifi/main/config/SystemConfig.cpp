@@ -64,7 +64,6 @@ SystemConfig::SystemConfig()
   mqtt_updated = false;
   get_mqtt_settings = false;
   get_sys_settings = false;
-  get_itho_settings = false;
   get_rf_settings = false;
 
   configLoaded = false;
@@ -363,7 +362,7 @@ void SystemConfig::get(JsonObject obj) const
 {
 
   bool complete = true;
-  if (get_mqtt_settings || get_sys_settings || get_itho_settings || get_rf_settings)
+  if (get_sys_settings || get_mqtt_settings || get_rf_settings)
   {
     complete = false;
   }
@@ -427,6 +426,7 @@ void SystemConfig::get(JsonObject obj) const
   }
   if (complete || get_rf_settings)
   {
+    get_rf_settings = false;
     obj["itho_rf_support"] = itho_rf_support;
     obj["rfInitOK"] = rfInitOK;
     JsonArray id = obj["module_rf_id"].to<JsonArray>();
@@ -438,10 +438,6 @@ void SystemConfig::get(JsonObject obj) const
     snprintf(module_rf_id_str, sizeof(module_rf_id_str), "%02X,%02X,%02X", module_rf_id[0], module_rf_id[1], module_rf_id[2]);
     obj["module_rf_id_str"] = module_rf_id_str;
     obj["itho_numrfrem"] = itho_numrfrem;
-  }
-  if (complete || get_itho_settings)
-  {
-    get_itho_settings = false;
   }
   obj["mqtt_ha_active"] = mqtt_ha_active;
   obj["version_of_program"] = config_struct_version;
