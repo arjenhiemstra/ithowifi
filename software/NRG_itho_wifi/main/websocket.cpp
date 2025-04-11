@@ -140,7 +140,6 @@ void jsonWsSend(const char *rootName)
   }
   else if (strcmp(rootName, "hadiscsettings") == 0)
   {
-    D_LOG("hadiscsettings request recieved2");
     JsonObject nested = root[rootName].to<JsonObject>();
     haDiscConfig.get(nested);
   }
@@ -241,7 +240,6 @@ void handle_ws_message(JsonObject root)
   }
   if (root["hadiscsettings"].is<JsonObject>())
   {
-    D_LOG("hadiscsettings received");
     if (haDiscConfig.set(root["hadiscsettings"].as<JsonObject>()))
     {
       saveHADiscConfigflag = true;

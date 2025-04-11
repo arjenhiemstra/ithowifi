@@ -1925,7 +1925,6 @@ void IthoCC1101::handleTimer(IthoPacket *packetPtr)
 
 void IthoCC1101::handle31D9(IthoPacket *packetPtr)
 {
-  D_LOG("handle31D9");
   uint32_t tempID = 0;
   if (packetPtr->deviceId0 != 0)
   {
@@ -1968,7 +1967,6 @@ void IthoCC1101::handle31D9(IthoPacket *packetPtr)
 
 void IthoCC1101::handle31DA(IthoPacket *packetPtr)
 {
-  D_LOG("handle31DA");
   uint32_t tempID = 0;
   if (packetPtr->deviceId0 != 0)
   {
@@ -2307,7 +2305,6 @@ void IthoCC1101::handleZoneSetpoint(IthoPacket *packetPtr)
 
 void IthoCC1101::handleDeviceInfo(IthoPacket *packetPtr)
 {
-  D_LOG("handleDeviceInfo");
   uint32_t tempID = 0;
   if (packetPtr->deviceId0 != 0)
   {

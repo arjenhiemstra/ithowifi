@@ -311,7 +311,6 @@ void TaskCC1101(void *pvParameters)
         disableRF_ISR();
         rf.send10E0();
         enableRF_ISR();
-        D_LOG("send10E0 send");
         rf.setSendTries(3);
         rf_message.once_ms(100, set_send31D9_true);
       }
@@ -359,7 +358,6 @@ void TaskCC1101(void *pvParameters)
       }
       if ((send31D9 || send31D9debug) && !ithoCheck)
       {
-        D_LOG("send31D9");
         // 80 82 B1 D9 01 10 86 05 0A 20 20 20 20 20 20 20 20 20 20 20 20 00 4E
         uint8_t command[] = {0x31, 0xD9, 0x11, 0x00, 0x06, 0x00, 0x0A, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00};
 
@@ -397,7 +395,6 @@ void TaskCC1101(void *pvParameters)
       }
       if ((send31DA || send31DAdebug) && !ithoCheck)
       {
-        D_LOG("send31DA");
         uint8_t command[] = {0x31, 0xDA, 0x1D, 0x00, 0xC8, 0x40, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0xEF, 0xF8, 0x08, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEF, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF};
 
         if (send31DA)
@@ -439,10 +436,6 @@ void TaskCC1101(void *pvParameters)
       {
         ithoCheck = false;
 
-        // D_LOG("getpacketBufferCount: %d", rf.getpacketBufferCount());
-
-        // while (rf.getpacketBufferCount() > 0)
-        // {
         IthoPacket *packet = rf.checkForNewPacket();
         rf.parseMessage(packet);
 
@@ -450,7 +443,6 @@ void TaskCC1101(void *pvParameters)
         IthoCommand cmd = rf.getLastCommand(packet);
         RemoteTypes remtype = rf.getLastRemType(packet);
         bool chk = remotes.checkID(*(lastID + 0), *(lastID + 1), *(lastID + 2));
-        // D_LOG("checkID: %d", chk);
         if (logConfig.rfloglevel >= 2)
         {
           if (chk || logConfig.rfloglevel == 3)
