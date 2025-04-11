@@ -612,7 +612,7 @@ $(document).ready(function () {
       else {
         var remfunc = (typeof $('#func_remote-' + i).val() === 'undefined') ? 0 : $('#func_remote-' + i).val();
         var remtype = (typeof $('#type_remote-' + i).val() === 'undefined') ? 0 : $('#type_remote-' + i).val();
-        var bidirectional = (typeof $('input[id=\'bidirect_remote-' + i + '\']:checked').val() === 'undefined') ? 0 : 1;
+        var bidirectional = (typeof $('input[id=\'bidirect_remote-' + i + '\']:checked').val() === 'undefined') ? false : true;
         var id = $('#id_remote-' + i).val();
         if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
