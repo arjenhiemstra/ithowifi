@@ -429,18 +429,18 @@ void handle_ws_message(JsonObject root)
   }
 
   // ---------- Itho get/refresh/update settings ----------
-  if (root["ithogetsetting"].is<JsonObject>())
+  if (root["ithogetsetting"].is<bool>() && root["ithogetsetting"].as<bool>())
   {
-    auto setObj = root["ithogetsetting"].as<JsonObject>();
-    uint8_t idx = setObj["index"] | 0;
-    bool upd = setObj["update"] | false;
+    // step1: index=0, update=false, loop=true -> reply with settings labels but null for values
+    uint8_t idx = root["index"].as<uint8_t>();
+    bool upd = root["update"].as<bool>();
+
     i2c_queue_add_cmd([idx, upd]()
                       { getSetting(idx, upd, false, true); });
   }
-  if (root["ithosetrefresh"].is<JsonObject>())
+  if (root["ithosetrefresh"].is<uint8_t>())
   {
-    auto refObj = root["ithosetrefresh"].as<JsonObject>();
-    uint8_t idx = refObj["ithosetrefresh"] | 0;
+    uint8_t idx = root["ithosetrefresh"].as<uint8_t>();
     i2c_queue_add_cmd([idx]()
                       { getSetting(idx, true, false, false); });
   }
@@ -508,10 +508,9 @@ void handle_ws_message(JsonObject root)
   }
 
   // copy_id => for virtualRemotes
-  if (root["copy_id"].is<JsonObject>())
+  if (root["copy_id"].is<bool>() && root["copy_id"].as<bool>())
   {
-    auto copyObj = root["copy_id"].as<JsonObject>();
-    int number = copyObj["index"] | 0;
+    int number = root["index"].as<uint8_t>();
     if (number > 0 && number <= virtualRemotes.getMaxRemotes())
     {
       virtualRemotes.copy_id_remote_idx = number - 1;
