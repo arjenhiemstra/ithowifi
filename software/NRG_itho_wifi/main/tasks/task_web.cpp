@@ -1261,6 +1261,9 @@ ApiResponse::api_response_status_t processCommand(JsonObject params, JsonDocumen
   return ApiResponse::status::FAIL;
 }
 
+/*
+api.html?setrfremote=1&setting=setrfdevicedestid&settingvalue=96,C8,B6
+*/
 ApiResponse::api_response_status_t processSetRFremote(JsonObject params, JsonDocument &response)
 {
   const char *setrfremote = params["setrfremote"];
@@ -1315,7 +1318,7 @@ ApiResponse::api_response_status_t processSetRFremote(JsonObject params, JsonDoc
     }
     return ApiResponse::status::SUCCESS;
   }
-  else if (strcmp("setrfdevicesourceid", setting) == 0 || strcmp("  ", setting) == 0)
+  else if (strcmp("setrfdevicesourceid", setting) == 0 || strcmp("setrfdevicedestid", setting) == 0)
   {
     std::vector<int> id = parseHexString(settingvalue);
 
