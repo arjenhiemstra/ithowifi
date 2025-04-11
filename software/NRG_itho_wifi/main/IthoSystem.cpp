@@ -78,6 +78,7 @@ struct ihtoDeviceType
 const struct ihtoDeviceType ithoDevices[]{
     {0x00, 0x01, "Air curtain", nullptr, 0, nullptr, nullptr, 0, nullptr},
     {0x00, 0x03, "HRU ECO-fan", ithoHRUecoFanSettingsMap, sizeof(ithoHRUecoFanSettingsMap) / sizeof(ithoHRUecoFanSettingsMap[0]), ithoHRUecoSettingsLabels, ithoHRUecoFanStatusMap, sizeof(ithoHRUecoFanStatusMap) / sizeof(ithoHRUecoFanStatusMap[0]), ithoHRUecoStatusLabels},
+    {0x00, 0x04, "CVE ECO2", nullptr, 0, nullptr, nullptr, 0, nullptr},
     {0x00, 0x08, "LoadBoiler", nullptr, 0, nullptr, nullptr, 0, nullptr},
     {0x00, 0x0A, "GGBB", nullptr, 0, nullptr, nullptr, 0, nullptr},
     {0x00, 0x0B, "DemandFlow", ithoDemandFlowSettingsMap, sizeof(ithoDemandFlowSettingsMap) / sizeof(ithoDemandFlowSettingsMap[0]), ithoDemandFlowSettingsLabels, ithoDemandFlowStatusMap, sizeof(ithoDemandFlowStatusMap) / sizeof(ithoDemandFlowStatusMap[0]), ithoDemandFlowStatusLabels},
