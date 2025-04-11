@@ -140,39 +140,17 @@ bool resetWifiConfig()
 
 bool loadSystemConfig(const char *location)
 {
-  return loadConfigFile(location, "usesysconfb", "/config.json", 2048, "systemconfig", systemConfig);
+  return loadConfigFile(location, "usesysconfb", "/config.json", 4096, "systemconfig", systemConfig);
 }
 
 bool saveSystemConfig(const char *location)
 {
-  return saveConfigFile(location, "/config.json", 2048, "systemconfig", systemConfig);
-}
-
-bool saveSystemConfigs()
-{
-  bool res = false;
-  res = saveConfigFile("flash", "/config.json", 2048, "systemconfig", systemConfig);
-  res = saveConfigFile("flash", "/syslog.json", 2048, "logconfig", logConfig);
-  res = saveConfigFile("flash", "/hadisc.json", 8192, "hadiscconfig", haDiscConfig);
-  res = saveFileRemotes("flash", "/remotes.json", "remotesconfig", remotes);
-  res = saveFileRemotes("flash", "/vremotes.json", "vremotesconfig", virtualRemotes);
-  return res;
+  return saveConfigFile(location, "/config.json", 4096, "systemconfig", systemConfig);
 }
 
 bool resetSystemConfig()
 {
   return resetConfigFile("/config.json");
-}
-
-bool resetSystemConfigs()
-{
-  bool res = false;
-  res = resetConfigFile("/config.json");
-  res = resetConfigFile("/syslog.json");
-  res = resetConfigFile("/hadisc.json");
-  res = resetConfigFile("/remotes.json");
-  res = resetConfigFile("/vremotes.json");
-  return res;
 }
 
 bool loadLogConfig(const char *location)
@@ -204,6 +182,29 @@ bool resetHADiscConfig()
 {
   return resetConfigFile("/hadisc.json");
 }
+
+bool saveSystemConfigs()
+{
+  bool res = false;
+  res = saveSystemConfig("flash");
+  res = saveLogConfig("flash");
+  res = saveHADiscConfig("flash");
+  res = saveRemotesConfig("flash");
+  res = saveVirtualRemotesConfig("flash");
+  return res;
+}
+
+bool resetSystemConfigs()
+{
+  bool res = false;
+  res = resetConfigFile("/config.json");
+  res = resetConfigFile("/syslog.json");
+  res = resetConfigFile("/hadisc.json");
+  res = resetConfigFile("/remotes.json");
+  res = resetConfigFile("/vremotes.json");
+  return res;
+}
+
 
 template <typename TDst>
 uint16_t serializeRemotes(const char *filename, const IthoRemote &remotes, TDst &dst)
