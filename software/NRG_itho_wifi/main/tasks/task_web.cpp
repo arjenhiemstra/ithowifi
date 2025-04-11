@@ -1227,7 +1227,7 @@ ApiResponse::api_response_status_t processCommand(JsonObject params, JsonDocumen
     response["failreason"] = "pwm2i2c protocol not enabled";
     return ApiResponse::status::FAIL;
   }
-  else if (currentIthoDeviceID() != 0x14 || currentIthoDeviceID() != 0x1B || currentIthoDeviceID() != 0x1D) // CVE or HRU200 are the only devices that support the pwm2i2c command
+  else if (currentIthoDeviceID() != 0x4 || currentIthoDeviceID() != 0x14 || currentIthoDeviceID() != 0x1B || currentIthoDeviceID() != 0x1D) // CVE or HRU200 are the only devices that support the pwm2i2c command
   {
     response["code"] = 400;
     response["failreason"] = "device does not support pwm2i2c commands, use virtual remote instead";
