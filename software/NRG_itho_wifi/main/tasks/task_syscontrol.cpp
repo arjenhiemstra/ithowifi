@@ -540,11 +540,6 @@ void init_i2c_functions()
       if (HADiscConfigLoaded && (strcmp(haDiscConfig.d, "unset") == 0))
       {
         strncpy(haDiscConfig.d, getIthoType(), sizeof(haDiscConfig.d));
-        D_LOG("haDiscConfig.d updated to:%s", haDiscConfig.d);
-      }
-      else
-      {
-        D_LOG("haDiscConfig.d not updated, HADiscConfigLoaded:%d, val:%s", HADiscConfigLoaded, haDiscConfig.d);
       }
       sendHomeAssistantDiscovery = true;
     }
