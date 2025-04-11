@@ -4,6 +4,7 @@
 #else
 static std::unordered_map<uint32_t, std::string> g_wsBuffers;
 AsyncWebServer wsserver(8000);
+WebSerial *webSerial = nullptr;
 #endif
 
 #if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
@@ -23,17 +24,18 @@ void websocketInit()
   ws.onEvent(onWsEvent);
   wsserver.addHandler(&ws);
   wsserver.begin();
-  WebSerial.onMessage([](const std::string &msg)
-                      { Serial.println(msg.c_str()); });
 
-  if (systemConfig.syssec_web)
-  {
-    WebSerial.setAuthentication(systemConfig.sys_username, systemConfig.sys_password);
-  }
   // if enable a web based serial terminal will be available at http://IP:8000/webserial
   if (logConfig.webserial_active)
   {
-    WebSerial.begin(&wsserver);
+    webSerial = new WebSerial();
+    webSerial->onMessage([](const std::string &msg)
+                        { Serial.println(msg.c_str()); });
+    if (systemConfig.syssec_web)
+    {
+      webSerial->setAuthentication(systemConfig.sys_username, systemConfig.sys_password);
+    }
+    webSerial->begin(&wsserver);
   }
 
 #endif

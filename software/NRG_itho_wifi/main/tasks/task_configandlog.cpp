@@ -355,9 +355,9 @@ void syslog_queue_worker()
     {
       syslog.log(input.code, input.msg.c_str());
     }
-    if (WiFi.status() == WL_CONNECTED)
+    if (WiFi.status() == WL_CONNECTED && logConfig.webserial_active && webSerial != nullptr)
     {
-      WebSerial.print(input.msg.c_str());
+      webSerial->print(input.msg.c_str());
     }
 
     // Also update webinterface
