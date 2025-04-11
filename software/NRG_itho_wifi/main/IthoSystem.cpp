@@ -362,6 +362,26 @@ int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, cons
   return -1;
 }
 
+const char *getSpeedLabel()
+{
+  const uint8_t deviceGroup = currentIthoDeviceGroup();
+  const uint8_t deviceID = currentIthoDeviceID();
+
+  if (deviceGroup == 0x0 && deviceID == 0x4)
+  {
+    if (systemConfig.api_normalize == 0)
+    {
+      return itho31D9Labels[0].labelFull;
+    }
+    else
+    {
+      return itho31D9Labels[0].labelNormalized;
+    }
+  }
+
+  return "no_speed_label_for_this_device_error";
+}
+
 const char *getStatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr)
 {
   const uint8_t deviceGroup = currentIthoDeviceGroup();
