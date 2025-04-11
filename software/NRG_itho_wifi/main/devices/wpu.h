@@ -36,7 +36,7 @@ const char *ithoWPUSettingsLabels[] = {
     "Hardware configuration",                                         //1
     "Year of commissioning",                                          //2
     "Date of commissioning",                                          //3
-    "Max manaul opeation time (min)",                                 //4
+    "Max manual operation time (min)",                                //4
     "Frost temp (°C)",                                                //5
     "Offset for forst temp (K)",                                      //6
     "Differential vorst temp electrical element (K)",                 //7

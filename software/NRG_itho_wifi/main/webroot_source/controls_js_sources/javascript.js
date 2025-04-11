@@ -774,7 +774,7 @@ $(document).ready(function () {
     else if ($(this).attr('id') == 'button2410set') {
       websock_send(JSON.stringify({
         ithobutton: 24109,
-        ithosetupdate: $('#itho_setting_id_set').val(),
+        ithosetupdate: parseInt($('#itho_setting_id_set').val()),
         value: parseFloat($('#itho_setting_value_set').val())
       }));
     }
