@@ -123,6 +123,10 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
         {
             actualSpeedLabel = getStatusLabel(0, ithoDeviceptr); //-> {"Ventilation setpoint (%)", "ventilation-setpoint_perc"}, of hru200.h
         }
+        else if (deviceID == 0x4) // cve eco2 0x4
+        {
+            actualSpeedLabel = getSpeedLabel(); //-> {"Speed status", "speed-status"}, of error_info_labels.h
+        }        
         else if (deviceID == 0x14) // cve 0x14
         {
             actualSpeedLabel = getStatusLabel(0, ithoDeviceptr); //-> {"Ventilation level (%)", "ventilation-level_perc"}, of cve14.h
