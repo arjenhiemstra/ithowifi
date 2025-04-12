@@ -1,0 +1,6 @@
+## IDF Component Manager Manifest File
+dependencies:
+  esp32async/asynctcp:
+    version: "*"
+    override_path: "../../../"
+    pre_release: true
