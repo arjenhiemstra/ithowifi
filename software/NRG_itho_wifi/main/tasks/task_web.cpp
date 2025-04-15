@@ -1668,8 +1668,8 @@ In case of "success" or "fail":
 - the returned JSON will always have a "data" key containing the resulting data of the request.
 - the value can be a string or a JSON object or array.
 - the returned JSON should contain a key "result" that contains a string with a short human readable API call result
-- the returned JSON should contain a key "cmdkey" that conains a string copy of the given command when a URL encoded key/value pair is present in the API call
-- the returned JSON should contain a key "cmdval" that conains a string copy of the given value when a URL encoded key/value pair is present in the API call
+- the returned JSON should contain a key "cmdkey" that contains a string copy of the given command when a URL encoded key/value pair is present in the API call
+- the returned JSON should contain a key "cmdval" that contains a string copy of the given value when a URL encoded key/value pair is present in the API call
 
 In case of "error":
 - the returned JSON will at least contain a key "message" with a value of type string, explaining what went wrong.
