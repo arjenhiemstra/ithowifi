@@ -2119,7 +2119,8 @@ Unless specified otherwise:<br>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with all available sensor data, status data and system
-                    information. Available keys depend on Itho device and firmware version. Return type present on MQTT "Itho status topic"</em></td>
+                    information. Available keys depend on Itho device and firmware version. Return type present on MQTT
+                    "Itho status topic"</em></td>
         </tr>
         <tr>
             <td>get</td>
@@ -2132,7 +2133,8 @@ Unless specified otherwise:<br>
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key=remote name, value is
                     JSON with all received capabilities of the remote. Depending on make and model this can be the last
-                    command, temperature, humidity, battery and/or co2 levels. Return type present on MQTT "Remotes info topic".</em></td>
+                    command, temperature, humidity, battery and/or co2 levels. Return type present on MQTT "Remotes info
+                    topic".</em></td>
         </tr>
         <tr>
             <td>get</td>
@@ -2143,8 +2145,9 @@ Unless specified otherwise:<br>
             <td style="text-align:center">●</td>
         </tr>
         <tr>
-            <td colspan="6">Comments:<br><em>Returns JSON with device information on the add-on and itho device connected (as of WebAPIv2). Return type present on MQTT "Device info topic".</em></td>
-        </tr>            
+            <td colspan="6">Comments:<br><em>Returns JSON with device information on the add-on and itho device
+                    connected (as of WebAPIv2). Return type present on MQTT "Device info topic".</em></td>
+        </tr>
         <tr>
             <td colspan="6"><b>Commands below this line work on Itho devices that support the PWM2IC2 protocol. Devices
                     supported are at least the HRU200 and all CVE models. Devices known not to support these commands
@@ -2212,7 +2215,7 @@ Unless specified otherwise:<br>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td>
-        </tr>        
+        </tr>
         <tr>
             <td colspan="6"><b>Commands only for WPU devices</b></td>
         </tr>
@@ -2226,17 +2229,17 @@ Unless specified otherwise:<br>
         </tr>
         <tr>
             <td colspan="6">
-              Comments:<br>
-              <em>
-                With this command an outside temperature can be send to a WPU. Unset values
-                will default to 0. <b>valid_until</b> = epoch now + valid time. <b>temporary_outside_temp</b> will
-                be used by the WPU during this valid time. After the valid time has
-                passed it will fallback to <b>outside_temp</b>.
-              </em>
-              <br><br>
-              <em>
-                The web API only supports the <b>outside_temp</b> setting.
-              </em>
+                Comments:<br>
+                <em>
+                    With this command an outside temperature can be send to a WPU. Unset values
+                    will default to 0. <b>valid_until</b> = epoch now + valid time. <b>temporary_outside_temp</b> will
+                    be used by the WPU during this valid time. After the valid time has
+                    passed it will fallback to <b>outside_temp</b>.
+                </em>
+                <br><br>
+                <em>
+                    The WebAPI only supports the <b>outside_temp</b> setting and version 2 of the WebAPI must be used.
+                </em>
             </td>
         </tr>
         <tr>
@@ -2391,7 +2394,6 @@ Unless specified otherwise:<br>
         }, 500);
     });
 </script>
-
 `;
 
 var html_systemsettings_end = `
