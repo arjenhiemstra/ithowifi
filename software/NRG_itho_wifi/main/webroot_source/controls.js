@@ -670,13 +670,14 @@ $(document).ready(function () {
     }
     else if ($(this).attr('id').substr(0, 14) == 'ithosetupdate-') {
       var row = parseInt($(this).attr('id').substr(14));
-      var i = $('input[name=\'options-ithoset\']:checked').val();
+      var i = parseInt($('input[name=\'options-ithoset\']:checked').val());
       if (i == null) {
         alert("Please select a row.");
       }
       else if (i != row) {
         alert("Please select the correct row.");
       }
+      
       else {
         if (Number.isInteger(parseFloat($('#name_ithoset-' + i).val()))) {
           websock_send(JSON.stringify({
