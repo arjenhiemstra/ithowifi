@@ -465,6 +465,27 @@ void updateSetting(const uint8_t index, const int32_t value, bool webupdate)
   // value2410 = value;
   // set2410 = true;
 
+  if (ithoSettingsArray != nullptr && ithoSettingsArray[index].length == 0)
+  { // if settings loaded from browser cache, first retrieve the current value of the setting
+    i2c_queue_add_cmd([index]()
+                      { getSetting(index, true, false, false); });
+    while (true) // wait for the setting to be retrieved or timeout after 2 sec
+    {
+      unsigned long timeout_ms = 2000; // 2 seconds
+      unsigned long start_time = millis();
+
+      if (millis() - start_time > timeout_ms)
+      {
+        break;
+      }
+      if (ithoSettingsArray[index].length != 0)
+      {
+        break;
+      }
+      vTaskDelay(pdMS_TO_TICKS(100)); // Small delay to avoid hogging CPU
+    }
+  }
+
   i2c_queue_add_cmd([index, value, webupdate]()
                     { setSetting2410(index, value, webupdate); });
 
@@ -1729,7 +1750,6 @@ bool decodeQuery2410(int32_t *ptr, ithoSettings *setting, double *cur, double *m
 
 bool setSetting2410(uint8_t index, int32_t value, bool updateweb)
 {
-
   if (index == 7 && value == 1 && (currentIthoDeviceID() == 0x14 || currentIthoDeviceID() == 0x1B || currentIthoDeviceID() == 0x1D))
   {
     logMessagejson("<br>!!Warning!! Command ignored!<br>Setting index 7 to value 1 will switch off I2C!", WEBINTERFACE);
