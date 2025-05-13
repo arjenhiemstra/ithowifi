@@ -958,9 +958,17 @@ ApiResponse::api_response_status_t processGetsettingCommands(JsonObject params, 
     return ApiResponse::status::FAIL;
   }
 
+  resultPtr2410 = nullptr;
+  auto timeoutmillis = millis() + 3000; // 1 sec. + 2 sec. for potential i2c queue pause on CVE devices
   // Get the settings directly instead of scheduling them, that way we can
   // present the up-to-date settings in the response.
-  resultPtr2410 = sendQuery2410(idx, true);
+  resultPtr2410 = sendQuery2410(idx, false);
+
+  while (resultPtr2410 == nullptr && millis() < timeoutmillis)
+  {
+    // wait for result
+  }
+
   ithoSettings *setting = &ithoSettingsArray[idx];
   double cur = 0.0;
   double min = 0.0;
@@ -1084,10 +1092,21 @@ ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, 
   }
 
   ithoSettings *setting = &ithoSettingsArray[idx];
-  resultPtr2410 = sendQuery2410(idx, true);
+
   double cur = 0.0;
   double min = 0.0;
   double max = 0.0;
+
+  resultPtr2410 = nullptr;
+  auto timeoutmillis = millis() + 3000; // 1 sec. + 2 sec. for potential i2c queue pause on CVE devices
+  // Get the settings directly instead of scheduling them, that way we can
+  // present the up-to-date settings in the response.
+  resultPtr2410 = sendQuery2410(idx, false);
+
+  while (resultPtr2410 == nullptr && millis() < timeoutmillis)
+  {
+    // wait for result
+  }
 
   if (resultPtr2410 == nullptr)
   {
