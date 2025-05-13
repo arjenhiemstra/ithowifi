@@ -20,7 +20,7 @@
 #include "cc1101/IthoPacket.h"
 #include "tasks/task_configandlog.h"
 
-#include "LittleFS.h"
+// #include "LittleFS.h"
 
 // globals
 extern Ticker TaskCC1101Timeout;
@@ -38,7 +38,7 @@ extern bool send31DA;
 extern uint8_t faninfo31DA;
 extern uint8_t timer31DA;
 
-IRAM_ATTR void ITHOinterrupt();
+void ITHOinterrupt();
 void disableRF_ISR();
 void enableRF_ISR();
 void RFDebug(IthoCommand cmd);

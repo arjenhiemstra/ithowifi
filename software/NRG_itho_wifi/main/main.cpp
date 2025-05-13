@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "globals.h"
+#include "tasks/task_init.h"
 
 #define TASK_MAIN_PRIO 5
 

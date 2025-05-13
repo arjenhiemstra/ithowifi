@@ -1,6 +1,8 @@
 #pragma once
 
-// #define MAX_NUM_OF_REMOTES 12
+#if !defined(MAX_NUM_OF_REMOTES)
+#define MAX_NUM_OF_REMOTES 12
+#endif
 #define REMOTE_CONFIG_VERSION "002"
 
 #include <cstdio>
