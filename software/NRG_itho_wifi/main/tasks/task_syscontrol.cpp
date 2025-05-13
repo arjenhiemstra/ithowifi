@@ -1,6 +1,7 @@
 
 
 #include "tasks/task_syscontrol.h"
+#include "../sys_log.h"
 
 #define TASK_SYS_CONTROL_PRIO 6
 // globals

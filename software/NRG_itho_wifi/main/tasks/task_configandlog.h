@@ -20,7 +20,7 @@
 #include "config/HADiscConfig.h"
 #include "esp32_repartition.h"
 
-#include "LittleFS.h"
+// #include "LittleFS.h"
 #include "uuid.h"
 
 // globals
