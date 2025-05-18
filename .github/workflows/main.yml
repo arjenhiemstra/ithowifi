@@ -12,5 +12,5 @@ jobs:
         uses: arjenhiemstra/auto-close-issues@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          issue-close-message: "@${issue.user.login}: hello! :wave:\n\nThis issue is being automatically closed because it does not follow the issue template." # optional property
+          issue-close-message: "@${issue.user.login}: hello! :wave:\n\nThis issue is being automatically closed because it does not follow the issue template.\n\nUpdate the current issue using the template or create a new issue." # optional property
           closed-issues-label: "🙁 Not following issue template" # optional property
