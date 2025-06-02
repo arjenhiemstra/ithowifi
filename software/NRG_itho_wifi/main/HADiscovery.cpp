@@ -117,7 +117,7 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
     {
         // tbd
     }
-    else if ((deviceGroup == 0x00 && (deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B)) || systemConfig.itho_pwm2i2c != 1) // assume CVE and HRU200 / or PWM2I2C is off
+    else if ((deviceGroup == 0x00 && (deviceID == 0x4 || deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B)) || systemConfig.itho_pwm2i2c != 1) // assume CVE and HRU200 / or PWM2I2C is off
     {
         if (deviceID == 0x1D) // hru200
         {

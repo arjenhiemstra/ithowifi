@@ -167,7 +167,7 @@ function processMessage(message) {
         buildHtmlHADiscTable(x);
       }
       else {
-        $("#ithostatusrdy").html("Itho status items not (completely) loaded yet:<br><br><div id='iis'></div><br><br>Reload to try again or disable I2C commands which might be unsupported for your device.<br><br><button id='hadreload' class='pure-button pure-button-primary'>Reload</button><br>");
+        $("#ithostatusrdy").html("Itho status items not (completely) loaded yet:<br><br><div id='iis'></div><br><br>Reload to try again or disable I2C commands (menu System Settings) which might be unsupported for your devic.<br><br><button id='hadreload' class='pure-button pure-button-primary'>Reload</button><br>");
         $("#ithostatusrdy").removeClass('hidden');
         $("#HADiscForm, #save_update_had").addClass('hidden');
         showItho(f.iis);
@@ -677,7 +677,7 @@ $(document).ready(function () {
       else if (i != row) {
         alert("Please select the correct row.");
       }
-      
+
       else {
         if (Number.isInteger(parseFloat($('#name_ithoset-' + i).val()))) {
           websock_send(JSON.stringify({
