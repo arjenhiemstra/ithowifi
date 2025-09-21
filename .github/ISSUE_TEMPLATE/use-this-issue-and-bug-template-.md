@@ -31,8 +31,8 @@ If applicable, add screenshots to help explain your problem.
 - CC1101 RF module enabled [ yes, no ]
 - In case of wifi issues, wifi access point make and model:
 
-## Debug logging
-Please provide debug logging from the debug page if possible:
+## Syslog
+Please provide the syslog from the Syslog page. If truncated, please also provide the recycled file:
 
 ## Desktop (please complete the following information):
  - OS: [e.g. iOS]
