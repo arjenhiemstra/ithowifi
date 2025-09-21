@@ -40,7 +40,7 @@ void TaskInit(void *pvParameters)
   esp_task_wdt_init(60, true);
 #endif
 
-  I_LOG("Setup: done");
+  I_LOG("SYS: setup done");
   vTaskDelete(NULL);
 }
 
@@ -96,7 +96,7 @@ void failSafeBoot()
             if (!index)
             {
               content_len = request->contentLength();
-              D_LOG("Update Start: %s", filename.c_str());
+              D_LOG("OTA: Update Start: %s", filename.c_str());
               if (!Update.begin(UPDATE_SIZE_UNKNOWN))
               {
                 Update.printError(Serial);

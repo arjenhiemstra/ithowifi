@@ -128,14 +128,14 @@ void TaskSysControl(void *pvParameters)
     esp_task_wdt_reset();
 
     TaskTimeout.once_ms(35000, []()
-                        { W_LOG("Warning: Task SysControl timed out!"); });
+                        { W_LOG("SYS: warning - Task SysControl timed out!"); });
 
     execSystemControlTasks();
 
     if (shouldReboot)
     {
       TaskTimeout.detach();
-      N_LOG("Reboot requested");
+      N_LOG("SYS: reboot requested");
       delay(1000);
       ACTIVE_FS.end();
       esp_restart();
@@ -282,17 +282,17 @@ void execSystemControlTasks()
     }
     if (millis() - lastWIFIReconnectAttempt > 60000)
     {
-      I_LOG("Attempt to reconnect WiFi");
+      I_LOG("NET: attempt to reconnect WiFi");
       lastWIFIReconnectAttempt = millis();
       // Attempt to reconnect
       if (connectWiFiSTA())
       {
-        I_LOG("Reconnect WiFi successful");
+        I_LOG("NET: WiFi reconnect successful");
         lastWIFIReconnectAttempt = 0;
       }
       else
       {
-        E_LOG("Reconnect WiFi failed!");
+        E_LOG("NET: error - WiFi reconnect failed!");
       }
     }
   }
@@ -345,7 +345,7 @@ void execSystemControlTasks()
     ithoInitResultLogEntry = true;
     i2c_init_functions_done = false;
     sysStatReq = true;
-    N_LOG("SHT3x sensor reset: executed");
+    N_LOG("SYS: SHT3x sensor reset: executed");
     jsonSysmessage("i2c_sht_reset", "Done");
   }
   if (WiFi.status() == WL_CONNECTED && systemConfig.fw_check && (millis() - getFWupdateInfo > 24 * 60 * 60 * 1000)) // 24hr
@@ -371,7 +371,7 @@ void update_sht_sensor()
         i2c_init_functions_done = false;
         sysStatReq = true;
       }
-      N_LOG("SHT3x sensor reset: %s", reset_res ? "Success" : "Failed");
+      N_LOG("SYS: SHT3x sensor reset: %s", reset_res ? "Success" : "Failed");
       char buf[32]{};
       snprintf(buf, sizeof(buf), "%s", reset_res ? "OK" : "NOK");
       jsonSysmessage("i2c_sht_reset", buf);
@@ -395,7 +395,7 @@ void update_sht_sensor()
         i2c_init_functions_done = false;
         sysStatReq = true;
       }
-      N_LOG("SHT3x sensor reset: %s", reset_res ? "Success" : "Failed");
+      N_LOG("SYS: SHT3x sensor reset: %s", reset_res ? "Success" : "Failed");
       char buf[32]{};
       snprintf(buf, sizeof(buf), "%s", reset_res ? "OK" : "NOK");
       jsonSysmessage("i2c_sht_reset", buf);
@@ -417,7 +417,7 @@ void init_i2c_functions()
 
     if (currentItho_fwversion() > 0)
     {
-      N_LOG("I2C init: QueryDevicetype - mfr:0x%02X type:0x%02X fw:0x%02X hw:0x%02X", currentIthoDeviceGroup(), currentIthoDeviceID(), currentItho_fwversion(), currentItho_hwversion());
+      N_LOG("I2C: QueryDevicetype - mfr:0x%02X type:0x%02X fw:0x%02X hw:0x%02X", currentIthoDeviceGroup(), currentIthoDeviceID(), currentItho_fwversion(), currentItho_hwversion());
 
       ithoInitResult = 1;
       i2c_init_functions_done = true;
@@ -473,23 +473,24 @@ void init_i2c_functions()
             i2c_queue_add_cmd([index, value]()
                               { setSetting2410(index, value, false); });
 
-            N_LOG("I2C init: set hum sensor in itho firmware to: %s", value ? "on" : "off");
+            N_LOG("I2C: set hum sensor in itho firmware to: %s", value ? "on" : "off");
           }
         }
         if (systemConfig.syssht30 == 2)
         {
           systemConfig.syssht30 = 0;
+          N_LOG("I2C: hum sensor setting set to \"off\"");
           saveSystemConfig("flash");
         }
       }
 
       sendQueryStatusFormat(false);
-      N_LOG("I2C init: QueryStatusFormat - items:%lu", static_cast<unsigned long>(ithoStatus.size()));
+      N_LOG("I2C: QueryStatusFormat - items:%lu", static_cast<unsigned long>(ithoStatus.size()));
 
       if (systemConfig.itho_2401 == 1)
       {
         sendQueryStatus(false);
-        N_LOG("I2C init: QueryStatus");
+        N_LOG("I2C: QueryStatus");
       }
 
       if (systemConfig.i2c_safe_guard > 0 && currentIthoDeviceID() == 0x1B)
@@ -498,7 +499,7 @@ void init_i2c_functions()
         {
           if (systemConfig.syssht30 == 0 && currentItho_fwversion() >= 25)
           {
-            N_LOG("I2C init: Safe guard enabled");
+            N_LOG("I2C: safe guard enabled");
             i2c_safe_guard.i2c_safe_guard_enabled = true;
             i2c_sniffer_enable();
           }
@@ -506,7 +507,7 @@ void init_i2c_functions()
           {
             if (systemConfig.i2c_safe_guard == 1)
             {
-              W_LOG("I2C init: i2c safe guard could not be enabled");
+              W_LOG("I2C: i2c safe guard could not be enabled");
             }
           }
         }
@@ -514,7 +515,7 @@ void init_i2c_functions()
         {
           if (systemConfig.i2c_safe_guard == 1)
           {
-            E_LOG("I2C init: i2c safe guard needs sniffer capable hardware");
+            E_LOG("I2C: i2c safe guard needs sniffer capable hardware");
           }
         }
       }
@@ -533,7 +534,7 @@ void init_i2c_functions()
         }
         else
         {
-          N_LOG("I2C init: i2c sniffer enabled");
+          N_LOG("I2C: i2c sniffer enabled");
           i2c_safe_guard.sniffer_enabled = true;
           i2c_sniffer_enable();
         }
@@ -553,7 +554,7 @@ void init_i2c_functions()
           ithoInitResult = -1;
         }
         ithoInitResultLogEntry = false;
-        E_LOG("I2C init: QueryDevicetype - failed");
+        E_LOG("I2C: QueryDevicetype - failed");
       }
     }
   }
@@ -564,7 +565,7 @@ void wifiInit()
   WifiConfigLoaded = loadWifiConfig("flash");
   if (!WifiConfigLoaded)
   {
-    E_LOG("Setup: Wifi config load failed");
+    E_LOG("SYS: Wifi config load failed");
   }
 
   WiFi.onEvent(WiFiEvent);
@@ -572,7 +573,7 @@ void wifiInit()
 
   if (wifiConfig.aptimeout > 0)
   {
-    I_LOG("Setup: starting wifi access point");
+    I_LOG("SYS: starting wifi access point");
     setupWiFiAP();
   }
   if (strcmp(wifiConfig.ssid, "") != 0)
@@ -581,7 +582,7 @@ void wifiInit()
   }
   else
   {
-    I_LOG("Setup: initial wifi config still there");
+    I_LOG("SYS: initial wifi config still there");
   }
 
   if (strcmp(wifiConfig.ntpserver, "") != 0)
@@ -593,7 +594,7 @@ void wifiInit()
 
   const char *tz_string = wifiConfig.getTimeZoneStr();
 
-  N_LOG("Timezone: %s, specifier %s ", wifiConfig.timezone, tz_string);
+  N_LOG("SYS: timezone: %s, specifier %s ", wifiConfig.timezone, tz_string);
   setenv("TZ", tz_string, 1);
   tzset();
 
@@ -763,7 +764,7 @@ void setupWiFiAP()
   // wifiModeAP = true;
 
   APmodeTimeout = millis();
-  N_LOG("wifi AP mode started");
+  N_LOG("NET: wifi AP mode started");
 }
 
 void setupWiFigeneric()
@@ -774,27 +775,27 @@ void setupWiFigeneric()
 
   // Set wifi mode to STA for next step (clear config)
   if (!WiFi.mode(WIFI_STA))
-    E_LOG("Unable to set WiFi mode to STA");
+    E_LOG("NET: Unable to set WiFi mode to STA");
 
   // Clear any saved wifi config
   esp_err_t wifi_restore = esp_wifi_restore();
-  D_LOG("esp_wifi_restore: %s", esp_err_to_name(wifi_restore));
+  D_LOG("NET: esp_wifi_restore: %s", esp_err_to_name(wifi_restore));
 
   // Disconnect any existing connections and clear
   if (!WiFi.disconnect(true, true))
-    E_LOG("Unable to set wifi disconnect");
+    W_LOG("NET: unable to set wifi disconnect");
 
   // Reset wifi mode to NULL
   if (!WiFi.mode(WIFI_MODE_NULL))
-    E_LOG("Unable to set WiFi mode to NULL");
+    W_LOG("NET: unable to set WiFi mode to NULL");
 
   // Set hostname
   bool setHostname_result = WiFi.setHostname(hostName());
-  D_LOG("WiFi.setHostname: %s", setHostname_result ? "OK" : "NOK");
+  D_LOG("NET: WiFi.setHostname: %s", setHostname_result ? "OK" : "NOK");
 
   // No AutoReconnect
   if (!WiFi.setAutoReconnect(false))
-    E_LOG("Unable to set auto reconnect");
+    W_LOG("NET: unable to set auto reconnect");
 
   delay(200);
 
@@ -804,29 +805,29 @@ void setupWiFigeneric()
   if (wifiConfig.aptimeout > 0)
   {
     if (WiFi.mode(WIFI_AP_STA))
-      I_LOG("WiFi mode WIFI_AP_STA");
+      I_LOG("NET: WiFi mode WIFI_AP_STA");
   }
   else
   {
     if (WiFi.mode(WIFI_STA))
-      I_LOG("WiFi mode WIFI_STA");
+      I_LOG("NET: WiFi mode WIFI_STA");
   }
 
   esp_err_t esp_wifi_set_max_tx_power(int8_t power);
   esp_err_t wifi_set_max_tx_power = esp_wifi_set_max_tx_power(78);
-  D_LOG("esp_wifi_set_max_tx_power: %s", esp_err_to_name(wifi_set_max_tx_power));
+  D_LOG("NET: esp_wifi_set_max_tx_power: %s", esp_err_to_name(wifi_set_max_tx_power));
 
   int8_t wifi_power_level = -1;
   esp_err_t wifi_get_max_tx_power = esp_wifi_get_max_tx_power(&wifi_power_level);
-  D_LOG("esp_wifi_get_max_tx_power: %s - level:%d", esp_err_to_name(wifi_get_max_tx_power), wifi_power_level);
+  D_LOG("NET: esp_wifi_get_max_tx_power: %s - level:%d", esp_err_to_name(wifi_get_max_tx_power), wifi_power_level);
 
   // Do not use flash storage for wifi settings
   esp_err_t wifi_set_storage = esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  D_LOG("esp_wifi_set_storage: %s", esp_err_to_name(wifi_set_storage));
+  D_LOG("NET: esp_wifi_set_storage: %s", esp_err_to_name(wifi_set_storage));
 
   // No power saving
   esp_err_t wifi_set_ps = esp_wifi_set_ps(WIFI_PS_NONE);
-  D_LOG("esp_wifi_set_ps: %s", esp_err_to_name(wifi_set_ps));
+  D_LOG("NET: esp_wifi_set_ps: %s", esp_err_to_name(wifi_set_ps));
 }
 
 bool connectWiFiSTA(bool restore)
@@ -845,7 +846,7 @@ bool connectWiFiSTA(bool restore)
   delay(2000);
 
   // wifiModeAP = false;
-  D_LOG("Connecting to wireless network...");
+  D_LOG("NET: Connecting to wireless network...");
 
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 
@@ -878,7 +879,7 @@ bool connectWiFiSTA(bool restore)
 
   digitalWrite(wifi_led_pin, HIGH);
 
-  E_LOG("Setup: wifi not connected - %s", wifiConfig.wl_status_to_name(status));
+  E_LOG("NET: error - could not connect to wifi - %s", wifiConfig.wl_status_to_name(status));
   wifiSTAconnecting = false;
   wifiSTAshouldConnect = true;
   return false;
@@ -917,11 +918,11 @@ void set_static_ip_config()
   {
     if (!WiFi.config(staticIP, gateway, subnet, dns1, dns2))
     {
-      E_LOG("Static IP config NOK");
+      E_LOG("NET: error - static IP config NOK");
     }
     else
     {
-      I_LOG("Static IP config OK");
+      I_LOG("NET: static IP config OK");
     }
   }
 }
@@ -941,11 +942,11 @@ void initSensor()
     }
     if (SHT3x_original)
     {
-      N_LOG("Setup: Original SHT30 sensor found");
+      N_LOG("SYS: original SHT30 sensor found");
     }
     else if (SHT3x_alternative)
     {
-      N_LOG("Setup: Alternative SHT30 sensor found");
+      N_LOG("SYS: alternative SHT30 sensor found");
     }
     if (SHT3x_original || SHT3x_alternative)
     {
@@ -964,16 +965,16 @@ void initSensor()
     }
     if (SHT3x_original)
     {
-      W_LOG("Setup: Original SHT30 sensor found (2nd try)");
+      W_LOG("SYS: original SHT30 sensor found (2nd try)");
     }
     else if (SHT3x_alternative)
     {
-      W_LOG("Setup: Alternative SHT30 sensor found (2nd try)");
+      W_LOG("SYS: alternative SHT30 sensor found (2nd try)");
     }
     else
     {
       systemConfig.syssht30 = 0;
-      N_LOG("Setup: SHT30 sensor not present");
+      N_LOG("SYS: SHT30 sensor not found");
     }
   }
 }
@@ -981,7 +982,7 @@ void initSensor()
 void init_vRemote()
 {
   // setup virtual remote
-  I_LOG("Setup: Virtual remotes, start ID: %02X,%02X,%02X - No.: %d", sys.getMac(3), sys.getMac(4), sys.getMac(5), systemConfig.itho_numvrem);
+  I_LOG("SYS: Virtual remotes, start ID: %02X,%02X,%02X - No.: %d", sys.getMac(3), sys.getMac(4), sys.getMac(5), systemConfig.itho_numvrem);
 
   virtualRemotes.setMaxRemotes(systemConfig.itho_numvrem);
   VirtualRemotesConfigLoaded = loadVirtualRemotesConfig("flash");

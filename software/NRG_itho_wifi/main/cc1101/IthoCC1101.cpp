@@ -1936,7 +1936,7 @@ void IthoCC1101::handle31D9(IthoPacket *packetPtr)
   }
   else
   {
-    D_LOG("deviceId not found");
+    D_LOG("RFI: deviceId not found");
     return;
   }
 
@@ -1978,7 +1978,7 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
   }
   else
   {
-    D_LOG("deviceId not found");
+    D_LOG("RFI: deviceId not found");
     return;
   }
 
@@ -2383,3 +2383,4 @@ const char *IthoCC1101::rem_cmd_to_name(IthoCommand code)
   }
   return IthoCC1101::remote_unknown_msg;
 }
+

@@ -204,13 +204,14 @@ void getIthoSettingsBackupJSON(JsonObject root)
 
 bool ithoExecCommand(const char *command, cmdOrigin origin)
 {
-  D_LOG("EXEC COMMAND:%s", command);
   if (systemConfig.itho_vremoteapi)
   {
+    D_LOG("SYS: exec i2c cmd:%s", command);
     ithoI2CCommand(0, command, origin);
   }
   else
   {
+    D_LOG("SYS: exec non-i2c cmd:%s", command);
     if (strcmp(command, "away") == 0)
     {
       ithoSetSpeed(systemConfig.itho_low, origin);
@@ -276,7 +277,7 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
 {
   bool res = true;
 
-  D_LOG("EXEC RF COMMAND:%s, idx: %d", command, remote_index);
+  D_LOG("SYS: exec rf cmd:%s, idx: %d", command, remote_index);
   disableRF_ISR();
 
   if (strcmp(command, "away") == 0)
@@ -354,6 +355,7 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
 
 bool ithoSetSpeed(const char *speed, cmdOrigin origin)
 {
+  D_LOG("SYS: ithoSetSpeed: char speed:%s", speed);
   uint16_t val = strtoul(speed, NULL, 10);
   return ithoSetSpeed(val, origin);
 }
@@ -362,14 +364,14 @@ bool ithoSetSpeed(uint16_t speed, cmdOrigin origin)
 {
   if (speed < 256)
   {
-    D_LOG("SET SPEED:%d", speed);
+    D_LOG("PWM: set speed:%d", speed);
     nextIthoVal = speed;
     nextIthoTimer = 0;
     updateItho();
   }
   else
   {
-    D_LOG("SET SPEED: value out of range");
+    D_LOG("PWM: set speed: value out of range");
     return false;
   }
 
@@ -387,7 +389,7 @@ bool ithoSetTimer(const char *timer, cmdOrigin origin)
 
 bool ithoSetTimer(uint16_t timer, cmdOrigin origin)
 {
-  D_LOG("SET TIMER:%dmin", timer);
+  D_LOG("PWM: set timer:%dmin", timer);
   if (timer > 0 && timer < 65535)
   {
     nextIthoTimer = timer;
@@ -414,7 +416,7 @@ bool ithoSetSpeedTimer(const char *speed, const char *timer, cmdOrigin origin)
 
 bool ithoSetSpeedTimer(uint16_t speed, uint16_t timer, cmdOrigin origin)
 {
-  D_LOG("SET SPEED AND TIMER");
+  D_LOG("PWM: set speed and timer");
   if (speed < 255)
   {
     nextIthoVal = speed;
@@ -501,7 +503,7 @@ void setRFdebugLevel(uint8_t level)
   {
     rf.setAllowAll(false);
   }
-  I_LOG("RF debug level = %d", level);
+  I_LOG("SYS: RF debug level = %d", level);
 }
 
 double round(float value, int precision)
@@ -672,7 +674,7 @@ void check_firmware_update()
             strncpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
             Serial.printf("latest_beta_fw:%s\n", root["hw_rev"][hw_revision]["latest_beta_fw"] | "error");
 
-            D_LOG("fw_update_available:%d", firmwareInfo.fw_update_available);
+            D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);
             // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful
           }
         }

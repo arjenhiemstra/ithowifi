@@ -364,14 +364,14 @@ void logWifiInfo()
   const char *const modes[] = {"NULL", "STA", "AP", "STA+AP"};
   IPAddress ip = WiFi.localIP();
 
-  N_LOG("WiFi: connection successful");
-  I_LOG("WiFi info:");
-  I_LOG("  SSID:%s | BSSID[%s]", WiFi.SSID().c_str(), WiFi.BSSIDstr().c_str());
-  I_LOG("  RSSI:%ddBm", WiFi.RSSI());
-  I_LOG("  Mode:%s", modes[WiFi.getMode()]);
-  I_LOG("  Status:%s", wifiConfig.wl_status_to_name(WiFi.status()));
-  I_LOG("  IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-  I_LOG("  MAC:%s", WiFi.macAddress().c_str());
+  N_LOG("NET: WiFi connection successful");
+  I_LOG(" - WiFi info:");
+  I_LOG("   SSID:%s | BSSID[%s]", WiFi.SSID().c_str(), WiFi.BSSIDstr().c_str());
+  I_LOG("   RSSI:%ddBm", WiFi.RSSI());
+  I_LOG("   Mode:%s", modes[WiFi.getMode()]);
+  I_LOG("   Status:%s", wifiConfig.wl_status_to_name(WiFi.status()));
+  I_LOG("   IP:%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+  I_LOG("   MAC:%s", WiFi.macAddress().c_str());
 }
 
 JsonDocument wifiInfoJson()

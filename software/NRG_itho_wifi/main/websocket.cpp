@@ -193,7 +193,7 @@ void handle_ws_message(JsonObject root)
 
   if (root["wifiscan"].is<bool>() && root["wifiscan"].as<bool>())
   {
-    D_LOG("Start wifi scan");
+    D_LOG("NET: Start wifi scan");
     runscan = true;
   }
   if (root["sysstat"].is<bool>() && root["sysstat"].as<bool>())
@@ -246,7 +246,7 @@ void handle_ws_message(JsonObject root)
     }
     else
     {
-      E_LOG("hadiscsettings: set config failed");
+      E_LOG("SYS: error - hadiscsettings: set config failed");
     }
   }
 
@@ -790,7 +790,7 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
           }
           else
           {
-            E_LOG("[WS] JSON parse error: %s", error.c_str());
+            E_LOG("WEB: error - [WS] JSON parse error: %s", error.c_str());
             Serial.println(msgBuffer.c_str());
           }
         }

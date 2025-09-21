@@ -13,7 +13,7 @@ bool saveConfigFile(const char *location, const char *filename, size_t size, con
     File configFile = ACTIVE_FS.open(filename, "w");
     if (!configFile)
     {
-      E_LOG("Failed to create %s file for writing", filename);
+      E_LOG("SYS: error - failed to create %s file for writing", filename);
       return false;
     }
 
@@ -29,7 +29,7 @@ bool saveConfigFile(const char *location, const char *filename, size_t size, con
   {
     return false;
   }
-  I_LOG("%s config saved on %s", config_type, location);
+  I_LOG("SYS: %s config saved on %s", config_type, location);
   return true;
 }
 
@@ -41,16 +41,16 @@ bool loadConfigFile(const char *location, const char *nvs_backup_key, const char
 
     if (!ACTIVE_FS.exists(filename))
     {
-      D_LOG("loadConfigFile %s:%d", nvs_backup_key, static_cast<uint8_t>(NVS.getInt(nvs_backup_key)));
+      D_LOG("SYS: loadConfigFile %s:%d", nvs_backup_key, static_cast<uint8_t>(NVS.getInt(nvs_backup_key)));
       if (NVS.getInt(nvs_backup_key) == 1)
       {
         NVS.setInt(nvs_backup_key, static_cast<uint8_t>(0));
-        D_LOG("Setup: loading %s config from nvs backup", config_type);
+        D_LOG("SYS: loading %s config from nvs backup", config_type);
         loadConfigFile("nvs", nvs_backup_key, filename, size, config_type, ref);
       }
       else
       {
-        D_LOG("Setup: writing initial %s config", config_type);
+        D_LOG("SYS: writing initial %s config", config_type);
       }
       if (!saveConfigFile(location, filename, size, config_type, ref))
       {
@@ -61,14 +61,14 @@ bool loadConfigFile(const char *location, const char *nvs_backup_key, const char
     File configFile = ACTIVE_FS.open(filename, "r");
     if (!configFile)
     {
-      E_LOG("Failed to open %s file", config_type);
+      E_LOG("SYS: error - failed to open %s file", config_type);
       return false;
     }
 
     size_t filesize = configFile.size();
     if (filesize > size)
     {
-      E_LOG("%s config file size is too large", config_type);
+      E_LOG("SYS: error - %s config file size is too large", config_type);
       return false;
     }
 
@@ -81,13 +81,13 @@ bool loadConfigFile(const char *location, const char *nvs_backup_key, const char
 
     if (!ref.configLoaded)
     {
-      W_LOG("%s config version mismatch, resetting config...", config_type);
+      W_LOG("SYS: %s config version mismatch, resetting config...", config_type);
       saveConfigFile(location, filename, size, config_type, ref);
       delay(1000);
       ESP.restart();
     }
 
-    D_LOG("Setup: %s config loaded successful from %s", config_type, location);
+    D_LOG("SYS: %s config loaded successful from %s", config_type, location);
   }
   else if (strcmp("nvs", location) == 0)
   {
@@ -241,7 +241,7 @@ bool saveFileRemotes(const char *location, const char *filename, const char *con
     File configFile = ACTIVE_FS.open(filename, "w");
     if (!configFile)
     {
-      E_LOG("Failed to create %s file", filename);
+      E_LOG("SYS: error - failed to create %s file", filename);
       return false;
     }
     serializeRemotes(filename, remotes, configFile);
@@ -253,7 +253,7 @@ bool saveFileRemotes(const char *location, const char *filename, const char *con
     NVS.setString(config_type, conf);
   }
 
-  D_LOG("Config %s saved on %s", filename, location);
+  D_LOG("SYS: Config %s saved on %s", filename, location);
   return true;
 }
 
@@ -266,7 +266,7 @@ bool deserializeRemotes(const char *filename, const char *config_type, TDst &src
   DeserializationError err = deserializeJson(doc, src);
   if (err)
   {
-    E_LOG("Failed to deserialize remotes config %s", filename);
+    E_LOG("SYS: error - failed to deserialize remotes config %s", filename);
     return false;
   }
 
@@ -281,7 +281,7 @@ bool deserializeRemotes(const char *filename, const char *config_type, TDst &src
   remotes.configLoaded = remotes.set(doc.as<JsonObject>(), rootName.c_str());
   if (!remotes.configLoaded)
   {
-    W_LOG("Remotes config version mismatch, resetting config...");
+    W_LOG("SYS: remotes config version mismatch, resetting config...");
     saveFileRemotes("flash", filename, config_type, remotes);
     delay(1000);
     ESP.restart();
@@ -313,7 +313,7 @@ bool loadFileRemotes(const char *location, const char *filename, const char *con
       }
       else
       {
-        D_LOG("Setup: writing initial %s config", config_type);
+        D_LOG("SYS: writing initial %s config", config_type);
       }
       if (!saveFileRemotes("flash", filename, config_type, remotes))
       {
@@ -324,14 +324,14 @@ bool loadFileRemotes(const char *location, const char *filename, const char *con
     File configFile = ACTIVE_FS.open(filename, "r");
     if (!configFile)
     {
-      D_LOG("Setup: failed to open %s config file", config_type);
+      D_LOG("SYS: failed to open %s config file", config_type);
       return false;
     }
 
     size_t size = configFile.size();
     if (size > 4000)
     {
-      E_LOG("Setup: %s config file size is too large", config_type);
+      E_LOG("SYS: error - %s config file size is too large", config_type);
       return false;
     }
 
@@ -339,7 +339,7 @@ bool loadFileRemotes(const char *location, const char *filename, const char *con
 
     if (!success)
     {
-      E_LOG("Failed to deserialize %s configuration from %s", config_type, location);
+      E_LOG("SYS: error - failed to deserialize %s configuration from %s", config_type, location);
       return false;
     }
   }
@@ -353,7 +353,7 @@ bool loadFileRemotes(const char *location, const char *filename, const char *con
 
     if (!success)
     {
-      E_LOG("Failed to deserialize %s configuration from %s", config_type, location);
+      E_LOG("SYS: failed to deserialize %s configuration from %s", config_type, location);
       return false;
     }
   }
@@ -362,6 +362,6 @@ bool loadFileRemotes(const char *location, const char *filename, const char *con
     return false;
   }
 
-  D_LOG("Setup: %s config loaded successful from %s", config_type, location);
+  D_LOG("SYS: %s config loaded successful from %s", config_type, location);
   return true;
 }

@@ -67,7 +67,6 @@ void TaskConfigAndLog(void *pvParameters)
   syslog_queue_worker();
   if (logConfig.esplog_active == 1)
   {
-    D_LOG("Setup: esp_vprintf on");
     esp_log_level_set("*", ESP_LOG_ERROR);
     esp_log_set_vprintf(&esp_vprintf);
     log_e("loge_e test %d", 1);
@@ -92,7 +91,7 @@ void TaskConfigAndLog(void *pvParameters)
     esp_task_wdt_reset();
 
     TaskConfigAndLogTimeout.once_ms(15000, []()
-                                    { W_LOG("Warning: Task ConfigAndLog timed out!"); });
+                                    { W_LOG("SYS: warning - Task ConfigAndLog timed out!"); });
 
     execLogAndConfigTasks();
 
@@ -282,7 +281,7 @@ void execLogAndConfigTasks()
     chk_partition_res = current_partition_scheme();
     if (chk_partition_res == -1)
     {
-      D_LOG("chkpartition error");
+      D_LOG("SYS: chkpartition error");
     }
     else
     {
@@ -372,7 +371,7 @@ void syslog_queue_worker()
 bool initFileSystem()
 {
 
-  D_LOG("Mounting FS...");
+  D_LOG("SYS: Mounting FS...");
 
   NVS.begin();
 
@@ -468,27 +467,29 @@ void logInit()
     strlcpy(buf, "NO_MEAN", sizeof(buf));
   }
 
-  N_LOG("System boot, last reset reason: %s", buf);
+  N_LOG("SYS: last reset reason: %s", buf);
 
-  N_LOG("Device UUID: %s", uuid);
+  N_LOG("SYS: device UUID: %s", uuid);
 
-  I_LOG("Hardware detected: 0x%02X", hardware_rev_det);
+  I_LOG("SYS: detected hardware: 0x%02X", hardware_rev_det);
 
-  N_LOG("HW rev: %s, FW ver.: %s", hw_revision, fw_version);
+  N_LOG("SYS: hw rev: %s, fw ver.: %s", hw_revision, fw_version);
 
-  N_LOG("I2C sniffer capable hardware: %s", i2c_sniffer_capable ? "yes" : "no");
+  N_LOG("I2C: sniffer capable hardware: %s", i2c_sniffer_capable ? "yes" : "no");
 
-  D_LOG("I2C master pins - SDA: %d SCL: %d", master_sda_pin, master_scl_pin);
+  D_LOG("I2C: master pins - SDA: %d SCL: %d", master_sda_pin, master_scl_pin);
 
-  D_LOG("I2C slave pins - SDA: %d SCL: %d", slave_sda_pin, slave_scl_pin);
+  D_LOG("I2C: slave pins - SDA: %d SCL: %d", slave_sda_pin, slave_scl_pin);
 
   if (i2c_sniffer_capable)
   {
-    D_LOG("I2C sniffer pins - SDA: %d SCL: %d", sniffer_sda_pin, sniffer_scl_pin);
+    D_LOG("I2C: sniffer pins - SDA: %d SCL: %d", sniffer_sda_pin, sniffer_scl_pin);
+    D_LOG("I2C: debug menu: %s", systemConfig.i2cmenu ? "on" : "off");
+    D_LOG("I2C: sniffer state: %s", systemConfig.i2c_sniffer ? "on" : "off");
   }
 }
 
 void log_mem_info()
 {
-  I_LOG("Mem free: %d, Mem low: %d, Mem block: %u", sys.getMemHigh(), sys.getMemLow(), sys.getMaxFreeBlockSize());
+  I_LOG("SYS: mem free: %d, mem low: %d, mem block: %u", sys.getMemHigh(), sys.getMemLow(), sys.getMaxFreeBlockSize());
 }
