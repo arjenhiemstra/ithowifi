@@ -90,33 +90,45 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
         actualSpeedLabel = getStatusLabel(10, ithoDeviceptr);                         //-> {"Absolute speed of the fan (%)", "absolute-speed-of-the-fan_perc"}, of hru250_300.h
         componentJson["pr_mode_cmd_tpl"] = "{\"rfremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
 
-        strncpy(pct_cmd_tpl, "{%% if value > 90 %%}{\"rfremotecmd\":\"high\"}{%% elif value > 40 %%}{\"rfremotecmd\":\"medium\"}{%% elif value > 20 %%}{\"rfremotecmd\":\"low\"}{%% else %%}{\"rfremotecmd\":\"auto\"}{%% endif %%}", sizeof(pct_cmd_tpl));
-
+        strncpy(pct_cmd_tpl, "{% if value > 90 %}{\"rfremotecmd\":\"high\"}{% elif value > 40 %}{\"rfremotecmd\":\"medium\"}{% elif value > 20 %}{\"rfremotecmd\":\"low\"}{% else %}{\"rfremotecmd\":\"auto\"}{% endif %}", sizeof(pct_cmd_tpl));
         snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
         componentJson["pl_off"] = "{\"rfremotecmd\":\"auto\"}"; // payload_off
         pr_mode_val_tpl_ver = 1;
     }
-    else if (deviceGroup == 0x00 && deviceID == 0x03) // HRU350
+    else if (deviceGroup == 0x00 && deviceID == 0x2B) // HRU350
     {
         actualSpeedLabel = getStatusLabel(0, ithoDeviceptr);                         //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hru350.h
         componentJson["pr_mode_cmd_tpl"] = "{\"vremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
-        strncpy(pct_cmd_tpl, "{%% if value > 90 %%}{\"vremotecmd\":\"high\"}{%% elif value > 40 %%}{\"vremotecmd\":\"medium\"}{%% elif value > 20 %%}{\"vremotecmd\":\"low\"}{%% else %%}{\"vremotecmd\":\"auto\"}{%% endif %%}", sizeof(pct_cmd_tpl));
+        strncpy(pct_cmd_tpl, "{% if value > 90 %}{\"vremotecmd\":\"high\"}{% elif value > 40 %}{\"vremotecmd\":\"medium\"}{% elif value > 20 %}{\"vremotecmd\":\"low\"}{% else %}{\"vremotecmd\":\"auto\"}{% endif %}", sizeof(pct_cmd_tpl));
 
         snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
         componentJson["pl_off"] = "{\"vremotecmd\":\"auto\"}"; // payload_off
         pr_mode_val_tpl_ver = 1;
     }
+    else if (deviceGroup == 0x00 && deviceID == 0x03) // HRU-eco
+    {
+        actualSpeedLabel = getStatusLabel(22, ithoDeviceptr);                         //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hrueco.h
+        componentJson["pr_mode_cmd_tpl"] = "{\"vremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
+        strncpy(pct_cmd_tpl, "{% if value > 90 %}{\"vremotecmd\":\"high\"}{% elif value > 40 %}{\"vremotecmd\":\"medium\"}{% elif value > 20 %}{\"vremotecmd\":\"low\"}{% else %}{\"vremotecmd\":\"auto\"}{% endif %}", sizeof(pct_cmd_tpl));
+
+        snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
+        componentJson["pl_off"] = "{\"vremotecmd\":\"auto\"}"; // payload_off
+        pr_mode_val_tpl_ver = 1;
+    }    
     else if (deviceGroup == 0x00 && deviceID == 0x0D) // WPU
     {
         // tbd
+        W_LOG("HAD: WPU not fully implemented yet for HA Auto Discovery");
     }
     else if (deviceGroup == 0x00 && (deviceID == 0x0F || deviceID == 0x30)) // Autotemp
     {
         // tbd
+        W_LOG("HAD: Autotemp not fully implemented yet for HA Auto Discovery");
     }
     else if (deviceGroup == 0x00 && deviceID == 0x0B) // DemandFlow
     {
         // tbd
+        W_LOG("HAD: DemandFlow not fully implemented yet for HA Auto Discovery");
     }
     else if ((deviceGroup == 0x00 && (deviceID == 0x4 || deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B)) || systemConfig.itho_pwm2i2c != 1) // assume CVE and HRU200 / or PWM2I2C is off
     {
@@ -140,7 +152,7 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
         {
             pr_mode_val_tpl_ver = 1;
             snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
-            strncpy(pct_cmd_tpl, "{% if value > 90 %}{\"vremotecmd\":\"high\"}{% elif value > 40 %}{ \"vremotecmd\":\"medium\"}{% elif value > 20 %}{\"vremotecmd\":\"low\"}{% else %}{\"vremotecmd\":\"auto\"}{% endif %}", sizeof(pct_cmd_tpl));
+            strncpy(pct_cmd_tpl, "{% if value > 90 %}{\"vremotecmd\":\"high\"}{% elif value > 40 %}{\"vremotecmd\":\"medium\"}{% elif value > 20 %}{\"vremotecmd\":\"low\"}{% else %}{\"vremotecmd\":\"auto\"}{% endif %}", sizeof(pct_cmd_tpl));
             componentJson["pr_mode_cmd_tpl"] = "{\"vremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
             componentJson["pl_off"] = "{\"vremotecmd\":\"auto\"}";                       // payload_off
         }
@@ -150,6 +162,9 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
             strncpy(pct_cmd_tpl, "{{ (value | int * 2.55) | round | int }}", sizeof(pct_cmd_tpl));
             componentJson["pl_off"] = "0"; // payload_off
         }
+    }
+    else {
+        W_LOG("HAD: Device type not implemented (yet) for HA Auto Discovery");
     }
 
     if (pr_mode_val_tpl_ver == 0)
@@ -168,6 +183,9 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
     componentJson["pct_cmd_tpl"] = pct_cmd_tpl;         // percentage_command_template
     componentJson["pr_mode_val_tpl"] = pr_mode_val_tpl; // preset_mode_value_template
     componentJson["pct_val_tpl"] = pct_val_tpl;         // percentage_value_template
+
+    N_LOG("HAD: dID:0x%02X, gID:0x%02X, tpl:%d",deviceID, deviceGroup, pr_mode_val_tpl_ver);
+
 }
 
 void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
@@ -306,6 +324,7 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
     else
     {
         if (compactJson["sscnt"] != 0)
+            E_LOG("HAD: error - HA Discovery Config does not match no. of status items, please update the config HA Discovery config");
     }
 
     // Add extra components (fan and firmware updates)
