@@ -56,6 +56,30 @@ const IthoRemote::remote_command_char IthoRemote::remote_command_msg_table[]{
 
 const char *IthoRemote::remote_unknown_msg = "CMD UNKNOWN ERROR";
 
+const IthoRemote::remote_type_char IthoRemote::remote_type_table[]{
+    {UNSETTYPE, "unset type"},
+    {RFTCVE, "RFT CVE"},
+    {RFTAUTO, "RFT Auto"},
+    {RFTN, "RFT-N"},
+    {RFTAUTON, "RFT Auto-N"},
+    {DEMANDFLOW, "RFT DF/QF"},
+    {RFTRV, "RFT RV"},
+    {RFTCO2, "RFT CO2"},
+    {RFTPIR, "RFT PIR"},
+    {RFTSPIDER, "RFT Spider"},
+    {ORCON15LF01, "Orcon 15lf01"}};
+
+const char *IthoRemote::remote_type_unknown_msg = "Type unknown error";
+
+const IthoRemote::remote_func_char IthoRemote::remote_func_table[]{
+    {UNSETFUNC, "unset func"},
+    {RECEIVE, "receive"},
+    {VREMOTE, "vremote"},
+    {MONITOR, "monitor"},
+    {SEND, "send"}};
+
+const char *IthoRemote::remote_func_unknown_msg = "Function unknown error";
+
 int IthoRemote::getRemoteCount()
 {
   return remoteCount;
@@ -327,7 +351,7 @@ void IthoRemote::Remote::set(JsonObject obj)
   }
 }
 
-void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index) const
+void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index, bool human_reaadble) const
 {
   obj["index"] = index;
 
@@ -364,7 +388,10 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
   }
   obj["name"] = name;
   obj["remfunc"] = remfunc;
+  obj["remfuncname"] = rem_func_to_name(remfunc);
   obj["remtype"] = remtype;
+  obj["remtypename"] = rem_type_to_name(remtype);
+
   if (capabilities.isNull())
   {
     obj["capabilities"] = nullptr;
@@ -433,9 +460,13 @@ void IthoRemote::get(JsonObject obj, const char *root) const
   // Add "remotes" object
   JsonArray rem = obj[root].to<JsonArray>();
   // Add each remote in the array
+  bool human_readable = false;
+  if (strcmp(root, "vremotesinfo") == 0)
+    human_readable = true;
+
   for (int i = 0; i < maxRemotes; i++)
   {
-    remotes[i].get(rem.add<JsonObject>(), instanceFunc, i);
+    remotes[i].get(rem.add<JsonObject>(), instanceFunc, i, human_readable);
   }
   obj["remfunc"] = instanceFunc;
   obj["version_of_program"] = config_struct_version;
@@ -462,4 +493,32 @@ const char *IthoRemote::rem_cmd_to_name(uint8_t code)
     }
   }
   return remote_unknown_msg;
+}
+
+const char *IthoRemote::Remote::rem_type_to_name(const RemoteTypes type) const
+{
+  size_t i;
+
+  for (i = 0; i < sizeof(remote_type_table) / sizeof(remote_type_table[0]); ++i)
+  {
+    if (remote_type_table[i].type == type)
+    {
+      return remote_type_table[i].msg;
+    }
+  }
+  return remote_type_unknown_msg;
+}
+
+const char *IthoRemote::Remote::rem_func_to_name(const RemoteFunctions func) const
+{
+  size_t i;
+
+  for (i = 0; i < sizeof(remote_func_table) / sizeof(remote_func_table[0]); ++i)
+  {
+    if (remote_func_table[i].func == func)
+    {
+      return remote_func_table[i].msg;
+    }
+  }
+  return remote_type_unknown_msg;
 }
