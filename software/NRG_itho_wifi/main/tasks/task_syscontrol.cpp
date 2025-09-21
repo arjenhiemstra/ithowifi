@@ -19,6 +19,7 @@ bool resetSystemConfigflag = false;
 bool clearQueue = false;
 bool shouldReboot = false;
 int8_t ithoInitResult = 0;
+bool ithoStatusFormateSuccessful = false;
 bool IthoInit = false;
 bool wifiModeAP = false;
 bool wifiSTAshouldConnect = false;
@@ -47,6 +48,7 @@ unsigned long query2401tim = 0;
 unsigned long query4210tim = 0;
 unsigned long mqttUpdatetim = 0;
 unsigned long lastVersionCheck = 0;
+unsigned long lastIthoStatusFormatCheck = 0;
 bool i2c_init_functions_done = false;
 bool joinSend = false;
 
@@ -309,6 +311,14 @@ void execSystemControlTasks()
     scan.once_ms(10, wifiScan);
   }
 
+  // If the status format is not retrieved correctly during boot but lost during runtime; resend the query.
+  if ((ithoStatus.empty() && systemConfig.itho_2401 == 1) && millis() - lastIthoStatusFormatCheck > 60000 && ithoStatusFormateSuccessful)
+  {
+    lastIthoStatusFormatCheck = millis();
+    sendQueryStatusFormat(false);
+    E_LOG("I2C: error - StatusFormat lost. Resend query result: %s", ithoStatus.size()?"success":"failed");
+  }
+
   if (!(currentItho_fwversion() > 0) && millis() - lastVersionCheck > 60000)
   {
     lastVersionCheck = millis();
@@ -486,6 +496,7 @@ void init_i2c_functions()
 
       sendQueryStatusFormat(false);
       N_LOG("I2C: QueryStatusFormat - items:%lu", static_cast<unsigned long>(ithoStatus.size()));
+      if(ithoStatus.size() > 0) ithoStatusFormateSuccessful = true;
 
       if (systemConfig.itho_2401 == 1)
       {
