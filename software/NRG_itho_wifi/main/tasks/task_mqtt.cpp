@@ -281,6 +281,8 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
   std::memcpy(s_payload, payload, length);
   s_payload[length] = '\0';
 
+  bool clean_cmd_topic = false;
+
   char c_topic[140]{};
   snprintf(c_topic, sizeof(c_topic), "%s%s", systemConfig.mqtt_base_topic, "/cmd");
 
@@ -327,6 +329,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         jsonCmd = true;
         const char *value = root["command"] | "";
         ithoExecCommand(value, MQTTAPI);
+        clean_cmd_topic = true;
       }
       if (!root["vremote"].isNull() || !root["vremotecmd"].isNull())
       {
@@ -338,6 +341,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         {
           jsonCmd = true;
           ithoI2CCommand(0, command, MQTTAPI);
+          clean_cmd_topic = true;
         }
         else
         {
@@ -354,6 +358,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           {
             jsonCmd = true;
             ithoI2CCommand(index, command, MQTTAPI);
+            clean_cmd_topic = true;
           }
         }
       }
@@ -368,6 +373,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         {
           jsonCmd = true;
           ithoExecRFCommand(idx, root["rfremotecmd"], MQTTAPI);
+          clean_cmd_topic = true;
         }
       }
       if (!root["speed"].isNull())
@@ -376,16 +382,19 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         if (!root["timer"].isNull())
         {
           ithoSetSpeedTimer(root["speed"].as<uint16_t>(), root["timer"].as<uint16_t>(), MQTTAPI);
+          clean_cmd_topic = true;
         }
         else
         {
           ithoSetSpeed(root["speed"].as<uint16_t>(), MQTTAPI);
+          clean_cmd_topic = true;
         }
       }
       else if (!root["timer"].isNull())
       {
         jsonCmd = true;
         ithoSetTimer(root["timer"].as<uint16_t>(), MQTTAPI);
+        clean_cmd_topic = true;
       }
       if (!root["clearqueue"].isNull())
       {
@@ -394,6 +403,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         if (strcmp(value, "true") == 0)
         {
           clearQueue = true;
+          clean_cmd_topic = true;
         }
       }
       if (!(const char *)root["outside_temp"].isNull())
@@ -403,6 +413,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         float temporary_outside_temp = root["temporary_outside_temp"].as<float>();
         uint32_t valid_until = root["valid_until"].as<uint32_t>();
         setSettingCE30(static_cast<int16_t>(temporary_outside_temp * 100), static_cast<int16_t>(outside_temp * 100), valid_until, false);
+        clean_cmd_topic = true;
       }
       if (!(const char *)root["manual_operation_index"].isNull())
       {
@@ -413,16 +424,21 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         uint8_t checked = root["manual_operation_checked"].as<uint8_t>();
         D_LOG("API: index: %d dt: %d value: %d checked: %d", index, datatype, value, checked);
         setSetting4030(index, datatype, value, checked, false);
+        clean_cmd_topic = true;
       }
       if (!jsonCmd)
       {
         ithoSetSpeed(s_payload, MQTTAPI);
+        clean_cmd_topic = true;
       }
     }
     else
     {
       if (api_cmd_allowed(s_payload))
+      {
         ithoExecCommand(s_payload, MQTTAPI);
+        clean_cmd_topic = true;
+      }
       else
         D_LOG("API: Invalid MQTT API command");
     }
@@ -443,10 +459,15 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
             uint16_t invalue = root["svalue1"].as<uint16_t>();
             float value = invalue * 2.55;
             ithoSetSpeed((uint16_t)value, MQTTAPI);
+            clean_cmd_topic = true;
           }
         }
       }
     }
+  }
+  if (clean_cmd_topic)
+  {
+    mqttClient.publish(c_topic, "", true);
   }
 }
 
