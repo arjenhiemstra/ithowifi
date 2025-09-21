@@ -422,7 +422,7 @@ bool IthoRemote::set(JsonObject obj, const char *root)
   }
   else
   {
-    D_LOG("IthoRemote::set root not present ");
+    D_LOG("SYS: IthoRemote::set root not present ");
     return false;
   }
   return true;

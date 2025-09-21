@@ -47,7 +47,7 @@ void TaskMQTT(void *pvParameters)
     esp_task_wdt_reset();
 
     TaskMQTTTimeout.once_ms(35000UL, []()
-                            { W_LOG("Warning: Task MQTT timed out!"); });
+                            { W_LOG("SYS: warning - Task MQTT timed out!"); });
 
     execMQTTTasks();
 
@@ -180,11 +180,11 @@ void mqttInit()
   {
     if (!setupMQTTClient())
     {
-      E_LOG("MQTT: connection failed, System config: %d", systemConfig.mqtt_active);
+      E_LOG("API: mqtt connection failed, System config: %d", systemConfig.mqtt_active);
     }
     else
     {
-      N_LOG("MQTT: connected, System config: %d", systemConfig.mqtt_active);
+      N_LOG("API: mqtt connected, System config: %d", systemConfig.mqtt_active);
     }
   }
 }
@@ -209,11 +209,11 @@ void mqttSendStatus()
   {
     serializeJson(root, mqttClient);
     if (!mqttClient.endPublish())
-      E_LOG("MQTT: Failed to send payload (itho status)");
+      E_LOG("API: Failed to send payload (itho status)");
   }
   if (doc.overflowed())
   {
-    E_LOG("MQTT: JsonDocument overflowed (itho status)");
+    E_LOG("API: JsonDocument overflowed (itho status)");
   }
 
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
@@ -229,7 +229,7 @@ void mqttSendRemotesInfo()
   getRemotesInfoJSON(root);
 
   if (doc.overflowed())
-    E_LOG("mqttSendRemotesInfo overflowed!");
+    E_LOG("API: mqttSendRemotesInfo overflowed!");
 
   MQTTSendBuffered(doc, remotesinfotopic);
 }
@@ -245,7 +245,7 @@ void mqttPublishLastcmd()
   getLastCMDinfoJSON(root);
 
   if (doc.overflowed())
-    E_LOG("mqttSendRemotesInfo overflowed!");
+    E_LOG("API: mqttSendRemotesInfo overflowed!");
 
   MQTTSendBuffered(doc, lastcmdtopic);
 }
@@ -261,7 +261,7 @@ void mqttPublishDeviceInfo()
   getDeviceInfoJSON(root);
 
   if (doc.overflowed())
-    E_LOG("mqttSendRemotesInfo overflowed!");
+    E_LOG("API: mqttSendRemotesInfo overflowed!");
 
   MQTTSendBuffered(doc, deviceinfotopic);
 }
@@ -411,7 +411,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         uint8_t datatype = root["manual_operation_datatype"].as<uint8_t>();
         uint16_t value = root["manual_operation_value"].as<uint16_t>();
         uint8_t checked = root["manual_operation_checked"].as<uint8_t>();
-        D_LOG("index: %d dt: %d value: %d checked: %d", index, datatype, value, checked);
+        D_LOG("API: index: %d dt: %d value: %d checked: %d", index, datatype, value, checked);
         setSetting4030(index, datatype, value, checked, false);
       }
       if (!jsonCmd)
@@ -424,7 +424,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
       if (api_cmd_allowed(s_payload))
         ithoExecCommand(s_payload, MQTTAPI);
       else
-        D_LOG("Invalid MQTT API command");
+        D_LOG("API: Invalid MQTT API command");
     }
   }
   if (strcmp(topic, systemConfig.mqtt_domoticzout_topic) == 0)
@@ -500,7 +500,7 @@ void mqttHomeAssistantDiscovery()
     return;
 
   sendHomeAssistantDiscovery = false;
-  I_LOG("HA DISCOVERY: Start publishing MQTT Home Assistant Discovery...");
+  N_LOG("HAD: publishing HA Discovery");
 
   JsonDocument configDoc;
   JsonObject configObj = configDoc.to<JsonObject>();
@@ -520,7 +520,7 @@ void mqttHomeAssistantDiscovery()
   snprintf(devicetopic, sizeof(devicetopic), "%s%s%s%s", systemConfig.mqtt_ha_topic, "/device/", hostName(), "/config");
 
   if (outputDoc.overflowed())
-    E_LOG("generateHADiscoveryJson overflowed!");
+    E_LOG("HAD: generateHADiscoveryJson overflowed!");
 
   MQTTSendBuffered(outputDoc, devicetopic);
 }

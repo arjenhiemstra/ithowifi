@@ -43,7 +43,7 @@ bool validate_table(const char *input_table)
     enableCore0WDT();
     if (ret != ESP_OK)
     {
-        D_LOG("validate_table: esp_flash_read error");
+        D_LOG("SYS: validate_table: esp_flash_read error");
         return false;
     }
     // Compare the contents of the input and flash_table
@@ -67,7 +67,7 @@ void write_partition_table(const char *new_table)
         disableCore0WDT();
         if (esp_flash_write(esp_flash_default_chip, new_table, CONFIG_PARTITION_TABLE_OFFSET, PARTITION_TABLE_SIZE) != ESP_OK)
         {
-            D_LOG("write_partition_table: data write failed");
+            D_LOG("SYS: write_partition_table: data write failed");
         }
         enableCore0WDT();
     }
@@ -77,7 +77,7 @@ void erase_partition(uint32_t size)
 {
     if (esp_flash_erase_region(esp_flash_default_chip, PARTITION_SPIFSS_START, size) != ESP_OK)
     {
-        D_LOG("erase_partition: failed");
+        D_LOG("SYS: erase_partition: failed");
     }
 }
 
@@ -89,7 +89,7 @@ void end_fs()
 void check_partition_tables()
 {
     const esp_partition_t *coredump_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_COREDUMP, "coredump");
-    D_LOG("check coredump partition present: %s", coredump_partition != NULL ? "YES" : "NO");
+    D_LOG("SYS: check coredump partition present: %s", coredump_partition != NULL ? "YES" : "NO");
     if (coredump_partition == NULL)
     {
         // coredump not present, repartition
@@ -99,7 +99,7 @@ void check_partition_tables()
 
 void backup_all_configs()
 {
-    D_LOG("Save all configs");
+    D_LOG("SYS: Save all configs");
 
     NVS.setInt("usewificonfb", static_cast<uint8_t>(1));
     NVS.setInt("usesysconfb", static_cast<uint8_t>(1));
@@ -116,7 +116,7 @@ void backup_all_configs()
 
 void load_all_configs()
 {
-    D_LOG("Load all configs before backup to NVS");
+    D_LOG("SYS: Load all configs before backup to NVS");
 
     // clear NVS to prevent any bogus readings
     nvs_flash_erase();
@@ -142,7 +142,7 @@ void revert_partitions_to_standard()
         write_partition_table(ithowifi_parttable_min_spiffs);
         erase_partition(PARTITION_SPIFSS_SIZE_MIN_SPIFFS);
 
-        D_LOG("Partition restored");
+        D_LOG("SYS: Partition restored");
     }
 }
 
@@ -182,29 +182,29 @@ void repartition_device(const char *mode)
     {
         if (coredump_partition != NULL && spiffs != NULL)
         {
-            D_LOG("Coredemp partition scheme detected, repartition to legacy table");
+            D_LOG("SYS: Coredemp partition scheme detected, repartition to legacy table");
             revert_partitions_to_standard();
         }
         else
         {
-            D_LOG("repartition_device() standard detect error");
+            D_LOG("SYS: repartition_device() standard detect error");
         }
     }
     else if (strcmp(mode, "coredump") == 0)
     {
         if (coredump_partition == NULL && spiffs != NULL)
         {
-            D_LOG("Standard partition scheme detected, repartition to coredump table");
+            D_LOG("SYS: Standard partition scheme detected, repartition to coredump table");
             change_partitions_to_coredump();
         }
         else
         {
-            D_LOG("repartition_device() coredump detect error");
+            D_LOG("SYS: repartition_device() coredump detect error");
         }
     }
     else
     {
-        D_LOG("repartition_device() unknown mode");
+        D_LOG("SYS: repartition_device() unknown mode");
     }
 }
 

@@ -231,7 +231,7 @@ void startTaskCC1101()
 void TaskCC1101(void *pvParameters)
 {
 
-  D_LOG("TaskCC1101 started");
+  D_LOG("SYS: TaskCC1101 started");
   configASSERT((uint32_t)pvParameters == 1UL);
 
   if (!xTaskMQTTHandle)
@@ -242,11 +242,11 @@ void TaskCC1101(void *pvParameters)
   uint8_t chipVersion = rf.getChipVersion();
   if (chipVersion)
   {
-    N_LOG("Setup: CC1101 RF module found, chip version: 0x%02X", chipVersion);
+    N_LOG("SYS: CC1101 RF module found, chip version: 0x%02X", chipVersion);
   }
   else
   {
-    N_LOG("Setup: no CC1101 RF module found");
+    N_LOG("SYS: no CC1101 RF module found");
     systemConfig.itho_rf_support = 0;
     systemConfig.rfInitOK = false;
   }
@@ -262,12 +262,12 @@ void TaskCC1101(void *pvParameters)
       systemConfig.module_rf_id[0] = sys.getMac(3);
       systemConfig.module_rf_id[1] = sys.getMac(4);
       systemConfig.module_rf_id[2] = sys.getMac(5) - 1;
-      I_LOG("rfsetup: module_rf_id default 0x%02X,0x%02X,0x%02X", systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
+      I_LOG("SYS: module_rf_id default 0x%02X,0x%02X,0x%02X", systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
       saveSystemConfigflag = true;
     }
     else
     {
-      I_LOG("rfsetup: module_rf_id 0x%02X,0x%02X,0x%02X", systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
+      I_LOG("SYS: module_rf_id 0x%02X,0x%02X,0x%02X", systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
     }
 
     remotes.setMaxRemotes(systemConfig.itho_numrfrem);
@@ -302,7 +302,7 @@ void TaskCC1101(void *pvParameters)
       esp_task_wdt_reset();
 
       TaskCC1101Timeout.once_ms(3000, []()
-                                { W_LOG("Warning: CC1101 Task timed out!"); });
+                                { W_LOG("SYS: warning - CC1101 Task timed out!"); });
 
       if (send10E0 && !ithoCheck)
       {
@@ -351,7 +351,7 @@ void TaskCC1101(void *pvParameters)
         disableRF_ISR();
         int res = rf.sendJoinReply(joinReplyRemIndex);
         enableRF_ISR();
-        D_LOG("Join reply send, result:%d", res);
+        D_LOG("RFI: Join reply send, result:%d", res);
         rf.setSendTries(3);
         joinReplyRemIndex = 255;
         rf_message.once_ms(100, set_send10E0_true);
@@ -415,7 +415,7 @@ void TaskCC1101(void *pvParameters)
           }
           else
           {
-            E_LOG("sendQuery31DA failed");
+            E_LOG("I2C: error - sendQuery31DA failed");
           }
         }
         if (send31DAdebug)
@@ -458,7 +458,7 @@ void TaskCC1101(void *pvParameters)
           }
           if (cmd == IthoLeave && remotes.remoteLearnLeaveStatus())
           {
-            D_LOG("Leave command received. Trying to remove remote...");
+            D_LOG("RFI: Leave command received. Trying to remove remote...");
             int index = remotes.removeRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2));
             if (index >= 0)
             {
@@ -477,7 +477,7 @@ void TaskCC1101(void *pvParameters)
           }
           if (cmd == IthoJoin || (cmd == IthoLow && remtype == RemoteTypes::RFTSPIDER)) // Itho low for the spider because join can be difficult to send
           {
-            D_LOG("Join command received. Trying to join remote...");
+            D_LOG("RFI: Join command received. Trying to join remote...");
             if (remotes.remoteLearnLeaveStatus())
             {
               int index = remotes.registerNewRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2), remtype);
@@ -494,7 +494,7 @@ void TaskCC1101(void *pvParameters)
                   // if (index >= 0)
                   // {
                   joinReplyRemIndex = index;
-                  // D_LOG("sendJoinReply:true");
+                  // D_LOG("RFI: sendJoinReply:true");
 
                   sendJoinReply = true;
                   // }
@@ -513,7 +513,7 @@ void TaskCC1101(void *pvParameters)
             if (virtualRemotes.remoteLearnLeaveStatus())
             {
               int result = virtualRemotes.registerNewRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2), remtype);
-              D_LOG("registerNewRemote:%d", result);
+              D_LOG("RFI: registerNewRemote:%d", result);
 
               if (result >= 0)
               {
@@ -538,7 +538,7 @@ void TaskCC1101(void *pvParameters)
             bool bidirect = remotes.getRemoteBidirectional(index);
             if (remfunc != RemoteFunctions::MONITOR)
             {
-              D_LOG("remfunc:%d, bidirect:%s", remfunc, bidirect ? "yes" : "no");
+              D_LOG("RFI: remfunc:%d, bidirect:%s", remfunc, bidirect ? "yes" : "no");
               if (cmd == IthoLow)
               {
                 ithoExecCommand("low", REMOTE);

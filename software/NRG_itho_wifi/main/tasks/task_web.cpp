@@ -2,12 +2,12 @@
 
 #if MG_ENABLE_PACKED_FS == 0
 
-#include "webroot/index_html_gz.h"
-#include "webroot/edit_html_gz.h"
 #include "webroot/controls_js_gz.h"
-#include "webroot/pure_min_css_gz.h"
-#include "webroot/jquery_min_js_gz.h"
+#include "webroot/edit_html_gz.h"
 #include "webroot/favicon_png_gz.h"
+#include "webroot/index_html_gz.h"
+#include "webroot/jquery_min_js_gz.h"
+#include "webroot/pure_min_css_gz.h"
 
 #endif
 
@@ -100,7 +100,7 @@ void TaskWeb(void *pvParameters)
     esp_task_wdt_reset();
 
     TaskTimeout.once_ms(15000, []()
-                        { W_LOG("Warning: Task Web timed out!"); });
+                        { W_LOG("SYS: warning - Task Web timed out!"); });
 
     execWebTasks();
 
@@ -142,7 +142,6 @@ void execWebTasks()
 
 void ArduinoOTAinit()
 {
-
   //  events.onConnect([](AsyncEventSourceClient * client) {
   //    client->send("hello!", NULL, millis(), 1000);
   //  });
@@ -154,7 +153,7 @@ void ArduinoOTAinit()
       .onStart([]()
                {
                  static char buf[128]{};
-                 strcat(buf, "Firmware update: ");
+                 strcat(buf, "SYS: firmware update: ");
 
                  if (ArduinoOTA.getCommand() == U_FLASH)
                    strncat(buf, "sketch", sizeof(buf) - strlen(buf) - 1);
@@ -189,18 +188,18 @@ void ArduinoOTAinit()
                    esp_task_wdt_delete(xTaskConfigAndLogHandle);
                  } })
       .onEnd([]()
-             { D_LOG("\nEnd"); })
+             { D_LOG("\nOTA: End"); })
       .onProgress([](unsigned int progress, unsigned int total)
-                  { D_LOG("Progress: %u%%\r", (progress / (total / 100))); })
+                  { D_LOG("POTA: rogress: %u%%\r", (progress / (total / 100))); })
       .onError([](ota_error_t error)
                {
-    D_LOG("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) D_LOG("Auth Failed");
-    else if (error == OTA_BEGIN_ERROR) D_LOG("Begin Failed");
-    else if (error == OTA_CONNECT_ERROR) D_LOG("Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR) D_LOG("Receive Failed");
+    D_LOG("OTA: Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) D_LOG("OTA: Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) D_LOG("OTA: Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) D_LOG("OTA: Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) D_LOG("OTA: Receive Failed");
     else if (error == OTA_END_ERROR)
-      D_LOG("End Failed"); });
+      D_LOG("OTA: End Failed"); });
   ArduinoOTA.begin();
   //
   //  ArduinoOTA.onStart([]() {
@@ -232,7 +231,6 @@ void ArduinoOTAinit()
 
 void webServerInit()
 {
-
 #if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
   mg_http_listen(&mgr, s_listen_on_http, httpEvent, &mgr); // Create HTTP listener
 #else
@@ -397,7 +395,7 @@ void webServerInit()
       {
         if (!index)
         {
-          D_LOG("Begin OTA update");
+          D_LOG("OTA: Begin OTA update");
           onOTA = true;
           dontReconnectMQTT = true;
           mqttClient.disconnect();
@@ -405,7 +403,7 @@ void webServerInit()
 
           content_len = request->contentLength();
 
-          N_LOG("Firmware update: %s", filename.c_str());
+          N_LOG("OTA: firmware update: %s", filename.c_str());
           delay(1000);
 
           if (xTaskCC1101Handle != NULL)
@@ -448,7 +446,7 @@ void webServerInit()
         {
           if (Update.end(true))
           {
-            D_LOG("Update Success: %uB", index + len);
+            D_LOG("OTA: Update Success: %uB", index + len);
           }
           else
           {
@@ -485,18 +483,17 @@ void webServerInit()
 
   server.begin();
 #endif
-  N_LOG("Webserver: started");
+  N_LOG("NET: webserver started");
 }
 
 void MDNSinit()
 {
-
   mdns_free();
   // initialize mDNS service
   esp_err_t err = mdns_init();
   if (err)
   {
-    E_LOG("mDNS: init failed: %d", err);
+    E_LOG("NET: mDNS init failed: %d", err);
     return;
   }
 
@@ -522,9 +519,9 @@ void MDNSinit()
 
   mdns_service_instance_name_set("_http", "_tcp", inst_name);
 
-  N_LOG("mDNS: started");
+  N_LOG("NET: mDNS started");
 
-  N_LOG("Hostname: %s", hostName());
+  N_LOG("NET: hostname - %s", hostName());
 }
 #if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
 #else
@@ -623,7 +620,7 @@ void handleAPIv1(AsyncWebServerRequest *request)
         request->send(response);
         if (doc.overflowed())
         {
-          E_LOG("JsonDocument overflowed (html api)");
+          E_LOG("API: error - JsonDocument overflowed (html api)");
         }
         return;
       }
@@ -810,7 +807,6 @@ void handleAPIv1(AsyncWebServerRequest *request)
 
 ApiResponse::api_response_status_t checkAuthentication(JsonObject params, JsonDocument &response)
 {
-
   if (!systemConfig.syssec_api)
     return ApiResponse::status::CONTINUE;
 
@@ -873,7 +869,6 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDoc
   }
   else if (strcmp(value, "ithostatus") == 0)
   {
-
     JsonObject obj = response["ithostatus"].to<JsonObject>();
     getIthoStatusJSON(obj);
 
@@ -1249,7 +1244,9 @@ ApiResponse::api_response_status_t processCommand(JsonObject params, JsonDocumen
   else if (currentIthoDeviceID() != 0x4 || currentIthoDeviceID() != 0x14 || currentIthoDeviceID() != 0x1B || currentIthoDeviceID() != 0x1D) // CVE or HRU200 are the only devices that support the pwm2i2c command
   {
     response["code"] = 400;
-    response["failreason"] = "device does not support pwm2i2c commands, use virtual remote instead";
+    char failReason[100]{};
+    snprintf(failReason, sizeof(failReason), "device (type: %02X) does not support pwm2i2c commands, use virtual remote instead", currentIthoDeviceID());
+    response["failreason"] = failReason;
     return ApiResponse::status::FAIL;
   }
   if (systemConfig.itho_vremoteapi)
@@ -1322,7 +1319,6 @@ ApiResponse::api_response_status_t processSetRFremote(JsonObject params, JsonDoc
 
   if (strcmp("setrfdevicebidirectional", setting) == 0)
   {
-
     if (strcmp(settingvalue, "true") == 0)
     {
       rf.setRFDeviceBidirectional(idx, true);
@@ -1370,7 +1366,6 @@ ApiResponse::api_response_status_t processSetRFremote(JsonObject params, JsonDoc
 
 ApiResponse::api_response_status_t processRFremoteCommands(JsonObject params, JsonDocument &response)
 {
-
   const char *rfremotecmd = params["rfremotecmd"];
   const char *rfremoteindex = params["rfremoteindex"];
 
@@ -1697,7 +1692,6 @@ In case of "error":
 */
 void handleAPIv2(AsyncWebServerRequest *request)
 {
-
   JsonDocument doc;
   JsonObject paramsJson = doc.to<JsonObject>();
 
@@ -1783,7 +1777,7 @@ void handleAPIv2(AsyncWebServerRequest *request)
 void handleCoreCrash(AsyncWebServerRequest *request)
 {
   request->send(200);
-  D_LOG("Triggering core crash...");
+  D_LOG("SYS: Triggering core crash...");
   assert(0);
 }
 
@@ -1805,13 +1799,13 @@ void handleCoredumpDownload(AsyncWebServerRequest *request)
     esp_err_t err = esp_core_dump_get_summary(summary);
     if (err == ESP_OK)
     {
-      D_LOG("Getting core dump summary ok.");
+      D_LOG("SYS: Getting core dump summary ok.");
     }
     else
     {
-      D_LOG("Getting core dump summary not ok. Error: %d\n", (int)err);
-      D_LOG("Probably no coredump present yet.\n");
-      D_LOG("esp_core_dump_image_check() = %s\n", esp_core_dump_image_check() ? "OK" : "NOK");
+      D_LOG("SYS: Getting core dump summary not ok. Error: %d\n", (int)err);
+      D_LOG("SYS: Probably no coredump present yet.\n");
+      D_LOG("SYS: esp_core_dump_image_check() = %s\n", esp_core_dump_image_check() ? "OK" : "NOK");
     }
     free(summary);
   }
@@ -1886,7 +1880,6 @@ void handleFileCreate(AsyncWebServerRequest *request)
       return;
     }
   }
-  D_LOG("handleFileCreate called");
 
   String path;
   String src;
@@ -1897,12 +1890,12 @@ void handleFileCreate(AsyncWebServerRequest *request)
 
     if (strcmp(p->name().c_str(), "path") == 0)
     {
-      D_LOG("handleFileCreate path found ('%s')", p->value().c_str());
+      D_LOG("SYS: handleFileCreate path found ('%s')", p->value().c_str());
       path = p->value().c_str();
     }
     if (strcmp(p->name().c_str(), "src") == 0)
     {
-      D_LOG("handleFileCreate src found ('%s')", p->value().c_str());
+      D_LOG("SYS: handleFileCreate src found ('%s')", p->value().c_str());
       src = p->value().c_str();
     }
     // D_LOG("Param[%d] (name:'%s', value:'%s'", i, p->name().c_str(), p->value().c_str());
@@ -1922,7 +1915,7 @@ void handleFileCreate(AsyncWebServerRequest *request)
   if (src.isEmpty())
   {
     // No source specified: creation
-    D_LOG("handleFileCreate: %s", path.c_str());
+    D_LOG("SYS: handleFileCreate: %s", path.c_str());
     if (path.endsWith("/"))
     {
       // Create a folder
@@ -1964,7 +1957,7 @@ void handleFileCreate(AsyncWebServerRequest *request)
       return;
     }
 
-    D_LOG("handleFileCreate: %s from %s", path.c_str(), src.c_str());
+    D_LOG("SYS: handleFileCreate: %s from %s", path.c_str(), src.c_str());
     if (path.endsWith("/"))
     {
       path.remove(path.length() - 1);
@@ -1994,8 +1987,6 @@ void handleFileDelete(AsyncWebServerRequest *request)
   }
   String path;
 
-  D_LOG("handleFileDelete called");
-
   int params = request->params();
   for (int i = 0; i < params; i++)
   {
@@ -2004,7 +1995,7 @@ void handleFileDelete(AsyncWebServerRequest *request)
     if (strcmp(p->name().c_str(), "path") == 0)
     {
       path = p->value().c_str();
-      D_LOG("handleFileDelete path found ('%s')", p->value().c_str());
+      D_LOG("SYS: handleFileDelete path found ('%s')", p->value().c_str());
     }
   }
 
@@ -2040,12 +2031,12 @@ void handleUpload(AsyncWebServerRequest *request, String filename, size_t index,
     if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
       return request->requestAuthentication();
   }
-  String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url() + "\n";
+  String logmessage = "SYS: Client:" + request->client()->remoteIP().toString() + " " + request->url() + "\n";
   D_LOG(logmessage.c_str());
 
   if (!index)
   {
-    logmessage = "Upload Start: " + String(filename) + "\n";
+    logmessage = "SYS: Upload Start: " + String(filename) + "\n";
     // open the file on first call and store the file handle in the request object
     request->_tempFile = ACTIVE_FS.open("/" + filename, "w");
     D_LOG(logmessage.c_str());
@@ -2055,13 +2046,13 @@ void handleUpload(AsyncWebServerRequest *request, String filename, size_t index,
   {
     // stream the incoming chunk to the opened file
     request->_tempFile.write(data, len);
-    logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len) + "\n";
+    logmessage = "SYS: Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len) + "\n";
     D_LOG(logmessage.c_str());
   }
 
   if (final)
   {
-    logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len) + "\n";
+    logmessage = "SYS: Upload Complete: " + String(filename) + ",size: " + String(index + len) + "\n";
     // close the file handle as the upload is now done
     request->_tempFile.close();
     D_LOG(logmessage.c_str());
@@ -2087,7 +2078,7 @@ bool handleFileRead(AsyncWebServerRequest *request)
   String pathWithGz = path + ".gz";
   if (ACTIVE_FS.exists(pathWithGz) || ACTIVE_FS.exists(path))
   {
-    D_LOG("file found ('%s')", path.c_str());
+    D_LOG("SYS: file found ('%s')", path.c_str());
 
     if (ACTIVE_FS.exists(pathWithGz))
     {
@@ -2479,14 +2470,12 @@ void mg_serve_fs(struct mg_connection *c, void *ev_data, bool download)
   }
   else if (mg_handleFileRead(c, hm, download))
   {
-
     // char buf[64]{};
     // strlcpy(buf, hm->uri.buf, hm->uri.len + 1);
     // D_LOG("File '%s' found on LittleFS file system", buf);
   }
   else
   {
-
     char buf[64]{};
     int len = hm->uri.len + 1;
     if (len > sizeof(buf))
@@ -2641,7 +2630,6 @@ void mg_handleFileDelete(struct mg_connection *c, int ev, void *ev_data)
 
 void mg_handleFileCreate(struct mg_connection *c, int ev, void *ev_data)
 {
-
   // handle auth
   // D_LOG("handleFileCreate called");
 

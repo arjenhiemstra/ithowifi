@@ -79,6 +79,7 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
     // const uint8_t version = currentItho_fwversion();
     const uint8_t deviceGroup = currentIthoDeviceGroup();
 
+    // N_LOG("HAD: dID:0x%02X, gID:0x%02X, devPtr:%s",deviceID, deviceGroup, ithoDeviceptr != nullptr ? "true" : "false");
     char pr_mode_val_tpl[400]{};
     char pct_cmd_tpl[300]{};
     char pct_val_tpl[100]{};
@@ -305,7 +306,6 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
     else
     {
         if (compactJson["sscnt"] != 0)
-            E_LOG("Error: HA Discovery Config does not match no. of status items, please update the config HA Discovery config");
     }
 
     // Add extra components (fan and firmware updates)

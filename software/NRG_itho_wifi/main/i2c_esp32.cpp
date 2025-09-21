@@ -58,7 +58,7 @@ esp_err_t i2c_master_init(int log_entry_idx)
   result = i2c_driver_install(I2C_MASTER_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
   if (result != ESP_OK)
   {
-    E_LOG("i2c_master_init error: %s", esp_err_to_name(result));
+    E_LOG("I2C: i2c_master_init error: %s", esp_err_to_name(result));
   }
 
   return result;
@@ -324,7 +324,7 @@ bool checkI2Cbus(int log_entry_idx)
   }
   if (cntr > 9)
   {
-    W_LOG("Warning: I2C timeout, trying I2C bus reset...");
+    W_LOG("I2C: warning - timeout, trying I2C bus reset...");
     int result = I2C_ClearBus();
     if (result != 0)
     {
@@ -340,7 +340,7 @@ bool checkI2Cbus(int log_entry_idx)
       {
         i2cLogger.i2c_log_err_state(log_entry_idx, I2CLogger::I2C_ERROR_SDA_LOW);
       }
-      E_LOG("Error: I2C bus could not be cleared!");
+      E_LOG("I2C: error - I2C bus could not be cleared!");
       if (systemConfig.i2cmenu == 1)
       {
         ithoInitResult = -2; // stop I2C bus activity to be able to save logging

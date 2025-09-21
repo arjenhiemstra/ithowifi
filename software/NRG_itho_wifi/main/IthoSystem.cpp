@@ -1579,7 +1579,7 @@ void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t ch
 
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
-  D_LOG("Sending 4030: %s", i2cbuf2string(command, sizeof(command)).c_str());
+  D_LOG("I2C: Sending 4030: %s", i2cbuf2string(command, sizeof(command)).c_str());
   if (updateweb)
     jsonSysmessage("itho_4030_result", i2cbuf2string(command, sizeof(command)).c_str());
 
@@ -1701,7 +1701,7 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
   }
   else
   {
-    D_LOG("itho2410: failed for index:%d", index);
+    D_LOG("I2C: itho2410: failed for index:%d", index);
     values[0] = 0x5555AAAA;
     values[1] = 0xAAAA5555;
     values[2] = 0xFFFFFFFF;
@@ -1862,7 +1862,7 @@ void sendQueryCounters(bool updateweb)
   int Nvalues = i2cbuf[6];
   if (Nvalues > ithoWPUCounterLabelLength)
   {
-    E_LOG("WPU Counter array too long. Counters not read.");
+    E_LOG("SYS: error - WPU Counter array too long. Counters not read.");
     return;
   }
 

@@ -209,7 +209,7 @@ void i2c_sniffer_enable()
     enable_sda_intr(true);
     if (i2c_safe_guard.i2c_safe_guard_enabled == true && i2c_safe_guard.sniffer_enabled == true)
     {
-        W_LOG("I2C Safe guard disabled due to enabled i2c sniffer");
+        W_LOG("I2C: safe guard disabled due to enabled i2c sniffer");
     }
 }
 
