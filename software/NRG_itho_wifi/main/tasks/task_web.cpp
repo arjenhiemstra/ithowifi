@@ -1715,10 +1715,15 @@ void handleAPIv2(AsyncWebServerRequest *request)
   response["timestamp"] = now;
   ApiResponse::api_response_status_t response_status = ApiResponse::status::CONTINUE;
 
-  if (checkAuthentication(paramsJson, response) != ApiResponse::status::CONTINUE)
+  // if (checkAuthentication(paramsJson, response) != ApiResponse::status::CONTINUE) {
+  //     apiresponse.sendFail(response);
+  //     return;  // Authentication failed, exit early.
+  // }
+
+  if (systemConfig.syssec_api)
   {
-    apiresponse.sendFail(response);
-    return; // Authentication failed, exit early.
+    if (!request->authenticate(systemConfig.sys_username, systemConfig.sys_password))
+      return request->requestAuthentication();
   }
 
   if (response_status == ApiResponse::status::CONTINUE)
