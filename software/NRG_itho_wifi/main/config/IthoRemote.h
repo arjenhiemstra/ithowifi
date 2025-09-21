@@ -37,7 +37,9 @@ private:
     bool bidirectional{false};
     JsonDocument capabilities;
     void set(JsonObject);
-    void get(JsonObject, RemoteFunctions instanceFunc, int index) const;
+    void get(JsonObject, RemoteFunctions instanceFunc, int index, bool human_reaadble = false) const;
+    const char *rem_type_to_name(RemoteTypes type) const;
+    const char *rem_func_to_name(RemoteFunctions func) const;
   };
   RemoteFunctions instanceFunc{RemoteFunctions::UNSETFUNC};
   Remote remotes[MAX_NUM_OF_REMOTES];
@@ -54,8 +56,26 @@ private:
   } remote_command_char;
 
   static const remote_command_char remote_command_msg_table[];
-
   static const char *remote_unknown_msg;
+
+  typedef struct
+  {
+    RemoteTypes type;
+    const char *msg;
+  } remote_type_char;
+
+  static const remote_type_char remote_type_table[];
+  static const char *remote_type_unknown_msg;
+
+
+  typedef struct
+  {
+    RemoteFunctions func;
+    const char *msg;
+  } remote_func_char;
+
+  static const remote_func_char remote_func_table[];
+  static const char *remote_func_unknown_msg;
 
 public:
   IthoRemote();

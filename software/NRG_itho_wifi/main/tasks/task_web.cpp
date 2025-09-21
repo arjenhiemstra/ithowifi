@@ -896,6 +896,14 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDoc
 
     return ApiResponse::status::SUCCESS;
   }
+  else if (strcmp(value, "vremotesinfo") == 0)
+  {
+    JsonObject obj = response.as<JsonObject>();
+    virtualRemotes.get(obj, value);
+    response.add(obj);
+
+    return ApiResponse::status::SUCCESS;
+  }
 
   response["failreason"] = "cmdvalue not valid";
   return ApiResponse::status::FAIL;
