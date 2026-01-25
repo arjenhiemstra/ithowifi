@@ -24,7 +24,8 @@
           -
         </div>
       </div>
-      <input id="ithoslider" type="range" min="0" max="255" value="0" class="slider" style="width: 100%; margin: 0 0 2em 0;">
+      <input id="ithoslider" type="range" min="0" max="255" value="0" class="slider"
+        style="width: 100%; margin: 0 0 2em 0;">
     </div>
     <div id="reminterface">
       <div style="text-align: center;margin: 2em 0 0 0;">
@@ -58,8 +59,20 @@
         slide.onchange = function () { updateSlider(this.value); };
       }
     }
-
     getSettings('sysstat');
     getSettings('remtype');
   });
+
+  function load_config() {
+    if (websock.readyState === WebSocket.OPEN) {
+      getSettings('sysstat');
+      getSettings('remtype');
+    }
+    else {
+      setTimeout(() => {
+        if (debug) console.log("websock not open, trying again");
+        load_config();
+      }, 100);
+    }
+  }
 </script>
