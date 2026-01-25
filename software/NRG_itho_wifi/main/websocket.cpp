@@ -644,6 +644,10 @@ void handle_ws_message(JsonObject root)
   {
     resetSystemConfigflag = true;
   }
+  if (root["resethadconf"].is<bool>() && root["resethadconf"].as<bool>())
+  {
+    resetHADiscConfigflag = true;
+  }  
   if (root["format"].is<bool>() && root["format"].as<bool>())
   {
     formatFileSystem = true;

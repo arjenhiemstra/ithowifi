@@ -229,6 +229,19 @@ void execLogAndConfigTasks()
       logMessagejson("Failed restoring System settings, please try again", WEBINTERFACE);
     }
   }
+  if (resetHADiscConfigflag)
+  {
+    resetHADiscConfigflag = false;
+
+    if (resetHADiscConfig())
+    {
+      logMessagejson("HA Discovery settings reset to default", WEBINTERFACE);
+    }
+    else
+    {
+      logMessagejson("Failed resetting HA Discovery settings", WEBINTERFACE);
+    }
+  }  
   if (saveAllConfigsflag)
   {
     saveAllConfigsflag = false;

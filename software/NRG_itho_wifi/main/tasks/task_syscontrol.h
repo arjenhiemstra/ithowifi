@@ -31,6 +31,7 @@ extern bool saveHADiscConfigflag;
 extern bool saveWifiConfigflag;
 extern bool resetWifiConfigflag;
 extern bool resetSystemConfigflag;
+extern bool resetHADiscConfigflag;
 extern bool clearQueue;
 extern bool shouldReboot;
 extern int8_t ithoInitResult;

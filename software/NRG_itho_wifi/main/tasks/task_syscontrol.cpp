@@ -16,6 +16,7 @@ bool saveWifiConfigflag = false;
 bool saveHADiscConfigflag = false;
 bool resetWifiConfigflag = false;
 bool resetSystemConfigflag = false;
+bool resetHADiscConfigflag = false;
 bool clearQueue = false;
 bool shouldReboot = false;
 int8_t ithoInitResult = 0;

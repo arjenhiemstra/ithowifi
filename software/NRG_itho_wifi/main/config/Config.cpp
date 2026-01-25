@@ -38,7 +38,6 @@ bool loadConfigFile(const char *location, const char *nvs_backup_key, const char
 {
   if (strcmp("flash", location) == 0)
   {
-
     if (!ACTIVE_FS.exists(filename))
     {
       D_LOG("SYS: loadConfigFile %s:%d", nvs_backup_key, static_cast<uint8_t>(NVS.getInt(nvs_backup_key)));
@@ -180,7 +179,14 @@ bool saveHADiscConfig(const char *location)
 
 bool resetHADiscConfig()
 {
-  return resetConfigFile("/hadisc.json");
+  bool res = resetConfigFile("/hadisc.json");
+  haDiscConfig.reset();
+  if (currentItho_fwversion() > 0)
+  {
+    strncpy(haDiscConfig.d, getIthoType(), sizeof(haDiscConfig.d));
+  }
+  saveHADiscConfig("flash");
+  return res;
 }
 
 bool saveSystemConfigs()
@@ -204,7 +210,6 @@ bool resetSystemConfigs()
   res = resetConfigFile("/vremotes.json");
   return res;
 }
-
 
 template <typename TDst>
 uint16_t serializeRemotes(const char *filename, const IthoRemote &remotes, TDst &dst)
@@ -235,7 +240,6 @@ bool saveVirtualRemotesConfig(const char *location)
 
 bool saveFileRemotes(const char *location, const char *filename, const char *config_type, const IthoRemote &remotes)
 {
-
   if (strcmp("flash", location) == 0)
   {
     File configFile = ACTIVE_FS.open(filename, "w");
@@ -260,7 +264,6 @@ bool saveFileRemotes(const char *location, const char *filename, const char *con
 template <typename TDst>
 bool deserializeRemotes(const char *filename, const char *config_type, TDst &src, IthoRemote &remotes)
 {
-
   JsonDocument doc;
 
   DeserializationError err = deserializeJson(doc, src);

@@ -67,7 +67,6 @@ private:
   static const remote_type_char remote_type_table[];
   static const char *remote_type_unknown_msg;
 
-
   typedef struct
   {
     RemoteFunctions func;
@@ -123,6 +122,7 @@ public:
   char config_struct_version[4];
   bool set(JsonObject, const char *root);
   void get(JsonObject obj, const char *root) const;
+  void reset();
   void getCapabilities(JsonObject obj) const;
   const char *rem_cmd_to_name(uint8_t code);
 
