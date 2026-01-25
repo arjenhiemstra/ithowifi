@@ -1930,11 +1930,16 @@ void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *upd
 
   if (systemConfig.itho_forcemedium)
   {
-    IthoCommand precmd = IthoCommand::IthoMedium;
+    IthoCommand precmd = IthoCommand::IthoUnknown;
     const RemoteTypes remoteType = virtualRemotes.getRemoteType(0);
-    if (remoteType == RemoteTypes::RFTAUTO) // RFT AUTO remote has no meduim button
+    if (rf.getRemoteCmd(remoteType, IthoCommand::IthoMedium) != nullptr)
+      precmd = IthoCommand::IthoMedium;
+    else if (rf.getRemoteCmd(remoteType, IthoCommand::IthoAuto) != nullptr)
       precmd = IthoCommand::IthoAuto;
-    if (remoteType == RemoteTypes::RFTCVE || remoteType == RemoteTypes::RFTCO2 || remoteType == RemoteTypes::RFTRV) // only handle remotes with mediom command support
+    else
+      W_LOG("SYS: force medium not executed, remote has no medium or auto command");
+
+    if (precmd != IthoCommand::IthoUnknown)
       sendRemoteCmd(0, precmd);
   }
 
