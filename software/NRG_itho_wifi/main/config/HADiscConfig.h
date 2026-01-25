@@ -24,6 +24,7 @@ public:
 
     bool set(JsonObject);
     void get(JsonObject) const;
+    void reset();
 
 protected:
 }; // HADiscConfig

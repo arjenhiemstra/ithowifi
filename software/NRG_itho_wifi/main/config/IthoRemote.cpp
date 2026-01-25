@@ -522,3 +522,7 @@ const char *IthoRemote::Remote::rem_func_to_name(const RemoteFunctions func) con
   }
   return remote_type_unknown_msg;
 }
+
+void IthoRemote::reset()
+{
+}

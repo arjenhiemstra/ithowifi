@@ -11,10 +11,7 @@ HADiscConfig haDiscConfig;
 HADiscConfig::HADiscConfig()
 {
     // default config
-
-    sscnt = 0;                                                             // saved_status_count
-    strlcpy(d, "unset", sizeof(d));                                        // device_name
-    JsonArray itemsArr __attribute__((unused)) = itemsDoc.to<JsonArray>(); // components
+    reset();
 
     configLoaded = false;
 
@@ -53,4 +50,11 @@ void HADiscConfig::get(JsonObject obj) const
     obj["sscnt"] = sscnt;
     obj["d"] = d;
     obj["c"].set(itemsDoc.as<JsonArrayConst>());
+}
+
+void HADiscConfig::reset()
+{
+    sscnt = 0;                                                             // saved_status_count
+    strlcpy(d, "unset", sizeof(d));                                        // device_name
+    JsonArray itemsArr __attribute__((unused)) = itemsDoc.to<JsonArray>(); // components
 }
