@@ -100,8 +100,8 @@ struct ithoLabels itho31DALabels[]{
     {"FanInfo", "fan-info"},                          // 11
     {"ExhFanSpeed (%)", "exh-fan-speed_perc"},        // 12
     {"InFanSpeed (%)", "in-fan-speed_perc"},          // 13
-    {"RemainingTime (min)", "remaining-time_min"},    // 13
-    {"PostHeat (%)", "post-heat_perc"},               // 14
-    {"PreHeat (%)", "pre-heat_perc"},                 // 15
-    {"InFlow (l sec)", "in-flow-l_sec"},              // 16
-    {"ExhFlow (l sec)", "exh-flow-l_sec"}};           // 17
+    {"RemainingTime (min)", "remaining-time_min"},    // 14
+    {"PostHeat (%)", "post-heat_perc"},               // 15
+    {"PreHeat (%)", "pre-heat_perc"},                 // 16
+    {"InFlow (l sec)", "in-flow-l_sec"},              // 17
+    {"ExhFlow (l sec)", "exh-flow-l_sec"}};           // 18
