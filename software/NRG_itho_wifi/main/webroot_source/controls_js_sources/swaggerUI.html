@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IthoWifi API - SwaggerUI</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.5.0/swagger-ui.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .swagger-ui {
+            margin: 20px auto;
+        }
+        .swagger-ui .topbar {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.5.0/swagger-ui-bundle.min.js"> </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.5.0/swagger-ui-standalone-preset.min.js"> </script>
+    <script>
+        window.onload = function() {
+            const spec = `openapi: 3.0.0
+info:
+  title: Web API
+  version: 1.0.0
+paths:
+  /api.html:
+    get:
+      parameters:
+        - name: vremotecmd
+          in: query
+          schema:
+            type: string
+            enum: ["away", "low", "medium", "high", "timer1", "timer2", "timer3", "join", "leave", "auto", "autonight", "cook30", "cook60"]
+        - name: vremoteindex
+          in: query
+          schema:
+            type: string
+            pattern: "^[0-11]$"
+        - name: vremotename
+          in: query
+          schema:
+            type: string
+        - name: username
+          in: query
+          schema:
+            type: string
+            maxLength: 20
+        - name: password
+          in: query
+          schema:
+            type: string
+            maxLength: 20
+        - name: clearqueue
+          in: query
+          schema:
+            type: string
+            enum: ["true"]
+        - name: get
+          in: query
+          schema:
+            type: string
+            enum: ["ithostatus"]
+        - name: speed
+          in: query
+          schema:
+            type: string
+            pattern: "^[0-255]$"
+        - name: command
+          in: query
+          schema:
+            type: string
+            enum: ["low", "medium", "high", "timer1", "timer2", "timer3", "clearqueue"]
+        - name: timer
+          in: query
+          schema:
+            type: string
+            pattern: "^[0-65535]$"
+        - name: currentspeed
+          in: query
+          schema:
+            type: string
+            enum: ["ithostatus"]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            text/plain:
+              example: OK
+        '400':
+          description: Unsuccessful response
+          content:
+            text/plain:
+              example: NOK
+      description: Format the request as http://[DNS or IP]/api.html?[param]=[value]
+      summary: Simple Web API`;
+            
+            const ui = SwaggerUIBundle({
+                spec: jsyaml.load(spec),
+                dom_id: '#swagger-ui',
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                layout: "StandaloneLayout"
+            });
+            window.ui = ui;
+        }
+    </script>
+</body>
+</html>
