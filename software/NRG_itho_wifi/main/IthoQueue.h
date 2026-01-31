@@ -30,9 +30,9 @@ public:
   uint16_t ithoSpeed = 0;
   uint16_t ithoOldSpeed = 0;
   uint16_t fallBackSpeed = 42;
-  void update_queue();
-  bool add2queue(int speedVal, unsigned long validVal, uint8_t nonQ_cmd_clearsQ);
-  void clear_queue();
+  void updateQueue();
+  bool addToQueue(int speedVal, unsigned long validVal, uint8_t nonQ_cmd_clearsQ);
+  void clearQueue();
   uint16_t get_itho_speed()
   {
     return ithoSpeed;

@@ -47,7 +47,7 @@ void startTaskConfigAndLog();
 void TaskConfigAndLog(void *pvParameters);
 void execLogAndConfigTasks();
 
-void syslog_queue_worker();
+void syslogQueueWorker();
 bool initFileSystem();
 void logInit();
-void log_mem_info();
+void logMemInfo();

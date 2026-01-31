@@ -10,7 +10,7 @@ IthoQueue::IthoQueue()
 
   // queueUpdater.attach_ms(
   //     QUEUE_UPDATE_MS, +[](IthoQueue *queueInstance)
-  //                      { queueInstance->update_queue(); },
+  //                      { queueInstance->updateQueue(); },
   //     this);
 
 } // IthoQueue
@@ -21,14 +21,14 @@ IthoQueue::~IthoQueue()
   //queueUpdater.detach();
 } //~IthoQueue
 
-bool IthoQueue::add2queue(int speedVal, unsigned long validVal, uint8_t nonQ_cmd_clearsQ)
+bool IthoQueue::addToQueue(int speedVal, unsigned long validVal, uint8_t nonQ_cmd_clearsQ)
 {
   if (validVal == 0)
   {
     fallBackSpeed = speedVal;
     if (nonQ_cmd_clearsQ)
     {
-      clear_queue();
+      clearQueue();
     }
     return true;
   }
@@ -57,7 +57,7 @@ bool IthoQueue::add2queue(int speedVal, unsigned long validVal, uint8_t nonQ_cmd
   }
 }
 
-void IthoQueue::update_queue()
+void IthoQueue::updateQueue()
 {
   for (int i = 0; i < MAX_QUEUE; i++)
   {
@@ -93,7 +93,7 @@ void IthoQueue::update_queue()
   }
 }
 
-void IthoQueue::clear_queue()
+void IthoQueue::clearQueue()
 {
   for (int i = 0; i < MAX_QUEUE; i++)
   {

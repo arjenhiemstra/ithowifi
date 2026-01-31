@@ -3,7 +3,7 @@
 // #include <algorithm>
 // #include <cctype>
 
-#include "IthoSystem.h"
+#include "ithodevice/IthoDevice.h"
 #include "notifyClients.h"
 #include "sys_log.h"
 #include "generic_functions.h"
@@ -33,7 +33,7 @@ void addHADevInfo(JsonObject obj)
     dev["mf"] = "Arjen Hiemstra";        // manufacturer
     dev["mdl"] = "Wifi add-on for Itho"; // model
     dev["name"] = hostName();            // name
-    dev["hw"] = hw_revision;             // hw_version
+    dev["hw"] = hardwareManager.hw_revision;             // hw_version
     dev["sw"] = fw_version;              // sw_version
     dev["cu"] = cu;                      // configuration_url
 }

@@ -15,9 +15,9 @@ void TaskInit(void *pvParameters)
 
   hardwareInit();
 
-  if (i2c_sniffer_capable)
+  if (hardwareManager.isSnifferCapable())
   {
-    i2c_sniffer_init(false);
+    i2cSnifferInit(false);
   }
 
   startTaskConfigAndLog();
@@ -54,7 +54,7 @@ void failSafeBoot()
   {
     yield();
 
-    if (digitalRead(fail_save_pin) == HIGH)
+    if (digitalRead(hardwareManager.fail_save_pin) == HIGH)
     {
 
       ACTIVE_FS.begin(true);
@@ -78,9 +78,6 @@ void failSafeBoot()
       dnsServer.start(53, "*", apIP);
 
       // Simple Firmware Update Form
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-// implement mongoose based ota
-#else
       server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request)
                 { request->send(200, "text/html", "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>"); });
 
@@ -123,7 +120,6 @@ void failSafeBoot()
             }
           });
       server.begin();
-#endif
       for (;;)
       {
         yield();
@@ -136,13 +132,13 @@ void failSafeBoot()
         if (millis() - ledblink > 200)
         {
           ledblink = millis();
-          if (digitalRead(wifi_led_pin) == LOW)
+          if (digitalRead(hardwareManager.wifi_led_pin) == LOW)
           {
-            digitalWrite(wifi_led_pin, HIGH);
+            digitalWrite(hardwareManager.wifi_led_pin, HIGH);
           }
           else
           {
-            digitalWrite(wifi_led_pin, LOW);
+            digitalWrite(hardwareManager.wifi_led_pin, LOW);
           }
         }
       }
@@ -151,99 +147,33 @@ void failSafeBoot()
     if (millis() - ledblink > 50)
     {
       ledblink = millis();
-      if (digitalRead(wifi_led_pin) == LOW)
+      if (digitalRead(hardwareManager.wifi_led_pin) == LOW)
       {
-        digitalWrite(wifi_led_pin, HIGH);
+        digitalWrite(hardwareManager.wifi_led_pin, HIGH);
       }
       else
       {
-        digitalWrite(wifi_led_pin, LOW);
+        digitalWrite(hardwareManager.wifi_led_pin, LOW);
       }
     }
   }
-  digitalWrite(wifi_led_pin, HIGH);
+  digitalWrite(hardwareManager.wifi_led_pin, HIGH);
 }
 
 void hardwareInit()
 {
-  delay(1000);
+  // Hardware detection now handled by HardwareManager
+  hardwareManager.detect();
 
-  // test pin connections te determine which hardware (and revision if applicable) we are dealing with
-  pinMode(GPIO_NUM_25, INPUT_PULLDOWN);
-  pinMode(GPIO_NUM_26, INPUT_PULLDOWN);
-  pinMode(GPIO_NUM_32, INPUT_PULLDOWN);
-  pinMode(GPIO_NUM_33, INPUT_PULLDOWN);
-  pinMode(GPIO_NUM_21, INPUT_PULLDOWN);
-  pinMode(GPIO_NUM_22, INPUT_PULLDOWN);
-
-  delay(50);
-
-  pinMode(GPIO_NUM_25, INPUT);
-  pinMode(GPIO_NUM_26, INPUT);
-  pinMode(GPIO_NUM_32, INPUT);
-  pinMode(GPIO_NUM_33, INPUT);
-  pinMode(GPIO_NUM_21, INPUT);
-  pinMode(GPIO_NUM_22, INPUT);
-
-  delay(50);
-
-  hardware_rev_det = digitalRead(GPIO_NUM_25) << 5 | digitalRead(GPIO_NUM_26) << 4 | digitalRead(GPIO_NUM_32) << 3 | digitalRead(GPIO_NUM_33) << 2 | digitalRead(GPIO_NUM_21) << 1 | digitalRead(GPIO_NUM_22);
-
-  // /*
-  //  * 0x34 -> NON-CVE
-  //  * 0x3F -> CVE i2c sniffer capable
-  //  * 0x03 -> CVE not i2c sniffer capable
-  //  */
-
-  if (hardware_rev_det == 0x3F || hardware_rev_det == 0x34)
+  // Initialize I2C sniffer if hardware supports it
+  if (hardwareManager.isSnifferCapable())
   {
-    i2c_sniffer_capable = true;
-    if (hardware_rev_det == 0x3F) // CVE i2c sniffer capable
-    {
-      i2c_master_setpins(GPIO_NUM_26, GPIO_NUM_32);
-      i2c_slave_setpins(GPIO_NUM_26, GPIO_NUM_32);
-      i2c_sniffer_setpins(GPIO_NUM_21, GPIO_NUM_22);
-    }
-    else
-    { // NON-CVE
-      pinMode(GPIO_NUM_27, INPUT);
-      pinMode(GPIO_NUM_13, INPUT);
-      pinMode(GPIO_NUM_14, INPUT);
-      i2c_master_setpins(GPIO_NUM_27, GPIO_NUM_26);
-      i2c_slave_setpins(GPIO_NUM_27, GPIO_NUM_26);
-      i2c_sniffer_setpins(GPIO_NUM_14, GPIO_NUM_25);
-    }
-  }
-  else // CVE i2c not sniffer capable
-  {
-    i2c_master_setpins(GPIO_NUM_21, GPIO_NUM_22);
-    i2c_slave_setpins(GPIO_NUM_21, GPIO_NUM_22);
+    i2cSnifferInit(false);
   }
 
-  if (hardware_rev_det == 0x3F || hardware_rev_det == 0x03) // CVE
-  {
-    boot_state_pin = GPIO_NUM_27;
-    fail_save_pin = GPIO_NUM_14;
-    status_pin = GPIO_NUM_13;
-    hw_revision = cve2;
-  }
-  else // NON-CVE
-  {
-    fail_save_pin = GPIO_NUM_32;
-    hw_revision = non_cve1;
-  }
-
-  pinMode(wifi_led_pin, OUTPUT);
-  digitalWrite(wifi_led_pin, HIGH);
-
-  if (hardware_rev_det == 0x3F || hardware_rev_det == 0x03) // CVE
-  {
-    pinMode(GPIO_NUM_16, INPUT_PULLUP);
-  }
-  pinMode(status_pin, OUTPUT);
-  digitalWrite(status_pin, LOW);
-  pinMode(fail_save_pin, INPUT);
+  // Fail-safe boot check
   failSafeBoot();
 
+  // Set initialization flag
   IthoInit = true;
 }

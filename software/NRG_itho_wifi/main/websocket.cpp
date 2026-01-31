@@ -1,25 +1,13 @@
 #include "websocket.h"
 
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-#else
 static std::unordered_map<uint32_t, std::string> g_wsBuffers;
 AsyncWebServer wsserver(8000);
 WebSerial *webSerial = nullptr;
-#endif
 
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-static void wsEvent(struct mg_connection *c, int ev, void *ev_data);
-#else
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
-#endif
 
 void websocketInit()
 {
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-  mg_log_set(0);
-  mg_mgr_init(&mgr);                                   // Initialise event manager
-  mg_http_listen(&mgr, s_listen_on_ws, wsEvent, &mgr); // Create WS listener
-#else
   // attach AsyncWebSocket
   ws.onEvent(onWsEvent);
   wsserver.addHandler(&ws);
@@ -37,8 +25,6 @@ void websocketInit()
     }
     webSerial->begin(&wsserver);
   }
-
-#endif
 }
 
 void jsonWsSend(const char *rootName)
@@ -62,7 +48,7 @@ void jsonWsSend(const char *rootName)
       nested["hostname"] = hostName();
     }
   }
-  else if (strcmp(rootName, "wifistat") == 0)
+  else if (strcmp(rootName, "wifiStat") == 0)
   {
 
     JsonObject wifiinfo = root[rootName].to<JsonObject>();
@@ -109,7 +95,7 @@ void jsonWsSend(const char *rootName)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
     logConfig.get(nested);
-    if (prevlog_available())
+    if (prevlogAvailable())
     {
       nested["prevlog"] = "/prevlog";
     }
@@ -135,7 +121,7 @@ void jsonWsSend(const char *rootName)
     uint8_t count = getIthoStatusJSON(nested);
     root["count"] = count;
     root["target"] = "hadisc";
-    root["itho_status_ready"] = itho_status_ready();
+    root["ithoStatusReady"] = ithoStatusReady();
     root["iis"] = itho_init_status;
   }
   else if (strcmp(rootName, "hadiscsettings") == 0)
@@ -256,7 +242,7 @@ void handle_ws_message(JsonObject root)
     const char *btn = root["button"].as<const char *>();
     if (strcmp(btn, "restorepart") == 0)
     {
-      repartition_device("legacy");
+      repartitionDevice("legacy");
     }
     else if (strcmp(btn, "checkpart") == 0)
     {
@@ -300,7 +286,7 @@ void handle_ws_message(JsonObject root)
       if (root["index"].is<uint8_t>())
       {
         uint8_t idx = root["index"].as<uint8_t>();
-        i2c_queue_add_cmd([idx]()
+        i2cQueueAddCmd([idx]()
                           { getSetting(idx, false, true, false); });
       }
       break;
@@ -381,9 +367,9 @@ void handle_ws_message(JsonObject root)
   {
     jsonWsSend("wifisettings");
   }
-  if (root["wifistat"].is<bool>() && root["wifistat"].as<bool>())
+  if (root["wifiStat"].is<bool>() && root["wifiStat"].as<bool>())
   {
-    jsonWsSend("wifistat");
+    jsonWsSend("wifiStat");
   }
   if (root["syssetup"].is<bool>() && root["syssetup"].as<bool>())
   {
@@ -433,13 +419,13 @@ void handle_ws_message(JsonObject root)
     uint8_t idx = root["index"].as<uint8_t>();
     bool upd = root["update"].as<bool>();
 
-    i2c_queue_add_cmd([idx, upd]()
+    i2cQueueAddCmd([idx, upd]()
                       { getSetting(idx, upd, false, true); });
   }
   if (root["ithosetrefresh"].is<uint8_t>())
   {
     uint8_t idx = root["ithosetrefresh"].as<uint8_t>();
-    i2c_queue_add_cmd([idx]()
+    i2cQueueAddCmd([idx]()
                       { getSetting(idx, true, false, false); });
   }
   if (root["ithosetupdate"].is<uint8_t>() && root["value"].is<float>())
@@ -556,7 +542,7 @@ void handle_ws_message(JsonObject root)
         uint8_t id1 = arr[1].as<uint8_t>();
         uint8_t id2 = arr[2].as<uint8_t>();
         remotes.updateRemoteID(idx, id0, id1, id2);
-        rf.updateRFDevice(idx, id0, id1, id2, remotes.getRemoteType(idx), bidir);
+        rfManager.radio.updateRFDevice(idx, id0, id1, id2, remotes.getRemoteType(idx), bidir);
       }
     }
     saveRemotesflag = true;
@@ -618,7 +604,7 @@ void handle_ws_message(JsonObject root)
         systemConfig.module_rf_id[1] = id1;
         systemConfig.module_rf_id[2] = id2;
       }
-      rf.setDefaultID(systemConfig.module_rf_id[0],
+      rfManager.radio.setDefaultID(systemConfig.module_rf_id[0],
                       systemConfig.module_rf_id[1],
                       systemConfig.module_rf_id[2]);
       saveSystemConfigflag = true;
@@ -684,56 +670,22 @@ void handle_ws_message(JsonObject root)
   // I2C sniffer
   if (root["i2csniffer"].is<uint8_t>())
   {
+    auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
     uint8_t val = root["i2csniffer"].as<uint8_t>();
     if (val == 1)
     {
-      i2c_safe_guard.sniffer_enabled = true;
-      i2c_safe_guard.sniffer_web_enabled = true;
-      i2c_sniffer_enable();
+      sg->sniffer_enabled = true;
+      sg->sniffer_web_enabled = true;
+      i2cSnifferEnable();
     }
     else
     {
-      i2c_safe_guard.sniffer_enabled = false;
-      i2c_safe_guard.sniffer_web_enabled = false;
-      i2c_sniffer_disable();
+      sg->sniffer_enabled = false;
+      sg->sniffer_web_enabled = false;
+      i2cSnifferDisable();
     }
   }
 }
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-static void wsEvent(struct mg_connection *c, int ev, void *ev_data)
-{
-  if (ev == MG_EV_HTTP_MSG)
-  {
-    struct mg_http_message *hm = (struct mg_http_message *)ev_data;
-    if (mg_match(hm->uri, mg_str("/ws"), nullptr))
-    {
-      if (systemConfig.syssec_web && !webauth_ok)
-      {
-        return;
-      }
-      // Upgrade to websocket. From now on, a connection is a full-duplex
-      // Websocket connection, which will receive MG_EV_WS_MSG events.
-      mg_ws_upgrade(c, hm, NULL);
-    }
-  }
-  else if (ev == MG_EV_WS_MSG)
-  {
-    if (systemConfig.syssec_web && !webauth_ok)
-    {
-      return;
-    }
-    // Got websocket frame. Received data is wm->data.
-    struct mg_ws_message *wm = (struct mg_ws_message *)ev_data;
-    std::string msg;
-    msg.assign(wm->data.buf, wm->data.len);
-#error "handle_ws_message not implemented for Mongoose WS"
-    // handle_ws_message(std::move(msg)); --> handle_ws_message(JsonObject);
-
-    wm = nullptr;
-    // msg = std::string();
-  }
-}
-#else
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
   if (!client->id())
@@ -824,4 +776,3 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
     }
   }
 }
-#endif

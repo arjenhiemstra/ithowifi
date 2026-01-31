@@ -15,7 +15,7 @@
 #include "generic_functions.h"
 #include "sys_log.h"
 #include "notifyClients.h"
-#include "IthoSystem.h"
+#include "ithodevice/IthoDevice.h"
 
 #include "cc1101/IthoPacket.h"
 #include "tasks/task_configandlog.h"

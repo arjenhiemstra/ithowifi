@@ -16,7 +16,7 @@
 #include "globals.h"
 #include "sys_log.h"
 #include "notifyClients.h"
-#include "IthoSystem.h"
+#include "ithodevice/IthoDevice.h"
 #include "enum.h"
 
 #include "LittleFS.h"
@@ -27,7 +27,7 @@ inline uint8_t itho_init_status = 0;
 
 const char *hostName();
 uint8_t getIthoStatusJSON(JsonObject root);
-bool itho_status_ready();
+bool ithoStatusReady();
 void getRemotesInfoJSON(JsonObject root);
 void getDeviceInfoJSON(JsonObject root);
 void getIthoSettingsBackupJSON(JsonObject root);
@@ -43,9 +43,9 @@ void logLastCommand(const char *command, cmdOrigin origin);
 void logLastCommand(const char *command, const char *source);
 void getLastCMDinfoJSON(JsonObject root);
 void updateItho();
-void add2queue();
+void addToQueue();
 void setRFdebugLevel(uint8_t level);
 double round(float value, int precision);
 char toHex(uint8_t c);
 std::vector<int> parseHexString(const std::string &input);
-void check_firmware_update();
+void checkFirmwareUpdate();

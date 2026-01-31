@@ -15,7 +15,7 @@
 
 #include "tasks/task_web.h"
 
-#include "ApiResponse.h"
+#include "api/ApiResponse.h"
 
 extern TaskHandle_t xTaskMQTTHandle;
 extern uint32_t TaskMQTTHWmark;
@@ -41,9 +41,7 @@ void mqttSendStatus();
 void mqttSendRemotesInfo();
 void mqttPublishLastcmd();
 void mqttPublishDeviceInfo();
-void mqttCallback(const char *topic, const byte *payload, unsigned int length);
 void updateState(uint16_t newState);
 void mqttHomeAssistantDiscovery();
 bool setupMQTTClient();
 bool reconnect();
-bool api_cmd_allowed(const char* cmd);

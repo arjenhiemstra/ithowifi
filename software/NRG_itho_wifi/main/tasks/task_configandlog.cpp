@@ -14,13 +14,6 @@ bool formatFileSystem = false;
 bool flashLogInitReady = false;
 char uuid[UUID_STR_LEN]{};
 
-// bool RemotesConfigLoaded = false;
-// bool VirtualRemotesConfigLoaded = false;
-// bool WifiConfigLoaded = false;
-// bool SystemConfigLoaded = false;
-// bool logConfigLoaded = false;
-// bool HADiscConfigLoaded = false;
-
 // locals
 FSFilePrint filePrint(ACTIVE_FS, "/logfile", 2, 10000);
 
@@ -51,20 +44,20 @@ void TaskConfigAndLog(void *pvParameters)
   syslog_queueSemaphore = xSemaphoreCreateBinary();
   xSemaphoreGive(syslog_queueSemaphore);
 
-  syslog_queue_worker();
+  syslogQueueWorker();
 
   initFileSystem();
-  syslog_queue_worker();
+  syslogQueueWorker();
 
   // set provisional timezone
   setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
   tzset();
 
   logInit();
-  syslog_queue_worker();
+  syslogQueueWorker();
 
   logConfigLoaded = loadLogConfig("flash");
-  syslog_queue_worker();
+  syslogQueueWorker();
   if (logConfig.esplog_active == 1)
   {
     esp_log_level_set("*", ESP_LOG_ERROR);
@@ -76,12 +69,12 @@ void TaskConfigAndLog(void *pvParameters)
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
   if (systemConfig.fw_check)
     getFWupdateInfo = 25 * 60 * 60 * 1000; // trigger firmware update check after boot
-  syslog_queue_worker();
+  syslogQueueWorker();
 
   HADiscConfigLoaded = loadHADiscConfig("flash");
 
   startTaskSysControl();
-  syslog_queue_worker();
+  syslogQueueWorker();
 
   esp_task_wdt_add(NULL);
 
@@ -90,7 +83,7 @@ void TaskConfigAndLog(void *pvParameters)
     yield();
     esp_task_wdt_reset();
 
-    TaskConfigAndLogTimeout.once_ms(15000, []()
+    TaskConfigAndLogTimeout.once_ms(TASK_CONFIGLOG_TIMEOUT_MS, []()
                                     { W_LOG("SYS: warning - Task ConfigAndLog timed out!"); });
 
     execLogAndConfigTasks();
@@ -107,7 +100,7 @@ void TaskConfigAndLog(void *pvParameters)
 
 void execLogAndConfigTasks()
 {
-  syslog_queue_worker();
+  syslogQueueWorker();
   // Logging and config tasks
   if (saveSystemConfigflag && SystemConfigLoaded)
   {
@@ -258,7 +251,7 @@ void execLogAndConfigTasks()
 
   if (millis() - lastLog > LOGGING_INTERVAL)
   {
-    log_mem_info();
+    logMemInfo();
     lastLog = millis();
   }
 
@@ -291,7 +284,7 @@ void execLogAndConfigTasks()
   if (chkpartition)
   {
     chkpartition = false;
-    chk_partition_res = current_partition_scheme();
+    chk_partition_res = currentPartitionScheme();
     if (chk_partition_res == -1)
     {
       D_LOG("SYS: chkpartition error");
@@ -303,7 +296,7 @@ void execLogAndConfigTasks()
   }
 }
 
-void syslog_queue_worker()
+void syslogQueueWorker()
 {
 
   while (!syslog_queue.empty())
@@ -394,8 +387,8 @@ bool initFileSystem()
   {
     uuid_t uu;
 
-    uuid_generate(uu);
-    uuid_unparse(uu, uuid);
+    uuidGenerate(uu);
+    uuidUnparse(uu, uuid);
     NVS.setString("uuid", uuid);
   }
   else
@@ -405,7 +398,7 @@ bool initFileSystem()
 
   ACTIVE_FS.begin(true);
 
-  check_partition_tables();
+  checkPartitionTables();
 
   return true;
 }
@@ -484,25 +477,25 @@ void logInit()
 
   N_LOG("SYS: device UUID: %s", uuid);
 
-  I_LOG("SYS: detected hardware: 0x%02X", hardware_rev_det);
+  I_LOG("SYS: detected hardware: 0x%02X", hardwareManager.hardware_rev_det);
 
-  N_LOG("SYS: hw rev: %s, fw ver.: %s", hw_revision, fw_version);
+  N_LOG("SYS: hw rev: %s, fw ver.: %s", hardwareManager.hw_revision, fw_version);
 
-  N_LOG("I2C: sniffer capable hardware: %s", i2c_sniffer_capable ? "yes" : "no");
+  N_LOG("I2C: sniffer capable hardware: %s", hardwareManager.i2c_sniffer_capable ? "yes" : "no");
 
-  D_LOG("I2C: master pins - SDA: %d SCL: %d", master_sda_pin, master_scl_pin);
+  D_LOG("I2C: master pins - SDA: %d SCL: %d", i2cManager.master_sda_pin, i2cManager.master_scl_pin);
 
-  D_LOG("I2C: slave pins - SDA: %d SCL: %d", slave_sda_pin, slave_scl_pin);
+  D_LOG("I2C: slave pins - SDA: %d SCL: %d", i2cManager.slave_sda_pin, i2cManager.slave_scl_pin);
 
-  if (i2c_sniffer_capable)
+  if (hardwareManager.i2c_sniffer_capable)
   {
-    D_LOG("I2C: sniffer pins - SDA: %d SCL: %d", sniffer_sda_pin, sniffer_scl_pin);
+    D_LOG("I2C: sniffer pins - SDA: %d SCL: %d", i2cManager.sniffer_sda_pin, i2cManager.sniffer_scl_pin);
     D_LOG("I2C: debug menu: %s", systemConfig.i2cmenu ? "on" : "off");
     D_LOG("I2C: sniffer state: %s", systemConfig.i2c_sniffer ? "on" : "off");
   }
 }
 
-void log_mem_info()
+void logMemInfo()
 {
   I_LOG("SYS: mem free: %d, mem low: %d, mem block: %u", sys.getMemHigh(), sys.getMemLow(), sys.getMaxFreeBlockSize());
 }

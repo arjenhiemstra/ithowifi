@@ -86,18 +86,18 @@ void end_fs()
     ACTIVE_FS.end();
 }
 
-void check_partition_tables()
+void checkPartitionTables()
 {
     const esp_partition_t *coredump_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_COREDUMP, "coredump");
     D_LOG("SYS: check coredump partition present: %s", coredump_partition != NULL ? "YES" : "NO");
     if (coredump_partition == NULL)
     {
         // coredump not present, repartition
-        repartition_device("coredump");
+        repartitionDevice("coredump");
     }
 }
 
-void backup_all_configs()
+void backupAllConfigs()
 {
     D_LOG("SYS: Save all configs");
 
@@ -160,7 +160,7 @@ void change_partitions_to_coredump()
 
         NVS.setInt("partupdated", static_cast<uint8_t>(1));
 
-        backup_all_configs();
+        backupAllConfigs();
 
         NVS.close();
 
@@ -173,7 +173,7 @@ void change_partitions_to_coredump()
     }
 }
 
-void repartition_device(const char *mode)
+void repartitionDevice(const char *mode)
 {
     const esp_partition_t *coredump_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_COREDUMP, "coredump");
     const esp_partition_t *spiffs = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS, "spiffs");
@@ -187,7 +187,7 @@ void repartition_device(const char *mode)
         }
         else
         {
-            D_LOG("SYS: repartition_device() standard detect error");
+            D_LOG("SYS: repartitionDevice() standard detect error");
         }
     }
     else if (strcmp(mode, "coredump") == 0)
@@ -199,16 +199,16 @@ void repartition_device(const char *mode)
         }
         else
         {
-            D_LOG("SYS: repartition_device() coredump detect error");
+            D_LOG("SYS: repartitionDevice() coredump detect error");
         }
     }
     else
     {
-        D_LOG("SYS: repartition_device() unknown mode");
+        D_LOG("SYS: repartitionDevice() unknown mode");
     }
 }
 
-int current_partition_scheme()
+int currentPartitionScheme()
 {
     if (validate_table(ithowifi_parttable_min_spiffs))
     {

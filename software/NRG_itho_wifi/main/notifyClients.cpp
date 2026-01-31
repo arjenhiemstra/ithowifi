@@ -2,13 +2,7 @@
 #include "notifyClients.h"
 
 
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-struct mg_mgr mgr;
-const char *s_listen_on_ws = "ws://0.0.0.0:8000";
-const char *s_listen_on_http = "http://0.0.0.0";
-#else
 AsyncWebSocket ws("/ws");
-#endif
 
 SemaphoreHandle_t mutexJSONLog;
 SemaphoreHandle_t mutexWSsend;
@@ -22,11 +16,7 @@ void notifyClients(const char *message)
   if (xSemaphoreTake(mutexWSsend, (TickType_t)100 / portTICK_PERIOD_MS) == pdTRUE)
   {
 
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-    wsSendAll(&mgr, message);
-#else
     ws.textAll(message);
-#endif
 
     xSemaphoreGive(mutexWSsend);
   }
@@ -45,18 +35,6 @@ void notifyClients(JsonObject obj)
     notifyClients(buffer);
   }
   delete[] buffer;
-}
-
-void wsSendAll(void *arg, const char *message)
-{
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-  struct mg_mgr *mgr = (struct mg_mgr *)arg;
-  for (struct mg_connection *c = mgr->conns; c != NULL; c = c->next)
-  {
-    mg_ws_send(c, message, strlen(message), WEBSOCKET_OP_TEXT);
-  }
-#else
-#endif
 }
 
 void jsonSysmessage(const char *id, const char *message)

@@ -1,21 +1,12 @@
 #include "globals.h"
 
-bool i2c_sniffer_capable = false;
-uint8_t hardware_rev_det = 0;
+// Hardware globals now managed by HardwareManager (see managers/HardwareManager.cpp)
+// Removed: i2c_sniffer_capable, hardware_rev_det, gpio pins, hardware strings
 
-gpio_num_t wifi_led_pin = GPIO_NUM_17;
-gpio_num_t status_pin = GPIO_NUM_16;
-gpio_num_t itho_irq_pin = GPIO_NUM_4;
-gpio_num_t boot_state_pin = GPIO_NUM_0;
-gpio_num_t fail_save_pin = GPIO_NUM_0;
-// gpio_num_t itho_status_pin = GPIO_NUM_0;
+// Network clients now managed by NetworkManager (see managers/NetworkManager.cpp)
+// Removed: WiFiClientSecure client, WiFiClient defaultclient
 
-const char *cve2 = "2";
-const char *non_cve1 = "NON-CVE 1";
-const char *hw_revision = nullptr;
+// RF communication objects now managed by RFManager (see managers/RFManager.cpp)
+// Removed: IthoCC1101 rf, IthoPacket packet
 
-WiFiClientSecure client;
-WiFiClient defaultclient;
-
-IthoCC1101 rf;
-IthoPacket packet;
+// All major hardware/communication globals are now managed by manager classes (Phases 1-3 complete)

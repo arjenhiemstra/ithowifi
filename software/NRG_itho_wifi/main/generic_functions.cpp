@@ -138,7 +138,7 @@ void getDeviceInfoJSON(JsonObject root)
   }
 }
 
-bool itho_status_ready()
+bool ithoStatusReady()
 {
   auto bp = [&](bool a, bool b)
   { return (a ? 1 : 0) | ((b ? 1 : 0) << 1); };
@@ -282,63 +282,63 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
 
   if (strcmp(command, "away") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoAway);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoAway);
   }
   else if (strcmp(command, "low") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoLow);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoLow);
   }
   else if (strcmp(command, "medium") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoMedium);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoMedium);
   }
   else if (strcmp(command, "high") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoHigh);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoHigh);
   }
   else if (strcmp(command, "timer1") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoTimer1);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoTimer1);
   }
   else if (strcmp(command, "timer2") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoTimer2);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoTimer2);
   }
   else if (strcmp(command, "timer3") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoTimer3);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoTimer3);
   }
   else if (strcmp(command, "cook30") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoCook30);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoCook30);
   }
   else if (strcmp(command, "cook60") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoCook60);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoCook60);
   }
   else if (strcmp(command, "auto") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoAuto);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoAuto);
   }
   else if (strcmp(command, "autonight") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoAutoNight);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoAutoNight);
   }
   else if (strcmp(command, "join") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoJoin);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoJoin);
   }
   else if (strcmp(command, "leave") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoLeave);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoLeave);
   }
   else if (strcmp(command, "motion_on") == 0)
   {
-    rf.send2E10(remote_index, IthoCommand::IthoPIRmotionOn);
+    rfManager.radio.send2E10(remote_index, IthoCommand::IthoPIRmotionOn);
   }
   else if (strcmp(command, "motion_off") == 0)
   {
-    rf.send2E10(remote_index, IthoCommand::IthoPIRmotionOff);
+    rfManager.radio.send2E10(remote_index, IthoCommand::IthoPIRmotionOff);
   }
   else
   {
@@ -483,25 +483,25 @@ void updateItho()
 {
   if (systemConfig.itho_rf_support)
   {
-    IthoCMD.once_ms(150, add2queue);
+    IthoCMD.once_ms(150, addToQueue);
   }
   else
   {
-    add2queue();
+    addToQueue();
   }
 }
 
-void add2queue()
+void addToQueue()
 {
-  ithoQueue.add2queue(nextIthoVal, nextIthoTimer, systemConfig.nonQ_cmd_clearsQ);
+  ithoQueue.addToQueue(nextIthoVal, nextIthoTimer, systemConfig.nonQ_cmd_clearsQ);
 }
 
 void setRFdebugLevel(uint8_t level)
 {
-  rf.setAllowAll(true);
+  rfManager.radio.setAllowAll(true);
   if (level == 2)
   {
-    rf.setAllowAll(false);
+    rfManager.radio.setAllowAll(false);
   }
   I_LOG("SYS: RF debug level = %d", level);
 }
@@ -644,7 +644,7 @@ int compareVersions(const std::string &v1, const std::string &v2)
   return pre1.compare(pre2); // Compare pre-releases if both are not empty
 }
 
-void check_firmware_update()
+void checkFirmwareUpdate()
 {
   WiFiClientSecure *secclient = new WiFiClientSecure;
   if (secclient)
@@ -667,12 +667,12 @@ void check_firmware_update()
           DeserializationError error = deserializeJson(root, payload);
           if (!error)
           {
-            firmwareInfo.fw_update_available = compareVersions(root["hw_rev"][hw_revision]["latest_fw"] | "error", fw_version);
+            firmwareInfo.fw_update_available = compareVersions(root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", fw_version);
 
-            strncpy(firmwareInfo.latest_fw, root["hw_rev"][hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
-            Serial.printf("latest_fw:%s\n", root["hw_rev"][hw_revision]["latest_fw"] | "error");
-            strncpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
-            Serial.printf("latest_beta_fw:%s\n", root["hw_rev"][hw_revision]["latest_beta_fw"] | "error");
+            strncpy(firmwareInfo.latest_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
+            Serial.printf("latest_fw:%s\n", root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error");
+            strncpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
+            Serial.printf("latest_beta_fw:%s\n", root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error");
 
             D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);
             // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful

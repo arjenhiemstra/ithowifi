@@ -10,18 +10,8 @@
 #include <freertos/task.h>
 #include "sys_log.h"
 
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-#include "mongoose.h"
-extern struct mg_mgr mgr;
-extern const char *s_listen_on_ws;
-extern const char *s_listen_on_http;
-#else
 extern AsyncWebSocket ws;
-#endif
 
-
-
-// extern AsyncWebSocket ws;
 extern SemaphoreHandle_t mutexJSONLog;
 extern SemaphoreHandle_t mutexWSsend;
 
@@ -45,8 +35,6 @@ extern size_t content_len;
 
 void notifyClients(const char *message);
 void notifyClients(JsonObject obj);
-void wsSendAll(void *arg, const char *message);
-
 void jsonSysmessage(const char *id, const char *message);
 void logMessagejson(const char *message, logtype type);
 void logMessagejson(JsonObject obj, logtype type);
