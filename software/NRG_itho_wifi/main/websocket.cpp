@@ -1,4 +1,5 @@
 #include "websocket.h"
+#include "managers/SecureWebCommLite.h"
 
 static std::unordered_map<uint32_t, std::string> g_wsBuffers;
 AsyncWebServer wsserver(8000);
@@ -8,6 +9,11 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 
 void websocketInit()
 {
+  // Initialize lightweight secure communication
+  if (!secureWebCommLite.init()) {
+    W_LOG("WEBSOCKET: Secure communication init failed");
+  }
+
   // attach AsyncWebSocket
   ws.onEvent(onWsEvent);
   wsserver.addHandler(&ws);
@@ -176,6 +182,29 @@ void jsonWsSend(const char *rootName)
 void handle_ws_message(JsonObject root)
 {
   // D_LOG("%s", msg.c_str());
+
+  // SECURITY LAYER 2: Handle session key request
+  if (root["command"].is<const char*>()) {
+    const char* cmd = root["command"];
+    if (strcmp(cmd, "get_session_key") == 0) {
+      secureWebCommLite.send_session_key_response();
+      return;
+    }
+  }
+
+  // SECURITY LAYER 2: Handle encrypted credential
+  if (root["encrypted_credential"].is<bool>()) {
+    if (secureWebCommLite.handle_encrypted_credential(root)) {
+      JsonDocument response;
+      response["credential_update"] = "success";
+      notifyClients(response.as<JsonObject>());
+    } else {
+      JsonDocument response;
+      response["credential_update"] = "failed";
+      notifyClients(response.as<JsonObject>());
+    }
+    return;
+  }
 
   if (root["wifiscan"].is<bool>() && root["wifiscan"].as<bool>())
   {

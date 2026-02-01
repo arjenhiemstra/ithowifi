@@ -136,13 +136,35 @@ bool WifiConfig::set(JsonObject obj)
   }
   if (!obj["passwd"].isNull())
   {
-    updated = true;
-    strlcpy(passwd, obj["passwd"] | "", sizeof(passwd));
+    const char* new_password = obj["passwd"] | "";
+
+    // SECURITY: Ignore placeholder, only update if actual new password
+    if (strcmp(new_password, "********") != 0 && strlen(new_password) > 0)
+    {
+      updated = true;
+      strlcpy(passwd, new_password, sizeof(passwd));
+    }
+    else if (strlen(new_password) == 0)
+    {
+      updated = true;
+      memset(passwd, 0, sizeof(passwd));
+    }
   }
   if (!obj["appasswd"].isNull())
   {
-    updated = true;
-    strlcpy(appasswd, obj["appasswd"] | "", sizeof(appasswd));
+    const char* new_password = obj["appasswd"] | "";
+
+    // SECURITY: Ignore placeholder
+    if (strcmp(new_password, "********") != 0 && strlen(new_password) > 0)
+    {
+      updated = true;
+      strlcpy(appasswd, new_password, sizeof(appasswd));
+    }
+    else if (strlen(new_password) == 0)
+    {
+      updated = true;
+      memset(appasswd, 0, sizeof(appasswd));
+    }
   }
   if (!obj["dhcp"].isNull())
   {
@@ -205,8 +227,24 @@ bool WifiConfig::set(JsonObject obj)
 void WifiConfig::get(JsonObject obj) const
 {
   obj["ssid"] = ssid;
-  obj["passwd"] = passwd;
-  obj["appasswd"] = appasswd;
+
+  // SECURITY: Never send WiFi passwords to web UI
+  if (strlen(passwd) > 0) {
+    obj["passwd"] = "********";
+    obj["passwd_set"] = true;
+  } else {
+    obj["passwd"] = "";
+    obj["passwd_set"] = false;
+  }
+
+  if (strlen(appasswd) > 0) {
+    obj["appasswd"] = "********";
+    obj["appasswd_set"] = true;
+  } else {
+    obj["appasswd"] = "";
+    obj["appasswd_set"] = false;
+  }
+
   obj["dhcp"] = dhcp;
   obj["ip"] = ip;
   obj["subnet"] = subnet;

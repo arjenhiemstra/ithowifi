@@ -93,8 +93,21 @@ bool SystemConfig::set(JsonObject obj)
   }
   if (!obj["sys_password"].isNull())
   {
-    updated = true;
-    strlcpy(sys_password, obj["sys_password"] | "", sizeof(sys_password));
+    const char* new_password = obj["sys_password"] | "";
+
+    // SECURITY: Ignore placeholder, only update if actual new password
+    if (strcmp(new_password, "********") != 0 && strlen(new_password) > 0)
+    {
+      updated = true;
+      strlcpy(sys_password, new_password, sizeof(sys_password));
+    }
+    // If empty string sent, means user wants to clear password
+    else if (strlen(new_password) == 0)
+    {
+      updated = true;
+      memset(sys_password, 0, sizeof(sys_password));
+    }
+    // If "********", ignore (user didn't change the password field)
   }
   if (!obj["syssec_web"].isNull())
   {
@@ -154,8 +167,21 @@ bool SystemConfig::set(JsonObject obj)
   }
   if (!obj["mqtt_password"].isNull())
   {
-    updated = true;
-    strlcpy(mqtt_password, obj["mqtt_password"] | "", sizeof(mqtt_password));
+    const char* new_password = obj["mqtt_password"] | "";
+
+    // SECURITY: Ignore placeholder, only update if actual new password
+    if (strcmp(new_password, "********") != 0 && strlen(new_password) > 0)
+    {
+      updated = true;
+      strlcpy(mqtt_password, new_password, sizeof(mqtt_password));
+    }
+    // If empty string sent, clear password
+    else if (strlen(new_password) == 0)
+    {
+      updated = true;
+      memset(mqtt_password, 0, sizeof(mqtt_password));
+    }
+    // If "********", ignore
   }
   if (!obj["mqtt_port"].isNull())
   {
@@ -370,7 +396,16 @@ void SystemConfig::get(JsonObject obj) const
   {
     get_sys_settings = false;
     obj["sys_username"] = sys_username;
-    obj["sys_password"] = sys_password;
+
+    // SECURITY: Never send actual password to web UI
+    if (strlen(sys_password) > 0) {
+      obj["sys_password"] = "********";
+      obj["sys_password_set"] = true;
+    } else {
+      obj["sys_password"] = "";
+      obj["sys_password_set"] = false;
+    }
+
     obj["syssec_web"] = syssec_web;
     obj["syssec_api"] = syssec_api;
     obj["syssec_edit"] = syssec_edit;
@@ -412,7 +447,16 @@ void SystemConfig::get(JsonObject obj) const
     obj["mqtt_active"] = mqtt_active;
     obj["mqtt_serverName"] = mqtt_serverName;
     obj["mqtt_username"] = mqtt_username;
-    obj["mqtt_password"] = mqtt_password;
+
+    // SECURITY: Never send MQTT password to web UI
+    if (strlen(mqtt_password) > 0) {
+      obj["mqtt_password"] = "********";
+      obj["mqtt_password_set"] = true;
+    } else {
+      obj["mqtt_password"] = "";
+      obj["mqtt_password_set"] = false;
+    }
+
     obj["mqtt_port"] = mqtt_port;
     obj["mqtt_version"] = mqtt_version;
     obj["mqtt_base_topic"] = mqtt_base_topic;
