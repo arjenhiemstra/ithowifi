@@ -48,7 +48,7 @@ void jsonWsSend(const char *rootName)
       nested["hostname"] = hostName();
     }
   }
-  else if (strcmp(rootName, "wifiStat") == 0)
+  else if (strcmp(rootName, "wifistat") == 0)
   {
 
     JsonObject wifiinfo = root[rootName].to<JsonObject>();
@@ -121,7 +121,7 @@ void jsonWsSend(const char *rootName)
     uint8_t count = getIthoStatusJSON(nested);
     root["count"] = count;
     root["target"] = "hadisc";
-    root["ithoStatusReady"] = ithoStatusReady();
+    root["itho_status_ready"] = ithoStatusReady();
     root["iis"] = itho_init_status;
   }
   else if (strcmp(rootName, "hadiscsettings") == 0)
@@ -367,9 +367,9 @@ void handle_ws_message(JsonObject root)
   {
     jsonWsSend("wifisettings");
   }
-  if (root["wifiStat"].is<bool>() && root["wifiStat"].as<bool>())
+  if (root["wifistat"].is<bool>() && root["wifistat"].as<bool>())
   {
-    jsonWsSend("wifiStat");
+    jsonWsSend("wifistat");
   }
   if (root["syssetup"].is<bool>() && root["syssetup"].as<bool>())
   {
