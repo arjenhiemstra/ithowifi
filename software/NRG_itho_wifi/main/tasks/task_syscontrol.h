@@ -51,6 +51,6 @@ void updateQueue();
 bool writeIthoVal(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
 void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin);
 
-#include "tasks/WiFiConnectionManager.h"
-#include "tasks/I2CQueryHandlers.h"
-#include "tasks/SensorManager.h"
+#include "managers/WiFiConnectionManager.h"
+#include "handlers/I2CQueryHandlers.h"
+#include "managers/SensorManager.h"

@@ -55,7 +55,7 @@ void webServerInit();
 #define CONFIG_LWIP_IPV4 1
 #endif // CONFIG_LWIP_IPV4
 #endif // ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 1, 0)
-#include "tasks/WebServerHandlers.h"
+#include "handlers/WebServerHandlers.h"
 #include "api/WebAPI.h"
-#include "tasks/FileHandlers.h"
-#include "tasks/WebSocketHandlers.h"
+#include "handlers/FileHandlers.h"
+#include "handlers/WebSocketHandlers.h"
