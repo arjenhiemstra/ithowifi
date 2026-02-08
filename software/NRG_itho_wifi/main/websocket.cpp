@@ -10,8 +10,9 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 void websocketInit()
 {
   // Initialize lightweight secure communication
-  if (!secureWebCommLite.init()) {
-    W_LOG("WEBSOCKET: Secure communication init failed");
+  if (!secureWebCommLite.init())
+  {
+    W_LOG("WEB: Secure communication init failed");
   }
 
   // attach AsyncWebSocket
@@ -24,7 +25,7 @@ void websocketInit()
   {
     webSerial = new WebSerial();
     webSerial->onMessage([](const std::string &msg)
-                        { Serial.println(msg.c_str()); });
+                         { Serial.println(msg.c_str()); });
     if (systemConfig.syssec_web)
     {
       webSerial->setAuthentication(systemConfig.sys_username, systemConfig.sys_password);
@@ -41,6 +42,9 @@ void jsonWsSend(const char *rootName)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
     wifiConfig.get(nested);
+    // Mask passwords before sending to web UI
+    nested["passwd"] = strlen(wifiConfig.passwd) > 0 ? "********" : "";
+    nested["appasswd"] = strlen(wifiConfig.appasswd) > 0 ? "********" : "";
     if (strcmp(wifiConfig.dhcp, "on") == 0)
     {
       nested["ip"] = WiFi.localIP().toString();
@@ -96,6 +100,9 @@ void jsonWsSend(const char *rootName)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
     systemConfig.get(nested);
+    // Mask passwords before sending to web UI
+    nested["sys_password"] = strlen(systemConfig.sys_password) > 0 ? "********" : "";
+    nested["mqtt_password"] = strlen(systemConfig.mqtt_password) > 0 ? "********" : "";
   }
   else if (strcmp(rootName, "logsettings") == 0)
   {
@@ -129,6 +136,9 @@ void jsonWsSend(const char *rootName)
     root["target"] = "hadisc";
     root["itho_status_ready"] = ithoStatusReady();
     root["iis"] = itho_init_status;
+    // Include RF and virtual remote device info for HA discovery
+    getRFDevicesForHADiscJSON(root.as<JsonObject>());
+    getVirtualRemotesForHADiscJSON(root.as<JsonObject>());
   }
   else if (strcmp(rootName, "hadiscsettings") == 0)
   {
@@ -184,26 +194,14 @@ void handle_ws_message(JsonObject root)
   // D_LOG("%s", msg.c_str());
 
   // SECURITY LAYER 2: Handle session key request
-  if (root["command"].is<const char*>()) {
-    const char* cmd = root["command"];
-    if (strcmp(cmd, "get_session_key") == 0) {
+  if (root["command"].is<const char *>())
+  {
+    const char *cmd = root["command"];
+    if (strcmp(cmd, "get_session_key") == 0)
+    {
       secureWebCommLite.send_session_key_response();
       return;
     }
-  }
-
-  // SECURITY LAYER 2: Handle encrypted credential
-  if (root["encrypted_credential"].is<bool>()) {
-    if (secureWebCommLite.handle_encrypted_credential(root)) {
-      JsonDocument response;
-      response["credential_update"] = "success";
-      notifyClients(response.as<JsonObject>());
-    } else {
-      JsonDocument response;
-      response["credential_update"] = "failed";
-      notifyClients(response.as<JsonObject>());
-    }
-    return;
   }
 
   if (root["wifiscan"].is<bool>() && root["wifiscan"].as<bool>())
@@ -233,16 +231,98 @@ void handle_ws_message(JsonObject root)
   // ---------- WiFi/system/log/hadisc config ----------
   if (root["wifisettings"].is<JsonObject>())
   {
-    if (wifiConfig.set(root["wifisettings"].as<JsonObject>()))
+    JsonObject wifiObj = root["wifisettings"].as<JsonObject>();
+    // Decrypt inline secure credentials before set() processes the fields
+    if (wifiObj["secure_credentials"].is<JsonObject>())
+    {
+      JsonObject creds = wifiObj["secure_credentials"].as<JsonObject>();
+      char decrypted[65];
+      if (creds["passwd"].is<JsonObject>())
+      {
+        const char *ct = creds["passwd"]["ct"] | "";
+        const char *nonce = creds["passwd"]["nonce"] | "";
+        if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
+        {
+          strlcpy(wifiConfig.passwd, decrypted, sizeof(wifiConfig.passwd));
+        }
+      }
+      if (creds["appasswd"].is<JsonObject>())
+      {
+        const char *ct = creds["appasswd"]["ct"] | "";
+        const char *nonce = creds["appasswd"]["nonce"] | "";
+        if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
+        {
+          strlcpy(wifiConfig.appasswd, decrypted, sizeof(wifiConfig.appasswd));
+        }
+      }
+      mbedtls_platform_zeroize(decrypted, sizeof(decrypted));
+      wifiObj.remove("secure_credentials");
+    }
+    if (wifiConfig.set(wifiObj))
     {
       saveWifiConfigflag = true;
     }
   }
   if (root["systemsettings"].is<JsonObject>())
   {
-    if (systemConfig.set(root["systemsettings"].as<JsonObject>()))
+    JsonObject sysObj = root["systemsettings"].as<JsonObject>();
+    // Decrypt inline secure credentials before set() processes the fields
+    if (sysObj["secure_credentials"].is<JsonObject>())
+    {
+      JsonObject creds = sysObj["secure_credentials"].as<JsonObject>();
+      char decrypted[65];
+      if (creds["sys_password"].is<JsonObject>())
+      {
+        const char *ct = creds["sys_password"]["ct"] | "";
+        const char *nonce = creds["sys_password"]["nonce"] | "";
+        if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
+        {
+          strlcpy(systemConfig.sys_password, decrypted, sizeof(systemConfig.sys_password));
+        }
+      }
+      if (creds["mqtt_password"].is<JsonObject>())
+      {
+        const char *ct = creds["mqtt_password"]["ct"] | "";
+        const char *nonce = creds["mqtt_password"]["nonce"] | "";
+        if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
+        {
+          strlcpy(systemConfig.mqtt_password, decrypted, sizeof(systemConfig.mqtt_password));
+        }
+      }
+      mbedtls_platform_zeroize(decrypted, sizeof(decrypted));
+      sysObj.remove("secure_credentials");
+    }
+    if (systemConfig.set(sysObj))
     {
       saveSystemConfigflag = true;
+      remotes.setMaxRemotes(systemConfig.itho_numrfrem);
+      virtualRemotes.setMaxRemotes(systemConfig.itho_numvrem);
+
+      // Apply itho_pwm2i2c: send I2C init command on CVE devices when enabled
+      if (systemConfig.itho_pwm2i2c == 1 &&
+          (hardwareManager.hardware_rev_det == 0x3F || hardwareManager.hardware_rev_det == 0x03))
+      {
+        sendI2CPWMinit();
+      }
+
+      // Apply i2c_safe_guard and i2c_sniffer: update runtime state
+      if (hardwareManager.i2c_sniffer_capable)
+      {
+        auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
+        sg->i2c_safe_guard_enabled = (systemConfig.i2c_safe_guard > 0 &&
+                                       currentIthoDeviceID() == 0x1B &&
+                                       systemConfig.syssht30 == 0 &&
+                                       currentItho_fwversion() >= 25);
+        sg->sniffer_enabled = (systemConfig.i2c_sniffer == 1);
+        if (sg->i2c_safe_guard_enabled || sg->sniffer_enabled)
+          i2cSnifferEnable();
+        else if (!sg->sniffer_web_enabled)
+          i2cSnifferDisable();
+      }
+
+      // Apply fw_check: trigger firmware update check soon when enabled
+      if (systemConfig.fw_check)
+        getFWupdateInfo = millis() - 24UL * 60 * 60 * 1000 - 1;
     }
   }
   if (root["logsettings"].is<JsonObject>())
@@ -316,7 +396,7 @@ void handle_ws_message(JsonObject root)
       {
         uint8_t idx = root["index"].as<uint8_t>();
         i2cQueueAddCmd([idx]()
-                          { getSetting(idx, false, true, false); });
+                       { getSetting(idx, false, true, false); });
       }
       break;
     }
@@ -449,13 +529,13 @@ void handle_ws_message(JsonObject root)
     bool upd = root["update"].as<bool>();
 
     i2cQueueAddCmd([idx, upd]()
-                      { getSetting(idx, upd, false, true); });
+                   { getSetting(idx, upd, false, true); });
   }
   if (root["ithosetrefresh"].is<uint8_t>())
   {
     uint8_t idx = root["ithosetrefresh"].as<uint8_t>();
     i2cQueueAddCmd([idx]()
-                      { getSetting(idx, true, false, false); });
+                   { getSetting(idx, true, false, false); });
   }
   if (root["ithosetupdate"].is<uint8_t>() && root["value"].is<float>())
   {
@@ -634,8 +714,8 @@ void handle_ws_message(JsonObject root)
         systemConfig.module_rf_id[2] = id2;
       }
       rfManager.radio.setDefaultID(systemConfig.module_rf_id[0],
-                      systemConfig.module_rf_id[1],
-                      systemConfig.module_rf_id[2]);
+                                   systemConfig.module_rf_id[1],
+                                   systemConfig.module_rf_id[2]);
       saveSystemConfigflag = true;
     }
   }
@@ -662,7 +742,7 @@ void handle_ws_message(JsonObject root)
   if (root["resethadconf"].is<bool>() && root["resethadconf"].as<bool>())
   {
     resetHADiscConfigflag = true;
-  }  
+  }
   if (root["format"].is<bool>() && root["format"].as<bool>())
   {
     formatFileSystem = true;

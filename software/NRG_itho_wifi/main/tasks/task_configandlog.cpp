@@ -234,7 +234,7 @@ void execLogAndConfigTasks()
     {
       logMessagejson("Failed resetting HA Discovery settings", WEBINTERFACE);
     }
-  }  
+  }
   if (saveAllConfigsflag)
   {
     saveAllConfigsflag = false;
