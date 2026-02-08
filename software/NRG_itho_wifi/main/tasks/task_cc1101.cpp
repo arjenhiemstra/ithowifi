@@ -283,8 +283,10 @@ void TaskCC1101(void *pvParameters)
 
     systemConfig.itho_rf_support = 1;
     RemotesConfigLoaded = loadRemotesConfig("flash");
-    for (int index = 0; index < remotes.getRemoteCount(); index++)
+    for (int index = 0; index < remotes.getMaxRemotes(); index++)
     {
+      if (remotes.isEmptySlot(index))
+        continue;
       uint8_t id[3]{};
       remotes.getRemoteIDbyIndex(index, &id[0]);
       rfManager.radio.setBindAllowed(true);

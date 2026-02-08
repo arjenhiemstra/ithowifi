@@ -43,7 +43,6 @@ private:
   };
   RemoteFunctions instanceFunc{RemoteFunctions::UNSETFUNC};
   Remote remotes[MAX_NUM_OF_REMOTES];
-  int remoteCount{0};
   int maxRemotes{MAX_NUM_OF_REMOTES};
   mutable bool llMode = false;
 
@@ -80,7 +79,8 @@ public:
   IthoRemote();
   IthoRemote(RemoteFunctions instanceFunc);
   ~IthoRemote();
-  int getRemoteCount();
+  int getRemoteCount() const;
+  bool isEmptySlot(int index) const;
   // mutable volatile bool llModeTimerUpdated { false };
   bool toggleLearnLeaveMode();
   bool remoteLearnLeaveStatus()
