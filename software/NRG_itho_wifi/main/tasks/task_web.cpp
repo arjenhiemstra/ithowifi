@@ -4,7 +4,6 @@
 #include "webroot/edit_html_gz.h"
 #include "webroot/favicon_png_gz.h"
 #include "webroot/index_html_gz.h"
-#include "webroot/jquery_min_js_gz.h"
 #include "webroot/pure_min_css_gz.h"
 
 #define TASK_WEB_PRIO 5
@@ -150,12 +149,6 @@ void webServerInit()
     request->send(response); });
 
   // javascript files
-  server.on("/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/javascript", jquery_min_js_gz, jquery_min_js_gz_len, nullptr);
-    response->addHeader("Content-Encoding", "gzip");
-    request->send(response); });
-
   server.on("/controls.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     AsyncWebServerResponse *response = request->beginResponse(200, "application/javascript", controls_js_gz, controls_js_gz_len, nullptr);
@@ -168,7 +161,15 @@ void webServerInit()
     AsyncResponseStream *response = request->beginResponseStream("application/javascript");
     response->addHeader("Server", "Itho WiFi Web Server");
 
-    response->print("var on_ap = false; var hostname = '");
+    int wizardStep = 0;
+    if (ACTIVE_FS.exists("/wizard_state")) {
+      File f = ACTIVE_FS.open("/wizard_state", "r");
+      if (f) { wizardStep = f.parseInt(); f.close(); }
+    }
+
+    response->print("var on_ap = false; var wizard_step = ");
+    response->print(wizardStep);
+    response->print("; var hostname = '");
     response->print(hostName());
     response->print("'; var fw_version = '");
     response->print(fw_version);
@@ -176,7 +177,9 @@ void webServerInit()
     response->print(hardwareManager.hw_revision);
     response->print("'; var itho_pwm2i2c = '");
     response->print(systemConfig.itho_pwm2i2c);
-    response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_index); });");
+    response->print("'; document.addEventListener('DOMContentLoaded', function() { var h = $id('headingindex'); h.textContent = hostname; h.href = 'http://' + hostname + '.local'; var m = $id('main'); m.insertAdjacentHTML('beforeend', ");
+    response->print(wizardStep > 0 ? "html_wizard" : "html_index");
+    response->print("); execScripts(m); });");
 
     request->send(response); })
       .setFilter(ON_STA_FILTER);
@@ -186,7 +189,19 @@ void webServerInit()
     AsyncResponseStream *response = request->beginResponseStream("application/javascript");
     response->addHeader("Server", "Itho WiFi Web Server");
 
-    response->print("var on_ap = true; var hostname = '");
+    bool isFirstBoot = (strlen(wifiConfig.ssid) == 0);
+    int wizardStep = 0;
+    if (ACTIVE_FS.exists("/wizard_state")) {
+      File f = ACTIVE_FS.open("/wizard_state", "r");
+      if (f) { wizardStep = f.parseInt(); f.close(); }
+    }
+    bool showWizard = isFirstBoot || wizardStep > 0;
+
+    response->print("var on_ap = true; var first_boot = ");
+    response->print(isFirstBoot ? "true" : "false");
+    response->print("; var wizard_step = ");
+    response->print(wizardStep);
+    response->print("; var hostname = '");
     response->print(hostName());
     response->print("'; var fw_version = '");
     response->print(fw_version);
@@ -194,7 +209,9 @@ void webServerInit()
     response->print(hardwareManager.hw_revision);
     response->print("'; var itho_pwm2i2c = '");
     response->print(systemConfig.itho_pwm2i2c);
-    response->print("'; $(document).ready(function() { $('#headingindex').text(hostname); $('#headingindex').attr('href', 'http://' + hostname + '.local'); $('#main').append(html_wifisetup); });");
+    response->print("'; document.addEventListener('DOMContentLoaded', function() { var h = $id('headingindex'); h.textContent = hostname; h.href = 'http://' + hostname + '.local'; var m = $id('main'); m.insertAdjacentHTML('beforeend', ");
+    response->print(showWizard ? "html_wizard" : "html_wifisetup");
+    response->print("); execScripts(m); });");
 
     request->send(response); })
       .setFilter(ON_AP_FILTER);
