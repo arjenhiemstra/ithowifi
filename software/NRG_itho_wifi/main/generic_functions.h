@@ -29,6 +29,8 @@ const char *hostName();
 uint8_t getIthoStatusJSON(JsonObject root);
 bool ithoStatusReady();
 void getRemotesInfoJSON(JsonObject root);
+void getRFDevicesForHADiscJSON(JsonObject root);
+void getVirtualRemotesForHADiscJSON(JsonObject root);
 void getDeviceInfoJSON(JsonObject root);
 void getIthoSettingsBackupJSON(JsonObject root);
 bool ithoExecCommand(const char *command, cmdOrigin origin);

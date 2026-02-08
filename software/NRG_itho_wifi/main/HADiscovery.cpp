@@ -7,7 +7,7 @@
 #include "notifyClients.h"
 #include "sys_log.h"
 #include "generic_functions.h"
-#include <unordered_set>
+#include "config/HADiscConfig.h"
 
 // Function to normalize the unique ID
 std::string normalizeUniqueId(const std::string &input)
@@ -29,13 +29,13 @@ void addHADevInfo(JsonObject obj)
     char cu[50]{};
     snprintf(cu, sizeof(cu), "http://%s.local", hostName());
     JsonObject dev = obj["dev"].to<JsonObject>();
-    dev["ids"] = hostName();             // identifiers
-    dev["mf"] = "Arjen Hiemstra";        // manufacturer
-    dev["mdl"] = "Wifi add-on for Itho"; // model
-    dev["name"] = hostName();            // name
-    dev["hw"] = hardwareManager.hw_revision;             // hw_version
-    dev["sw"] = fw_version;              // sw_version
-    dev["cu"] = cu;                      // configuration_url
+    dev["ids"] = hostName();                 // identifiers
+    dev["mf"] = "Arjen Hiemstra";            // manufacturer
+    dev["mdl"] = "Wifi add-on for Itho";     // model
+    dev["name"] = hostName();                // name
+    dev["hw"] = hardwareManager.hw_revision; // hw_version
+    dev["sw"] = fw_version;                  // sw_version
+    dev["cu"] = cu;                          // configuration_url
 }
 
 void addHADiscoveryFan(JsonObject obj, const char *name)
@@ -63,98 +63,125 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
     componentJson["pr_mode_cmd_t"] = cmdtopic;                                         // preset_mode_command_topic
     componentJson["pr_mode_stat_t"] = ihtostatustopic;                                 // preset_mode_state_topic
 
-    JsonArray modes = componentJson["pr_modes"].to<JsonArray>(); // preset_modes
-    modes.add("Low");
-    modes.add("Medium");
-    modes.add("High");
-    modes.add("Auto");
-    modes.add("AutoNight");
-    modes.add("Timer 10min");
-    modes.add("Timer 20min");
-    modes.add("Timer 30min");
-
     std::string actualSpeedLabel;
 
     const uint8_t deviceID = currentIthoDeviceID();
     // const uint8_t version = currentItho_fwversion();
     const uint8_t deviceGroup = currentIthoDeviceGroup();
 
+    // Determine preset modes from remote type at index 0 for supported device types
+    bool useRemotePresets = false;
+    uint16_t firstRemoteType = 0;
+
+    if ((deviceGroup == 0x07 && deviceID == 0x01) ||                                                                                                  // HRU250-300
+        (deviceGroup == 0x00 && deviceID == 0x2B) ||                                                                                                  // HRU350
+        (deviceGroup == 0x00 && deviceID == 0x03) ||                                                                                                  // HRU-eco
+        (deviceGroup == 0x00 && (deviceID == 0x4 || deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B) && systemConfig.itho_pwm2i2c != 1)) // CVE/HRU200 with PWM2I2C off
+    {
+        if (deviceGroup == 0x07 && deviceID == 0x01) // HRU250-300: use RF remote at index 0
+        {
+            firstRemoteType = static_cast<uint16_t>(remotes.getRemoteType(0));
+        }
+        else // Other supported types: use virtual remote at index 0
+        {
+            firstRemoteType = static_cast<uint16_t>(virtualRemotes.getRemoteType(0));
+        }
+        useRemotePresets = (firstRemoteType != 0);
+    }
+
+    JsonArray modes = componentJson["pr_modes"].to<JsonArray>(); // preset_modes
+    if (useRemotePresets && firstRemoteType != 0)
+    {
+        const char *presetsStr = HADiscConfig::getPresetsForType(firstRemoteType);
+        if (presetsStr && strlen(presetsStr) > 0)
+        {
+            std::string presets(presetsStr);
+            size_t pos = 0;
+            while ((pos = presets.find(',')) != std::string::npos)
+            {
+                modes.add(presets.substr(0, pos).c_str());
+                presets.erase(0, pos + 1);
+            }
+            if (!presets.empty())
+            {
+                modes.add(presets.c_str());
+            }
+        }
+    }
+    else
+    {
+        modes.add("Low");
+        modes.add("Medium");
+        modes.add("High");
+        modes.add("Auto");
+        modes.add("AutoNight");
+        modes.add("Timer 10min");
+        modes.add("Timer 20min");
+        modes.add("Timer 30min");
+    }
+
+    // Determine mid/low commands based on remote type presets
+    // e.g. RFTCVE/RFTN have Medium but no Auto, RFTAUTO/RFTAUTON have Auto but no Medium
+    const char *midCmd = "medium";
+    const char *lowCmd = "auto";
+    if (useRemotePresets && firstRemoteType != 0)
+    {
+        const char *p = HADiscConfig::getPresetsForType(firstRemoteType);
+        bool hasMedium = (p && strstr(p, "Medium") != nullptr);
+        bool hasAuto = (p && strstr(p, "Auto") != nullptr);
+        midCmd = hasAuto ? "auto" : (hasMedium ? "medium" : "medium");
+        lowCmd = "low";
+    }
+
     // N_LOG("HAD: dID:0x%02X, gID:0x%02X, devPtr:%s",deviceID, deviceGroup, ithoDeviceptr != nullptr ? "true" : "false");
     char pr_mode_val_tpl[400]{};
     char pct_cmd_tpl[300]{};
     char pct_val_tpl[100]{};
     int pr_mode_val_tpl_ver = 0;
+    const char *cmdKey = "vremotecmd";
 
     if (deviceGroup == 0x07 && deviceID == 0x01) // HRU250-300
     {
-        actualSpeedLabel = getStatusLabel(10, ithoDeviceptr);                         //-> {"Absolute speed of the fan (%)", "absolute-speed-of-the-fan_perc"}, of hru250_300.h
-        componentJson["pr_mode_cmd_tpl"] = "{\"rfremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
-
-        strncpy(pct_cmd_tpl, "{% if value > 90 %}{\"rfremotecmd\":\"high\"}{% elif value > 40 %}{\"rfremotecmd\":\"medium\"}{% elif value > 20 %}{\"rfremotecmd\":\"low\"}{% else %}{\"rfremotecmd\":\"auto\"}{% endif %}", sizeof(pct_cmd_tpl));
-        snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
-        componentJson["pl_off"] = "{\"rfremotecmd\":\"auto\"}"; // payload_off
+        actualSpeedLabel = getStatusLabel(10, ithoDeviceptr); //-> {"Absolute speed of the fan (%)", "absolute-speed-of-the-fan_perc"}, of hru250_300.h
+        cmdKey = "rfremotecmd";
         pr_mode_val_tpl_ver = 1;
     }
     else if (deviceGroup == 0x00 && deviceID == 0x2B) // HRU350
     {
-        actualSpeedLabel = getStatusLabel(0, ithoDeviceptr);                         //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hru350.h
-        componentJson["pr_mode_cmd_tpl"] = "{\"vremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
-        strncpy(pct_cmd_tpl, "{% if value > 90 %}{\"vremotecmd\":\"high\"}{% elif value > 40 %}{\"vremotecmd\":\"medium\"}{% elif value > 20 %}{\"vremotecmd\":\"low\"}{% else %}{\"vremotecmd\":\"auto\"}{% endif %}", sizeof(pct_cmd_tpl));
-
-        snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
-        componentJson["pl_off"] = "{\"vremotecmd\":\"auto\"}"; // payload_off
+        actualSpeedLabel = getStatusLabel(0, ithoDeviceptr); //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hru350.h
         pr_mode_val_tpl_ver = 1;
     }
     else if (deviceGroup == 0x00 && deviceID == 0x03) // HRU-eco
     {
-        actualSpeedLabel = getStatusLabel(22, ithoDeviceptr);                         //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hrueco.h
-        componentJson["pr_mode_cmd_tpl"] = "{\"vremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
-        strncpy(pct_cmd_tpl, "{% if value > 90 %}{\"vremotecmd\":\"high\"}{% elif value > 40 %}{\"vremotecmd\":\"medium\"}{% elif value > 20 %}{\"vremotecmd\":\"low\"}{% else %}{\"vremotecmd\":\"auto\"}{% endif %}", sizeof(pct_cmd_tpl));
-
-        snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
-        componentJson["pl_off"] = "{\"vremotecmd\":\"auto\"}"; // payload_off
+        actualSpeedLabel = getStatusLabel(22, ithoDeviceptr); //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hrueco.h
         pr_mode_val_tpl_ver = 1;
-    }    
+    }
     else if (deviceGroup == 0x00 && deviceID == 0x0D) // WPU
     {
-        // tbd
         W_LOG("HAD: WPU not fully implemented yet for HA Auto Discovery");
     }
     else if (deviceGroup == 0x00 && (deviceID == 0x0F || deviceID == 0x30)) // Autotemp
     {
-        // tbd
         W_LOG("HAD: Autotemp not fully implemented yet for HA Auto Discovery");
     }
     else if (deviceGroup == 0x00 && deviceID == 0x0B) // DemandFlow
     {
-        // tbd
         W_LOG("HAD: DemandFlow not fully implemented yet for HA Auto Discovery");
     }
-    else if ((deviceGroup == 0x00 && (deviceID == 0x4 || deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B)) || systemConfig.itho_pwm2i2c != 1) // assume CVE and HRU200 / or PWM2I2C is off
+    else if (deviceGroup == 0x00 && (deviceID == 0x4 || deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B)) // CVE and HRU200
     {
         if (deviceID == 0x1D) // hru200
-        {
             actualSpeedLabel = getStatusLabel(0, ithoDeviceptr); //-> {"Ventilation setpoint (%)", "ventilation-setpoint_perc"}, of hru200.h
-        }
         else if (deviceID == 0x4) // cve eco2 0x4
-        {
             actualSpeedLabel = getSpeedLabel(); //-> {"Speed status", "speed-status"}, of error_info_labels.h
-        }
         else if (deviceID == 0x14) // cve 0x14
-        {
             actualSpeedLabel = getStatusLabel(0, ithoDeviceptr); //-> {"Ventilation level (%)", "ventilation-level_perc"}, of cve14.h
-        }
         else if (deviceID == 0x1B) // cve 0x1B
-        {
             actualSpeedLabel = getStatusLabel(0, ithoDeviceptr); //-> {"Ventilation setpoint (%)", "ventilation-setpoint_perc"}, of cve1b.h
-        }
+
         if (systemConfig.itho_pwm2i2c != 1)
         {
             pr_mode_val_tpl_ver = 1;
-            snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
-            strncpy(pct_cmd_tpl, "{% if value > 90 %}{\"vremotecmd\":\"high\"}{% elif value > 40 %}{\"vremotecmd\":\"medium\"}{% elif value > 20 %}{\"vremotecmd\":\"low\"}{% else %}{\"vremotecmd\":\"auto\"}{% endif %}", sizeof(pct_cmd_tpl));
-            componentJson["pr_mode_cmd_tpl"] = "{\"vremotecmd\":\"{{value.lower()}}\"}"; // preset_mode_command_template
-            componentJson["pl_off"] = "{\"vremotecmd\":\"auto\"}";                       // payload_off
         }
         else
         {
@@ -163,29 +190,48 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
             componentJson["pl_off"] = "0"; // payload_off
         }
     }
-    else {
+    else
+    {
         W_LOG("HAD: Device type not implemented (yet) for HA Auto Discovery");
     }
 
     if (pr_mode_val_tpl_ver == 0)
     {
         componentJson["pr_mode_cmd_tpl"] = "{%- if value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- else %}{{value.lower()}}{%- endif -%}";
-        // snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 219 %%}high{%%- elif speed > 119 %%}medium{%%- elif speed > 19 %%}low{%%- else %%}auto{%%- endif -%%}", actualSpeedLabel.c_str());
         snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 90 %%}High{%%- elif speed > 35 %%}Medium{%%- elif speed > 10 %%}Low{%%- else %%}Auto{%%- endif -%%}", actualSpeedLabel.c_str());
-
-        // strncpy(pr_mode_val_tpl, "{%- if value == 'Low' %}{{'low'}}{%- elif value == 'Medium' %}{{'medium'}}{%- elif value == 'High' %}{{'high'}}{%- elif value == 'Auto' %}{{'auto'}}{%- elif value == 'AutoNight' %}{{'autonight'}}{%- elif value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- endif -%}", sizeof(pr_mode_val_tpl));
     }
     else if (pr_mode_val_tpl_ver == 1)
     {
-        snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 90 %%}High{%%- elif speed > 35 %%}Medium{%%- elif speed > 10 %%}Low{%%- else %%}Auto{%%- endif -%%}", actualSpeedLabel.c_str());
+        char cmdTplBuf[64];
+        snprintf(cmdTplBuf, sizeof(cmdTplBuf), "{\"%s\":\"{{value.lower()}}\"}", cmdKey);
+        componentJson["pr_mode_cmd_tpl"] = cmdTplBuf; // preset_mode_command_template
+
+        snprintf(pct_cmd_tpl, sizeof(pct_cmd_tpl),
+                 "{%% if value > 90 %%}{\"%s\":\"high\"}"
+                 "{%% elif value > 40 %%}{\"%s\":\"%s\"}"
+                 "{%% elif value > 20 %%}{\"%s\":\"low\"}"
+                 "{%% else %%}{\"%s\":\"%s\"}"
+                 "{%% endif %%}",
+                 cmdKey, cmdKey, midCmd, cmdKey, cmdKey, lowCmd);
+
+        snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
+        componentJson["pl_off"] = (std::string("{\"") + cmdKey + "\":\"" + lowCmd + "\"}").c_str(); // payload_off
+
+        const char *midLabel = (strcmp(midCmd, "auto") == 0) ? "Auto" : "Medium";
+        const char *lowLabel = (strcmp(lowCmd, "auto") == 0) ? "Auto" : "Low";
+        snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl),
+                 "{%%- set speed = value_json['%s'] | int %%}"
+                 "{%%- if speed > 90 %%}High"
+                 "{%%- elif speed > 35 %%}%s"
+                 "{%%- elif speed > 10 %%}Low"
+                 "{%%- else %%}%s"
+                 "{%%- endif -%%}",
+                 actualSpeedLabel.c_str(), midLabel, lowLabel);
     }
 
     componentJson["pct_cmd_tpl"] = pct_cmd_tpl;         // percentage_command_template
     componentJson["pr_mode_val_tpl"] = pr_mode_val_tpl; // preset_mode_value_template
     componentJson["pct_val_tpl"] = pct_val_tpl;         // percentage_value_template
-
-    N_LOG("HAD: dID:0x%02X, gID:0x%02X, tpl:%d",deviceID, deviceGroup, pr_mode_val_tpl_ver);
-
 }
 
 void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
@@ -215,6 +261,213 @@ void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
 
     tmpstr = "{{ {'installed_version': value_json['add-on_fwversion'], 'latest_version': value_json['add-on_latest_fw'], 'title': 'Add-on Firmware', 'release_url': 'https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + std::string(firmwareInfo.latest_fw) + "' } | to_json }}";
     componentJson["val_tpl"] = tmpstr;
+}
+
+void addHADiscoveryRFSensors(JsonObject components, JsonObject compactJson, const char *deviceName, const char *mqttBaseTopic)
+{
+    // Process RF device sensors from compact JSON
+    JsonArray rfArray = compactJson["rf"].as<JsonArray>();
+    if (rfArray.isNull())
+        return;
+
+    char remotesinfotopic[140]{};
+    snprintf(remotesinfotopic, sizeof(remotesinfotopic), "%s%s", mqttBaseTopic, "/remotesinfo");
+
+    for (JsonObject rfDevice : rfArray)
+    {
+        int idx = rfDevice["idx"] | -1;
+        const char *remoteName = rfDevice["name"];
+        JsonArray sensors = rfDevice["sensors"].as<JsonArray>();
+
+        if (idx < 0 || remoteName == nullptr || sensors.isNull())
+            continue;
+
+        for (JsonVariant sensorVar : sensors)
+        {
+            const char *sensor = sensorVar.as<const char *>();
+            if (sensor == nullptr)
+                continue;
+
+            // Generate unique ID for this RF sensor
+            std::string uniqueId = normalizeUniqueId(std::string(deviceName) + "_rf_" + remoteName + "_" + sensor);
+
+            // Create component object
+            JsonObject componentJson = components[uniqueId].to<JsonObject>();
+            componentJson["p"] = "sensor";
+            componentJson["uniq_id"] = uniqueId;
+            componentJson["stat_t"] = remotesinfotopic;
+
+            // Set sensor-specific properties
+            if (strcmp(sensor, "temp") == 0)
+            {
+                componentJson["name"] = (std::string(remoteName) + " Temperature").c_str();
+                componentJson["val_tpl"] = ("{{ value_json['" + std::string(remoteName) + "']['temp'] | default('unknown') }}").c_str();
+                componentJson["unit_of_meas"] = "°C";
+                componentJson["dev_cla"] = "temperature";
+                componentJson["stat_cla"] = "measurement";
+            }
+            else if (strcmp(sensor, "hum") == 0)
+            {
+                componentJson["name"] = (std::string(remoteName) + " Humidity").c_str();
+                componentJson["val_tpl"] = ("{{ value_json['" + std::string(remoteName) + "']['hum'] | default('unknown') }}").c_str();
+                componentJson["unit_of_meas"] = "%";
+                componentJson["dev_cla"] = "humidity";
+                componentJson["stat_cla"] = "measurement";
+            }
+            else if (strcmp(sensor, "dewpoint") == 0)
+            {
+                componentJson["name"] = (std::string(remoteName) + " Dew Point").c_str();
+                componentJson["val_tpl"] = ("{{ value_json['" + std::string(remoteName) + "']['dewpoint'] | default('unknown') }}").c_str();
+                componentJson["unit_of_meas"] = "°C";
+                componentJson["dev_cla"] = "temperature";
+                componentJson["stat_cla"] = "measurement";
+            }
+            else if (strcmp(sensor, "co2") == 0)
+            {
+                componentJson["name"] = (std::string(remoteName) + " CO2").c_str();
+                componentJson["val_tpl"] = ("{{ value_json['" + std::string(remoteName) + "']['co2'] | default('unknown') }}").c_str();
+                componentJson["unit_of_meas"] = "ppm";
+                componentJson["dev_cla"] = "carbon_dioxide";
+                componentJson["stat_cla"] = "measurement";
+            }
+            else if (strcmp(sensor, "battery") == 0)
+            {
+                componentJson["name"] = (std::string(remoteName) + " Battery").c_str();
+                componentJson["val_tpl"] = ("{{ value_json['" + std::string(remoteName) + "']['battery'] | default('unknown') }}").c_str();
+                componentJson["unit_of_meas"] = "%";
+                componentJson["dev_cla"] = "battery";
+                componentJson["stat_cla"] = "measurement";
+            }
+            else if (strcmp(sensor, "pir") == 0)
+            {
+                componentJson["name"] = (std::string(remoteName) + " PIR").c_str();
+                componentJson["val_tpl"] = ("{{ value_json['" + std::string(remoteName) + "']['pir'] | default('unknown') }}").c_str();
+                componentJson["dev_cla"] = "motion";
+            }
+            else if (strcmp(sensor, "lastcmd") == 0)
+            {
+                componentJson["name"] = (std::string(remoteName) + " Last Command").c_str();
+                // Convert lastcmdmsg to human-readable: IthoLow->Low, IthoTimer1->Timer 10min, etc.
+                char lastcmdTpl[512]{};
+                snprintf(lastcmdTpl, sizeof(lastcmdTpl),
+                         "{%%- set cmd = value_json['%s']['lastcmdmsg'] | default('') -%%}"
+                         "{%%- if cmd.startswith('Itho') -%%}"
+                         "{%%- set c = cmd[4:] -%%}"
+                         "{%%- if c == 'Timer1' -%%}Timer 10min"
+                         "{%%- elif c == 'Timer2' -%%}Timer 20min"
+                         "{%%- elif c == 'Timer3' -%%}Timer 30min"
+                         "{%%- elif c.startswith('Cook') -%%}Cook {{ c[4:] }}min"
+                         "{%%- else -%%}{{ c }}"
+                         "{%%- endif -%%}"
+                         "{%%- else -%%}unknown{%%- endif -%%}",
+                         remoteName);
+                componentJson["val_tpl"] = lastcmdTpl;
+            }
+        }
+    }
+}
+
+// Generic helper for creating fan entities from remote device arrays (RF or virtual)
+// arrayKey: "rf" or "vr" (key in compactJson)
+// cmdKey: "rfremotecmd" or "vremotecmd" (MQTT command key)
+// idxKey: "rfremoteindex" or "vremoteindex" (MQTT index key)
+// idPrefix: "rf" or "vr" (for unique ID generation)
+// hasStateTopic: true for RF (has /remotesinfo), false for virtual (no per-remote state)
+void addHADiscoveryRemoteFan(JsonObject components, JsonObject compactJson, const char *deviceName, const char *mqttBaseTopic,
+                             const char *arrayKey, const char *cmdKey, const char *idxKey, const char *idPrefix, bool hasStateTopic)
+{
+    JsonArray devArray = compactJson[arrayKey].as<JsonArray>();
+    if (devArray.isNull())
+        return;
+
+    char cmdtopic[140]{};
+    snprintf(cmdtopic, sizeof(cmdtopic), "%s%s", mqttBaseTopic, "/cmd");
+
+    char remotesinfotopic[140]{};
+    if (hasStateTopic)
+        snprintf(remotesinfotopic, sizeof(remotesinfotopic), "%s%s", mqttBaseTopic, "/remotesinfo");
+
+    for (JsonObject device : devArray)
+    {
+        if (!device["fan"].is<bool>() || !device["fan"].as<bool>())
+            continue;
+
+        int idx = device["idx"] | -1;
+        const char *remoteName = device["name"];
+        uint16_t remoteType = device["type"] | 0;
+
+        if (idx < 0 || remoteName == nullptr)
+            continue;
+
+        std::string uniqueId = normalizeUniqueId(std::string(deviceName) + "_" + idPrefix + "_" + remoteName + "_fan");
+
+        JsonObject componentJson = components[uniqueId].to<JsonObject>();
+        componentJson["name"] = (std::string(remoteName) + " Fan").c_str();
+        componentJson["p"] = "fan";
+        componentJson["uniq_id"] = uniqueId;
+        componentJson["cmd_t"] = cmdtopic;
+        componentJson["pr_mode_cmd_t"] = cmdtopic;
+
+        if (hasStateTopic)
+            componentJson["pr_mode_stat_t"] = remotesinfotopic;
+
+        // Command template: converts preset names to commands
+        // "Timer 10min" -> "timer1", "Cook 30min" -> "cook30", etc.
+        char cmdTemplate[256]{};
+        snprintf(cmdTemplate, sizeof(cmdTemplate),
+                 "{\"%s\":\"{%%-if 'Timer' in value-%%}timer{{value[-5]}}{%%-elif 'Cook' in value-%%}cook{{value.split()[1].replace('min','')}}{%%-else-%%}{{value.lower().replace(' ','')}}{%%-endif-%%}\",\"%s\":%d}",
+                 cmdKey, idxKey, idx);
+        componentJson["pr_mode_cmd_tpl"] = cmdTemplate;
+
+        // State template (only if state topic available)
+        if (hasStateTopic)
+        {
+            char valTpl[512]{};
+            snprintf(valTpl, sizeof(valTpl),
+                     "{%%- set cmd = value_json['%s']['lastcmdmsg'] | default('') -%%}"
+                     "{%%- if cmd.startswith('Itho') -%%}"
+                     "{%%- set c = cmd[4:] -%%}"
+                     "{%%- if c == 'Timer1' -%%}Timer 10min"
+                     "{%%- elif c == 'Timer2' -%%}Timer 20min"
+                     "{%%- elif c == 'Timer3' -%%}Timer 30min"
+                     "{%%- elif c.startswith('Cook') -%%}Cook {{ c[4:] }}min"
+                     "{%%- else -%%}{{ c }}"
+                     "{%%- endif -%%}"
+                     "{%%- else -%%}unknown{%%- endif -%%}",
+                     remoteName);
+            componentJson["pr_mode_val_tpl"] = valTpl;
+        }
+
+        // Add preset modes based on remote type
+        const char *presetsStr = HADiscConfig::getPresetsForType(remoteType);
+        if (presetsStr && strlen(presetsStr) > 0)
+        {
+            JsonArray modes = componentJson["pr_modes"].to<JsonArray>();
+            std::string presets(presetsStr);
+            size_t pos = 0;
+            while ((pos = presets.find(',')) != std::string::npos)
+            {
+                modes.add(presets.substr(0, pos).c_str());
+                presets.erase(0, pos + 1);
+            }
+            if (!presets.empty())
+                modes.add(presets.c_str());
+        }
+
+        // Determine on command: prefer auto over medium (same logic as main fan midCmd)
+        const char *onCmd = "medium";
+        if (presetsStr)
+        {
+            if (strstr(presetsStr, "Auto") != nullptr)
+                onCmd = "auto";
+            else if (strstr(presetsStr, "Medium") != nullptr)
+                onCmd = "medium";
+        }
+
+        // Payload for on/off
+        componentJson["pl_on"] = (std::string("{\"") + cmdKey + "\":\"" + onCmd + "\",\"" + idxKey + "\":" + std::to_string(idx) + "}").c_str();
+        componentJson["pl_off"] = (std::string("{\"") + cmdKey + "\":\"low\",\"" + idxKey + "\":" + std::to_string(idx) + "}").c_str();
+    }
 }
 
 void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
@@ -256,13 +509,8 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
 
     if (!compactJson["sscnt"].isNull() && compactJson["sscnt"] != 0 && compactJson["sscnt"] == count)
     {
-        std::unordered_set<uint8_t> configuredIndices;
-
         for (JsonObject component : componentsArray)
         {
-
-            configuredIndices.insert(component["i"].as<uint8_t>());
-
             uint8_t index = component["i"].as<uint8_t>();
             const char *name = component["n"];
             const char *platform = component["p"].is<const char *>() ? component["p"].as<const char *>() : "sensor";
@@ -305,21 +553,6 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
                 componentJson["stat_cla"] = stateClass; // Use "sc" from compact JSON
             }
         }
-
-        // Add unconfigured items as empty components
-        int index = 0;
-        for (JsonObject::iterator it = statusitemsobj.begin(); it != statusitemsobj.end(); ++it, ++index)
-        {
-            if (configuredIndices.find(index) == configuredIndices.end())
-            {
-                // Generate unique ID for unconfigured component
-                std::string uniqueId = normalizeUniqueId(std::string(outputJson["dev"]["ids"] | "default_name") + "_sensor_i_" + std::to_string(index));
-
-                // Create empty component
-                JsonObject componentJson = components[uniqueId].to<JsonObject>();
-                componentJson["p"] = "sensor"; // Default platform
-            }
-        }
     }
     else
     {
@@ -330,4 +563,15 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
     // Add extra components (fan and firmware updates)
     addHADiscoveryFan(components, outputJson["dev"]["name"].as<const char *>());
     addHADiscoveryFWUpdate(components, outputJson["dev"]["name"].as<const char *>());
+
+    // Add RF device sensors
+    addHADiscoveryRFSensors(components, compactJson, outputJson["dev"]["name"].as<const char *>(), systemConfig.mqtt_base_topic);
+
+    // Add RF device fans
+    addHADiscoveryRemoteFan(components, compactJson, outputJson["dev"]["name"].as<const char *>(), systemConfig.mqtt_base_topic,
+                            "rf", "rfremotecmd", "rfremoteindex", "rf", true);
+
+    // Add virtual remote fans
+    addHADiscoveryRemoteFan(components, compactJson, outputJson["dev"]["name"].as<const char *>(), systemConfig.mqtt_base_topic,
+                            "vr", "vremotecmd", "vremoteindex", "vr", false);
 }

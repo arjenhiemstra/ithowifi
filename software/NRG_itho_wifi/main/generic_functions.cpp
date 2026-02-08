@@ -1,4 +1,5 @@
 #include "generic_functions.h"
+#include "config/HADiscConfig.h"
 
 #define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 2000 // firmware json response should be smaller than this
 
@@ -164,6 +165,43 @@ void getRemotesInfoJSON(JsonObject root)
 {
 
   remotes.getCapabilities(root);
+}
+
+void getRFDevicesForHADiscJSON(JsonObject root)
+{
+  // Get list of RF devices with their available sensors for HA discovery configuration
+  JsonArray devices = root["rfdevices"].to<JsonArray>();
+  D_LOG("HAD: getRFDevicesForHADiscJSON:%d", remotes.getRemoteCount());
+
+  for (int i = 0; i < remotes.getMaxRemotes(); i++)
+  {
+    if (remotes.isEmptySlot(i))
+      continue;
+    JsonObject device = devices.add<JsonObject>();
+    device["idx"] = i;
+    device["name"] = remotes.getRemoteNamebyIndex(i);
+    uint16_t remType = static_cast<uint16_t>(remotes.getRemoteType(i));
+    device["type"] = remType;
+    device["available"] = HADiscConfig::getAvailableSensorsForType(remType);
+    device["presets"] = HADiscConfig::getPresetsForType(remType);
+  }
+}
+
+void getVirtualRemotesForHADiscJSON(JsonObject root)
+{
+  JsonArray devices = root["vrdevices"].to<JsonArray>();
+
+  for (int i = 0; i < virtualRemotes.getMaxRemotes(); i++)
+  {
+    if (virtualRemotes.isEmptySlot(i))
+      continue;
+    JsonObject device = devices.add<JsonObject>();
+    device["idx"] = i;
+    device["name"] = virtualRemotes.getRemoteNamebyIndex(i);
+    uint16_t remType = static_cast<uint16_t>(virtualRemotes.getRemoteType(i));
+    device["type"] = remType;
+    device["presets"] = HADiscConfig::getPresetsForType(remType);
+  }
 }
 
 void getIthoSettingsBackupJSON(JsonObject root)

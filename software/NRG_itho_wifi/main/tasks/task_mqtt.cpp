@@ -339,6 +339,9 @@ void mqttHomeAssistantDiscovery()
   if (outputDoc.overflowed())
     E_LOG("HAD: generateHADiscoveryJson overflowed!");
 
+  // First publish empty payload to remove all previously discovered entities
+  mqttClient.publish(devicetopic, "", true);
+
   MQTTSendBuffered(outputDoc, devicetopic);
 }
 
