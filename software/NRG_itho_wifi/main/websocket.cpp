@@ -521,6 +521,22 @@ void handle_ws_message(JsonObject root)
     sysStatReq = true;
   }
 
+  // ---------- Wizard state persistence ----------
+  if (root["wizardsave"].is<int>())
+  {
+    int step = root["wizardsave"].as<int>();
+    File f = ACTIVE_FS.open("/wizard_state", "w");
+    if (f)
+    {
+      f.print(step);
+      f.close();
+    }
+  }
+  if (root["wizardclear"].is<bool>() && root["wizardclear"].as<bool>())
+  {
+    ACTIVE_FS.remove("/wizard_state");
+  }
+
   // ---------- Itho get/refresh/update settings ----------
   if (root["ithogetsetting"].is<bool>() && root["ithogetsetting"].as<bool>())
   {

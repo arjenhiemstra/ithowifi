@@ -106,25 +106,25 @@
 <script>
     var ha_dev_name = "Loading...";
     var status_items_loaded = false;
-    var hastatus_to;
 
     getSettings('hadiscinfo')
 
-    $(document).ready(function () {
-        function repeat() {
-            if (!status_items_loaded) hastatus_to = setTimeout(repeat, 100);
-            else {
-                $("#ithostatusrdy").addClass('hidden');
-                $("#ithostatusrdy").html('');
-                clearTimeout(hastatus_to);
-                getSettings('gethadiscsettings');
-            }
+    function repeat() {
+        var el = $id("ithostatusrdy");
+        if (!el) return;
+        if (!status_items_loaded) hastatus_to = setTimeout(repeat, 100);
+        else {
+            el.classList.add('hidden');
+            el.innerHTML = '';
+            clearTimeout(hastatus_to);
+            getSettings('gethadiscsettings');
         }
-        repeat();
-    });
+    }
+    repeat();
 
     function showItho(i) {
         let s = document.getElementById("iis"), f = ["31d9", "31da", "2401", "4210"];
+        if (!s) return;
         s.innerHTML = "";
         for (let x = 0; x < 4; x++) {
             let p = (i >> (2 * x)) & 3;

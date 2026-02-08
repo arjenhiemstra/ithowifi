@@ -199,13 +199,11 @@
     if (x.type === 'password') { x.type = 'text'; }
     else { x.type = 'password'; }
   }
-  $(document).ready(function () {
-    getSettings('wifisetup');
-    function repeat_wifistat() {
-      getSettings('wifistat');
-      wifistat_to = setTimeout(repeat_wifistat, 1000);
-    }
-    repeat_wifistat();
-  });
+  getSettings('wifisetup');
+  function repeat_wifistat() {
+    getSettings('wifistat');
+    wifistat_to = setTimeout(repeat_wifistat, 1000);
+  }
+  repeat_wifistat();
 
 </script>

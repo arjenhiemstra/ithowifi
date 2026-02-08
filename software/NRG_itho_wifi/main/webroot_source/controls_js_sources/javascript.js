@@ -8,6 +8,9 @@ var sensor = -1;
 var uuid = 0;
 var wifistat_to;
 var statustimer_to;
+var ithostatus_to;
+var hastatus_to;
+var remotesRefreshInterval;
 var saved_status_count = 0;
 var current_status_count = 0;
 localStorage.setItem("statustimer", 0);
@@ -451,8 +454,32 @@ class SecureCredentialManager {
 // Initialize secure credential manager
 const secureCredentials = new SecureCredentialManager();
 
+// DOM helper functions (jQuery replacement)
+function $id(id) { return document.getElementById(id); }
+function $qa(sel) { return document.querySelectorAll(sel); }
+function $q(sel) { return document.querySelector(sel); }
+function $val(id) { var el = document.getElementById(id); return el ? el.value : undefined; }
+
 var domReady = false;
-$(function () { domReady = true; });
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", function () {
+    domReady = true;
+    if (debug) console.info("DOM loaded");
+  });
+} else {
+  domReady = true;
+  if (debug) console.info("DOM loaded");
+}
+
+// Execute <script> tags after insertAdjacentHTML (which doesn't run them)
+function execScripts(container) {
+  container.querySelectorAll('script').forEach(function (old) {
+    var s = document.createElement('script');
+    s.textContent = old.textContent;
+    old.parentNode.replaceChild(s, old);
+  });
+}
 
 (async function processMessages() {
   while (messageQueue.length > 0) {
@@ -474,7 +501,8 @@ const messageHandlers = {
   logsettings: function (f) {
     var x = f.logsettings;
     processElements(x);
-    if (x.rfloglevel > 0) $('#rflog_outer').removeClass('hidden');
+    var rfo = $id('rflog_outer');
+    if (rfo && x.rfloglevel > 0) rfo.classList.remove('hidden');
   },
   wifistat: function (f) {
     processElements(f.wifistat);
@@ -485,82 +513,107 @@ const messageHandlers = {
   systemsettings: function (f) {
     var x = f.systemsettings;
     processElements(x);
+    if (wizardActive) {
+      if ("rfInitOK" in x) {
+        wizardHasRF = (x.itho_rf_support == 1 && x.rfInitOK == true);
+        wizardUpdateIndicators();
+      }
+      return;
+    }
     if ("itho_rf_support" in x) {
       if (x.itho_rf_support == 1 && x.rfInitOK == false) {
         if (confirm("For changes to take effect click 'Ok' to reboot")) {
-          $('#main').empty();
-          $('#main').append("<br><br><br><br>");
-          $('#main').append(html_reboot_script);
+          var main = $id('main');
+          main.innerHTML = '';
+          main.insertAdjacentHTML('beforeend', "<br><br><br><br>");
+          main.insertAdjacentHTML('beforeend', html_reboot_script);
+          execScripts(main);
           websock_send('{"reboot":true}');
         }
       }
-      if (x.itho_rf_support == 1 && x.rfInitOK == true) $('#remotemenu').removeClass('hidden');
-      else $('#remotemenu').addClass('hidden');
+      if (x.itho_rf_support == 1 && x.rfInitOK == true) $id('remotemenu').classList.remove('hidden');
+      else $id('remotemenu').classList.add('hidden');
     }
-    if (x.mqtt_ha_active == 1) $('#hadiscmenu').removeClass('hidden');
-    else $('#hadiscmenu').addClass('hidden');
+    if (x.mqtt_ha_active == 1) $id('hadiscmenu').classList.remove('hidden');
+    else $id('hadiscmenu').classList.add('hidden');
     if ("i2cmenu" in x) {
-      $('#i2cmenu').toggleClass('hidden', x.i2cmenu != 1);
+      $id('i2cmenu').classList.toggle('hidden', x.i2cmenu != 1);
     }
     if ("api_version" in x) {
       localStorage.setItem("api_version", x.api_version);
     }
   },
   remotes: function (f) {
-    if ($('#RemotesTable tbody tr').length > 0) {
+    var tbl = $id('RemotesTable');
+    if (!tbl) return;
+    if (tbl.querySelector('tbody tr')) {
       updateRemoteCapabilities(f.remotes);
     } else {
-      $('#RemotesTable').empty();
-      buildHtmlTableRemotes('#RemotesTable', f.remfunc, f.remotes);
+      tbl.innerHTML = '';
+      buildHtmlTableRemotes(tbl, f.remfunc, f.remotes);
     }
   },
   vremotes: function (f) {
-    $('#vremotesTable').empty();
-    buildHtmlTableRemotes('#vremotesTable', f.remfunc, f.vremotes);
+    var tbl = $id('vremotesTable');
+    if (!tbl) return;
+    tbl.innerHTML = '';
+    buildHtmlTableRemotes(tbl, f.remfunc, f.vremotes);
   },
   ithostatusinfo: function (f) {
     var x = f.ithostatusinfo;
-    $('#StatusTable').empty();
+    var st = $id('StatusTable');
+    if (st) st.innerHTML = '';
     if (f.target == "hadisc") {
+      var haForm = $id('HADiscForm');
+      if (!haForm) return;
       if (f.itho_status_ready) {
         current_status_count = f.count;
         status_items_loaded = true;
-        $("#HADiscForm, #save_update_had").removeClass('hidden');
+        haForm.classList.remove('hidden');
+        $id('save_update_had').classList.remove('hidden');
         buildHtmlHADiscTable(x);
         if (f.rfdevices) buildRFDevicesUI(f.rfdevices);
         if (f.vrdevices) buildVirtualRemotesUI(f.vrdevices);
       }
       else {
-        $("#ithostatusrdy").html("Itho status items not (completely) loaded yet:<br><br><div id='iis'></div><br><br>Reload to try again or disable I2C commands (menu System Settings) which might be unsupported for your devic.<br><br><button id='hadreload' class='pure-button pure-button-primary'>Reload</button><br>");
-        $("#ithostatusrdy").removeClass('hidden');
-        $("#HADiscForm, #save_update_had").addClass('hidden');
+        $id('ithostatusrdy').innerHTML = "Itho status items not (completely) loaded yet:<br><br><div id='iis'></div><br><br>Reload to try again or disable I2C commands (menu System Settings) which might be unsupported for your devic.<br><br><button id='hadreload' class='pure-button pure-button-primary'>Reload</button><br>";
+        $id('ithostatusrdy').classList.remove('hidden');
+        haForm.classList.add('hidden');
+        $id('save_update_had').classList.add('hidden');
         showItho(f.iis);
       }
     }
     else {
-      buildHtmlStatusTable('#StatusTable', x);
+      if (st) buildHtmlStatusTable(st, x);
     }
   },
   hadiscsettings: function (f) {
+    var el = $id('ithostatusrdy');
+    if (!el) return;
     var x = f.hadiscsettings;
     saved_status_count = x.sscnt;
     if ((current_status_count !== saved_status_count) && (saved_status_count > 0)) {
       localStorage.setItem("ithostatus", JSON.stringify(x));
-      $("#ithostatusrdy").html("The stored number of HA Discovery items does not match the current number of detected Itho status items. Activating/deactivating I2C functions can be a source of this discrepancy. Please check if configured items are still correct and click 'Save and update' to update the stored items.<br><button id='hadignore' class='pure-button pure-button-primary'>Ignore and use config</button><button id='hadusenew' class='pure-button pure-button-primary'>Use new config</button>");
-      $("#ithostatusrdy").removeClass('hidden');
+      el.innerHTML = "The stored number of HA Discovery items does not match the current number of detected Itho status items. Activating/deactivating I2C functions can be a source of this discrepancy. Please check if configured items are still correct and click 'Save and update' to update the stored items.<br><button id='hadignore' class='pure-button pure-button-primary'>Ignore and use config</button><button id='hadusenew' class='pure-button pure-button-primary'>Use new config</button>";
+      el.classList.remove('hidden');
     }
     else {
-      $("#ithostatusrdy").addClass('hidden').html('');
+      el.classList.add('hidden');
+      el.innerHTML = '';
       updateStatusTableFromCompactJson(x);
     }
   },
   i2cdebuglog: function (f) {
-    $('#I2CLogTable').empty();
-    buildHtmlTablePlain('#I2CLogTable', f.i2cdebuglog);
+    var tbl = $id('I2CLogTable');
+    if (!tbl) return;
+    tbl.innerHTML = '';
+    buildHtmlTablePlain(tbl, f.i2cdebuglog);
   },
   i2csniffer: function (f) {
-    $('#i2clog_outer').removeClass('hidden');
-    $('#i2clog').prepend(`${new Date().toLocaleString('nl-NL')}: ${f.i2csniffer}<br>`);
+    var outer = $id('i2clog_outer');
+    if (!outer) return;
+    outer.classList.remove('hidden');
+    $id('i2clog').insertAdjacentHTML('afterbegin', `${new Date().toLocaleString('nl-NL')}: ${f.i2csniffer}<br>`);
   },
   ithodevinfo: function (f) {
     var x = f.ithodevinfo;
@@ -569,6 +622,9 @@ const messageHandlers = {
     localStorage.setItem("itho_devtype", x.itho_devtype);
     localStorage.setItem("itho_fwversion", x.itho_fwversion);
     localStorage.setItem("itho_hwversion", x.itho_hwversion);
+    if (wizardActive) {
+      wizardOnDevInfo(x.itho_devtype);
+    }
   },
   ithosettings: function (f) {
     var x = f.ithosettings;
@@ -577,12 +633,13 @@ const messageHandlers = {
     if (x.Index === 0 && x.update === false) {
       clearSettingsLocStor();
       localStorage.setItem("ihto_settings_complete", "false");
-      $('#SettingsTable').empty();
-      addColumnHeader(x, '#SettingsTable', true);
-      $('#SettingsTable').append('<tbody>');
+      var tbl = $id('SettingsTable');
+      tbl.innerHTML = '';
+      addColumnHeader(x, tbl, true);
+      tbl.insertAdjacentHTML('beforeend', '<tbody>');
     }
     if (x.update === false) {
-      addRowTableIthoSettings($('#SettingsTable > tbody'), x);
+      addRowTableIthoSettings($id('SettingsTable').querySelector('tbody'), x);
     }
     else {
       updateRowTableIthoSettings(x);
@@ -606,23 +663,31 @@ const messageHandlers = {
   },
   wifiscanresult: function (f) {
     var x = f.wifiscanresult;
-    $('#wifiscanresult').append(`<div class='ScanResults'><input id='${x.id}' class='pure-input-1-5' name='optionsWifi' value='${x.ssid}' type='radio'>${returnSignalSVG(x.sigval)}${returnWifiSecSVG(x.sec)} ${x.ssid}</label></div>`);
+    $id('wifiscanresult').insertAdjacentHTML('beforeend', `<div class='ScanResults'><input id='${x.id}' class='pure-input-1-5' name='optionsWifi' value='${x.ssid}' type='radio'>${returnSignalSVG(x.sigval)}${returnWifiSecSVG(x.sec)} ${x.ssid}</label></div>`);
   },
   systemstat: function (f) {
     var x = f.systemstat;
     uuid = x.uuid;
     if ('sensor_temp' in x) {
-      $('#sensor_temp').html(`Temperature: ${round(x.sensor_temp, 1)}&#8451;`);
+      var stEl = $id('sensor_temp');
+      if (stEl) stEl.innerHTML = `Temperature: ${round(x.sensor_temp, 1)}&#8451;`;
     }
     if ('sensor_hum' in x) {
-      $('#sensor_hum').html(`Humidity: ${round(x.sensor_hum, 1)}%`);
+      var shEl = $id('sensor_hum');
+      if (shEl) shEl.innerHTML = `Humidity: ${round(x.sensor_hum, 1)}%`;
     }
-    $('#memory_box').show().html(`<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`);
-    var mqttEl = $('#mqtt_conn');
-    var button = returnMqttState(x.mqqtstatus);
-    mqttEl.removeClass().addClass(`pure-button ${button.button}`).text(button.state);
-    $('#ithoslider').val(x.itho);
-    $('#ithotextval').html(x.itho);
+    var memBox = $id('memory_box');
+    if (memBox) { memBox.style.display = ''; memBox.innerHTML = `<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`; }
+    var mqttEl = $id('mqtt_conn');
+    if (mqttEl) {
+      var button = returnMqttState(x.mqqtstatus);
+      mqttEl.className = `pure-button ${button.button}`;
+      mqttEl.textContent = button.state;
+    }
+    var slider = $id('ithoslider');
+    if (slider) slider.value = x.itho;
+    var textval = $id('ithotextval');
+    if (textval) textval.innerHTML = x.itho;
     if ('itho_low' in x) itho_low = x.itho_low;
     if ('itho_medium' in x) itho_medium = x.itho_medium;
     if ('itho_high' in x) itho_high = x.itho_high;
@@ -642,24 +707,34 @@ const messageHandlers = {
     else {
       initstatus = 'unknown status';
     }
-    $('#ithoinit').html(initstatus);
+    var initEl = $id('ithoinit');
+    if (initEl) initEl.innerHTML = initstatus;
     if ('sensor' in x) sensor = x.sensor;
-    var llmEl = $('#itho_llm');
-    if (x.itho_llm > 0) {
-      llmEl.removeClass().addClass("pure-button button-success").text(`On ${x.itho_llm}`);
+    var llmEl = $id('itho_llm');
+    if (llmEl) {
+      if (x.itho_llm > 0) {
+        llmEl.className = "pure-button button-success";
+        llmEl.textContent = `On ${x.itho_llm}`;
+      }
+      else {
+        llmEl.className = "pure-button button-secondary";
+        llmEl.textContent = "Off";
+      }
     }
-    else {
-      llmEl.removeClass().addClass("pure-button button-secondary").text("Off");
-    }
-    var copyEl = $('#itho_copyid_vremote');
-    if (x.copy_id > 0) {
-      copyEl.removeClass().addClass("pure-button button-success").text(`Press join. Time remaining: ${x.copy_id}`);
-    }
-    else {
-      copyEl.removeClass().addClass("pure-button").text("Copy ID");
+    var copyEl = $id('itho_copyid_vremote');
+    if (copyEl) {
+      if (x.copy_id > 0) {
+        copyEl.className = "pure-button button-success";
+        copyEl.textContent = `Press join. Time remaining: ${x.copy_id}`;
+      }
+      else {
+        copyEl.className = "pure-button";
+        copyEl.textContent = "Copy ID";
+      }
     }
     if ('format' in x) {
-      $('#format').text(x.format ? 'Format filesystem' : 'Format failed');
+      var fmtEl = $id('format');
+      if (fmtEl) fmtEl.textContent = x.format ? 'Format filesystem' : 'Format failed';
     }
   },
   remtypeconf: function (f) {
@@ -672,21 +747,26 @@ const messageHandlers = {
     var x = f.messagebox;
     count += 1;
     resetTimer();
-    $('#message_box').show().append(`<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
+    var mb = $id('message_box');
+    mb.style.display = '';
+    mb.insertAdjacentHTML('beforeend', `<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
     removeAfter5secs(count);
   },
   rflog: function (f) {
-    $('#rflog_outer').removeClass('hidden');
-    $('#rflog').prepend(`${new Date().toLocaleString('nl-NL')}: ${f.rflog.message}<br>`);
+    $id('rflog_outer').classList.remove('hidden');
+    $id('rflog').insertAdjacentHTML('afterbegin', `${new Date().toLocaleString('nl-NL')}: ${f.rflog.message}<br>`);
   },
   ota: function (f) {
     var x = f.ota;
-    $('#updateprg').html(`Firmware update progress: ${x.percent}%`);
+    var el = $id('updateprg');
+    if (!el) return;
+    el.innerHTML = `Firmware update progress: ${x.percent}%`;
     moveBar(x.percent, "updateBar");
   },
   sysmessage: function (f) {
     var x = f.sysmessage;
-    $(`#${x.id}`).text(x.message);
+    var el = $id(x.id);
+    if (el) el.textContent = x.message;
   }
 };
 
@@ -751,7 +831,7 @@ function updateSettingsLocStor(receivedData) {
       if (existingData.Index == (setlen - 1)) {
         localStorage.setItem("ihto_settings_complete", "true");
         localStorage.setItem("uuid", uuid);
-        $('#downloadsettingsdiv').removeClass('hidden');
+        $id('downloadsettingsdiv').classList.remove('hidden');
       }
     }
     else {
@@ -776,9 +856,10 @@ function loadSettingsLocStor() {
       existingData = JSON.parse(existingData);
 
       if (index == 0) {
-        $('#SettingsTable').empty();
-        addColumnHeader(existingData, '#SettingsTable', true);
-        $('#SettingsTable').append('<tbody>');
+        var tbl = $id('SettingsTable');
+        tbl.innerHTML = '';
+        addColumnHeader(existingData, tbl, true);
+        tbl.insertAdjacentHTML('beforeend', '<tbody>');
       }
       let current_tmp = existingData.Current;
       let maximum_tmp = existingData.Maximum;
@@ -786,7 +867,7 @@ function loadSettingsLocStor() {
       existingData.Current = null;
       existingData.Maximum = null;
       existingData.Minimum = null;
-      addRowTableIthoSettings($('#SettingsTable > tbody'), existingData);
+      addRowTableIthoSettings($id('SettingsTable').querySelector('tbody'), existingData);
       existingData.Current = current_tmp;
       existingData.Maximum = maximum_tmp;
       existingData.Minimum = minimum_tmp;
@@ -800,41 +881,72 @@ function loadSettingsLocStor() {
 }
 
 
-$(document).ready(function () {
+document.addEventListener('DOMContentLoaded', function () {
   document.getElementById("layout").style.opacity = 0.3;
   document.getElementById("loader").style.display = "block";
   startWebsock();
 
-  //handle menu clicks
-  $(document).on('click', 'ul.pure-menu-list li a', function (event) {
-    var page = $(this).attr('href');
-    update_page(page);
-    $('li.pure-menu-item').removeClass("pure-menu-selected");
-    $(this).parent().addClass("pure-menu-selected");
-    event.preventDefault();
+  // Setup wizard mode
+  if (typeof first_boot !== 'undefined' && first_boot) {
+    initWizard(1);
+  } else if (typeof wizard_step !== 'undefined' && wizard_step > 0) {
+    initWizard(wizard_step);
+  }
+
+  // Helper: get value of checked radio by name
+  function checkedVal(name) {
+    var el = $q('input[name=\'' + name + '\']:checked');
+    return el ? el.value : undefined;
+  }
+
+  // Wizard navigation buttons
+  document.addEventListener('click', function (e) {
+    var target = e.target;
+    if (target.id === 'wizard-next') { e.preventDefault(); wizardNext(); return; }
+    if (target.id === 'wizard-back') { e.preventDefault(); wizardBack(); return; }
+    if (target.id === 'wizard-finish') { e.preventDefault(); wizardFinish(); return; }
   });
-  $(document).on('click', '#headingindex', function (event) {
-    update_page('index');
-    $('li.pure-menu-item').removeClass("pure-menu-selected");
-    event.preventDefault();
+
+  //handle menu clicks
+  document.addEventListener('click', function (event) {
+    var link = event.target.closest('ul.pure-menu-list li a');
+    if (link) {
+      var page = link.getAttribute('href');
+      update_page(page);
+      $qa('li.pure-menu-item').forEach(function (el) { el.classList.remove('pure-menu-selected'); });
+      link.parentElement.classList.add('pure-menu-selected');
+      event.preventDefault();
+      return;
+    }
+    if (event.target.id === 'headingindex' || event.target.closest('#headingindex')) {
+      update_page('index');
+      $qa('li.pure-menu-item').forEach(function (el) { el.classList.remove('pure-menu-selected'); });
+      event.preventDefault();
+      return;
+    }
   });
   //handle wifi network select
-  $(document).on('change', 'input', function (e) {
-    if ($(this).attr('name') == 'optionsWifi') {
-      $('#ssid').val($(this).attr('value'));
+  document.addEventListener('change', function (e) {
+    if (e.target.tagName === 'INPUT' && e.target.getAttribute('name') === 'optionsWifi') {
+      $id('ssid').value = e.target.value;
     }
   });
   //handle submit buttons
-  $(document).on('click', 'button', function (e) {
-    if ($(this).attr('id').startsWith('command-')) {
-      const items = $(this).attr('id').split('-');
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var btnId = btn.id;
+    if (!btnId) return;
+
+    if (btnId.startsWith('command-')) {
+      const items = btnId.split('-');
       websock_send(`{"command":"${items[1]}"}`);
     }
-    else if ($(this).attr('id') == 'wifisubmit') {
-      hostname = $('#hostname').val();
+    else if (btnId === 'wifisubmit') {
+      hostname = $val('hostname');
 
-      const wifi_passwd = $('#passwd').val();
-      const wifi_appasswd = $('#appasswd').val();
+      const wifi_passwd = $val('passwd');
+      const wifi_appasswd = $val('appasswd');
 
       // Build secure_credentials for changed passwords
       const secure_credentials = {};
@@ -845,20 +957,19 @@ $(document).ready(function () {
 
       const wifiMsg = {
         wifisettings: {
-          ssid: $('#ssid').val(),
+          ssid: $val('ssid'),
           passwd: enc_passwd ? '********' : wifi_passwd,
           appasswd: enc_appasswd ? '********' : wifi_appasswd,
-          dhcp: $('input[name=\'option-dhcp\']:checked').val(),
-          ip: $('#ip').val(),
-          subnet: $('#subnet').val(),
-          gateway: $('#gateway').val(),
-          dns1: $('#dns1').val(),
-          dns2: $('#dns2').val(),
-          port: $('#port').val(),
-          hostname: $('#hostname').val(),
-          ntpserver: $('#ntpserver').val(),
-          timezone: $('#timezone').val(),
-          aptimeout: $('#aptimeout').val()
+          dhcp: checkedVal('option-dhcp'),
+          ip: $val('ip'),
+          subnet: $val('subnet'),
+          gateway: $val('gateway'),
+          dns1: $val('dns1'),
+          dns2: $val('dns2'),
+          hostname: $val('hostname'),
+          ntpserver: $val('ntpserver'),
+          timezone: $val('timezone'),
+          aptimeout: $val('aptimeout')
         }
       };
       if (Object.keys(secure_credentials).length > 0) {
@@ -869,57 +980,57 @@ $(document).ready(function () {
       update_page('wifisetup');
     }
     //syssubmit
-    else if ($(this).attr('id') == 'syssumbit') {
-      if (!isValidJsonArray($('#api_settings_activated').val())) {
+    else if (btnId === 'syssumbit') {
+      if (!isValidJsonArray($val('api_settings_activated'))) {
         alert("error: Activated settings input value is not a valid JSON array!");
         return;
       }
       else {
-        if (!areAllUnsignedIntegers(JSON.parse($('#api_settings_activated').val()))) {
+        if (!areAllUnsignedIntegers(JSON.parse($val('api_settings_activated')))) {
           alert("error: Activated settings array contains non integer values!");
           return;
         }
       }
 
-      const sys_passwd = $('#sys_password').val();
+      const sys_passwd = $val('sys_password');
       const sys_secure_credentials = {};
       const enc_sys = secureCredentials.getEncryptedField(sys_passwd);
       if (enc_sys) sys_secure_credentials.sys_password = enc_sys;
 
       const sysMsg = {
         systemsettings: {
-          sys_username: $('#sys_username').val(),
+          sys_username: $val('sys_username'),
           sys_password: enc_sys ? '********' : sys_passwd,
-          syssec_web: $('input[name=\'option-syssec_web\']:checked').val(),
-          syssec_api: $('input[name=\'option-syssec_api\']:checked').val(),
-          syssec_edit: $('input[name=\'option-syssec_edit\']:checked').val(),
-          api_version: $('input[name=\'option-api_version\']:checked').val(),
-          api_normalize: $('input[name=\'option-api_normalize\']:checked').val(),
-          api_settings: $('input[name=\'option-api_settings\']:checked').val(),
-          api_settings_activated: JSON.parse($('#api_settings_activated').val()),
-          syssht30: $('input[name=\'option-syssht30\']:checked').val(),
-          itho_rf_support: $('input[name=\'option-itho_rf_support\']:checked').val(),
-          itho_fallback: $('#itho_fallback').val(),
-          itho_low: $('#itho_low').val(),
-          itho_medium: $('#itho_medium').val(),
-          itho_high: $('#itho_high').val(),
-          itho_timer1: $('#itho_timer1').val(),
-          itho_timer2: $('#itho_timer2').val(),
-          itho_timer3: $('#itho_timer3').val(),
-          itho_updatefreq: $('#itho_updatefreq').val(),
-          itho_counter_updatefreq: $('#itho_counter_updatefreq').val(),
-          itho_numvrem: $('#itho_numvrem').val(),
-          //itho_numrfrem: $('#iitho_numrfrem').val(),
-          itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
-          itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
-          itho_vremoteapi: $('input[name=\'option-itho_vremoteapi\']:checked').val(),
-          itho_pwm2i2c: $('input[name=\'option-itho_pwm2i2c\']:checked').val(),
-          itho_31da: $('input[name=\'option-itho_31da\']:checked').val(),
-          itho_31d9: $('input[name=\'option-itho_31d9\']:checked').val(),
-          itho_2401: $('input[name=\'option-itho_2401\']:checked').val(),
-          itho_4210: $('input[name=\'option-itho_4210\']:checked').val(),
-          i2c_safe_guard: $('input[name=\'option-i2c_safe_guard\']:checked').val(),
-          i2c_sniffer: $('input[name=\'option-i2c_sniffer\']:checked').val()
+          syssec_web: checkedVal('option-syssec_web'),
+          syssec_api: checkedVal('option-syssec_api'),
+          syssec_edit: checkedVal('option-syssec_edit'),
+          api_version: checkedVal('option-api_version'),
+          api_normalize: checkedVal('option-api_normalize'),
+          api_settings: checkedVal('option-api_settings'),
+          api_settings_activated: JSON.parse($val('api_settings_activated')),
+          syssht30: checkedVal('option-syssht30'),
+          itho_rf_support: checkedVal('option-itho_rf_support'),
+          itho_fallback: $val('itho_fallback'),
+          itho_low: $val('itho_low'),
+          itho_medium: $val('itho_medium'),
+          itho_high: $val('itho_high'),
+          itho_timer1: $val('itho_timer1'),
+          itho_timer2: $val('itho_timer2'),
+          itho_timer3: $val('itho_timer3'),
+          itho_updatefreq: $val('itho_updatefreq'),
+          itho_counter_updatefreq: $val('itho_counter_updatefreq'),
+          itho_numvrem: $val('itho_numvrem'),
+          //itho_numrfrem: $id('itho_numrfrem').value,
+          itho_sendjoin: checkedVal('option-itho_sendjoin'),
+          itho_forcemedium: checkedVal('option-itho_forcemedium'),
+          itho_vremoteapi: checkedVal('option-itho_vremoteapi'),
+          itho_pwm2i2c: checkedVal('option-itho_pwm2i2c'),
+          itho_31da: checkedVal('option-itho_31da'),
+          itho_31d9: checkedVal('option-itho_31d9'),
+          itho_2401: checkedVal('option-itho_2401'),
+          itho_4210: checkedVal('option-itho_4210'),
+          i2c_safe_guard: checkedVal('option-i2c_safe_guard'),
+          i2c_sniffer: checkedVal('option-i2c_sniffer')
         }
       };
       if (Object.keys(sys_secure_credentials).length > 0) {
@@ -928,44 +1039,44 @@ $(document).ready(function () {
       websock_send(JSON.stringify(sysMsg));
       update_page('system');
     }
-    else if ($(this).attr('id') == 'syslogsubmit') {
+    else if (btnId === 'syslogsubmit') {
       websock_send(JSON.stringify({
         logsettings: {
-          loglevel: $('#loglevel').val(),
-          syslog_active: $('input[name=\'option-syslog_active\']:checked').val(),
-          esplog_active: $('input[name=\'option-esplog_active\']:checked').val(),
-          webserial_active: $('input[name=\'option-webserial_active\']:checked').val(),
-          rfloglevel: $('#rfloglevel').val(),
-          logserver: $('#logserver').val(),
-          logport: $('#logport').val(),
-          logref: $('#logref').val()
+          loglevel: $val('loglevel'),
+          syslog_active: checkedVal('option-syslog_active'),
+          esplog_active: checkedVal('option-esplog_active'),
+          webserial_active: checkedVal('option-webserial_active'),
+          rfloglevel: $val('rfloglevel'),
+          logserver: $val('logserver'),
+          logport: $val('logport'),
+          logref: $val('logref')
         }
       }));
       update_page('syslog');
     }
     //mqttsubmit
-    else if ($(this).attr('id') == 'mqttsubmit') {
-      const mqtt_passwd = $('#mqtt_password').val();
+    else if (btnId === 'mqttsubmit') {
+      const mqtt_passwd = $val('mqtt_password');
       const mqtt_secure_credentials = {};
       const enc_mqtt = secureCredentials.getEncryptedField(mqtt_passwd);
       if (enc_mqtt) mqtt_secure_credentials.mqtt_password = enc_mqtt;
 
       const mqttMsg = {
         systemsettings: {
-          mqtt_active: $('input[name=\'option-mqtt_active\']:checked').val(),
-          mqtt_serverName: $('#mqtt_serverName').val(),
-          mqtt_username: $('#mqtt_username').val(),
+          mqtt_active: checkedVal('option-mqtt_active'),
+          mqtt_serverName: $val('mqtt_serverName'),
+          mqtt_username: $val('mqtt_username'),
           mqtt_password: enc_mqtt ? '********' : mqtt_passwd,
-          mqtt_port: $('#mqtt_port').val(),
-          mqtt_version: $('#mqtt_version').val(),
-          mqtt_base_topic: $('#mqtt_base_topic').val(),
-          mqtt_ha_topic: $('#mqtt_ha_topic').val(),
-          mqtt_domoticzin_topic: $('#mqtt_domoticzin_topic').val(),
-          mqtt_domoticzout_topic: $('#mqtt_domoticzout_topic').val(),
-          mqtt_idx: $('#mqtt_idx').val(),
-          sensor_idx: $('#sensor_idx').val(),
-          mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val(),
-          mqtt_ha_active: $('input[name=\'option-mqtt_ha_active\']:checked').val()
+          mqtt_port: $val('mqtt_port'),
+          mqtt_version: $val('mqtt_version'),
+          mqtt_base_topic: $val('mqtt_base_topic'),
+          mqtt_ha_topic: $val('mqtt_ha_topic'),
+          mqtt_domoticzin_topic: $val('mqtt_domoticzin_topic'),
+          mqtt_domoticzout_topic: $val('mqtt_domoticzout_topic'),
+          mqtt_idx: $val('mqtt_idx'),
+          sensor_idx: $val('sensor_idx'),
+          mqtt_domoticz_active: checkedVal('option-mqtt_domoticz_active'),
+          mqtt_ha_active: checkedVal('option-mqtt_ha_active')
         }
       };
       if (Object.keys(mqtt_secure_credentials).length > 0) {
@@ -974,40 +1085,43 @@ $(document).ready(function () {
       websock_send(JSON.stringify(mqttMsg));
       update_page('mqtt');
     }
-    else if ($(this).attr('id') == 'itho_llm') {
+    else if (btnId === 'itho_llm') {
       websock_send('{"itho_llm":true}');
     }
-    else if ($(this).attr('id') == 'itho_remove_remote' || $(this).attr('id') == 'itho_remove_vremote') {
-      var selected = $('input[name=\'optionsRemotes\']:checked').val();
+    else if (btnId === 'itho_remove_remote' || btnId === 'itho_remove_vremote') {
+      var selected = checkedVal('optionsRemotes');
       if (selected == null) {
         alert("Please select a remote.")
       }
       else {
         var val = parseInt(selected, 10) + 1;
-        websock_send('{"' + $(this).attr('id') + '":' + val + '}');
+        websock_send('{"' + btnId + '":' + val + '}');
       }
     }
-    else if ($(this).attr('id') == 'itho_update_remote' || $(this).attr('id') == 'itho_update_vremote') {
-      var i = $('input[name=\'optionsRemotes\']:checked').val();
+    else if (btnId === 'itho_update_remote' || btnId === 'itho_update_vremote') {
+      var i = checkedVal('optionsRemotes');
       if (i == null) {
         alert("Please select a remote.");
       }
       else {
-        var remfunc = (typeof $('#func_remote-' + i).val() === 'undefined') ? 0 : $('#func_remote-' + i).val();
-        var remtype = (typeof $('#type_remote-' + i).val() === 'undefined') ? 0 : $('#type_remote-' + i).val();
-        var bidirectional = (typeof $('input[id=\'bidirect_remote-' + i + '\']:checked').val() === 'undefined') ? false : true;
-        var id = $('#id_remote-' + i).val();
+        var funcEl = $id('func_remote-' + i);
+        var remfunc = (!funcEl || typeof funcEl.value === 'undefined') ? 0 : funcEl.value;
+        var typeEl = $id('type_remote-' + i);
+        var remtype = (!typeEl || typeof typeEl.value === 'undefined') ? 0 : typeEl.value;
+        var biEl = $id('bidirect_remote-' + i);
+        var bidirectional = (biEl && biEl.checked) ? true : false;
+        var id = $id('id_remote-' + i).value;
         if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
-          websock_send(`{"${$(this).attr('id')}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$('#name_remote-' + i).val()}","remtype":${remtype},"remfunc":${remfunc},"bidirectional":${bidirectional}}`);
+          websock_send(`{"${btnId}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + i).value}","remtype":${remtype},"remfunc":${remfunc},"bidirectional":${bidirectional}}`);
         }
         else {
           alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
         }
       }
     }
-    else if ($(this).attr('id') == 'update_rf_id') {
-      var id = $('#module_rf_id_str').val();
+    else if (btnId === 'update_rf_id') {
+      var id = $id('module_rf_id_str').value;
       if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
         websock_send(`{"update_rf_id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}]}`);
       }
@@ -1015,15 +1129,15 @@ $(document).ready(function () {
         alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
       }
     }
-    else if ($(this).attr('id') == 'update_num_rf') {
+    else if (btnId === 'update_num_rf') {
       websock_send(JSON.stringify({
         systemsettings: {
-          itho_numrfrem: $('#itho_numrfrem').val()
+          itho_numrfrem: $val('itho_numrfrem')
         }
       }));
     }
-    else if ($(this).attr('id') == 'itho_copyid_vremote') {
-      var i = $('input[name=\'optionsRemotes\']:checked').val();
+    else if (btnId === 'itho_copyid_vremote') {
+      var i = checkedVal('optionsRemotes');
       if (i == null) {
         alert("Please select a remote.");
       }
@@ -1032,9 +1146,9 @@ $(document).ready(function () {
         websock_send(`{"copy_id":true, "index":${val}}`);
       }
     }
-    else if ($(this).attr('id').substr(0, 15) == 'ithosetrefresh-') {
-      var row = parseInt($(this).attr('id').substr(15));
-      var i = $('input[name=\'options-ithoset\']:checked').val();
+    else if (btnId.substr(0, 15) === 'ithosetrefresh-') {
+      var row = parseInt(btnId.substr(15));
+      var i = checkedVal('options-ithoset');
       if (i == null) {
         alert("Please select a row.");
       }
@@ -1042,17 +1156,24 @@ $(document).ready(function () {
         alert("Please select the correct row.");
       }
       else {
-        $('input[name=\'options-ithoset\']:checked').prop('checked', false);
-        $('[id^=ithosetrefresh-]').each(function (index) {
-          $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).removeClass('pure-button-primary');
+        var checkedRadio = $q('input[name=\'options-ithoset\']:checked');
+        if (checkedRadio) checkedRadio.checked = false;
+        $qa('[id^=ithosetrefresh-]').forEach(function (el, index) {
+          var ref = $id('ithosetrefresh-' + index);
+          var upd = $id('ithosetupdate-' + index);
+          if (ref) ref.classList.remove('pure-button-primary');
+          if (upd) upd.classList.remove('pure-button-primary');
         });
-        $(`#Current-${i}, #Minimum-${i}, #Maximum-${i}`).html(`<div style='margin: auto;' class='dot-elastic'></div>`);
+        ['Current', 'Minimum', 'Maximum'].forEach(function (k) {
+          var el = $id(k + '-' + i);
+          if (el) el.innerHTML = "<div style='margin: auto;' class='dot-elastic'></div>";
+        });
         websock_send('{"ithosetrefresh":' + i + '}');
       }
     }
-    else if ($(this).attr('id').substr(0, 14) == 'ithosetupdate-') {
-      var row = parseInt($(this).attr('id').substr(14));
-      var i = parseInt($('input[name=\'options-ithoset\']:checked').val());
+    else if (btnId.substr(0, 14) === 'ithosetupdate-') {
+      var row = parseInt(btnId.substr(14));
+      var i = parseInt(checkedVal('options-ithoset'));
       if (i == null) {
         alert("Please select a row.");
       }
@@ -1061,155 +1182,164 @@ $(document).ready(function () {
       }
 
       else {
-        if (Number.isInteger(parseFloat($('#name_ithoset-' + i).val()))) {
+        if (Number.isInteger(parseFloat($id('name_ithoset-' + i).value))) {
           websock_send(JSON.stringify({
             ithosetupdate: i,
-            value: parseInt($('#name_ithoset-' + i).val())
+            value: parseInt($id('name_ithoset-' + i).value)
           }));
         }
         else {
           websock_send(JSON.stringify({
             ithosetupdate: i,
-            value: parseFloat($('#name_ithoset-' + i).val())
+            value: parseFloat($id('name_ithoset-' + i).value)
           }));
         }
 
-        $('input[name=\'options-ithoset\']:checked').prop('checked', false);
-        $('[id^=ithosetrefresh-]').each(function (index) {
-          $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).removeClass('pure-button-primary');
+        var checkedRadio = $q('input[name=\'options-ithoset\']:checked');
+        if (checkedRadio) checkedRadio.checked = false;
+        $qa('[id^=ithosetrefresh-]').forEach(function (el, index) {
+          var ref = $id('ithosetrefresh-' + index);
+          var upd = $id('ithosetupdate-' + index);
+          if (ref) ref.classList.remove('pure-button-primary');
+          if (upd) upd.classList.remove('pure-button-primary');
         });
-        $(`#Current-${i}, #Minimum-${i}, #Maximum-${i}`).html(`<div style='margin: auto;' class='dot-elastic'></div>`);
+        ['Current', 'Minimum', 'Maximum'].forEach(function (k) {
+          var el = $id(k + '-' + i);
+          if (el) el.innerHTML = "<div style='margin: auto;' class='dot-elastic'></div>";
+        });
       }
     }
-    else if ($(this).attr('id') == 'resetwificonf') {
+    else if (btnId === 'resetwificonf') {
       if (confirm("This will reset the wifi config to factory default, are you sure?")) {
         websock_send('{"resetwificonf":true}');
       }
     }
-    else if ($(this).attr('id') == 'resetsysconf') {
+    else if (btnId === 'resetsysconf') {
       if (confirm("This will reset the system configs files to factory default, are you sure?")) {
         websock_send('{"resetsysconf":true}');
       }
     }
-    else if ($(this).attr('id') == 'resethadconf') {
+    else if (btnId === 'resethadconf') {
       if (confirm("This will reset the HA Discovery configs to factory default, are you sure?")) {
         websock_send('{"resethadconf":true}');
-        setTimeout(function () { $('#main').empty(); $('#main').append(html_hadiscovery); }, 1000);
+        setTimeout(function () { var main = $id('main'); main.innerHTML = ''; main.insertAdjacentHTML('beforeend', html_hadiscovery); execScripts(main); }, 1000);
       }
     }
-    else if ($(this).attr('id') == 'saveallconfigs') {
+    else if (btnId === 'saveallconfigs') {
       websock_send('{"saveallconfigs":true}');
     }
-    else if ($(this).attr('id') == 'reboot') {
+    else if (btnId === 'reboot') {
       if (confirm("This will reboot the device, are you sure?")) {
-        $('#rebootscript').append(html_reboot_script);
+        var rbs = $id('rebootscript');
+        rbs.insertAdjacentHTML('beforeend', html_reboot_script);
+        execScripts(rbs);
         websock_send('{"reboot":true}');
       }
     }
-    else if ($(this).attr('id') == 'format') {
+    else if (btnId === 'format') {
       if (confirm("This will erase all settings, are you sure?")) {
         websock_send('{"format":true}');
-        $('#format').text('Formatting...');
+        $id('format').textContent = 'Formatting...';
       }
     }
-    else if ($(this).attr('id') == 'wifiscan') {
-      $('.ScanResults').remove();
-      $('.hidden').removeClass('hidden');
+    else if (btnId === 'wifiscan') {
+      $qa('.ScanResults').forEach(function (el) { el.remove(); });
+      $qa('.hidden').forEach(function (el) { el.classList.remove('hidden'); });
       websock_send('{"wifiscan":true}');
     }
-    else if ($(this).attr('id').startsWith('button_vremote-')) {
-      const items = $(this).attr('id').split('-');
+    else if (btnId.startsWith('button_vremote-')) {
+      const items = btnId.split('-');
       websock_send(`{"vremote":${items[1]}, "command":"${items[2]}"}`);
     }
-    else if ($(this).attr('id').startsWith('button_remote-')) {
-      const items = $(this).attr('id').split('-');
+    else if (btnId.startsWith('button_remote-')) {
+      const items = btnId.split('-');
       websock_send(`{"remote":${items[1]}, "command":"${items[2]}"}`);
     }
-    else if ($(this).attr('id').startsWith('ithobutton-')) {
-      const items = $(this).attr('id').split('-');
+    else if (btnId.startsWith('ithobutton-')) {
+      const items = btnId.split('-');
       websock_send(`{"ithobutton":"${items[1]}"}`);
-      if (items[1] == 'shtreset') $(`#i2c_sht_reset`).text("Processing...");
+      if (items[1] == 'shtreset') $id('i2c_sht_reset').textContent = "Processing...";
     }
-    else if ($(this).attr('id').startsWith('button-')) {
-      const items = $(this).attr('id').split('-');
+    else if (btnId.startsWith('button-')) {
+      const items = btnId.split('-');
       websock_send(`{"button":"${items[1]}"}`);
     }
-    else if ($(this).attr('id').startsWith('rfdebug-')) {
-      const items = $(this).attr('id').split('-');
-      if (items[1] == 0) $('#rflog_outer').addClass('hidden');
-      if (items[1] > 0) $('#rflog_outer').removeClass('hidden');
+    else if (btnId.startsWith('rfdebug-')) {
+      const items = btnId.split('-');
+      if (items[1] == 0) $id('rflog_outer').classList.add('hidden');
+      if (items[1] > 0) $id('rflog_outer').classList.remove('hidden');
       if (items[1] == 12762) {
-        websock_send(`{"rfdebug":${items[1]}, "faninfo":${$('#rfdebug-12762-faninfo').val()}, "timer":${$('#rfdebug-12762-timer').val()}}`);
+        websock_send(`{"rfdebug":${items[1]}, "faninfo":${$id('rfdebug-12762-faninfo').value}, "timer":${$id('rfdebug-12762-timer').value}}`);
       }
       else if (items[1] == 12761) {
-        websock_send(`{"rfdebug":${items[1]}, "status":${$('#rfdebug-12761-status').val()}, "fault":${$('#rfdebug-12761-fault').val()}, "frost":${$('#rfdebug-12761-frost').val()}, "filter":${$('#rfdebug-12761-filter').val()}}`);
+        websock_send(`{"rfdebug":${items[1]}, "status":${$id('rfdebug-12761-status').value}, "fault":${$id('rfdebug-12761-fault').value}, "frost":${$id('rfdebug-12761-frost').value}, "filter":${$id('rfdebug-12761-filter').value}}`);
 
       }
       else {
         websock_send(`{"rfdebug":${items[1]}}`);
       }
     }
-    else if ($(this).attr('id').startsWith('i2csniffer-')) {
-      const items = $(this).attr('id').split('-');
-      if (items[1] == 0) $('#i2clog_outer').addClass('hidden');
-      if (items[1] > 0) $('#i2clog_outer').removeClass('hidden');
+    else if (btnId.startsWith('i2csniffer-')) {
+      const items = btnId.split('-');
+      if (items[1] == 0) $id('i2clog_outer').classList.add('hidden');
+      if (items[1] > 0) $id('i2clog_outer').classList.remove('hidden');
       websock_send(`{"i2csniffer":${items[1]}}`);
     }
-    else if ($(this).attr('id') == 'button2410') {
+    else if (btnId === 'button2410') {
       websock_send(JSON.stringify({
         ithobutton: 2410,
-        index: parseInt($('#itho_setting_id').val())
+        index: parseInt($id('itho_setting_id').value)
       }));
     }
-    else if ($(this).attr('id') == 'button2410set') {
+    else if (btnId === 'button2410set') {
       websock_send(JSON.stringify({
         ithobutton: 24109,
-        ithosetupdate: parseInt($('#itho_setting_id_set').val()),
-        value: parseFloat($('#itho_setting_value_set').val())
+        ithosetupdate: parseInt($id('itho_setting_id_set').value),
+        value: parseFloat($id('itho_setting_value_set').value)
       }));
     }
-    else if ($(this).attr('id') == 'button4210') {
+    else if (btnId === 'button4210') {
       websock_send(JSON.stringify({
         ithobutton: 4210
       }));
     }
-    else if ($(this).attr('id') == 'buttonCE30') {
+    else if (btnId === 'buttonCE30') {
       websock_send(JSON.stringify({
         ithobutton: 0xCE30,
-        ithotemp: parseFloat($('#itho_ce30_temp').val() * 100.),
-        ithotemptemp: parseFloat($('#itho_ce30_temptemp').val() * 100.),
-        ithotimestamp: $('#itho_ce30_timestamp').val()
+        ithotemp: parseFloat($id('itho_ce30_temp').value * 100.),
+        ithotemptemp: parseFloat($id('itho_ce30_temptemp').value * 100.),
+        ithotimestamp: $id('itho_ce30_timestamp').value
       }));
     }
-    else if ($(this).attr('id') == 'buttonC000') { //CO2
+    else if (btnId === 'buttonC000') { //CO2
       websock_send(JSON.stringify({
         ithobutton: 0xC000,
-        itho_c000_speed1: Number($('#itho_c000_speed1').val()),
-        itho_c000_speed2: Number($('#itho_c000_speed2').val())
+        itho_c000_speed1: Number($id('itho_c000_speed1').value),
+        itho_c000_speed2: Number($id('itho_c000_speed2').value)
       }));
     }
-    else if ($(this).attr('id') == 'button9298') { //CO2 value
+    else if (btnId === 'button9298') { //CO2 value
       websock_send(JSON.stringify({
         ithobutton: 0x9298,
-        itho_9298_val: Number($('#itho_9298_val').val())
+        itho_9298_val: Number($id('itho_9298_val').value)
       }));
     }
-    else if ($(this).attr('id') == 'button4030') {
-      if ($('#itho_4030_password').val() == 'thisisunsafe') {
+    else if (btnId === 'button4030') {
+      if ($id('itho_4030_password').value == 'thisisunsafe') {
         websock.send(JSON.stringify({
           ithobutton: 4030,
-          idx: Number($('#itho_4030_index').val()),
-          dt: Number($('#itho_4030_datatype').val()),
-          val: Number($('#itho_4030_value').val()),
-          chk: Number($('#itho_4030_checked').val()),
+          idx: Number($id('itho_4030_index').value),
+          dt: Number($id('itho_4030_datatype').value),
+          val: Number($id('itho_4030_value').value),
+          chk: Number($id('itho_4030_checked').value),
         }));
       }
     }
-    else if ($(this).attr('id') == 'ithogetsettings') {
+    else if (btnId === 'ithogetsettings') {
       if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
         loadSettingsLocStor();
-        $('#settings_cache_load').removeClass('hidden');
-        $('#downloadsettingsdiv').removeClass('hidden');
+        $id('settings_cache_load').classList.remove('hidden');
+        $id('downloadsettingsdiv').classList.remove('hidden');
       }
       else {
         settingIndex = 0;
@@ -1220,9 +1350,9 @@ $(document).ready(function () {
         }));
       }
     }
-    else if ($(this).attr('id') == 'ithoforcerefresh') {
-      $('#settings_cache_load').addClass('hidden');
-      $('#downloadsettingsdiv').addClass('hidden');
+    else if (btnId === 'ithoforcerefresh') {
+      $id('settings_cache_load').classList.add('hidden');
+      $id('downloadsettingsdiv').classList.add('hidden');
       settingIndex = 0;
       websock_send(JSON.stringify({
         ithogetsetting: true,
@@ -1230,7 +1360,7 @@ $(document).ready(function () {
         update: false
       }));
     }
-    else if ($(this).attr('id') == 'downloadsettings') {
+    else if (btnId === 'downloadsettings') {
       if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
         let settings = {};
         let setlen = localStorage.getItem("itho_setlen");
@@ -1275,41 +1405,62 @@ $(document).ready(function () {
         alert("error: download of settings file not possible!");
       }
     }
-    else if ($(this).attr('id') == 'updatesubmit') {
+    else if (btnId === 'updatesubmit') {
       e.preventDefault();
-      var form = $('#updateform')[0];
+      var form = $id('updateform');
       var data = new FormData(form);
       let filename = data.get('update').name;
       if (!filename.endsWith(".bin")) {
         count += 1;
         resetTimer();
-        $('#message_box').show();
-        $('#message_box').append(`<p class='messageP' id='mbox_p${count}'>Updater: file name error, please select a *.bin firmware file</p>`);
+        $id('message_box').style.display = '';
+        $id('message_box').insertAdjacentHTML('beforeend', `<p class='messageP' id='mbox_p${count}'>Updater: file name error, please select a *.bin firmware file</p>`);
         removeAfter5secs(count);
         return;
       }
-      $('#updatesubmit').addClass("pure-button-disabled");
-      $('#updatesubmit').text("Update in progress...");
-      $('#uploadProgress, #updateProgress, #uploadprg, #updateprg').show();
-      $.ajax({ url: '/update', type: 'POST', data: data, contentType: false, processData: false, xhr: function () { var xhr = new window.XMLHttpRequest(); xhr.upload.addEventListener('progress', function (evt) { if (evt.lengthComputable) { var per = Math.round(10 + (((evt.loaded / evt.total) * 100) * 0.9)); $('#uploadprg').html('File upload progress: ' + per + '%'); moveBar(per, "uploadBar"); } }, false); return xhr; }, success: function (d, s) { moveBar(100, "updateBar"); $('#updateprg').html('Firmware update progress: 100%'); $('#updatesubmit').text("Update finished"); $('#time').show(); startCountdown(); }, error: function () { $('#updatesubmit').text("Update failed"); $('#time').show(); startCountdown(); } });
+      $id('updatesubmit').classList.add('pure-button-disabled');
+      $id('updatesubmit').textContent = 'Update in progress...';
+      ['uploadProgress', 'updateProgress', 'uploadprg', 'updateprg'].forEach(function (id) { var el = $id(id); if (el) el.style.display = ''; });
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/update', true);
+      xhr.upload.addEventListener('progress', function (evt) {
+        if (evt.lengthComputable) {
+          var per = Math.round(10 + (((evt.loaded / evt.total) * 100) * 0.9));
+          $id('uploadprg').innerHTML = 'File upload progress: ' + per + '%';
+          moveBar(per, "uploadBar");
+        }
+      }, false);
+      xhr.onload = function () {
+        moveBar(100, "updateBar");
+        $id('updateprg').innerHTML = 'Firmware update progress: 100%';
+        $id('updatesubmit').textContent = 'Update finished';
+        $id('time').style.display = '';
+        startCountdown();
+      };
+      xhr.onerror = function () {
+        $id('updatesubmit').textContent = 'Update failed';
+        $id('time').style.display = '';
+        startCountdown();
+      };
+      xhr.send(data);
     }
-    else if ($(this).attr('id') == 'hadreload') {
-      $("#ithostatusrdy, #HADiscForm, #save_update_had").addClass('hidden');
-      $("#ithostatusrdy").html('');
+    else if (btnId === 'hadreload') {
+      ['ithostatusrdy', 'HADiscForm', 'save_update_had'].forEach(function (id) { $id(id).classList.add('hidden'); });
+      $id('ithostatusrdy').innerHTML = '';
       setTimeout(function () { getSettings('hadiscinfo'); }, 1000);
     }
-    else if ($(this).attr('id') == 'hadusenew') {
-      $("#ithostatusrdy").addClass('hidden');
-      $("#ithostatusrdy").html('');
+    else if (btnId === 'hadusenew') {
+      $id('ithostatusrdy').classList.add('hidden');
+      $id('ithostatusrdy').innerHTML = '';
     }
-    else if ($(this).attr('id') == 'hadignore') {
-      $("#ithostatusrdy").addClass('hidden');
-      $("#ithostatusrdy").html('');
+    else if (btnId === 'hadignore') {
+      $id('ithostatusrdy').classList.add('hidden');
+      $id('ithostatusrdy').innerHTML = '';
       let obj = localStorage.getItem("ithostatus");
       updateStatusTableFromCompactJson(JSON.parse(obj));
       localStorage.removeItem("ithostatus");
     }
-    else if ($(this).attr('id') == 'save_update_had') {
+    else if (btnId === 'save_update_had') {
       var jsonvar = generateCompactJson();
       websock_send(JSON.stringify({
         hadiscsettings: jsonvar
@@ -1319,31 +1470,29 @@ $(document).ready(function () {
     return false;
   });
   //keep the message box on top on scroll
-  $(window).scroll(function (e) {
-    var $el = $('#message_box');
-    var isPositionFixed = ($el.css('position') == 'fixed');
-    if ($(this).scrollTop() > 100 && !isPositionFixed) {
-      $('#message_box').css({
-        'position': 'fixed',
-        'top': '0px'
-      });
+  window.addEventListener('scroll', function () {
+    var el = $id('message_box');
+    if (el && window.scrollY > 100 && el.style.position !== 'fixed') {
+      el.style.position = 'fixed';
+      el.style.top = '0px';
     }
   });
 });
 
 var timerHandle = setTimeout(function () {
-  $('#message_box').hide();
+  $id('message_box').style.display = 'none';
 }, 5000);
 
 function resetTimer() {
   window.clearTimeout(timerHandle);
   timerHandle = setTimeout(function () {
-    $('#message_box').hide();
+    $id('message_box').style.display = 'none';
   }, 5000);
 }
 
 function removeID(id) {
-  $(`#${id}`).remove();
+  var el = $id(id);
+  if (el) el.remove();
 }
 
 function processElements(x) {
@@ -1352,33 +1501,34 @@ function processElements(x) {
       if (Array.isArray(x[key])) {
         x[key] = JSON.stringify(x[key]);
       }
-      var el = $(`#${key}`);
-      if (el.is('input') || el.is('select')) {
-        if ($(`#${key}`).val() !== x[key]) {
-          $(`#${key}`).val(x[key]);
+      var el = $id(key);
+      if (el && (el.matches('input') || el.matches('select'))) {
+        if (el.value !== x[key]) {
+          el.value = x[key];
         }
       }
-      else if (el.is('span')) {
-        if ($(`#${key}`).text() !== x[key]) {
-          $(`#${key}`).text(x[key]);
+      else if (el && el.matches('span')) {
+        if (el.textContent !== x[key]) {
+          el.textContent = x[key];
         }
       }
-      else if (el.is('a')) {
-        $(`#${key}`).attr("href", x[key]);
+      else if (el && el.matches('a')) {
+        el.href = x[key];
       }
       else {
-        var radios = $(`input[name='option-${key}']`);
+        var radios = $qa(`input[name='option-${key}']`);
         if (radios[1]) {
-          if (radios.is(':checked') === false) {
-            radios.filter(`[value='${x[key]}']`).prop('checked', true);
+          if (![...radios].some(r => r.checked)) {
+            var target = document.querySelector(`input[name='option-${key}'][value='${x[key]}']`);
+            if (target) target.checked = true;
           }
           radio(key, x[key]);
         }
       }
-      var elbyname = $(`[name='${key}']`).each(function () {
-        if ($(this).is('span')) {
-          if ($(this).text() !== x[key]) {
-            $(this).text(x[key]);
+      $qa(`[name='${key}']`).forEach(function(nameEl) {
+        if (nameEl.matches('span')) {
+          if (nameEl.textContent !== x[key]) {
+            nameEl.textContent = x[key];
           }
         }
       });
@@ -1405,84 +1555,67 @@ function getlog(url) {
   xhr.onreadystatechange = function () {
     if (xhr.readyState == 4 && xhr.status == 200) {
       let res = xhr.responseText.split(/\r?\n/).reverse().slice(1).join("<br>");
-      $('#dblog').html(res);
+      $id('dblog').innerHTML = res;
     }
   }
   xhr.onerror = (e) => {
-    $('#dblog').html(xhr.statusText);
+    $id('dblog').innerHTML = xhr.statusText;
   };
   xhr.send(null);
 }
 
 function radio(origin, state) {
   if (origin == "dhcp") {
-    if (state == 'on') {
-      $('#ip, #subnet, #gateway, #dns1, #dns2').prop('readonly', true);
-      $('#port').prop('readonly', false);
-      $('#option-dhcp-on, #option-dhcp-off').prop('disabled', false);
-    }
-    else {
-      $('#ip, #subnet, #gateway, #dns1, #dns2, #port').prop('readonly', false);
-      $('#option-dhcp-on, #option-dhcp-off').prop('disabled', false);
-    }
+    var readOnly = (state == 'on');
+    ['ip', 'subnet', 'gateway', 'dns1', 'dns2'].forEach(function (id) { var el = $id(id); if (el) el.readOnly = readOnly; });
+    var portEl = $id('port');
+    if (portEl) portEl.readOnly = false;
+    var dhcpOn = $id('option-dhcp-on');
+    var dhcpOff = $id('option-dhcp-off');
+    if (dhcpOn) dhcpOn.disabled = false;
+    if (dhcpOff) dhcpOff.disabled = false;
   }
   else if (origin == "mqtt_active") {
     var enabled = (state == 1);
-    $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_base_topic, #mqtt_ha_topic, #mqtt_domoticzin_topic, #mqtt_domoticzout_topic, #mqtt_idx, #sensor_idx').prop('readonly', !enabled);
-    $('#option-mqtt_domoticz_active-0, #option-mqtt_domoticz_active-1, #option-mqtt_ha_active-1, #option-mqtt_ha_active-0').prop('disabled', !enabled);
+    ['mqtt_serverName', 'mqtt_username', 'mqtt_password', 'mqtt_port', 'mqtt_base_topic', 'mqtt_ha_topic', 'mqtt_domoticzin_topic', 'mqtt_domoticzout_topic', 'mqtt_idx', 'sensor_idx'].forEach(function (id) { var el = $id(id); if (el) el.readOnly = !enabled; });
+    ['option-mqtt_domoticz_active-0', 'option-mqtt_domoticz_active-1', 'option-mqtt_ha_active-1', 'option-mqtt_ha_active-0'].forEach(function (id) { var el = $id(id); if (el) el.disabled = !enabled; });
   }
   else if (origin == "mqtt_domoticz_active") {
-    if (state == 1) {
-      $('#mqtt_domoticzin_topic, #label-mqtt_domoticzin, #label-mqtt_domoticzout, #mqtt_domoticzout_topic, #mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').show();
-    }
-    else {
-      $('#mqtt_domoticzin_topic, #label-mqtt_domoticzin, #label-mqtt_domoticzout, #mqtt_domoticzout_topic, #mqtt_idx, #label-mqtt_idx, #sensor_idx, #label-sensor_idx').hide();
-    }
+    var display = (state == 1) ? '' : 'none';
+    ['mqtt_domoticzin_topic', 'label-mqtt_domoticzin', 'label-mqtt_domoticzout', 'mqtt_domoticzout_topic', 'mqtt_idx', 'label-mqtt_idx', 'sensor_idx', 'label-sensor_idx'].forEach(function (id) { var el = $id(id); if (el) el.style.display = display; });
   }
   else if (origin == "mqtt_ha_active") {
-    if (state == 1) {
-      $('#mqtt_ha_topic, #label-mqtt_ha').show();
-    }
-    else {
-      $('#mqtt_ha_topic, #label-mqtt_ha').hide();
-    }
+    var display = (state == 1) ? '' : 'none';
+    ['mqtt_ha_topic', 'label-mqtt_ha'].forEach(function (id) { var el = $id(id); if (el) el.style.display = display; });
   }
   else if (origin == "remote" || origin == "ithoset") {
-    $(`[id^=name_${origin}-]`).each(function (index) {
-      $(`#name_${origin}-${index}`).prop('readonly', true);
-      if (index == state) {
-        $(`#name_${origin}-${index}`).prop('readonly', false);
-      }
+    $qa(`[id^=name_${origin}-]`).forEach(function (el, index) {
+      el.readOnly = (index != state);
     });
-    $(`[id^=type_${origin}-]`).each(function (index) {
-      $(`#type_${origin}-${index}`).prop('disabled', true);
-      if (index == state) {
-        $(`#type_${origin}-${index}`).prop('disabled', false);
-      }
+    $qa(`[id^=type_${origin}-]`).forEach(function (el, index) {
+      el.disabled = (index != state);
     });
-    $(`[id^=func_${origin}-]`).each(function (index) {
-      $(`#func_${origin}-${index}`).prop('disabled', true);
-      if (index == state) {
-        $(`#func_${origin}-${index}`).prop('disabled', false);
-      }
+    $qa(`[id^=func_${origin}-]`).forEach(function (el, index) {
+      el.disabled = (index != state);
     });
-    $(`[id^=id_${origin}-]`).each(function (index) {
-      $(`#id_${origin}-${index}`).prop('readonly', true);
-      if (index == state) {
-        $(`#id_${origin}-${index}`).prop('readonly', false);
-      }
+    $qa(`[id^=id_${origin}-]`).forEach(function (el, index) {
+      el.readOnly = (index != state);
     });
-    $(`[id^=bidirect_${origin}-]`).each(function (index) {
-      $(`#bidirect_${origin}-${index}`).prop("disabled", true);
+    $qa(`[id^=bidirect_${origin}-]`).forEach(function (el, index) {
+      el.disabled = true;
       if (index == state) {
         remfunction_validation(index);
       }
     });
     if (origin == "ithoset") {
-      $('[id^=ithosetrefresh-]').each(function (index) {
-        $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).removeClass('pure-button-primary');
+      $qa('[id^=ithosetrefresh-]').forEach(function (el, index) {
+        var ref = $id('ithosetrefresh-' + index);
+        var upd = $id('ithosetupdate-' + index);
+        if (ref) ref.classList.remove('pure-button-primary');
+        if (upd) upd.classList.remove('pure-button-primary');
         if (index == state) {
-          $(`#ithosetrefresh-${index}, #ithosetupdate-${index}`).addClass('pure-button-primary');
+          if (ref) ref.classList.add('pure-button-primary');
+          if (upd) upd.classList.add('pure-button-primary');
         }
       });
     }
@@ -1536,7 +1669,7 @@ function moveBar(nPer, element) {
 function updateSlider(value) {
   var val = parseInt(value);
   if (isNaN(val)) val = 0;
-  $('#ithotextval').html(val);
+  $id('ithotextval').innerHTML = val;
   websock_send(JSON.stringify({ 'itho': val }));
 }
 
@@ -1546,30 +1679,35 @@ function update_page(page) {
   lastPageReq = page;
   clearTimeout(wifistat_to);
   clearTimeout(statustimer_to);
-  $('#main').empty();
-  $('#main').css('max-width', '768px')
-  if (page == 'index') { $('#main').append(html_index); }
-  if (page == 'wifisetup') { $('#main').append(html_wifisetup); }
-  if (page == 'syslog') { $('#main').append(html_syslog); }
+  clearTimeout(ithostatus_to);
+  clearTimeout(hastatus_to);
+  if (remotesRefreshInterval) { clearInterval(remotesRefreshInterval); remotesRefreshInterval = null; }
+  var main = $id('main');
+  main.innerHTML = '';
+  main.style.maxWidth = '768px';
+  if (page == 'index') { main.insertAdjacentHTML('beforeend', html_index); }
+  if (page == 'wifisetup') { main.insertAdjacentHTML('beforeend', html_wifisetup); }
+  if (page == 'syslog') { main.insertAdjacentHTML('beforeend', html_syslog); }
   if (page == 'system') {
-    $('#main').append(html_systemsettings_start);
-    if (hw_revision == "2" || hw_revision.startsWith('NON-CVE ')) { $('#sys_fieldset').append(html_systemsettings_cc1101); }
-    $('#sys_fieldset').append(html_systemsettings_end);
+    main.insertAdjacentHTML('beforeend', html_systemsettings_start);
+    var sf = $id('sys_fieldset');
+    if (hw_revision == "2" || hw_revision.startsWith('NON-CVE ')) { sf.insertAdjacentHTML('beforeend', html_systemsettings_cc1101); }
+    sf.insertAdjacentHTML('beforeend', html_systemsettings_end);
   }
-  if (page == 'itho') { $('#main').append(html_ithosettings); }
-  if (page == 'status') { $('#main').append(html_ithostatus); }
-  if (page == 'remotes') { $('#main').append(html_remotessetup); }
-  if (page == 'vremotes') { $('#main').append(html_vremotessetup); }
-  if (page == 'mqtt') { $('#main').append(html_mqttsetup); }
-  if (page == 'api') { $('#main').append(html_api); }
-  if (page == 'help') { $('#main').append(html_help); }
-  if (page == 'reset') { $('#main').append(html_reset); }
-  if (page == 'update') { $('#main').append(html_update); }
-  if (page == 'debug') { $('#main').append(html_debug); $('#main').css('max-width', '1600px') }
-  if (page == 'i2cdebug') { $('#main').append(html_i2cdebug); }
-  if (page == 'hadiscovery') { $('#main').append(html_hadiscovery); }
-
-
+  if (page == 'itho') { main.insertAdjacentHTML('beforeend', html_ithosettings); }
+  if (page == 'status') { main.insertAdjacentHTML('beforeend', html_ithostatus); }
+  if (page == 'remotes') { main.insertAdjacentHTML('beforeend', html_remotessetup); }
+  if (page == 'vremotes') { main.insertAdjacentHTML('beforeend', html_vremotessetup); }
+  if (page == 'mqtt') { main.insertAdjacentHTML('beforeend', html_mqttsetup); }
+  if (page == 'api') { main.insertAdjacentHTML('beforeend', html_api); }
+  if (page == 'help') { main.insertAdjacentHTML('beforeend', html_help); }
+  if (page == 'reset') { main.insertAdjacentHTML('beforeend', html_reset); }
+  if (page == 'update') { main.insertAdjacentHTML('beforeend', html_update); }
+  if (page == 'debug') { main.insertAdjacentHTML('beforeend', html_debug); main.style.maxWidth = '1600px'; }
+  if (page == 'i2cdebug') { main.insertAdjacentHTML('beforeend', html_i2cdebug); }
+  if (page == 'hadiscovery') { main.insertAdjacentHTML('beforeend', html_hadiscovery); }
+  if (page == 'wizard') { main.insertAdjacentHTML('beforeend', html_wizard); }
+  execScripts(main);
 }
 
 //handle menu collapse on smaller screens
@@ -1703,7 +1841,7 @@ var remfuncs = [
   ["Send", 5]
 ];
 
-function addRemoteButtons(selector, remfunc, remtype, vremotenum, seperator) {
+function addRemoteButtons(container, remfunc, remtype, vremotenum, seperator) {
   var remfuncname = remfunc == 1 ? "remote" : "vremote";
   for (const item of remtypes) {
     if (remtype == item[1]) {
@@ -1718,12 +1856,12 @@ function addRemoteButtons(selector, remfunc, remtype, vremotenum, seperator) {
         if (seperator) {
           if (item[2][i] == 'high' || item[2][i] == 'cook60' || item[2][i] == 'timer3' || (item[2].length == 10 && item[2][i] == 'autonight') || item[2][i] == 'leave') {
             newinner += '</div>';
-            $(selector).append(newinner);
+            container.insertAdjacentHTML('beforeend', newinner);
             newinner = '';
           }
         }
         else {
-          $(selector).append(newinner);
+          container.insertAdjacentHTML('beforeend', newinner);
           newinner = '';
         }
 
@@ -1734,45 +1872,48 @@ function addRemoteButtons(selector, remfunc, remtype, vremotenum, seperator) {
 
 function addvRemoteInterface(remtype) {
 
-  var elem = $('#reminterface');
-  elem.empty();
+  var elem = $id('reminterface');
+  elem.innerHTML = '';
   addRemoteButtons(elem, 2, remtype, 0, true);
 
 }
 
-function buildHtmlTablePlain(selector, jsonVar) {
+function buildHtmlTablePlain(table, jsonVar) {
   if (!jsonVar || jsonVar.length === 0) return;
   var columns = [];
-  var headerThead$ = $('<thead>');
-  var headerTr$ = $('<tr />');
+  var thead = document.createElement('thead');
+  var headerTr = document.createElement('tr');
 
   for (var key in jsonVar[0]) {
-    if ($.inArray(key, columnSet) == -1) {
-      columnSet.push(key);
-      columns.push(key);
-      headerTr$.append($('<th />').html(key));
-    }
+    columns.push(key);
+    var th = document.createElement('th');
+    th.innerHTML = key;
+    headerTr.appendChild(th);
   }
 
-  headerThead$.append(headerTr$);
+  thead.appendChild(headerTr);
 
-  var tbody$ = $('<tbody>');
+  var tbody = document.createElement('tbody');
   for (var i = 0; i < jsonVar.length; i++) {
-    var row$ = $('<tr />');
+    var row = document.createElement('tr');
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
       var cellValue = jsonVar[i][columns[colIndex]];
       if (cellValue == null) cellValue = "";
-      row$.append($('<td />').html(cellValue));
+      var td = document.createElement('td');
+      td.innerHTML = cellValue;
+      row.appendChild(td);
     }
-    tbody$.append(row$);
+    tbody.appendChild(row);
   }
 
-  $(selector).append(headerThead$).append(tbody$);
+  table.appendChild(thead);
+  table.appendChild(tbody);
 }
 
 function remfunction_validation(i) {
-  if ($('#func_remote-' + i).val() == 5) $(`#bidirect_remote-${i}`).prop("disabled", false);
-  else $(`#bidirect_remote-${i}`).prop("disabled", true);
+  var funcEl = $id('func_remote-' + i);
+  var biEl = $id('bidirect_remote-' + i);
+  if (biEl) biEl.disabled = !(funcEl && funcEl.value == 5);
 }
 
 function formatCapabilities(JSONObj) {
@@ -1791,19 +1932,21 @@ function formatCapabilities(JSONObj) {
 function updateRemoteCapabilities(jsonVar) {
   for (const remote of jsonVar) {
     var i = remote["index"] || 0;
-    var capsCell = $(`#caps-${i}`);
-    if (capsCell.length && remote["capabilities"]) {
-      capsCell.html(formatCapabilities(remote["capabilities"]));
+    var capsCell = $id('caps-' + i);
+    if (capsCell && remote["capabilities"]) {
+      capsCell.innerHTML = formatCapabilities(remote["capabilities"]);
     }
   }
 }
 
-function buildHtmlTableRemotes(selector, remfunc, jsonVar) {
+function buildHtmlTableRemotes(table, remfunc, jsonVar) {
   if (!jsonVar || jsonVar.length === 0) return;
 
-  var headerThead$ = $('<thead>');
-  var headerTr$ = $('<tr>');
-  headerTr$.append($('<th>').html('Select'));
+  var thead = document.createElement('thead');
+  var headerTr = document.createElement('tr');
+  var selectTh = document.createElement('th');
+  selectTh.innerHTML = 'Select';
+  headerTr.appendChild(selectTh);
 
   for (var key in jsonVar[0]) {
     var append = [];
@@ -1828,14 +1971,17 @@ function buildHtmlTableRemotes(selector, remfunc, jsonVar) {
     else if (key === "bidirectional" && remfunc == 1) { //unly show on rf remote page
       append = ["Bidirectional", true];
     }
-    if (append[1]) { headerTr$.append($('<th>').html(append[0])); }
+    if (append[1]) {
+      var th = document.createElement('th');
+      th.innerHTML = append[0];
+      headerTr.appendChild(th);
+    }
   }
 
-  headerThead$.append(headerTr$);
+  thead.appendChild(headerTr);
+  table.appendChild(thead);
 
-  $(selector).append(headerThead$);
-
-  var headerTbody$ = $('<tbody>');
+  var tbody = document.createElement('tbody');
   remotesCount = jsonVar.length;
 
   for (const remote of jsonVar) {
@@ -1843,14 +1989,18 @@ function buildHtmlTableRemotes(selector, remfunc, jsonVar) {
     if (remote["index"]) i = remote["index"];
     var remtype = 0;
     var remfunction = 0;
-    var row$ = $('<tr>');
-    row$.append($('<td>').html(`<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}' />`));
+    var row = document.createElement('tr');
+    var selectTd = document.createElement('td');
+    selectTd.innerHTML = `<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}' />`;
+    row.appendChild(selectTd);
 
     for (const key in remote) {
       const value = remote[key];
 
       if (key === "index") {
-        row$.append($('<td>').html(value.toString()));
+        var td = document.createElement('td');
+        td.innerHTML = value.toString();
+        row.appendChild(td);
       }
       else if (key === "id") {
         var cellValue = value.toString();
@@ -1858,13 +2008,17 @@ function buildHtmlTableRemotes(selector, remfunc, jsonVar) {
         cellValue = `${value[0].toString(16).toUpperCase()},${value[1].toString(16).toUpperCase()},${value[2].toString(16).toUpperCase()}`;
         if (cellValue == "0,0,0") cellValue = "empty slot";
         var idval = `id_remote-${i}`;
-        row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly='' />`));
+        var td = document.createElement('td');
+        td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}' readonly='' />`;
+        row.appendChild(td);
       }
       else if (key === "name") {
         var cellValue = value.toString();
         if (cellValue == null) cellValue = '';
         var idval = `name_remote-${i}`;
-        row$.append($('<td>').html(`<input type='text' id='${idval}' value='${cellValue}' readonly='' />`));
+        var td = document.createElement('td');
+        td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}' readonly='' />`;
+        row.appendChild(td);
       }
       else if (key === "remfunc") {
         remfunction = value;
@@ -1884,7 +2038,9 @@ function buildHtmlTableRemotes(selector, remfunc, jsonVar) {
             }
             select.appendChild(option);
           }
-          row$.append($('<td>').html(select));
+          var td = document.createElement('td');
+          td.appendChild(select);
+          row.appendChild(td);
         }
       }
       else if (key === "remtype") {
@@ -1903,19 +2059,20 @@ function buildHtmlTableRemotes(selector, remfunc, jsonVar) {
           }
           select.appendChild(option);
         }
-        row$.append($('<td>').html(select));
+        var td = document.createElement('td');
+        td.appendChild(select);
+        row.appendChild(td);
       }
       else if (key === "capabilities") {
+        var td = document.createElement('td');
         if (remfunction == 2 || remfunction == 5) {
-          var td$ = $('<td>');
-          addRemoteButtons(td$, remfunc, remtype, i, false);
-          row$.append(td$);
+          addRemoteButtons(td, remfunc, remtype, i, false);
         }
         else {
-          var td$ = $('<td>').attr('id', `caps-${i}`);
-          td$.html(formatCapabilities(value));
-          row$.append(td$);
+          td.id = `caps-${i}`;
+          td.innerHTML = formatCapabilities(value);
         }
+        row.appendChild(td);
       }
       else if (key === "bidirectional") {
         if (remfunc != 2) { //do not add remote function is remfunction == virtual remote
@@ -1924,95 +2081,124 @@ function buildHtmlTableRemotes(selector, remfunc, jsonVar) {
           checkbox.id = `bidirect_remote-${i}`;
           checkbox.checked = jsonVar[i]["bidirectional"];
           checkbox.disabled = true;
-          row$.append($('<td>').html(checkbox));
+          var td = document.createElement('td');
+          td.appendChild(checkbox);
+          row.appendChild(td);
         }
       }
-      // else {
-      //   var cellValue = value.toString();
-      //   if (cellValue == null) cellValue = '';
-      //   row$.append(cellValue);
-      // }
-      headerTbody$.append(row$);
+      tbody.appendChild(row);
     }
   }
-  $(selector).append(headerTbody$);
+  table.appendChild(tbody);
 }
 
-function buildHtmlStatusTable(selector, jsonVar) {
-  var headerThead$ = $('<thead>');
-  var headerTr$ = $('<tr>');
-  headerTr$.append($('<th>').html('Index'));
-  headerTr$.append($('<th>').html('Label'));
-  headerTr$.append($('<th>').html('Value'));
-  headerThead$.append(headerTr$);
-  $(selector).append(headerThead$);
+function buildHtmlStatusTable(table, jsonVar) {
+  var thead = document.createElement('thead');
+  var headerTr = document.createElement('tr');
+  ['Index', 'Label', 'Value'].forEach(function (text) {
+    var th = document.createElement('th');
+    th.innerHTML = text;
+    headerTr.appendChild(th);
+  });
+  thead.appendChild(headerTr);
+  table.appendChild(thead);
 
-  var headerTbody$ = $('<tbody>');
+  var tbody = document.createElement('tbody');
 
   Object.entries(jsonVar).forEach(([key, value], index) => {
-    var row$ = $('<tr>');
-    row$.append($('<td>').text(index));
-    row$.append($('<td>').text(key));
-    row$.append($('<td>').text(value));
-    headerTbody$.append(row$);
+    var row = document.createElement('tr');
+    [index, key, value].forEach(function (text) {
+      var td = document.createElement('td');
+      td.textContent = text;
+      row.appendChild(td);
+    });
+    tbody.appendChild(row);
   });
 
-  $(selector).append(headerTbody$);
-
+  table.appendChild(tbody);
 }
 
-function addRowTableIthoSettings(selector, jsonVar) {
+function addRowTableIthoSettings(tbody, jsonVar) {
   var i = jsonVar.Index;
-  var row$ = $(`<tr>`);
-  row$.append($(`<td class='ithoset' style='text-align: center;vertical-align: middle;'>`).html(`<input type='radio' id='option-select_ithoset-${i}' name='options-ithoset' onchange='radio("ithoset",${i})' value='${i}' />`));
+  var row = document.createElement('tr');
+  var selectTd = document.createElement('td');
+  selectTd.className = 'ithoset';
+  selectTd.style.textAlign = 'center';
+  selectTd.style.verticalAlign = 'middle';
+  selectTd.innerHTML = `<input type='radio' id='option-select_ithoset-${i}' name='options-ithoset' onchange='radio("ithoset",${i})' value='${i}' />`;
+  row.appendChild(selectTd);
   for (var key in jsonVar) {
     if (key == "update") { continue; }
     if (key == "loop") { continue; }
+    var td = document.createElement('td');
+    td.className = 'ithoset';
     if (jsonVar[key] == null) {
-      row$.append($(`<td class='ithoset' id='${key}-${i}'>`).html(`<div style='margin: auto;' class='dot-elastic'></div>`));
+      td.id = key + '-' + i;
+      td.innerHTML = "<div style='margin: auto;' class='dot-elastic'></div>";
     }
     else {
-      row$.append($(`<td class='ithoset'>`).html(jsonVar[key]));
+      td.innerHTML = jsonVar[key];
     }
+    row.appendChild(td);
   }
-  row$.append($(`<td class='ithoset'>`).html(`<button id='ithosetupdate-${i}' class='pure-button'>Update</button>`));
-  row$.append($(`<td class='ithoset'>`).html(`<button id='ithosetrefresh-${i}' class='pure-button'>Refresh</button>`));
+  var updTd = document.createElement('td');
+  updTd.className = 'ithoset';
+  updTd.innerHTML = `<button id='ithosetupdate-${i}' class='pure-button'>Update</button>`;
+  row.appendChild(updTd);
+  var refTd = document.createElement('td');
+  refTd.className = 'ithoset';
+  refTd.innerHTML = `<button id='ithosetrefresh-${i}' class='pure-button'>Refresh</button>`;
+  row.appendChild(refTd);
 
-  $(selector).append(row$);
+  tbody.appendChild(row);
 }
 
 function updateRowTableIthoSettings(jsonVar) {
   var i = jsonVar.Index;
   for (var key in jsonVar) {
     if (key == "Current") {
-      $(`#${key}-${i}`).html(`<input type='text' id='name_ithoset-${i}' value='${jsonVar[key]}' readonly='' />`);
+      var el = $id(key + '-' + i);
+      if (el) el.innerHTML = `<input type='text' id='name_ithoset-${i}' value='${jsonVar[key]}' readonly='' />`;
     }
     if (key == "Minimum" || key == "Maximum") {
-      $(`#${key}-${i}`).html(jsonVar[key]);
+      var el = $id(key + '-' + i);
+      if (el) el.innerHTML = jsonVar[key];
     }
   }
 }
 
-function addColumnHeader(jsonVar, selector, appendRow) {
+function addColumnHeader(jsonVar, table, appendRow) {
   var columnSet = [];
-  var headerThead$ = $('<thead>');
-  var headerTr$ = $('<tr>');
-  headerTr$.append($(`<th class='ithoset'>`).html('Select'));
+  var thead = document.createElement('thead');
+  var headerTr = document.createElement('tr');
+  var selectTh = document.createElement('th');
+  selectTh.className = 'ithoset';
+  selectTh.innerHTML = 'Select';
+  headerTr.appendChild(selectTh);
 
   for (var key in jsonVar) {
     if (key == "update") { continue; }
     if (key == "loop") { continue; }
-    if ($.inArray(key, columnSet) == -1) {
+    if (columnSet.indexOf(key) == -1) {
       columnSet.push(key);
-      headerTr$.append($(`<th class='ithoset'>`).html(key));
+      var th = document.createElement('th');
+      th.className = 'ithoset';
+      th.innerHTML = key;
+      headerTr.appendChild(th);
     }
   }
-  headerTr$.append($(`<th class='ithoset'>`).html('&nbsp;'));
-  headerTr$.append($(`<th class='ithoset'>`).html('&nbsp;'));
+  var spacer1 = document.createElement('th');
+  spacer1.className = 'ithoset';
+  spacer1.innerHTML = '&nbsp;';
+  headerTr.appendChild(spacer1);
+  var spacer2 = document.createElement('th');
+  spacer2.className = 'ithoset';
+  spacer2.innerHTML = '&nbsp;';
+  headerTr.appendChild(spacer2);
 
-  headerThead$.append(headerTr$);
+  thead.appendChild(headerTr);
   if (appendRow) {
-    $(selector).append(headerThead$);
+    table.appendChild(thead);
   }
   return columnSet;
 }
@@ -2023,103 +2209,125 @@ function buildHtmlHADiscTable(ithostatusinfo) {
   // Set default value for device type input field
   document.getElementById("hadevicename").value = ha_dev_name;
 
-  const headerThead$ = $("<thead>");
-  const headerTr$ = $("<tr>");
-  const selectAllCb$ = $("<input>", { type: "checkbox", id: "selectAllStatus" });
-  headerTr$.append($("<th>").append(selectAllCb$).append(" Include"));
-  headerTr$.append($("<th>").html("Label"));
-  headerTr$.append($("<th>").html("HA Name"));
-  headerTr$.append($("<th>").addClass("advanced hidden").html("Device Class"));
-  headerTr$.append($("<th>").addClass("advanced hidden").html("State Class"));
-  headerTr$.append($("<th>").addClass("advanced hidden").html("Value Template"));
-  headerTr$.append($("<th>").addClass("advanced hidden").html("Unit of Measurement"));
-  headerThead$.append(headerTr$);
-  $("#HADiscTable").append(headerThead$);
+  var thead = document.createElement('thead');
+  var headerTr = document.createElement('tr');
+
+  var selectAllCb = document.createElement('input');
+  selectAllCb.type = 'checkbox';
+  selectAllCb.id = 'selectAllStatus';
+  var includeTh = document.createElement('th');
+  includeTh.appendChild(selectAllCb);
+  includeTh.append(' Include');
+  headerTr.appendChild(includeTh);
+
+  ['Label', 'HA Name'].forEach(function (text) {
+    var th = document.createElement('th');
+    th.innerHTML = text;
+    headerTr.appendChild(th);
+  });
+  ['Device Class', 'State Class', 'Value Template', 'Unit of Measurement'].forEach(function (text) {
+    var th = document.createElement('th');
+    th.className = 'advanced hidden';
+    th.innerHTML = text;
+    headerTr.appendChild(th);
+  });
+  thead.appendChild(headerTr);
+  $id('HADiscTable').appendChild(thead);
 
   // Select all / deselect all
-  selectAllCb$.on("change", function () {
-    const checked = $(this).is(":checked");
-    $("#HADiscTable tbody tr td:first-child input[type='checkbox']").prop("checked", checked);
+  selectAllCb.addEventListener('change', function () {
+    var checked = this.checked;
+    $qa("#HADiscTable tbody tr td:first-child input[type='checkbox']").forEach(function (cb) { cb.checked = checked; });
   });
 
-  const headerTbody$ = $("<tbody>");
+  var tbody = document.createElement('tbody');
 
   // Build table rows from ithostatusinfo
   Object.entries(ithostatusinfo).forEach(([key, value], index) => {
-    const row$ = $("<tr>");
-    const isDisabled = value === "not available";
+    var row = document.createElement('tr');
 
     // Include checkbox (default unchecked)
-    const includeCheckbox$ = $("<input>", {
-      type: "checkbox",
-      checked: false,
-      "data-field": "include",
-    });
-    const includeTd$ = $("<td>").append(includeCheckbox$);
-    row$.append(includeTd$);
+    var includeCheckbox = document.createElement('input');
+    includeCheckbox.type = 'checkbox';
+    includeCheckbox.checked = false;
+    includeCheckbox.dataset.field = 'include';
+    var includeTd = document.createElement('td');
+    includeTd.appendChild(includeCheckbox);
+    row.appendChild(includeTd);
 
     // Label (non-editable)
-    row$.append($("<td>").text(key));
+    var labelTd = document.createElement('td');
+    labelTd.textContent = key;
+    row.appendChild(labelTd);
 
     // HA Name (editable, unit of measurement removed)
     const unitMatch = key.match(/\(([^)]+)\)$/);
     const cleanName = key.replace(/\s*\([^)]+\)$/, "");
-    const nameInput$ = $("<input>", {
-      type: "text",
-      value: cleanName,
-      placeholder: "Name",
-      "data-field": "name",
-    });
-    row$.append($("<td>").append(nameInput$));
+    var nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = cleanName;
+    nameInput.placeholder = 'Name';
+    nameInput.dataset.field = 'name';
+    var nameTd = document.createElement('td');
+    nameTd.appendChild(nameInput);
+    row.appendChild(nameTd);
 
     // Device Class (editable, advanced)
-    const deviceClassInput$ = $("<input>", {
-      type: "text",
-      class: "advanced hidden",
-      placeholder: "Device Class",
-      "data-field": "dc",
-    });
-    row$.append($("<td>").addClass("advanced hidden").append(deviceClassInput$));
+    var deviceClassInput = document.createElement('input');
+    deviceClassInput.type = 'text';
+    deviceClassInput.className = 'advanced hidden';
+    deviceClassInput.placeholder = 'Device Class';
+    deviceClassInput.dataset.field = 'dc';
+    var dcTd = document.createElement('td');
+    dcTd.className = 'advanced hidden';
+    dcTd.appendChild(deviceClassInput);
+    row.appendChild(dcTd);
 
     // State Class (editable, advanced)
-    const stateClassInput$ = $("<input>", {
-      type: "text",
-      class: "advanced hidden",
-      placeholder: "State Class",
-      "data-field": "sc",
-    });
-    row$.append($("<td>").addClass("advanced hidden").append(stateClassInput$));
+    var stateClassInput = document.createElement('input');
+    stateClassInput.type = 'text';
+    stateClassInput.className = 'advanced hidden';
+    stateClassInput.placeholder = 'State Class';
+    stateClassInput.dataset.field = 'sc';
+    var scTd = document.createElement('td');
+    scTd.className = 'advanced hidden';
+    scTd.appendChild(stateClassInput);
+    row.appendChild(scTd);
 
     // Value Template (editable, advanced, retains unit)
-    const valueTemplateInput$ = $("<input>", {
-      type: "text",
-      class: "advanced hidden",
-      placeholder: `{{ value_json['${key}'] }}`,
-      value: `{{ value_json['${key}'] }}`,
-      "data-default": `{{ value_json['${key}'] }}`,
-      "data-field": "vt",
-    });
-    row$.append($("<td>").addClass("advanced hidden").append(valueTemplateInput$));
+    var valueTemplateInput = document.createElement('input');
+    valueTemplateInput.type = 'text';
+    valueTemplateInput.className = 'advanced hidden';
+    valueTemplateInput.placeholder = `{{ value_json['${key}'] }}`;
+    valueTemplateInput.value = `{{ value_json['${key}'] }}`;
+    valueTemplateInput.dataset.default = `{{ value_json['${key}'] }}`;
+    valueTemplateInput.dataset.field = 'vt';
+    var vtTd = document.createElement('td');
+    vtTd.className = 'advanced hidden';
+    vtTd.appendChild(valueTemplateInput);
+    row.appendChild(vtTd);
 
     // Unit of Measurement (editable, advanced, pre-filled if present)
-    const unitInput$ = $("<input>", {
-      type: "text",
-      class: "advanced hidden",
-      placeholder: "Unit of Measurement",
-      value: unitMatch ? unitMatch[1] : "",
-      "data-field": "um",
-    });
-    row$.append($("<td>").addClass("advanced hidden").append(unitInput$));
+    var unitInput = document.createElement('input');
+    unitInput.type = 'text';
+    unitInput.className = 'advanced hidden';
+    unitInput.placeholder = 'Unit of Measurement';
+    unitInput.value = unitMatch ? unitMatch[1] : '';
+    unitInput.dataset.field = 'um';
+    var umTd = document.createElement('td');
+    umTd.className = 'advanced hidden';
+    umTd.appendChild(unitInput);
+    row.appendChild(umTd);
 
-    headerTbody$.append(row$);
+    tbody.appendChild(row);
   });
 
-  $("#HADiscTable").append(headerTbody$);
+  $id('HADiscTable').appendChild(tbody);
 
   // Advanced toggle
-  $("#" + advancedToggleId).on("change", function () {
-    const showAdvanced = $(this).is(":checked");
-    $(".advanced").toggleClass("hidden", !showAdvanced);
+  $id(advancedToggleId).addEventListener('change', function () {
+    var showAdvanced = this.checked;
+    $qa('.advanced').forEach(function (el) { el.classList.toggle('hidden', !showAdvanced); });
   });
 }
 
@@ -2140,15 +2348,15 @@ const sensorInfo = {
 
 function buildRFDevicesUI(rfdevices) {
   rfDevicesData = rfdevices || [];
-  const container = $('#rfdevices-container');
-  container.empty();
+  const container = $id('rfdevices-container');
+  container.innerHTML = '';
 
   if (!rfdevices || rfdevices.length === 0) {
-    $('#rfdevices-header').addClass('hidden');
+    $id('rfdevices-header').classList.add('hidden');
     return;
   }
 
-  $('#rfdevices-header').removeClass('hidden');
+  $id('rfdevices-header').classList.remove('hidden');
 
   rfdevices.forEach((device) => {
     const availableSensors = device.available ? device.available.split(',') : [];
@@ -2199,21 +2407,21 @@ function buildRFDevicesUI(rfdevices) {
         ${fanHtml}
       </div>`;
 
-    container.append(deviceHtml);
+    container.insertAdjacentHTML('beforeend', deviceHtml);
   });
 }
 
 function buildVirtualRemotesUI(vrdevices) {
   vrDevicesData = vrdevices || [];
-  const container = $('#vrdevices-container');
-  container.empty();
+  const container = $id('vrdevices-container');
+  container.innerHTML = '';
 
   if (!vrdevices || vrdevices.length === 0) {
-    $('#vrdevices-header').addClass('hidden');
+    $id('vrdevices-header').classList.add('hidden');
     return;
   }
 
-  $('#vrdevices-header').removeClass('hidden');
+  $id('vrdevices-header').classList.remove('hidden');
 
   vrdevices.forEach((device) => {
     const availablePresets = device.presets ? device.presets.split(',') : [];
@@ -2230,7 +2438,7 @@ function buildVirtualRemotesUI(vrdevices) {
         <div class="rf-presets-info">Presets: ${availablePresets.join(', ')}</div>
       </div>`;
 
-    container.append(deviceHtml);
+    container.insertAdjacentHTML('beforeend', deviceHtml);
   });
 }
 
@@ -2238,18 +2446,21 @@ function updateStatusTableFromCompactJson(compactJson) {
   ha_dev_name = compactJson.d;
   document.getElementById("hadevicename").value = ha_dev_name;
 
-  const rows = $("#HADiscTable tbody tr");
+  const rows = $qa("#HADiscTable tbody tr");
   if (rows.length == 0) return;
 
   if (compactJson.c && compactJson.c.length > 0) {
     compactJson.c.forEach((component) => {
-      const row$ = rows.eq(component.i);
-      row$.find("input[data-field='include']").prop("checked", true);
-      row$.find("input[data-field='name']").val(component.n);
-      if (component.dc) row$.find("input[data-field='dc']").val(component.dc);
-      if (component.sc) row$.find("input[data-field='sc']").val(component.sc);
-      if (component.vt) row$.find("input[data-field='vt']").val(component.vt);
-      if (component.um) row$.find("input[data-field='um']").val(component.um);
+      const row = rows[component.i];
+      if (!row) return;
+      var incl = row.querySelector("input[data-field='include']");
+      if (incl) incl.checked = true;
+      var nameEl = row.querySelector("input[data-field='name']");
+      if (nameEl) nameEl.value = component.n;
+      if (component.dc) { var el = row.querySelector("input[data-field='dc']"); if (el) el.value = component.dc; }
+      if (component.sc) { var el = row.querySelector("input[data-field='sc']"); if (el) el.value = component.sc; }
+      if (component.vt) { var el = row.querySelector("input[data-field='vt']"); if (el) el.value = component.vt; }
+      if (component.um) { var el = row.querySelector("input[data-field='um']"); if (el) el.value = component.um; }
     });
   }
 
@@ -2257,36 +2468,40 @@ function updateStatusTableFromCompactJson(compactJson) {
   if (compactJson.rf) {
     compactJson.rf.forEach((rfConfig) => {
       var idx = rfConfig.idx;
-      (rfConfig.sensors || []).forEach(s => $(`#rf_${idx}_${s}`).prop('checked', true));
-      if (rfConfig.fan) $(`#rf_${idx}_fan`).prop('checked', true);
+      (rfConfig.sensors || []).forEach(s => { var el = $id('rf_' + idx + '_' + s); if (el) el.checked = true; });
+      if (rfConfig.fan) { var el = $id('rf_' + idx + '_fan'); if (el) el.checked = true; }
     });
   }
 
   // Restore virtual remote fan selections
   if (compactJson.vr) {
     compactJson.vr.forEach((vrConfig) => {
-      if (vrConfig.fan) $(`#vr_${vrConfig.idx}_fan`).prop('checked', true);
+      if (vrConfig.fan) { var el = $id('vr_' + vrConfig.idx + '_fan'); if (el) el.checked = true; }
     });
   }
 }
 
 function generateCompactJson() {
-  const rows = $("#HADiscTable tbody tr");
+  const rows = $qa("#HADiscTable tbody tr");
   const components = [];
 
-  rows.each(function (index) {
-    var row$ = $(this);
-    if (!row$.find("input[data-field='include']").is(":checked")) return;
+  rows.forEach(function (row, index) {
+    var incl = row.querySelector("input[data-field='include']");
+    if (!incl || !incl.checked) return;
 
-    var vtInput = row$.find("input[data-field='vt']");
-    var component = { i: index, n: row$.find("input[data-field='name']").val() };
-    var dc = row$.find("input[data-field='dc']").val();
-    var sc = row$.find("input[data-field='sc']").val();
-    var vt = vtInput.val();
-    var um = row$.find("input[data-field='um']").val();
+    var vtInput = row.querySelector("input[data-field='vt']");
+    var nameInput = row.querySelector("input[data-field='name']");
+    var component = { i: index, n: nameInput ? nameInput.value : '' };
+    var dcInput = row.querySelector("input[data-field='dc']");
+    var scInput = row.querySelector("input[data-field='sc']");
+    var dc = dcInput ? dcInput.value : '';
+    var sc = scInput ? scInput.value : '';
+    var vt = vtInput ? vtInput.value : '';
+    var umInput = row.querySelector("input[data-field='um']");
+    var um = umInput ? umInput.value : '';
     if (dc) component.dc = dc;
     if (sc) component.sc = sc;
-    if (vt && vt !== vtInput.data("default")) component.vt = vt;
+    if (vt && vtInput && vt !== vtInput.dataset.default) component.vt = vt;
     if (um) component.um = um;
     components.push(component);
   });
@@ -2295,10 +2510,11 @@ function generateCompactJson() {
   const rfSelections = [];
   rfDevicesData.forEach(device => {
     var sensors = [];
-    $(`input[data-rfidx="${device.idx}"][data-sensor]:checked`).each(function () {
-      sensors.push($(this).data('sensor'));
+    $qa(`input[data-rfidx="${device.idx}"][data-sensor]:checked`).forEach(function (el) {
+      sensors.push(el.dataset.sensor);
     });
-    var fanEnabled = $(`#rf_${device.idx}_fan`).is(':checked');
+    var fanEl = $id('rf_' + device.idx + '_fan');
+    var fanEnabled = fanEl && fanEl.checked;
     if (sensors.length > 0 || fanEnabled) {
       var rfEntry = { idx: device.idx, name: device.name, type: device.type };
       if (sensors.length > 0) rfEntry.sensors = sensors;
@@ -2310,7 +2526,8 @@ function generateCompactJson() {
   // Collect virtual remote fan selections
   const vrSelections = [];
   vrDevicesData.forEach(device => {
-    if ($(`#vr_${device.idx}_fan`).is(':checked')) {
+    var fanEl = $id('vr_' + device.idx + '_fan');
+    if (fanEl && fanEl.checked) {
       vrSelections.push({ idx: device.idx, name: device.name, type: device.type, fan: true });
     }
   });
@@ -2349,6 +2566,294 @@ var webapihtml = `
                                                                               </ul>
                                                                             </p>
                                                                             `;
+
+//
+// Setup Wizard
+//
+var wizardActive = false;
+var wizardCurrentStep = 1;
+var wizardHasRF = false;
+var wizardDeviceCategory = 'other';
+var wizardRemotesInterval = null;
+var wizardWifistatInterval = null;
+
+function initWizard(startStep) {
+  wizardActive = true;
+  $id('menu').style.display = 'none';
+  $id('menuLink').style.display = 'none';
+  wizardCurrentStep = startStep || 1;
+  // Save initial state so wizard persists across reboots
+  websock_send('{"wizardsave":' + wizardCurrentStep + '}');
+  wizardGoTo(wizardCurrentStep);
+}
+
+function wizardGetVisibleSteps() {
+  var steps = [1, 2];
+  if (wizardHasRF) steps.push(3);
+  steps.push(4);
+  var haEl = $q('input[name="option-mqtt_ha_active"]:checked');
+  if (haEl && haEl.value == '1') steps.push(5);
+  return steps;
+}
+
+function wizardUpdateIndicators() {
+  var visible = wizardGetVisibleSteps();
+  $qa('#wizard-indicators li').forEach(function (li) {
+    var step = parseInt(li.getAttribute('data-step'));
+    if (visible.indexOf(step) === -1) {
+      li.style.display = 'none';
+    } else {
+      li.style.display = '';
+      li.classList.remove('active', 'done');
+      if (step === wizardCurrentStep) li.classList.add('active');
+      else if (step < wizardCurrentStep) li.classList.add('done');
+    }
+  });
+  // Show/hide nav buttons
+  var idx = visible.indexOf(wizardCurrentStep);
+  var backEl = $id('wizard-back');
+  if (backEl) backEl.style.display = (idx > 0) ? '' : 'none';
+  var isLast = (idx === visible.length - 1);
+  var nextEl = $id('wizard-next');
+  if (nextEl) nextEl.style.display = isLast ? 'none' : '';
+  var finishEl = $id('wizard-finish');
+  if (finishEl) finishEl.style.display = isLast ? '' : 'none';
+}
+
+function wizardSaveWifiSettings() {
+  var wifi_passwd = $val('passwd');
+  var wifi_appasswd = $val('appasswd');
+  var secure_credentials = {};
+  var enc_passwd = secureCredentials.getEncryptedField(wifi_passwd);
+  var enc_appasswd = secureCredentials.getEncryptedField(wifi_appasswd);
+  if (enc_passwd) secure_credentials.passwd = enc_passwd;
+  if (enc_appasswd) secure_credentials.appasswd = enc_appasswd;
+
+  var dhcpEl = $q('input[name="option-dhcp"]:checked');
+  var wifiMsg = {
+    wifisettings: {
+      ssid: $val('ssid'),
+      passwd: enc_passwd ? '********' : wifi_passwd,
+      appasswd: enc_appasswd ? '********' : wifi_appasswd,
+      dhcp: dhcpEl ? dhcpEl.value : 'on',
+      ip: $val('ip'),
+      subnet: $val('subnet'),
+      gateway: $val('gateway'),
+      dns1: $val('dns1'),
+      dns2: $val('dns2'),
+      hostname: $val('hostname'),
+      ntpserver: $val('ntpserver'),
+      timezone: $val('timezone'),
+      aptimeout: $val('aptimeout')
+    }
+  };
+  if (Object.keys(secure_credentials).length > 0) {
+    wifiMsg.wifisettings.secure_credentials = secure_credentials;
+  }
+  websock_send(JSON.stringify(wifiMsg));
+}
+
+function wizardGoTo(step) {
+  // Save WiFi settings when leaving step 1 (so they persist across reboots)
+  if (wizardCurrentStep === 1 && step > 1) {
+    wizardSaveWifiSettings();
+  }
+  // Clean up wifistat polling if leaving step 1
+  if (wizardCurrentStep === 1 && wizardWifistatInterval) {
+    clearInterval(wizardWifistatInterval);
+    wizardWifistatInterval = null;
+  }
+  // Clean up remotes interval if leaving step 3
+  if (wizardCurrentStep === 3 && wizardRemotesInterval) {
+    clearInterval(wizardRemotesInterval);
+    wizardRemotesInterval = null;
+  }
+  wizardCurrentStep = step;
+  // Persist wizard step across reboots
+  websock_send('{"wizardsave":' + step + '}');
+  $qa('.wizard-step').forEach(function (el) { el.classList.remove('active'); });
+  var stepEl = $id('wizard-step-' + step);
+  if (stepEl) stepEl.classList.add('active');
+  wizardUpdateIndicators();
+  // Load data for step
+  if (step === 1) {
+    getSettings('wifisetup');
+    getSettings('wifistat');
+    wizardWifistatInterval = setInterval(function () {
+      getSettings('wifistat');
+    }, 2000);
+  } else if (step === 2) {
+    getSettings('ithodevinfo');
+    getSettings('syssetup');
+  } else if (step === 3) {
+    getSettings('rfsetup');
+    getSettings('ithoremotes');
+    wizardRemotesInterval = setInterval(function () {
+      getSettings('ithoremotes');
+    }, 5000);
+  } else if (step === 4) {
+    getSettings('mqttsetup');
+  }
+}
+
+function wizardNext() {
+  var visible = wizardGetVisibleSteps();
+  var idx = visible.indexOf(wizardCurrentStep);
+  if (idx < visible.length - 1) {
+    wizardGoTo(visible[idx + 1]);
+  }
+}
+
+function wizardBack() {
+  var visible = wizardGetVisibleSteps();
+  var idx = visible.indexOf(wizardCurrentStep);
+  if (idx > 0) {
+    wizardGoTo(visible[idx - 1]);
+  }
+}
+
+function wizardDetectDeviceCategory(devtype) {
+  if (!devtype || devtype === 'Unkown device type') return 'other';
+  if (devtype === 'Heatpump') return 'wpu';
+  if (devtype === 'HRU 250-300') return 'hru250_300';
+  if (devtype === 'HRU 350') return 'hru350';
+  if (devtype === 'HRU ECO-fan') return 'hru_eco';
+  if (devtype === 'CVE-SilentExtPlus') return 'hru200';
+  if (devtype.indexOf('CVE') !== -1) return 'cve';
+  return 'other';
+}
+
+function applyDeviceDefaults() {
+  var cat = wizardDeviceCategory;
+
+  // Helper to check a radio by name+value
+  function checkRadio(name, value) {
+    var el = $q('input[name="' + name + '"][value="' + value + '"]');
+    if (el) el.checked = true;
+  }
+
+  // PWM2I2C: off for all
+  checkRadio('option-itho_pwm2i2c', '0');
+
+  // 31DA and 31D9
+  var enable31 = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350');
+  checkRadio('option-itho_31da', enable31 ? '1' : '0');
+  checkRadio('option-itho_31d9', enable31 ? '1' : '0');
+
+  // Virtual remote and related settings
+  var useVirtual = (cat !== 'hru250_300' && cat !== 'wpu');
+  var numvremEl = $id('itho_numvrem');
+  if (useVirtual) {
+    if (numvremEl) numvremEl.value = 1;
+    checkRadio('option-itho_sendjoin', '2');
+    checkRadio('option-itho_forcemedium', '1');
+  } else {
+    if (numvremEl) numvremEl.value = (cat === 'wpu' ? 0 : 1);
+    checkRadio('option-itho_sendjoin', '0');
+    checkRadio('option-itho_forcemedium', '0');
+  }
+
+  // Map RF→virtual: always off
+  checkRadio('option-itho_vremoteapi', '0');
+
+  // Update frequency
+  var isHRU = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350' || cat === 'hru250_300');
+  var updatefreqEl = $id('itho_updatefreq');
+  if (updatefreqEl) updatefreqEl.value = (isHRU ? 10 : 60);
+
+  // Show RF note for HRU 250-300
+  var rfNote = $id('wiz-rf-note');
+  if (rfNote) rfNote.style.display = (cat === 'hru250_300') ? '' : 'none';
+
+  // Update device info display
+  var hwEl = $id('wiz-hw-revision');
+  if (hwEl) hwEl.textContent = (typeof hw_revision !== 'undefined' ? (hw_revision.startsWith('NON-CVE') ? 'Non-CVE' : 'CVE') : 'Unknown');
+}
+
+function wizardOnDevInfo(devtype) {
+  wizardDeviceCategory = wizardDetectDeviceCategory(devtype);
+  var el = $id('wiz-dev-type');
+  if (el) el.textContent = devtype || 'Unknown';
+  applyDeviceDefaults();
+}
+
+function wizardFinish() {
+  // Helper to get checked radio value
+  function checkedVal(name) {
+    var el = $q('input[name="' + name + '"]:checked');
+    return el ? el.value : undefined;
+  }
+
+  // 1. Save WiFi settings (also saved when leaving step 1, but save again with latest values)
+  wizardSaveWifiSettings();
+
+  // 2. Save system settings (device defaults from step 2)
+  var sysMsg = {
+    systemsettings: {
+      itho_pwm2i2c: checkedVal('option-itho_pwm2i2c'),
+      itho_31da: checkedVal('option-itho_31da'),
+      itho_31d9: checkedVal('option-itho_31d9'),
+      itho_numvrem: $val('itho_numvrem'),
+      itho_sendjoin: checkedVal('option-itho_sendjoin'),
+      itho_forcemedium: checkedVal('option-itho_forcemedium'),
+      itho_vremoteapi: checkedVal('option-itho_vremoteapi'),
+      itho_updatefreq: $val('itho_updatefreq')
+    }
+  };
+  websock_send(JSON.stringify(sysMsg));
+
+  // 3. Save MQTT settings
+  var mqtt_passwd = $val('mqtt_password');
+  var mqtt_secure_credentials = {};
+  var enc_mqtt = secureCredentials.getEncryptedField(mqtt_passwd);
+  if (enc_mqtt) mqtt_secure_credentials.mqtt_password = enc_mqtt;
+
+  var mqttMsg = {
+    systemsettings: {
+      mqtt_active: checkedVal('option-mqtt_active'),
+      mqtt_serverName: $val('mqtt_serverName'),
+      mqtt_username: $val('mqtt_username'),
+      mqtt_password: enc_mqtt ? '********' : mqtt_passwd,
+      mqtt_port: $val('mqtt_port'),
+      mqtt_base_topic: $val('mqtt_base_topic'),
+      mqtt_ha_topic: $val('mqtt_ha_topic'),
+      mqtt_ha_active: checkedVal('option-mqtt_ha_active')
+    }
+  };
+  if (Object.keys(mqtt_secure_credentials).length > 0) {
+    mqttMsg.systemsettings.secure_credentials = mqtt_secure_credentials;
+  }
+  websock_send(JSON.stringify(mqttMsg));
+
+  // 4. Clear wizard state and reboot
+  websock_send('{"wizardclear":true}');
+
+  $id('wizard-reboot-overlay').style.display = '';
+  var dhcpEl = $q('input[name="option-dhcp"]:checked');
+  var dhcp = dhcpEl ? dhcpEl.value : 'on';
+  var targetUrl;
+  if (dhcp === 'off') {
+    targetUrl = 'http://' + ($val('ip') || '192.168.4.1');
+  } else {
+    targetUrl = 'http://' + ($val('hostname') || 'nrg-itho') + '.local';
+  }
+  $id('wizard-reboot-url').innerHTML = 'Device will be available at: <a href="' + targetUrl + '">' + targetUrl + '</a>';
+
+  setTimeout(function () {
+    websock_send('{"reboot":true}');
+  }, 1000);
+
+  // Countdown and redirect
+  var countdown = 30;
+  var cdInterval = setInterval(function () {
+    countdown--;
+    $id('wizard-reboot-countdown').textContent = countdown;
+    if (countdown <= 0) {
+      clearInterval(cdInterval);
+      window.location.href = targetUrl;
+    }
+  }, 1000);
+}
 
 //
 // HTML string literals

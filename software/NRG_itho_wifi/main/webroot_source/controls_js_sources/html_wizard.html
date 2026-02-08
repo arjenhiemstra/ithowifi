@@ -1,0 +1,432 @@
+<div class="header">
+  <h1>Setup Wizard</h1>
+</div>
+<style>
+  .wizard-indicators {
+    display: flex;
+    justify-content: center;
+    margin: 1em 0 2em 0;
+    padding: 0;
+    list-style: none;
+  }
+  .wizard-indicators li {
+    display: flex;
+    align-items: center;
+    font-size: 0.9em;
+    color: #999;
+  }
+  .wizard-indicators li .wiz-num {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    border-radius: 50%;
+    border: 2px solid #ccc;
+    margin-right: 4px;
+    font-weight: bold;
+  }
+  .wizard-indicators li.active .wiz-num {
+    background: #0078e7;
+    border-color: #0078e7;
+    color: #fff;
+  }
+  .wizard-indicators li.done .wiz-num {
+    background: #1cb841;
+    border-color: #1cb841;
+    color: #fff;
+  }
+  .wizard-indicators li.active {
+    color: #0078e7;
+    font-weight: bold;
+  }
+  .wizard-indicators li.done {
+    color: #1cb841;
+  }
+  .wizard-indicators li .wiz-line {
+    width: 30px;
+    height: 2px;
+    background: #ccc;
+    margin: 0 6px;
+  }
+  .wizard-indicators li.done .wiz-line {
+    background: #1cb841;
+  }
+  .wizard-nav {
+    margin: 2em 0;
+    text-align: right;
+  }
+  .wizard-nav button {
+    margin-left: 8px;
+  }
+  .wizard-step {
+    display: none;
+  }
+  .wizard-step.active {
+    display: block;
+  }
+  .wizard-info-box {
+    background: #f0f7ff;
+    border: 1px solid #b3d4fc;
+    border-radius: 4px;
+    padding: 1em;
+    margin: 1em 0;
+  }
+  .wizard-info-box.warning {
+    background: #fff8e1;
+    border-color: #ffe082;
+  }
+  .pure-form-aligned .pure-control-group label {
+    width: 15em;
+  }
+</style>
+
+<ul class="wizard-indicators" id="wizard-indicators">
+  <li class="active" data-step="1"><span class="wiz-num">1</span> WiFi</li>
+  <li data-step="2"><span class="wiz-line"></span><span class="wiz-num">2</span> Device</li>
+  <li data-step="3" id="wiz-ind-rf"><span class="wiz-line"></span><span class="wiz-num">3</span> RF</li>
+  <li data-step="4"><span class="wiz-line"></span><span class="wiz-num">4</span> MQTT</li>
+  <li data-step="5" id="wiz-ind-ha"><span class="wiz-line"></span><span class="wiz-num">5</span> HA</li>
+</ul>
+
+<!-- Step 1: WiFi Setup -->
+<div class="wizard-step active" id="wizard-step-1">
+  <h2>WiFi Setup</h2>
+  <p>Connect your device to your WiFi network.</p>
+  <div class="pure-g">
+    <div class="pure-u-1 pure-u-md-3-5">
+      <form class="pure-form pure-form-aligned" id="wifiform" action="#">
+        <fieldset>
+          <div class="pure-control-group">
+            <label for="ssid">SSID</label>
+            <input id="ssid" maxlength="64" type="text"
+              oninput="if(this.value.length > 32) { this.value = this.value.substring(0, 32); document.getElementById('ssid-msg').innerHTML = 'SSID truncated to 32 characters.'; } else { document.getElementById('ssid-msg').innerHTML = ''; }">
+            <span id="ssid-msg" style="color: red;"></span>
+          </div>
+          <div class="pure-control-group">
+            <label for="passwd">Password</label>
+            <input id="passwd" type="Password" maxlength="65" type="text"
+              oninput="if(this.value.length > 64) { this.value = this.value.substring(0, 64); document.getElementById('passwd-msg').innerHTML = 'Password truncated to 64 characters.'; } else { document.getElementById('passwd-msg').innerHTML = ''; }">
+            <span id="passwd-msg" style="color: red;"></span>
+          </div>
+          <div class="pure-control-group">
+            <label>Show Password</label>
+            <input type="checkbox" onclick="var x=document.getElementById('passwd');x.type=x.type==='password'?'text':'password';">
+          </div>
+          <div class="pure-control-group">
+            <label for="option-dhcp" class="pure-radio">Use DHCP</label>
+            <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
+            <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off"> off
+          </div>
+          <div class="pure-control-group">
+            <label for="hostname">Hostname</label>
+            <input id="hostname" type="text">
+          </div>
+          <div class="pure-control-group">
+            <label for="ip">IP address</label>
+            <input id="ip" type="text">
+          </div>
+          <div class="pure-control-group">
+            <label for="subnet">Subnet</label>
+            <input id="subnet" type="text">
+          </div>
+          <div class="pure-control-group">
+            <label for="gateway">Gateway</label>
+            <input id="gateway" type="text">
+          </div>
+          <div class="pure-control-group">
+            <label for="dns1">DNS server 1</label>
+            <input id="dns1" type="text">
+          </div>
+          <div class="pure-control-group">
+            <label for="dns2">DNS server 2</label>
+            <input id="dns2" type="text">
+          </div>
+          <div class="pure-control-group">
+            <label for="ntpserver">NTP server</label>
+            <input id="ntpserver" type="text">
+          </div>
+          <div class="pure-control-group">
+            <label for="timezone">Timezone</label>
+            <select name="timezone" id="timezone">
+              <option value="Europe/Amsterdam" selected>Europe/Amsterdam</option>
+              <option value="Europe/Andorra">Europe/Andorra</option>
+              <option value="Europe/Athens">Europe/Athens</option>
+              <option value="Europe/Belgrade">Europe/Belgrade</option>
+              <option value="Europe/Berlin">Europe/Berlin</option>
+              <option value="Europe/Bratislava">Europe/Bratislava</option>
+              <option value="Europe/Brussels">Europe/Brussels</option>
+              <option value="Europe/Bucharest">Europe/Bucharest</option>
+              <option value="Europe/Budapest">Europe/Budapest</option>
+              <option value="Europe/Busingen">Europe/Busingen</option>
+              <option value="Europe/Chisinau">Europe/Chisinau</option>
+              <option value="Europe/Copenhagen">Europe/Copenhagen</option>
+              <option value="Europe/Dublin">Europe/Dublin</option>
+              <option value="Europe/Gibraltar">Europe/Gibraltar</option>
+              <option value="Europe/Guernsey">Europe/Guernsey</option>
+              <option value="Europe/Helsinki">Europe/Helsinki</option>
+              <option value="Europe/Isle_of_Man">Europe/Isle_of_Man</option>
+              <option value="Europe/Istanbul">Europe/Istanbul</option>
+              <option value="Europe/Jersey">Europe/Jersey</option>
+              <option value="Europe/Kaliningrad">Europe/Kaliningrad</option>
+              <option value="Europe/Kyiv">Europe/Kyiv</option>
+              <option value="Europe/Kirov">Europe/Kirov</option>
+              <option value="Europe/Lisbon">Europe/Lisbon</option>
+              <option value="Europe/Ljubljana">Europe/Ljubljana</option>
+              <option value="Europe/London">Europe/London</option>
+              <option value="Europe/Luxembourg">Europe/Luxembourg</option>
+              <option value="Europe/Madrid">Europe/Madrid</option>
+              <option value="Europe/Malta">Europe/Malta</option>
+              <option value="Europe/Mariehamn">Europe/Mariehamn</option>
+              <option value="Europe/Minsk">Europe/Minsk</option>
+              <option value="Europe/Monaco">Europe/Monaco</option>
+              <option value="Europe/Moscow">Europe/Moscow</option>
+              <option value="Europe/Oslo">Europe/Oslo</option>
+              <option value="Europe/Paris">Europe/Paris</option>
+              <option value="Europe/Podgorica">Europe/Podgorica</option>
+              <option value="Europe/Prague">Europe/Prague</option>
+              <option value="Europe/Riga">Europe/Riga</option>
+              <option value="Europe/Rome">Europe/Rome</option>
+              <option value="Europe/Samara">Europe/Samara</option>
+              <option value="Europe/San_Marino">Europe/San_Marino</option>
+              <option value="Europe/Sarajevo">Europe/Sarajevo</option>
+              <option value="Europe/Saratov">Europe/Saratov</option>
+              <option value="Europe/Simferopol">Europe/Simferopol</option>
+              <option value="Europe/Skopje">Europe/Skopje</option>
+              <option value="Europe/Sofia">Europe/Sofia</option>
+              <option value="Europe/Stockholm">Europe/Stockholm</option>
+              <option value="Europe/Tallinn">Europe/Tallinn</option>
+              <option value="Europe/Tirane">Europe/Tirane</option>
+              <option value="Europe/Ulyanovsk">Europe/Ulyanovsk</option>
+              <option value="Europe/Uzhgorod">Europe/Uzhgorod</option>
+              <option value="Europe/Vaduz">Europe/Vaduz</option>
+              <option value="Europe/Vatican">Europe/Vatican</option>
+              <option value="Europe/Vienna">Europe/Vienna</option>
+              <option value="Europe/Vilnius">Europe/Vilnius</option>
+              <option value="Europe/Volgograd">Europe/Volgograd</option>
+              <option value="Europe/Warsaw">Europe/Warsaw</option>
+              <option value="Europe/Zagreb">Europe/Zagreb</option>
+              <option value="Europe/Zaporizhzhia">Europe/Zaporizhzhia</option>
+              <option value="Europe/Zurich">Europe/Zurich</option>
+              <option value="Etc/Greenwich">Etc/Greenwich</option>
+              <option value="Etc/Universal">Etc/Universal</option>
+            </select>
+          </div>
+          <div class="pure-control-group">
+            <label for="aptimeout">AP time out (min)</label>
+            <input id="aptimeout" type="number" min="0" max="255" size="6"
+              title="0-255 minutes, 0: AP always off, 255: always on">
+          </div>
+          <div class="pure-control-group">
+            <label for="appasswd">AP Password</label>
+            <input id="appasswd" maxlength="65" type="text"
+              oninput="if(this.value.length > 64) { this.value = this.value.substring(0, 64); document.getElementById('appasswd-msg').innerHTML = 'AP Password truncated to 64 characters.'; } else { document.getElementById('appasswd-msg').innerHTML = ''; }">
+            <span id="appasswd-msg" style="color: red;"></span>
+          </div>
+        </fieldset>
+      </form>
+      <br>
+      <table class="pure-table pure-table-bordered" style="margin-left:auto;margin-right:auto;">
+        <thead style="white-space: nowrap;">
+          <tr>
+            <th colspan="2">WiFi status:</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>WiFi SSID:</td>
+            <td><span name="wifissid">unknown</span></td>
+          </tr>
+          <tr>
+            <td>WiFi status:</td>
+            <td><span name="wificonnstat">unknown</span></td>
+          </tr>
+          <tr>
+            <td>WiFi IP:</td>
+            <td><span name="wifiip">unknown</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <br>
+    </div>
+    <div class="pure-u-1 pure-u-md-2-5">
+      <div>
+        <div><button id="wifiscan" class="pure-button pure-button-active">Scan</button></div>
+      </div>
+      <div class="hidden">
+        <div>
+          <p>Scan results:</p>
+        </div>
+      </div>
+      <div id="wifiscanresult"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 2: Device & Defaults -->
+<div class="wizard-step" id="wizard-step-2">
+  <h2>Device Settings</h2>
+  <div class="wizard-info-box">
+    <p><strong>Hardware:</strong> <span id="wiz-hw-revision">detecting...</span></p>
+    <p><strong>Device type:</strong> <span id="wiz-dev-type">detecting...</span></p>
+  </div>
+  <p>The following settings have been configured based on your device type. You can adjust them if needed.</p>
+  <form class="pure-form pure-form-aligned">
+    <fieldset>
+      <legend><br>Fan control:</legend>
+      <div class="pure-control-group">
+        <label for="option-pwm2i2c" class="pure-radio">CVE fan control (PWM2I2C)</label>
+        <input id="option-pwm2i2c-1" type="radio" name="option-itho_pwm2i2c" value="1"> on
+        <input id="option-pwm2i2c-0" type="radio" name="option-itho_pwm2i2c" value="0"> off
+      </div>
+      <legend><br>I2C commands:</legend>
+      <div class="pure-control-group">
+        <label for="option-31da" class="pure-radio">Ventilation status (31DA)</label>
+        <input id="option-31da-1" type="radio" name="option-itho_31da" value="1"> on
+        <input id="option-31da-0" type="radio" name="option-itho_31da" value="0"> off
+      </div>
+      <div class="pure-control-group">
+        <label for="option-31d9" class="pure-radio">Fan system status (31D9)</label>
+        <input id="option-31d9-1" type="radio" name="option-itho_31d9" value="1"> on
+        <input id="option-31d9-0" type="radio" name="option-itho_31d9" value="0"> off
+      </div>
+      <legend><br>Virtual remote:</legend>
+      <div class="pure-control-group">
+        <label for="itho_numvrem">Number of virtual remotes</label>
+        <input id="itho_numvrem" type="number" min="0" max="12" size="6">
+      </div>
+      <div class="pure-control-group">
+        <label for="option-vremotejoin" class="pure-radio">Send join command</label>
+        <input id="option-vremotejoin-2" type="radio" name="option-itho_sendjoin" value="2"> every power on
+        <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1"> next power on
+        <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
+      </div>
+      <div class="pure-control-group">
+        <label for="option-vremotemedium" class="pure-radio">Force medium/auto mode</label>
+        <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1"> on
+        <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
+      </div>
+      <div class="pure-control-group">
+        <label for="option-vremoteapi" class="pure-radio">Map RF remotes to virtual remote</label>
+        <input id="option-vremoteapi-1" type="radio" name="option-itho_vremoteapi" value="1"> on
+        <input id="option-vremoteapi-0" type="radio" name="option-itho_vremoteapi" value="0"> off
+      </div>
+      <legend><br>Status update frequency:</legend>
+      <div class="pure-control-group">
+        <label for="itho_updatefreq">Update frequency (seconds)</label>
+        <input id="itho_updatefreq" type="number" min="0" max="65535" size="6">
+      </div>
+    </fieldset>
+  </form>
+  <div class="wizard-info-box warning" id="wiz-rf-note" style="display:none">
+    <p><strong>Note:</strong> For your device type, an RF remote should be configured. You can do this in the next step or later via the RF Devices menu.</p>
+  </div>
+</div>
+
+<!-- Step 3: RF Setup (conditional) -->
+<div class="wizard-step" id="wizard-step-3">
+  <h2>RF Remote Setup</h2>
+  <p>A CC1101 RF module has been detected. You can pair RF remotes with your device here, or skip this step and do it later.</p>
+  <form class="pure-form pure-form-aligned">
+    <fieldset>
+      <div class="pure-control-group">
+        <label for="itho_llm">Learn/Leave mode</label>
+        <button id="itho_llm" type="button" class="pure-button">Unknown</button>
+      </div>
+      <br>
+      <div class="pure-control-group">
+        <label for="module_rf_id_str">Module RF ID</label>
+        <input id="module_rf_id_str" maxlength="8" type="text">
+      </div>
+      <div class="pure-control-group">
+        <label for="itho_numrfrem">Number of RF remotes</label>
+        <input id="itho_numrfrem" type="number" min="1" max="12" size="6">
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend><br>RF remotes:</legend>
+      <br>
+      <table id="RemotesTable" class="pure-table pure-table-bordered" style="text-align: center;">
+      </table>
+      <div class="pure-control-group">
+        <button id="itho_update_remote" type="button" class="pure-button">Update</button>&nbsp;
+        <button id="itho_remove_remote" type="button" class="pure-button">Remove</button>
+      </div>
+    </fieldset>
+  </form>
+</div>
+
+<!-- Step 4: MQTT -->
+<div class="wizard-step" id="wizard-step-4">
+  <h2>MQTT Setup</h2>
+  <p>Configure the MQTT server to publish status and receive commands.</p>
+  <form class="pure-form pure-form-aligned">
+    <fieldset>
+      <div class="pure-control-group">
+        <label for="option-mqtt_active" class="pure-radio">MQTT Active</label>
+        <input id="option-mqtt_active-1" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 1)' value="1"> on
+        <input id="option-mqtt_active-0" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 0)' value="0"> off
+      </div>
+      <br>
+      <div class="pure-control-group">
+        <label for="mqtt_serverName">Server</label>
+        <input id="mqtt_serverName" maxlength="63" type="text">
+      </div>
+      <div class="pure-control-group">
+        <label for="mqtt_username">Username</label>
+        <input id="mqtt_username" maxlength="64" type="text">
+      </div>
+      <div class="pure-control-group">
+        <label for="mqtt_password">Password</label>
+        <input id="mqtt_password" maxlength="64" type="Password">
+      </div>
+      <div class="pure-control-group">
+        <label for="mqtt_port">Port</label>
+        <input id="mqtt_port" maxlength="5" type="text">
+      </div>
+      <div class="pure-control-group">
+        <label for="mqtt_base_topic">MQTT base topic</label>
+        <input id="mqtt_base_topic" maxlength="120" type="text">
+      </div>
+      <br>
+      <div class="pure-control-group">
+        <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
+        <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha_active", 1)' value="1"> on
+        <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha_active", 0)' value="0"> off
+      </div>
+      <div class="pure-control-group">
+        <label for="mqtt_ha_topic">HA Discovery topic prefix</label>
+        <input id="mqtt_ha_topic" maxlength="120" type="text">
+      </div>
+    </fieldset>
+  </form>
+</div>
+
+<!-- Step 5: HA Discovery (conditional) -->
+<div class="wizard-step" id="wizard-step-5">
+  <h2>Home Assistant Discovery</h2>
+  <div class="wizard-info-box">
+    <p>Home Assistant MQTT Discovery has been enabled.</p>
+    <p>After the device reboots and connects to your network, it will automatically register with Home Assistant via MQTT.</p>
+    <p>You can fine-tune the HA Discovery entity configuration later through the <strong>HA Discovery</strong> menu item.</p>
+  </div>
+</div>
+
+<!-- Wizard Navigation -->
+<div class="wizard-nav">
+  <button id="wizard-back" class="pure-button" style="display:none">Back</button>
+  <button id="wizard-next" class="pure-button pure-button-primary">Next</button>
+  <button id="wizard-finish" class="pure-button pure-button-primary" style="display:none">Finish</button>
+</div>
+
+<!-- Reboot overlay -->
+<div id="wizard-reboot-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.95); z-index:9999; text-align:center; padding-top:20%;">
+  <h2>Setup Complete!</h2>
+  <p>Saving configuration and rebooting...</p>
+  <p id="wizard-reboot-msg">Redirecting in <span id="wizard-reboot-countdown">30</span> seconds...</p>
+  <p id="wizard-reboot-url"></p>
+</div>
+
+<script>
+  getSettings('wifisetup');
+</script>

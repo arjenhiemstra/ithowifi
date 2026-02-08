@@ -403,13 +403,10 @@ Unless specified otherwise:<br>
 </table>
 <p><br><br></p>
 <script>
-    $(document).ready(function () {
-        getSettings('syssetup');
-        setTimeout(function () {
-            if (localStorage.getItem("api_version") == "2") {
-                //$('#webapitxt').html("");
-                $('#webapitxt').html(webapihtml);
-            }
-        }, 500);
-    });
+    getSettings('syssetup');
+    setTimeout(function () {
+        if (localStorage.getItem("api_version") == "2") {
+            $id('webapitxt').innerHTML = webapihtml;
+        }
+    }, 500);
 </script>

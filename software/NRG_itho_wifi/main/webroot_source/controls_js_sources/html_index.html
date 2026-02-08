@@ -47,21 +47,19 @@
   <div class="pure-u-1 pure-u-md-1-5"></div>
 </div>
 <script>
-  $(document).ready(function () {
-    if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
-      $('#sliderdiv').addClass('hidden');
-      $('#reminterface').empty();
+  if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
+    $id('sliderdiv').classList.add('hidden');
+    $id('reminterface').innerHTML = '';
+  }
+  else {
+    var slide = $id("ithoslider");
+    if (!!slide) {
+      slide.oninput = function () { $id('ithotextval').innerHTML = this.value; };
+      slide.onchange = function () { updateSlider(this.value); };
     }
-    else {
-      var slide = document.getElementById("ithoslider");
-      if (!!slide) {
-        slide.oninput = function () { $('#ithotextval').html(this.value); };
-        slide.onchange = function () { updateSlider(this.value); };
-      }
-    }
-    getSettings('sysstat');
-    getSettings('remtype');
-  });
+  }
+  getSettings('sysstat');
+  getSettings('remtype');
 
   function load_config() {
     if (websock.readyState === WebSocket.OPEN) {

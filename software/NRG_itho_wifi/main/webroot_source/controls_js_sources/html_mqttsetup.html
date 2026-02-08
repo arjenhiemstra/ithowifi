@@ -138,9 +138,7 @@
 </table>
 <br><br>
 <script>
-  $(document).ready(function () {
-    getSettings('mqttsetup');
-  });
+  getSettings('mqttsetup');
 
   var input = document.getElementById("mqtt_base_topic");
   input.addEventListener('input', updateSpanByName);

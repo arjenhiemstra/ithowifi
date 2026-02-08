@@ -32,12 +32,10 @@
   </fieldset>
 </form>
 <script>
-  $(document).ready(function () {
-    getSettings('ithosetup');
-    if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
-      loadSettingsLocStor();
-      $('#settings_cache_load').removeClass('hidden');
-      $('#downloadsettingsdiv').removeClass('hidden');
-    }
-  });
+  getSettings('ithosetup');
+  if (localStorage.getItem("ihto_settings_complete") == "true" && localStorage.getItem("uuid") == uuid) {
+    loadSettingsLocStor();
+    $id('settings_cache_load').classList.remove('hidden');
+    $id('downloadsettingsdiv').classList.remove('hidden');
+  }
 </script>

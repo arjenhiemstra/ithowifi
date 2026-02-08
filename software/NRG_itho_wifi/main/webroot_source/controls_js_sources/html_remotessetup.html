@@ -50,18 +50,12 @@
   </fieldset>
 </form>
 <script>
-  var remotesRefreshInterval;
-  $(document).ready(function () {
-    $('#main').css('max-width', '1400px')
+  $id('main').style.maxWidth = '1400px';
+  getSettings('ithoremotes');
+  getSettings('rfsetup');
+  remotesRefreshInterval = setInterval(function () {
     getSettings('ithoremotes');
-    getSettings('rfsetup');
-    remotesRefreshInterval = setInterval(function () {
-      getSettings('ithoremotes');
-    }, 5000);
-  });
-  $(window).on('beforeunload', function () {
-    if (remotesRefreshInterval) clearInterval(remotesRefreshInterval);
-  });
+  }, 5000);
   function update_rf_setup() {
     setTimeout(function () {
       getSettings('rfsetup');

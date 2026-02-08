@@ -9,7 +9,7 @@
     <br>
     <span>File system: </span><span id='bfree'></span><span> bytes used / </span><span id='btotal'></span><span> bytes
         total</span><br>
-    <a href="#" class="pure-button" onclick="$('#main').empty();$('#main').append( html_edit );">Edit
+    <a href="#" class="pure-button" onclick="var m=$id('main');m.innerHTML='';m.insertAdjacentHTML('beforeend',html_edit);execScripts(m);">Edit
         filesystem</a><br><br>
     <p>Partition restore: </p>
     <p>Firmware versions prior to 2.4.4-beta7 used a different partition scheme. Older versions work with the new scheme
@@ -139,13 +139,11 @@
     </form>
 </div>
 <script>
-    $(document).ready(function () {
-        getSettings('debugvalues');
-        getSettings('sysstat');
-        $("#jsdebug_status").text(debug ? "on" : "off");
-    });
-    $("#jsdebug").click(function () {
+    getSettings('debugvalues');
+    getSettings('sysstat');
+    $id("jsdebug_status").textContent = debug ? "on" : "off";
+    $id("jsdebug").addEventListener('click', function () {
         debug = !debug;
-        $("#jsdebug_status").text(debug ? "on" : "off");
+        $id("jsdebug_status").textContent = debug ? "on" : "off";
     });    
 </script>

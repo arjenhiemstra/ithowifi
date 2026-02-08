@@ -20,11 +20,9 @@
   </fieldset>
 </form>
 <script>
-  $(document).ready(function () {
-    function repeat() {
-      getSettings('ithostatus');
-      ithostatus_to = setTimeout(repeat, 5000);
-    }
-    repeat();
-  });
+  function repeat() {
+    getSettings('ithostatus');
+    ithostatus_to = setTimeout(repeat, 5000);
+  }
+  repeat();
 </script>
