@@ -283,6 +283,36 @@ bool handleFileRead(AsyncWebServerRequest *request)
   }
   String path = request->url();
 
+  // Mask passwords in config files served via file editor
+  if (path == "/config.json" || path == "/wifi.json")
+  {
+    if (ACTIVE_FS.exists(path))
+    {
+      File file = ACTIVE_FS.open(path, "r");
+      if (!file)
+        return false;
+      JsonDocument doc;
+      DeserializationError err = deserializeJson(doc, file);
+      file.close();
+      if (err)
+        return false;
+      JsonObject root = doc.as<JsonObject>();
+      const char *pwFields[] = {"sys_password", "mqtt_password", "passwd", "appasswd"};
+      for (const char *field : pwFields)
+      {
+        if (!root[field].isNull())
+        {
+          const char *val = root[field].as<const char *>();
+          root[field] = (val && strlen(val) > 0) ? "********" : "";
+        }
+      }
+      String output;
+      serializeJson(doc, output);
+      request->send(200, "application/json", output);
+      return true;
+    }
+  }
+
   String pathWithGz = path + ".gz";
   if (ACTIVE_FS.exists(pathWithGz) || ACTIVE_FS.exists(path))
   {

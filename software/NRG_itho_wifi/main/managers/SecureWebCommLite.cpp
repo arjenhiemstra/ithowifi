@@ -1,6 +1,4 @@
 #include "SecureWebCommLite.h"
-#include "config/SystemConfig.h"
-#include "config/WifiConfig.h"
 #include "sys_log.h"
 #include "notifyClients.h"
 
@@ -22,7 +20,7 @@ SecureWebCommLite::~SecureWebCommLite() {
 }
 
 bool SecureWebCommLite::init() {
-    I_LOG("SECURE_WEB_LITE: Initializing secure communication");
+    I_LOG("SWL: Initializing secure communication");
 
     uint32_t start_time = millis();
 
@@ -33,36 +31,36 @@ bool SecureWebCommLite::init() {
                                      (const unsigned char *)pers,
                                      strlen(pers));
     if (ret != 0) {
-        E_LOG("SECURE_WEB_LITE: RNG seed failed: -0x%04x", -ret);
+        E_LOG("SWL: RNG seed failed: -0x%04x", -ret);
         return false;
     }
 
     // Generate initial session key
     if (!generate_session_key()) {
-        E_LOG("SECURE_WEB_LITE: Session key generation failed");
+        E_LOG("SWL: Session key generation failed");
         return false;
     }
 
     uint32_t elapsed = millis() - start_time;
-    I_LOG("SECURE_WEB_LITE: Init complete in %ums", elapsed);
+    I_LOG("SWL: Init complete in %ums", elapsed);
 
     return true;
 }
 
 bool SecureWebCommLite::generate_session_key() {
-    D_LOG("SECURE_WEB_LITE: Generating session key...");
+    D_LOG("SWL: Generating session key...");
 
     // Generate 32 random bytes for AES-256 key
     int ret = mbedtls_ctr_drbg_random(&ctr_drbg, session_key, SESSION_KEY_SIZE);
     if (ret != 0) {
-        E_LOG("SECURE_WEB_LITE: Random generation failed: -0x%04x", -ret);
+        E_LOG("SWL: Random generation failed: -0x%04x", -ret);
         return false;
     }
 
     session_established = true;
     session_start_time = time(nullptr);
 
-    D_LOG("SECURE_WEB_LITE: Session key generated");
+    D_LOG("SWL: Session key generated");
     return true;
 }
 
@@ -70,7 +68,7 @@ bool SecureWebCommLite::needs_new_session() {
     // Check session timeout
     time_t now = time(nullptr);
     if (now - session_start_time > SESSION_TIMEOUT_SEC) {
-        I_LOG("SECURE_WEB_LITE: Session expired, generating new key");
+        I_LOG("SWL: Session expired, generating new key");
         generate_session_key();
         return true;
     }
@@ -84,7 +82,7 @@ bool SecureWebCommLite::decrypt_aes_ctr(const uint8_t *ciphertext,
                                         uint8_t *plaintext,
                                         size_t *plaintext_len) {
     if (!session_established) {
-        E_LOG("SECURE_WEB_LITE: No session established");
+        E_LOG("SWL: No session established");
         return false;
     }
 
@@ -94,7 +92,7 @@ bool SecureWebCommLite::decrypt_aes_ctr(const uint8_t *ciphertext,
 
     int ret = mbedtls_aes_setkey_enc(&aes, session_key, SESSION_KEY_SIZE * 8);
     if (ret != 0) {
-        E_LOG("SECURE_WEB_LITE: AES setkey failed: -0x%04x", -ret);
+        E_LOG("SWL: AES setkey failed: -0x%04x", -ret);
         mbedtls_aes_free(&aes);
         return false;
     }
@@ -116,29 +114,19 @@ bool SecureWebCommLite::decrypt_aes_ctr(const uint8_t *ciphertext,
     mbedtls_aes_free(&aes);
 
     if (ret != 0) {
-        E_LOG("SECURE_WEB_LITE: Decryption failed: -0x%04x", -ret);
+        E_LOG("SWL: Decryption failed: -0x%04x", -ret);
         return false;
     }
 
     *plaintext_len = ciphertext_len;
-    D_LOG("SECURE_WEB_LITE: Decrypted %zu bytes", ciphertext_len);
+    D_LOG("SWL: Decrypted %zu bytes", ciphertext_len);
     return true;
 }
 
-bool SecureWebCommLite::handle_encrypted_credential(JsonObject obj) {
-    if (!obj["encrypted_credential"].is<bool>()) {
-        return false;
-    }
-
-    const char* type = obj["type"] | "";
-    const char* username = obj["username"] | "";
-
-    // Get encrypted password data
-    const char* ciphertext_b64 = obj["ciphertext"] | "";
-    const char* nonce_b64 = obj["nonce"] | "";
-
-    if (strlen(ciphertext_b64) == 0 || strlen(nonce_b64) == 0) {
-        E_LOG("SECURE_WEB_LITE: Missing encryption parameters");
+bool SecureWebCommLite::decryptField(const char* ct_b64, const char* nonce_b64,
+                                     char* out, size_t maxLen) {
+    if (!ct_b64 || !nonce_b64 || strlen(ct_b64) == 0 || strlen(nonce_b64) == 0) {
+        E_LOG("SWL: Missing encryption parameters");
         return false;
     }
 
@@ -148,71 +136,35 @@ bool SecureWebCommLite::handle_encrypted_credential(JsonObject obj) {
     size_t ct_len, nonce_len;
 
     int ret = mbedtls_base64_decode(ciphertext, sizeof(ciphertext), &ct_len,
-                                     (const uint8_t*)ciphertext_b64,
-                                     strlen(ciphertext_b64));
+                                     (const uint8_t*)ct_b64, strlen(ct_b64));
     if (ret != 0) {
-        E_LOG("SECURE_WEB_LITE: Ciphertext decode failed");
+        E_LOG("SWL: Ciphertext decode failed");
         return false;
     }
 
     ret = mbedtls_base64_decode(nonce, sizeof(nonce), &nonce_len,
                                 (const uint8_t*)nonce_b64, strlen(nonce_b64));
     if (ret != 0 || nonce_len != NONCE_SIZE) {
-        E_LOG("SECURE_WEB_LITE: Nonce decode failed");
+        E_LOG("SWL: Nonce decode failed");
         return false;
     }
 
-    // Decrypt password
+    // Decrypt
     uint8_t plaintext[256];
     size_t plaintext_len;
 
-    if (!decrypt_aes_ctr(ciphertext, ct_len, nonce,
-                         plaintext, &plaintext_len)) {
-        E_LOG("SECURE_WEB_LITE: Decryption failed for %s credential", type);
+    if (!decrypt_aes_ctr(ciphertext, ct_len, nonce, plaintext, &plaintext_len)) {
+        E_LOG("SWL: Decryption failed");
         return false;
     }
 
     plaintext[plaintext_len] = '\0';
-
-    // Update credentials
-    bool updated = false;
-
-    if (strcmp(type, "sys") == 0) {
-        strlcpy(systemConfig.sys_username, username,
-                sizeof(systemConfig.sys_username));
-        strlcpy(systemConfig.sys_password, (char*)plaintext,
-                sizeof(systemConfig.sys_password));
-
-        updated = true;
-        I_LOG("SECURE_WEB_LITE: Updated system credentials");
-
-    } else if (strcmp(type, "mqtt") == 0) {
-        strlcpy(systemConfig.mqtt_username, username,
-                sizeof(systemConfig.mqtt_username));
-        strlcpy(systemConfig.mqtt_password, (char*)plaintext,
-                sizeof(systemConfig.mqtt_password));
-
-        updated = true;
-        I_LOG("SECURE_WEB_LITE: Updated MQTT credentials");
-
-    } else if (strcmp(type, "wifi") == 0) {
-        strlcpy(wifiConfig.ssid, username, sizeof(wifiConfig.ssid));
-        strlcpy(wifiConfig.passwd, (char*)plaintext, sizeof(wifiConfig.passwd));
-
-        updated = true;
-        I_LOG("SECURE_WEB_LITE: Updated WiFi credentials");
-
-    } else if (strcmp(type, "wifiap") == 0) {
-        strlcpy(wifiConfig.appasswd, (char*)plaintext, sizeof(wifiConfig.appasswd));
-
-        updated = true;
-        I_LOG("SECURE_WEB_LITE: Updated WiFi AP password");
-    }
+    strlcpy(out, (char*)plaintext, maxLen);
 
     // Zero plaintext from memory
     mbedtls_platform_zeroize(plaintext, sizeof(plaintext));
 
-    return updated;
+    return true;
 }
 
 void SecureWebCommLite::send_session_key_response() {
@@ -233,5 +185,5 @@ void SecureWebCommLite::send_session_key_response() {
 
     notifyClients(response.as<JsonObject>());
 
-    D_LOG("SECURE_WEB_LITE: Sent session key to browser");
+    D_LOG("SWL: Sent session key to browser");
 }

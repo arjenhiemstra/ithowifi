@@ -396,15 +396,7 @@ void SystemConfig::get(JsonObject obj) const
   {
     get_sys_settings = false;
     obj["sys_username"] = sys_username;
-
-    // SECURITY: Never send actual password to web UI
-    if (strlen(sys_password) > 0) {
-      obj["sys_password"] = "********";
-      obj["sys_password_set"] = true;
-    } else {
-      obj["sys_password"] = "";
-      obj["sys_password_set"] = false;
-    }
+    obj["sys_password"] = sys_password;
 
     obj["syssec_web"] = syssec_web;
     obj["syssec_api"] = syssec_api;
@@ -447,15 +439,7 @@ void SystemConfig::get(JsonObject obj) const
     obj["mqtt_active"] = mqtt_active;
     obj["mqtt_serverName"] = mqtt_serverName;
     obj["mqtt_username"] = mqtt_username;
-
-    // SECURITY: Never send MQTT password to web UI
-    if (strlen(mqtt_password) > 0) {
-      obj["mqtt_password"] = "********";
-      obj["mqtt_password_set"] = true;
-    } else {
-      obj["mqtt_password"] = "";
-      obj["mqtt_password_set"] = false;
-    }
+    obj["mqtt_password"] = mqtt_password;
 
     obj["mqtt_port"] = mqtt_port;
     obj["mqtt_version"] = mqtt_version;

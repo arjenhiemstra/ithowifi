@@ -5,7 +5,6 @@
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/base64.h>
 #include <mbedtls/platform_util.h>
-#include <ArduinoJson.h>
 #include <time.h>
 
 #define SESSION_KEY_SIZE 32  // AES-256
@@ -53,8 +52,8 @@ public:
     // Check if session needs new key
     bool needs_new_session();
 
-    // Handle encrypted credential from browser
-    bool handle_encrypted_credential(JsonObject obj);
+    // Decrypt a single base64-encoded field, returns true on success
+    bool decryptField(const char* ct_b64, const char* nonce_b64, char* out, size_t maxLen);
 
     // Send session key response for WebSocket
     void send_session_key_response();

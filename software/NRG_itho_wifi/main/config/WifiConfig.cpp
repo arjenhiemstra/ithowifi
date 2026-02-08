@@ -227,23 +227,8 @@ bool WifiConfig::set(JsonObject obj)
 void WifiConfig::get(JsonObject obj) const
 {
   obj["ssid"] = ssid;
-
-  // SECURITY: Never send WiFi passwords to web UI
-  if (strlen(passwd) > 0) {
-    obj["passwd"] = "********";
-    obj["passwd_set"] = true;
-  } else {
-    obj["passwd"] = "";
-    obj["passwd_set"] = false;
-  }
-
-  if (strlen(appasswd) > 0) {
-    obj["appasswd"] = "********";
-    obj["appasswd_set"] = true;
-  } else {
-    obj["appasswd"] = "";
-    obj["appasswd_set"] = false;
-  }
+  obj["passwd"] = passwd;
+  obj["appasswd"] = appasswd;
 
   obj["dhcp"] = dhcp;
   obj["ip"] = ip;
