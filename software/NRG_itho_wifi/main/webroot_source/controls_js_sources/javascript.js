@@ -42,6 +42,9 @@ function cleanupSocketAndTimers() {
   clearTimeout(pingTimeout);
   pingTimeout = null;
 
+  clearInterval(pingIntervalId);
+  pingIntervalId = null;
+
   // Close the socket safely
   try {
     if (websock != null && (websock.readyState === WebSocket.CONNECTING || websock.readyState === WebSocket.OPEN)) {
@@ -119,7 +122,7 @@ function attachWebSocketHandlers() {
   });
 
   websock.addEventListener("message", (event) => {
-    "pong" == event.data ? (clearTimeout(pingTimeout), pingTimeout = !1) : messageQueue.push(event.data);
+    "pong" == event.data ? (clearTimeout(pingTimeout), pingTimeout = null) : messageQueue.push(event.data);
   });
 
   websock.addEventListener("close", () => {
@@ -412,32 +415,17 @@ class SecureCredentialManager {
     }
   }
 
-  async sendCredentialUpdate(type, username, password) {
-    // Check if password is placeholder - if so, skip
-    if (password === '********' || password === '') {
-      if (debug) console.log('[SECURE] Skipping placeholder password');
-      return false;
+  getEncryptedField(password) {
+    if (!password || password === '********' || password === '') {
+      return null;
     }
 
     const encrypted = this.encryptCredential(password);
-
     if (!encrypted.encrypted) {
-      // Fallback: rely on Layer 1 (placeholder protection)
-      if (debug) console.warn('[SECURE] Sending without encryption (Layer 1 active)');
-      return false;
+      return null;
     }
 
-    const message = {
-      encrypted_credential: true,
-      type: type,
-      username: username,
-      ciphertext: encrypted.ciphertext,
-      nonce: encrypted.nonce
-    };
-
-    websock_send(JSON.stringify(message));
-    if (debug) console.log(`[SECURE] Sent encrypted ${type} credential`);
-    return true;
+    return { ct: encrypted.ciphertext, nonce: encrypted.nonce };
   }
 
   // Utility: bytes to base64
@@ -463,8 +451,12 @@ class SecureCredentialManager {
 // Initialize secure credential manager
 const secureCredentials = new SecureCredentialManager();
 
+var domReady = false;
+$(function () { domReady = true; });
+
 (async function processMessages() {
   while (messageQueue.length > 0) {
+    if (!domReady) break;
     const message = messageQueue.shift();
     processMessage(message);
   }
@@ -472,53 +464,26 @@ const secureCredentials = new SecureCredentialManager();
   processMessages();
 })();
 
-function processMessage(message) {
-  if (debug) console.log(message);
-  let f;
-  try {
-    f = JSON.parse(decodeURIComponent(message));
-  } catch (error) {
-    f = JSON.parse(message);
-  }
-  let g = document.body;
-
-  // SECURITY LAYER 2: Handle session key response
-  if (f.session_key) {
+const messageHandlers = {
+  session_key: function (f) {
     secureCredentials.handleKeyExchangeResponse(f);
-    return;  // Don't process further
-  }
-
-  // SECURITY LAYER 2: Handle credential update response
-  if (f.credential_update) {
-    if (debug) {
-      if (f.credential_update === 'success') {
-        if (debug) console.log('[SECURE] Credential update confirmed');
-      } else {
-        if (debug) console.error('[SECURE] Credential update failed');
-      }
-    }
-    return;  // Don't process further
-  }
-
-  if (f.wifisettings) {
-    let x = f.wifisettings;
-    processElements(x);
-  }
-  else if (f.logsettings) {
-    let x = f.logsettings;
+  },
+  wifisettings: function (f) {
+    processElements(f.wifisettings);
+  },
+  logsettings: function (f) {
+    var x = f.logsettings;
     processElements(x);
     if (x.rfloglevel > 0) $('#rflog_outer').removeClass('hidden');
-  }
-  else if (f.wifistat) {
-    let x = f.wifistat;
-    processElements(x);
-  }
-  else if (f.debuginfo) {
-    let x = f.debuginfo;
-    processElements(x);
-  }
-  else if (f.systemsettings) {
-    let x = f.systemsettings;
+  },
+  wifistat: function (f) {
+    processElements(f.wifistat);
+  },
+  debuginfo: function (f) {
+    processElements(f.debuginfo);
+  },
+  systemsettings: function (f) {
+    var x = f.systemsettings;
     processElements(x);
     if ("itho_rf_support" in x) {
       if (x.itho_rf_support == 1 && x.rfInitOK == false) {
@@ -535,31 +500,26 @@ function processMessage(message) {
     if (x.mqtt_ha_active == 1) $('#hadiscmenu').removeClass('hidden');
     else $('#hadiscmenu').addClass('hidden');
     if ("i2cmenu" in x) {
-      if (x.i2cmenu == 1) {
-        $('#i2cmenu').removeClass('hidden');
-      }
-      else {
-        $('#i2cmenu').addClass('hidden');
-      }
+      $('#i2cmenu').toggleClass('hidden', x.i2cmenu != 1);
     }
     if ("api_version" in x) {
       localStorage.setItem("api_version", x.api_version);
     }
-  }
-  else if (f.remotes) {
-    let x = f.remotes;
-    let remfunc = f.remfunc;
-    $('#RemotesTable').empty();
-    buildHtmlTableRemotes('#RemotesTable', remfunc, x);
-  }
-  else if (f.vremotes) {
-    let x = f.vremotes;
-    let remfunc = f.remfunc;
+  },
+  remotes: function (f) {
+    if ($('#RemotesTable tbody tr').length > 0) {
+      updateRemoteCapabilities(f.remotes);
+    } else {
+      $('#RemotesTable').empty();
+      buildHtmlTableRemotes('#RemotesTable', f.remfunc, f.remotes);
+    }
+  },
+  vremotes: function (f) {
     $('#vremotesTable').empty();
-    buildHtmlTableRemotes('#vremotesTable', remfunc, x);
-  }
-  else if (f.ithostatusinfo) {
-    let x = f.ithostatusinfo;
+    buildHtmlTableRemotes('#vremotesTable', f.remfunc, f.vremotes);
+  },
+  ithostatusinfo: function (f) {
+    var x = f.ithostatusinfo;
     $('#StatusTable').empty();
     if (f.target == "hadisc") {
       if (f.itho_status_ready) {
@@ -567,6 +527,8 @@ function processMessage(message) {
         status_items_loaded = true;
         $("#HADiscForm, #save_update_had").removeClass('hidden');
         buildHtmlHADiscTable(x);
+        if (f.rfdevices) buildRFDevicesUI(f.rfdevices);
+        if (f.vrdevices) buildVirtualRemotesUI(f.vrdevices);
       }
       else {
         $("#ithostatusrdy").html("Itho status items not (completely) loaded yet:<br><br><div id='iis'></div><br><br>Reload to try again or disable I2C commands (menu System Settings) which might be unsupported for your devic.<br><br><button id='hadreload' class='pure-button pure-button-primary'>Reload</button><br>");
@@ -578,9 +540,9 @@ function processMessage(message) {
     else {
       buildHtmlStatusTable('#StatusTable', x);
     }
-  }
-  else if (f.hadiscsettings) {
-    let x = f.hadiscsettings;
+  },
+  hadiscsettings: function (f) {
+    var x = f.hadiscsettings;
     saved_status_count = x.sscnt;
     if ((current_status_count !== saved_status_count) && (saved_status_count > 0)) {
       localStorage.setItem("ithostatus", JSON.stringify(x));
@@ -588,40 +550,34 @@ function processMessage(message) {
       $("#ithostatusrdy").removeClass('hidden');
     }
     else {
-      $("#ithostatusrdy").addClass('hidden');
-      $("#ithostatusrdy").html('');
+      $("#ithostatusrdy").addClass('hidden').html('');
       updateStatusTableFromCompactJson(x);
     }
-
-  }
-  else if (f.i2cdebuglog) {
-    let x = f.i2cdebuglog;
+  },
+  i2cdebuglog: function (f) {
     $('#I2CLogTable').empty();
-    buildHtmlTablePlain('#I2CLogTable', x);
-  }
-  else if (f.i2csniffer) {
-    let x = f.i2csniffer;
+    buildHtmlTablePlain('#I2CLogTable', f.i2cdebuglog);
+  },
+  i2csniffer: function (f) {
     $('#i2clog_outer').removeClass('hidden');
-    var d = new Date();
-    $('#i2clog').prepend(`${d.toLocaleString('nl-NL')}: ${x}<br>`);
-  }
-  else if (f.ithodevinfo) {
-    let x = f.ithodevinfo;
+    $('#i2clog').prepend(`${new Date().toLocaleString('nl-NL')}: ${f.i2csniffer}<br>`);
+  },
+  ithodevinfo: function (f) {
+    var x = f.ithodevinfo;
     processElements(x);
     localStorage.setItem("itho_setlen", x.itho_setlen);
     localStorage.setItem("itho_devtype", x.itho_devtype);
     localStorage.setItem("itho_fwversion", x.itho_fwversion);
     localStorage.setItem("itho_hwversion", x.itho_hwversion);
-  }
-  else if (f.ithosettings) {
-    let x = f.ithosettings;
+  },
+  ithosettings: function (f) {
+    var x = f.ithosettings;
     updateSettingsLocStor(x);
 
     if (x.Index === 0 && x.update === false) {
       clearSettingsLocStor();
       localStorage.setItem("ihto_settings_complete", "false");
       $('#SettingsTable').empty();
-      //add header
       addColumnHeader(x, '#SettingsTable', true);
       $('#SettingsTable').append('<tbody>');
     }
@@ -647,13 +603,13 @@ function processMessage(message) {
         update: true
       }));
     }
-  }
-  else if (f.wifiscanresult) {
-    let x = f.wifiscanresult;
+  },
+  wifiscanresult: function (f) {
+    var x = f.wifiscanresult;
     $('#wifiscanresult').append(`<div class='ScanResults'><input id='${x.id}' class='pure-input-1-5' name='optionsWifi' value='${x.ssid}' type='radio'>${returnSignalSVG(x.sigval)}${returnWifiSecSVG(x.sec)} ${x.ssid}</label></div>`);
-  }
-  else if (f.systemstat) {
-    let x = f.systemstat;
+  },
+  systemstat: function (f) {
+    var x = f.systemstat;
     uuid = x.uuid;
     if ('sensor_temp' in x) {
       $('#sensor_temp').html(`Temperature: ${round(x.sensor_temp, 1)}&#8451;`);
@@ -661,23 +617,15 @@ function processMessage(message) {
     if ('sensor_hum' in x) {
       $('#sensor_hum').html(`Humidity: ${round(x.sensor_hum, 1)}%`);
     }
-    $('#memory_box').show();
-    $('#memory_box').html(`<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`);
-    $('#mqtt_conn').removeClass();
+    $('#memory_box').show().html(`<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`);
+    var mqttEl = $('#mqtt_conn');
     var button = returnMqttState(x.mqqtstatus);
-    $('#mqtt_conn').addClass(`pure-button ${button.button}`);
-    $('#mqtt_conn').text(button.state);
+    mqttEl.removeClass().addClass(`pure-button ${button.button}`).text(button.state);
     $('#ithoslider').val(x.itho);
     $('#ithotextval').html(x.itho);
-    if ('itho_low' in x) {
-      itho_low = x.itho_low;
-    }
-    if ('itho_medium' in x) {
-      itho_medium = x.itho_medium;
-    }
-    if ('itho_high' in x) {
-      itho_high = x.itho_high;
-    }
+    if ('itho_low' in x) itho_low = x.itho_low;
+    if ('itho_medium' in x) itho_medium = x.itho_medium;
+    if ('itho_high' in x) itho_high = x.itho_high;
     var initstatus = '';
     if (x.ithoinit == -1) {
       initstatus = '<span style="color:#ca3c3c;">init failed - please power cycle the Itho unit -</span>';
@@ -695,72 +643,69 @@ function processMessage(message) {
       initstatus = 'unknown status';
     }
     $('#ithoinit').html(initstatus);
-    if ('sensor' in x) {
-      sensor = x.sensor;
-    }
+    if ('sensor' in x) sensor = x.sensor;
+    var llmEl = $('#itho_llm');
     if (x.itho_llm > 0) {
-      $('#itho_llm').removeClass();
-      $('#itho_llm').addClass("pure-button button-success");
-      $('#itho_llm').text(`On ${x.itho_llm}`);
+      llmEl.removeClass().addClass("pure-button button-success").text(`On ${x.itho_llm}`);
     }
     else {
-      $('#itho_llm').removeClass();
-      $('#itho_llm').addClass("pure-button button-secondary");
-      $('#itho_llm').text("Off");
+      llmEl.removeClass().addClass("pure-button button-secondary").text("Off");
     }
+    var copyEl = $('#itho_copyid_vremote');
     if (x.copy_id > 0) {
-      $('#itho_copyid_vremote').removeClass();
-      $('#itho_copyid_vremote').addClass("pure-button button-success");
-      $('#itho_copyid_vremote').text(`Press join. Time remaining: ${x.copy_id}`);
+      copyEl.removeClass().addClass("pure-button button-success").text(`Press join. Time remaining: ${x.copy_id}`);
     }
     else {
-      $('#itho_copyid_vremote').removeClass();
-      $('#itho_copyid_vremote').addClass("pure-button");
-      $('#itho_copyid_vremote').text("Copy ID");
+      copyEl.removeClass().addClass("pure-button").text("Copy ID");
     }
     if ('format' in x) {
-      if (x.format) {
-        $('#format').text('Format filesystem');
-      }
-      else {
-        $('#format').text('Format failed');
-      }
-
+      $('#format').text(x.format ? 'Format filesystem' : 'Format failed');
     }
-  }
-  else if (f.remtypeconf) {
-    let x = f.remtypeconf;
+  },
+  remtypeconf: function (f) {
+    var x = f.remtypeconf;
     if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
       addvRemoteInterface(x.remtype);
     }
-  }
-  else if (f.messagebox) {
-    let x = f.messagebox;
+  },
+  messagebox: function (f) {
+    var x = f.messagebox;
     count += 1;
     resetTimer();
-    $('#message_box').show();
-    $('#message_box').append(`<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
+    $('#message_box').show().append(`<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
     removeAfter5secs(count);
-  }
-  else if (f.rflog) {
-    let x = f.rflog;
+  },
+  rflog: function (f) {
     $('#rflog_outer').removeClass('hidden');
-    var d = new Date();
-    $('#rflog').prepend(`${d.toLocaleString('nl-NL')}: ${x.message}<br>`);
-  }
-  else if (f.ota) {
-    let x = f.ota;
+    $('#rflog').prepend(`${new Date().toLocaleString('nl-NL')}: ${f.rflog.message}<br>`);
+  },
+  ota: function (f) {
+    var x = f.ota;
     $('#updateprg').html(`Firmware update progress: ${x.percent}%`);
     moveBar(x.percent, "updateBar");
-  }
-  else if (f.sysmessage) {
-    let x = f.sysmessage;
+  },
+  sysmessage: function (f) {
+    var x = f.sysmessage;
     $(`#${x.id}`).text(x.message);
   }
-  else {
-    processElements(f);
+};
+
+function processMessage(message) {
+  if (debug) console.log(message);
+  let f;
+  try {
+    f = JSON.parse(decodeURIComponent(message));
+  } catch (error) {
+    f = JSON.parse(message);
   }
 
+  for (var key in messageHandlers) {
+    if (key in f) {
+      messageHandlers[key](f);
+      return;
+    }
+  }
+  processElements(f);
 }
 
 function initButton() {
@@ -888,43 +833,38 @@ $(document).ready(function () {
     else if ($(this).attr('id') == 'wifisubmit') {
       hostname = $('#hostname').val();
 
-      // SECURITY LAYER 2: Handle WiFi password encryption
       const wifi_passwd = $('#passwd').val();
       const wifi_appasswd = $('#appasswd').val();
 
-      (async () => {
-        // Try to send encrypted WiFi password
-        let passwd_sent = false;
-        let appasswd_sent = false;
+      // Build secure_credentials for changed passwords
+      const secure_credentials = {};
+      const enc_passwd = secureCredentials.getEncryptedField(wifi_passwd);
+      const enc_appasswd = secureCredentials.getEncryptedField(wifi_appasswd);
+      if (enc_passwd) secure_credentials.passwd = enc_passwd;
+      if (enc_appasswd) secure_credentials.appasswd = enc_appasswd;
 
-        if (wifi_passwd && wifi_passwd !== '********') {
-          passwd_sent = await secureCredentials.sendCredentialUpdate('wifi', $('#ssid').val(), wifi_passwd);
+      const wifiMsg = {
+        wifisettings: {
+          ssid: $('#ssid').val(),
+          passwd: enc_passwd ? '********' : wifi_passwd,
+          appasswd: enc_appasswd ? '********' : wifi_appasswd,
+          dhcp: $('input[name=\'option-dhcp\']:checked').val(),
+          ip: $('#ip').val(),
+          subnet: $('#subnet').val(),
+          gateway: $('#gateway').val(),
+          dns1: $('#dns1').val(),
+          dns2: $('#dns2').val(),
+          port: $('#port').val(),
+          hostname: $('#hostname').val(),
+          ntpserver: $('#ntpserver').val(),
+          timezone: $('#timezone').val(),
+          aptimeout: $('#aptimeout').val()
         }
-
-        if (wifi_appasswd && wifi_appasswd !== '********') {
-          appasswd_sent = await secureCredentials.sendCredentialUpdate('wifiap', '', wifi_appasswd);
-        }
-
-        // Send other WiFi settings (non-password)
-        websock_send(JSON.stringify({
-          wifisettings: {
-            ssid: $('#ssid').val(),
-            passwd: passwd_sent ? '********' : wifi_passwd,  // Send placeholder if encrypted
-            appasswd: appasswd_sent ? '********' : wifi_appasswd,
-            dhcp: $('input[name=\'option-dhcp\']:checked').val(),
-            ip: $('#ip').val(),
-            subnet: $('#subnet').val(),
-            gateway: $('#gateway').val(),
-            dns1: $('#dns1').val(),
-            dns2: $('#dns2').val(),
-            port: $('#port').val(),
-            hostname: $('#hostname').val(),
-            ntpserver: $('#ntpserver').val(),
-            timezone: $('#timezone').val(),
-            aptimeout: $('#aptimeout').val()
-          }
-        }));
-      })();
+      };
+      if (Object.keys(secure_credentials).length > 0) {
+        wifiMsg.wifisettings.secure_credentials = secure_credentials;
+      }
+      websock_send(JSON.stringify(wifiMsg));
 
       update_page('wifisetup');
     }
@@ -941,54 +881,52 @@ $(document).ready(function () {
         }
       }
 
-      // SECURITY LAYER 2: Handle system password encryption
       const sys_passwd = $('#sys_password').val();
+      const sys_secure_credentials = {};
+      const enc_sys = secureCredentials.getEncryptedField(sys_passwd);
+      if (enc_sys) sys_secure_credentials.sys_password = enc_sys;
 
-      (async () => {
-        let passwd_sent = false;
-
-        if (sys_passwd && sys_passwd !== '********') {
-          passwd_sent = await secureCredentials.sendCredentialUpdate('sys', $('#sys_username').val(), sys_passwd);
+      const sysMsg = {
+        systemsettings: {
+          sys_username: $('#sys_username').val(),
+          sys_password: enc_sys ? '********' : sys_passwd,
+          syssec_web: $('input[name=\'option-syssec_web\']:checked').val(),
+          syssec_api: $('input[name=\'option-syssec_api\']:checked').val(),
+          syssec_edit: $('input[name=\'option-syssec_edit\']:checked').val(),
+          api_version: $('input[name=\'option-api_version\']:checked').val(),
+          api_normalize: $('input[name=\'option-api_normalize\']:checked').val(),
+          api_settings: $('input[name=\'option-api_settings\']:checked').val(),
+          api_settings_activated: JSON.parse($('#api_settings_activated').val()),
+          syssht30: $('input[name=\'option-syssht30\']:checked').val(),
+          itho_rf_support: $('input[name=\'option-itho_rf_support\']:checked').val(),
+          itho_fallback: $('#itho_fallback').val(),
+          itho_low: $('#itho_low').val(),
+          itho_medium: $('#itho_medium').val(),
+          itho_high: $('#itho_high').val(),
+          itho_timer1: $('#itho_timer1').val(),
+          itho_timer2: $('#itho_timer2').val(),
+          itho_timer3: $('#itho_timer3').val(),
+          itho_updatefreq: $('#itho_updatefreq').val(),
+          itho_counter_updatefreq: $('#itho_counter_updatefreq').val(),
+          itho_numvrem: $('#itho_numvrem').val(),
+          //itho_numrfrem: $('#iitho_numrfrem').val(),
+          itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
+          itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
+          itho_vremoteapi: $('input[name=\'option-itho_vremoteapi\']:checked').val(),
+          itho_pwm2i2c: $('input[name=\'option-itho_pwm2i2c\']:checked').val(),
+          itho_31da: $('input[name=\'option-itho_31da\']:checked').val(),
+          itho_31d9: $('input[name=\'option-itho_31d9\']:checked').val(),
+          itho_2401: $('input[name=\'option-itho_2401\']:checked').val(),
+          itho_4210: $('input[name=\'option-itho_4210\']:checked').val(),
+          i2c_safe_guard: $('input[name=\'option-i2c_safe_guard\']:checked').val(),
+          i2c_sniffer: $('input[name=\'option-i2c_sniffer\']:checked').val()
         }
-
-        websock_send(JSON.stringify({
-          systemsettings: {
-            sys_username: $('#sys_username').val(),
-            sys_password: passwd_sent ? '********' : sys_passwd,
-            syssec_web: $('input[name=\'option-syssec_web\']:checked').val(),
-            syssec_api: $('input[name=\'option-syssec_api\']:checked').val(),
-            syssec_edit: $('input[name=\'option-syssec_edit\']:checked').val(),
-            api_version: $('input[name=\'option-api_version\']:checked').val(),
-            api_normalize: $('input[name=\'option-api_normalize\']:checked').val(),
-            api_settings: $('input[name=\'option-api_settings\']:checked').val(),
-            api_settings_activated: JSON.parse($('#api_settings_activated').val()),
-            syssht30: $('input[name=\'option-syssht30\']:checked').val(),
-            itho_rf_support: $('input[name=\'option-itho_rf_support\']:checked').val(),
-            itho_fallback: $('#itho_fallback').val(),
-            itho_low: $('#itho_low').val(),
-            itho_medium: $('#itho_medium').val(),
-            itho_high: $('#itho_high').val(),
-            itho_timer1: $('#itho_timer1').val(),
-            itho_timer2: $('#itho_timer2').val(),
-            itho_timer3: $('#itho_timer3').val(),
-            itho_updatefreq: $('#itho_updatefreq').val(),
-            itho_counter_updatefreq: $('#itho_counter_updatefreq').val(),
-            itho_numvrem: $('#itho_numvrem').val(),
-            //itho_numrfrem: $('#iitho_numrfrem').val(),
-            itho_sendjoin: $('input[name=\'option-itho_sendjoin\']:checked').val(),
-            itho_forcemedium: $('input[name=\'option-itho_forcemedium\']:checked').val(),
-            itho_vremoteapi: $('input[name=\'option-itho_vremoteapi\']:checked').val(),
-            itho_pwm2i2c: $('input[name=\'option-itho_pwm2i2c\']:checked').val(),
-            itho_31da: $('input[name=\'option-itho_31da\']:checked').val(),
-            itho_31d9: $('input[name=\'option-itho_31d9\']:checked').val(),
-            itho_2401: $('input[name=\'option-itho_2401\']:checked').val(),
-            itho_4210: $('input[name=\'option-itho_4210\']:checked').val(),
-            i2c_safe_guard: $('input[name=\'option-i2c_safe_guard\']:checked').val(),
-            i2c_sniffer: $('input[name=\'option-i2c_sniffer\']:checked').val()
-          }
-        }));
-        update_page('system');
-      })();
+      };
+      if (Object.keys(sys_secure_credentials).length > 0) {
+        sysMsg.systemsettings.secure_credentials = sys_secure_credentials;
+      }
+      websock_send(JSON.stringify(sysMsg));
+      update_page('system');
     }
     else if ($(this).attr('id') == 'syslogsubmit') {
       websock_send(JSON.stringify({
@@ -1007,36 +945,34 @@ $(document).ready(function () {
     }
     //mqttsubmit
     else if ($(this).attr('id') == 'mqttsubmit') {
-      // SECURITY LAYER 2: Handle MQTT password encryption
       const mqtt_passwd = $('#mqtt_password').val();
+      const mqtt_secure_credentials = {};
+      const enc_mqtt = secureCredentials.getEncryptedField(mqtt_passwd);
+      if (enc_mqtt) mqtt_secure_credentials.mqtt_password = enc_mqtt;
 
-      (async () => {
-        let passwd_sent = false;
-
-        if (mqtt_passwd && mqtt_passwd !== '********') {
-          passwd_sent = await secureCredentials.sendCredentialUpdate('mqtt', $('#mqtt_username').val(), mqtt_passwd);
+      const mqttMsg = {
+        systemsettings: {
+          mqtt_active: $('input[name=\'option-mqtt_active\']:checked').val(),
+          mqtt_serverName: $('#mqtt_serverName').val(),
+          mqtt_username: $('#mqtt_username').val(),
+          mqtt_password: enc_mqtt ? '********' : mqtt_passwd,
+          mqtt_port: $('#mqtt_port').val(),
+          mqtt_version: $('#mqtt_version').val(),
+          mqtt_base_topic: $('#mqtt_base_topic').val(),
+          mqtt_ha_topic: $('#mqtt_ha_topic').val(),
+          mqtt_domoticzin_topic: $('#mqtt_domoticzin_topic').val(),
+          mqtt_domoticzout_topic: $('#mqtt_domoticzout_topic').val(),
+          mqtt_idx: $('#mqtt_idx').val(),
+          sensor_idx: $('#sensor_idx').val(),
+          mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val(),
+          mqtt_ha_active: $('input[name=\'option-mqtt_ha_active\']:checked').val()
         }
-
-        websock_send(JSON.stringify({
-          systemsettings: {
-            mqtt_active: $('input[name=\'option-mqtt_active\']:checked').val(),
-            mqtt_serverName: $('#mqtt_serverName').val(),
-            mqtt_username: $('#mqtt_username').val(),
-            mqtt_password: passwd_sent ? '********' : mqtt_passwd,
-            mqtt_port: $('#mqtt_port').val(),
-            mqtt_version: $('#mqtt_version').val(),
-            mqtt_base_topic: $('#mqtt_base_topic').val(),
-            mqtt_ha_topic: $('#mqtt_ha_topic').val(),
-            mqtt_domoticzin_topic: $('#mqtt_domoticzin_topic').val(),
-            mqtt_domoticzout_topic: $('#mqtt_domoticzout_topic').val(),
-            mqtt_idx: $('#mqtt_idx').val(),
-            sensor_idx: $('#sensor_idx').val(),
-            mqtt_domoticz_active: $('input[name=\'option-mqtt_domoticz_active\']:checked').val(),
-            mqtt_ha_active: $('input[name=\'option-mqtt_ha_active\']:checked').val()
-          }
-        }));
-        update_page('mqtt');
-      })();
+      };
+      if (Object.keys(mqtt_secure_credentials).length > 0) {
+        mqttMsg.systemsettings.secure_credentials = mqtt_secure_credentials;
+      }
+      websock_send(JSON.stringify(mqttMsg));
+      update_page('mqtt');
     }
     else if ($(this).attr('id') == 'itho_llm') {
       websock_send('{"itho_llm":true}');
@@ -1491,15 +1427,9 @@ function radio(origin, state) {
     }
   }
   else if (origin == "mqtt_active") {
-    if (state == 1) {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_base_topic, #mqtt_ha_topic, #mqtt_domoticzin_topic, #mqtt_domoticzout_topic, #mqtt_idx, #sensor_idx').prop('readonly', false);
-      $('#option-mqtt_domoticz_active-0, #option-mqtt_domoticz_active-1, #option-mqtt_ha_active-1, #option-mqtt_ha_active-0').prop('disabled', false);
-    }
-    else {
-      $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_base_topic, #mqtt_ha_topic, #mqtt_domoticzin_topic, #mqtt_domoticzout_topic, #mqtt_idx, #sensor_idx').prop('readonly', true);
-      $('#option-mqtt_domoticz_active-0, #option-mqtt_domoticz_active-1, #option-mqtt_ha_active-1, #option-mqtt_ha_active-0').prop('disabled', true);
-
-    }
+    var enabled = (state == 1);
+    $('#mqtt_serverName, #mqtt_username, #mqtt_password, #mqtt_port, #mqtt_base_topic, #mqtt_ha_topic, #mqtt_domoticzin_topic, #mqtt_domoticzout_topic, #mqtt_idx, #sensor_idx').prop('readonly', !enabled);
+    $('#option-mqtt_domoticz_active-0, #option-mqtt_domoticz_active-1, #option-mqtt_ha_active-1, #option-mqtt_ha_active-0').prop('disabled', !enabled);
   }
   else if (origin == "mqtt_domoticz_active") {
     if (state == 1) {
@@ -1738,58 +1668,20 @@ function returnMqttState(state) {
 
 //functions to generate SVG images
 function returnSignalSVG(signalVal) {
-  var returnString = '';
-  returnString += '<svg id=\'svgSignalImage\' width=28 height=28 xmlns=\'http://www.w3.org/2000/svg\' xmlns:xlink=\'http://www.w3.org/1999/xlink\' version=\'1.1\' x=\'0px\' y=\'0px\' viewBox=\'0 0 96 120\' style=\'enable-background:new 0 0 96 96;\' xml:space=\'preserve\'>';
-  returnString += '<rect x=\'5\' y=\'70.106\' width=\'13.404\' height=\'13.404\' rx=\'2\' ry=\'2\' fill=\'#';
-  if (signalVal > 0) {
-    returnString += '000000';
-  } else {
-    returnString += 'cccccc';
-  }
-  returnString += '\'/>';
-  returnString += '<rect x=\'24.149\' y=\'56.702\' width=\'13.404\' height=\'26.809\' rx=\'2\' ry=\'2\' fill=\'#';
-  if (signalVal > 1) {
-    returnString += '000000';
-  } else {
-    returnString += 'cccccc';
-  }
-  returnString += '\'/>';
-  returnString += '<rect x=\'43.298\' y=\'43.298\' width=\'13.404\' height=\'40.213\' rx=\'2\' ry=\'2\' fill=\'#';
-  if (signalVal > 2) {
-    returnString += '000000';
-  } else {
-    returnString += 'cccccc';
-  }
-  returnString += '\'/>';
-  returnString += '<rect x=\'62.447\' y=\'29.894\' width=\'13.403\' height=\'53.617\' rx=\'2\' ry=\'2\' fill=\'#';
-  if (signalVal > 3) {
-    returnString += '000000';
-  } else {
-    returnString += 'cccccc';
-  }
-  returnString += '\'/>';
-  returnString += '<rect x=\'81.596\' y=\'16.489\' width=\'13.404\' height=\'67.021\' rx=\'2\' ry=\'2\' fill=\'#';
-  if (signalVal > 4) {
-    returnString += '000000';
-  } else {
-    returnString += 'cccccc';
-  }
-  returnString += '\'/></svg>';
-  return returnString;
+  var c = function (threshold) { return signalVal > threshold ? '000000' : 'cccccc'; };
+  return `<svg id='svgSignalImage' width=28 height=28 xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 120' style='enable-background:new 0 0 96 96;' xml:space='preserve'><rect x='5' y='70.106' width='13.404' height='13.404' rx='2' ry='2' fill='#${c(0)}'/><rect x='24.149' y='56.702' width='13.404' height='26.809' rx='2' ry='2' fill='#${c(1)}'/><rect x='43.298' y='43.298' width='13.404' height='40.213' rx='2' ry='2' fill='#${c(2)}'/><rect x='62.447' y='29.894' width='13.403' height='53.617' rx='2' ry='2' fill='#${c(3)}'/><rect x='81.596' y='16.489' width='13.404' height='67.021' rx='2' ry='2' fill='#${c(4)}'/></svg>`;
 }
 
 function returnWifiSecSVG(secVal) {
-  var returnString = '';
-  returnString += '<svg id=\'svgSignalImage\' width=30 height=30 xmlns=\'http://www.w3.org/2000/svg\' xmlns:xlink=\'http://www.w3.org/1999/xlink\' version=\'1.1\' x=\'0px\' y=\'0px\' viewBox=\'0 0 96 120\' style=\'enable-background:new 0 0 96 96;\' xml:space=\'preserve\'>';
+  var inner = '';
   if (secVal == 2) {
-    returnString += '<g><path d=\'M64,41h-4v-8.2c0-6.6-5.4-12-12-12s-12,5.4-12,12V41h-4c-2.2,0-4,2-4,4.2v22c0,4.4,3.6,7.8,8,7.8h24c4.4,0,8-3.3,8-7.8v-22   C68,43,66.2,41,64,41z M40,32.8c0-4.4,3.6-8,8-8s8,3.6,8,8V41H40V32.8z M64,67.2c0,2.2-1.8,3.8-4,3.8H36c-2.2,0-4-1.5-4-3.8V45h32   V67.2z\'/><g><path d=\'M48,62c-1.1,0-2-0.9-2-2v-2c0-1.1,0.9-2,2-2s2,0.9,2,2v2C50,61.1,49.1,62,48,62z\'/></g></g>';
+    inner = '<g><path d=\'M64,41h-4v-8.2c0-6.6-5.4-12-12-12s-12,5.4-12,12V41h-4c-2.2,0-4,2-4,4.2v22c0,4.4,3.6,7.8,8,7.8h24c4.4,0,8-3.3,8-7.8v-22   C68,43,66.2,41,64,41z M40,32.8c0-4.4,3.6-8,8-8s8,3.6,8,8V41H40V32.8z M64,67.2c0,2.2-1.8,3.8-4,3.8H36c-2.2,0-4-1.5-4-3.8V45h32   V67.2z\'/><g><path d=\'M48,62c-1.1,0-2-0.9-2-2v-2c0-1.1,0.9-2,2-2s2,0.9,2,2v2C50,61.1,49.1,62,48,62z\'/></g></g>';
   } else if (secVal == 1) {
-    returnString += '<g><path d=\'M66,20.8c-6.6,0-12,5.4-12,12V41H32c-2.2,0-4,2-4,4.2v22c0,4.4,3.6,7.8,8,7.8h24c4.4,0,8-3.3,8-7.8v-22   c0-2.2-1.8-4.2-4-4.2h-6v-8.2c0-4.4,3.6-8,8-8s8,3.6,8,8V36h4v-3.2C78,26.1,72.6,20.8,66,20.8z M64,67.2c0,2.2-1.8,3.8-4,3.8H36   c-2.2,0-4-1.5-4-3.8V45h32V67.2z\'/><g><path d=\'M48,62c-1.1,0-2-0.9-2-2v-2c0-1.1,0.9-2,2-2s2,0.9,2,2v2C50,61.1,49.1,62,48,62z\'/></g></g>';
+    inner = '<g><path d=\'M66,20.8c-6.6,0-12,5.4-12,12V41H32c-2.2,0-4,2-4,4.2v22c0,4.4,3.6,7.8,8,7.8h24c4.4,0,8-3.3,8-7.8v-22   c0-2.2-1.8-4.2-4-4.2h-6v-8.2c0-4.4,3.6-8,8-8s8,3.6,8,8V36h4v-3.2C78,26.1,72.6,20.8,66,20.8z M64,67.2c0,2.2-1.8,3.8-4,3.8H36   c-2.2,0-4-1.5-4-3.8V45h32V67.2z\'/><g><path d=\'M48,62c-1.1,0-2-0.9-2-2v-2c0-1.1,0.9-2,2-2s2,0.9,2,2v2C50,61.1,49.1,62,48,62z\'/></g></g>';
   } else {
-    returnString += '<path d=\'M52.7,18.9c-9-0.9-19.1,4.5-21.4,18.3l6.9,1.2c1.7-10,8.4-13.1,14-12.6c4.8,0.4,9.8,3.6,9.8,9c0,4.4-2.5,6.8-6.6,10.1  c-3.9,3.2-8.7,7.3-8.7,14.6v6.1h6.9v-6.1c0-3.9,2.3-6,6.2-9.2c4-3.4,9.1-7.7,9.1-15.5C68.8,26.3,62.1,19.7,52.7,18.9z\'/><rect x=\'46.6\' y=\'73.4\' width=\'6.9\' height=\'7.8\'/>';
+    inner = '<path d=\'M52.7,18.9c-9-0.9-19.1,4.5-21.4,18.3l6.9,1.2c1.7-10,8.4-13.1,14-12.6c4.8,0.4,9.8,3.6,9.8,9c0,4.4-2.5,6.8-6.6,10.1  c-3.9,3.2-8.7,7.3-8.7,14.6v6.1h6.9v-6.1c0-3.9,2.3-6,6.2-9.2c4-3.4,9.1-7.7,9.1-15.5C68.8,26.3,62.1,19.7,52.7,18.9z\'/><rect x=\'46.6\' y=\'73.4\' width=\'6.9\' height=\'7.8\'/>';
   }
-  returnString += '</svg>';
-  return returnString;
+  return `<svg id='svgSignalImage' width=30 height=30 xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 120' style='enable-background:new 0 0 96 96;' xml:space='preserve'>${inner}</svg>`;
 }
 
 var remotesCount;
@@ -1849,7 +1741,7 @@ function addvRemoteInterface(remtype) {
 }
 
 function buildHtmlTablePlain(selector, jsonVar) {
-  //var columns = addAllColumnHeadersPlain(jsonVar, selector);
+  if (!jsonVar || jsonVar.length === 0) return;
   var columns = [];
   var headerThead$ = $('<thead>');
   var headerTr$ = $('<tr />');
@@ -1857,13 +1749,14 @@ function buildHtmlTablePlain(selector, jsonVar) {
   for (var key in jsonVar[0]) {
     if ($.inArray(key, columnSet) == -1) {
       columnSet.push(key);
+      columns.push(key);
       headerTr$.append($('<th />').html(key));
     }
   }
 
   headerThead$.append(headerTr$);
-  $(selector).append(headerThead$);
 
+  var tbody$ = $('<tbody>');
   for (var i = 0; i < jsonVar.length; i++) {
     var row$ = $('<tr />');
     for (var colIndex = 0; colIndex < columns.length; colIndex++) {
@@ -1871,8 +1764,10 @@ function buildHtmlTablePlain(selector, jsonVar) {
       if (cellValue == null) cellValue = "";
       row$.append($('<td />').html(cellValue));
     }
-    $(selector).append(row$);
+    tbody$.append(row$);
   }
+
+  $(selector).append(headerThead$).append(tbody$);
 }
 
 function remfunction_validation(i) {
@@ -1880,7 +1775,31 @@ function remfunction_validation(i) {
   else $(`#bidirect_remote-${i}`).prop("disabled", true);
 }
 
+function formatCapabilities(JSONObj) {
+  var str = '';
+  if (JSONObj != null) {
+    for (let value in JSONObj) {
+      if (JSONObj.hasOwnProperty(value)) {
+        str += value + ':' + JSONObj[value];
+        if (value != Object.keys(JSONObj).pop()) str += ', ';
+      }
+    }
+  }
+  return str;
+}
+
+function updateRemoteCapabilities(jsonVar) {
+  for (const remote of jsonVar) {
+    var i = remote["index"] || 0;
+    var capsCell = $(`#caps-${i}`);
+    if (capsCell.length && remote["capabilities"]) {
+      capsCell.html(formatCapabilities(remote["capabilities"]));
+    }
+  }
+}
+
 function buildHtmlTableRemotes(selector, remfunc, jsonVar) {
+  if (!jsonVar || jsonVar.length === 0) return;
 
   var headerThead$ = $('<thead>');
   var headerTr$ = $('<tr>');
@@ -1993,17 +1912,9 @@ function buildHtmlTableRemotes(selector, remfunc, jsonVar) {
           row$.append(td$);
         }
         else {
-          var str = '';
-          var JSONObj = value;
-          if (JSONObj != null) {
-            for (let value in JSONObj) {
-              if (JSONObj.hasOwnProperty(value)) {
-                str += value + ':' + JSONObj[value];
-                if (value != Object.keys(JSONObj).pop()) str += ', ';
-              }
-            }
-          }
-          row$.append($('<td>').html(str));
+          var td$ = $('<td>').attr('id', `caps-${i}`);
+          td$.html(formatCapabilities(value));
+          row$.append(td$);
         }
       }
       else if (key === "bidirectional") {
@@ -2114,7 +2025,8 @@ function buildHtmlHADiscTable(ithostatusinfo) {
 
   const headerThead$ = $("<thead>");
   const headerTr$ = $("<tr>");
-  headerTr$.append($("<th>").html("Include"));
+  const selectAllCb$ = $("<input>", { type: "checkbox", id: "selectAllStatus" });
+  headerTr$.append($("<th>").append(selectAllCb$).append(" Include"));
   headerTr$.append($("<th>").html("Label"));
   headerTr$.append($("<th>").html("HA Name"));
   headerTr$.append($("<th>").addClass("advanced hidden").html("Device Class"));
@@ -2123,6 +2035,12 @@ function buildHtmlHADiscTable(ithostatusinfo) {
   headerTr$.append($("<th>").addClass("advanced hidden").html("Unit of Measurement"));
   headerThead$.append(headerTr$);
   $("#HADiscTable").append(headerThead$);
+
+  // Select all / deselect all
+  selectAllCb$.on("change", function () {
+    const checked = $(this).is(":checked");
+    $("#HADiscTable tbody tr td:first-child input[type='checkbox']").prop("checked", checked);
+  });
 
   const headerTbody$ = $("<tbody>");
 
@@ -2135,6 +2053,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     const includeCheckbox$ = $("<input>", {
       type: "checkbox",
       checked: false,
+      "data-field": "include",
     });
     const includeTd$ = $("<td>").append(includeCheckbox$);
     row$.append(includeTd$);
@@ -2143,12 +2062,13 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     row$.append($("<td>").text(key));
 
     // HA Name (editable, unit of measurement removed)
-    const unitMatch = key.match(/\(([^)]+)\)$/); // Extract unit in parentheses
-    const cleanName = key.replace(/\s*\([^)]+\)$/, ""); // Remove unit from name
+    const unitMatch = key.match(/\(([^)]+)\)$/);
+    const cleanName = key.replace(/\s*\([^)]+\)$/, "");
     const nameInput$ = $("<input>", {
       type: "text",
       value: cleanName,
       placeholder: "Name",
+      "data-field": "name",
     });
     row$.append($("<td>").append(nameInput$));
 
@@ -2157,6 +2077,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
       type: "text",
       class: "advanced hidden",
       placeholder: "Device Class",
+      "data-field": "dc",
     });
     row$.append($("<td>").addClass("advanced hidden").append(deviceClassInput$));
 
@@ -2165,6 +2086,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
       type: "text",
       class: "advanced hidden",
       placeholder: "State Class",
+      "data-field": "sc",
     });
     row$.append($("<td>").addClass("advanced hidden").append(stateClassInput$));
 
@@ -2174,7 +2096,8 @@ function buildHtmlHADiscTable(ithostatusinfo) {
       class: "advanced hidden",
       placeholder: `{{ value_json['${key}'] }}`,
       value: `{{ value_json['${key}'] }}`,
-      "data-default": `{{ value_json['${key}'] }}`, // Store the default value
+      "data-default": `{{ value_json['${key}'] }}`,
+      "data-field": "vt",
     });
     row$.append($("<td>").addClass("advanced hidden").append(valueTemplateInput$));
 
@@ -2184,6 +2107,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
       class: "advanced hidden",
       placeholder: "Unit of Measurement",
       value: unitMatch ? unitMatch[1] : "",
+      "data-field": "um",
     });
     row$.append($("<td>").addClass("advanced hidden").append(unitInput$));
 
@@ -2197,6 +2121,209 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     const showAdvanced = $(this).is(":checked");
     $(".advanced").toggleClass("hidden", !showAdvanced);
   });
+}
+
+// RF Devices for HA Discovery
+var rfDevicesData = [];
+var vrDevicesData = [];
+
+// Sensor display names and units
+const sensorInfo = {
+  lastcmd: { name: 'Last Command', unit: '', deviceClass: '' },
+  temp: { name: 'Temperature', unit: '°C', deviceClass: 'temperature' },
+  hum: { name: 'Humidity', unit: '%', deviceClass: 'humidity' },
+  dewpoint: { name: 'Dew Point', unit: '°C', deviceClass: 'temperature' },
+  co2: { name: 'CO2', unit: 'ppm', deviceClass: 'carbon_dioxide' },
+  battery: { name: 'Battery', unit: '%', deviceClass: 'battery' },
+  pir: { name: 'Motion', unit: '', deviceClass: 'motion' }
+};
+
+function buildRFDevicesUI(rfdevices) {
+  rfDevicesData = rfdevices || [];
+  const container = $('#rfdevices-container');
+  container.empty();
+
+  if (!rfdevices || rfdevices.length === 0) {
+    $('#rfdevices-header').addClass('hidden');
+    return;
+  }
+
+  $('#rfdevices-header').removeClass('hidden');
+
+  rfdevices.forEach((device) => {
+    const availableSensors = device.available ? device.available.split(',') : [];
+    const availablePresets = device.presets ? device.presets.split(',') : [];
+    const allSensors = ['lastcmd', 'temp', 'hum', 'dewpoint', 'co2', 'battery', 'pir'];
+
+    let sensorsHtml = '';
+    allSensors.forEach(sensor => {
+      const isAvailable = availableSensors.includes(sensor);
+      const info = sensorInfo[sensor] || { name: sensor, unit: '' };
+      const checkboxId = `rf_${device.idx}_${sensor}`;
+
+      if (isAvailable) {
+        sensorsHtml += `
+          <div class="rf-sensor-item">
+            <input type="checkbox" id="${checkboxId}" data-rfidx="${device.idx}" data-sensor="${sensor}">
+            <label for="${checkboxId}">${info.name}</label>
+          </div>`;
+      } else {
+        sensorsHtml += `
+          <div class="rf-sensor-item rf-sensor-unavailable">
+            <input type="checkbox" id="${checkboxId}" disabled>
+            <label for="${checkboxId}">${info.name}</label>
+          </div>`;
+      }
+    });
+
+    // Add fan checkbox if presets are available
+    let fanHtml = '';
+    if (availablePresets.length > 0) {
+      const fanCheckboxId = `rf_${device.idx}_fan`;
+      fanHtml = `
+        <div class="rf-fan-section">
+          <div class="rf-sensor-item rf-fan-item">
+            <input type="checkbox" id="${fanCheckboxId}" data-rfidx="${device.idx}" data-fan="true" data-type="${device.type}">
+            <label for="${fanCheckboxId}"><strong>Create Fan Device</strong></label>
+          </div>
+          <div class="rf-presets-info">Presets: ${availablePresets.join(', ')}</div>
+        </div>`;
+    }
+
+    const deviceHtml = `
+      <div class="rf-device-section" data-rfidx="${device.idx}" data-type="${device.type}">
+        <div class="rf-device-title">${device.name} (Index: ${device.idx})</div>
+        <div class="rf-sensor-list">
+          ${sensorsHtml}
+        </div>
+        ${fanHtml}
+      </div>`;
+
+    container.append(deviceHtml);
+  });
+}
+
+function buildVirtualRemotesUI(vrdevices) {
+  vrDevicesData = vrdevices || [];
+  const container = $('#vrdevices-container');
+  container.empty();
+
+  if (!vrdevices || vrdevices.length === 0) {
+    $('#vrdevices-header').addClass('hidden');
+    return;
+  }
+
+  $('#vrdevices-header').removeClass('hidden');
+
+  vrdevices.forEach((device) => {
+    const availablePresets = device.presets ? device.presets.split(',') : [];
+    if (availablePresets.length === 0) return;
+
+    const fanCheckboxId = `vr_${device.idx}_fan`;
+    const deviceHtml = `
+      <div class="rf-device-section" data-vridx="${device.idx}" data-type="${device.type}">
+        <div class="rf-device-title">${device.name} (Index: ${device.idx})</div>
+        <div class="rf-sensor-item rf-fan-item">
+          <input type="checkbox" id="${fanCheckboxId}" data-vridx="${device.idx}" data-fan="true" data-type="${device.type}">
+          <label for="${fanCheckboxId}"><strong>Create Fan Device</strong></label>
+        </div>
+        <div class="rf-presets-info">Presets: ${availablePresets.join(', ')}</div>
+      </div>`;
+
+    container.append(deviceHtml);
+  });
+}
+
+function updateStatusTableFromCompactJson(compactJson) {
+  ha_dev_name = compactJson.d;
+  document.getElementById("hadevicename").value = ha_dev_name;
+
+  const rows = $("#HADiscTable tbody tr");
+  if (rows.length == 0) return;
+
+  if (compactJson.c && compactJson.c.length > 0) {
+    compactJson.c.forEach((component) => {
+      const row$ = rows.eq(component.i);
+      row$.find("input[data-field='include']").prop("checked", true);
+      row$.find("input[data-field='name']").val(component.n);
+      if (component.dc) row$.find("input[data-field='dc']").val(component.dc);
+      if (component.sc) row$.find("input[data-field='sc']").val(component.sc);
+      if (component.vt) row$.find("input[data-field='vt']").val(component.vt);
+      if (component.um) row$.find("input[data-field='um']").val(component.um);
+    });
+  }
+
+  // Restore RF device sensor and fan selections
+  if (compactJson.rf) {
+    compactJson.rf.forEach((rfConfig) => {
+      var idx = rfConfig.idx;
+      (rfConfig.sensors || []).forEach(s => $(`#rf_${idx}_${s}`).prop('checked', true));
+      if (rfConfig.fan) $(`#rf_${idx}_fan`).prop('checked', true);
+    });
+  }
+
+  // Restore virtual remote fan selections
+  if (compactJson.vr) {
+    compactJson.vr.forEach((vrConfig) => {
+      if (vrConfig.fan) $(`#vr_${vrConfig.idx}_fan`).prop('checked', true);
+    });
+  }
+}
+
+function generateCompactJson() {
+  const rows = $("#HADiscTable tbody tr");
+  const components = [];
+
+  rows.each(function (index) {
+    var row$ = $(this);
+    if (!row$.find("input[data-field='include']").is(":checked")) return;
+
+    var vtInput = row$.find("input[data-field='vt']");
+    var component = { i: index, n: row$.find("input[data-field='name']").val() };
+    var dc = row$.find("input[data-field='dc']").val();
+    var sc = row$.find("input[data-field='sc']").val();
+    var vt = vtInput.val();
+    var um = row$.find("input[data-field='um']").val();
+    if (dc) component.dc = dc;
+    if (sc) component.sc = sc;
+    if (vt && vt !== vtInput.data("default")) component.vt = vt;
+    if (um) component.um = um;
+    components.push(component);
+  });
+
+  // Collect RF device sensor and fan selections
+  const rfSelections = [];
+  rfDevicesData.forEach(device => {
+    var sensors = [];
+    $(`input[data-rfidx="${device.idx}"][data-sensor]:checked`).each(function () {
+      sensors.push($(this).data('sensor'));
+    });
+    var fanEnabled = $(`#rf_${device.idx}_fan`).is(':checked');
+    if (sensors.length > 0 || fanEnabled) {
+      var rfEntry = { idx: device.idx, name: device.name, type: device.type };
+      if (sensors.length > 0) rfEntry.sensors = sensors;
+      if (fanEnabled) rfEntry.fan = true;
+      rfSelections.push(rfEntry);
+    }
+  });
+
+  // Collect virtual remote fan selections
+  const vrSelections = [];
+  vrDevicesData.forEach(device => {
+    if ($(`#vr_${device.idx}_fan`).is(':checked')) {
+      vrSelections.push({ idx: device.idx, name: device.name, type: device.type, fan: true });
+    }
+  });
+
+  var compactJson = {
+    sscnt: current_status_count,
+    d: document.getElementById("hadevicename").value.trim(),
+    c: components,
+    rf: rfSelections,
+    vr: vrSelections
+  };
+  if (debug) console.log(JSON.stringify(compactJson));
+  return compactJson;
 }
 
 var webapihtml = `
