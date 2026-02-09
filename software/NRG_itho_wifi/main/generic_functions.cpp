@@ -123,7 +123,7 @@ uint8_t getIthoStatusJSON(JsonObject root)
   return index;
 }
 
-uint8_t getRFStatusJSON(JsonObject root, int sourceIndex)
+uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
 {
   uint8_t count = 0;
 
@@ -131,6 +131,8 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex)
   for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
   {
     if (!rfStatusSources[i].active)
+      continue;
+    if (trackedOnly && !rfStatusSources[i].tracked)
       continue;
     JsonObject src = sources.add<JsonObject>();
     char idStr[10];
@@ -141,46 +143,81 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex)
     src["lastSeen"] = static_cast<int32_t>(rfStatusSources[i].lastSeen);
     src["tracked"] = rfStatusSources[i].tracked;
     src["name"] = rfStatusSources[i].name;
-  }
 
-  int idx = sourceIndex;
-  if (idx == -1)
-  {
-    for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+    if (trackedOnly)
     {
-      if (rfStatusSources[i].active)
+      JsonObject data = src["data"].to<JsonObject>();
+      for (const auto &m : rfStatusSources[i].measurements31D9)
       {
-        idx = i;
-        break;
+        if (m.type == ithoDeviceMeasurements::is_int)
+          data[m.name] = m.value.intval;
+        else if (m.type == ithoDeviceMeasurements::is_float)
+          data[m.name] = round(m.value.floatval, 2);
+        else if (m.type == ithoDeviceMeasurements::is_string)
+          data[m.name] = m.value.stringval;
+        count++;
+      }
+      for (const auto &m : rfStatusSources[i].measurements31DA)
+      {
+        if (m.type == ithoDeviceMeasurements::is_int)
+          data[m.name] = m.value.intval;
+        else if (m.type == ithoDeviceMeasurements::is_float)
+          data[m.name] = round(m.value.floatval, 2);
+        else if (m.type == ithoDeviceMeasurements::is_string)
+          data[m.name] = m.value.stringval;
+        count++;
       }
     }
   }
 
-  if (idx >= 0 && idx < MAX_RF_STATUS_SOURCES && rfStatusSources[idx].active)
-  {
-    root["selectedSource"] = idx;
-    JsonObject data = root["data"].to<JsonObject>();
+  int trackedCount = 0;
+  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+    if (rfStatusSources[i].active && rfStatusSources[i].tracked)
+      trackedCount++;
+  root["trackedCount"] = trackedCount;
+  root["maxTracked"] = MAX_RF_STATUS_SOURCES;
 
-    for (const auto &m : rfStatusSources[idx].measurements31D9)
+  if (!trackedOnly)
+  {
+    int idx = sourceIndex;
+    if (idx == -1)
     {
-      if (m.type == ithoDeviceMeasurements::is_int)
-        data[m.name] = m.value.intval;
-      else if (m.type == ithoDeviceMeasurements::is_float)
-        data[m.name] = round(m.value.floatval, 2);
-      else if (m.type == ithoDeviceMeasurements::is_string)
-        data[m.name] = m.value.stringval;
-      count++;
+      for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+      {
+        if (rfStatusSources[i].active)
+        {
+          idx = i;
+          break;
+        }
+      }
     }
 
-    for (const auto &m : rfStatusSources[idx].measurements31DA)
+    if (idx >= 0 && idx < MAX_RF_STATUS_SOURCES && rfStatusSources[idx].active)
     {
-      if (m.type == ithoDeviceMeasurements::is_int)
-        data[m.name] = m.value.intval;
-      else if (m.type == ithoDeviceMeasurements::is_float)
-        data[m.name] = round(m.value.floatval, 2);
-      else if (m.type == ithoDeviceMeasurements::is_string)
-        data[m.name] = m.value.stringval;
-      count++;
+      root["selectedSource"] = idx;
+      JsonObject data = root["data"].to<JsonObject>();
+
+      for (const auto &m : rfStatusSources[idx].measurements31D9)
+      {
+        if (m.type == ithoDeviceMeasurements::is_int)
+          data[m.name] = m.value.intval;
+        else if (m.type == ithoDeviceMeasurements::is_float)
+          data[m.name] = round(m.value.floatval, 2);
+        else if (m.type == ithoDeviceMeasurements::is_string)
+          data[m.name] = m.value.stringval;
+        count++;
+      }
+
+      for (const auto &m : rfStatusSources[idx].measurements31DA)
+      {
+        if (m.type == ithoDeviceMeasurements::is_int)
+          data[m.name] = m.value.intval;
+        else if (m.type == ithoDeviceMeasurements::is_float)
+          data[m.name] = round(m.value.floatval, 2);
+        else if (m.type == ithoDeviceMeasurements::is_string)
+          data[m.name] = m.value.stringval;
+        count++;
+      }
     }
   }
 

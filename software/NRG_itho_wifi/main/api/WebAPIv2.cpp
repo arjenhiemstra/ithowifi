@@ -185,10 +185,55 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDoc
   }
   else if (strcmp(value, "rfstatus") == 0)
   {
-    JsonObject obj = response["rfstatus"].to<JsonObject>();
-    getRFStatusJSON(obj);
-    response.add(obj);
-    return ApiResponse::status::SUCCESS;
+    const char *nameFilter = params["name"] | nullptr;
+    if (nameFilter)
+    {
+      // Find specific tracked source by name
+      for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+      {
+        if (!rfStatusSources[i].active || !rfStatusSources[i].tracked)
+          continue;
+        if (strcmp(rfStatusSources[i].name, nameFilter) != 0)
+          continue;
+        JsonObject obj = response["rfstatus"].to<JsonObject>();
+        char idStr[10];
+        snprintf(idStr, sizeof(idStr), "%02X:%02X:%02X",
+                 rfStatusSources[i].id[0], rfStatusSources[i].id[1], rfStatusSources[i].id[2]);
+        obj["id"] = idStr;
+        obj["name"] = rfStatusSources[i].name;
+        obj["lastSeen"] = static_cast<int32_t>(rfStatusSources[i].lastSeen);
+        JsonObject data = obj["data"].to<JsonObject>();
+        for (const auto &m : rfStatusSources[i].measurements31D9)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            data[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            data[m.name] = m.value.floatval;
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            data[m.name] = m.value.stringval;
+        }
+        for (const auto &m : rfStatusSources[i].measurements31DA)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            data[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            data[m.name] = m.value.floatval;
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            data[m.name] = m.value.stringval;
+        }
+        response.add(obj);
+        return ApiResponse::status::SUCCESS;
+      }
+      response["rfstatus"] = "source not found";
+      return ApiResponse::status::FAIL;
+    }
+    else
+    {
+      JsonObject obj = response["rfstatus"].to<JsonObject>();
+      getRFStatusJSON(obj, -1, true);
+      response.add(obj);
+      return ApiResponse::status::SUCCESS;
+    }
   }
   else if (strcmp(value, "lastcmd") == 0)
   {
