@@ -114,6 +114,12 @@
             <input type="checkbox" onclick="var x=document.getElementById('passwd');x.type=x.type==='password'?'text':'password';">
           </div>
           <div class="pure-control-group">
+            <label>&nbsp;</label>
+            <button id="wiz-wifi-connect" type="button" class="pure-button pure-button-primary">Connect</button>
+          </div>
+          <details id="wiz-wifi-advanced">
+            <summary style="cursor:pointer; margin:1em 0; font-weight:bold;">Advanced network settings</summary>
+          <div class="pure-control-group">
             <label for="option-dhcp" class="pure-radio">Use DHCP</label>
             <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
             <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off"> off
@@ -223,6 +229,7 @@
               oninput="if(this.value.length > 64) { this.value = this.value.substring(0, 64); document.getElementById('appasswd-msg').innerHTML = 'AP Password truncated to 64 characters.'; } else { document.getElementById('appasswd-msg').innerHTML = ''; }">
             <span id="appasswd-msg" style="color: red;"></span>
           </div>
+          </details>
         </fieldset>
       </form>
       <br>
@@ -270,7 +277,7 @@
     <p><strong>Hardware:</strong> <span id="wiz-hw-revision">detecting...</span></p>
     <p><strong>Device type:</strong> <span id="wiz-dev-type">detecting...</span></p>
   </div>
-  <p>The following settings have been configured based on your device type. You can adjust them if needed.</p>
+  <p>The following settings have been configured based on your device type. You can adjust them here or later if needed.</p>
   <form class="pure-form pure-form-aligned">
     <fieldset>
       <legend><br>Fan control:</legend>
@@ -320,6 +327,14 @@
   </form>
   <div class="wizard-info-box warning" id="wiz-rf-note" style="display:none">
     <p><strong>Note:</strong> For your device type, an RF remote should be configured. You can do this in the next step or later via the RF Devices menu.</p>
+  </div>
+  <div class="wizard-info-box warning" id="wiz-co2-box" style="display:none">
+    <p><strong>CVE-Silent detected.</strong> This device could be an <strong>Optima Inside</strong> with a built-in CO2 sensor, or a standard model without built-in CO2 sensor.</p>
+    <p id="wiz-co2-detected" style="display:none"><strong>A CO2 sensor was detected in the system.</strong></p>
+    <p>Which model do you have?</p>
+    <button id="wiz-co2-optima" class="pure-button" type="button">Optima Inside (built-in CO2)</button>&nbsp;
+    <button id="wiz-co2-rft" class="pure-button" type="button">Standard (no built-in CO2)</button>
+    <p id="wiz-co2-chosen" style="display:none; margin-top:1em;"></p>
   </div>
 </div>
 
@@ -388,15 +403,16 @@
         <label for="mqtt_base_topic">MQTT base topic</label>
         <input id="mqtt_base_topic" maxlength="120" type="text">
       </div>
+      <div class="pure-control-group">
+        <label>&nbsp;</label>
+        <button id="wiz-mqtt-connect" type="button" class="pure-button pure-button-primary">Connect</button>
+        <span id="wiz-mqtt-status" style="margin-left:8px;"></span>
+      </div>
       <br>
       <div class="pure-control-group">
         <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
         <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha_active", 1)' value="1"> on
         <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha_active", 0)' value="0"> off
-      </div>
-      <div class="pure-control-group">
-        <label for="mqtt_ha_topic">HA Discovery topic prefix</label>
-        <input id="mqtt_ha_topic" maxlength="120" type="text">
       </div>
     </fieldset>
   </form>
@@ -414,9 +430,9 @@
 
 <!-- Wizard Navigation -->
 <div class="wizard-nav">
-  <button id="wizard-back" class="pure-button" style="display:none">Back</button>
-  <button id="wizard-next" class="pure-button pure-button-primary">Next</button>
-  <button id="wizard-finish" class="pure-button pure-button-primary" style="display:none">Finish</button>
+  <button id="wizard-back" type="button" class="pure-button" style="display:none">Back</button>
+  <button id="wizard-next" type="button" class="pure-button pure-button-primary">Next</button>
+  <button id="wizard-finish" type="button" class="pure-button pure-button-primary" style="display:none">Finish</button>
 </div>
 
 <!-- Reboot overlay -->
@@ -429,4 +445,5 @@
 
 <script>
   getSettings('wifisetup');
+  getSettings('wifistat');
 </script>

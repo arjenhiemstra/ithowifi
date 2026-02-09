@@ -145,7 +145,7 @@ function attachWebSocketHandlers() {
 
   document.getElementById("layout").style.opacity = 1;
   document.getElementById("loader").style.display = "none";
-  if (lastPageReq !== "") {
+  if (!wizardActive && lastPageReq !== "") {
     update_page(lastPageReq);
   }
   getSettings('syssetup');
@@ -507,6 +507,11 @@ const messageHandlers = {
   },
   wifistat: function (f) {
     processElements(f.wifistat);
+    // Stop wizard connect polling once connected
+    if (wizardActive && wizardConnectInterval && f.wifistat.wificonnstat === 'WL_CONNECTED') {
+      clearInterval(wizardConnectInterval);
+      wizardConnectInterval = null;
+    }
   },
   debuginfo: function (f) {
     processElements(f.debuginfo);
@@ -586,6 +591,13 @@ const messageHandlers = {
     }
     else {
       if (st) buildHtmlStatusTable(st, x);
+    }
+    // Wizard: detect CO2 sensor for CVE-Silent
+    if (wizardActive && wizardDevType === 'CVE-Silent') {
+      if ('co2level_ppm' in x && x.co2level_ppm > 0) {
+        var det = $id('wiz-co2-detected');
+        if (det) det.style.display = '';
+      }
     }
   },
   hadiscsettings: function (f) {
@@ -685,6 +697,21 @@ const messageHandlers = {
       mqttEl.className = `pure-button ${button.button}`;
       mqttEl.textContent = button.state;
     }
+    if (wizardActive && wizardMqttInterval) {
+      var mqttState = returnMqttState(x.mqqtstatus);
+      var statusEl = $id('wiz-mqtt-status');
+      if (statusEl) {
+        statusEl.textContent = mqttState.state;
+        statusEl.className = mqttState.button;
+      }
+      if (mqttState.state === 'Connected') {
+        clearInterval(wizardMqttInterval);
+        wizardMqttInterval = null;
+        var haEl = $q('input[name="option-mqtt_ha_active"][value="1"]');
+        if (haEl) haEl.checked = true;
+        wizardUpdateIndicators();
+      }
+    }
     var slider = $id('ithoslider');
     if (slider) slider.value = x.itho;
     var textval = $id('ithotextval');
@@ -749,7 +776,7 @@ const messageHandlers = {
     count += 1;
     resetTimer();
     var mb = $id('message_box');
-    mb.style.display = '';
+    mb.style.display = 'block';
     mb.insertAdjacentHTML('beforeend', `<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
     removeAfter5secs(count);
   },
@@ -906,6 +933,26 @@ document.addEventListener('DOMContentLoaded', function () {
     if (target.id === 'wizard-next') { e.preventDefault(); wizardNext(); return; }
     if (target.id === 'wizard-back') { e.preventDefault(); wizardBack(); return; }
     if (target.id === 'wizard-finish') { e.preventDefault(); wizardFinish(); return; }
+    if (target.id === 'wiz-co2-optima') { e.preventDefault(); wizardSetCO2Choice(true); return; }
+    if (target.id === 'wiz-co2-rft') { e.preventDefault(); wizardSetCO2Choice(false); return; }
+    if (target.id === 'wiz-wifi-connect') {
+      e.preventDefault();
+      wizardSaveWifiSettings();
+      getSettings('wifistat');
+      if (wizardConnectInterval) clearInterval(wizardConnectInterval);
+      wizardConnectInterval = setInterval(function () { getSettings('wifistat'); }, 2000);
+      return;
+    }
+    if (target.id === 'wiz-mqtt-connect') {
+      e.preventDefault();
+      wizardSaveMqttSettings();
+      getSettings('systemstat');
+      if (wizardMqttInterval) clearInterval(wizardMqttInterval);
+      wizardMqttInterval = setInterval(function () { getSettings('systemstat'); }, 2000);
+      var statusEl = $id('wiz-mqtt-status');
+      if (statusEl) { statusEl.textContent = 'Connecting...'; statusEl.className = ''; }
+      return;
+    }
   });
 
   //handle menu clicks
@@ -1414,7 +1461,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!filename.endsWith(".bin")) {
         count += 1;
         resetTimer();
-        $id('message_box').style.display = '';
+        $id('message_box').style.display = 'block';
         $id('message_box').insertAdjacentHTML('beforeend', `<p class='messageP' id='mbox_p${count}'>Updater: file name error, please select a *.bin firmware file</p>`);
         removeAfter5secs(count);
         return;
@@ -2575,8 +2622,12 @@ var wizardActive = false;
 var wizardCurrentStep = 1;
 var wizardHasRF = false;
 var wizardDeviceCategory = 'other';
+var wizardDevType = '';
+var wizardIsOptimaInside = false;
 var wizardRemotesInterval = null;
 var wizardWifistatInterval = null;
+var wizardConnectInterval = null;
+var wizardMqttInterval = null;
 
 function initWizard(startStep) {
   wizardActive = true;
@@ -2654,20 +2705,47 @@ function wizardSaveWifiSettings() {
   websock_send(JSON.stringify(wifiMsg));
 }
 
+function wizardSaveMqttSettings() {
+  var mqtt_passwd = $val('mqtt_password');
+  var mqtt_secure_credentials = {};
+  var enc_mqtt = secureCredentials.getEncryptedField(mqtt_passwd);
+  if (enc_mqtt) mqtt_secure_credentials.mqtt_password = enc_mqtt;
+
+  var mqttMsg = {
+    systemsettings: {
+      mqtt_active: '1',
+      mqtt_serverName: $val('mqtt_serverName'),
+      mqtt_username: $val('mqtt_username'),
+      mqtt_password: enc_mqtt ? '********' : mqtt_passwd,
+      mqtt_port: $val('mqtt_port'),
+      mqtt_base_topic: $val('mqtt_base_topic')
+    }
+  };
+  if (Object.keys(mqtt_secure_credentials).length > 0) {
+    mqttMsg.systemsettings.secure_credentials = mqtt_secure_credentials;
+  }
+  websock_send(JSON.stringify(mqttMsg));
+}
+
 function wizardGoTo(step) {
   // Save WiFi settings when leaving step 1 (so they persist across reboots)
   if (wizardCurrentStep === 1 && step > 1) {
     wizardSaveWifiSettings();
   }
   // Clean up wifistat polling if leaving step 1
-  if (wizardCurrentStep === 1 && wizardWifistatInterval) {
-    clearInterval(wizardWifistatInterval);
-    wizardWifistatInterval = null;
+  if (wizardCurrentStep === 1) {
+    if (wizardWifistatInterval) { clearInterval(wizardWifistatInterval); wizardWifistatInterval = null; }
+    if (wizardConnectInterval) { clearInterval(wizardConnectInterval); wizardConnectInterval = null; }
   }
   // Clean up remotes interval if leaving step 3
   if (wizardCurrentStep === 3 && wizardRemotesInterval) {
     clearInterval(wizardRemotesInterval);
     wizardRemotesInterval = null;
+  }
+  // Clean up MQTT polling if leaving step 4
+  if (wizardCurrentStep === 4 && wizardMqttInterval) {
+    clearInterval(wizardMqttInterval);
+    wizardMqttInterval = null;
   }
   wizardCurrentStep = step;
   // Persist wizard step across reboots
@@ -2684,7 +2762,7 @@ function wizardGoTo(step) {
       getSettings('wifistat');
     }, 2000);
   } else if (step === 2) {
-    getSettings('ithodevinfo');
+    getSettings('ithosetup');
     getSettings('syssetup');
   } else if (step === 3) {
     getSettings('rfsetup');
@@ -2733,8 +2811,15 @@ function applyDeviceDefaults() {
     if (el) el.checked = true;
   }
 
-  // PWM2I2C: off for all
-  checkRadio('option-itho_pwm2i2c', '0');
+  // PWM2I2C: off for all, except CVE-Silent with external CO2 (RFT CO2)
+  var isCveSilentRft = (wizardDevType === 'CVE-Silent' && !wizardIsOptimaInside);
+  checkRadio('option-itho_pwm2i2c', isCveSilentRft ? '1' : '0');
+  // Lock PWM2I2C when Optima Inside (must stay off)
+  var pwm1 = $id('option-pwm2i2c-1');
+  var pwm0 = $id('option-pwm2i2c-0');
+  var optimaLock = (wizardDevType === 'CVE-Silent' && wizardIsOptimaInside);
+  if (pwm1) pwm1.disabled = optimaLock;
+  if (pwm0) pwm0.disabled = optimaLock;
 
   // 31DA and 31D9
   var enable31 = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350');
@@ -2746,7 +2831,7 @@ function applyDeviceDefaults() {
   var numvremEl = $id('itho_numvrem');
   if (useVirtual) {
     if (numvremEl) numvremEl.value = 1;
-    checkRadio('option-itho_sendjoin', '2');
+    checkRadio('option-itho_sendjoin', '1');
     checkRadio('option-itho_forcemedium', '1');
   } else {
     if (numvremEl) numvremEl.value = (cat === 'wpu' ? 0 : 1);
@@ -2773,9 +2858,27 @@ function applyDeviceDefaults() {
 
 function wizardOnDevInfo(devtype) {
   wizardDeviceCategory = wizardDetectDeviceCategory(devtype);
+  wizardDevType = devtype || '';
   var el = $id('wiz-dev-type');
   if (el) el.textContent = devtype || 'Unknown';
+  // Show CO2 choice for CVE-Silent (device ID 0x1B)
+  var co2box = $id('wiz-co2-box');
+  if (co2box) co2box.style.display = (devtype === 'CVE-Silent') ? '' : 'none';
   applyDeviceDefaults();
+  // Request status to check for CO2 sensor (may not be available on first boot)
+  if (devtype === 'CVE-Silent') getSettings('ithostatus');
+}
+
+function wizardSetCO2Choice(isOptima) {
+  wizardIsOptimaInside = isOptima;
+  applyDeviceDefaults();
+  var msg = $id('wiz-co2-chosen');
+  if (msg) {
+    msg.style.display = '';
+    msg.textContent = isOptima
+      ? 'Configured for Optima Inside: PWM2I2C disabled, virtual remote enabled.'
+      : 'Configured for standard CVE (no built-in CO2): PWM2I2C enabled.';
+  }
 }
 
 function wizardFinish() {
@@ -2817,7 +2920,6 @@ function wizardFinish() {
       mqtt_password: enc_mqtt ? '********' : mqtt_passwd,
       mqtt_port: $val('mqtt_port'),
       mqtt_base_topic: $val('mqtt_base_topic'),
-      mqtt_ha_topic: $val('mqtt_ha_topic'),
       mqtt_ha_active: checkedVal('option-mqtt_ha_active')
     }
   };
@@ -2838,7 +2940,14 @@ function wizardFinish() {
   } else {
     targetUrl = 'http://' + ($val('hostname') || 'nrg-itho') + '.local';
   }
-  $id('wizard-reboot-url').innerHTML = 'Device will be available at: <a href="' + targetUrl + '">' + targetUrl + '</a>';
+  var ipSpan = $q('[name="wifiip"]');
+  var ipAddr = ipSpan ? ipSpan.textContent : '';
+  var ipUrl = (ipAddr && ipAddr !== 'unknown' && ipAddr !== '0.0.0.0') ? 'http://' + ipAddr : '';
+  var msg = 'Device will be available at: <a href="' + targetUrl + '">' + targetUrl + '</a>';
+  if (ipUrl && ipUrl !== targetUrl) {
+    msg += '<br>or: <a href="' + ipUrl + '">' + ipUrl + '</a>';
+  }
+  $id('wizard-reboot-url').innerHTML = msg;
 
   setTimeout(function () {
     websock_send('{"reboot":true}');
@@ -4769,6 +4878,12 @@ var html_wizard = `
             <input type="checkbox" onclick="var x=document.getElementById('passwd');x.type=x.type==='password'?'text':'password';">
           </div>
           <div class="pure-control-group">
+            <label>&nbsp;</label>
+            <button id="wiz-wifi-connect" type="button" class="pure-button pure-button-primary">Connect</button>
+          </div>
+          <details id="wiz-wifi-advanced">
+            <summary style="cursor:pointer; margin:1em 0; font-weight:bold;">Advanced network settings</summary>
+          <div class="pure-control-group">
             <label for="option-dhcp" class="pure-radio">Use DHCP</label>
             <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
             <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off"> off
@@ -4878,6 +4993,7 @@ var html_wizard = `
               oninput="if(this.value.length > 64) { this.value = this.value.substring(0, 64); document.getElementById('appasswd-msg').innerHTML = 'AP Password truncated to 64 characters.'; } else { document.getElementById('appasswd-msg').innerHTML = ''; }">
             <span id="appasswd-msg" style="color: red;"></span>
           </div>
+          </details>
         </fieldset>
       </form>
       <br>
@@ -4925,7 +5041,7 @@ var html_wizard = `
     <p><strong>Hardware:</strong> <span id="wiz-hw-revision">detecting...</span></p>
     <p><strong>Device type:</strong> <span id="wiz-dev-type">detecting...</span></p>
   </div>
-  <p>The following settings have been configured based on your device type. You can adjust them if needed.</p>
+  <p>The following settings have been configured based on your device type. You can adjust them here or later if needed.</p>
   <form class="pure-form pure-form-aligned">
     <fieldset>
       <legend><br>Fan control:</legend>
@@ -4975,6 +5091,14 @@ var html_wizard = `
   </form>
   <div class="wizard-info-box warning" id="wiz-rf-note" style="display:none">
     <p><strong>Note:</strong> For your device type, an RF remote should be configured. You can do this in the next step or later via the RF Devices menu.</p>
+  </div>
+  <div class="wizard-info-box warning" id="wiz-co2-box" style="display:none">
+    <p><strong>CVE-Silent detected.</strong> This device could be an <strong>Optima Inside</strong> with a built-in CO2 sensor, or a standard model without built-in CO2 sensor.</p>
+    <p id="wiz-co2-detected" style="display:none"><strong>A CO2 sensor was detected in the system.</strong></p>
+    <p>Which model do you have?</p>
+    <button id="wiz-co2-optima" class="pure-button" type="button">Optima Inside (built-in CO2)</button>&nbsp;
+    <button id="wiz-co2-rft" class="pure-button" type="button">Standard (no built-in CO2)</button>
+    <p id="wiz-co2-chosen" style="display:none; margin-top:1em;"></p>
   </div>
 </div>
 
@@ -5043,15 +5167,16 @@ var html_wizard = `
         <label for="mqtt_base_topic">MQTT base topic</label>
         <input id="mqtt_base_topic" maxlength="120" type="text">
       </div>
+      <div class="pure-control-group">
+        <label>&nbsp;</label>
+        <button id="wiz-mqtt-connect" type="button" class="pure-button pure-button-primary">Connect</button>
+        <span id="wiz-mqtt-status" style="margin-left:8px;"></span>
+      </div>
       <br>
       <div class="pure-control-group">
         <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
         <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha_active", 1)' value="1"> on
         <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active" onchange='radio("mqtt_ha_active", 0)' value="0"> off
-      </div>
-      <div class="pure-control-group">
-        <label for="mqtt_ha_topic">HA Discovery topic prefix</label>
-        <input id="mqtt_ha_topic" maxlength="120" type="text">
       </div>
     </fieldset>
   </form>
@@ -5069,9 +5194,9 @@ var html_wizard = `
 
 <!-- Wizard Navigation -->
 <div class="wizard-nav">
-  <button id="wizard-back" class="pure-button" style="display:none">Back</button>
-  <button id="wizard-next" class="pure-button pure-button-primary">Next</button>
-  <button id="wizard-finish" class="pure-button pure-button-primary" style="display:none">Finish</button>
+  <button id="wizard-back" type="button" class="pure-button" style="display:none">Back</button>
+  <button id="wizard-next" type="button" class="pure-button pure-button-primary">Next</button>
+  <button id="wizard-finish" type="button" class="pure-button pure-button-primary" style="display:none">Finish</button>
 </div>
 
 <!-- Reboot overlay -->
@@ -5084,6 +5209,7 @@ var html_wizard = `
 
 <script>
   getSettings('wifisetup');
+  getSettings('wifistat');
 </script>
 
 `;
