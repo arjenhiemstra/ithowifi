@@ -257,6 +257,8 @@ void TaskCC1101(void *pvParameters)
 
     // init the RF module
     rfManager.radio.init();
+    IthoCC1101::setRF31DACallback(parseRF31DA);
+    IthoCC1101::setRF31D9Callback(parseRF31D9);
     if (systemConfig.module_rf_id[0] == 0 && systemConfig.module_rf_id[1] == 0 && systemConfig.module_rf_id[2] == 0)
     {
       systemConfig.module_rf_id[0] = sys.getMac(3);

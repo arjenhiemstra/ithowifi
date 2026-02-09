@@ -60,6 +60,8 @@ const uint8_t ithoPaTableReceive[8] = {0x6F, 0x26, 0x2E, 0x7F, 0x8A, 0x84, 0xCA,
 
 class IthoPacket;
 
+typedef void (*RFStatusCallback_t)(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t srcId1, uint8_t srcId2);
+
 class IthoCC1101 : protected CC1101
 {
 private:
@@ -82,6 +84,9 @@ private:
   // Itho remotes
   bool bindAllowed;
   bool allowAll;
+
+  static RFStatusCallback_t rf31DACallback;
+  static RFStatusCallback_t rf31D9Callback;
   ithoRFDevices ithoRF;
 
   typedef struct
@@ -228,5 +233,8 @@ public:
   void handleZoneSetpoint(IthoPacket *packetPtr);
   void handleDeviceInfo(IthoPacket *packetPtr);
   const char *rem_cmd_to_name(IthoCommand code);
+
+  static void setRF31DACallback(RFStatusCallback_t cb) { rf31DACallback = cb; }
+  static void setRF31D9Callback(RFStatusCallback_t cb) { rf31D9Callback = cb; }
 
 }; // IthoCC1101

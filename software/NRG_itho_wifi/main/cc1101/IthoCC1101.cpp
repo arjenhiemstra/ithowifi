@@ -5,6 +5,9 @@
 #include "IthoCC1101.h"
 #include "IthoPacket.h"
 #include <string>
+
+RFStatusCallback_t IthoCC1101::rf31DACallback = nullptr;
+RFStatusCallback_t IthoCC1101::rf31D9Callback = nullptr;
 #include <Arduino.h>
 #include <SPI.h>
 
@@ -1944,6 +1947,10 @@ void IthoCC1101::handle31D9(IthoPacket *packetPtr)
   uint8_t byte1 = tempID >> 8 & 0xFF;
   uint8_t byte2 = tempID & 0xFF;
 
+  // Capture RF status data from all sources (before registered-device check)
+  if (packetPtr->len > 1 && rf31D9Callback)
+    rf31D9Callback(&packetPtr->dataDecoded[packetPtr->payloadPos], packetPtr->len, byte0, byte1, byte2);
+
   if (!checkRFDevice(byte0, byte1, byte2))
   {
     return;
@@ -1985,6 +1992,10 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
   uint8_t byte0 = tempID >> 16 & 0xFF;
   uint8_t byte1 = tempID >> 8 & 0xFF;
   uint8_t byte2 = tempID & 0xFF;
+
+  // Capture RF status data from all sources (before registered-device check)
+  if (packetPtr->len > 1 && rf31DACallback)
+    rf31DACallback(&packetPtr->dataDecoded[packetPtr->payloadPos], packetPtr->len, byte0, byte1, byte2);
 
   if (!checkRFDevice(byte0, byte1, byte2))
   {
