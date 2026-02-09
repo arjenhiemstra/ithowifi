@@ -243,7 +243,7 @@ void handle_ws_message(JsonObject root)
         const char *nonce = creds["passwd"]["nonce"] | "";
         if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
         {
-          strlcpy(wifiConfig.passwd, decrypted, sizeof(wifiConfig.passwd));
+          wifiObj["passwd"] = decrypted;
         }
       }
       if (creds["appasswd"].is<JsonObject>())
@@ -252,7 +252,7 @@ void handle_ws_message(JsonObject root)
         const char *nonce = creds["appasswd"]["nonce"] | "";
         if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
         {
-          strlcpy(wifiConfig.appasswd, decrypted, sizeof(wifiConfig.appasswd));
+          wifiObj["appasswd"] = decrypted;
         }
       }
       mbedtls_platform_zeroize(decrypted, sizeof(decrypted));
@@ -277,7 +277,7 @@ void handle_ws_message(JsonObject root)
         const char *nonce = creds["sys_password"]["nonce"] | "";
         if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
         {
-          strlcpy(systemConfig.sys_password, decrypted, sizeof(systemConfig.sys_password));
+          sysObj["sys_password"] = decrypted;
         }
       }
       if (creds["mqtt_password"].is<JsonObject>())
@@ -286,7 +286,7 @@ void handle_ws_message(JsonObject root)
         const char *nonce = creds["mqtt_password"]["nonce"] | "";
         if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
         {
-          strlcpy(systemConfig.mqtt_password, decrypted, sizeof(systemConfig.mqtt_password));
+          sysObj["mqtt_password"] = decrypted;
         }
       }
       mbedtls_platform_zeroize(decrypted, sizeof(decrypted));
