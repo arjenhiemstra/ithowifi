@@ -110,6 +110,23 @@ extern std::vector<ithoDeviceMeasurements> ithoMeasurements;
 extern std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 extern std::vector<ithoDeviceMeasurements> ithoCounters;
 
+#define MAX_RF_STATUS_SOURCES 20
+
+struct rfStatusSource
+{
+  uint8_t id[3]{};
+  time_t lastSeen{};
+  std::vector<ithoDeviceMeasurements> measurements31DA;
+  std::vector<ithoDeviceMeasurements> measurements31D9;
+  bool active{false};
+  bool tracked{false};
+  char name[32]{};
+};
+
+extern rfStatusSource rfStatusSources[MAX_RF_STATUS_SOURCES];
+extern volatile int rfSelectedSourceForParsing;
+rfStatusSource *findOrAllocRFStatusSource(uint8_t b0, uint8_t b1, uint8_t b2);
+
 struct lastCommand
 {
   char source[30];
@@ -175,6 +192,10 @@ bool decodeQuery2410(int32_t *, ithoSettings *, double *, double *, double *);
 bool setSetting2410(uint8_t index, int32_t value, bool updateweb);
 // void setSetting2410(bool updateweb);
 void sendQueryCounters(bool updateweb);
+void parseRF31DA(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t srcId1, uint8_t srcId2);
+void parseRF31D9(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t srcId1, uint8_t srcId2);
+bool saveRFTrackedSources();
+bool loadRFTrackedSources();
 void filterReset();
 void IthoPWMcommand(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
 size_t sendI2cQuery(uint8_t *i2c_command, size_t i2c_command_length, uint8_t *receive_buffer, i2c_cmdref_t origin);

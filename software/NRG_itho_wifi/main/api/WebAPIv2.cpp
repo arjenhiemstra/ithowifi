@@ -183,6 +183,13 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDoc
 
     return ApiResponse::status::SUCCESS;
   }
+  else if (strcmp(value, "rfstatus") == 0)
+  {
+    JsonObject obj = response["rfstatus"].to<JsonObject>();
+    getRFStatusJSON(obj);
+    response.add(obj);
+    return ApiResponse::status::SUCCESS;
+  }
   else if (strcmp(value, "lastcmd") == 0)
   {
     JsonObject obj = response["lastcmd"].to<JsonObject>();

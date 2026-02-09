@@ -1,4 +1,5 @@
 #include "tasks/task_configandlog.h"
+#include "ithodevice/IthoDevice.h"
 
 #define TASK_CONFIG_AND_LOG_PRIO 5
 
@@ -8,6 +9,7 @@ TaskHandle_t xTaskConfigAndLogHandle = NULL;
 uint32_t TaskConfigAndLogHWmark = 0;
 volatile bool saveRemotesflag = false;
 volatile bool saveVremotesflag = false;
+volatile bool saveRFTrackedConfigflag = false;
 bool chkpartition = false;
 int chk_partition_res = -1;
 bool formatFileSystem = false;
@@ -72,6 +74,8 @@ void TaskConfigAndLog(void *pvParameters)
   syslogQueueWorker();
 
   HADiscConfigLoaded = loadHADiscConfig("flash");
+
+  loadRFTrackedSources();
 
   startTaskSysControl();
   syslogQueueWorker();
@@ -196,6 +200,14 @@ void execLogAndConfigTasks()
       saveVirtualRemotesConfig("flash");
       jsonWsSend("vremotes"); });
     logMessagejson("Virtual remotes config saved", WEBINTERFACE);
+  }
+  if (saveRFTrackedConfigflag)
+  {
+    saveRFTrackedConfigflag = false;
+    if (saveRFTrackedSources())
+      logMessagejson("RF tracked sources saved", WEBINTERFACE);
+    else
+      logMessagejson("Failed saving RF tracked sources", WEBINTERFACE);
   }
   if (resetWifiConfigflag)
   {

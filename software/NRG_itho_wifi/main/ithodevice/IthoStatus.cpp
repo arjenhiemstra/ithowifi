@@ -2,10 +2,19 @@
 #include "devices/error_info_labels.h"
 #include "devices/wpu.h"
 
+#include "globals.h"
+#include "sys_log.h"
+#include <ArduinoJson.h>
+
+extern bool updateMQTTRFStatus;
+
 std::vector<ithoDeviceStatus> ithoStatus;
 std::vector<ithoDeviceMeasurements> ithoMeasurements;
 std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 std::vector<ithoDeviceMeasurements> ithoCounters;
+
+rfStatusSource rfStatusSources[MAX_RF_STATUS_SOURCES];
+volatile int rfSelectedSourceForParsing = -1;
 
 bool i2c_31d9_done = false;
 
@@ -316,6 +325,208 @@ static void addTwoByteMeasurement(const char *label, const uint8_t *i2cbuf, int 
   }
 }
 
+// Parameterized helper overloads for RF status parsing (push to target vector instead of global ithoMeasurements)
+static void addSingleByteMeasurementTo(std::vector<ithoDeviceMeasurements> &target, const char *label, const uint8_t *buf, int offset, uint8_t errorThreshold, const std::map<uint8_t, const char *> &errorMap, bool isFloat = false, float divider = 1.0f)
+{
+  target.push_back(ithoDeviceMeasurements());
+  target.back().name = label;
+  if (buf[offset] > errorThreshold)
+  {
+    target.back().type = ithoDeviceMeasurements::is_string;
+    auto it = errorMap.find(buf[offset]);
+    if (it != errorMap.end())
+      target.back().value.stringval = it->second;
+    else
+      target.back().value.stringval = errorMap.rbegin()->second;
+  }
+  else if (isFloat)
+  {
+    target.back().type = ithoDeviceMeasurements::is_float;
+    target.back().value.floatval = buf[offset] / divider;
+  }
+  else
+  {
+    target.back().type = ithoDeviceMeasurements::is_int;
+    target.back().value.intval = buf[offset];
+  }
+}
+
+static void addTwoByteMeasurementTo(std::vector<ithoDeviceMeasurements> &target, const char *label, const uint8_t *buf, int offset, bool checkError = false, uint8_t errorThreshold = 0x7F, const std::map<uint8_t, const char *> *errorMap = nullptr, bool isFloat = false, float divider = 1.0f)
+{
+  target.push_back(ithoDeviceMeasurements());
+  target.back().name = label;
+  if (checkError && buf[offset] >= errorThreshold && errorMap != nullptr)
+  {
+    target.back().type = ithoDeviceMeasurements::is_string;
+    auto it = errorMap->find(buf[offset]);
+    if (it != errorMap->end())
+      target.back().value.stringval = it->second;
+    else
+      target.back().value.stringval = errorMap->rbegin()->second;
+  }
+  else
+  {
+    int32_t tempVal = (buf[offset] << 8) | buf[offset + 1];
+    if (isFloat)
+    {
+      target.back().type = ithoDeviceMeasurements::is_float;
+      target.back().value.floatval = tempVal / divider;
+    }
+    else
+    {
+      target.back().type = ithoDeviceMeasurements::is_int;
+      target.back().value.intval = tempVal;
+    }
+  }
+}
+
+rfStatusSource *findOrAllocRFStatusSource(uint8_t b0, uint8_t b1, uint8_t b2)
+{
+  for (auto &src : rfStatusSources)
+    if (src.active && src.id[0] == b0 && src.id[1] == b1 && src.id[2] == b2)
+      return &src;
+  for (auto &src : rfStatusSources)
+  {
+    if (!src.active)
+    {
+      src.id[0] = b0;
+      src.id[1] = b1;
+      src.id[2] = b2;
+      src.active = true;
+      return &src;
+    }
+  }
+  return nullptr;
+}
+
+void parseRF31DA(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t srcId1, uint8_t srcId2)
+{
+  if (len < 2)
+    return;
+  if (payload[0] != 0x00)
+    return; // unexpected domain byte
+
+  rfStatusSource *src = findOrAllocRFStatusSource(srcId0, srcId1, srcId2);
+  if (!src)
+    return;
+
+  time_t now;
+  time(&now);
+  src->lastSeen = now;
+
+  // Only parse measurements for tracked or currently-selected sources
+  int srcIndex = static_cast<int>(src - &rfStatusSources[0]);
+  if (!src->tracked && srcIndex != rfSelectedSourceForParsing)
+    return;
+
+  auto dataStart = 1; // skip domain byte
+  auto dataLength = len - 1;
+
+  src->measurements31DA.clear();
+
+  const int labelLen = 19;
+  const char *labels[labelLen];
+  for (int i = 0; i < labelLen; i++)
+    labels[i] = systemConfig.api_normalize == 0 ? itho31DALabels[i].labelFull : itho31DALabels[i].labelNormalized;
+
+  auto &t = src->measurements31DA;
+
+  if (dataLength > 0)
+  {
+    addSingleByteMeasurementTo(t, labels[0], payload, 0 + dataStart, 200, fanSensorErrors, false);
+    t.push_back(ithoDeviceMeasurements());
+    t.back().name = labels[1];
+    t.back().type = ithoDeviceMeasurements::is_int;
+    t.back().value.intval = payload[1 + dataStart];
+  }
+  if (dataLength > 1)
+    addTwoByteMeasurementTo(t, labels[2], payload, 2 + dataStart, true, 0x7F, &fanSensorErrors2, false);
+  if (dataLength > 3)
+    addSingleByteMeasurementTo(t, labels[3], payload, 4 + dataStart, 200, fanSensorErrors, false);
+  if (dataLength > 4)
+    addSingleByteMeasurementTo(t, labels[4], payload, 5 + dataStart, 200, fanSensorErrors, true, 2.0f);
+  if (dataLength > 5)
+    addTwoByteMeasurementTo(t, labels[5], payload, 6 + dataStart, true, 0x7F, &fanSensorErrors2, true, 100.0f);
+  if (dataLength > 7)
+    addTwoByteMeasurementTo(t, labels[6], payload, 8 + dataStart, true, 0x7F, &fanSensorErrors2, true, 100.0f);
+  if (dataLength > 9)
+    addTwoByteMeasurementTo(t, labels[7], payload, 10 + dataStart, true, 0x7F, &fanSensorErrors2, true, 100.0f);
+  if (dataLength > 11)
+    addTwoByteMeasurementTo(t, labels[8], payload, 12 + dataStart, true, 0x7F, &fanSensorErrors2, true, 100.0f);
+  if (dataLength > 13)
+    addTwoByteMeasurementTo(t, labels[9], payload, 14 + dataStart, false);
+  if (dataLength > 15)
+    addSingleByteMeasurementTo(t, labels[10], payload, 16 + dataStart, 200, fanSensorErrors, true, 2.0f);
+  if (dataLength > 16)
+  {
+    t.push_back(ithoDeviceMeasurements());
+    t.back().name = labels[11];
+    t.back().type = ithoDeviceMeasurements::is_string;
+    auto it = fanInfo.find(payload[17 + dataStart] & 0x1F);
+    t.back().value.stringval = (it != fanInfo.end()) ? it->second : fanInfo.rbegin()->second;
+  }
+  if (dataLength > 17)
+    addSingleByteMeasurementTo(t, labels[12], payload, 18 + dataStart, 200, fanSensorErrors, true, 2.0f);
+  if (dataLength > 18)
+    addSingleByteMeasurementTo(t, labels[13], payload, 19 + dataStart, 200, fanSensorErrors, true, 2.0f);
+  if (dataLength > 19)
+    addTwoByteMeasurementTo(t, labels[14], payload, 20 + dataStart, false);
+  if (dataLength > 21)
+    addSingleByteMeasurementTo(t, labels[15], payload, 22 + dataStart, 200, fanHeatErrors, true, 2.0f);
+  if (dataLength > 22)
+    addSingleByteMeasurementTo(t, labels[16], payload, 23 + dataStart, 200, fanHeatErrors, true, 2.0f);
+  if (dataLength > 23)
+    addTwoByteMeasurementTo(t, labels[17], payload, 24 + dataStart, true, 0x7F, &fanSensorErrors2, true, 100.0f);
+  if (dataLength > 25)
+    addTwoByteMeasurementTo(t, labels[18], payload, 26 + dataStart, true, 0x7F, &fanSensorErrors2, true, 100.0f);
+
+  if (src->tracked)
+    updateMQTTRFStatus = true;
+}
+
+void parseRF31D9(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t srcId1, uint8_t srcId2)
+{
+  if (len < 3)
+    return;
+  if (payload[0] != 0x00)
+    return; // unexpected domain byte
+
+  rfStatusSource *src = findOrAllocRFStatusSource(srcId0, srcId1, srcId2);
+  if (!src)
+    return;
+
+  time_t now;
+  time(&now);
+  src->lastSeen = now;
+
+  // Only parse measurements for tracked or currently-selected sources
+  int srcIndex = static_cast<int>(src - &rfStatusSources[0]);
+  if (!src->tracked && srcIndex != rfSelectedSourceForParsing)
+    return;
+
+  auto dataStart = 1; // skip domain byte
+
+  src->measurements31D9.clear();
+
+  const int labelLen = 4;
+  const char *labels[labelLen];
+  for (int i = 0; i < labelLen; i++)
+    labels[i] = systemConfig.api_normalize == 0 ? itho31D9Labels[i].labelFull : itho31D9Labels[i].labelNormalized;
+
+  float tempVal = payload[1 + dataStart] / 2.0f;
+  src->measurements31D9.push_back({labels[0], ithoDeviceMeasurements::is_float, {.floatval = tempVal}, 1});
+
+  int status = (payload[0 + dataStart] & 0x80) ? 1 : 0;
+  src->measurements31D9.push_back({labels[1], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
+  status = (payload[0 + dataStart] & 0x40) ? 1 : 0;
+  src->measurements31D9.push_back({labels[2], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
+  status = (payload[0 + dataStart] & 0x20) ? 1 : 0;
+  src->measurements31D9.push_back({labels[3], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
+
+  if (src->tracked)
+    updateMQTTRFStatus = true;
+}
+
 void sendQuery31DA(bool updateweb)
 {
   uint8_t i2cbuf[512]{};
@@ -617,4 +828,73 @@ void sendQueryCounters(bool updateweb)
     ithoCounters.back().type = ithoDeviceMeasurements::is_int;
     ithoCounters.back().value.intval = val;
   }
+}
+
+bool saveRFTrackedSources()
+{
+  JsonDocument doc;
+  JsonArray arr = doc.to<JsonArray>();
+
+  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+  {
+    if (rfStatusSources[i].active && rfStatusSources[i].tracked)
+    {
+      JsonObject entry = arr.add<JsonObject>();
+      char idStr[10];
+      snprintf(idStr, sizeof(idStr), "%02X:%02X:%02X",
+               rfStatusSources[i].id[0], rfStatusSources[i].id[1], rfStatusSources[i].id[2]);
+      entry["id"] = idStr;
+      entry["name"] = rfStatusSources[i].name;
+    }
+  }
+
+  File f = ACTIVE_FS.open("/rftrack.json", "w");
+  if (!f)
+  {
+    E_LOG("SYS: error - failed to write /rftrack.json");
+    return false;
+  }
+  serializeJson(doc, f);
+  f.close();
+  D_LOG("SYS: RF tracked sources saved");
+  return true;
+}
+
+bool loadRFTrackedSources()
+{
+  if (!ACTIVE_FS.exists("/rftrack.json"))
+    return true;
+
+  File f = ACTIVE_FS.open("/rftrack.json", "r");
+  if (!f)
+    return false;
+
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, f);
+  f.close();
+  if (err)
+  {
+    E_LOG("SYS: error - failed to parse /rftrack.json");
+    return false;
+  }
+
+  JsonArray arr = doc.as<JsonArray>();
+  for (JsonObject entry : arr)
+  {
+    const char *idStr = entry["id"] | "";
+    if (strlen(idStr) < 8)
+      continue;
+    uint8_t b0, b1, b2;
+    if (sscanf(idStr, "%02hhX:%02hhX:%02hhX", &b0, &b1, &b2) == 3)
+    {
+      rfStatusSource *src = findOrAllocRFStatusSource(b0, b1, b2);
+      if (src)
+      {
+        src->tracked = true;
+        strlcpy(src->name, entry["name"] | "", sizeof(src->name));
+      }
+    }
+  }
+  D_LOG("SYS: RF tracked sources loaded");
+  return true;
 }

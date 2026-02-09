@@ -2,6 +2,7 @@
 #include "managers/SecureWebCommLite.h"
 
 static std::unordered_map<uint32_t, std::string> g_wsBuffers;
+// rfSelectedSourceForParsing is defined in IthoStatus.cpp
 AsyncWebServer wsserver(8000);
 WebSerial *webSerial = nullptr;
 
@@ -181,6 +182,11 @@ void jsonWsSend(const char *rootName)
   {
     JsonObject obj = root.to<JsonObject>(); // Fill the object
     virtualRemotes.get(obj, rootName);
+  }
+  else if (strcmp(rootName, "rfstatusinfo") == 0)
+  {
+    JsonObject nested = root[rootName].to<JsonObject>();
+    getRFStatusJSON(nested, rfSelectedSourceForParsing);
   }
   else if (strcmp(rootName, "chkpart") == 0)
   {
@@ -509,6 +515,32 @@ void handle_ws_message(JsonObject root)
   {
     jsonWsSend("ithostatusinfo");
     sysStatReq = true;
+  }
+  if (root["rfstatus"].is<bool>() && root["rfstatus"].as<bool>())
+  {
+    rfSelectedSourceForParsing = root["source"].is<int>() ? root["source"].as<int>() : -1;
+    jsonWsSend("rfstatusinfo");
+  }
+  if (root["rftrack"].is<JsonObject>())
+  {
+    JsonObject trackObj = root["rftrack"].as<JsonObject>();
+    int idx = trackObj["index"].is<int>() ? trackObj["index"].as<int>() : -1;
+    if (idx >= 0 && idx < MAX_RF_STATUS_SOURCES && rfStatusSources[idx].active)
+    {
+      if (trackObj["track"].is<bool>())
+      {
+        bool track = trackObj["track"].as<bool>();
+        rfStatusSources[idx].tracked = track;
+        if (!track)
+        {
+          rfStatusSources[idx].measurements31DA.clear();
+          rfStatusSources[idx].measurements31D9.clear();
+        }
+      }
+      if (trackObj["name"].is<const char *>())
+        strlcpy(rfStatusSources[idx].name, trackObj["name"].as<const char *>(), sizeof(rfStatusSources[idx].name));
+      saveRFTrackedConfigflag = true;
+    }
   }
   if (root["hadiscinfo"].is<bool>() && root["hadiscinfo"].as<bool>())
   {

@@ -29,6 +29,7 @@ extern TaskHandle_t xTaskConfigAndLogHandle;
 extern uint32_t TaskConfigAndLogHWmark;
 extern volatile bool saveRemotesflag;
 extern volatile bool saveVremotesflag;
+extern volatile bool saveRFTrackedConfigflag;
 extern bool chkpartition;
 extern int chk_partition_res;
 extern bool formatFileSystem;

@@ -27,6 +27,7 @@ inline uint8_t itho_init_status = 0;
 
 const char *hostName();
 uint8_t getIthoStatusJSON(JsonObject root);
+uint8_t getRFStatusJSON(JsonObject root, int sourceIndex = -1);
 bool ithoStatusReady();
 void getRemotesInfoJSON(JsonObject root);
 void getRFDevicesForHADiscJSON(JsonObject root);

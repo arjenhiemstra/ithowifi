@@ -1,6 +1,8 @@
 #include "tasks/task_mqtt.h"
 #include <StreamUtils.h>
 #include "api/MqttAPI.h"
+#include "ithodevice/IthoDevice.h"
+#include "generic_functions.h"
 
 #define TASK_MQTT_PRIO 5
 
@@ -14,6 +16,7 @@ StaticTask_t xTaskMQTTBuffer;
 StackType_t xTaskMQTTStack[STACK_SIZE_MEDIUM];
 bool sendHomeAssistantDiscovery = false;
 bool updateIthoMQTT = false;
+bool updateMQTTRFStatus = false;
 
 Ticker TaskMQTTTimeout;
 
@@ -155,6 +158,12 @@ void execMQTTTasks()
         mqttPublishDeviceInfo();
       }
     }
+    if (updateMQTTRFStatus)
+    {
+      updateMQTTRFStatus = false;
+      if (mqttClient.connected())
+        mqttSendRFStatus();
+    }
     mqttClient.loop();
   }
   else
@@ -219,6 +228,82 @@ void mqttSendStatus()
 
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }
+
+void mqttSendRFStatus()
+{
+  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+  {
+    if (!rfStatusSources[i].active || !rfStatusSources[i].tracked)
+      continue;
+
+    const char *srcName = rfStatusSources[i].name[0] != '\0'
+                              ? rfStatusSources[i].name
+                              : nullptr;
+
+    char defaultName[12];
+    if (!srcName)
+    {
+      snprintf(defaultName, sizeof(defaultName), "%02X_%02X_%02X",
+               rfStatusSources[i].id[0], rfStatusSources[i].id[1], rfStatusSources[i].id[2]);
+      srcName = defaultName;
+    }
+
+    if (!rfStatusSources[i].measurements31DA.empty())
+    {
+      char topic[180];
+      snprintf(topic, sizeof(topic), "%s/rfstatus/%s/31DA", systemConfig.mqtt_base_topic, srcName);
+
+      JsonDocument doc;
+      JsonObject root = doc.to<JsonObject>();
+      for (const auto &m : rfStatusSources[i].measurements31DA)
+      {
+        if (m.type == ithoDeviceMeasurements::is_int)
+          root[m.name] = m.value.intval;
+        else if (m.type == ithoDeviceMeasurements::is_float)
+          root[m.name] = round(m.value.floatval, 2);
+        else if (m.type == ithoDeviceMeasurements::is_string)
+          root[m.name] = m.value.stringval;
+      }
+      size_t len = measureJson(root);
+      if (mqttClient.getBufferSize() < len)
+        mqttClient.setBufferSize(len);
+      if (mqttClient.beginPublish(topic, len, true))
+      {
+        serializeJson(root, mqttClient);
+        mqttClient.endPublish();
+      }
+      mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+    }
+
+    if (!rfStatusSources[i].measurements31D9.empty())
+    {
+      char topic[180];
+      snprintf(topic, sizeof(topic), "%s/rfstatus/%s/31D9", systemConfig.mqtt_base_topic, srcName);
+
+      JsonDocument doc;
+      JsonObject root = doc.to<JsonObject>();
+      for (const auto &m : rfStatusSources[i].measurements31D9)
+      {
+        if (m.type == ithoDeviceMeasurements::is_int)
+          root[m.name] = m.value.intval;
+        else if (m.type == ithoDeviceMeasurements::is_float)
+          root[m.name] = round(m.value.floatval, 2);
+        else if (m.type == ithoDeviceMeasurements::is_string)
+          root[m.name] = m.value.stringval;
+      }
+      size_t len = measureJson(root);
+      if (mqttClient.getBufferSize() < len)
+        mqttClient.setBufferSize(len);
+      if (mqttClient.beginPublish(topic, len, true))
+      {
+        serializeJson(root, mqttClient);
+        mqttClient.endPublish();
+      }
+      mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+    }
+  }
+}
+
 void mqttSendRemotesInfo()
 {
   char remotesinfotopic[140]{};

@@ -123,6 +123,70 @@ uint8_t getIthoStatusJSON(JsonObject root)
   return index;
 }
 
+uint8_t getRFStatusJSON(JsonObject root, int sourceIndex)
+{
+  uint8_t count = 0;
+
+  JsonArray sources = root["sources"].to<JsonArray>();
+  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+  {
+    if (!rfStatusSources[i].active)
+      continue;
+    JsonObject src = sources.add<JsonObject>();
+    char idStr[10];
+    snprintf(idStr, sizeof(idStr), "%02X:%02X:%02X",
+             rfStatusSources[i].id[0], rfStatusSources[i].id[1], rfStatusSources[i].id[2]);
+    src["id"] = idStr;
+    src["index"] = i;
+    src["lastSeen"] = static_cast<int32_t>(rfStatusSources[i].lastSeen);
+    src["tracked"] = rfStatusSources[i].tracked;
+    src["name"] = rfStatusSources[i].name;
+  }
+
+  int idx = sourceIndex;
+  if (idx == -1)
+  {
+    for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+    {
+      if (rfStatusSources[i].active)
+      {
+        idx = i;
+        break;
+      }
+    }
+  }
+
+  if (idx >= 0 && idx < MAX_RF_STATUS_SOURCES && rfStatusSources[idx].active)
+  {
+    root["selectedSource"] = idx;
+    JsonObject data = root["data"].to<JsonObject>();
+
+    for (const auto &m : rfStatusSources[idx].measurements31D9)
+    {
+      if (m.type == ithoDeviceMeasurements::is_int)
+        data[m.name] = m.value.intval;
+      else if (m.type == ithoDeviceMeasurements::is_float)
+        data[m.name] = round(m.value.floatval, 2);
+      else if (m.type == ithoDeviceMeasurements::is_string)
+        data[m.name] = m.value.stringval;
+      count++;
+    }
+
+    for (const auto &m : rfStatusSources[idx].measurements31DA)
+    {
+      if (m.type == ithoDeviceMeasurements::is_int)
+        data[m.name] = m.value.intval;
+      else if (m.type == ithoDeviceMeasurements::is_float)
+        data[m.name] = round(m.value.floatval, 2);
+      else if (m.type == ithoDeviceMeasurements::is_string)
+        data[m.name] = m.value.stringval;
+      count++;
+    }
+  }
+
+  return count;
+}
+
 void getDeviceInfoJSON(JsonObject root)
 {
   root["itho_devtype"] = getIthoType();
