@@ -1,0 +1,76 @@
+<div class="header">
+  <h1>RF Status</h1>
+</div>
+<p>Real-time status received from Itho devices via RF (31DA/31D9 messages).</p>
+<p>Source device:
+  <select id="rfStatusSource" class="pure-input">
+    <option value="-1">Loading...</option>
+  </select>
+  &nbsp; Last seen: <span id="rfLastSeen">-</span>
+</p>
+<div id="rfTrackRow" style="display:none;">
+  <form class="pure-form pure-form-aligned">
+    <fieldset>
+      <div class="pure-control-group">
+        <label><input type="checkbox" id="rfTrackSource">
+          Track this source (persist across reboots)</label>
+      </div>
+      <div class="pure-control-group">
+        <label for="rfSourceName">Name</label>
+        <input type="text" id="rfSourceName" maxlength="31" class="pure-input"
+          placeholder="e.g. Bathroom HRU" style="width:200px;">
+      </div>
+      <div class="pure-controls">
+        <button id="rfTrackSave" type="button" class="pure-button pure-button-primary">Save</button>
+      </div>
+    </fieldset>
+  </form>
+</div>
+<form class="pure-form pure-form-aligned">
+  <fieldset>
+    <table id="RFStatusTable" class="pure-table pure-table-bordered"></table>
+  </fieldset>
+</form>
+<script>
+  var rfSelectedSource = -1;
+  var rfSourcesData = [];
+  $id('rfStatusSource').addEventListener('change', function () {
+    rfSelectedSource = parseInt(this.value);
+    updateTrackCheckbox();
+    requestRFStatus();
+  });
+  $id('rfTrackSave').addEventListener('click', function () {
+    if (rfSelectedSource >= 0)
+      websock_send(JSON.stringify({rftrack: {
+        index: rfSelectedSource,
+        track: $id('rfTrackSource').checked,
+        name: $id('rfSourceName').value
+      }}));
+  });
+  function updateTrackCheckbox() {
+    var row = $id('rfTrackRow');
+    var cb = $id('rfTrackSource');
+    var nameInput = $id('rfSourceName');
+    if (rfSelectedSource >= 0) {
+      row.style.display = '';
+      var src = rfSourcesData.find(function (s) { return s.index == rfSelectedSource; });
+      cb.checked = src ? !!src.tracked : false;
+      nameInput.value = src ? (src.name || '') : '';
+    } else {
+      row.style.display = 'none';
+      cb.checked = false;
+      nameInput.value = '';
+    }
+  }
+  function requestRFStatus() {
+    var msg = rfSelectedSource >= 0
+      ? '{"rfstatus":true,"source":' + rfSelectedSource + '}'
+      : '{"rfstatus":true}';
+    websock_send(msg);
+  }
+  function repeatRFStatus() {
+    requestRFStatus();
+    rfstatus_to = setTimeout(repeatRFStatus, 5000);
+  }
+  repeatRFStatus();
+</script>

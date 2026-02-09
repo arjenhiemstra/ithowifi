@@ -12,6 +12,7 @@ var statustimer_to;
 var ithostatus_to;
 var hastatus_to;
 var remotesRefreshInterval;
+var rfstatus_to;
 var saved_status_count = 0;
 var current_status_count = 0;
 localStorage.setItem("statustimer", 0);
@@ -537,8 +538,15 @@ const messageHandlers = {
           websock_send('{"reboot":true}');
         }
       }
-      if (x.itho_rf_support == 1 && x.rfInitOK == true) $id('remotemenu').classList.remove('hidden');
-      else $id('remotemenu').classList.add('hidden');
+      if (x.itho_rf_support == 1 && x.rfInitOK == true) {
+        $id('remotemenu').classList.remove('hidden');
+        $id('rfstatusmenu').classList.remove('hidden');
+        var rfMqttRow = $id('rfstatus_mqtt_row');
+        if (rfMqttRow) rfMqttRow.style.display = '';
+      } else {
+        $id('remotemenu').classList.add('hidden');
+        $id('rfstatusmenu').classList.add('hidden');
+      }
     }
     if (x.mqtt_ha_active == 1) $id('hadiscmenu').classList.remove('hidden');
     else $id('hadiscmenu').classList.add('hidden');
@@ -599,6 +607,36 @@ const messageHandlers = {
         if (det) det.style.display = '';
       }
     }
+  },
+  rfstatusinfo: function (f) {
+    var x = f.rfstatusinfo;
+    var sel = $id('rfStatusSource');
+    if (sel && x.sources) {
+      if (typeof rfSourcesData !== 'undefined') rfSourcesData = x.sources;
+      if (typeof rfSelectedSource !== 'undefined' && x.selectedSource !== undefined)
+        rfSelectedSource = x.selectedSource;
+      sel.innerHTML = '';
+      if (x.sources.length === 0) {
+        sel.insertAdjacentHTML('beforeend', '<option value="-1">No devices detected</option>');
+      } else {
+        x.sources.forEach(function (s) {
+          var opt = document.createElement('option');
+          opt.value = s.index;
+          opt.textContent = s.tracked ? (s.name || s.id) + ' *' : s.id;
+          if (s.index == x.selectedSource) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }
+    }
+    var lsEl = $id('rfLastSeen');
+    if (lsEl && x.sources && x.selectedSource !== undefined) {
+      var src = x.sources.find(function (s) { return s.index == x.selectedSource; });
+      if (src && src.lastSeen > 0) lsEl.textContent = new Date(src.lastSeen * 1000).toLocaleString();
+      else lsEl.textContent = '-';
+    }
+    if (typeof updateTrackCheckbox === 'function') updateTrackCheckbox();
+    var st = $id('RFStatusTable');
+    if (st && x.data) { st.innerHTML = ''; buildHtmlStatusTable(st, x.data); }
   },
   hadiscsettings: function (f) {
     var el = $id('ithostatusrdy');
@@ -690,7 +728,7 @@ const messageHandlers = {
       if (shEl) shEl.innerHTML = `Humidity: ${round(x.sensor_hum, 1)}%`;
     }
     var memBox = $id('memory_box');
-    if (memBox) { memBox.style.display = ''; memBox.innerHTML = `<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`; }
+    if (memBox) { memBox.style.display = 'block'; memBox.innerHTML = `<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`; }
     var mqttEl = $id('mqtt_conn');
     if (mqttEl) {
       var button = returnMqttState(x.mqqtstatus);
@@ -1729,6 +1767,7 @@ function update_page(page) {
   clearTimeout(statustimer_to);
   clearTimeout(ithostatus_to);
   clearTimeout(hastatus_to);
+  clearTimeout(rfstatus_to);
   if (remotesRefreshInterval) { clearInterval(remotesRefreshInterval); remotesRefreshInterval = null; }
   var main = $id('main');
   main.innerHTML = '';
@@ -1745,6 +1784,7 @@ function update_page(page) {
   if (page == 'itho') { main.insertAdjacentHTML('beforeend', html_ithosettings); }
   if (page == 'status') { main.insertAdjacentHTML('beforeend', html_ithostatus); }
   if (page == 'remotes') { main.insertAdjacentHTML('beforeend', html_remotessetup); }
+  if (page == 'rfstatus') { main.insertAdjacentHTML('beforeend', html_rfstatus); }
   if (page == 'vremotes') { main.insertAdjacentHTML('beforeend', html_vremotessetup); }
   if (page == 'mqtt') { main.insertAdjacentHTML('beforeend', html_mqttsetup); }
   if (page == 'api') { main.insertAdjacentHTML('beforeend', html_api); }
@@ -3479,6 +3519,21 @@ Unless specified otherwise:<br>
             </td>
         </tr>
         <tr>
+            <td>get</td>
+            <td>string</td>
+            <td>rfstatus</td>
+            <td>JSON</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Returns JSON with RF status data from detected and tracked sources
+                    (31DA/31D9 messages). Includes source IDs, names, tracking state and measurement data.
+                    Tracked sources also publish to MQTT topics:
+                    [base_topic]/rfstatus/[name]/31DA and [base_topic]/rfstatus/[name]/31D9.
+                    Requires a CC1101 RF module.</em></td>
+        </tr>
+        <tr>
             <td colspan="6"><b>Commands only for devices with CC1101 module</b></td>
         </tr>
         <tr>
@@ -3835,6 +3890,86 @@ var html_wifisetup = `
   repeat_wifistat();
 
 </script>
+`;
+
+var html_rfstatus = `
+<div class="header">
+  <h1>RF Status</h1>
+</div>
+<p>Real-time status received from Itho devices via RF (31DA/31D9 messages).</p>
+<p>Source device:
+  <select id="rfStatusSource" class="pure-input">
+    <option value="-1">Loading...</option>
+  </select>
+  &nbsp; Last seen: <span id="rfLastSeen">-</span>
+</p>
+<div id="rfTrackRow" style="display:none;">
+  <form class="pure-form pure-form-aligned">
+    <fieldset>
+      <div class="pure-control-group">
+        <label><input type="checkbox" id="rfTrackSource">
+          Track this source (persist across reboots)</label>
+      </div>
+      <div class="pure-control-group">
+        <label for="rfSourceName">Name</label>
+        <input type="text" id="rfSourceName" maxlength="31" class="pure-input"
+          placeholder="e.g. Bathroom HRU" style="width:200px;">
+      </div>
+      <div class="pure-controls">
+        <button id="rfTrackSave" type="button" class="pure-button pure-button-primary">Save</button>
+      </div>
+    </fieldset>
+  </form>
+</div>
+<form class="pure-form pure-form-aligned">
+  <fieldset>
+    <table id="RFStatusTable" class="pure-table pure-table-bordered"></table>
+  </fieldset>
+</form>
+<script>
+  var rfSelectedSource = -1;
+  var rfSourcesData = [];
+  $id('rfStatusSource').addEventListener('change', function () {
+    rfSelectedSource = parseInt(this.value);
+    updateTrackCheckbox();
+    requestRFStatus();
+  });
+  $id('rfTrackSave').addEventListener('click', function () {
+    if (rfSelectedSource >= 0)
+      websock_send(JSON.stringify({rftrack: {
+        index: rfSelectedSource,
+        track: $id('rfTrackSource').checked,
+        name: $id('rfSourceName').value
+      }}));
+  });
+  function updateTrackCheckbox() {
+    var row = $id('rfTrackRow');
+    var cb = $id('rfTrackSource');
+    var nameInput = $id('rfSourceName');
+    if (rfSelectedSource >= 0) {
+      row.style.display = '';
+      var src = rfSourcesData.find(function (s) { return s.index == rfSelectedSource; });
+      cb.checked = src ? !!src.tracked : false;
+      nameInput.value = src ? (src.name || '') : '';
+    } else {
+      row.style.display = 'none';
+      cb.checked = false;
+      nameInput.value = '';
+    }
+  }
+  function requestRFStatus() {
+    var msg = rfSelectedSource >= 0
+      ? '{"rfstatus":true,"source":' + rfSelectedSource + '}'
+      : '{"rfstatus":true}';
+    websock_send(msg);
+  }
+  function repeatRFStatus() {
+    requestRFStatus();
+    rfstatus_to = setTimeout(repeatRFStatus, 5000);
+  }
+  repeatRFStatus();
+</script>
+
 `;
 
 var html_edit = `
@@ -4471,6 +4606,12 @@ var html_mqttsetup = `
       <td>Last will</td>
       <td><span name="mqtt_base_topic"></span>/lwt</td>
       <td>Last will online/offline info topic</td>
+    </tr>
+    <tr id="rfstatus_mqtt_row" style="display:none;">
+      <td>RF status</td>
+      <td><span name="mqtt_base_topic"></span>/rfstatus/[name]/31DA<br>
+        <span name="mqtt_base_topic"></span>/rfstatus/[name]/31D9</td>
+      <td>Status data from tracked RF sources (configured via RF status page). [name] is the user-defined name or device ID.</td>
     </tr>
   </tbody>
 </table>

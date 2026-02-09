@@ -11,6 +11,7 @@ var statustimer_to;
 var ithostatus_to;
 var hastatus_to;
 var remotesRefreshInterval;
+var rfstatus_to;
 var saved_status_count = 0;
 var current_status_count = 0;
 localStorage.setItem("statustimer", 0);
@@ -536,8 +537,15 @@ const messageHandlers = {
           websock_send('{"reboot":true}');
         }
       }
-      if (x.itho_rf_support == 1 && x.rfInitOK == true) $id('remotemenu').classList.remove('hidden');
-      else $id('remotemenu').classList.add('hidden');
+      if (x.itho_rf_support == 1 && x.rfInitOK == true) {
+        $id('remotemenu').classList.remove('hidden');
+        $id('rfstatusmenu').classList.remove('hidden');
+        var rfMqttRow = $id('rfstatus_mqtt_row');
+        if (rfMqttRow) rfMqttRow.style.display = '';
+      } else {
+        $id('remotemenu').classList.add('hidden');
+        $id('rfstatusmenu').classList.add('hidden');
+      }
     }
     if (x.mqtt_ha_active == 1) $id('hadiscmenu').classList.remove('hidden');
     else $id('hadiscmenu').classList.add('hidden');
@@ -598,6 +606,36 @@ const messageHandlers = {
         if (det) det.style.display = '';
       }
     }
+  },
+  rfstatusinfo: function (f) {
+    var x = f.rfstatusinfo;
+    var sel = $id('rfStatusSource');
+    if (sel && x.sources) {
+      if (typeof rfSourcesData !== 'undefined') rfSourcesData = x.sources;
+      if (typeof rfSelectedSource !== 'undefined' && x.selectedSource !== undefined)
+        rfSelectedSource = x.selectedSource;
+      sel.innerHTML = '';
+      if (x.sources.length === 0) {
+        sel.insertAdjacentHTML('beforeend', '<option value="-1">No devices detected</option>');
+      } else {
+        x.sources.forEach(function (s) {
+          var opt = document.createElement('option');
+          opt.value = s.index;
+          opt.textContent = s.tracked ? (s.name || s.id) + ' *' : s.id;
+          if (s.index == x.selectedSource) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      }
+    }
+    var lsEl = $id('rfLastSeen');
+    if (lsEl && x.sources && x.selectedSource !== undefined) {
+      var src = x.sources.find(function (s) { return s.index == x.selectedSource; });
+      if (src && src.lastSeen > 0) lsEl.textContent = new Date(src.lastSeen * 1000).toLocaleString();
+      else lsEl.textContent = '-';
+    }
+    if (typeof updateTrackCheckbox === 'function') updateTrackCheckbox();
+    var st = $id('RFStatusTable');
+    if (st && x.data) { st.innerHTML = ''; buildHtmlStatusTable(st, x.data); }
   },
   hadiscsettings: function (f) {
     var el = $id('ithostatusrdy');
@@ -689,7 +727,7 @@ const messageHandlers = {
       if (shEl) shEl.innerHTML = `Humidity: ${round(x.sensor_hum, 1)}%`;
     }
     var memBox = $id('memory_box');
-    if (memBox) { memBox.style.display = ''; memBox.innerHTML = `<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`; }
+    if (memBox) { memBox.style.display = 'block'; memBox.innerHTML = `<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`; }
     var mqttEl = $id('mqtt_conn');
     if (mqttEl) {
       var button = returnMqttState(x.mqqtstatus);
@@ -1728,6 +1766,7 @@ function update_page(page) {
   clearTimeout(statustimer_to);
   clearTimeout(ithostatus_to);
   clearTimeout(hastatus_to);
+  clearTimeout(rfstatus_to);
   if (remotesRefreshInterval) { clearInterval(remotesRefreshInterval); remotesRefreshInterval = null; }
   var main = $id('main');
   main.innerHTML = '';
@@ -1744,6 +1783,7 @@ function update_page(page) {
   if (page == 'itho') { main.insertAdjacentHTML('beforeend', html_ithosettings); }
   if (page == 'status') { main.insertAdjacentHTML('beforeend', html_ithostatus); }
   if (page == 'remotes') { main.insertAdjacentHTML('beforeend', html_remotessetup); }
+  if (page == 'rfstatus') { main.insertAdjacentHTML('beforeend', html_rfstatus); }
   if (page == 'vremotes') { main.insertAdjacentHTML('beforeend', html_vremotessetup); }
   if (page == 'mqtt') { main.insertAdjacentHTML('beforeend', html_mqttsetup); }
   if (page == 'api') { main.insertAdjacentHTML('beforeend', html_api); }
