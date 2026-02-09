@@ -311,9 +311,10 @@ Unless specified otherwise:<br>
             <td style="text-align:center">●</td>
         </tr>
         <tr>
-            <td colspan="6">Comments:<br><em>Returns JSON with RF status data from detected and tracked sources
-                    (31DA/31D9 messages). Includes source IDs, names, tracking state and measurement data.
-                    Tracked sources also publish to MQTT topics:
+            <td colspan="6">Comments:<br><em>Returns JSON with measurement data from monitored RF sources
+                    (31DA/31D9 messages). Use the optional <b>name</b> parameter to get data from a specific
+                    source (e.g. <b>get=rfstatus&amp;name=Bathroom</b>).
+                    Monitored sources also publish to MQTT topics:
                     [base_topic]/rfstatus/[name]/31DA and [base_topic]/rfstatus/[name]/31D9.
                     Requires a CC1101 RF module.</em></td>
         </tr>

@@ -614,6 +614,10 @@ const messageHandlers = {
       if (typeof rfSourcesData !== 'undefined') rfSourcesData = x.sources;
       if (typeof rfSelectedSource !== 'undefined' && x.selectedSource !== undefined)
         rfSelectedSource = x.selectedSource;
+      if (typeof rfTrackedCount !== 'undefined') {
+        rfTrackedCount = x.trackedCount || 0;
+        rfMaxTracked = x.maxTracked || 20;
+      }
       sel.innerHTML = '';
       if (x.sources.length === 0) {
         sel.insertAdjacentHTML('beforeend', '<option value="-1">No devices detected</option>');
@@ -635,7 +639,10 @@ const messageHandlers = {
     }
     if (typeof updateTrackCheckbox === 'function') updateTrackCheckbox();
     var st = $id('RFStatusTable');
-    if (st && x.data) { st.innerHTML = ''; buildHtmlStatusTable(st, x.data); }
+    if (st) {
+      if (x.data && Object.keys(x.data).length > 0) { st.innerHTML = ''; buildHtmlStatusTable(st, x.data); }
+      else if (x.selectedSource !== undefined) { st.innerHTML = '<tr><td style="padding:1em;">Waiting for data from selected source device...</td></tr>'; }
+    }
   },
   hadiscsettings: function (f) {
     var el = $id('ithostatusrdy');
