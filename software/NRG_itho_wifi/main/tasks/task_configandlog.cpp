@@ -270,7 +270,8 @@ void execLogAndConfigTasks()
       logMessagejson(logBuff, WEBINTERFACE);
       strlcpy(logBuff, "Device rebooting, connect to accesspoint to setup the device", sizeof(logBuff));
       logMessagejson(logBuff, WEBINTERFACE);
-      esp_restart();
+      delay(3000);
+      shouldReboot = true;
     }
     else
     {
