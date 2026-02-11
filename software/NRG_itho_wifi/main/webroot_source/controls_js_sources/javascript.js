@@ -2884,10 +2884,15 @@ function applyDeviceDefaults() {
   if (pwm1) pwm1.disabled = optimaLock;
   if (pwm0) pwm0.disabled = optimaLock;
 
-  // 31DA and 31D9
+  // 31DA and 31D9: on for most, off for WPU
   var enable31 = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350');
   checkRadio('option-itho_31da', enable31 ? '1' : '0');
   checkRadio('option-itho_31d9', enable31 ? '1' : '0');
+
+  // WPU counters (4210): on for WPU only
+  var row4210 = $id('wiz-4210-row');
+  if (row4210) row4210.style.display = (cat === 'wpu') ? '' : 'none';
+  checkRadio('option-itho_4210', cat === 'wpu' ? '1' : '0');
 
   // Virtual remote and related settings
   var useVirtual = (cat !== 'hru250_300' && cat !== 'wpu');
@@ -2902,8 +2907,14 @@ function applyDeviceDefaults() {
     checkRadio('option-itho_forcemedium', '0');
   }
 
-  // Map RF→virtual: always off
-  checkRadio('option-itho_vremoteapi', '0');
+  // Virtual remote type: RFT AUTO for HRU types, RFT CVE for CVE types
+  var vremTypeEl = $id('wiz-vremtype');
+  var vremTypeRow = $id('wiz-vremtype-row');
+  if (vremTypeRow) vremTypeRow.style.display = useVirtual ? '' : 'none';
+  if (vremTypeEl) {
+    var useAuto = (cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200');
+    vremTypeEl.value = useAuto ? '0x22F3' : '0x22F1';
+  }
 
   // Update frequency
   var isHRU = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350' || cat === 'hru250_300');
@@ -2913,6 +2924,13 @@ function applyDeviceDefaults() {
   // Show RF note for HRU 250-300
   var rfNote = $id('wiz-rf-note');
   if (rfNote) rfNote.style.display = (cat === 'hru250_300') ? '' : 'none';
+
+  // RF remote type default: RFT AUTO for HRU types, RFT CVE for CVE types
+  var rfRemTypeEl = $id('wiz-rfremtype');
+  if (rfRemTypeEl) {
+    var rfUseAuto = (cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200' || cat === 'hru250_300');
+    rfRemTypeEl.value = rfUseAuto ? '0x22F3' : '0x22F1';
+  }
 
   // Update device info display
   var hwEl = $id('wiz-hw-revision');
@@ -2955,19 +2973,49 @@ function wizardFinish() {
   wizardSaveWifiSettings();
 
   // 2. Save system settings (device defaults from step 2)
+  var sendjoinVal = checkedVal('option-itho_sendjoin') || '0';
+  var forcemediumVal = checkedVal('option-itho_forcemedium') || '0';
   var sysMsg = {
     systemsettings: {
       itho_pwm2i2c: checkedVal('option-itho_pwm2i2c'),
       itho_31da: checkedVal('option-itho_31da'),
       itho_31d9: checkedVal('option-itho_31d9'),
       itho_numvrem: $val('itho_numvrem'),
-      itho_sendjoin: checkedVal('option-itho_sendjoin'),
-      itho_forcemedium: checkedVal('option-itho_forcemedium'),
-      itho_vremoteapi: checkedVal('option-itho_vremoteapi'),
-      itho_updatefreq: $val('itho_updatefreq')
+      itho_sendjoin: sendjoinVal,
+      itho_forcemedium: forcemediumVal,
+      itho_updatefreq: $val('itho_updatefreq'),
+      itho_4210: checkedVal('option-itho_4210') || '0'
     }
   };
   websock_send(JSON.stringify(sysMsg));
+
+  // 2b. Save virtual remote type (if virtual remote is configured)
+  var vremTypeEl = $id('wiz-vremtype');
+  if (vremTypeEl && parseInt($val('itho_numvrem')) > 0) {
+    var vremType = parseInt(vremTypeEl.value);
+    websock_send(JSON.stringify({itho_update_vremote: 0, remtype: vremType, value: ''}));
+  }
+
+  // 2c. Save RF remote type for all configured RF remotes
+  var rfRemTypeEl = $id('wiz-rfremtype');
+  if (rfRemTypeEl && remotesCount > 0) {
+    var rfRemType = parseInt(rfRemTypeEl.value);
+    for (var ri = 0; ri < remotesCount; ri++) {
+      var idEl = $id('id_remote-' + ri);
+      if (idEl && idEl.value && idEl.value !== 'empty slot') {
+        var funcEl = $id('func_remote-' + ri);
+        var remfuncVal = funcEl ? parseInt(funcEl.value) : 1;
+        websock_send(JSON.stringify({
+          itho_update_remote: ri,
+          remtype: rfRemType,
+          remfunc: remfuncVal,
+          value: $id('name_remote-' + ri) ? $id('name_remote-' + ri).value : '',
+          id: idEl.value.split(',').map(function(s) { return parseInt(s, 16); }),
+          bidirectional: false
+        }));
+      }
+    }
+  }
 
   // 3. Save MQTT settings
   var mqtt_passwd = $val('mqtt_password');
@@ -2991,41 +3039,71 @@ function wizardFinish() {
   }
   websock_send(JSON.stringify(mqttMsg));
 
-  // 4. Clear wizard state and reboot
+  // 4. Clear wizard state
   websock_send('{"wizardclear":true}');
 
-  $id('wizard-reboot-overlay').style.display = '';
-  var dhcpEl = $q('input[name="option-dhcp"]:checked');
-  var dhcp = dhcpEl ? dhcpEl.value : 'on';
-  var targetUrl;
-  if (dhcp === 'off') {
-    targetUrl = 'http://' + ($val('ip') || '192.168.4.1');
-  } else {
-    targetUrl = 'http://' + ($val('hostname') || 'nrg-itho') + '.local';
-  }
+  // Determine what action is needed
+  var ssidChanged = $val('ssid') !== '';
+  var joinEnabled = sendjoinVal !== '0';
+  var needsPowerCycle = joinEnabled && forcemediumVal !== '0';
+  var needsReboot = ssidChanged && !needsPowerCycle;
+
+  // Build target URL — prefer IP address, fall back to hostname.local
   var ipSpan = $q('[name="wifiip"]');
   var ipAddr = ipSpan ? ipSpan.textContent : '';
-  var ipUrl = (ipAddr && ipAddr !== 'unknown' && ipAddr !== '0.0.0.0') ? 'http://' + ipAddr : '';
-  var msg = 'Device will be available at: <a href="' + targetUrl + '">' + targetUrl + '</a>';
-  if (ipUrl && ipUrl !== targetUrl) {
-    msg += '<br>or: <a href="' + ipUrl + '">' + ipUrl + '</a>';
+  var hasIp = (ipAddr && ipAddr !== 'unknown' && ipAddr !== '0.0.0.0');
+  var dhcpEl = $q('input[name="option-dhcp"]:checked');
+  var dhcp = dhcpEl ? dhcpEl.value : 'on';
+  var hostnameUrl;
+  if (dhcp === 'off') {
+    hostnameUrl = 'http://' + ($val('ip') || '192.168.4.1');
+  } else {
+    hostnameUrl = 'http://' + ($val('hostname') || 'nrg-itho') + '.local';
   }
-  $id('wizard-reboot-url').innerHTML = msg;
+  var targetUrl = hasIp ? ('http://' + ipAddr) : hostnameUrl;
 
-  setTimeout(function () {
-    websock_send('{"reboot":true}');
-  }, 1000);
+  var urlMsg = 'Device will be available at: <a href="' + targetUrl + '">' + targetUrl + '</a>';
+  if (hasIp && hostnameUrl !== targetUrl) {
+    urlMsg += '<br>or: <a href="' + hostnameUrl + '">' + hostnameUrl + '</a>';
+  }
 
-  // Countdown and redirect
-  var countdown = 30;
-  var cdInterval = setInterval(function () {
-    countdown--;
-    $id('wizard-reboot-countdown').textContent = countdown;
-    if (countdown <= 0) {
-      clearInterval(cdInterval);
-      window.location.href = targetUrl;
+  // Show overlay
+  $id('wizard-reboot-overlay').style.display = '';
+  $id('wizard-reboot-url').innerHTML = urlMsg;
+
+  if (needsPowerCycle) {
+    // Don't reboot — instruct user to power cycle the Itho unit instead
+    var pcMsg = $id('wizard-powercycle-msg');
+    if (pcMsg) {
+      pcMsg.style.display = '';
+      pcMsg.innerHTML = '<strong>Important:</strong> Power cycle your Itho unit to complete the virtual remote pairing. The add-on will restart together with the unit.';
     }
-  }, 1000);
+    if (ssidChanged) {
+      var wifiMsg = $id('wizard-wifi-reconnect');
+      if (wifiMsg) wifiMsg.style.display = '';
+    }
+    $id('wizard-finish-status').innerHTML = 'Settings saved. <a href="' + targetUrl + '">Go to device</a>';
+  } else if (needsReboot) {
+    $id('wizard-finish-status').textContent = 'Saving configuration and rebooting...';
+    $id('wizard-reboot-msg').style.display = '';
+    var wifiMsg = $id('wizard-wifi-reconnect');
+    if (wifiMsg) wifiMsg.style.display = '';
+    setTimeout(function () {
+      websock_send('{"reboot":true}');
+    }, 1000);
+
+    var countdown = 30;
+    var cdInterval = setInterval(function () {
+      countdown--;
+      $id('wizard-reboot-countdown').textContent = countdown;
+      if (countdown <= 0) {
+        clearInterval(cdInterval);
+        window.location.href = targetUrl;
+      }
+    }, 1000);
+  } else {
+    $id('wizard-finish-status').innerHTML = 'Settings saved successfully. <a href="' + targetUrl + '">Go to device</a>';
+  }
 }
 
 //
