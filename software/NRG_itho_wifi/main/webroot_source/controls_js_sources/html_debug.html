@@ -31,6 +31,10 @@
     <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br>
     <span>Loop task memory: </span><span id='looptaskmem'></span><span> bytes free</span><br><br>
 
+    <p>Setup wizard:</p>
+    <span>Status: </span><span id='wizard_status'>unknown</span><br><br>
+    <button id="button-wizardreactivate" class="pure-button pure-button-primary">Reactivate wizard</button>
+
     <p>JavaScript console debug:</p>
     <button id="jsdebug" class="pure-button pure-button-primary">Toggle</button>
     <span>Status: </span><span id='jsdebug_status'>unknown</span>
@@ -141,9 +145,16 @@
 <script>
     getSettings('debugvalues');
     getSettings('sysstat');
+    $id("wizard_status").textContent = (typeof wizard_step !== 'undefined' && wizard_step > 0) ? "enabled" : "disabled";
+    $id("button-wizardreactivate").addEventListener('click', function () {
+        if (confirm("This will reactivate the setup wizard. Are you sure?")) {
+            update_page('wizard');
+            initWizard(1);
+        }
+    });
     $id("jsdebug_status").textContent = debug ? "on" : "off";
     $id("jsdebug").addEventListener('click', function () {
         debug = !debug;
         $id("jsdebug_status").textContent = debug ? "on" : "off";
-    });    
+    });
 </script>
