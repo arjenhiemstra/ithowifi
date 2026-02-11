@@ -977,6 +977,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (target.id === 'wizard-next') { e.preventDefault(); wizardNext(); return; }
     if (target.id === 'wizard-back') { e.preventDefault(); wizardBack(); return; }
     if (target.id === 'wizard-finish') { e.preventDefault(); wizardFinish(); return; }
+    if (target.id === 'wizard-abort') { e.preventDefault(); wizardAbort(); return; }
     if (target.id === 'wiz-co2-optima') { e.preventDefault(); wizardSetCO2Choice(true); return; }
     if (target.id === 'wiz-co2-rft') { e.preventDefault(); wizardSetCO2Choice(false); return; }
     if (target.id === 'wiz-wifi-connect') {
@@ -2835,6 +2836,22 @@ function wizardBack() {
   if (idx > 0) {
     wizardGoTo(visible[idx - 1]);
   }
+}
+
+function wizardAbort() {
+  if (!confirm('Are you sure you want to abort the wizard? No settings will be saved.')) return;
+  // Clean up any active intervals
+  if (wizardWifistatInterval) { clearInterval(wizardWifistatInterval); wizardWifistatInterval = null; }
+  if (wizardConnectInterval) { clearInterval(wizardConnectInterval); wizardConnectInterval = null; }
+  if (wizardRemotesInterval) { clearInterval(wizardRemotesInterval); wizardRemotesInterval = null; }
+  if (wizardMqttInterval) { clearInterval(wizardMqttInterval); wizardMqttInterval = null; }
+  // Clear wizard state on device
+  websock_send('{"wizardclear":true}');
+  wizardActive = false;
+  // Restore menu and navigate to index
+  $id('menu').style.display = '';
+  $id('menuLink').style.display = '';
+  update_page('index');
 }
 
 function wizardDetectDeviceCategory(devtype) {
