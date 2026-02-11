@@ -1965,11 +1965,11 @@ function addRemoteButtons(container, remfunc, remtype, vremotenum, seperator) {
 }
 
 function addvRemoteInterface(remtype) {
-
   var elem = $id('reminterface');
   elem.innerHTML = '';
-  addRemoteButtons(elem, 2, remtype, 0, true);
-
+  var devtype = localStorage.getItem('itho_devtype') || '';
+  var remfunc = (devtype === 'HRU 250-300') ? 1 : 2;
+  addRemoteButtons(elem, remfunc, remtype, 0, true);
 }
 
 function buildHtmlTablePlain(table, jsonVar) {
