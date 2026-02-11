@@ -38,6 +38,29 @@ void addHADevInfo(JsonObject obj)
     dev["cu"] = cu;                          // configuration_url
 }
 
+static std::string getActualSpeedLabel()
+{
+    const uint8_t deviceID = currentIthoDeviceID();
+    const uint8_t deviceGroup = currentIthoDeviceGroup();
+
+    if (deviceGroup == 0x07 && deviceID == 0x01) // HRU250-300
+        return getStatusLabel(10, ithoDeviceptr);
+    if (deviceGroup == 0x00 && deviceID == 0x2B) // HRU350
+        return getStatusLabel(0, ithoDeviceptr);
+    if (deviceGroup == 0x00 && deviceID == 0x03) // HRU-eco
+        return getStatusLabel(22, ithoDeviceptr);
+    if (deviceGroup == 0x00 && deviceID == 0x1D) // HRU200
+        return getStatusLabel(0, ithoDeviceptr);
+    if (deviceGroup == 0x00 && deviceID == 0x04) // CVE Eco2
+        return getSpeedLabel();
+    if (deviceGroup == 0x00 && deviceID == 0x14) // CVE
+        return getStatusLabel(0, ithoDeviceptr);
+    if (deviceGroup == 0x00 && deviceID == 0x1B) // CVE-Silent
+        return getStatusLabel(0, ithoDeviceptr);
+
+    return "";
+}
+
 void addHADiscoveryFan(JsonObject obj, const char *name)
 {
 
@@ -156,18 +179,18 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
         actualSpeedLabel = getStatusLabel(22, ithoDeviceptr); //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hrueco.h
         pr_mode_val_tpl_ver = 1;
     }
-    else if (deviceGroup == 0x00 && deviceID == 0x0D) // WPU
-    {
-        W_LOG("HAD: WPU not fully implemented yet for HA Auto Discovery");
-    }
-    else if (deviceGroup == 0x00 && (deviceID == 0x0F || deviceID == 0x30)) // Autotemp
-    {
-        W_LOG("HAD: Autotemp not fully implemented yet for HA Auto Discovery");
-    }
-    else if (deviceGroup == 0x00 && deviceID == 0x0B) // DemandFlow
-    {
-        W_LOG("HAD: DemandFlow not fully implemented yet for HA Auto Discovery");
-    }
+    // else if (deviceGroup == 0x00 && deviceID == 0x0D) // WPU
+    // {
+    //     W_LOG("HAD: WPU not fully implemented yet for HA Auto Discovery");
+    // }
+    // else if (deviceGroup == 0x00 && (deviceID == 0x0F || deviceID == 0x30)) // Autotemp
+    // {
+    //     W_LOG("HAD: Autotemp not fully implemented yet for HA Auto Discovery");
+    // }
+    // else if (deviceGroup == 0x00 && deviceID == 0x0B) // DemandFlow
+    // {
+    //     W_LOG("HAD: DemandFlow not fully implemented yet for HA Auto Discovery");
+    // }
     else if (deviceGroup == 0x00 && (deviceID == 0x4 || deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B)) // CVE and HRU200
     {
         if (deviceID == 0x1D) // hru200
@@ -554,6 +577,29 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
             }
         }
     }
+    else if (compactJson["sscnt"].isNull() || compactJson["sscnt"] == 0)
+    {
+        // Auto-include speed label and FanInfo when no user config exists
+        std::string speedLabel = getActualSpeedLabel();
+        std::string fanInfoLabel = (systemConfig.api_normalize == 0) ? "FanInfo" : "fan-info";
+
+        int idx = 0;
+        for (auto kv : statusitemsobj)
+        {
+            std::string keyStr(kv.key().c_str());
+            if ((!speedLabel.empty() && keyStr == speedLabel) || keyStr == fanInfoLabel)
+            {
+                std::string uniqueId = normalizeUniqueId(
+                    std::string(outputJson["dev"]["ids"] | "default_name") + "_sensor_i_" + std::to_string(idx));
+                JsonObject componentJson = components[uniqueId].to<JsonObject>();
+                componentJson["name"] = kv.key().c_str();
+                componentJson["p"] = "sensor";
+                componentJson["uniq_id"] = uniqueId;
+                componentJson["val_tpl"] = ("{{ value_json['" + keyStr + "'] }}");
+            }
+            idx++;
+        }
+    }
     else
     {
         if (compactJson["sscnt"] != 0)
@@ -561,7 +607,14 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
     }
 
     // Add extra components (fan and firmware updates)
-    addHADiscoveryFan(components, outputJson["dev"]["name"].as<const char *>());
+    // Skip fan entity for WPU, Autotemp, and DemandFlow — not fully supported
+    const uint8_t dg = currentIthoDeviceGroup();
+    const uint8_t did = currentIthoDeviceID();
+    bool skipFanEntity = (dg == 0x00 && did == 0x0D) ||                       // WPU
+                         (dg == 0x00 && (did == 0x0F || did == 0x30)) ||       // Autotemp
+                         (dg == 0x00 && did == 0x0B);                          // DemandFlow
+    if (!skipFanEntity)
+        addHADiscoveryFan(components, outputJson["dev"]["name"].as<const char *>());
     addHADiscoveryFWUpdate(components, outputJson["dev"]["name"].as<const char *>());
 
     // Add RF device sensors
