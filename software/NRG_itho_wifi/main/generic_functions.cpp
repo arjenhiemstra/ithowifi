@@ -228,6 +228,7 @@ void getDeviceInfoJSON(JsonObject root)
 {
   root["itho_devtype"] = getIthoType();
   root["itho_mfr"] = currentIthoDeviceGroup();
+  root["itho_deviceid"] = currentIthoDeviceID();
   root["itho_hwversion"] = currentItho_hwversion();
   root["itho_fwversion"] = currentItho_fwversion();
   root["add-on_hwid"] = WiFi.macAddress();

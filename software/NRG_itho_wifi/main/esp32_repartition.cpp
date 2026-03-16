@@ -29,6 +29,7 @@ static const char ithowifi_parttable_coredump[] = {
 esp_vfs_littlefs_conf_t conf = {
     .base_path = "/littlefs",
     .partition_label = "spiffs",
+    .partition = nullptr,
     .format_if_mount_failed = true,
     .read_only = false,
     .dont_mount = false,

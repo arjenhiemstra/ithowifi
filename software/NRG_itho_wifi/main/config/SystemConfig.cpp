@@ -41,7 +41,7 @@ SystemConfig::SystemConfig()
   itho_timer3 = 30;
   itho_numvrem = 1;
   itho_numrfrem = 10;
-  itho_updatefreq = 60;
+  itho_updatefreq = 10;
   itho_counter_updatefreq = 3600;
   itho_sendjoin = 0;
   itho_pwm2i2c = 1;
