@@ -1,5 +1,7 @@
 
 var debug = true;
+var remotesRefreshNeeded = false;
+var sliderUserInput = 0;
 var count = 0;
 var itho_low = 0;
 var itho_medium = 127;
@@ -14,7 +16,6 @@ var remotesRefreshInterval;
 var rfstatus_to;
 var saved_status_count = 0;
 var current_status_count = 0;
-localStorage.setItem("statustimer", 0);
 localStorage.setItem("statustimer", 0);
 var settingIndex = -1;
 
@@ -145,8 +146,15 @@ function attachWebSocketHandlers() {
 
   document.getElementById("layout").style.opacity = 1;
   document.getElementById("loader").style.display = "none";
-  if (!wizardActive && lastPageReq !== "") {
-    update_page(lastPageReq);
+  if (!wizardActive) {
+    var savedPage = sessionStorage.getItem('currentPage');
+    var page = savedPage || lastPageReq || 'index';
+    update_page(page);
+    var menuItem = $q('a[href="' + page + '"]');
+    if (menuItem) {
+      $qa('li.pure-menu-item').forEach(function (el) { el.classList.remove('pure-menu-selected'); });
+      menuItem.parentElement.classList.add('pure-menu-selected');
+    }
   }
   getSettings('syssetup');
 
@@ -167,13 +175,12 @@ function attachWebSocketHandlers() {
 }
 
 function websock_send(message) {
-  if (websock.readyState === WebSocket.OPEN) {
-    if (debug) console.log(message);
-    websock.send(message);
-  }
-  else {
+  if (!websock || websock.readyState !== WebSocket.OPEN) {
     if (debug) console.log("websock.readyState != open");
+    return;
   }
+  if (debug) console.log(message);
+  websock.send(message);
 }
 
 /**
@@ -559,11 +566,15 @@ const messageHandlers = {
   remotes: function (f) {
     var tbl = $id('RemotesTable');
     if (!tbl) return;
-    if (tbl.querySelector('tbody tr')) {
+    if (tbl.querySelector('tbody tr') && !remotesRefreshNeeded) {
       updateRemoteCapabilities(f.remotes);
     } else {
       tbl.innerHTML = '';
       buildHtmlTableRemotes(tbl, f.remfunc, f.remotes);
+      remotesRefreshNeeded = false;
+    }
+    if (wizardActive && wizardDeviceCategory === 'hru250_300') {
+      wizardAutoConfigRFRemote();
     }
   },
   vremotes: function (f) {
@@ -677,10 +688,12 @@ const messageHandlers = {
     processElements(x);
     localStorage.setItem("itho_setlen", x.itho_setlen);
     localStorage.setItem("itho_devtype", x.itho_devtype);
+    localStorage.setItem("itho_mfr", x.itho_mfr);
+    localStorage.setItem("itho_deviceid", x.itho_deviceid);
     localStorage.setItem("itho_fwversion", x.itho_fwversion);
     localStorage.setItem("itho_hwversion", x.itho_hwversion);
     if (wizardActive) {
-      wizardOnDevInfo(x.itho_devtype);
+      wizardOnDevInfo(x.itho_devtype, x.itho_mfr, x.itho_deviceid);
     }
   },
   ithosettings: function (f) {
@@ -756,10 +769,12 @@ const messageHandlers = {
         wizardUpdateIndicators();
       }
     }
-    var slider = $id('ithoslider');
-    if (slider) slider.value = x.itho;
-    var textval = $id('ithotextval');
-    if (textval) textval.innerHTML = x.itho;
+    if (Date.now() - sliderUserInput > 3000) {
+      var slider = $id('ithoslider');
+      if (slider) slider.value = x.itho;
+      var textval = $id('ithotextval');
+      if (textval) textval.innerHTML = x.itho;
+    }
     if ('itho_low' in x) itho_low = x.itho_low;
     if ('itho_medium' in x) itho_medium = x.itho_medium;
     if ('itho_high' in x) itho_high = x.itho_high;
@@ -787,6 +802,7 @@ const messageHandlers = {
       if (x.itho_llm > 0) {
         llmEl.className = "pure-button button-success";
         llmEl.textContent = `On ${x.itho_llm}`;
+        remotesRefreshNeeded = true;
       }
       else {
         llmEl.className = "pure-button button-secondary";
@@ -1188,6 +1204,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       else {
         var val = parseInt(selected, 10) + 1;
+        remotesRefreshNeeded = true;
         websock_send('{"' + btnId + '":' + val + '}');
       }
     }
@@ -1206,6 +1223,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var id = $id('id_remote-' + i).value;
         if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
+          remotesRefreshNeeded = true;
           websock_send(`{"${btnId}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + i).value}","remtype":${remtype},"remfunc":${remfunc},"bidirectional":${bidirectional}}`);
         }
         else {
@@ -1419,7 +1437,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     else if (btnId === 'button4030') {
       if ($id('itho_4030_password').value == 'thisisunsafe') {
-        websock.send(JSON.stringify({
+        websock_send(JSON.stringify({
           ithobutton: 4030,
           idx: Number($id('itho_4030_index').value),
           dt: Number($id('itho_4030_datatype').value),
@@ -1502,8 +1520,8 @@ document.addEventListener('DOMContentLoaded', function () {
       e.preventDefault();
       var form = $id('updateform');
       var data = new FormData(form);
-      let filename = data.get('update').name;
-      if (!filename.endsWith(".bin")) {
+      let filename = data.get('update')?.name;
+      if (!filename || !filename.endsWith(".bin")) {
         count += 1;
         resetTimer();
         $id('message_box').style.display = 'block';
@@ -1762,6 +1780,7 @@ function moveBar(nPer, element) {
 function updateSlider(value) {
   var val = parseInt(value);
   if (isNaN(val)) val = 0;
+  sliderUserInput = Date.now();
   $id('ithotextval').innerHTML = val;
   websock_send(JSON.stringify({ 'itho': val }));
 }
@@ -1770,6 +1789,7 @@ function updateSlider(value) {
 var lastPageReq = "";
 function update_page(page) {
   lastPageReq = page;
+  sessionStorage.setItem('currentPage', page);
   clearTimeout(wifistat_to);
   clearTimeout(statustimer_to);
   clearTimeout(ithostatus_to);
@@ -2037,16 +2057,21 @@ function updateRemoteCapabilities(jsonVar) {
 function buildHtmlTableRemotes(table, remfunc, jsonVar) {
   if (!jsonVar || jsonVar.length === 0) return;
 
+  var isWizard = wizardActive;
+  var data = isWizard ? jsonVar.slice(0, 1) : jsonVar;
+
   var thead = document.createElement('thead');
   var headerTr = document.createElement('tr');
-  var selectTh = document.createElement('th');
-  selectTh.innerHTML = 'Select';
-  headerTr.appendChild(selectTh);
+  if (!isWizard) {
+    var selectTh = document.createElement('th');
+    selectTh.innerHTML = 'Select';
+    headerTr.appendChild(selectTh);
+  }
 
   for (var key in jsonVar[0]) {
     var append = [];
     if (key === "index") {
-      append = ["Index", true];
+      append = ["Index", !isWizard];
     }
     else if (key === "id") {
       append = ["ID", true];
@@ -2054,14 +2079,14 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
     else if (key === "name") {
       append = ["Name", true];
     }
-    else if (key === "remfunc" && remfunc == 1) { //unly show on rf remote page
+    else if (key === "remfunc" && (remfunc == 1 || isWizard)) {
       append = ["Remote function", true];
     }
     else if (key === "remtype") {
       append = ["Remote model", true];
     }
     else if (key === "capabilities") {
-      append = ["Capabilities", true];
+      append = ["Capabilities", !isWizard];
     }
     else if (key === "bidirectional" && remfunc == 1) { //unly show on rf remote page
       append = ["Bidirectional", true];
@@ -2077,25 +2102,29 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
   table.appendChild(thead);
 
   var tbody = document.createElement('tbody');
-  remotesCount = jsonVar.length;
+  remotesCount = data.length;
 
-  for (const remote of jsonVar) {
+  for (const remote of data) {
     var i = 0;
     if (remote["index"]) i = remote["index"];
     var remtype = 0;
     var remfunction = 0;
     var row = document.createElement('tr');
-    var selectTd = document.createElement('td');
-    selectTd.innerHTML = `<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}' />`;
-    row.appendChild(selectTd);
+    if (!isWizard) {
+      var selectTd = document.createElement('td');
+      selectTd.innerHTML = `<input type='radio' id='option-select_remote-${i}' name='optionsRemotes' onchange='radio("remote",${i})' value='${i}' />`;
+      row.appendChild(selectTd);
+    }
 
     for (const key in remote) {
       const value = remote[key];
 
       if (key === "index") {
-        var td = document.createElement('td');
-        td.innerHTML = value.toString();
-        row.appendChild(td);
+        if (!isWizard) {
+          var td = document.createElement('td');
+          td.innerHTML = value.toString();
+          row.appendChild(td);
+        }
       }
       else if (key === "id") {
         var cellValue = value.toString();
@@ -2104,7 +2133,7 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
         if (cellValue == "0,0,0") cellValue = "empty slot";
         var idval = `id_remote-${i}`;
         var td = document.createElement('td');
-        td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}' readonly='' />`;
+        td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}'${isWizard ? '' : " readonly=''"} />`;
         row.appendChild(td);
       }
       else if (key === "name") {
@@ -2112,17 +2141,17 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
         if (cellValue == null) cellValue = '';
         var idval = `name_remote-${i}`;
         var td = document.createElement('td');
-        td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}' readonly='' />`;
+        td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}'${isWizard ? '' : " readonly=''"} />`;
         row.appendChild(td);
       }
       else if (key === "remfunc") {
         remfunction = value;
-        if (remfunction != 2) { //do not add remote function is remfunction == virtual remote
+        if (remfunction != 2 || isWizard) { //do not add remote function is remfunction == virtual remote
           var select = document.createElement('select');
           select.name = remfunction;
           select.id = `func_remote-${i}`;
           select.setAttribute('onChange', `remfunction_validation(${i});`);
-          select.disabled = true;
+          select.disabled = !isWizard;
           for (const item of remfuncs) {
             var option = document.createElement('option');
             option.value = item[1];
@@ -2143,8 +2172,10 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
         var select = document.createElement('select');
         select.name = cellValue;
         select.id = `type_remote-${i}`;
-        select.disabled = true;
+        select.disabled = !isWizard;
+        var wizardHru = isWizard && wizardDeviceCategory === 'hru250_300';
         for (const item of remtypes) {
+          if (wizardHru && item[1] !== 0x22F1 && item[1] !== 0x22F3) continue;
           var option = document.createElement('option');
           option.value = item[1];
           option.text = item[0];
@@ -2159,15 +2190,17 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
         row.appendChild(td);
       }
       else if (key === "capabilities") {
-        var td = document.createElement('td');
-        if (remfunction == 2 || remfunction == 5) {
-          addRemoteButtons(td, remfunc, remtype, i, false);
+        if (!isWizard) {
+          var td = document.createElement('td');
+          if (remfunction == 2 || remfunction == 5) {
+            addRemoteButtons(td, remfunc, remtype, i, false);
+          }
+          else {
+            td.id = `caps-${i}`;
+            td.innerHTML = formatCapabilities(value);
+          }
+          row.appendChild(td);
         }
-        else {
-          td.id = `caps-${i}`;
-          td.innerHTML = formatCapabilities(value);
-        }
-        row.appendChild(td);
       }
       else if (key === "bidirectional") {
         if (remfunc != 2) { //do not add remote function is remfunction == virtual remote
@@ -2671,6 +2704,7 @@ var wizardHasRF = false;
 var wizardDeviceCategory = 'other';
 var wizardDevType = '';
 var wizardIsOptimaInside = false;
+var wizardSimDevType = null;
 var wizardRemotesInterval = null;
 var wizardWifistatInterval = null;
 var wizardConnectInterval = null;
@@ -2817,6 +2851,12 @@ function wizardGoTo(step) {
     wizardRemotesInterval = setInterval(function () {
       getSettings('ithoremotes');
     }, 5000);
+    if (wizardActive) {
+      var nr = $id('wiz-numrfrem-row'); if (nr) nr.style.display = 'none';
+      var rt = $id('wiz-rfremtype-row'); if (rt) rt.style.display = 'none';
+      var rb = $id('wiz-rf-buttons'); if (rb) rb.style.display = 'none';
+      var rl = $id('wiz-rf-later'); if (rl) rl.style.display = '';
+    }
   } else if (step === 4) {
     getSettings('mqttsetup');
   }
@@ -2874,9 +2914,10 @@ function applyDeviceDefaults() {
     if (el) el.checked = true;
   }
 
-  // PWM2I2C: off for all, except CVE-Silent with external CO2 (RFT CO2)
-  var isCveSilentRft = (wizardDevType === 'CVE-Silent' && !wizardIsOptimaInside);
-  checkRadio('option-itho_pwm2i2c', isCveSilentRft ? '1' : '0');
+  // PWM2I2C: on for all CVE devices (CVE, CVE ECO2, CVE-Silent, CVE-SilentExtPlus), except Optima Inside
+  var isCveDevice = (cat === 'cve' || cat === 'hru200');
+  var enablePwm2i2c = isCveDevice && !(wizardDevType === 'CVE-Silent' && wizardIsOptimaInside);
+  checkRadio('option-itho_pwm2i2c', enablePwm2i2c ? '1' : '0');
   // Lock PWM2I2C when Optima Inside (must stay off)
   var pwm1 = $id('option-pwm2i2c-1');
   var pwm0 = $id('option-pwm2i2c-0');
@@ -2885,13 +2926,11 @@ function applyDeviceDefaults() {
   if (pwm0) pwm0.disabled = optimaLock;
 
   // 31DA and 31D9: on for most, off for WPU
-  var enable31 = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350');
+  var enable31 = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350' || cat === 'hru250_300');
   checkRadio('option-itho_31da', enable31 ? '1' : '0');
   checkRadio('option-itho_31d9', enable31 ? '1' : '0');
 
-  // WPU counters (4210): on for WPU only
-  var row4210 = $id('wiz-4210-row');
-  if (row4210) row4210.style.display = (cat === 'wpu') ? '' : 'none';
+  // WPU counters (4210): on for WPU, off for others (always visible in wizard)
   checkRadio('option-itho_4210', cat === 'wpu' ? '1' : '0');
 
   // Virtual remote and related settings
@@ -2907,12 +2946,22 @@ function applyDeviceDefaults() {
     checkRadio('option-itho_forcemedium', '0');
   }
 
-  // Virtual remote type: RFT AUTO for HRU types, RFT CVE for CVE types
+  // Hide virtual remote section for HRU250/300, show RF note instead
+  var vremSection = $id('wiz-vrem-section');
+  if (vremSection) vremSection.style.display = (cat === 'hru250_300') ? 'none' : '';
+  var rfNote = $id('wiz-rf-note');
+  if (rfNote) rfNote.style.display = (cat === 'hru250_300') ? '' : 'none';
+
+  // Virtual remote type: RFT AUTO for CVE-Silent, HRU 250-300, HRU 350, and other HRU types
+  // Exception: Older CVE devices (DG=0x0, ID=0x4 or 0x14) use RFT CVE
   var vremTypeEl = $id('wiz-vremtype');
   var vremTypeRow = $id('wiz-vremtype-row');
   if (vremTypeRow) vremTypeRow.style.display = useVirtual ? '' : 'none';
   if (vremTypeEl) {
-    var useAuto = (cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200');
+    var devGroup = parseInt(localStorage.getItem("itho_mfr") || "0", 10);
+    var devId = parseInt(localStorage.getItem("itho_deviceid") || "0", 10);
+    var isOlderCVE = (devGroup === 0x0 && (devId === 0x4 || devId === 0x14));
+    var useAuto = !isOlderCVE && (cat === 'cve' || cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200' || cat === 'hru250_300');
     vremTypeEl.value = useAuto ? '0x22F3' : '0x22F1';
   }
 
@@ -2920,10 +2969,6 @@ function applyDeviceDefaults() {
   var isHRU = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350' || cat === 'hru250_300');
   var updatefreqEl = $id('itho_updatefreq');
   if (updatefreqEl) updatefreqEl.value = (isHRU ? 10 : 60);
-
-  // Show RF note for HRU 250-300
-  var rfNote = $id('wiz-rf-note');
-  if (rfNote) rfNote.style.display = (cat === 'hru250_300') ? '' : 'none';
 
   // RF remote type default: RFT AUTO for HRU types, RFT CVE for CVE types
   var rfRemTypeEl = $id('wiz-rfremtype');
@@ -2935,19 +2980,98 @@ function applyDeviceDefaults() {
   // Update device info display
   var hwEl = $id('wiz-hw-revision');
   if (hwEl) hwEl.textContent = (typeof hw_revision !== 'undefined' ? (hw_revision.startsWith('NON-CVE') ? 'Non-CVE' : 'CVE') : 'Unknown');
+
+  // Lock default settings initially
+  wizardLockDefaults();
 }
 
-function wizardOnDevInfo(devtype) {
-  wizardDeviceCategory = wizardDetectDeviceCategory(devtype);
-  wizardDevType = devtype || '';
+function wizardLockDefaults() {
+  // List of field IDs to lock
+  var fieldsToLock = [
+    'option-pwm2i2c-1', 'option-pwm2i2c-0',
+    'option-31da-1', 'option-31da-0',
+    'option-31d9-1', 'option-31d9-0',
+    'option-4210-1', 'option-4210-0',
+    'itho_numvrem',
+    'option-vremotejoin-2', 'option-vremotejoin-1', 'option-vremotejoin-0',
+    'option-vremotemedium-1', 'option-vremotemedium-0',
+    'wiz-vremtype',
+    'itho_updatefreq'
+  ];
+
+  fieldsToLock.forEach(function(id) {
+    var el = $id(id);
+    if (el) {
+      el.disabled = true;
+      // Don't lock PWM2I2C if it's already locked for Optima Inside
+      if ((id === 'option-pwm2i2c-1' || id === 'option-pwm2i2c-0') &&
+          wizardDevType === 'CVE-Silent' && wizardIsOptimaInside) {
+        // Keep the Optima lock
+      }
+    }
+  });
+}
+
+function wizardOverrideDefaults() {
+  // Unlock all default fields except Optima-locked PWM2I2C
+  var fieldsToUnlock = [
+    'option-pwm2i2c-1', 'option-pwm2i2c-0',
+    'option-31da-1', 'option-31da-0',
+    'option-31d9-1', 'option-31d9-0',
+    'option-4210-1', 'option-4210-0',
+    'itho_numvrem',
+    'option-vremotejoin-2', 'option-vremotejoin-1', 'option-vremotejoin-0',
+    'option-vremotemedium-1', 'option-vremotemedium-0',
+    'wiz-vremtype',
+    'itho_updatefreq'
+  ];
+
+  fieldsToUnlock.forEach(function(id) {
+    var el = $id(id);
+    if (el) {
+      // Don't unlock PWM2I2C if it's locked for Optima Inside
+      var isOptimaLock = ((id === 'option-pwm2i2c-1' || id === 'option-pwm2i2c-0') &&
+                          wizardDevType === 'CVE-Silent' && wizardIsOptimaInside);
+      if (!isOptimaLock) {
+        el.disabled = false;
+      }
+    }
+  });
+
+  // Update button appearance
+  var btn = $id('wiz-override-defaults');
+  var icon = $id('wiz-override-icon');
+  var msg = $id('wiz-override-msg');
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('pure-button-disabled');
+    btn.innerHTML = '<span id="wiz-override-icon">🔓</span> Defaults Unlocked';
+  }
+  if (msg) msg.style.display = '';
+}
+
+function wizardOnDevInfo(devtype, devgroup, devid) {
+  var effectiveType = wizardSimDevType || devtype;
+  wizardDeviceCategory = wizardDetectDeviceCategory(effectiveType);
+  wizardDevType = effectiveType || '';
+
+  // Store device group and ID if provided
+  if (devgroup !== undefined) localStorage.setItem("itho_mfr", devgroup);
+  if (devid !== undefined) localStorage.setItem("itho_deviceid", devid);
+
   var el = $id('wiz-dev-type');
-  if (el) el.textContent = devtype || 'Unknown';
+  if (el) el.textContent = (effectiveType || 'Unknown') + (wizardSimDevType ? ' (simulated)' : '');
   // Show CO2 choice for CVE-Silent (device ID 0x1B)
   var co2box = $id('wiz-co2-box');
-  if (co2box) co2box.style.display = (devtype === 'CVE-Silent') ? '' : 'none';
+  if (co2box) co2box.style.display = (effectiveType === 'CVE-Silent') ? '' : 'none';
+  // Force RF available when simulating
+  if (wizardSimDevType) {
+    wizardHasRF = true;
+    wizardUpdateIndicators();
+  }
   applyDeviceDefaults();
   // Request status to check for CO2 sensor (may not be available on first boot)
-  if (devtype === 'CVE-Silent') getSettings('ithostatus');
+  if (effectiveType === 'CVE-Silent') getSettings('ithostatus');
 }
 
 function wizardSetCO2Choice(isOptima) {
@@ -2959,6 +3083,28 @@ function wizardSetCO2Choice(isOptima) {
     msg.textContent = isOptima
       ? 'Configured for Optima Inside: PWM2I2C disabled, virtual remote enabled.'
       : 'Configured for standard CVE (no built-in CO2): PWM2I2C enabled.';
+  }
+}
+
+function wizardAutoConfigRFRemote() {
+  var idEl = $id('id_remote-0');
+  var rfIdEl = $id('module_rf_id_str');
+  if (!idEl || !rfIdEl) return;
+  // Only auto-fill if the slot is empty
+  if (idEl.value === 'empty slot' || idEl.value === '0,0,0' || idEl.value === '') {
+    idEl.value = rfIdEl.value;
+  }
+  // Set remote function to Send (5)
+  var funcEl = $id('func_remote-0');
+  if (funcEl) {
+    funcEl.value = '5';
+    funcEl.disabled = false;
+  }
+  // Set name
+  var nameEl = $id('name_remote-0');
+  if (nameEl && (!nameEl.value || nameEl.value === '')) {
+    nameEl.value = 'RF Send';
+    nameEl.readOnly = false;
   }
 }
 

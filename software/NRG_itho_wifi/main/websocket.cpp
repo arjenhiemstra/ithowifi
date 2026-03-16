@@ -628,14 +628,15 @@ void handle_ws_message(JsonObject root)
     ithoI2CCommand(root["vremote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
   }
   // "remote" => use ithoExecRFCommand
-  if (root["remote"].is<uint8_t>() && root["command"].is<const char *>())
+  else if (root["remote"].is<uint8_t>() && root["command"].is<const char *>())
   {
     ithoExecRFCommand(root["remote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
   }
   // Single top-level "command"
-  if (root["command"].is<const char *>())
+  else if (root["command"].is<const char *>())
   {
     ithoExecCommand(root["command"].as<const char *>(), WEB);
+    sysStatReq = true;
   }
   // Itho speed command
   if (root["itho"].is<uint16_t>())
