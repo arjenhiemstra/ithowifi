@@ -33,6 +33,18 @@
 
     <p>Setup wizard:</p>
     <span>Status: </span><span id='wizard_status'>unknown</span><br><br>
+    <label for="wiz-sim-devtype">Simulate device type: </label>
+    <select id="wiz-sim-devtype">
+      <option value="">(actual device)</option>
+      <option value="CVE">CVE</option>
+      <option value="CVE-Silent">CVE-Silent</option>
+      <option value="CVE-S Eco2">CVE-S Eco2</option>
+      <option value="CVE-SilentExtPlus">CVE-SilentExtPlus (HRU200)</option>
+      <option value="HRU 250-300">HRU 250-300</option>
+      <option value="HRU 350">HRU 350</option>
+      <option value="HRU ECO-fan">HRU ECO-fan</option>
+      <option value="Heatpump">Heatpump (WPU)</option>
+    </select><br><br>
     <button id="button-wizardreactivate" class="pure-button pure-button-primary">Reactivate wizard</button>
 
     <p>JavaScript console debug:</p>
@@ -148,6 +160,8 @@
     $id("wizard_status").textContent = (typeof wizard_step !== 'undefined' && wizard_step > 0) ? "enabled" : "disabled";
     $id("button-wizardreactivate").addEventListener('click', function () {
         if (confirm("This will reactivate the setup wizard. Are you sure?")) {
+            var simSel = $id('wiz-sim-devtype');
+            wizardSimDevType = (simSel && simSel.value) ? simSel.value : null;
             update_page('wizard');
             initWizard(1);
         }
