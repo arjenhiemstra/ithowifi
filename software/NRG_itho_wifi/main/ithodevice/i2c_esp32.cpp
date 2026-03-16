@@ -232,25 +232,26 @@ size_t i2cSlaveReceive(uint8_t *i2c_receive_buf)
 
   i2c_receive_buf[0] = I2C_SLAVE_ADDRESS << 1;
 
-  // uint8_t byte = 0;
-  // int len_rec = 0;
-  // attempt to read in bytes one by one
-  // while (true)
-  // {
-  //   int len = i2c_slave_read_buffer(I2C_SLAVE_NUM, &byte, 1, 200 / portTICK_PERIOD_MS);
-  //   if (len <= 0)
-  //     break;
-  //   i2c_receive_buf[len_rec++] = byte;
-  // }
-
-  int len_rec = i2c_slave_read_buffer(I2C_SLAVE_NUM, &i2c_receive_buf[1], I2C_SLAVE_RX_BUF_LEN - 1, 200 / portTICK_PERIOD_MS);
+  // Read I2C response in a loop to handle devices that send data in multiple chunks
+  // (e.g., HRU 300). Some devices may send responses across multiple I2C transactions
+  // or with delays between bytes.
+  int total_len = 0;
+  while (total_len < I2C_SLAVE_RX_BUF_LEN - 1)
+  {
+    int len = i2c_slave_read_buffer(I2C_SLAVE_NUM, &i2c_receive_buf[1 + total_len],
+                                     I2C_SLAVE_RX_BUF_LEN - 1 - total_len,
+                                     50 / portTICK_PERIOD_MS);
+    if (len <= 0)
+      break;
+    total_len += len;
+  }
 
   i2cSlaveDeinit();
 
-  if (len_rec <= 0)
+  if (total_len <= 0)
     return 0;
 
-  return len_rec + 1; // add 1 because i2c_receive_buf[0] = I2C_SLAVE_ADDRESS
+  return total_len + 1; // add 1 because i2c_receive_buf[0] = I2C_SLAVE_ADDRESS
 }
 
 void i2cSlaveDeinit()
