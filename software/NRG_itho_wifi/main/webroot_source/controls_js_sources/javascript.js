@@ -622,6 +622,38 @@ const messageHandlers = {
     var x = f.rfstatusinfo;
     var sel = $id('rfStatusSource');
     if (sel && x.sources) {
+      var prev = sel.value;
+      x.sources.forEach(function (s) {
+        var opt = sel.querySelector('option[value="' + s.index + '"]');
+        if (!opt) {
+          opt = document.createElement('option');
+          opt.value = s.index;
+          sel.appendChild(opt);
+        }
+        var cfg = (typeof rfSourcesData !== 'undefined') ? rfSourcesData.find(function (c) { return c.index == s.index; }) : null;
+        opt.textContent = (cfg && cfg.tracked) ? ((cfg.name || s.id) + ' *') : s.id;
+      });
+      if (sel.querySelector('option[value="' + prev + '"]')) sel.value = prev;
+      if (sel.value == '-1' && x.sources.length > 0) {
+        sel.value = x.sources[0].index;
+      }
+    }
+    var lsEl = $id('rfLastSeen');
+    if (lsEl && x.sources && x.selectedSource !== undefined) {
+      var src = x.sources.find(function (s) { return s.index == x.selectedSource; });
+      if (src && src.lastSeen > 0) lsEl.textContent = new Date(src.lastSeen * 1000).toLocaleString();
+      else lsEl.textContent = '-';
+    }
+    var st = $id('RFStatusTable');
+    if (st) {
+      if (x.data && Object.keys(x.data).length > 0) { st.innerHTML = ''; buildHtmlStatusTable(st, x.data); }
+      else if (x.selectedSource !== undefined) { st.innerHTML = '<tr><td style="padding:1em;">Waiting for data from selected source device...</td></tr>'; }
+    }
+  },
+  rfstatusconfig: function (f) {
+    var x = f.rfstatusconfig;
+    var sel = $id('rfStatusSource');
+    if (sel && x.sources) {
       if (typeof rfSourcesData !== 'undefined') rfSourcesData = x.sources;
       if (typeof rfSelectedSource !== 'undefined' && x.selectedSource !== undefined)
         rfSelectedSource = x.selectedSource;
@@ -642,18 +674,7 @@ const messageHandlers = {
         });
       }
     }
-    var lsEl = $id('rfLastSeen');
-    if (lsEl && x.sources && x.selectedSource !== undefined) {
-      var src = x.sources.find(function (s) { return s.index == x.selectedSource; });
-      if (src && src.lastSeen > 0) lsEl.textContent = new Date(src.lastSeen * 1000).toLocaleString();
-      else lsEl.textContent = '-';
-    }
     if (typeof updateTrackCheckbox === 'function') updateTrackCheckbox();
-    var st = $id('RFStatusTable');
-    if (st) {
-      if (x.data && Object.keys(x.data).length > 0) { st.innerHTML = ''; buildHtmlStatusTable(st, x.data); }
-      else if (x.selectedSource !== undefined) { st.innerHTML = '<tr><td style="padding:1em;">Waiting for data from selected source device...</td></tr>'; }
-    }
   },
   hadiscsettings: function (f) {
     var el = $id('ithostatusrdy');

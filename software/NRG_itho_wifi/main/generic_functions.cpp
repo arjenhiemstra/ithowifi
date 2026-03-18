@@ -141,11 +141,11 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
     src["id"] = idStr;
     src["index"] = i;
     src["lastSeen"] = static_cast<int32_t>(rfStatusSources[i].lastSeen);
-    src["tracked"] = rfStatusSources[i].tracked;
-    src["name"] = rfStatusSources[i].name;
 
     if (trackedOnly)
     {
+      src["tracked"] = rfStatusSources[i].tracked;
+      src["name"] = rfStatusSources[i].name;
       JsonObject data = src["data"].to<JsonObject>();
       for (const auto &m : rfStatusSources[i].measurements31D9)
       {
@@ -169,13 +169,6 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
       }
     }
   }
-
-  int trackedCount = 0;
-  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
-    if (rfStatusSources[i].active && rfStatusSources[i].tracked)
-      trackedCount++;
-  root["trackedCount"] = trackedCount;
-  root["maxTracked"] = MAX_RF_STATUS_SOURCES;
 
   if (!trackedOnly)
   {
@@ -222,6 +215,46 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
   }
 
   return count;
+}
+
+void getRFStatusConfigJSON(JsonObject root, int sourceIndex)
+{
+  JsonArray sources = root["sources"].to<JsonArray>();
+  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+  {
+    if (!rfStatusSources[i].active)
+      continue;
+    JsonObject src = sources.add<JsonObject>();
+    char idStr[10];
+    snprintf(idStr, sizeof(idStr), "%02X:%02X:%02X",
+             rfStatusSources[i].id[0], rfStatusSources[i].id[1], rfStatusSources[i].id[2]);
+    src["id"] = idStr;
+    src["index"] = i;
+    src["tracked"] = rfStatusSources[i].tracked;
+    src["name"] = rfStatusSources[i].name;
+  }
+
+  int trackedCount = 0;
+  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+    if (rfStatusSources[i].active && rfStatusSources[i].tracked)
+      trackedCount++;
+  root["trackedCount"] = trackedCount;
+  root["maxTracked"] = MAX_RF_STATUS_SOURCES;
+
+  int idx = sourceIndex;
+  if (idx == -1)
+  {
+    for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+    {
+      if (rfStatusSources[i].active)
+      {
+        idx = i;
+        break;
+      }
+    }
+  }
+  if (idx >= 0 && idx < MAX_RF_STATUS_SOURCES && rfStatusSources[idx].active)
+    root["selectedSource"] = idx;
 }
 
 void getDeviceInfoJSON(JsonObject root)

@@ -42,7 +42,7 @@
   var rfMaxTracked = 20;
   $id('rfStatusSource').addEventListener('change', function () {
     rfSelectedSource = parseInt(this.value);
-    updateTrackCheckbox();
+    requestRFStatusConfig();
     requestRFStatus();
   });
   $id('rfTrackSave').addEventListener('click', function () {
@@ -88,9 +88,16 @@
       : '{"rfstatus":true}';
     websock_send(msg);
   }
+  function requestRFStatusConfig() {
+    var msg = rfSelectedSource >= 0
+      ? '{"rfstatusconfig":true,"source":' + rfSelectedSource + '}'
+      : '{"rfstatusconfig":true}';
+    websock_send(msg);
+  }
   function repeatRFStatus() {
     requestRFStatus();
     rfstatus_to = setTimeout(repeatRFStatus, 5000);
   }
+  requestRFStatusConfig();
   repeatRFStatus();
 </script>

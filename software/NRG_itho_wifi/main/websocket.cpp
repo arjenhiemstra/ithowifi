@@ -188,6 +188,11 @@ void jsonWsSend(const char *rootName)
     JsonObject nested = root[rootName].to<JsonObject>();
     getRFStatusJSON(nested, rfSelectedSourceForParsing);
   }
+  else if (strcmp(rootName, "rfstatusconfig") == 0)
+  {
+    JsonObject nested = root[rootName].to<JsonObject>();
+    getRFStatusConfigJSON(nested, rfSelectedSourceForParsing);
+  }
   else if (strcmp(rootName, "chkpart") == 0)
   {
     root["chkpart"] = chk_partition_res ? "partition scheme supports firmware versions from 2.4.4-beta7 and upwards" : "partion scheme supports firmware versions 2.4.4-beta6 and older";
@@ -521,6 +526,11 @@ void handle_ws_message(JsonObject root)
     rfSelectedSourceForParsing = root["source"].is<int>() ? root["source"].as<int>() : -1;
     jsonWsSend("rfstatusinfo");
   }
+  if (root["rfstatusconfig"].is<bool>() && root["rfstatusconfig"].as<bool>())
+  {
+    rfSelectedSourceForParsing = root["source"].is<int>() ? root["source"].as<int>() : -1;
+    jsonWsSend("rfstatusconfig");
+  }
   if (root["rftrack"].is<JsonObject>())
   {
     JsonObject trackObj = root["rftrack"].as<JsonObject>();
@@ -540,6 +550,7 @@ void handle_ws_message(JsonObject root)
       if (trackObj["name"].is<const char *>())
         strlcpy(rfStatusSources[idx].name, trackObj["name"].as<const char *>(), sizeof(rfStatusSources[idx].name));
       saveRFTrackedConfigflag = true;
+      jsonWsSend("rfstatusconfig");
     }
   }
   if (root["hadiscinfo"].is<bool>() && root["hadiscinfo"].as<bool>())
