@@ -86,6 +86,8 @@ private:
   // Itho remotes
   bool bindAllowed;
   bool allowAll;
+  bool bindInitiatorActive{false};
+  uint8_t bindInitiatorRemIndex{0};
 
   static RFStatusCallback_t rf31DACallback;
   static RFStatusCallback_t rf31D9Callback;
@@ -178,6 +180,19 @@ public:
   {
     return ithoRF;
   }
+  void setBindInitiatorActive(bool active, uint8_t remIndex = 0)
+  {
+    bindInitiatorActive = active;
+    bindInitiatorRemIndex = remIndex;
+  }
+  bool isBindInitiatorActive() const
+  {
+    return bindInitiatorActive;
+  }
+  uint8_t getBindInitiatorRemIndex() const
+  {
+    return bindInitiatorRemIndex;
+  }
   // receive
   bool receivePacket(); // read RX fifo
   void decodeBufferedPacket(); // decode raw packet buffered by receivePacket
@@ -213,6 +228,8 @@ public:
   const uint8_t *getRemoteCmd(const RemoteTypes type, const IthoCommand command);
   void sendRFCommand(uint8_t remote_index, IthoCommand command);
   int8_t sendJoinReply(uint8_t remote_index);
+  void sendBindConfirm(uint8_t remote_index);
+  void send1060();
   void send10E0();
   void send2E10(uint8_t remote_index, IthoCommand command);
   void send31D9(uint8_t speedstatus = 0, uint8_t info = 0);

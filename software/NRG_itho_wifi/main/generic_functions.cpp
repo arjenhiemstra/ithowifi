@@ -1,5 +1,6 @@
 #include "generic_functions.h"
 #include "config/HADiscConfig.h"
+#include "tasks/task_cc1101.h"
 
 #define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 2000 // firmware json response should be smaller than this
 
@@ -451,6 +452,9 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   bool res = true;
 
   D_LOG("SYS: exec rf cmd:%s, idx: %d", command, remote_index);
+  bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
+  if (bidirectional)
+    rfManager.radio.setSendTries(1);
   disableRF_ISR();
 
   if (strcmp(command, "away") == 0)
@@ -499,7 +503,11 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   }
   else if (strcmp(command, "join") == 0)
   {
+    rfManager.radio.setBindInitiatorActive(true, remote_index);
+    startBindInitiatorTimeout();
+    rfManager.radio.setSendTries(1);
     rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoJoin);
+    rfManager.radio.setSendTries(3);
   }
   else if (strcmp(command, "leave") == 0)
   {
@@ -523,6 +531,8 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   logLastCommand(buf, origin);
 
   enableRF_ISR();
+  if (bidirectional)
+    rfManager.radio.setSendTries(3);
   return res;
 }
 

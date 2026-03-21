@@ -16,6 +16,9 @@ bool filter31D9 = false;
 bool send31DA = false;
 bool sendJoinReply = false;
 bool send10E0 = false;
+bool sendBindConfirm = false;
+bool sendBatteryStatus = false;
+uint8_t bindConfirmRemIndex = 255;
 uint8_t faninfo31DA{0};
 uint8_t timer31DA{0};
 
@@ -25,6 +28,7 @@ StackType_t xTaskCC1101Stack[STACK_SIZE];
 
 Ticker timerLearnLeaveMode;
 Ticker rf_message;
+Ticker bindInitiatorTimeout;
 
 volatile bool ithoCheck = false;
 SemaphoreHandle_t isrSemaphore = NULL;
@@ -51,6 +55,12 @@ void disableRF_ISR()
 void enableRF_ISR()
 {
   attachInterrupt(hardwareManager.itho_irq_pin, ITHOinterrupt, RISING);
+  // If GDO is already HIGH, a packet arrived while the ISR was disabled.
+  // The rising edge was missed, so manually trigger a receive.
+  if (digitalRead(hardwareManager.itho_irq_pin) == HIGH)
+  {
+    ithoCheck = rfManager.radio.receivePacket();
+  }
 }
 
 void RFDebug(IthoPacket *packet)
@@ -125,6 +135,12 @@ void RFDebug(IthoPacket *packet)
     break;
   case IthoDeviceInfo:
     strncat(debugLog, " (cmd:ithodeviceinfo)", sizeof(debugLog) - strlen(debugLog) - 1);
+    break;
+  case IthoBindAccept:
+    strncat(debugLog, " (cmd:bindaccept)", sizeof(debugLog) - strlen(debugLog) - 1);
+    break;
+  case IthoBindConfirm:
+    strncat(debugLog, " (cmd:bindconfirm)", sizeof(debugLog) - strlen(debugLog) - 1);
     break;
   }
   // strncat(debugLog, "\n", sizeof(debugLog) - strlen(debugLog) - 1);
@@ -201,6 +217,25 @@ void setllModeTimer()
     }
     return;
   }
+}
+
+void bindInitiatorTimeoutCallback()
+{
+  if (rfManager.radio.isBindInitiatorActive())
+  {
+    rfManager.radio.setBindInitiatorActive(false);
+    W_LOG("RFI: Bind initiator timeout - no binding accept received");
+  }
+}
+
+void startBindInitiatorTimeout()
+{
+  bindInitiatorTimeout.once_ms(5000, bindInitiatorTimeoutCallback);
+}
+
+void cancelBindInitiatorTimeout()
+{
+  bindInitiatorTimeout.detach();
 }
 
 void set_send10E0_true()
@@ -360,6 +395,34 @@ void TaskCC1101(void *pvParameters)
         joinReplyRemIndex = 255;
         rf_message.once_ms(100, set_send10E0_true);
       }
+      if (sendBindConfirm && !ithoCheck)
+      {
+        /*
+          Initiator binding flow:
+          1. We sent the Binding Offer (1FC9 I, self-addressed)
+          2. Target responded with Binding Accept (1FC9 W, 31D9+31DA)
+          3. Now send Binding Confirm (1FC9 I, payload 00, addr0=us addr1=target)
+          4. Then send Battery Status (1060 x3)
+        */
+        sendBindConfirm = false;
+        rfManager.radio.setSendTries(3);
+        disableRF_ISR();
+        rfManager.radio.sendBindConfirm(bindConfirmRemIndex);
+        enableRF_ISR();
+        D_LOG("RFI: Bind confirm sent for remote index:%d", bindConfirmRemIndex);
+        // Schedule battery status after a short delay
+        sendBatteryStatus = true;
+      }
+      if (sendBatteryStatus && !ithoCheck)
+      {
+        sendBatteryStatus = false;
+        rfManager.radio.setSendTries(3); // send 3 times for reliability
+        disableRF_ISR();
+        rfManager.radio.send1060();
+        enableRF_ISR();
+        D_LOG("RFI: Battery status (1060) sent");
+        bindConfirmRemIndex = 255;
+      }
       if ((send31D9 || send31D9debug) && !ithoCheck)
       {
         // 80 82 B1 D9 01 10 86 05 0A 20 20 20 20 20 20 20 20 20 20 20 20 00 4E
@@ -479,6 +542,18 @@ void TaskCC1101(void *pvParameters)
               saveRemotesflag = true;
               break;
             }
+          }
+          if (cmd == IthoBindAccept)
+          {
+            cancelBindInitiatorTimeout();
+            uint8_t remIdx = rfManager.radio.getBindInitiatorRemIndex();
+            D_LOG("RFI: Binding accept received, remote index:%d", remIdx);
+            // Store the target's device ID as the destination for this remote
+            rfManager.radio.updateDestinationID(*(lastID + 0), *(lastID + 1), *(lastID + 2), remIdx);
+            bindConfirmRemIndex = remIdx;
+            // Delay the confirm to let the remaining accepts from the target pass
+            rf_message.once_ms(300, []()
+                               { sendBindConfirm = true; });
           }
           if (cmd == IthoJoin || (cmd == IthoLow && remtype == RemoteTypes::RFTSPIDER)) // Itho low for the spider because join can be difficult to send
           {

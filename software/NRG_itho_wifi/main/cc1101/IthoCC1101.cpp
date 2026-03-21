@@ -107,7 +107,7 @@ IthoCC1101::~IthoCC1101()
 const uint8_t *RFTCVE_Remote_Map[] = {nullptr, ithoMessageCVERFTJoinCommandBytes, ithoMessageLeaveCommandBytes, ithoMessageAwayCommandBytes, ithoMessageLowCommandBytes, ithoMessageMediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageTimer1CommandBytes, ithoMessageTimer2CommandBytes, ithoMessageTimer3CommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 const uint8_t *RFTAUTO_Remote_Map[] = {nullptr, ithoMessageAUTORFTJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes, nullptr, ithoMessageAUTORFTLowCommandBytes, nullptr, ithoMessageAUTORFTHighCommandBytes, nullptr, ithoMessageAUTORFTTimer1CommandBytes, ithoMessageAUTORFTTimer2CommandBytes, ithoMessageAUTORFTTimer3CommandBytes, ithoMessageAUTORFTAutoCommandBytes, ithoMessageAUTORFTAutoNightCommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 const uint8_t *RFTN_Remote_Map[] = {nullptr, ithoMessageAUTORFTNJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes, ithoMessageAwayCommandBytes, ithoMessageLowCommandBytes, ithoMessageMediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageTimer1CommandBytes, ithoMessageTimer2CommandBytes, ithoMessageTimer3CommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
-const uint8_t *RFTAUTON_Remote_Map[] = {nullptr, ithoMessageAUTORFTNJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes, nullptr, ithoMessageAUTORFTLowCommandBytes, nullptr, ithoMessageAUTORFTHighCommandBytes, nullptr, ithoMessageAUTORFTTimer1CommandBytes, ithoMessageAUTORFTTimer2CommandBytes, ithoMessageAUTORFTTimer3CommandBytes, ithoMessageAUTORFTAutoCommandBytes, ithoMessageAUTORFTAutoNightCommandBytes, nullptr, nullptr, nullptr, ithoMessageJoinReplyCommandBytes, nullptr, nullptr};
+const uint8_t *RFTAUTON_Remote_Map[] = {nullptr, ithoMessageAUTORFTNJoinCommandBytes, ithoMessageAUTORFTLeaveCommandBytes, ithoMessageAwayCommandBytes, ithoMessageLowCommandBytes, ithoMessageMediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageTimer1CommandBytes, ithoMessageTimer2CommandBytes, ithoMessageTimer3CommandBytes, ithoMessageRV_CO2AutoCommandBytes, ithoMessageRV_CO2AutoNightCommandBytes, nullptr, nullptr, nullptr, ithoMessageJoinReplyCommandBytes, nullptr, nullptr};
 const uint8_t *DEMANDFLOW_Remote_Map[] = {nullptr, ithoMessageDFJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageDFLowCommandBytes, nullptr, ithoMessageDFHighCommandBytes, nullptr, ithoMessageDFTimer1CommandBytes, ithoMessageDFTimer2CommandBytes, ithoMessageDFTimer3CommandBytes, nullptr, nullptr, ithoMessageDFCook30CommandBytes, ithoMessageDFCook60CommandBytes, nullptr, nullptr, nullptr, nullptr};
 const uint8_t *RFTRV_Remote_Map[] = {nullptr, ithoMessageRVJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageLowCommandBytes, ithoMessageRV_CO2MediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageRV_CO2Timer1CommandBytes, ithoMessageRV_CO2Timer2CommandBytes, ithoMessageRV_CO2Timer3CommandBytes, ithoMessageRV_CO2AutoCommandBytes, ithoMessageRV_CO2AutoNightCommandBytes, nullptr, nullptr, nullptr, ithoMessageJoinReplyCommandBytes, nullptr, nullptr};
 const uint8_t *RFTCO2_Remote_Map[] = {nullptr, ithoMessageCO2JoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageLowCommandBytes, ithoMessageRV_CO2MediumCommandBytes, ithoMessageHighCommandBytes, nullptr, ithoMessageRV_CO2Timer1CommandBytes, ithoMessageRV_CO2Timer2CommandBytes, ithoMessageRV_CO2Timer3CommandBytes, ithoMessageRV_CO2AutoCommandBytes, ithoMessageRV_CO2AutoNightCommandBytes, nullptr, nullptr, nullptr, ithoMessageJoinReplyCommandBytes, nullptr, nullptr};
@@ -356,13 +356,14 @@ bool IthoCC1101::receivePacket()
 {
   readData(&inMessage[inMessageIdx], MAX_RAW);
   initReceiveMessage();
-  inMessageIdx = 1 - inMessageIdx;
+  inMessageIdx = 1 - inMessageIdx; // swap buffer so next ISR writes to the other one
 
   return true;
 }
 
 void IthoCC1101::decodeBufferedPacket()
 {
+  // decode from the buffer the ISR is NOT currently writing to
   messageDecode(&inMessage[1 - inMessageIdx], &inPacket);
 }
 
@@ -696,6 +697,61 @@ int8_t IthoCC1101::sendJoinReply(uint8_t remote_index)
   return remote_index;
 }
 
+void IthoCC1101::sendBindConfirm(uint8_t remote_index)
+{
+  if (remote_index > MAX_NUM_OF_REMOTES - 1)
+    return;
+
+  uint8_t sourceId[3]{};
+  if (ithoRF.device[remote_index].sourceID[0] == 0 && ithoRF.device[remote_index].sourceID[1] == 0 && ithoRF.device[remote_index].sourceID[2] == 0)
+  {
+    sourceId[0] = defaultID[0];
+    sourceId[1] = defaultID[1];
+    sourceId[2] = defaultID[2];
+  }
+  else
+  {
+    sourceId[0] = ithoRF.device[remote_index].sourceID[0];
+    sourceId[1] = ithoRF.device[remote_index].sourceID[1];
+    sourceId[2] = ithoRF.device[remote_index].sourceID[2];
+  }
+
+  RFmessage message;
+
+  message.header = HEADER_RFT_BIDIRECTIONAL; // 0x1C: I type, addr0+addr1
+
+  message.deviceid0[0] = sourceId[0];
+  message.deviceid0[1] = sourceId[1];
+  message.deviceid0[2] = sourceId[2];
+
+  message.deviceid1[0] = ithoRF.device[remote_index].destinationID[0];
+  message.deviceid1[1] = ithoRF.device[remote_index].destinationID[1];
+  message.deviceid1[2] = ithoRF.device[remote_index].destinationID[2];
+
+  message.command = &ithoMessageBindConfirmCommandBytes[0];
+
+  sendRFMessage(&message);
+}
+
+void IthoCC1101::send1060()
+{
+  RFmessage message;
+
+  message.header = HEADER_REMOTE_1FC9; // 0x18: I type, addr0+addr2 (self-addressed)
+
+  message.deviceid0[0] = defaultID[0];
+  message.deviceid0[1] = defaultID[1];
+  message.deviceid0[2] = defaultID[2];
+
+  message.deviceid2[0] = defaultID[0];
+  message.deviceid2[1] = defaultID[1];
+  message.deviceid2[2] = defaultID[2];
+
+  message.command = &ithoMessageBatteryStatusCommandBytes[0];
+
+  sendRFMessage(&message);
+}
+
 void IthoCC1101::send2E10(uint8_t remote_index, IthoCommand command)
 {
   // if (remote_index > MAX_NUM_OF_REMOTES - 1)
@@ -960,15 +1016,15 @@ void IthoCC1101::sendRFMessage(RFmessage *message)
   CC1101Message.length = messageEncode(&ithoPacket, &CC1101Message);
   CC1101Message.length += 1;
 
-  // set end byte - determined by command length parity
+  // set end byte - even/uneven cmd length determines last byte?
   if (opcode == 0x1FC9 && command_len % 2 != 0)
   {
-    // odd command_len 1FC9 (e.g. bind confirm with len=1)
+    // odd command_len 1FC9 (e.g. bind confirm with len=1): use 0xAC
     CC1101Message.data[CC1101Message.length] = 0xAC;
   }
   else if (opcode == 0x1FC9)
   {
-    // even command_len 1FC9 (join, leave, join reply)
+    // even command_len 1FC9 (join, leave, join reply): use 0xCA
     CC1101Message.data[CC1101Message.length] = 0xCA;
   }
   else
@@ -1636,6 +1692,31 @@ void IthoCC1101::handleBind(IthoPacket *packetPtr)
   uint8_t byte0 = tempID >> 16 & 0xFF;
   uint8_t byte1 = tempID >> 8 & 0xFF;
   uint8_t byte2 = tempID & 0xFF;
+
+  // Check for W-type 1FC9 (binding accept from target device during initiator bind)
+  uint8_t msgType = (packetPtr->header >> 4) & 0x3;
+  if (msgType == MESSAGE_TYPE_W_MASK && bindInitiatorActive)
+  {
+    // Binding accept: W --- target self --:-- 1FC9 [31D9+31DA]
+    // Verify deviceId1 matches our defaultID (message is addressed to us)
+    uint32_t ourId = ((uint32_t)defaultID[0] << 16) | ((uint32_t)defaultID[1] << 8) | (uint32_t)defaultID[2];
+    if (packetPtr->deviceId1 == ourId)
+    {
+      packetPtr->command = IthoBindAccept;
+      packetPtr->remType = RemoteTypes::UNSETTYPE;
+      bindInitiatorActive = false;
+
+      for (auto &item : ithoRF.device)
+      {
+        if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
+        {
+          item.lastCommand = packetPtr->command;
+          return;
+        }
+      }
+      return;
+    }
+  }
 
   if (checkIthoCommand(packetPtr, ithoMessageLeaveCommandBytes) || checkIthoCommand(packetPtr, ithoMessageAUTORFTLeaveCommandBytes))
   {
@@ -2388,7 +2469,8 @@ const IthoCC1101::remote_command_char IthoCC1101::remote_command_msg_table[]{
     {IthoPIRmotionOff, "IthoPIRmotionOff"},
     {Itho31D9, "Itho31D9"},
     {Itho31DA, "Itho31DA"},
-    {IthoDeviceInfo, "IthoDeviceInfo"}};
+    {IthoDeviceInfo, "IthoDeviceInfo"},
+    {IthoBindAccept, "IthoBindAccept"}};
 
 const char *IthoCC1101::remote_unknown_msg = "CMD UNKNOWN ERROR";
 
