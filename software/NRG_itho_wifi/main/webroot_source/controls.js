@@ -1396,6 +1396,20 @@ document.addEventListener('DOMContentLoaded', function () {
       const items = btnId.split('-');
       websock_send(`{"remote":${items[1]}, "command":"${items[2]}"}`);
     }
+    else if (btnId.startsWith('button_sendco2-')) {
+      const idx = btnId.split('-')[1];
+      const val = $id('co2val-' + idx);
+      if (val && val.value) {
+        websock_send(`{"rfco2":${val.value}, "rfremoteindex":${idx}}`);
+      }
+    }
+    else if (btnId.startsWith('button_senddemand-')) {
+      const idx = btnId.split('-')[1];
+      const val = $id('demandval-' + idx);
+      if (val && val.value) {
+        websock_send(`{"rfdemand":${val.value}, "rfremoteindex":${idx}}`);
+      }
+    }
     else if (btnId.startsWith('ithobutton-')) {
       const items = btnId.split('-');
       websock_send(`{"ithobutton":"${items[1]}"}`);
@@ -2225,6 +2239,10 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
           var td = document.createElement('td');
           if (remfunction == 2 || remfunction == 5) {
             addRemoteButtons(td, remfunc, remtype, i, false);
+            if (remfunction == 5 && remtype == 0x1298) {
+              td.insertAdjacentHTML('beforeend', `<br><input type="number" id="co2val-${i}" min="0" max="10000" placeholder="CO2 ppm" style="width:90px;margin-top:4px;"> <button id="button_sendco2-${i}" class="pure-button">Send CO2</button>`);
+              td.insertAdjacentHTML('beforeend', `<br><input type="number" id="demandval-${i}" min="0" max="200" placeholder="Demand 0-200" style="width:90px;margin-top:4px;"> <button id="button_senddemand-${i}" class="pure-button">Send Demand</button>`);
+            }
           }
           else {
             td.id = `caps-${i}`;
@@ -3875,6 +3893,47 @@ Unless specified otherwise:<br>
             <td colspan="6">Comments:<br><em>The rfremoteindex key/value enables the selection of a specific RF
                     remote if more than 1 RF remote is configured. The index can be found on the "RF devices"
                     page.</em></td>
+        </tr>
+        <tr>
+            <td>rfco2</td>
+            <td>number</td>
+            <td>0-10000</td>
+            <td>string</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Sends a CO2 value (in ppm) via RF using the 1298 command.
+                    The RF remote at the specified index (or index 0 if rfremoteindex is not present)
+                    must be configured as type "RFT CO2". Can be used to emulate a CO2 sensor for
+                    CO2-based ventilation control. Use together with rfremoteindex to select the remote.</em></td>
+        </tr>
+        <tr>
+            <td>rfdemand</td>
+            <td>number</td>
+            <td>0-200</td>
+            <td>string</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Sends a ventilation demand value via RF using the 31E0 command.
+                    Value 0 = 0% demand (minimum), 200 (0xC8) = 100% demand (maximum).
+                    The RF remote must be configured as type "RFT CO2" or "RFT RV".
+                    This is the message that actually drives the Itho fan speed for CO2-based control.
+                    Use together with rfremoteindex and optionally rfzone (default 0).</em></td>
+        </tr>
+        <tr>
+            <td>rfzone</td>
+            <td>number</td>
+            <td>0-255</td>
+            <td>number</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Zone number for rfdemand command (default 0).
+                    Only needed for multi-zone setups.</em></td>
         </tr>
         <tr>
             <td>get</td>

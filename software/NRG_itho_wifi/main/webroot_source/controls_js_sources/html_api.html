@@ -356,6 +356,47 @@ Unless specified otherwise:<br>
                     page.</em></td>
         </tr>
         <tr>
+            <td>rfco2</td>
+            <td>number</td>
+            <td>0-10000</td>
+            <td>string</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Sends a CO2 value (in ppm) via RF using the 1298 command.
+                    The RF remote at the specified index (or index 0 if rfremoteindex is not present)
+                    must be configured as type "RFT CO2". Can be used to emulate a CO2 sensor for
+                    CO2-based ventilation control. Use together with rfremoteindex to select the remote.</em></td>
+        </tr>
+        <tr>
+            <td>rfdemand</td>
+            <td>number</td>
+            <td>0-200</td>
+            <td>string</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Sends a ventilation demand value via RF using the 31E0 command.
+                    Value 0 = 0% demand (minimum), 200 (0xC8) = 100% demand (maximum).
+                    The RF remote must be configured as type "RFT CO2" or "RFT RV".
+                    This is the message that actually drives the Itho fan speed for CO2-based control.
+                    Use together with rfremoteindex and optionally rfzone (default 0).</em></td>
+        </tr>
+        <tr>
+            <td>rfzone</td>
+            <td>number</td>
+            <td>0-255</td>
+            <td>number</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Zone number for rfdemand command (default 0).
+                    Only needed for multi-zone setups.</em></td>
+        </tr>
+        <tr>
             <td>get</td>
             <td>string</td>
             <td>rfstatus</td>

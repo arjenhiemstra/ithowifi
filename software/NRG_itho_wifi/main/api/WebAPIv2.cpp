@@ -77,6 +77,12 @@ void handleAPIv2(AsyncWebServerRequest *request)
     response_status = processRFremoteCommands(paramsJson, response);
 
   if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processRFCO2Command(paramsJson, response);
+
+  if (response_status == ApiResponse::status::CONTINUE)
+    response_status = processRFDemandCommand(paramsJson, response);
+
+  if (response_status == ApiResponse::status::CONTINUE)
     response_status = processVremoteCommands(paramsJson, response);
 
   if (response_status == ApiResponse::status::CONTINUE)
@@ -769,6 +775,74 @@ ApiResponse::api_response_status_t processRFremoteCommands(JsonObject params, Js
   response["code"] = 400;
   response["failreason"] = "cmdvalue not valid";
   return ApiResponse::status::FAIL;
+}
+
+ApiResponse::api_response_status_t processRFCO2Command(JsonObject params, JsonDocument &response)
+{
+  const char *rfco2 = params["rfco2"];
+  const char *rfremoteindex = params["rfremoteindex"];
+
+  if (rfco2 == nullptr)
+    return ApiResponse::status::CONTINUE;
+
+  response["cmdkey"] = "rfco2";
+  response["cmdvalue"] = rfco2;
+
+  uint8_t idx = 0;
+  if (rfremoteindex != nullptr)
+    idx = strtoul(rfremoteindex, NULL, 10);
+
+  response["idx"] = idx;
+
+  uint16_t co2level = strtoul(rfco2, NULL, 10);
+
+  if (ithoSendRFCO2(idx, co2level, HTMLAPI))
+  {
+    response["result"] = "rf co2 value sent";
+    return ApiResponse::status::SUCCESS;
+  }
+  else
+  {
+    response["failreason"] = "rf co2 send failed - remote must be RFT CO2 type";
+    return ApiResponse::status::FAIL;
+  }
+}
+
+ApiResponse::api_response_status_t processRFDemandCommand(JsonObject params, JsonDocument &response)
+{
+  const char *rfdemand = params["rfdemand"];
+  const char *rfremoteindex = params["rfremoteindex"];
+  const char *rfzone = params["rfzone"];
+
+  if (rfdemand == nullptr)
+    return ApiResponse::status::CONTINUE;
+
+  response["cmdkey"] = "rfdemand";
+  response["cmdvalue"] = rfdemand;
+
+  uint8_t idx = 0;
+  if (rfremoteindex != nullptr)
+    idx = strtoul(rfremoteindex, NULL, 10);
+
+  uint8_t zone = 0;
+  if (rfzone != nullptr)
+    zone = strtoul(rfzone, NULL, 10);
+
+  response["idx"] = idx;
+  response["zone"] = zone;
+
+  uint8_t demand = strtoul(rfdemand, NULL, 10);
+
+  if (ithoSendRFDemand(idx, demand, zone, HTMLAPI))
+  {
+    response["result"] = "rf demand sent";
+    return ApiResponse::status::SUCCESS;
+  }
+  else
+  {
+    response["failreason"] = "rf demand send failed - remote must be RFT CO2 or RFT RV type";
+    return ApiResponse::status::FAIL;
+  }
 }
 
 ApiResponse::api_response_status_t processVremoteCommands(JsonObject params, JsonDocument &response)

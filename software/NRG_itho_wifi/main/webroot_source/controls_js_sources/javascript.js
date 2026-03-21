@@ -1395,6 +1395,20 @@ document.addEventListener('DOMContentLoaded', function () {
       const items = btnId.split('-');
       websock_send(`{"remote":${items[1]}, "command":"${items[2]}"}`);
     }
+    else if (btnId.startsWith('button_sendco2-')) {
+      const idx = btnId.split('-')[1];
+      const val = $id('co2val-' + idx);
+      if (val && val.value) {
+        websock_send(`{"rfco2":${val.value}, "rfremoteindex":${idx}}`);
+      }
+    }
+    else if (btnId.startsWith('button_senddemand-')) {
+      const idx = btnId.split('-')[1];
+      const val = $id('demandval-' + idx);
+      if (val && val.value) {
+        websock_send(`{"rfdemand":${val.value}, "rfremoteindex":${idx}}`);
+      }
+    }
     else if (btnId.startsWith('ithobutton-')) {
       const items = btnId.split('-');
       websock_send(`{"ithobutton":"${items[1]}"}`);
@@ -2224,6 +2238,10 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
           var td = document.createElement('td');
           if (remfunction == 2 || remfunction == 5) {
             addRemoteButtons(td, remfunc, remtype, i, false);
+            if (remfunction == 5 && remtype == 0x1298) {
+              td.insertAdjacentHTML('beforeend', `<br><input type="number" id="co2val-${i}" min="0" max="10000" placeholder="CO2 ppm" style="width:90px;margin-top:4px;"> <button id="button_sendco2-${i}" class="pure-button">Send CO2</button>`);
+              td.insertAdjacentHTML('beforeend', `<br><input type="number" id="demandval-${i}" min="0" max="200" placeholder="Demand 0-200" style="width:90px;margin-top:4px;"> <button id="button_senddemand-${i}" class="pure-button">Send Demand</button>`);
+            }
           }
           else {
             td.id = `caps-${i}`;

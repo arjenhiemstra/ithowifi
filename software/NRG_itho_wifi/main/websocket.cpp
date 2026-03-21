@@ -649,6 +649,25 @@ void handle_ws_message(JsonObject root)
     ithoExecCommand(root["command"].as<const char *>(), WEB);
     sysStatReq = true;
   }
+  // RF CO2 value command
+  if (!root["rfco2"].isNull())
+  {
+    uint8_t idx = 0;
+    if (root["rfremoteindex"].is<uint8_t>())
+      idx = root["rfremoteindex"].as<uint8_t>();
+    ithoSendRFCO2(idx, root["rfco2"].as<uint16_t>(), WEB);
+  }
+  // RF demand command
+  if (!root["rfdemand"].isNull())
+  {
+    uint8_t idx = 0;
+    if (root["rfremoteindex"].is<uint8_t>())
+      idx = root["rfremoteindex"].as<uint8_t>();
+    uint8_t zone = 0;
+    if (root["rfzone"].is<uint8_t>())
+      zone = root["rfzone"].as<uint8_t>();
+    ithoSendRFDemand(idx, root["rfdemand"].as<uint8_t>(), zone, WEB);
+  }
   // Itho speed command
   if (root["itho"].is<uint16_t>())
   {

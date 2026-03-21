@@ -14,6 +14,8 @@ ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, 
 ApiResponse::api_response_status_t processCommand(JsonObject params, JsonDocument &response);
 ApiResponse::api_response_status_t processSetRFremote(JsonObject params, JsonDocument &response);
 ApiResponse::api_response_status_t processRFremoteCommands(JsonObject params, JsonDocument &response);
+ApiResponse::api_response_status_t processRFCO2Command(JsonObject params, JsonDocument &response);
+ApiResponse::api_response_status_t processRFDemandCommand(JsonObject params, JsonDocument &response);
 ApiResponse::api_response_status_t processVremoteCommands(JsonObject params, JsonDocument &response);
 ApiResponse::api_response_status_t processPWMSpeedTimerCommands(JsonObject params, JsonDocument &response);
 ApiResponse::api_response_status_t processi2csnifferCommands(JsonObject params, JsonDocument &response);

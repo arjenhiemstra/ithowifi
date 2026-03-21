@@ -111,6 +111,33 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           clean_cmd_topic = true;
         }
       }
+      if (!root["rfco2"].isNull())
+      {
+        uint8_t idx = 0;
+        if (!root["rfremoteindex"].isNull())
+        {
+          idx = strtoul(root["rfremoteindex"], NULL, 10);
+        }
+        jsonCmd = true;
+        ithoSendRFCO2(idx, root["rfco2"].as<uint16_t>(), MQTTAPI);
+        clean_cmd_topic = true;
+      }
+      if (!root["rfdemand"].isNull())
+      {
+        uint8_t idx = 0;
+        if (!root["rfremoteindex"].isNull())
+        {
+          idx = strtoul(root["rfremoteindex"], NULL, 10);
+        }
+        uint8_t zone = 0;
+        if (!root["rfzone"].isNull())
+        {
+          zone = root["rfzone"].as<uint8_t>();
+        }
+        jsonCmd = true;
+        ithoSendRFDemand(idx, root["rfdemand"].as<uint8_t>(), zone, MQTTAPI);
+        clean_cmd_topic = true;
+      }
       if (!root["speed"].isNull())
       {
         jsonCmd = true;
