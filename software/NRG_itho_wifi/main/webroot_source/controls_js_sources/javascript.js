@@ -2062,6 +2062,27 @@ function buildHtmlTablePlain(table, jsonVar) {
 }
 
 
+function generateRemoteID(index) {
+  var rfIdEl = $id('module_rf_id_str');
+  if (!rfIdEl || !rfIdEl.value) return 'empty slot';
+  var parts = rfIdEl.value.split(',');
+  if (parts.length < 3) return 'empty slot';
+  var b0 = parseInt(parts[0], 16);
+  var b1 = parseInt(parts[1], 16);
+  var b2 = (parseInt(parts[2], 16) + index) & 0xFF;
+  // Check for collisions with existing remotes
+  for (var attempt = 0; attempt < 255; attempt++) {
+    var candidate = b0.toString(16).toUpperCase() + ',' + b1.toString(16).toUpperCase() + ',' + ((b2 + attempt) & 0xFF).toString(16).toUpperCase();
+    var collision = false;
+    for (var j = 0; j < remotesCount; j++) {
+      var el = $id('id_remote-' + j);
+      if (el && el.value === candidate) { collision = true; break; }
+    }
+    if (!collision) return candidate;
+  }
+  return 'empty slot';
+}
+
 function formatCapabilities(JSONObj) {
   var str = '';
   if (JSONObj != null) {
@@ -2133,7 +2154,7 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
   remotesCount = data.length;
 
   for (const remote of data) {
-    var i = 0;
+    let i = 0;
     if (remote["index"]) i = remote["index"];
     var remtype = 0;
     var remfunction = 0;
@@ -2161,7 +2182,7 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
         if (cellValue == "0,0,0") cellValue = "empty slot";
         var idval = `id_remote-${i}`;
         var td = document.createElement('td');
-        td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}'${isWizard ? '' : " readonly=''"} />`;
+        td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}' data-saved-id='${cellValue}'${isWizard ? '' : " readonly=''"} />`;
         row.appendChild(td);
       }
       else if (key === "name") {
@@ -2179,6 +2200,25 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
           select.name = remfunction;
           select.id = `func_remote-${i}`;
           select.disabled = !isWizard;
+          select.addEventListener('change', function () {
+            var idEl = $id('id_remote-' + i);
+            if (!idEl) return;
+            if (this.value == 5) {
+              // Send mode: restore saved ID or generate new one
+              var savedId = idEl.dataset.savedId;
+              if (savedId && savedId !== 'empty slot' && savedId !== '0,0,0') {
+                idEl.value = savedId;
+              } else if (idEl.value === 'empty slot' || idEl.value === '0,0,0' || idEl.value === '') {
+                idEl.value = generateRemoteID(i);
+              }
+            } else {
+              // Receive/Monitor: save current ID and show empty
+              if (idEl.value !== 'empty slot' && idEl.value !== '0,0,0' && idEl.value !== '') {
+                idEl.dataset.savedId = idEl.value;
+              }
+              idEl.value = 'empty slot';
+            }
+          });
           for (const item of remfuncs) {
             var option = document.createElement('option');
             option.value = item[1];
