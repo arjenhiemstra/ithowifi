@@ -857,13 +857,17 @@ const messageHandlers = {
     count += 1;
     resetTimer();
     var mb = $id('message_box');
+    if (!mb) return;
     mb.style.display = 'block';
     mb.insertAdjacentHTML('beforeend', `<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
     removeAfter5secs(count);
   },
   rflog: function (f) {
-    $id('rflog_outer').classList.remove('hidden');
-    $id('rflog').insertAdjacentHTML('afterbegin', `${new Date().toLocaleString('nl-NL')}: ${f.rflog.message}<br>`);
+    var rfo = $id('rflog_outer');
+    var rfl = $id('rflog');
+    if (!rfo || !rfl) return;
+    rfo.classList.remove('hidden');
+    rfl.insertAdjacentHTML('afterbegin', `${new Date().toLocaleString('nl-NL')}: ${f.rflog.message}<br>`);
   },
   ota: function (f) {
     var x = f.ota;
@@ -888,13 +892,17 @@ function processMessage(message) {
     f = JSON.parse(message);
   }
 
-  for (var key in messageHandlers) {
-    if (key in f) {
-      messageHandlers[key](f);
-      return;
+  try {
+    for (var key in messageHandlers) {
+      if (key in f) {
+        messageHandlers[key](f);
+        return;
+      }
     }
+    processElements(f);
+  } catch (error) {
+    console.error('Error processing message:', error);
   }
-  processElements(f);
 }
 
 function initButton() {
@@ -2008,6 +2016,7 @@ function addRemoteButtons(container, remfunc, remtype, vremotenum, seperator) {
 
 function addvRemoteInterface(remtype) {
   var elem = $id('reminterface');
+  if (!elem) return;
   elem.innerHTML = '';
   var devtype = localStorage.getItem('itho_devtype') || '';
   var remfunc = (devtype === 'HRU 250-300') ? 1 : 2;
@@ -2870,6 +2879,7 @@ function wizardGoTo(step) {
     getSettings('rfsetup');
     getSettings('ithoremotes');
     wizardRemotesInterval = setInterval(function () {
+      getSettings('rfsetup');
       getSettings('ithoremotes');
     }, 5000);
     if (wizardActive) {
@@ -2928,6 +2938,7 @@ function wizardDetectDeviceCategory(devtype) {
 
 function applyDeviceDefaults() {
   var cat = wizardDeviceCategory;
+  console.log("wizardDeviceCategory:" + wizardDeviceCategory)
 
   // Helper to check a radio by name+value
   function checkRadio(name, value) {
@@ -2987,14 +2998,14 @@ function applyDeviceDefaults() {
   }
 
   // Update frequency
-  var isHRU = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350' || cat === 'hru250_300');
+  var deviceTypeQ = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350' || cat === 'hru250_300');
   var updatefreqEl = $id('itho_updatefreq');
-  if (updatefreqEl) updatefreqEl.value = (isHRU ? 10 : 60);
+  if (updatefreqEl) updatefreqEl.value = (deviceTypeQ ? 10 : 60);
 
   // RF remote type default: RFT AUTO for HRU types, RFT CVE for CVE types
   var rfRemTypeEl = $id('wiz-rfremtype');
   if (rfRemTypeEl) {
-    var rfUseAuto = (cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200' || cat === 'hru250_300');
+    var rfUseAuto = (cat === 'cve' || cat === 'hru200' || cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200' || cat === 'hru250_300');
     rfRemTypeEl.value = rfUseAuto ? '0x22F3' : '0x22F1';
   }
 
@@ -3014,7 +3025,7 @@ function wizardLockDefaults() {
     'option-31d9-1', 'option-31d9-0',
     'option-4210-1', 'option-4210-0',
     'itho_numvrem',
-    'option-vremotejoin-2', 'option-vremotejoin-1', 'option-vremotejoin-0',
+    'option-vremotejoin-1', 'option-vremotejoin-0',
     'option-vremotemedium-1', 'option-vremotemedium-0',
     'wiz-vremtype',
     'itho_updatefreq'
@@ -3041,7 +3052,7 @@ function wizardOverrideDefaults() {
     'option-31d9-1', 'option-31d9-0',
     'option-4210-1', 'option-4210-0',
     'itho_numvrem',
-    'option-vremotejoin-2', 'option-vremotejoin-1', 'option-vremotejoin-0',
+    'option-vremotejoin-1', 'option-vremotejoin-0',
     'option-vremotemedium-1', 'option-vremotemedium-0',
     'wiz-vremtype',
     'itho_updatefreq'
@@ -3160,7 +3171,7 @@ function wizardFinish() {
   var vremTypeEl = $id('wiz-vremtype');
   if (vremTypeEl && parseInt($val('itho_numvrem')) > 0) {
     var vremType = parseInt(vremTypeEl.value);
-    websock_send(JSON.stringify({itho_update_vremote: 0, remtype: vremType, value: ''}));
+    websock_send(JSON.stringify({itho_update_vremote: 0, remtype: vremType, value: 'remote0'}));
   }
 
   // 2c. Save RF remote type for all configured RF remotes
