@@ -960,9 +960,15 @@ void IthoCC1101::sendRFMessage(RFmessage *message)
   CC1101Message.length = messageEncode(&ithoPacket, &CC1101Message);
   CC1101Message.length += 1;
 
-  // set end byte - even/uneven cmd length determines last byte?
-  if (opcode == 0x1FC9)
+  // set end byte - determined by command length parity
+  if (opcode == 0x1FC9 && command_len % 2 != 0)
   {
+    // odd command_len 1FC9 (e.g. bind confirm with len=1)
+    CC1101Message.data[CC1101Message.length] = 0xAC;
+  }
+  else if (opcode == 0x1FC9)
+  {
+    // even command_len 1FC9 (join, leave, join reply)
     CC1101Message.data[CC1101Message.length] = 0xCA;
   }
   else
