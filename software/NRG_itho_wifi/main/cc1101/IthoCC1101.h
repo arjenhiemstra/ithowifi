@@ -230,6 +230,10 @@ public:
   int8_t sendJoinReply(uint8_t remote_index);
   void sendBindConfirm(uint8_t remote_index);
   void send1060();
+  void send1298(uint8_t remote_index, uint16_t co2level);
+  void send12A0(uint8_t remote_index, uint8_t humidity, int16_t temperature, int16_t dewpoint);
+  void send31E0(uint8_t remote_index, uint8_t zone = 0, uint8_t demand = 0, uint8_t flags = 0);
+  void sendRQ31DA(uint8_t remote_index);
   void send10E0();
   void send2E10(uint8_t remote_index, IthoCommand command);
   void send31D9(uint8_t speedstatus = 0, uint8_t info = 0);

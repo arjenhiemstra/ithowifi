@@ -536,6 +536,72 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   return res;
 }
 
+bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
+{
+  if (remote_index >= remotes.getMaxRemotes())
+    return false;
+
+  if (remotes.getRemoteType(remote_index) != RemoteTypes::RFTCO2)
+  {
+    E_LOG("SYS: rfco2 failed - remote %d is not RFT CO2 type", remote_index);
+    return false;
+  }
+
+  D_LOG("SYS: send rfco2:%d, idx:%d", co2level, remote_index);
+
+  bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
+  if (bidirectional)
+    rfManager.radio.setSendTries(1);
+
+  disableRF_ISR();
+  rfManager.radio.send1298(remote_index, co2level);
+  enableRF_ISR();
+
+  if (bidirectional)
+    rfManager.radio.setSendTries(3);
+
+  char buf[32]{};
+  snprintf(buf, sizeof(buf), "rfco2:%d, idx:%d", co2level, remote_index);
+  logLastCommand(buf, origin);
+
+  return true;
+}
+
+bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOrigin origin)
+{
+  if (remote_index >= remotes.getMaxRemotes())
+    return false;
+
+  RemoteTypes rtype = remotes.getRemoteType(remote_index);
+  if (rtype != RemoteTypes::RFTCO2 && rtype != RemoteTypes::RFTRV)
+  {
+    E_LOG("SYS: rfdemand failed - remote %d is not RFT CO2 or RFT RV type", remote_index);
+    return false;
+  }
+
+  if (demand > 200)
+    demand = 200;
+
+  D_LOG("SYS: send rfdemand:%d, zone:%d, idx:%d", demand, zone, remote_index);
+
+  bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
+  if (bidirectional)
+    rfManager.radio.setSendTries(1);
+
+  disableRF_ISR();
+  rfManager.radio.send31E0(remote_index, zone, demand, 0x00);
+  enableRF_ISR();
+
+  if (bidirectional)
+    rfManager.radio.setSendTries(3);
+
+  char buf[40]{};
+  snprintf(buf, sizeof(buf), "rfdemand:%d, zone:%d, idx:%d", demand, zone, remote_index);
+  logLastCommand(buf, origin);
+
+  return true;
+}
+
 bool ithoSetSpeed(const char *speed, cmdOrigin origin)
 {
   D_LOG("SYS: ithoSetSpeed: char speed:%s", speed);
