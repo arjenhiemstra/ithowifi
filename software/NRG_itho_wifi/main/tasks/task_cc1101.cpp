@@ -571,34 +571,34 @@ void TaskCC1101(void *pvParameters)
             if (remotes.remoteLearnLeaveStatus())
             {
               int index = remotes.registerNewRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2), remtype);
-              bool bidirectional = remotes.getRemoteBidirectional(index);
-              // bool bidirectional = (remtype == RemoteTypes::RFTAUTON || remtype == RemoteTypes::RFTN || remtype == RemoteTypes::RFTCO2 || remtype == RemoteTypes::RFTRV || remtype == RemoteTypes::RFTSPIDER) ? ((remotes.getRemoteFunction(index) != RemoteFunctions::MONITOR) ? true : false) : false;
-              // remotes.updateRemoteBidirectional(index, bidirectional);
-              rfManager.radio.updateRFDevice(index, *(lastID + 0), *(lastID + 1), *(lastID + 2), remotes.getRemoteType(index), bidirectional);
+
+              if (index == -1)
+              {
+                // Already registered — look up existing index for re-binding
+                index = remotes.remoteIndex(*(lastID + 0), *(lastID + 1), *(lastID + 2));
+                D_LOG("RFI: Remote already registered at index:%d, re-binding", index);
+              }
+
               if (index >= 0)
               {
-                // int rfresult = rfManager.radio.getRemoteIndexByID(*(lastID + 0), *(lastID + 1), *(lastID + 2));
+                // Auto-detect bidirectional from remote type (unless monitor mode)
+                bool bidirectional = (remtype == RemoteTypes::RFTAUTON || remtype == RemoteTypes::RFTN ||
+                                      remtype == RemoteTypes::RFTCO2 || remtype == RemoteTypes::RFTRV ||
+                                      remtype == RemoteTypes::RFTSPIDER)
+                                         ? (remotes.getRemoteFunction(index) != RemoteFunctions::MONITOR)
+                                         : false;
+                remotes.updateRemoteBidirectional(index, bidirectional);
+                rfManager.radio.updateRFDevice(index, *(lastID + 0), *(lastID + 1), *(lastID + 2), remotes.getRemoteType(index), bidirectional);
+
                 if (bidirectional)
                 {
-                  // rfManager.radio.updateSourceID(sys.getMac(3), sys.getMac(4), sys.getMac(5) - 1, index);
-                  // if (index >= 0)
-                  // {
                   joinReplyRemIndex = index;
-                  // D_LOG("RFI: sendJoinReply:true");
-
                   sendJoinReply = true;
-                  // }
                 }
 
                 saveRemotesflag = true;
               }
-              else
-              {
-                // error
-                // case -1: // failed! - remote already registered
-                //   break;
-                // case -2: // failed! - max number of remotes reached"
-              }
+              // index == -2: max number of remotes reached
             }
             if (virtualRemotes.remoteLearnLeaveStatus())
             {
