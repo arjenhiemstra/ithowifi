@@ -1247,13 +1247,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var remfunc = (!funcEl || typeof funcEl.value === 'undefined') ? 0 : funcEl.value;
         var typeEl = $id('type_remote-' + i);
         var remtype = (!typeEl || typeof typeEl.value === 'undefined') ? 0 : typeEl.value;
-        var biEl = $id('bidirect_remote-' + i);
-        var bidirectional = (biEl && biEl.checked) ? true : false;
         var id = $id('id_remote-' + i).value;
         if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
           remotesRefreshNeeded = true;
-          websock_send(`{"${btnId}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + i).value}","remtype":${remtype},"remfunc":${remfunc},"bidirectional":${bidirectional}}`);
+          websock_send(`{"${btnId}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + i).value}","remtype":${remtype},"remfunc":${remfunc}}`);
         }
         else {
           alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
@@ -1755,12 +1753,6 @@ function radio(origin, state) {
     $qa(`[id^=id_${origin}-]`).forEach(function (el, index) {
       el.readOnly = (index != state);
     });
-    $qa(`[id^=bidirect_${origin}-]`).forEach(function (el, index) {
-      el.disabled = true;
-      if (index == state) {
-        remfunction_validation(index);
-      }
-    });
     if (origin == "ithoset") {
       $qa('[id^=ithosetrefresh-]').forEach(function (el, index) {
         var ref = $id('ithosetrefresh-' + index);
@@ -2069,11 +2061,6 @@ function buildHtmlTablePlain(table, jsonVar) {
   table.appendChild(tbody);
 }
 
-function remfunction_validation(i) {
-  var funcEl = $id('func_remote-' + i);
-  var biEl = $id('bidirect_remote-' + i);
-  if (biEl) biEl.disabled = !(funcEl && funcEl.value == 5);
-}
 
 function formatCapabilities(JSONObj) {
   var str = '';
@@ -2131,9 +2118,6 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
     }
     else if (key === "capabilities") {
       append = ["Capabilities", !isWizard];
-    }
-    else if (key === "bidirectional" && remfunc == 1) { //unly show on rf remote page
-      append = ["Bidirectional", true];
     }
     if (append[1]) {
       var th = document.createElement('th');
@@ -2194,7 +2178,6 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
           var select = document.createElement('select');
           select.name = remfunction;
           select.id = `func_remote-${i}`;
-          select.setAttribute('onChange', `remfunction_validation(${i});`);
           select.disabled = !isWizard;
           for (const item of remfuncs) {
             var option = document.createElement('option');
@@ -2247,18 +2230,6 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
             td.id = `caps-${i}`;
             td.innerHTML = formatCapabilities(value);
           }
-          row.appendChild(td);
-        }
-      }
-      else if (key === "bidirectional") {
-        if (remfunc != 2) { //do not add remote function is remfunction == virtual remote
-          var checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.id = `bidirect_remote-${i}`;
-          checkbox.checked = jsonVar[i]["bidirectional"];
-          checkbox.disabled = true;
-          var td = document.createElement('td');
-          td.appendChild(checkbox);
           row.appendChild(td);
         }
       }
@@ -3206,8 +3177,7 @@ function wizardFinish() {
           remtype: rfRemType,
           remfunc: remfuncVal,
           value: $id('name_remote-' + ri) ? $id('name_remote-' + ri).value : '',
-          id: idEl.value.split(',').map(function(s) { return parseInt(s, 16); }),
-          bidirectional: false
+          id: idEl.value.split(',').map(function(s) { return parseInt(s, 16); })
         }));
       }
     }

@@ -716,8 +716,10 @@ void handle_ws_message(JsonObject root)
     auto rtype = (RemoteTypes)(root["remtype"].is<uint16_t>() ? root["remtype"].as<uint16_t>() : 0);
     remotes.updateRemoteType(idx, rtype);
 
-    // bidirectional
-    bool bidir = root["bidirectional"].is<bool>() ? root["bidirectional"].as<bool>() : false;
+    // bidirectional - derived from remote type
+    bool bidir = (rtype == RemoteTypes::RFTAUTON || rtype == RemoteTypes::RFTN ||
+                  rtype == RemoteTypes::RFTCO2 || rtype == RemoteTypes::RFTRV ||
+                  rtype == RemoteTypes::RFTSPIDER);
     remotes.updateRemoteBidirectional(idx, bidir);
 
     // id array
