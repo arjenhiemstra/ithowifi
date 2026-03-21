@@ -858,13 +858,17 @@ const messageHandlers = {
     count += 1;
     resetTimer();
     var mb = $id('message_box');
+    if (!mb) return;
     mb.style.display = 'block';
     mb.insertAdjacentHTML('beforeend', `<p class='messageP' id='mbox_p${count}'>Message: ${x.message}</p>`);
     removeAfter5secs(count);
   },
   rflog: function (f) {
-    $id('rflog_outer').classList.remove('hidden');
-    $id('rflog').insertAdjacentHTML('afterbegin', `${new Date().toLocaleString('nl-NL')}: ${f.rflog.message}<br>`);
+    var rfo = $id('rflog_outer');
+    var rfl = $id('rflog');
+    if (!rfo || !rfl) return;
+    rfo.classList.remove('hidden');
+    rfl.insertAdjacentHTML('afterbegin', `${new Date().toLocaleString('nl-NL')}: ${f.rflog.message}<br>`);
   },
   ota: function (f) {
     var x = f.ota;
@@ -889,13 +893,17 @@ function processMessage(message) {
     f = JSON.parse(message);
   }
 
-  for (var key in messageHandlers) {
-    if (key in f) {
-      messageHandlers[key](f);
-      return;
+  try {
+    for (var key in messageHandlers) {
+      if (key in f) {
+        messageHandlers[key](f);
+        return;
+      }
     }
+    processElements(f);
+  } catch (error) {
+    console.error('Error processing message:', error);
   }
-  processElements(f);
 }
 
 function initButton() {
@@ -2009,6 +2017,7 @@ function addRemoteButtons(container, remfunc, remtype, vremotenum, seperator) {
 
 function addvRemoteInterface(remtype) {
   var elem = $id('reminterface');
+  if (!elem) return;
   elem.innerHTML = '';
   var devtype = localStorage.getItem('itho_devtype') || '';
   var remfunc = (devtype === 'HRU 250-300') ? 1 : 2;
@@ -2871,6 +2880,7 @@ function wizardGoTo(step) {
     getSettings('rfsetup');
     getSettings('ithoremotes');
     wizardRemotesInterval = setInterval(function () {
+      getSettings('rfsetup');
       getSettings('ithoremotes');
     }, 5000);
     if (wizardActive) {
@@ -2929,6 +2939,7 @@ function wizardDetectDeviceCategory(devtype) {
 
 function applyDeviceDefaults() {
   var cat = wizardDeviceCategory;
+  console.log("wizardDeviceCategory:" + wizardDeviceCategory)
 
   // Helper to check a radio by name+value
   function checkRadio(name, value) {
@@ -2988,14 +2999,14 @@ function applyDeviceDefaults() {
   }
 
   // Update frequency
-  var isHRU = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350' || cat === 'hru250_300');
+  var deviceTypeQ = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350' || cat === 'hru250_300');
   var updatefreqEl = $id('itho_updatefreq');
-  if (updatefreqEl) updatefreqEl.value = (isHRU ? 10 : 60);
+  if (updatefreqEl) updatefreqEl.value = (deviceTypeQ ? 10 : 60);
 
   // RF remote type default: RFT AUTO for HRU types, RFT CVE for CVE types
   var rfRemTypeEl = $id('wiz-rfremtype');
   if (rfRemTypeEl) {
-    var rfUseAuto = (cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200' || cat === 'hru250_300');
+    var rfUseAuto = (cat === 'cve' || cat === 'hru200' || cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200' || cat === 'hru250_300');
     rfRemTypeEl.value = rfUseAuto ? '0x22F3' : '0x22F1';
   }
 
@@ -3015,7 +3026,7 @@ function wizardLockDefaults() {
     'option-31d9-1', 'option-31d9-0',
     'option-4210-1', 'option-4210-0',
     'itho_numvrem',
-    'option-vremotejoin-2', 'option-vremotejoin-1', 'option-vremotejoin-0',
+    'option-vremotejoin-1', 'option-vremotejoin-0',
     'option-vremotemedium-1', 'option-vremotemedium-0',
     'wiz-vremtype',
     'itho_updatefreq'
@@ -3042,7 +3053,7 @@ function wizardOverrideDefaults() {
     'option-31d9-1', 'option-31d9-0',
     'option-4210-1', 'option-4210-0',
     'itho_numvrem',
-    'option-vremotejoin-2', 'option-vremotejoin-1', 'option-vremotejoin-0',
+    'option-vremotejoin-1', 'option-vremotejoin-0',
     'option-vremotemedium-1', 'option-vremotemedium-0',
     'wiz-vremtype',
     'itho_updatefreq'
@@ -3161,7 +3172,7 @@ function wizardFinish() {
   var vremTypeEl = $id('wiz-vremtype');
   if (vremTypeEl && parseInt($val('itho_numvrem')) > 0) {
     var vremType = parseInt(vremTypeEl.value);
-    websock_send(JSON.stringify({itho_update_vremote: 0, remtype: vremType, value: ''}));
+    websock_send(JSON.stringify({itho_update_vremote: 0, remtype: vremType, value: 'remote0'}));
   }
 
   // 2c. Save RF remote type for all configured RF remotes
@@ -3954,7 +3965,7 @@ var html_ithostatus = `
   generated
   automatically using this Itho model/firmware version information.</p>
 <p>A working I2C connection is needed for these
-  status labels to get populated and updated.</p>
+  status labels to get populated and updated. Status values are retrieved from Itho firmware and presented unchanged.</p>
 <span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span><br><br>
 <style>
   .pure-form-aligned .pure-control-group label {
@@ -4564,9 +4575,7 @@ var html_systemsettings_start = `
       <input id="itho_counter_updatefreq" type="number" min="0" max="65535" size="6">
     </div>
     <legend><br>Virtual remote settings:</legend>
-    <p>The add-on can present itself as a virtual remote. A virtual remote emulates a physical remote through software.
-      A virtual remote must be joined to the Itho unit before it can be used.</p>
-    <p>A join command will only be accepted by the Itho unit within the first 2 minutes after a power cycle.</p>
+    <p>The add-on can present itself as one or more virtual remote(s). A virtual remote emulates a physical remote through software.</p>
     <div class="pure-control-group">
       <label for="itho_numvrem">Number of virtual remotes</label>
       <input id="itho_numvrem" type="number" min="1" max="12" size="6">
@@ -4580,7 +4589,6 @@ var html_systemsettings_start = `
     <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
     <div class="pure-control-group">
       <label for="option-vremotejoin" class="pure-radio">Send join command</label>
-      <input id="option-vremotejoin-2" type="radio" name="option-itho_sendjoin" value="2"> every power on
       <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1"> next power on
       <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
     </div>
@@ -5128,15 +5136,15 @@ var html_remotessetup = `
   }
 </style>
 <br>
-<p>A range of RF devices (ie. remotes, co2 and rv sensors) can be joined to the add-on using a CC1101 RF module.<br> The
-  add-on will translate commands from a RF device to speed/timer commands towards the itho.<br>This way the speed status
+<p>A range of RF devices (ie. remotes, co2 and rv sensors) can be joined to the add-on using the CC1101 RF module.<br> The
+  add-on will translate commands from a RF device to speed/timer commands towards the Itho.<br>This way the speed status
   of a
   RF device is always correctly represented on the add-on and within your domotica software.</p>
 <p>There is also an option
-  to monitor only. With this option checked, a RF device still paired with an Itho unit can be monitored without
+  to only monitor RF devices. With this option checked, a RF device still paired with an Itho unit can be monitored without
   influencing
-  the commands using the add-on.</p>
-<p>Changing the remote function to "Send" will enable the user to send RF commands by using the CC1101 RF module.</p>
+  the commands to your Itho.</p>
+<p>Changing the remote function to "Send" will enable the user to send RF commands. The add-on can present itself with this function as a remote to you Itho.</p>
 <p>Last received commands (and if applicable data) received from paired RF devices is available through the MQTT API and
   WebAPI</p>
 <form class="pure-form pure-form-aligned">
@@ -5196,8 +5204,7 @@ var html_vremotessetup = `
 </style>
 <br>
 <p>The add-on can present itself as one or more virtual remote(s). A virtual remote emulates a physical remote through
-  software.<br>A virtual remote must be joined to the Itho unit before it can be used. A join command will only be
-  accepted by the Itho unit within the first 2 minutes after a power cycle.</p>
+  software.<br>A virtual remote must be joined to the Itho unit before it can be used. Refer to your Itho manual how to join new remotes to you specific unit.</p>
 <p>With the 'Copy ID' function the ID from an existing physical remote can be copied. If the remote type is supported,
   the type will be detected automatically. If this physical remote is already joined to the Itho unit a new join is not
   necessary.</p>
@@ -5564,13 +5571,12 @@ var html_wizard = `
         </div>
         <div class="pure-control-group">
           <label for="option-vremotejoin" class="pure-radio">Send join command</label>
-          <input id="option-vremotejoin-2" type="radio" name="option-itho_sendjoin" value="2"> every power on
-          <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1"> next power on
+          <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1" checked> next power on
           <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
         </div>
         <div class="pure-control-group">
           <label for="option-vremotemedium" class="pure-radio">Force medium/auto mode</label>
-          <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1"> on
+          <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1" checked> on
           <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
         </div>
         <div class="pure-control-group" id="wiz-vremtype-row">
