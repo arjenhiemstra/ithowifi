@@ -31,6 +31,7 @@ private:
   struct Remote
   {
     mutable uint8_t ID[3]{0, 0, 0};
+    uint8_t destID[3]{0, 0, 0}; // target device ID for bidirectional communication (e.g. Itho CVE address after binding)
     char name[32];
     mutable RemoteTypes remtype{RemoteTypes::UNSETTYPE};
     mutable RemoteFunctions remfunc{RemoteFunctions::UNSETFUNC};
@@ -106,6 +107,8 @@ public:
   void updateRemoteName(const uint8_t index, const char *remoteName);
   void updateRemoteType(const uint8_t index, const uint16_t type);
   void updateRemoteID(const uint8_t index, uint8_t byte0, uint8_t byte1, uint8_t byte2);
+  void updateRemoteDestID(const uint8_t index, uint8_t byte0, uint8_t byte1, uint8_t byte2);
+  void getRemoteDestIDbyIndex(const int index, uint8_t *id);
   void updateRemoteBidirectional(const uint8_t index, bool bidirectional);
   void updateRemoteFunction(const uint8_t index, const uint8_t remfunc);
   // int remoteIndex(const int32_t id);

@@ -224,6 +224,21 @@ void IthoRemote::updateRemoteID(const uint8_t index, uint8_t byte0, uint8_t byte
   remotes[index].ID[1] = byte1;
   remotes[index].ID[2] = byte2;
 }
+void IthoRemote::updateRemoteDestID(const uint8_t index, uint8_t byte0, uint8_t byte1, uint8_t byte2)
+{
+  remotes[index].destID[0] = byte0;
+  remotes[index].destID[1] = byte1;
+  remotes[index].destID[2] = byte2;
+}
+void IthoRemote::getRemoteDestIDbyIndex(const int index, uint8_t *id)
+{
+  if (!id)
+    return;
+  for (uint8_t i = 0; i < 3; i++)
+  {
+    id[i] = remotes[index].destID[i];
+  }
+}
 void IthoRemote::updateRemoteFunction(const uint8_t index, const uint8_t remfunc)
 {
   remotes[index].remfunc = static_cast<RemoteFunctions>(remfunc);
@@ -344,6 +359,10 @@ void IthoRemote::Remote::set(JsonObject obj)
   {
     bidirectional = obj["bidirectional"];
   }
+  if (!obj["destid"].isNull())
+  {
+    copyArray(obj["destid"].as<JsonArray>(), destID);
+  }
 }
 
 void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index, bool human_reaadble) const
@@ -396,6 +415,14 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
     obj["capabilities"] = capabilities;
   }
   obj["bidirectional"] = bidirectional;
+  if (destID[0] != 0 || destID[1] != 0 || destID[2] != 0)
+  {
+    JsonArray did = obj["destid"].to<JsonArray>();
+    for (uint8_t y = 0; y < 3; y++)
+    {
+      did.add(destID[y]);
+    }
+  }
 }
 
 bool IthoRemote::set(JsonObject obj, const char *root)

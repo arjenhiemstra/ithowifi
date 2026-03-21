@@ -329,6 +329,13 @@ void TaskCC1101(void *pvParameters)
       rfManager.radio.setBindAllowed(true);
       rfManager.radio.addRFDevice(id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteBidirectional(index));
       rfManager.radio.setBindAllowed(false);
+      // Restore persisted target device ID for bidirectional remotes
+      uint8_t destId[3]{};
+      remotes.getRemoteDestIDbyIndex(index, &destId[0]);
+      if (destId[0] != 0 || destId[1] != 0 || destId[2] != 0)
+      {
+        rfManager.radio.updateDestinationID(destId[0], destId[1], destId[2], index);
+      }
     }
     systemConfig.rfInitOK = true;
 
@@ -548,8 +555,11 @@ void TaskCC1101(void *pvParameters)
             cancelBindInitiatorTimeout();
             uint8_t remIdx = rfManager.radio.getBindInitiatorRemIndex();
             D_LOG("RFI: Binding accept received, remote index:%d", remIdx);
-            // Store the target's device ID as the destination for this remote
+            // Store the target's device ID as the destination for this remote (runtime)
             rfManager.radio.updateDestinationID(*(lastID + 0), *(lastID + 1), *(lastID + 2), remIdx);
+            // Persist the target device ID so it survives reboot
+            remotes.updateRemoteDestID(remIdx, *(lastID + 0), *(lastID + 1), *(lastID + 2));
+            saveRemotesflag = true;
             bindConfirmRemIndex = remIdx;
             // Delay the confirm to let the remaining accepts from the target pass
             rf_message.once_ms(300, []()
