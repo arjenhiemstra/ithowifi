@@ -68,6 +68,8 @@ private:
   uint8_t chipVersion{};
 
   // receive
+  CC1101Packet inMessage[2];
+  volatile uint8_t inMessageIdx{0}; // ISR writes to inMessage[inMessageIdx], task decodes from inMessage[1 - inMessageIdx]
   IthoPacket inPacket;
 
   // send
@@ -178,6 +180,7 @@ public:
   }
   // receive
   bool receivePacket(); // read RX fifo
+  void decodeBufferedPacket(); // decode raw packet buffered by receivePacket
   IthoPacket *checkForNewPacket();
   bool parseMessage(IthoPacket *packetPtr);
 

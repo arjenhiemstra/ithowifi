@@ -354,12 +354,16 @@ void IthoCC1101::initReceiveMessage()
 
 bool IthoCC1101::receivePacket()
 {
-  CC1101Packet inMessage;
-  readData(&inMessage, MAX_RAW);
-  messageDecode(&inMessage, &inPacket);
+  readData(&inMessage[inMessageIdx], MAX_RAW);
   initReceiveMessage();
+  inMessageIdx = 1 - inMessageIdx;
 
   return true;
+}
+
+void IthoCC1101::decodeBufferedPacket()
+{
+  messageDecode(&inMessage[1 - inMessageIdx], &inPacket);
 }
 
 IthoPacket *IthoCC1101::checkForNewPacket()
@@ -987,7 +991,8 @@ void IthoCC1101::sendRFMessage(RFmessage *message)
     sendData(&CC1101Message);
 
     finishTransfer();
-    delay(delaytime);
+    if (i < sendTries - 1)
+      delay(delaytime);
   }
   initReceive();
 }

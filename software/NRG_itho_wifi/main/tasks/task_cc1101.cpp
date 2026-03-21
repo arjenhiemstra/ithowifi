@@ -440,6 +440,7 @@ void TaskCC1101(void *pvParameters)
       {
         ithoCheck = false;
 
+        rfManager.radio.decodeBufferedPacket();
         IthoPacket *packet = rfManager.radio.checkForNewPacket();
         rfManager.radio.parseMessage(packet);
 
