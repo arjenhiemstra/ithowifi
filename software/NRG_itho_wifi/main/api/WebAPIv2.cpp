@@ -111,7 +111,8 @@ void handleAPIv2(AsyncWebServerRequest *request)
   }
   else
   {
-    apiresponse.sendError("api call could not be processed");
+    response["failreason"] = "no valid api command found";
+    apiresponse.sendFail(response);
   }
 
   return;

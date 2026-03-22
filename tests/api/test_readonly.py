@@ -101,9 +101,11 @@ class TestEdgeCases:
     """Test boundary conditions and malformed input."""
 
     def test_empty_request(self):
-        """No parameters should not return 5xx."""
+        """No parameters should return fail, not server error."""
         r = requests.get(API_URL, timeout=10)
         assert r.status_code < 500, f"Server error on empty request: {r.status_code} {r.text}"
+        data = r.json()
+        assert data.get("status") == "fail"
 
     def test_long_string_param(self):
         """Very long string should not crash the ESP32."""
