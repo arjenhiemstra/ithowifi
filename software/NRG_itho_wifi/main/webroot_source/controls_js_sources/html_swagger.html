@@ -1,0 +1,24 @@
+<div class="header">
+    <h1>IthoWifi - API Explorer</h1>
+</div>
+<p>Interactive API documentation powered by Swagger UI. Requires internet access to load the UI framework from CDN.</p>
+<p><a href='/api/openapi.json' target='_blank'>Download OpenAPI Specification (JSON)</a></p>
+<div id="swagger-ui"></div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css"/>
+<script>
+  var swaggerScript = document.createElement('script');
+  swaggerScript.src = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js';
+  swaggerScript.onload = function() {
+    SwaggerUIBundle({
+      url: '/api/openapi.json',
+      dom_id: '#swagger-ui',
+      deepLinking: true,
+      presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+      layout: 'BaseLayout'
+    });
+  };
+  swaggerScript.onerror = function() {
+    $id('swagger-ui').innerHTML = '<p style="color:red">Failed to load Swagger UI from CDN. Check your internet connection.</p><p>You can still use the <a href="/api/openapi.json" target="_blank">OpenAPI spec</a> with an external tool like <a href="https://editor.swagger.io" target="_blank">Swagger Editor</a>.</p>';
+  };
+  document.head.appendChild(swaggerScript);
+</script>

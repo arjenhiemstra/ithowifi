@@ -1850,6 +1850,7 @@ function update_page(page) {
   if (page == 'vremotes') { main.insertAdjacentHTML('beforeend', html_vremotessetup); }
   if (page == 'mqtt') { main.insertAdjacentHTML('beforeend', html_mqttsetup); }
   if (page == 'api') { main.insertAdjacentHTML('beforeend', html_api); }
+  if (page == 'swagger') { main.insertAdjacentHTML('beforeend', html_swagger); main.style.maxWidth = '1600px'; }
   if (page == 'help') { main.insertAdjacentHTML('beforeend', html_help); }
   if (page == 'reset') { main.insertAdjacentHTML('beforeend', html_reset); }
   if (page == 'update') { main.insertAdjacentHTML('beforeend', html_update); }

@@ -1,4 +1,5 @@
 #include "tasks/task_web.h"
+#include "api/OpenAPI.h"
 
 #include "webroot/controls_js_gz.h"
 #include "webroot/edit_html_gz.h"
@@ -240,6 +241,7 @@ void webServerInit()
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); });
   server.on("/api.html", HTTP_GET, handleAPI);
+  server.on("/api/openapi.json", HTTP_GET, handleOpenAPI);
 
   // Log file download
   server.on("/curlog", HTTP_GET, handleCurLogDownload);

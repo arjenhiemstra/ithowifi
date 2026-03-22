@@ -1248,13 +1248,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var remfunc = (!funcEl || typeof funcEl.value === 'undefined') ? 0 : funcEl.value;
         var typeEl = $id('type_remote-' + i);
         var remtype = (!typeEl || typeof typeEl.value === 'undefined') ? 0 : typeEl.value;
-        var biEl = $id('bidirect_remote-' + i);
-        var bidirectional = (biEl && biEl.checked) ? true : false;
         var id = $id('id_remote-' + i).value;
         if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
           remotesRefreshNeeded = true;
-          websock_send(`{"${btnId}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + i).value}","remtype":${remtype},"remfunc":${remfunc},"bidirectional":${bidirectional}}`);
+          websock_send(`{"${btnId}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + i).value}","remtype":${remtype},"remfunc":${remfunc}}`);
         }
         else {
           alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
@@ -1756,12 +1754,6 @@ function radio(origin, state) {
     $qa(`[id^=id_${origin}-]`).forEach(function (el, index) {
       el.readOnly = (index != state);
     });
-    $qa(`[id^=bidirect_${origin}-]`).forEach(function (el, index) {
-      el.disabled = true;
-      if (index == state) {
-        remfunction_validation(index);
-      }
-    });
     if (origin == "ithoset") {
       $qa('[id^=ithosetrefresh-]').forEach(function (el, index) {
         var ref = $id('ithosetrefresh-' + index);
@@ -1859,6 +1851,7 @@ function update_page(page) {
   if (page == 'vremotes') { main.insertAdjacentHTML('beforeend', html_vremotessetup); }
   if (page == 'mqtt') { main.insertAdjacentHTML('beforeend', html_mqttsetup); }
   if (page == 'api') { main.insertAdjacentHTML('beforeend', html_api); }
+  if (page == 'swagger') { main.insertAdjacentHTML('beforeend', html_swagger); main.style.maxWidth = '1600px'; }
   if (page == 'help') { main.insertAdjacentHTML('beforeend', html_help); }
   if (page == 'reset') { main.insertAdjacentHTML('beforeend', html_reset); }
   if (page == 'update') { main.insertAdjacentHTML('beforeend', html_update); }
@@ -2070,10 +2063,26 @@ function buildHtmlTablePlain(table, jsonVar) {
   table.appendChild(tbody);
 }
 
-function remfunction_validation(i) {
-  var funcEl = $id('func_remote-' + i);
-  var biEl = $id('bidirect_remote-' + i);
-  if (biEl) biEl.disabled = !(funcEl && funcEl.value == 5);
+
+function generateRemoteID(index) {
+  var rfIdEl = $id('module_rf_id_str');
+  if (!rfIdEl || !rfIdEl.value) return 'empty slot';
+  var parts = rfIdEl.value.split(',');
+  if (parts.length < 3) return 'empty slot';
+  var b0 = parseInt(parts[0], 16);
+  var b1 = parseInt(parts[1], 16);
+  var b2 = (parseInt(parts[2], 16) + index) & 0xFF;
+  // Check for collisions with existing remotes
+  for (var attempt = 0; attempt < 255; attempt++) {
+    var candidate = b0.toString(16).toUpperCase() + ',' + b1.toString(16).toUpperCase() + ',' + ((b2 + attempt) & 0xFF).toString(16).toUpperCase();
+    var collision = false;
+    for (var j = 0; j < remotesCount; j++) {
+      var el = $id('id_remote-' + j);
+      if (el && el.value === candidate) { collision = true; break; }
+    }
+    if (!collision) return candidate;
+  }
+  return 'empty slot';
 }
 
 function formatCapabilities(JSONObj) {
@@ -2133,9 +2142,6 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
     else if (key === "capabilities") {
       append = ["Capabilities", !isWizard];
     }
-    else if (key === "bidirectional" && remfunc == 1) { //unly show on rf remote page
-      append = ["Bidirectional", true];
-    }
     if (append[1]) {
       var th = document.createElement('th');
       th.innerHTML = append[0];
@@ -2150,7 +2156,7 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
   remotesCount = data.length;
 
   for (const remote of data) {
-    var i = 0;
+    let i = 0;
     if (remote["index"]) i = remote["index"];
     var remtype = 0;
     var remfunction = 0;
@@ -2178,7 +2184,7 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
         if (cellValue == "0,0,0") cellValue = "empty slot";
         var idval = `id_remote-${i}`;
         var td = document.createElement('td');
-        td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}'${isWizard ? '' : " readonly=''"} />`;
+        td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}' data-saved-id='${cellValue}'${isWizard ? '' : " readonly=''"} />`;
         row.appendChild(td);
       }
       else if (key === "name") {
@@ -2195,8 +2201,26 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
           var select = document.createElement('select');
           select.name = remfunction;
           select.id = `func_remote-${i}`;
-          select.setAttribute('onChange', `remfunction_validation(${i});`);
           select.disabled = !isWizard;
+          select.addEventListener('change', function () {
+            var idEl = $id('id_remote-' + i);
+            if (!idEl) return;
+            if (this.value == 5) {
+              // Send mode: restore saved ID or generate new one
+              var savedId = idEl.dataset.savedId;
+              if (savedId && savedId !== 'empty slot' && savedId !== '0,0,0') {
+                idEl.value = savedId;
+              } else if (idEl.value === 'empty slot' || idEl.value === '0,0,0' || idEl.value === '') {
+                idEl.value = generateRemoteID(i);
+              }
+            } else {
+              // Receive/Monitor: save current ID and show empty
+              if (idEl.value !== 'empty slot' && idEl.value !== '0,0,0' && idEl.value !== '') {
+                idEl.dataset.savedId = idEl.value;
+              }
+              idEl.value = 'empty slot';
+            }
+          });
           for (const item of remfuncs) {
             var option = document.createElement('option');
             option.value = item[1];
@@ -2248,18 +2272,6 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
             td.id = `caps-${i}`;
             td.innerHTML = formatCapabilities(value);
           }
-          row.appendChild(td);
-        }
-      }
-      else if (key === "bidirectional") {
-        if (remfunc != 2) { //do not add remote function is remfunction == virtual remote
-          var checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.id = `bidirect_remote-${i}`;
-          checkbox.checked = jsonVar[i]["bidirectional"];
-          checkbox.disabled = true;
-          var td = document.createElement('td');
-          td.appendChild(checkbox);
           row.appendChild(td);
         }
       }
@@ -3207,8 +3219,7 @@ function wizardFinish() {
           remtype: rfRemType,
           remfunc: remfuncVal,
           value: $id('name_remote-' + ri) ? $id('name_remote-' + ri).value : '',
-          id: idEl.value.split(',').map(function(s) { return parseInt(s, 16); }),
-          bidirectional: false
+          id: idEl.value.split(',').map(function(s) { return parseInt(s, 16); })
         }));
       }
     }
@@ -3541,6 +3552,7 @@ var html_api = `
     <h1>IthoWifi - API</h1>
 </div>
 <h3>API Description</h3>
+<p><a href='swagger' onclick="event.preventDefault(); update_page('swagger');">Interactive API Explorer (Swagger UI)</a> | <a href='/api/openapi.json' target='_blank'>OpenAPI Specification (JSON)</a></p>
 <strong>General information WebAPI</strong><br><br>
 A simple WebAPI is available at the following URL: <a href='api.html' target='_blank'>api.html</a><br><br>
 The request should be formatted as follows: <br>http://[DNS or IP]/api.html?[param]=[value]<br><br>
@@ -4719,6 +4731,34 @@ var html_systemsettings_start = `
 <script>
   getSettings('syssetup');
 </script>
+`;
+
+var html_swagger = `
+<div class="header">
+    <h1>IthoWifi - API Explorer</h1>
+</div>
+<p>Interactive API documentation powered by Swagger UI. Requires internet access to load the UI framework from CDN.</p>
+<p><a href='/api/openapi.json' target='_blank'>Download OpenAPI Specification (JSON)</a></p>
+<div id="swagger-ui"></div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css"/>
+<script>
+  var swaggerScript = document.createElement('script');
+  swaggerScript.src = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js';
+  swaggerScript.onload = function() {
+    SwaggerUIBundle({
+      url: '/api/openapi.json',
+      dom_id: '#swagger-ui',
+      deepLinking: true,
+      presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+      layout: 'BaseLayout'
+    });
+  };
+  swaggerScript.onerror = function() {
+    $id('swagger-ui').innerHTML = '<p style="color:red">Failed to load Swagger UI from CDN. Check your internet connection.</p><p>You can still use the <a href="/api/openapi.json" target="_blank">OpenAPI spec</a> with an external tool like <a href="https://editor.swagger.io" target="_blank">Swagger Editor</a>.</p>';
+  };
+  document.head.appendChild(swaggerScript);
+</script>
+
 `;
 
 var html_hadiscovery = `
