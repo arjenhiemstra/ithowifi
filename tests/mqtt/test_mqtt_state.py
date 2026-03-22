@@ -2,50 +2,47 @@
 MQTT state verification tests. Subscribes to topics, sends commands,
 and verifies that state updates are published correctly.
 
-Requires:
-    MQTT_BROKER=<device-ip>
-    ITHO_DEVICE=<device-ip>
+MQTT credentials are auto-read from the device's config.json.
+Set MQTT_PASSWORD env var for broker authentication.
 
 Usage:
-    MQTT_BROKER=<device-ip> ITHO_DEVICE=<device-ip> pytest tests/mqtt/test_mqtt_state.py -v
+    MQTT_PASSWORD=secret ITHO_DEVICE=<device-ip> pytest tests/mqtt/test_mqtt_state.py -v
 """
-import os
 import json
 import time
 import threading
 import requests
 import pytest
 
+from conftest import (
+    MQTT_BROKER, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD,
+    DEVICE_IP, API_URL, HAS_PAHO, create_mqtt_client
+)
+
 try:
     import paho.mqtt.client as mqtt
-    HAS_PAHO = True
 except ImportError:
-    HAS_PAHO = False
-
-MQTT_BROKER = os.environ.get("MQTT_BROKER", "")
-MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
-DEVICE_IP = os.environ.get("ITHO_DEVICE", "<device-ip>")
-API_URL = f"http://{DEVICE_IP}/api.html"
+    pass
 
 # Read base topic from device config
-BASE_TOPIC = None
+BASE_TOPIC = "itho"
 try:
     r = requests.get(f"http://{DEVICE_IP}/config.json", timeout=5)
     if r.status_code == 200:
         BASE_TOPIC = r.json().get("mqtt_base_topic", "itho")
 except Exception:
-    BASE_TOPIC = "itho"
+    pass
 
-CMD_TOPIC = f"{BASE_TOPIC}/cmd" if BASE_TOPIC else "itho/cmd"
-STATE_TOPIC = f"{BASE_TOPIC}/state" if BASE_TOPIC else "itho/state"
-LWT_TOPIC = f"{BASE_TOPIC}/lwt" if BASE_TOPIC else "itho/lwt"
+CMD_TOPIC = f"{BASE_TOPIC}/cmd"
+STATE_TOPIC = f"{BASE_TOPIC}/state"
+LWT_TOPIC = f"{BASE_TOPIC}/lwt"
 
 
 def skip_if_no_mqtt():
     if not HAS_PAHO:
         pytest.skip("paho-mqtt not installed")
     if not MQTT_BROKER:
-        pytest.skip("MQTT_BROKER not set")
+        pytest.skip("MQTT_BROKER not available")
 
 
 class MqttCollector:
@@ -56,6 +53,8 @@ class MqttCollector:
         self.messages = {}
         self.lock = threading.Lock()
         self.client = mqtt.Client(client_id="test_collector", protocol=mqtt.MQTTv311)
+        if MQTT_USERNAME:
+            self.client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
         self.client.on_message = self._on_message
         self.client.connect(broker, port, 60)
         for topic in topics:
@@ -149,9 +148,10 @@ class TestMqttStatePublishing:
             collector.get_messages(state_topic)  # clear
 
             # Send command via MQTT
-            pub = mqtt.Client(client_id="test_pub", protocol=mqtt.MQTTv311)
-            pub.connect(MQTT_BROKER, MQTT_PORT, 60)
+            pub = create_mqtt_client("test_pub")
+            pub.loop_start()
             pub.publish(CMD_TOPIC, json.dumps({"speed": 200}))
+            pub.loop_stop()
             pub.disconnect()
 
             time.sleep(3)
@@ -188,6 +188,7 @@ class TestMqttRFStatusPublishing:
             pub = mqtt.Client(client_id="test_pub2", protocol=mqtt.MQTTv311)
             pub.connect(MQTT_BROKER, MQTT_PORT, 60)
             pub.publish(CMD_TOPIC, json.dumps({"command": "low"}))
+            pub.loop_stop()
             pub.disconnect()
 
             time.sleep(3)
