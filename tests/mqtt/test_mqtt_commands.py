@@ -5,12 +5,12 @@ Requires:
   - paho-mqtt: pip install paho-mqtt
   - MQTT broker running and device connected
   - Environment variables:
-      MQTT_BROKER=<device-ip> (broker IP)
+      MQTT_BROKER=<broker-ip> (broker IP)
       MQTT_CMD_TOPIC=itho/cmd (command topic)
       ITHO_DEVICE=<device-ip> (for HTTP verification)
 
 Usage:
-    MQTT_BROKER=<device-ip> pytest tests/mqtt/test_mqtt_commands.py -v
+    MQTT_BROKER=<broker-ip> pytest tests/mqtt/test_mqtt_commands.py -v
 """
 import json
 import os

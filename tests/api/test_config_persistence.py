@@ -19,7 +19,7 @@ try:
 except ImportError:
     HAS_WS = False
 
-DEVICE_IP = os.environ.get("ITHO_DEVICE", "<device-ip>")
+DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
 API_URL = f"http://{DEVICE_IP}/api.html"
 WS_URL = f"ws://{DEVICE_IP}:8000/ws"
 REMOTES_URL = f"http://{DEVICE_IP}/remotes.json"

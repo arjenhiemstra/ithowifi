@@ -9,7 +9,7 @@ import os
 import requests
 import pytest
 
-DEVICE_IP = os.environ.get("ITHO_DEVICE", "<device-ip>")
+DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
 SPEC_URL = f"http://{DEVICE_IP}/api/openapi.json"
 
 

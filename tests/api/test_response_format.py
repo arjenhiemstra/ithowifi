@@ -8,7 +8,7 @@ Usage:
 import os
 import requests
 
-DEVICE_IP = os.environ.get("ITHO_DEVICE", "<device-ip>")
+DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
 API_URL = f"http://{DEVICE_IP}/api.html"
 
 
