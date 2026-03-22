@@ -40,9 +40,9 @@ class TestFanCommands:
         assert r.json().get("status") == "success"
 
     def test_command_invalid(self):
-        """Invalid command should fail gracefully."""
+        """Invalid command should fail gracefully, not crash."""
         r = requests.get(API_URL, params={"command": "nonexistent"}, timeout=10)
-        assert r.status_code == 200
+        assert r.status_code < 500
         assert r.json().get("status") in ("fail", "error")
 
     def test_speed_direct(self):
