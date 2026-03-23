@@ -5,8 +5,8 @@
 
 void handleAPI(AsyncWebServerRequest *request)
 {
-  if (systemConfig.api_version == 1)
+  if (systemConfig.api_version == 0)
     handleAPIv1(request);
-  else if (systemConfig.api_version == 2)
+  else
     handleAPIv2(request);
 }
