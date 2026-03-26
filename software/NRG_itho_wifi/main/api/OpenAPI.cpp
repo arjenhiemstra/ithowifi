@@ -74,54 +74,34 @@ void handleOpenAPI(AsyncWebServerRequest *request)
 
   // === Paths ===
 
-  // GET /api.html
+  // GET /api.html (legacy v1)
   JsonObject apiGet = doc["paths"]["/api.html"]["get"].to<JsonObject>();
-  apiGet["summary"] = "Execute API command";
-  apiGet["description"] = "All commands are passed as URL query parameters. Response follows the JSend specification.";
-  apiGet["tags"].add("WebAPI");
+  apiGet["summary"] = "Legacy WebAPI v1";
+  apiGet["description"] = "Legacy API with URL query parameters. Returns plain text OK/NOK. "
+                           "For JSON responses and advanced features, use the REST API v2 endpoints.";
+  apiGet["tags"].add("Legacy WebAPI v1");
+  apiGet["deprecated"] = true;
 
   JsonArray params = apiGet["parameters"].to<JsonArray>();
 
-  // General commands
-  addEnumParam(params, "command", "Fan speed/timer command",
+  // Only parameters actually supported by v1
+  addEnumParam(params, "command", "Fan speed/timer command (PWM2I2C devices only)",
                {"low", "medium", "high", "timer1", "timer2", "timer3", "away", "cook30", "cook60", "autonight", "clearqueue"});
   addParam(params, "speed", "Set fan speed directly (0-255)", "integer", 0, 255);
   addParam(params, "timer", "Timer in minutes (use with speed or command)", "integer", 0, 65535);
-
-  // Virtual remote
   addEnumParam(params, "vremotecmd", "Virtual remote command (I2C)",
                {"away", "low", "medium", "high", "timer1", "timer2", "timer3", "join", "leave", "auto", "autonight", "cook30", "cook60"});
   addParam(params, "vremoteindex", "Virtual remote index (default 0)", "integer", 0, 11);
   addParam(params, "vremotename", "Select virtual remote by name", "string");
-
-  // Get commands
-  addEnumParam(params, "get", "Retrieve data",
-               {"ithostatus", "remotesinfo", "vremotesinfo", "deviceinfo", "currentspeed", "rfstatus"});
-  addParam(params, "name", "Filter name for get=rfstatus", "string");
-
-  // Settings
-  addParam(params, "getsetting", "Get Itho setting by index", "integer", 0, 255);
-  addParam(params, "setsetting", "Set Itho setting by index (use with value)", "integer", 0, 255);
-  addParam(params, "value", "Value for setsetting", "number");
-
-  // RF remote (CC1101)
+  addEnumParam(params, "get", "Retrieve data (JSON response)",
+               {"ithostatus", "remotesinfo", "currentspeed", "lastcmd", "queue"});
   addEnumParam(params, "rfremotecmd", "RF remote command via CC1101",
                {"away", "low", "medium", "high", "timer1", "timer2", "timer3", "join", "leave", "auto", "autonight", "cook30", "cook60", "motion_on", "motion_off"});
   addParam(params, "rfremoteindex", "RF remote index (default 0)", "integer", 0, 11);
-  addParam(params, "rfco2", "Send CO2 ppm via RF (requires RFT CO2)", "integer", 0, 10000);
-  addParam(params, "rfdemand", "Send ventilation demand via RF (0-200, requires RFT CO2/RV)", "integer", 0, 200);
-  addParam(params, "rfzone", "Zone for rfdemand (default 0)", "integer", 0, 255);
 
-  // WPU
-  addParam(params, "outside_temp", "Set outside temperature (WPU only)", "number");
-
-  // Response
   JsonObject resp200 = apiGet["responses"]["200"].to<JsonObject>();
-  resp200["description"] = "JSend response";
-  resp200["content"]["application/json"]["schema"]["$ref"] = "#/components/schemas/ApiResponse";
-
-  // Mark legacy API as deprecated
-  apiGet["deprecated"] = true;
+  resp200["description"] = "OK or NOK (plain text), or JSON for get= queries";
+  resp200["content"]["text/plain"]["schema"]["type"] = "string";
 
   // === REST API v2 endpoints ===
 
