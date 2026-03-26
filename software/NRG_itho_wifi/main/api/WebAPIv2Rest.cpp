@@ -277,6 +277,342 @@ static void handleGetSettings(AsyncWebServerRequest *request)
   sendSuccess(request, data);
 }
 
+// --- POST/PUT helpers ---
+
+// Bridge: convert JSON body to the params format expected by process* functions,
+// call the function, then send the appropriate JSend response.
+static void delegateToProcessor(
+    AsyncWebServerRequest *request,
+    JsonVariant &json,
+    std::function<ApiResponse::api_response_status_t(JsonObject, JsonDocument &)> processor)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonDocument responseDoc;
+  time_t now;
+  time(&now);
+  responseDoc["timestamp"] = now;
+
+  JsonObject body = json.as<JsonObject>();
+  auto status = processor(body, responseDoc);
+
+  switch (status)
+  {
+  case ApiResponse::status::SUCCESS:
+    sendSuccess(request, responseDoc);
+    break;
+  case ApiResponse::status::FAIL:
+    sendFail(request, responseDoc["failreason"] | "request failed");
+    break;
+  case ApiResponse::status::ERROR:
+    sendError(request, responseDoc["message"] | "internal error");
+    break;
+  default:
+    sendFail(request, "unknown or missing command parameters");
+    break;
+  }
+}
+
+// --- POST/PUT endpoint handlers ---
+
+// POST /api/v2/command
+// Body: {"command":"low"} or {"speed":100} or {"speed":100,"timer":10}
+static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  JsonDocument responseDoc;
+
+  // Try named command first, then speed/timer
+  auto status = processCommand(body, responseDoc);
+  if (status == ApiResponse::status::CONTINUE)
+    status = processPWMSpeedTimerCommands(body, responseDoc);
+
+  if (status == ApiResponse::status::SUCCESS)
+    sendSuccess(request, responseDoc);
+  else if (status == ApiResponse::status::FAIL)
+    sendFail(request, responseDoc["failreason"] | "command failed");
+  else if (status == ApiResponse::status::ERROR)
+    sendError(request, responseDoc["message"] | "internal error");
+  else
+    sendFail(request, "missing required field: command, speed, or timer");
+}
+
+// POST /api/v2/vremote
+// Body: {"command":"low","index":0} or {"command":"low","name":"remote1"}
+static void handlePostVRemote(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+
+  // Map REST field names to the legacy parameter names
+  JsonDocument params;
+  if (body.containsKey("command"))
+    params["vremotecmd"] = body["command"];
+  if (body.containsKey("index"))
+  {
+    char idx[8];
+    snprintf(idx, sizeof(idx), "%d", body["index"].as<int>());
+    params["vremoteindex"] = idx;
+  }
+  if (body.containsKey("name"))
+    params["vremotename"] = body["name"];
+
+  JsonDocument responseDoc;
+  auto status = processVremoteCommands(params.as<JsonObject>(), responseDoc);
+
+  if (status == ApiResponse::status::SUCCESS)
+    sendSuccess(request, responseDoc);
+  else if (status == ApiResponse::status::FAIL)
+    sendFail(request, responseDoc["failreason"] | "command failed");
+  else
+    sendFail(request, "missing required field: command");
+}
+
+// POST /api/v2/rfremote
+// Body: {"command":"low","index":0}
+static void handlePostRFRemote(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  JsonDocument params;
+  if (body.containsKey("command"))
+    params["rfremotecmd"] = body["command"];
+  if (body.containsKey("index"))
+  {
+    char idx[8];
+    snprintf(idx, sizeof(idx), "%d", body["index"].as<int>());
+    params["rfremoteindex"] = idx;
+  }
+
+  JsonDocument responseDoc;
+  auto status = processRFremoteCommands(params.as<JsonObject>(), responseDoc);
+
+  if (status == ApiResponse::status::SUCCESS)
+    sendSuccess(request, responseDoc);
+  else if (status == ApiResponse::status::FAIL)
+    sendFail(request, responseDoc["failreason"] | "command failed");
+  else
+    sendFail(request, "missing required field: command");
+}
+
+// POST /api/v2/rfco2
+// Body: {"co2":800,"index":2}
+static void handlePostRFCO2(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  if (!body.containsKey("co2"))
+  {
+    sendFail(request, "missing required field: co2");
+    return;
+  }
+
+  uint16_t co2 = body["co2"].as<uint16_t>();
+  uint8_t idx = body["index"] | 0;
+
+  if (co2 > 10000)
+  {
+    sendFail(request, "co2 value out of range (0-10000)");
+    return;
+  }
+
+  if (ithoSendRFCO2(idx, co2, HTMLAPI))
+  {
+    JsonDocument data;
+    data["result"] = "rf co2 value sent";
+    data["co2"] = co2;
+    data["index"] = idx;
+    sendSuccess(request, data);
+  }
+  else
+  {
+    sendFail(request, "rf co2 send failed - remote must be RFT CO2 type");
+  }
+}
+
+// POST /api/v2/rfdemand
+// Body: {"demand":150,"zone":0,"index":2}
+static void handlePostRFDemand(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  if (!body.containsKey("demand"))
+  {
+    sendFail(request, "missing required field: demand");
+    return;
+  }
+
+  uint8_t demand = body["demand"].as<uint8_t>();
+  uint8_t zone = body["zone"] | 0;
+  uint8_t idx = body["index"] | 0;
+
+  if (body["demand"].as<int>() > 200)
+  {
+    sendFail(request, "demand value out of range (0-200)");
+    return;
+  }
+
+  if (ithoSendRFDemand(idx, demand, zone, HTMLAPI))
+  {
+    JsonDocument data;
+    data["result"] = "rf demand sent";
+    data["demand"] = demand;
+    data["zone"] = zone;
+    data["index"] = idx;
+    sendSuccess(request, data);
+  }
+  else
+  {
+    sendFail(request, "rf demand send failed - remote must be RFT CO2 or RFT RV type");
+  }
+}
+
+// POST /api/v2/rf/config
+// Body: {"index":1,"setting":"setrfdevicesourceid","value":"96,C8,B6"}
+static void handlePostRFConfig(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  JsonDocument params;
+  if (body.containsKey("index"))
+  {
+    char idx[8];
+    snprintf(idx, sizeof(idx), "%d", body["index"].as<int>());
+    params["setrfremote"] = idx;
+  }
+  if (body.containsKey("setting"))
+    params["setting"] = body["setting"];
+  if (body.containsKey("value"))
+    params["settingvalue"] = body["value"];
+
+  JsonDocument responseDoc;
+  auto status = processSetRFremote(params.as<JsonObject>(), responseDoc);
+
+  if (status == ApiResponse::status::SUCCESS)
+    sendSuccess(request, responseDoc);
+  else if (status == ApiResponse::status::FAIL)
+    sendFail(request, responseDoc["failreason"] | "config update failed");
+  else
+    sendFail(request, "missing required fields: index, setting, value");
+}
+
+// PUT /api/v2/settings
+// Body: {"index":5,"value":50}
+static void handlePutSettings(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  if (!body.containsKey("index") || !body.containsKey("value"))
+  {
+    sendFail(request, "missing required fields: index and value");
+    return;
+  }
+
+  // Convert to the string-based params format expected by processSetsettingCommands
+  JsonDocument params;
+  char idxStr[12], valStr[20];
+  snprintf(idxStr, sizeof(idxStr), "%d", body["index"].as<int>());
+  // Handle both int and float values
+  if (body["value"].is<float>() && body["value"].as<float>() != body["value"].as<int>())
+    snprintf(valStr, sizeof(valStr), "%g", body["value"].as<double>());
+  else
+    snprintf(valStr, sizeof(valStr), "%d", body["value"].as<int>());
+  params["setsetting"] = idxStr;
+  params["value"] = valStr;
+
+  JsonDocument responseDoc;
+  auto status = processSetsettingCommands(params.as<JsonObject>(), responseDoc);
+
+  if (status == ApiResponse::status::SUCCESS)
+  {
+    responseDoc["index"] = body["index"].as<int>();
+    sendSuccess(request, responseDoc);
+  }
+  else if (status == ApiResponse::status::FAIL)
+    sendFail(request, responseDoc["failreason"] | "setting update failed", responseDoc["code"] | 400);
+  else if (status == ApiResponse::status::ERROR)
+    sendError(request, responseDoc["message"] | "I2C error");
+  else
+    sendFail(request, "unable to process setting");
+}
+
+// POST /api/v2/debug
+// Body: {"action":"reboot"} or {"action":"level1"}
+static void handlePostDebug(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  if (!body.containsKey("action"))
+  {
+    sendFail(request, "missing required field: action");
+    return;
+  }
+
+  JsonDocument params;
+  params["debug"] = body["action"];
+
+  JsonDocument responseDoc;
+  auto status = processDebugCommands(params.as<JsonObject>(), responseDoc);
+
+  if (status == ApiResponse::status::SUCCESS)
+    sendSuccess(request, responseDoc);
+  else
+    sendFail(request, responseDoc["failreason"] | "invalid action");
+}
+
+// POST /api/v2/outside_temp
+// Body: {"temp":15.5}
+static void handlePostOutsideTemp(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  if (!body.containsKey("temp"))
+  {
+    sendFail(request, "missing required field: temp");
+    return;
+  }
+
+  JsonDocument params;
+  char tempStr[12];
+  snprintf(tempStr, sizeof(tempStr), "%d", body["temp"].as<int>());
+  params["outside_temp"] = tempStr;
+
+  JsonDocument responseDoc;
+  auto status = processSetOutsideTemperature(params.as<JsonObject>(), responseDoc);
+
+  if (status == ApiResponse::status::SUCCESS)
+  {
+    JsonDocument data;
+    data["result"] = "outside temperature set";
+    data["temp"] = body["temp"].as<int>();
+    sendSuccess(request, data);
+  }
+  else if (status == ApiResponse::status::FAIL)
+    sendFail(request, responseDoc["failreason"] | "temperature set failed");
+  else
+    sendError(request, responseDoc["message"] | "internal error");
+}
+
 // --- Route registration ---
 
 void registerRestAPIv2Routes(AsyncWebServer &server)
@@ -291,4 +627,178 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/vremotes", HTTP_GET, handleGetVRemotes);
   server.on("/api/v2/rfstatus", HTTP_GET, handleGetRFStatus);
   server.on("/api/v2/settings", HTTP_GET, handleGetSettings);
+
+  // POST/PUT endpoints use query parameters from the JSON body
+  // parsed in the onBody handler (avoids AsyncCallbackJsonWebHandler dependency)
+  server.on(
+      "/api/v2/command", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostCommand(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/vremote", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostVRemote(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/rfremote", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostRFRemote(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/rfco2", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostRFCO2(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/rfdemand", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostRFDemand(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/rf/config", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostRFConfig(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/debug", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostDebug(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/outside_temp", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostOutsideTemp(request, v);
+        }
+      });
+
+  // PUT endpoint
+  server.on(
+      "/api/v2/settings", HTTP_PUT,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePutSettings(request, v);
+        }
+      });
 }
