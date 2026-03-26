@@ -1,5 +1,6 @@
 #include "tasks/task_web.h"
 #include "api/OpenAPI.h"
+#include "api/WebAPIv2Rest.h"
 
 #include "webroot/controls_js_gz.h"
 #include "webroot/edit_html_gz.h"
@@ -242,6 +243,7 @@ void webServerInit()
     request->send(response); });
   server.on("/api.html", HTTP_GET, handleAPI);
   server.on("/api/openapi.json", HTTP_GET, handleOpenAPI);
+  registerRestAPIv2Routes(server);
 
   // Log file download
   server.on("/curlog", HTTP_GET, handleCurLogDownload);
