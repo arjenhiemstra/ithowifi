@@ -559,9 +559,6 @@ const messageHandlers = {
     if ("i2cmenu" in x) {
       $id('i2cmenu').classList.toggle('hidden', x.i2cmenu != 1);
     }
-    if ("api_version" in x) {
-      localStorage.setItem("api_version", x.api_version);
-    }
   },
   remotes: function (f) {
     var tbl = $id('RemotesTable');
@@ -1142,7 +1139,6 @@ document.addEventListener('DOMContentLoaded', function () {
           syssec_web: checkedVal('option-syssec_web'),
           syssec_api: checkedVal('option-syssec_api'),
           syssec_edit: checkedVal('option-syssec_edit'),
-          api_version: checkedVal('option-api_version'),
           api_normalize: checkedVal('option-api_normalize'),
           api_settings: checkedVal('option-api_settings'),
           api_settings_activated: JSON.parse($val('api_settings_activated')),

@@ -1,5 +1,4 @@
 #include "api/WebAPIv1.h"
-#include "api/WebAPIv2.h"
 #include "tasks/task_web.h"
 
 void handleAPIv1(AsyncWebServerRequest *request)
@@ -121,14 +120,9 @@ void handleAPIv1(AsyncWebServerRequest *request)
         return;
       }
     }
-    else if (strcmp(p->name().c_str(), "getsetting") == 0)
+    else if (strcmp(p->name().c_str(), "getsetting") == 0 || strcmp(p->name().c_str(), "setsetting") == 0)
     {
-      handleAPIv2(request);
-      return;
-    }
-    else if (strcmp(p->name().c_str(), "setsetting") == 0)
-    {
-      handleAPIv2(request);
+      request->send(200, "text/plain", "Use REST API: GET/PUT /api/v2/settings");
       return;
     }
     else if (strcmp(p->name().c_str(), "command") == 0)

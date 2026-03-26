@@ -52,7 +52,6 @@ SystemConfig::SystemConfig()
   itho_forcemedium = 0;
   itho_vremoteapi = 0;
   itho_rf_support = 1;
-  api_version = 2;
   i2cmenu = 0;
   i2c_safe_guard = 2;
   i2c_sniffer = 0;
@@ -366,11 +365,6 @@ bool SystemConfig::set(JsonObject obj)
     updated = true;
     fw_check = obj["fw_check"];
   }
-  if (!obj["api_version"].isNull())
-  {
-    updated = true;
-    api_version = obj["api_version"];
-  }
   if (!obj["rfInitOK"].isNull())
   {
     updated = true;
@@ -431,7 +425,6 @@ void SystemConfig::get(JsonObject obj) const
     obj["fw_check"] = fw_check;
     obj["api_settings"] = api_settings;
     obj["api_settings_activated"].set(api_settings_activated.as<JsonArrayConst>());
-    obj["api_version"] = api_version;
   }
   if (complete || get_mqtt_settings)
   {

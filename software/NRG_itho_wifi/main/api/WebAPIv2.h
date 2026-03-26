@@ -3,11 +3,7 @@
 #include <ArduinoJson.h>
 #include "api/ApiResponse.h"
 
-class AsyncWebServerRequest;
-
-void handleAPIv2(AsyncWebServerRequest *request);
-
-ApiResponse::api_response_status_t checkAuthentication(JsonObject params, JsonDocument &response);
+// Process functions used by REST API v2 route handlers (WebAPIv2Rest.cpp)
 ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDocument &response);
 ApiResponse::api_response_status_t processGetsettingCommands(JsonObject params, JsonDocument &response);
 ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, JsonDocument &response);

@@ -61,7 +61,6 @@ public:
   uint8_t i2c_sniffer;
   uint8_t fw_check;
   uint8_t api_settings;
-  uint8_t api_version;
   JsonDocument api_settings_activated;
   mutable bool rfInitOK;
   uint8_t nonQ_cmd_clearsQ;

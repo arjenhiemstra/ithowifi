@@ -463,8 +463,6 @@ Unless specified otherwise:<br>
 <script>
     getSettings('syssetup');
     setTimeout(function () {
-        if (localStorage.getItem("api_version") != "0") {
-            $id('webapitxt').innerHTML = webapihtml;
-        }
+        $id('webapitxt').innerHTML = webapihtml;
     }, 500);
 </script>
