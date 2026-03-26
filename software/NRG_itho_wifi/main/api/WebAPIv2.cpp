@@ -38,6 +38,40 @@ void handleAPIv2(AsyncWebServerRequest *request)
     }
   }
 
+  // Validate parameters against whitelist
+  static const char *allowedParams[] = {
+      "get", "name", "getsetting", "setsetting", "value", "command",
+      "speed", "timer", "setrfremote", "setting", "settingvalue",
+      "rfremotecmd", "rfremoteindex", "rfco2", "rfdemand", "rfzone",
+      "vremote", "vremotecmd", "vremoteindex", "vremotename",
+      "i2csniffer", "debug", "outside_temp",
+      "username", "password", nullptr};
+
+  for (JsonPair kv : paramsJson)
+  {
+    bool found = false;
+    for (int j = 0; allowedParams[j] != nullptr; j++)
+    {
+      if (strcmp(kv.key().c_str(), allowedParams[j]) == 0)
+      {
+        found = true;
+        break;
+      }
+    }
+    if (!found)
+    {
+      AsyncWebServerAdapter adapter(request);
+      ApiResponse apiresponse(&adapter, &mqttClient);
+      JsonDocument response;
+      time_t now;
+      time(&now);
+      response["timestamp"] = now;
+      response["failreason"] = (std::string("unknown parameter: ") + kv.key().c_str()).c_str();
+      apiresponse.sendFail(response);
+      return;
+    }
+  }
+
   AsyncWebServerAdapter adapter(request);
   ApiResponse apiresponse(&adapter, &mqttClient);
   JsonDocument response;
@@ -46,11 +80,6 @@ void handleAPIv2(AsyncWebServerRequest *request)
   time(&now);
   response["timestamp"] = now;
   ApiResponse::api_response_status_t response_status = ApiResponse::status::CONTINUE;
-
-  // if (checkAuthentication(paramsJson, response) != ApiResponse::status::CONTINUE) {
-  //     apiresponse.sendFail(response);
-  //     return;  // Authentication failed, exit early.
-  // }
 
   if (systemConfig.syssec_api)
   {

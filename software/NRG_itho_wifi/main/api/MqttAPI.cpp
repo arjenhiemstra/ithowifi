@@ -72,29 +72,24 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         if (strcmp(command, "") == 0)
           command = root["vremotecmd"] | "";
 
-        if (!root["vremoteindex"].isNull() && !root["vremotename"].isNull())
+        int index = -1;
+        if (!root["vremotename"].isNull())
         {
-          jsonCmd = true;
-          ithoI2CCommand(0, command, MQTTAPI);
-          clean_cmd_topic = true;
+          index = virtualRemotes.getRemoteIndexbyName((const char *)root["vremotename"]);
+        }
+        else if (!root["vremoteindex"].isNull())
+        {
+          index = root["vremoteindex"];
         }
         else
         {
-          int index = -1;
-          if (!root["vremotename"].isNull())
-          {
-            index = virtualRemotes.getRemoteIndexbyName((const char *)root["vremotename"]);
-          }
-          else
-          {
-            index = root["vremoteindex"];
-          }
-          if (index >= 0)
-          {
-            jsonCmd = true;
-            ithoI2CCommand(index, command, MQTTAPI);
-            clean_cmd_topic = true;
-          }
+          index = 0; // default to index 0 if neither specified
+        }
+        if (index >= 0)
+        {
+          jsonCmd = true;
+          ithoI2CCommand(index, command, MQTTAPI);
+          clean_cmd_topic = true;
         }
       }
       if (!root["rfremotecmd"].isNull() || !root["rfremoteindex"].isNull())
