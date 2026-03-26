@@ -3,23 +3,45 @@
 </div>
 <h3>API Description</h3>
 <p><a href='swagger' onclick="event.preventDefault(); update_page('swagger');">Interactive API Explorer (Swagger UI)</a> | <a href='/api/openapi.json' target='_blank'>OpenAPI Specification (JSON)</a></p>
-<strong>General information WebAPI</strong><br><br>
-A simple WebAPI is available at the following URL: <a href='api.html' target='_blank'>api.html</a><br><br>
-The request should be formatted as follows: <br>http://[DNS or IP]/api.html?[param]=[value]<br><br>
-ie. http://192.168.4.1/api.html?command=medium<br>
-or<br>
-http://192.168.4.1/api.html?speed=150&timer=15<br><br>
-Unless specified otherwise:<br>
+
+<strong>REST API v2 (recommended)</strong><br><br>
+The REST API is available at <b>/api/v2/</b> with proper HTTP methods:<br><br>
+<ul>
+    <li><b>GET</b> endpoints for reading data (status, speed, device info, settings, remotes, etc.)</li>
+    <li><b>POST</b> endpoints for commands and state changes (fan control, RF commands, CO2, demand, debug)</li>
+    <li><b>PUT</b> endpoint for updating device settings</li>
+</ul>
+All responses follow the <a href='https://github.com/omniti-labs/jsend' target='_blank'>JSend</a> specification:<br>
+<ul>
+    <li>Success: <code>{"status":"success","data":{...}}</code> (HTTP 200)</li>
+    <li>Fail: <code>{"status":"fail","data":{"failreason":"..."}}</code> (HTTP 400/403/404)</li>
+    <li>Error: <code>{"status":"error","message":"..."}</code> (HTTP 500)</li>
+</ul>
+POST/PUT endpoints require <code>Content-Type: application/json</code> with a JSON body.<br>
+When API authentication is enabled, all endpoints require HTTP Basic Auth.<br>
+Cross-origin requests (CORS) are supported on all endpoints.<br><br>
+
+Examples:<br>
+<code>GET /api/v2/speed</code> &rarr; current fan speed<br>
+<code>POST /api/v2/command</code> with body <code>{"command":"low"}</code><br>
+<code>POST /api/v2/command</code> with body <code>{"speed":150,"timer":15}</code><br>
+<code>PUT /api/v2/settings</code> with body <code>{"index":4,"value":10}</code><br>
+<code>POST /api/v2/rfco2</code> with body <code>{"co2":800,"index":2}</code><br>
+<br>
+<strong>Legacy WebAPI v1</strong><br><br>
+A simple legacy WebAPI is available at: <a href='api.html' target='_blank'>api.html</a><br>
+Requests use URL query parameters: <code>http://[IP]/api.html?command=medium</code><br><br>
 <div id="webapitxt">
     <ul>
         <li>A successful command will return 'OK', an unsuccessful command will return 'NOK'</li>
         <li>String params/values are supplied without quote marks</li>
         <li>Values outside specified values/ranges will be ignored or 0 in case of an overflow</li>
+        <li>For settings access (getsetting/setsetting), use the REST API v2 instead</li>
     </ul>
 </div>
 <br>
-<strong>General information MQTT API</strong><br><br>
-Unless specified otherwise:<br>
+<strong>MQTT API</strong><br><br>
+Commands are sent as JSON to the MQTT command topic. The MQTT API supports the same commands as the REST API.<br>
 <ul>
     <li>The command must be sent as valid JSON</li>
     <li>The command must be sent to the command topic</li>
