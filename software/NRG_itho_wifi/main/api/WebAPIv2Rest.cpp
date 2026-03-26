@@ -684,8 +684,8 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
 {
   // CORS preflight for all /api/v2/ endpoints
   server.on("/api/v2/speed", HTTP_OPTIONS, handleOptions);
-  server.on("/api/v2/status", HTTP_OPTIONS, handleOptions);
-  server.on("/api/v2/device", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/ithostatus", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/deviceinfo", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/queue", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/lastcmd", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/remotes", HTTP_OPTIONS, handleOptions);
@@ -694,17 +694,17 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/settings", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/command", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/vremote", HTTP_OPTIONS, handleOptions);
-  server.on("/api/v2/rfremote", HTTP_OPTIONS, handleOptions);
-  server.on("/api/v2/rfco2", HTTP_OPTIONS, handleOptions);
-  server.on("/api/v2/rfdemand", HTTP_OPTIONS, handleOptions);
-  server.on("/api/v2/rf/config", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/rfremote/command", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/rfremote/co2", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/rfremote/demand", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/rfremote/config", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/debug", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/outside_temp", HTTP_OPTIONS, handleOptions);
 
   // GET endpoints
   server.on("/api/v2/speed", HTTP_GET, handleGetSpeed);
-  server.on("/api/v2/status", HTTP_GET, handleGetStatus);
-  server.on("/api/v2/device", HTTP_GET, handleGetDevice);
+  server.on("/api/v2/ithostatus", HTTP_GET, handleGetStatus);
+  server.on("/api/v2/deviceinfo", HTTP_GET, handleGetDevice);
   server.on("/api/v2/queue", HTTP_GET, handleGetQueue);
   server.on("/api/v2/lastcmd", HTTP_GET, handleGetLastCmd);
   server.on("/api/v2/remotes", HTTP_GET, handleGetRemotes);
@@ -753,7 +753,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
       });
 
   server.on(
-      "/api/v2/rfremote", HTTP_POST,
+      "/api/v2/rfremote/command", HTTP_POST,
       [](AsyncWebServerRequest *request) {},
       nullptr,
       [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
@@ -772,7 +772,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
       });
 
   server.on(
-      "/api/v2/rfco2", HTTP_POST,
+      "/api/v2/rfremote/co2", HTTP_POST,
       [](AsyncWebServerRequest *request) {},
       nullptr,
       [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
@@ -791,7 +791,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
       });
 
   server.on(
-      "/api/v2/rfdemand", HTTP_POST,
+      "/api/v2/rfremote/demand", HTTP_POST,
       [](AsyncWebServerRequest *request) {},
       nullptr,
       [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
@@ -810,7 +810,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
       });
 
   server.on(
-      "/api/v2/rf/config", HTTP_POST,
+      "/api/v2/rfremote/config", HTTP_POST,
       [](AsyncWebServerRequest *request) {},
       nullptr,
       [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)

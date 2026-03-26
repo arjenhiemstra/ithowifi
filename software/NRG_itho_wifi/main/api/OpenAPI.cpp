@@ -130,8 +130,8 @@ void handleOpenAPI(AsyncWebServerRequest *request)
 
   // GET endpoints
   addRestGet("/api/v2/speed", "Get current fan speed");
-  addRestGet("/api/v2/status", "Get Itho device status");
-  addRestGet("/api/v2/device", "Get device info");
+  addRestGet("/api/v2/ithostatus", "Get Itho device status");
+  addRestGet("/api/v2/deviceinfo", "Get device info");
   addRestGet("/api/v2/queue", "Get command queue");
   addRestGet("/api/v2/lastcmd", "Get last executed command");
   addRestGet("/api/v2/remotes", "Get RF remotes configuration");
@@ -148,10 +148,10 @@ void handleOpenAPI(AsyncWebServerRequest *request)
   // POST endpoints
   addRestPost("/api/v2/command", "Send fan command", "#/components/schemas/CommandRequest");
   addRestPost("/api/v2/vremote", "Send virtual remote command", "#/components/schemas/VRemoteRequest");
-  addRestPost("/api/v2/rfremote", "Send RF remote command", "#/components/schemas/RFRemoteRequest");
-  addRestPost("/api/v2/rfco2", "Send CO2 ppm via RF", "#/components/schemas/RFCO2Request");
-  addRestPost("/api/v2/rfdemand", "Send ventilation demand via RF", "#/components/schemas/RFDemandRequest");
-  addRestPost("/api/v2/rf/config", "Configure RF remote", "#/components/schemas/RFConfigRequest");
+  addRestPost("/api/v2/rfremote/command", "Send RF remote command", "#/components/schemas/RFRemoteRequest");
+  addRestPost("/api/v2/rfremote/co2", "Send CO2 ppm via RF", "#/components/schemas/RFCO2Request");
+  addRestPost("/api/v2/rfremote/demand", "Send ventilation demand via RF", "#/components/schemas/RFDemandRequest");
+  addRestPost("/api/v2/rfremote/config", "Configure RF remote", "#/components/schemas/RFConfigRequest");
   addRestPost("/api/v2/debug", "Debug actions (reboot, RF debug level)", "#/components/schemas/DebugRequest");
   addRestPost("/api/v2/outside_temp", "Set outside temperature", "#/components/schemas/OutsideTempRequest");
 

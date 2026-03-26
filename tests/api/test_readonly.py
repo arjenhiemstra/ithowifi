@@ -33,8 +33,8 @@ class TestOpenAPISpec:
         r = requests.get(SPEC_URL, timeout=5)
         spec = r.json()
         paths = spec["paths"]
-        for expected in ["/api/v2/speed", "/api/v2/command", "/api/v2/status",
-                         "/api/v2/device", "/api/v2/remotes", "/api/v2/settings"]:
+        for expected in ["/api/v2/speed", "/api/v2/command", "/api/v2/ithostatus",
+                         "/api/v2/deviceinfo", "/api/v2/remotes", "/api/v2/settings"]:
             assert expected in paths, f"Missing path: {expected}"
 
     def test_spec_cors_header(self):

@@ -33,14 +33,14 @@ class TestRESTv2EndpointCoverage:
     """Every REST API v2 endpoint should be documented in the spec."""
 
     def test_get_endpoints(self, v2_paths):
-        for expected in ["/api/v2/speed", "/api/v2/status", "/api/v2/device",
+        for expected in ["/api/v2/speed", "/api/v2/ithostatus", "/api/v2/deviceinfo",
                          "/api/v2/queue", "/api/v2/lastcmd", "/api/v2/remotes",
                          "/api/v2/vremotes", "/api/v2/rfstatus", "/api/v2/settings"]:
             assert expected in v2_paths, f"Missing GET endpoint: {expected}"
 
     def test_post_endpoints(self, v2_paths):
-        for expected in ["/api/v2/command", "/api/v2/vremote", "/api/v2/rfremote",
-                         "/api/v2/rfco2", "/api/v2/rfdemand", "/api/v2/debug",
+        for expected in ["/api/v2/command", "/api/v2/vremote", "/api/v2/rfremote/command",
+                         "/api/v2/rfremote/co2", "/api/v2/rfremote/demand", "/api/v2/debug",
                          "/api/v2/outside_temp"]:
             assert expected in v2_paths, f"Missing POST endpoint: {expected}"
 
