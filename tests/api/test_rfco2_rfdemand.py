@@ -10,133 +10,133 @@ import os
 import requests
 
 DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
-API_URL = f"http://{DEVICE_IP}/api.html"
+REST_URL = f"http://{DEVICE_IP}/api/v2"
 
 
 class TestRFCO2:
-    """Test rfco2 parameter — sends CO2 ppm via RF."""
+    """Test rfco2 endpoint — sends CO2 ppm via RF."""
 
     def test_rfco2_default_index(self):
-        """rfco2 without rfremoteindex should default to index 0."""
-        r = requests.get(API_URL, params={"rfco2": "800"}, timeout=10)
+        """rfco2 without index should default to index 0."""
+        r = requests.post(f"{REST_URL}/rfco2", json={"co2": 800}, timeout=10)
         assert r.status_code < 500
 
     def test_rfco2_with_index(self):
-        r = requests.get(API_URL, params={"rfco2": "800", "rfremoteindex": "0"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfco2", json={"co2": 800, "index": 0}, timeout=10)
         assert r.status_code < 500
 
     def test_rfco2_zero(self):
-        r = requests.get(API_URL, params={"rfco2": "0"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfco2", json={"co2": 0}, timeout=10)
         assert r.status_code < 500
 
     def test_rfco2_max(self):
-        r = requests.get(API_URL, params={"rfco2": "10000"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfco2", json={"co2": 10000}, timeout=10)
         assert r.status_code < 500
 
     def test_rfco2_over_max(self):
         """Above max should not crash."""
-        r = requests.get(API_URL, params={"rfco2": "65535"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfco2", json={"co2": 65535}, timeout=10)
         assert r.status_code < 500
 
     def test_rfco2_negative(self):
-        r = requests.get(API_URL, params={"rfco2": "-1"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfco2", json={"co2": -1}, timeout=10)
         assert r.status_code < 500
 
     def test_rfco2_non_numeric(self):
-        r = requests.get(API_URL, params={"rfco2": "abc"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfco2", json={"co2": "abc"}, timeout=10)
         assert r.status_code < 500
 
     def test_rfco2_invalid_index(self):
         """Out-of-range index should fail gracefully."""
-        r = requests.get(API_URL, params={"rfco2": "800", "rfremoteindex": "99"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfco2", json={"co2": 800, "index": 99}, timeout=10)
         assert r.status_code < 500
 
     def test_rfco2_wrong_remote_type(self):
         """rfco2 on non-RFTCO2 remote should return fail, not crash."""
         # Index 0 might not be RFTCO2 — that's fine, we test error handling
-        r = requests.get(API_URL, params={"rfco2": "500", "rfremoteindex": "0"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfco2", json={"co2": 500, "index": 0}, timeout=10)
         assert r.status_code < 500
         data = r.json()
         assert data.get("status") in ("success", "fail")
 
 
 class TestRFDemand:
-    """Test rfdemand parameter — sends ventilation demand via RF."""
+    """Test rfdemand endpoint — sends ventilation demand via RF."""
 
     def test_rfdemand_default_index(self):
-        r = requests.get(API_URL, params={"rfdemand": "100"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfdemand", json={"demand": 100}, timeout=10)
         assert r.status_code < 500
 
     def test_rfdemand_with_index(self):
-        r = requests.get(API_URL, params={"rfdemand": "100", "rfremoteindex": "0"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfdemand", json={"demand": 100, "index": 0}, timeout=10)
         assert r.status_code < 500
 
     def test_rfdemand_zero(self):
-        r = requests.get(API_URL, params={"rfdemand": "0"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfdemand", json={"demand": 0}, timeout=10)
         assert r.status_code < 500
 
     def test_rfdemand_max(self):
-        r = requests.get(API_URL, params={"rfdemand": "200"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfdemand", json={"demand": 200}, timeout=10)
         assert r.status_code < 500
 
     def test_rfdemand_over_max(self):
         """Above 200 should be clamped or fail, not crash."""
-        r = requests.get(API_URL, params={"rfdemand": "255"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfdemand", json={"demand": 255}, timeout=10)
         assert r.status_code < 500
 
     def test_rfdemand_with_zone(self):
-        r = requests.get(API_URL, params={"rfdemand": "100", "rfzone": "1"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfdemand", json={"demand": 100, "zone": 1}, timeout=10)
         assert r.status_code < 500
 
     def test_rfdemand_zone_zero(self):
-        r = requests.get(API_URL, params={"rfdemand": "100", "rfzone": "0"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfdemand", json={"demand": 100, "zone": 0}, timeout=10)
         assert r.status_code < 500
 
     def test_rfdemand_zone_max(self):
-        r = requests.get(API_URL, params={"rfdemand": "100", "rfzone": "255"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfdemand", json={"demand": 100, "zone": 255}, timeout=10)
         assert r.status_code < 500
 
     def test_rfdemand_negative(self):
-        r = requests.get(API_URL, params={"rfdemand": "-1"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfdemand", json={"demand": -1}, timeout=10)
         assert r.status_code < 500
 
     def test_rfdemand_non_numeric(self):
-        r = requests.get(API_URL, params={"rfdemand": "xyz"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfdemand", json={"demand": "xyz"}, timeout=10)
         assert r.status_code < 500
 
     def test_rfdemand_invalid_index(self):
-        r = requests.get(API_URL, params={"rfdemand": "100", "rfremoteindex": "99"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfdemand", json={"demand": 100, "index": 99}, timeout=10)
         assert r.status_code < 500
 
 
 class TestRFRemoteCommands:
-    """Test rfremotecmd with various indices."""
+    """Test rfremote endpoint with various indices."""
 
-    def test_rfremotecmd_index_zero(self):
-        r = requests.get(API_URL, params={"rfremotecmd": "low", "rfremoteindex": "0"}, timeout=10)
+    def test_rfremote_index_zero(self):
+        r = requests.post(f"{REST_URL}/rfremote", json={"command": "low", "index": 0}, timeout=10)
         assert r.status_code < 500
 
-    def test_rfremotecmd_index_max(self):
-        r = requests.get(API_URL, params={"rfremotecmd": "low", "rfremoteindex": "11"}, timeout=10)
+    def test_rfremote_index_max(self):
+        r = requests.post(f"{REST_URL}/rfremote", json={"command": "low", "index": 11}, timeout=10)
         assert r.status_code < 500
 
-    def test_rfremotecmd_index_out_of_range(self):
-        r = requests.get(API_URL, params={"rfremotecmd": "low", "rfremoteindex": "99"}, timeout=10)
+    def test_rfremote_index_out_of_range(self):
+        r = requests.post(f"{REST_URL}/rfremote", json={"command": "low", "index": 99}, timeout=10)
         assert r.status_code < 500
 
-    def test_rfremotecmd_invalid_command(self):
-        r = requests.get(API_URL, params={"rfremotecmd": "nonexistent"}, timeout=10)
+    def test_rfremote_invalid_command(self):
+        r = requests.post(f"{REST_URL}/rfremote", json={"command": "nonexistent"}, timeout=10)
         assert r.status_code < 500
 
-    def test_rfremotecmd_join(self):
+    def test_rfremote_join(self):
         """Join command should not crash (may fail if no device to bind to)."""
-        r = requests.get(API_URL, params={"rfremotecmd": "join", "rfremoteindex": "0"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfremote", json={"command": "join", "index": 0}, timeout=10)
         assert r.status_code < 500
 
-    def test_rfremotecmd_all_commands(self):
+    def test_rfremote_all_commands(self):
         """Every RF command should not cause a server error."""
         commands = ["away", "low", "medium", "high", "timer1", "timer2", "timer3",
                     "auto", "autonight", "cook30", "cook60", "motion_on", "motion_off", "leave"]
         for cmd in commands:
-            r = requests.get(API_URL, params={"rfremotecmd": cmd, "rfremoteindex": "0"}, timeout=10)
-            assert r.status_code < 500, f"rfremotecmd={cmd} returned {r.status_code}"
+            r = requests.post(f"{REST_URL}/rfremote", json={"command": cmd, "index": 0}, timeout=10)
+            assert r.status_code < 500, f"rfremote command={cmd} returned {r.status_code}"

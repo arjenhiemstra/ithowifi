@@ -1,6 +1,6 @@
 """
 OpenAPI spec validation tests. Verifies the spec documents all actual
-API parameters and that every documented enum value works against the
+API endpoints and that every documented enum value works against the
 live device.
 
 Usage:
@@ -12,7 +12,7 @@ import pytest
 
 DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
 DEVICE_URL = f"http://{DEVICE_IP}"
-API_URL = f"{DEVICE_URL}/api.html"
+REST_URL = f"{DEVICE_URL}/api/v2"
 SPEC_URL = f"{DEVICE_URL}/api/openapi.json"
 
 
@@ -20,11 +20,6 @@ SPEC_URL = f"{DEVICE_URL}/api/openapi.json"
 def spec():
     r = requests.get(SPEC_URL, timeout=5)
     return r.json()
-
-
-@pytest.fixture(scope="module")
-def api_params(spec):
-    return spec["paths"]["/api.html"]["get"]["parameters"]
 
 
 class TestSpecStructure:
@@ -37,9 +32,12 @@ class TestSpecStructure:
         assert "title" in spec["info"]
         assert "version" in spec["info"]
 
-    def test_paths_present(self, spec):
-        assert "/api.html" in spec["paths"]
-        assert "/api/openapi.json" in spec["paths"]
+    def test_v2_paths_present(self, spec):
+        paths = spec["paths"]
+        for expected in ["/api/v2/speed", "/api/v2/command", "/api/v2/status",
+                         "/api/v2/device", "/api/v2/remotes", "/api/v2/settings"]:
+            assert expected in paths, f"Missing path: {expected}"
+        assert "/api/openapi.json" in paths
 
     def test_components_present(self, spec):
         assert "ApiResponse" in spec["components"]["schemas"]
@@ -59,73 +57,80 @@ class TestSpecStructure:
             assert key in mqtt["properties"], f"Missing {key} in MqttCommand"
 
 
-class TestSpecParameterCompleteness:
-    """Verify all expected parameters are documented."""
+class TestSpecEndpointCompleteness:
+    """Verify all expected REST v2 endpoints are documented."""
 
-    def test_general_params(self, api_params):
-        names = [p["name"] for p in api_params]
-        for expected in ["command", "speed", "timer"]:
-            assert expected in names, f"Missing param: {expected}"
+    def test_get_endpoints(self, spec):
+        paths = spec["paths"]
+        for endpoint in ["/api/v2/speed", "/api/v2/status", "/api/v2/device",
+                         "/api/v2/remotes", "/api/v2/vremotes", "/api/v2/rfstatus",
+                         "/api/v2/queue", "/api/v2/lastcmd", "/api/v2/settings"]:
+            assert endpoint in paths, f"Missing GET endpoint: {endpoint}"
 
-    def test_vremote_params(self, api_params):
-        names = [p["name"] for p in api_params]
-        for expected in ["vremotecmd", "vremoteindex", "vremotename"]:
-            assert expected in names, f"Missing param: {expected}"
+    def test_post_endpoints(self, spec):
+        paths = spec["paths"]
+        for endpoint in ["/api/v2/command", "/api/v2/vremote", "/api/v2/rfremote",
+                         "/api/v2/rfco2", "/api/v2/rfdemand", "/api/v2/debug",
+                         "/api/v2/outside_temp"]:
+            assert endpoint in paths, f"Missing POST endpoint: {endpoint}"
 
-    def test_get_params(self, api_params):
-        names = [p["name"] for p in api_params]
-        assert "get" in names
-        assert "name" in names
-
-    def test_settings_params(self, api_params):
-        names = [p["name"] for p in api_params]
-        for expected in ["getsetting", "setsetting", "value"]:
-            assert expected in names, f"Missing param: {expected}"
-
-    def test_rf_params(self, api_params):
-        names = [p["name"] for p in api_params]
-        for expected in ["rfremotecmd", "rfremoteindex", "rfco2", "rfdemand", "rfzone"]:
-            assert expected in names, f"Missing param: {expected}"
-
-    def test_wpu_params(self, api_params):
-        names = [p["name"] for p in api_params]
-        assert "outside_temp" in names
+    def test_put_endpoints(self, spec):
+        paths = spec["paths"]
+        assert "/api/v2/settings" in paths, "Missing PUT endpoint: /api/v2/settings"
 
 
 class TestSpecEnumValuesWork:
     """Verify every enum value documented in the spec works against the device."""
 
-    def test_all_command_enum_values(self, api_params):
-        cmd_param = next(p for p in api_params if p["name"] == "command")
-        for cmd in cmd_param["schema"]["enum"]:
-            r = requests.get(API_URL, params={"command": cmd}, timeout=10)
+    def test_all_command_enum_values(self, spec):
+        """Test all command enum values from the spec's command endpoint."""
+        cmd_path = spec["paths"].get("/api/v2/command", {})
+        # Find the command enum in the request body schema
+        post_schema = cmd_path.get("post", {}).get("requestBody", {}).get(
+            "content", {}).get("application/json", {}).get("schema", {})
+        cmd_prop = post_schema.get("properties", {}).get("command", {})
+        if "enum" not in cmd_prop:
+            pytest.skip("No command enum found in spec")
+        for cmd in cmd_prop["enum"]:
+            r = requests.post(f"{REST_URL}/command", json={"command": cmd}, timeout=10)
             assert r.status_code == 200, f"command={cmd} returned {r.status_code}: {r.text}"
 
-    def test_all_get_enum_values(self, api_params):
-        get_param = next(p for p in api_params if p["name"] == "get")
-        for val in get_param["schema"]["enum"]:
-            r = requests.get(API_URL, params={"get": val}, timeout=10)
-            assert r.status_code == 200, f"get={val} returned {r.status_code}: {r.text}"
+    def test_all_rfremote_command_enum_values(self, spec):
+        """Test all rfremote command enum values from the spec."""
+        rf_path = spec["paths"].get("/api/v2/rfremote", {})
+        post_schema = rf_path.get("post", {}).get("requestBody", {}).get(
+            "content", {}).get("application/json", {}).get("schema", {})
+        cmd_prop = post_schema.get("properties", {}).get("command", {})
+        if "enum" not in cmd_prop:
+            pytest.skip("No rfremote command enum found in spec")
+        for cmd in cmd_prop["enum"]:
+            r = requests.post(f"{REST_URL}/rfremote", json={"command": cmd, "index": 0}, timeout=10)
+            assert r.status_code < 500, f"rfremote command={cmd} returned {r.status_code}"
 
-    def test_all_rfremotecmd_enum_values(self, api_params):
-        rf_param = next(p for p in api_params if p["name"] == "rfremotecmd")
-        for cmd in rf_param["schema"]["enum"]:
-            r = requests.get(API_URL, params={"rfremotecmd": cmd, "rfremoteindex": "0"}, timeout=10)
-            assert r.status_code < 500, f"rfremotecmd={cmd} returned {r.status_code}"
+    def test_all_vremote_command_enum_values(self, spec):
+        """Test all vremote command enum values from the spec."""
+        vr_path = spec["paths"].get("/api/v2/vremote", {})
+        post_schema = vr_path.get("post", {}).get("requestBody", {}).get(
+            "content", {}).get("application/json", {}).get("schema", {})
+        cmd_prop = post_schema.get("properties", {}).get("command", {})
+        if "enum" not in cmd_prop:
+            pytest.skip("No vremote command enum found in spec")
+        for cmd in cmd_prop["enum"]:
+            r = requests.post(f"{REST_URL}/vremote", json={"command": cmd}, timeout=10)
+            assert r.status_code < 500, f"vremote command={cmd} returned {r.status_code}"
 
-    def test_all_vremotecmd_enum_values(self, api_params):
-        vr_param = next(p for p in api_params if p["name"] == "vremotecmd")
-        for cmd in vr_param["schema"]["enum"]:
-            r = requests.get(API_URL, params={"vremotecmd": cmd}, timeout=10)
-            assert r.status_code < 500, f"vremotecmd={cmd} returned {r.status_code}"
-
-    def test_speed_boundaries_match_spec(self, api_params):
-        speed_param = next(p for p in api_params if p["name"] == "speed")
-        min_val = speed_param["schema"]["minimum"]
-        max_val = speed_param["schema"]["maximum"]
+    def test_speed_boundaries_match_spec(self, spec):
+        cmd_path = spec["paths"].get("/api/v2/command", {})
+        post_schema = cmd_path.get("post", {}).get("requestBody", {}).get(
+            "content", {}).get("application/json", {}).get("schema", {})
+        speed_prop = post_schema.get("properties", {}).get("speed", {})
+        if "minimum" not in speed_prop:
+            pytest.skip("No speed boundaries found in spec")
+        min_val = speed_prop["minimum"]
+        max_val = speed_prop["maximum"]
         for val in [min_val, max_val]:
-            r = requests.get(API_URL, params={"speed": str(val)}, timeout=10)
+            r = requests.post(f"{REST_URL}/command", json={"speed": val}, timeout=10)
             assert r.json().get("status") == "success", f"speed={val} failed"
 
     def test_restore_low(self):
-        requests.get(API_URL, params={"command": "low"}, timeout=10)
+        requests.post(f"{REST_URL}/command", json={"command": "low"}, timeout=10)

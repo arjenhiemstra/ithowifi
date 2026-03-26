@@ -348,12 +348,29 @@ static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
     }
   }
 
+  // Convert JSON values to string params (process* functions expect const char*)
+  JsonDocument params;
+  if (body.containsKey("command"))
+    params["command"] = body["command"];
+  if (body.containsKey("speed"))
+  {
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%d", body["speed"].as<int>());
+    params["speed"] = buf;
+  }
+  if (body.containsKey("timer"))
+  {
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%d", body["timer"].as<int>());
+    params["timer"] = buf;
+  }
+
   JsonDocument responseDoc;
 
   // Try named command first, then speed/timer
-  auto status = processCommand(body, responseDoc);
+  auto status = processCommand(params.as<JsonObject>(), responseDoc);
   if (status == ApiResponse::status::CONTINUE)
-    status = processPWMSpeedTimerCommands(body, responseDoc);
+    status = processPWMSpeedTimerCommands(params.as<JsonObject>(), responseDoc);
 
   if (status == ApiResponse::status::SUCCESS)
     sendSuccess(request, responseDoc);

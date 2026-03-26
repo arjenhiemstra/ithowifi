@@ -1,6 +1,6 @@
 """
 OpenAPI spec completeness tests. Verifies the spec documents all
-actual API processors and MQTT commands.
+actual API v2 endpoints and MQTT commands.
 
 Usage:
     ITHO_DEVICE=<device-ip> pytest tests/api/test_openapi_completeness.py -v
@@ -20,8 +20,8 @@ def spec():
 
 
 @pytest.fixture(scope="module")
-def api_param_names(spec):
-    return [p["name"] for p in spec["paths"]["/api.html"]["get"]["parameters"]]
+def v2_paths(spec):
+    return [p for p in spec["paths"].keys() if p.startswith("/api/v2/")]
 
 
 @pytest.fixture(scope="module")
@@ -29,63 +29,42 @@ def mqtt_schema_props(spec):
     return list(spec["components"]["schemas"]["MqttCommand"]["properties"].keys())
 
 
-class TestWebAPIParamCoverage:
-    """Every WebAPIv2 processor should have its params in the spec."""
+class TestRESTv2EndpointCoverage:
+    """Every REST API v2 endpoint should be documented in the spec."""
 
-    def test_general_commands(self, api_param_names):
-        assert "command" in api_param_names
-        assert "speed" in api_param_names
-        assert "timer" in api_param_names
+    def test_get_endpoints(self, v2_paths):
+        for expected in ["/api/v2/speed", "/api/v2/status", "/api/v2/device",
+                         "/api/v2/queue", "/api/v2/lastcmd", "/api/v2/remotes",
+                         "/api/v2/vremotes", "/api/v2/rfstatus", "/api/v2/settings"]:
+            assert expected in v2_paths, f"Missing GET endpoint: {expected}"
 
-    def test_virtual_remote(self, api_param_names):
-        assert "vremotecmd" in api_param_names
-        assert "vremoteindex" in api_param_names
-        assert "vremotename" in api_param_names
+    def test_post_endpoints(self, v2_paths):
+        for expected in ["/api/v2/command", "/api/v2/vremote", "/api/v2/rfremote",
+                         "/api/v2/rfco2", "/api/v2/rfdemand", "/api/v2/debug",
+                         "/api/v2/outside_temp"]:
+            assert expected in v2_paths, f"Missing POST endpoint: {expected}"
 
-    def test_get_commands(self, api_param_names):
-        assert "get" in api_param_names
-        assert "name" in api_param_names
+    def test_put_endpoints(self, v2_paths):
+        assert "/api/v2/settings" in v2_paths, "Missing PUT endpoint: /api/v2/settings"
 
-    def test_settings(self, api_param_names):
-        assert "getsetting" in api_param_names
-        assert "setsetting" in api_param_names
-        assert "value" in api_param_names
-
-    def test_rf_remote(self, api_param_names):
-        assert "rfremotecmd" in api_param_names
-        assert "rfremoteindex" in api_param_names
-
-    def test_rf_co2_demand(self, api_param_names):
-        assert "rfco2" in api_param_names
-        assert "rfdemand" in api_param_names
-        assert "rfzone" in api_param_names
-
-    def test_wpu(self, api_param_names):
-        assert "outside_temp" in api_param_names
-
-    def test_get_enum_includes_all_endpoints(self, spec):
-        """Verify the 'get' param enum includes all known endpoints."""
-        params = spec["paths"]["/api.html"]["get"]["parameters"]
-        get_param = next(p for p in params if p["name"] == "get")
-        enum_vals = get_param["schema"]["enum"]
-        for expected in ["ithostatus", "remotesinfo", "vremotesinfo", "deviceinfo", "currentspeed", "rfstatus"]:
-            assert expected in enum_vals, f"Missing get value: {expected}"
-
-    def test_command_enum_includes_all_commands(self, spec):
-        params = spec["paths"]["/api.html"]["get"]["parameters"]
-        cmd_param = next(p for p in params if p["name"] == "command")
-        enum_vals = cmd_param["schema"]["enum"]
+    def test_command_endpoint_has_all_commands(self, spec):
+        """Verify the command endpoint documents all known commands."""
+        # Follow $ref to the schema in components
+        cmd_schema = spec["components"]["schemas"].get("CommandRequest", {})
+        cmd_prop = cmd_schema.get("properties", {}).get("command", {})
+        enum_vals = cmd_prop.get("enum", [])
         for expected in ["low", "medium", "high", "timer1", "timer2", "timer3", "away",
                          "cook30", "cook60", "autonight", "clearqueue"]:
             assert expected in enum_vals, f"Missing command: {expected}"
 
-    def test_rfremotecmd_enum_includes_all(self, spec):
-        params = spec["paths"]["/api.html"]["get"]["parameters"]
-        rf_param = next(p for p in params if p["name"] == "rfremotecmd")
-        enum_vals = rf_param["schema"]["enum"]
+    def test_rfremote_endpoint_has_all_commands(self, spec):
+        # Follow $ref to the schema in components
+        rf_schema = spec["components"]["schemas"].get("RFRemoteRequest", {})
+        cmd_prop = rf_schema.get("properties", {}).get("command", {})
+        enum_vals = cmd_prop.get("enum", [])
         for expected in ["low", "medium", "high", "join", "leave", "auto", "autonight",
                          "motion_on", "motion_off"]:
-            assert expected in enum_vals, f"Missing rfremotecmd: {expected}"
+            assert expected in enum_vals, f"Missing rfremote command: {expected}"
 
 
 class TestMQTTSchemaCoverage:

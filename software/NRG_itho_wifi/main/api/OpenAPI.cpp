@@ -246,17 +246,23 @@ void handleOpenAPI(AsyncWebServerRequest *request)
   };
 
   JsonObject cmdProps = addSchema("CommandRequest", "Fan command or speed/timer");
-  addProp(cmdProps, "command", "string", "Named command (low/medium/high/timer1-3/away/cook30/cook60/autonight/clearqueue)");
+  addProp(cmdProps, "command", "string", "Named command");
+  for (auto cmd : {"low", "medium", "high", "timer1", "timer2", "timer3", "away", "cook30", "cook60", "autonight", "clearqueue"})
+    cmdProps["command"]["enum"].add(cmd);
   addProp(cmdProps, "speed", "integer", "Fan speed", 0, 255);
   addProp(cmdProps, "timer", "integer", "Timer in minutes", 0, 65535);
 
   JsonObject vrProps = addSchema("VRemoteRequest", "Virtual remote command");
   addProp(vrProps, "command", "string", "Command name");
+  for (auto cmd : {"away", "low", "medium", "high", "timer1", "timer2", "timer3", "join", "leave", "auto", "autonight", "cook30", "cook60"})
+    vrProps["command"]["enum"].add(cmd);
   addProp(vrProps, "index", "integer", "Virtual remote index", 0, 11);
   addProp(vrProps, "name", "string", "Virtual remote name (alternative to index)");
 
   JsonObject rfProps = addSchema("RFRemoteRequest", "RF remote command");
   addProp(rfProps, "command", "string", "RF command name");
+  for (auto cmd : {"away", "low", "medium", "high", "timer1", "timer2", "timer3", "join", "leave", "auto", "autonight", "cook30", "cook60", "motion_on", "motion_off"})
+    rfProps["command"]["enum"].add(cmd);
   addProp(rfProps, "index", "integer", "RF remote index", 0, 11);
 
   JsonObject co2Props = addSchema("RFCO2Request", "Send CO2 value via RF");

@@ -11,7 +11,7 @@ import os
 import requests
 
 DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
-API_URL = f"http://{DEVICE_IP}/api.html"
+REST_URL = f"http://{DEVICE_IP}/api/v2"
 
 
 class TestPwm2i2cDeviceTypeCheck:
@@ -20,7 +20,7 @@ class TestPwm2i2cDeviceTypeCheck:
     def test_command_low_accepted(self):
         """command=low should succeed on CVE Silent (0x1B).
         Before the fix, this returned 'device does not support pwm2i2c'."""
-        r = requests.get(API_URL, params={"command": "low"}, timeout=10)
+        r = requests.post(f"{REST_URL}/command", json={"command": "low"}, timeout=10)
         data = r.json()
         assert data.get("status") == "success", (
             f"Expected success but got {data}. "
@@ -28,29 +28,29 @@ class TestPwm2i2cDeviceTypeCheck:
         )
 
     def test_command_medium_accepted(self):
-        r = requests.get(API_URL, params={"command": "medium"}, timeout=10)
+        r = requests.post(f"{REST_URL}/command", json={"command": "medium"}, timeout=10)
         data = r.json()
         assert data.get("status") == "success"
         failreason = data.get("data", {}).get("failreason", "")
         assert "does not support pwm2i2c" not in failreason
 
     def test_command_high_accepted(self):
-        r = requests.get(API_URL, params={"command": "high"}, timeout=10)
+        r = requests.post(f"{REST_URL}/command", json={"command": "high"}, timeout=10)
         assert r.json().get("status") == "success"
 
     def test_speed_direct_accepted(self):
         """Direct speed also goes through the pwm2i2c path."""
-        r = requests.get(API_URL, params={"speed": "100"}, timeout=10)
+        r = requests.post(f"{REST_URL}/command", json={"speed": 100}, timeout=10)
         assert r.json().get("status") == "success"
 
     def test_speed_with_timer_accepted(self):
-        r = requests.get(API_URL, params={"speed": "100", "timer": "1"}, timeout=10)
+        r = requests.post(f"{REST_URL}/command", json={"speed": 100, "timer": 1}, timeout=10)
         assert r.json().get("status") == "success"
 
     def test_all_timer_commands_accepted(self):
         for cmd in ["timer1", "timer2", "timer3"]:
-            r = requests.get(API_URL, params={"command": cmd}, timeout=10)
+            r = requests.post(f"{REST_URL}/command", json={"command": cmd}, timeout=10)
             assert r.json().get("status") == "success", f"command={cmd} failed"
 
     def test_restore_low(self):
-        requests.get(API_URL, params={"command": "low"}, timeout=10)
+        requests.post(f"{REST_URL}/command", json={"command": "low"}, timeout=10)

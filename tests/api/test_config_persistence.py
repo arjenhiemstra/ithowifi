@@ -20,7 +20,7 @@ except ImportError:
     HAS_WS = False
 
 DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
-API_URL = f"http://{DEVICE_IP}/api.html"
+REST_URL = f"http://{DEVICE_IP}/api/v2"
 WS_URL = f"ws://{DEVICE_IP}:8000/ws"
 REMOTES_URL = f"http://{DEVICE_IP}/remotes.json"
 CONFIG_URL = f"http://{DEVICE_IP}/config.json"
@@ -31,7 +31,7 @@ def wait_for_device(timeout=30):
     start = time.time()
     while time.time() - start < timeout:
         try:
-            r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=3)
+            r = requests.get(f"{REST_URL}/speed", timeout=3)
             if r.status_code == 200:
                 return True
         except Exception:

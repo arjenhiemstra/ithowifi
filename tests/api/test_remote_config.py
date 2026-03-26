@@ -19,7 +19,7 @@ except ImportError:
 
 DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
 WS_URL = f"ws://{DEVICE_IP}:8000/ws"
-API_URL = f"http://{DEVICE_IP}/api.html"
+REST_URL = f"http://{DEVICE_IP}/api/v2"
 REMOTES_URL = f"http://{DEVICE_IP}/remotes.json"
 
 
@@ -82,7 +82,7 @@ class TestRemoteConfigRead:
                 )
 
     def test_remotesinfo_via_api(self):
-        r = requests.get(API_URL, params={"get": "remotesinfo"}, timeout=10)
+        r = requests.get(f"{REST_URL}/remotes", timeout=10)
         assert r.status_code == 200
 
     def test_remotes_via_websocket(self, ws):
@@ -190,78 +190,44 @@ class TestRemoteConfigUpdate:
                 })
 
 
-class TestCombinedParameters:
-    """Test interactions between multiple API parameters."""
+class TestCombinedOperations:
+    """Test interactions between different REST API v2 endpoints."""
 
-    def test_speed_overrides_command(self):
-        """When both speed and command are present, both should be processed."""
-        r = requests.get(API_URL, params={"speed": "200", "command": "low"}, timeout=10)
-        assert r.status_code < 500
-
-    def test_get_with_command(self):
-        """get + command in same request — both should be processed."""
-        r = requests.get(API_URL, params={"get": "currentspeed", "command": "medium"}, timeout=10)
+    def test_speed_then_read(self):
+        """Set speed then read it back."""
+        requests.post(f"{REST_URL}/command", json={"speed": 200}, timeout=10)
+        r = requests.get(f"{REST_URL}/speed", timeout=10)
         assert r.status_code == 200
 
-    def test_rfremotecmd_with_rfco2(self):
-        """Both RF params in one request."""
-        r = requests.get(API_URL, params={"rfremotecmd": "low", "rfco2": "800"}, timeout=10)
-        assert r.status_code < 500
-
-    def test_vremotecmd_with_rfremotecmd(self):
-        """Virtual + RF remote in same request."""
-        r = requests.get(API_URL, params={"vremotecmd": "low", "rfremotecmd": "high"}, timeout=10)
-        assert r.status_code < 500
+    def test_command_then_read_speed(self):
+        """Send command then verify speed is readable."""
+        requests.post(f"{REST_URL}/command", json={"command": "medium"}, timeout=10)
+        r = requests.get(f"{REST_URL}/speed", timeout=10)
+        assert r.status_code == 200
 
     def test_speed_boundary_with_timer_boundary(self):
-        r = requests.get(API_URL, params={"speed": "255", "timer": "65535"}, timeout=10)
+        r = requests.post(f"{REST_URL}/command", json={"speed": 255, "timer": 65535}, timeout=10)
         assert r.status_code < 500
 
     def test_speed_zero_with_timer(self):
-        r = requests.get(API_URL, params={"speed": "0", "timer": "10"}, timeout=10)
-        assert r.status_code < 500
-
-    def test_getsetting_with_get(self):
-        """Two get-type params — first match wins in chain."""
-        r = requests.get(API_URL, params={"get": "currentspeed", "getsetting": "0"}, timeout=10)
-        assert r.status_code < 500
-
-    def test_multiple_unknown_params(self):
-        """Unknown params should be ignored, not crash."""
-        r = requests.get(API_URL, params={"foo": "bar", "baz": "123", "get": "currentspeed"}, timeout=10)
-        assert r.status_code == 200
-
-    def test_rfco2_rfdemand_together(self):
-        """Both CO2 and demand in one request."""
-        r = requests.get(API_URL, params={"rfco2": "800", "rfdemand": "100"}, timeout=10)
-        assert r.status_code < 500
-
-    def test_all_rf_params(self):
-        """All RF params at once."""
-        r = requests.get(API_URL, params={
-            "rfremotecmd": "low",
-            "rfremoteindex": "0",
-            "rfco2": "500",
-            "rfdemand": "100",
-            "rfzone": "0"
-        }, timeout=10)
+        r = requests.post(f"{REST_URL}/command", json={"speed": 0, "timer": 10}, timeout=10)
         assert r.status_code < 500
 
     def test_restore_low(self):
-        requests.get(API_URL, params={"command": "low"}, timeout=10)
+        requests.post(f"{REST_URL}/command", json={"command": "low"}, timeout=10)
 
 
 class TestSettingsRead:
-    """Test getsetting — uses I2C which can be slow."""
+    """Test settings endpoint — uses I2C which can be slow."""
 
     def test_getsetting_index_1(self):
         """Read a single setting — longer timeout for I2C."""
-        r = requests.get(API_URL, params={"getsetting": "1"}, timeout=30)
+        r = requests.get(f"{REST_URL}/settings", params={"index": "1"}, timeout=30)
         assert r.status_code < 500
 
     def test_getsetting_response_structure(self):
         """Successful getsetting should return structured data."""
-        r = requests.get(API_URL, params={"getsetting": "1"}, timeout=30)
+        r = requests.get(f"{REST_URL}/settings", params={"index": "1"}, timeout=30)
         if r.status_code == 200:
             data = r.json()
             assert data.get("status") in ("success", "fail")

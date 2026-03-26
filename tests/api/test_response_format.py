@@ -9,44 +9,45 @@ import os
 import requests
 
 DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
-API_URL = f"http://{DEVICE_IP}/api.html"
+DEVICE_URL = f"http://{DEVICE_IP}"
+REST_URL = f"{DEVICE_URL}/api/v2"
 
 
 class TestJSendFormat:
     """Verify API responses follow JSend specification."""
 
     def test_success_has_status_and_data(self):
-        r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=10)
+        r = requests.get(f"{REST_URL}/speed", timeout=10)
         data = r.json()
         assert "status" in data, "Missing 'status' field"
         assert data["status"] == "success"
         assert "data" in data, "Success response must have 'data' field"
 
     def test_success_has_timestamp(self):
-        r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=10)
+        r = requests.get(f"{REST_URL}/speed", timeout=10)
         data = r.json()
         assert "timestamp" in data.get("data", {}), "Missing timestamp"
         assert isinstance(data["data"]["timestamp"], int)
 
     def test_fail_has_status_and_data(self):
         """Fail responses should have status=fail and a data object."""
-        r = requests.get(API_URL, params={"rfco2": "800", "rfremoteindex": "99"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfco2", json={"co2": 800, "index": 99}, timeout=10)
         data = r.json()
         assert "status" in data
         assert data["status"] == "fail"
         assert "data" in data
 
     def test_fail_has_failreason(self):
-        r = requests.get(API_URL, params={"rfco2": "800", "rfremoteindex": "99"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfco2", json={"co2": 800, "index": 99}, timeout=10)
         data = r.json()
         assert "failreason" in data.get("data", {}), "Fail response should have failreason"
 
     def test_content_type_is_json(self):
-        r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=10)
+        r = requests.get(f"{REST_URL}/speed", timeout=10)
         assert "application/json" in r.headers.get("Content-Type", "")
 
-    def test_get_deviceinfo_structure(self):
-        r = requests.get(API_URL, params={"get": "deviceinfo"}, timeout=10)
+    def test_get_device_structure(self):
+        r = requests.get(f"{REST_URL}/device", timeout=10)
         data = r.json()
         assert data["status"] == "success"
         info = data["data"]["deviceinfo"]
@@ -54,27 +55,27 @@ class TestJSendFormat:
         assert "add-on_fwversion" in info
         assert "add-on_hwid" in info
 
-    def test_get_remotesinfo_structure(self):
-        r = requests.get(API_URL, params={"get": "remotesinfo"}, timeout=10)
+    def test_get_remotes_structure(self):
+        r = requests.get(f"{REST_URL}/remotes", timeout=10)
         data = r.json()
         assert data["status"] in ("success", "fail")
 
-    def test_get_currentspeed_structure(self):
-        r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=10)
+    def test_get_speed_structure(self):
+        r = requests.get(f"{REST_URL}/speed", timeout=10)
         data = r.json()
         assert data["status"] == "success"
         assert "currentspeed" in data["data"]
 
-    def test_rfremotecmd_success_structure(self):
-        r = requests.get(API_URL, params={"rfremotecmd": "low", "rfremoteindex": "0"}, timeout=10)
+    def test_rfremote_success_structure(self):
+        r = requests.post(f"{REST_URL}/rfremote", json={"command": "low", "index": 0}, timeout=10)
         data = r.json()
         assert "status" in data
         if data["status"] == "success":
             assert "result" in data["data"]
 
-    def test_rfremotecmd_fail_structure(self):
+    def test_rfremote_fail_structure(self):
         """Invalid index should return structured fail."""
-        r = requests.get(API_URL, params={"rfremotecmd": "low", "rfremoteindex": "99"}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfremote", json={"command": "low", "index": 99}, timeout=10)
         data = r.json()
         assert data["status"] == "fail"
         assert "failreason" in data["data"]
@@ -145,31 +146,27 @@ class TestConfigEndpoints:
 
 
 class TestVirtualRemoteCommands:
-    """Test vremotecmd API parameter."""
+    """Test vremote REST endpoint."""
 
-    def test_vremotecmd_low(self):
-        r = requests.get(API_URL, params={"vremotecmd": "low"}, timeout=10)
+    def test_vremote_low(self):
+        r = requests.post(f"{REST_URL}/vremote", json={"command": "low"}, timeout=10)
         assert r.status_code < 500
 
-    def test_vremotecmd_medium(self):
-        r = requests.get(API_URL, params={"vremotecmd": "medium"}, timeout=10)
+    def test_vremote_medium(self):
+        r = requests.post(f"{REST_URL}/vremote", json={"command": "medium"}, timeout=10)
         assert r.status_code < 500
 
-    def test_vremotecmd_with_index(self):
-        r = requests.get(API_URL, params={"vremotecmd": "low", "vremoteindex": "0"}, timeout=10)
+    def test_vremote_with_index(self):
+        r = requests.post(f"{REST_URL}/vremote", json={"command": "low", "index": 0}, timeout=10)
         assert r.status_code < 500
 
-    def test_vremotecmd_with_name(self):
-        r = requests.get(API_URL, params={"vremotecmd": "low", "vremotename": "test"}, timeout=10)
+    def test_vremote_invalid(self):
+        r = requests.post(f"{REST_URL}/vremote", json={"command": "nonexistent"}, timeout=10)
         assert r.status_code < 500
 
-    def test_vremotecmd_invalid(self):
-        r = requests.get(API_URL, params={"vremotecmd": "nonexistent"}, timeout=10)
-        assert r.status_code < 500
-
-    def test_vremotecmd_invalid_index(self):
-        r = requests.get(API_URL, params={"vremotecmd": "low", "vremoteindex": "99"}, timeout=10)
+    def test_vremote_invalid_index(self):
+        r = requests.post(f"{REST_URL}/vremote", json={"command": "low", "index": 99}, timeout=10)
         assert r.status_code < 500
 
     def test_restore_low(self):
-        requests.get(API_URL, params={"command": "low"}, timeout=10)
+        requests.post(f"{REST_URL}/command", json={"command": "low"}, timeout=10)

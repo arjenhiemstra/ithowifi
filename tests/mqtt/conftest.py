@@ -10,7 +10,7 @@ except ImportError:
 
 DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
 DEVICE_URL = f"http://{DEVICE_IP}"
-API_URL = f"{DEVICE_URL}/api.html"
+REST_URL = f"{DEVICE_URL}/api/v2"
 
 # Read MQTT config from the device itself
 MQTT_BROKER = os.environ.get("MQTT_BROKER", "")

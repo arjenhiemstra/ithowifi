@@ -11,7 +11,7 @@ import pytest
 
 DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
 DEVICE_URL = f"http://{DEVICE_IP}"
-API_URL = f"{DEVICE_URL}/api.html"
+REST_URL = f"{DEVICE_URL}/api/v2"
 SPEC_URL = f"{DEVICE_URL}/api/openapi.json"
 
 
@@ -29,13 +29,13 @@ class TestOpenAPISpec:
         assert "paths" in spec
         assert "components" in spec
 
-    def test_spec_has_parameters(self):
+    def test_spec_has_v2_paths(self):
         r = requests.get(SPEC_URL, timeout=5)
         spec = r.json()
-        params = spec["paths"]["/api.html"]["get"]["parameters"]
-        names = [p["name"] for p in params]
-        for expected in ["command", "speed", "get", "rfremotecmd", "rfco2", "rfdemand"]:
-            assert expected in names, f"Missing parameter: {expected}"
+        paths = spec["paths"]
+        for expected in ["/api/v2/speed", "/api/v2/command", "/api/v2/status",
+                         "/api/v2/device", "/api/v2/remotes", "/api/v2/settings"]:
+            assert expected in paths, f"Missing path: {expected}"
 
     def test_spec_cors_header(self):
         r = requests.get(SPEC_URL, timeout=5)
@@ -43,103 +43,93 @@ class TestOpenAPISpec:
 
 
 class TestGetEndpoints:
-    """Test read-only GET parameter values."""
+    """Test read-only GET endpoints."""
 
-    def test_get_ithostatus(self):
-        r = requests.get(API_URL, params={"get": "ithostatus"}, timeout=10)
+    def test_get_status(self):
+        r = requests.get(f"{REST_URL}/status", timeout=10)
         assert r.status_code == 200
         assert r.json()["status"] == "success"
 
-    def test_get_deviceinfo(self):
-        r = requests.get(API_URL, params={"get": "deviceinfo"}, timeout=10)
+    def test_get_device(self):
+        r = requests.get(f"{REST_URL}/device", timeout=10)
         assert r.status_code == 200
         data = r.json()
         assert data["status"] == "success"
         assert "deviceinfo" in data.get("data", {})
 
-    def test_get_remotesinfo(self):
-        r = requests.get(API_URL, params={"get": "remotesinfo"}, timeout=10)
+    def test_get_remotes(self):
+        r = requests.get(f"{REST_URL}/remotes", timeout=10)
         assert r.status_code == 200
 
-    def test_get_vremotesinfo(self):
-        r = requests.get(API_URL, params={"get": "vremotesinfo"}, timeout=10)
+    def test_get_vremotes(self):
+        r = requests.get(f"{REST_URL}/vremotes", timeout=10)
         assert r.status_code == 200
 
-    def test_get_currentspeed(self):
-        r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=10)
+    def test_get_speed(self):
+        r = requests.get(f"{REST_URL}/speed", timeout=10)
         assert r.status_code == 200
         assert r.json()["status"] == "success"
 
     def test_get_rfstatus(self):
-        r = requests.get(API_URL, params={"get": "rfstatus"}, timeout=10)
+        r = requests.get(f"{REST_URL}/rfstatus", timeout=10)
         assert r.status_code == 200
 
     def test_get_rfstatus_with_name(self):
-        r = requests.get(API_URL, params={"get": "rfstatus", "name": "test"}, timeout=10)
-        assert r.status_code == 200
+        """Unknown name should return 404 fail, not 5xx."""
+        r = requests.get(f"{REST_URL}/rfstatus", params={"name": "nonexistent"}, timeout=10)
+        assert r.status_code in (200, 404)
+        assert r.status_code < 500
 
-    def test_get_unknown_value(self):
-        """Unknown get value should return error, not 5xx."""
-        r = requests.get(API_URL, params={"get": "nonexistent"}, timeout=10)
-        assert r.status_code < 500, f"Server error on unknown get value: {r.text}"
+    def test_get_unknown_endpoint(self):
+        """Unknown endpoint should return 404, not 5xx."""
+        r = requests.get(f"{REST_URL}/nonexistent", timeout=10)
+        assert r.status_code < 500, f"Server error on unknown endpoint: {r.text}"
 
     def test_getsetting_zero(self):
-        r = requests.get(API_URL, params={"getsetting": "0"}, timeout=10)
+        r = requests.get(f"{REST_URL}/settings", params={"index": "0"}, timeout=15)
         assert r.status_code < 500
 
     def test_getsetting_max(self):
-        r = requests.get(API_URL, params={"getsetting": "255"}, timeout=10)
+        r = requests.get(f"{REST_URL}/settings", params={"index": "255"}, timeout=15)
         assert r.status_code < 500
 
     def test_getsetting_out_of_range(self):
         """Out-of-range should return client error, not server error."""
-        r = requests.get(API_URL, params={"getsetting": "999"}, timeout=10)
+        r = requests.get(f"{REST_URL}/settings", params={"index": "999"}, timeout=10)
         assert r.status_code < 500
 
 
 class TestEdgeCases:
     """Test boundary conditions and malformed input."""
 
-    def test_empty_request(self):
-        """No parameters should return fail, not server error."""
-        r = requests.get(API_URL, timeout=10)
-        assert r.status_code < 500, f"Server error on empty request: {r.status_code} {r.text}"
-        data = r.json()
-        assert data.get("status") == "fail"
-
-    def test_long_string_param(self):
-        """Very long string should not crash the ESP32."""
-        r = requests.get(API_URL, params={"get": "A" * 200}, timeout=10)
+    def test_long_string_endpoint(self):
+        """Very long path should not crash the ESP32."""
+        r = requests.get(f"{REST_URL}/{'A' * 200}", timeout=10)
         assert r.status_code < 500
 
     def test_special_characters(self):
         """Special chars should not crash."""
-        r = requests.get(API_URL, params={"get": "<script>alert(1)</script>"}, timeout=10)
+        r = requests.get(f"{REST_URL}/status", params={"name": "<script>alert(1)</script>"}, timeout=10)
         assert r.status_code < 500
 
     def test_unicode_param(self):
-        r = requests.get(API_URL, params={"get": "\u00e9\u00e8\u00ea"}, timeout=10)
-        assert r.status_code < 500
-
-    def test_multiple_get_params(self):
-        """Multiple params in one request."""
-        r = requests.get(API_URL, params={"get": "currentspeed", "getsetting": "0"}, timeout=10)
+        r = requests.get(f"{REST_URL}/rfstatus", params={"name": "\u00e9\u00e8\u00ea"}, timeout=10)
         assert r.status_code < 500
 
     def test_response_is_json(self):
         """Successful responses should be valid JSON."""
-        for param in ["ithostatus", "deviceinfo", "currentspeed"]:
-            r = requests.get(API_URL, params={"get": param}, timeout=10)
+        for endpoint in ["status", "device", "speed"]:
+            r = requests.get(f"{REST_URL}/{endpoint}", timeout=10)
             r.json()  # raises if not valid JSON
 
     def test_response_has_status(self):
         """Successful responses should have a status field."""
-        r = requests.get(API_URL, params={"get": "deviceinfo"}, timeout=10)
+        r = requests.get(f"{REST_URL}/device", timeout=10)
         data = r.json()
         assert "status" in data
 
     def test_no_server_errors(self):
         """Rapid-fire requests should not crash the device."""
         for _ in range(10):
-            r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=10)
+            r = requests.get(f"{REST_URL}/speed", timeout=10)
             assert r.status_code < 500

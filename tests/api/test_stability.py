@@ -20,14 +20,14 @@ except ImportError:
     HAS_WS = False
 
 DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
-API_URL = f"http://{DEVICE_IP}/api.html"
+REST_URL = f"http://{DEVICE_IP}/api/v2"
 WS_URL = f"ws://{DEVICE_IP}:8000/ws"
 
 
 def device_alive():
     """Quick check if device is responding."""
     try:
-        r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=10)
+        r = requests.get(f"{REST_URL}/speed", timeout=10)
         return r.status_code == 200
     except Exception:
         return False
@@ -39,13 +39,13 @@ class TestHTTPStress:
     def test_30_sequential_requests(self):
         """30 sequential API calls — device must stay responsive."""
         for i in range(30):
-            r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=10)
+            r = requests.get(f"{REST_URL}/speed", timeout=10)
             assert r.status_code == 200, f"Request {i} failed: {r.status_code}"
 
     def test_10_concurrent_requests(self):
         """10 simultaneous HTTP requests."""
         def fetch(i):
-            r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=15)
+            r = requests.get(f"{REST_URL}/speed", timeout=15)
             return i, r.status_code
 
         with ThreadPoolExecutor(max_workers=10) as pool:
@@ -59,40 +59,40 @@ class TestHTTPStress:
     def test_mixed_concurrent_endpoints(self):
         """Concurrent requests to different endpoints."""
         endpoints = [
-            {"get": "currentspeed"},
-            {"get": "deviceinfo"},
-            {"get": "remotesinfo"},
-            {"get": "rfstatus"},
-            {"get": "currentspeed"},
+            f"{REST_URL}/speed",
+            f"{REST_URL}/device",
+            f"{REST_URL}/remotes",
+            f"{REST_URL}/rfstatus",
+            f"{REST_URL}/speed",
         ]
 
-        def fetch(params):
-            r = requests.get(API_URL, params=params, timeout=15)
-            return params, r.status_code
+        def fetch(url):
+            r = requests.get(url, timeout=15)
+            return url, r.status_code
 
         with ThreadPoolExecutor(max_workers=5) as pool:
-            futures = [pool.submit(fetch, p) for p in endpoints]
+            futures = [pool.submit(fetch, u) for u in endpoints]
             results = [f.result() for f in as_completed(futures)]
 
-        for params, code in results:
-            assert code < 500, f"Server error on {params}: {code}"
+        for url, code in results:
+            assert code < 500, f"Server error on {url}: {code}"
 
     def test_rapid_speed_changes(self):
         """Rapid speed changes should not crash."""
         for speed in range(0, 255, 25):
-            r = requests.get(API_URL, params={"speed": str(speed)}, timeout=10)
+            r = requests.post(f"{REST_URL}/command", json={"speed": speed}, timeout=10)
             assert r.status_code < 500
         # Restore
-        requests.get(API_URL, params={"command": "low"}, timeout=10)
+        requests.post(f"{REST_URL}/command", json={"command": "low"}, timeout=10)
 
     def test_alternating_read_write(self):
         """Alternate between read and write operations."""
         for _ in range(10):
-            r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=10)
+            r = requests.get(f"{REST_URL}/speed", timeout=10)
             assert r.status_code == 200
-            r = requests.get(API_URL, params={"speed": "100"}, timeout=10)
+            r = requests.post(f"{REST_URL}/command", json={"speed": 100}, timeout=10)
             assert r.status_code < 500
-        requests.get(API_URL, params={"command": "low"}, timeout=10)
+        requests.post(f"{REST_URL}/command", json={"command": "low"}, timeout=10)
 
 
 class TestWebSocketStress:
@@ -175,7 +175,7 @@ class TestHTTPAndWSConcurrent:
 
             # Concurrent HTTP requests
             for _ in range(5):
-                r = requests.get(API_URL, params={"get": "currentspeed"}, timeout=10)
+                r = requests.get(f"{REST_URL}/speed", timeout=10)
                 assert r.status_code == 200
                 ws.send(json.dumps({"sysstat": True}))
         finally:
@@ -214,7 +214,7 @@ class TestHTTPAndWSConcurrent:
 
     def test_final_health_check(self):
         """Final verification that device is healthy after all stress tests."""
-        r = requests.get(API_URL, params={"get": "deviceinfo"}, timeout=10)
+        r = requests.get(f"{REST_URL}/device", timeout=10)
         assert r.status_code == 200
         data = r.json()
         assert data["status"] == "success"

@@ -18,7 +18,7 @@ except ImportError:
     HAS_WS = False
 
 DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
-API_URL = f"http://{DEVICE_IP}/api.html"
+REST_URL = f"http://{DEVICE_IP}/api/v2"
 WS_URL = f"ws://{DEVICE_IP}:8000/ws"
 CONFIG_URL = f"http://{DEVICE_IP}/config.json"
 WIFI_URL = f"http://{DEVICE_IP}/wifi.json"
@@ -71,10 +71,10 @@ class TestPasswordMasking:
 class TestXSSPrevention:
     """Verify script injection attempts don't get reflected back."""
 
-    def test_xss_in_get_param(self):
+    def test_xss_in_rfstatus_name(self):
         """Script tags in params — response must be JSON, not HTML."""
         payload = "<script>alert('xss')</script>"
-        r = requests.get(API_URL, params={"get": payload}, timeout=10)
+        r = requests.get(f"{REST_URL}/rfstatus", params={"name": payload}, timeout=10)
         assert r.status_code < 500
         # Critical: Content-Type must be JSON so browsers don't execute reflected input
         assert "application/json" in r.headers.get("Content-Type", ""), \
@@ -82,20 +82,20 @@ class TestXSSPrevention:
         # Verify it's valid JSON (not HTML)
         r.json()
 
-    def test_xss_in_command_param(self):
+    def test_xss_in_command_body(self):
         payload = "<img src=x onerror=alert(1)>"
-        r = requests.get(API_URL, params={"command": payload}, timeout=10)
+        r = requests.post(f"{REST_URL}/command", json={"command": payload}, timeout=10)
         assert r.status_code < 500
         assert "application/json" in r.headers.get("Content-Type", "")
 
-    def test_xss_in_rfremotecmd(self):
+    def test_xss_in_rfremote_body(self):
         payload = "';alert(1);//"
-        r = requests.get(API_URL, params={"rfremotecmd": payload}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfremote", json={"command": payload}, timeout=10)
         assert r.status_code < 500
 
-    def test_xss_in_vremotename(self):
+    def test_xss_in_debug_body(self):
         payload = "<script>document.location='http://evil.com'</script>"
-        r = requests.get(API_URL, params={"vremotename": payload}, timeout=10)
+        r = requests.post(f"{REST_URL}/debug", json={"action": payload}, timeout=10)
         assert r.status_code < 500
         assert "<script>" not in r.text
 
@@ -109,21 +109,21 @@ class TestInputSanitization:
     """Verify malicious input doesn't crash the device."""
 
     def test_null_bytes(self):
-        r = requests.get(API_URL, params={"get": "test\x00value"}, timeout=10)
+        r = requests.get(f"{REST_URL}/rfstatus", params={"name": "test\x00value"}, timeout=10)
         assert r.status_code < 500
 
-    def test_very_long_param_name(self):
-        r = requests.get(f"http://{DEVICE_IP}/api.html?{'A' * 500}=test", timeout=10)
+    def test_very_long_path(self):
+        r = requests.get(f"{REST_URL}/{'A' * 500}", timeout=10)
         assert r.status_code < 500
 
     def test_many_params(self):
         """50 query parameters at once."""
         params = {f"param{i}": f"value{i}" for i in range(50)}
-        r = requests.get(API_URL, params=params, timeout=10)
+        r = requests.get(f"{REST_URL}/speed", params=params, timeout=10)
         assert r.status_code < 500
 
     def test_sql_injection_attempt(self):
-        r = requests.get(API_URL, params={"get": "'; DROP TABLE config;--"}, timeout=10)
+        r = requests.get(f"{REST_URL}/rfstatus", params={"name": "'; DROP TABLE config;--"}, timeout=10)
         assert r.status_code < 500
 
     def test_path_traversal_attempt(self):
@@ -132,14 +132,14 @@ class TestInputSanitization:
         assert r.status_code in (400, 404)
 
     def test_command_injection_attempt(self):
-        r = requests.get(API_URL, params={"command": "low; reboot"}, timeout=10)
+        r = requests.post(f"{REST_URL}/command", json={"command": "low; reboot"}, timeout=10)
         assert r.status_code < 500
 
     def test_unicode_overflow(self):
-        r = requests.get(API_URL, params={"get": "\uffff" * 100}, timeout=10)
+        r = requests.get(f"{REST_URL}/rfstatus", params={"name": "\uffff" * 100}, timeout=10)
         assert r.status_code < 500
 
-    def test_empty_string_params(self):
-        """All params set to empty string."""
-        r = requests.get(API_URL, params={"command": "", "speed": "", "get": ""}, timeout=10)
+    def test_empty_json_body(self):
+        """Empty JSON body to POST endpoints."""
+        r = requests.post(f"{REST_URL}/command", json={}, timeout=10)
         assert r.status_code < 500
