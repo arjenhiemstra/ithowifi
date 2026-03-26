@@ -46,12 +46,12 @@ class TestGetEndpoints:
     """Test read-only GET endpoints."""
 
     def test_get_status(self):
-        r = requests.get(f"{REST_URL}/status", timeout=10)
+        r = requests.get(f"{REST_URL}/ithostatus", timeout=10)
         assert r.status_code == 200
         assert r.json()["status"] == "success"
 
     def test_get_device(self):
-        r = requests.get(f"{REST_URL}/device", timeout=10)
+        r = requests.get(f"{REST_URL}/deviceinfo", timeout=10)
         assert r.status_code == 200
         data = r.json()
         assert data["status"] == "success"
@@ -109,7 +109,7 @@ class TestEdgeCases:
 
     def test_special_characters(self):
         """Special chars should not crash."""
-        r = requests.get(f"{REST_URL}/status", params={"name": "<script>alert(1)</script>"}, timeout=10)
+        r = requests.get(f"{REST_URL}/ithostatus", params={"name": "<script>alert(1)</script>"}, timeout=10)
         assert r.status_code < 500
 
     def test_unicode_param(self):
@@ -118,13 +118,13 @@ class TestEdgeCases:
 
     def test_response_is_json(self):
         """Successful responses should be valid JSON."""
-        for endpoint in ["status", "device", "speed"]:
+        for endpoint in ["ithostatus", "deviceinfo", "speed"]:
             r = requests.get(f"{REST_URL}/{endpoint}", timeout=10)
             r.json()  # raises if not valid JSON
 
     def test_response_has_status(self):
         """Successful responses should have a status field."""
-        r = requests.get(f"{REST_URL}/device", timeout=10)
+        r = requests.get(f"{REST_URL}/deviceinfo", timeout=10)
         data = r.json()
         assert "status" in data
 

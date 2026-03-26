@@ -31,14 +31,14 @@ class TestJSendFormat:
 
     def test_fail_has_status_and_data(self):
         """Fail responses should have status=fail and a data object."""
-        r = requests.post(f"{REST_URL}/rfco2", json={"co2": 800, "index": 99}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfremote/co2", json={"co2": 800, "index": 99}, timeout=10)
         data = r.json()
         assert "status" in data
         assert data["status"] == "fail"
         assert "data" in data
 
     def test_fail_has_failreason(self):
-        r = requests.post(f"{REST_URL}/rfco2", json={"co2": 800, "index": 99}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfremote/co2", json={"co2": 800, "index": 99}, timeout=10)
         data = r.json()
         assert "failreason" in data.get("data", {}), "Fail response should have failreason"
 
@@ -47,7 +47,7 @@ class TestJSendFormat:
         assert "application/json" in r.headers.get("Content-Type", "")
 
     def test_get_device_structure(self):
-        r = requests.get(f"{REST_URL}/device", timeout=10)
+        r = requests.get(f"{REST_URL}/deviceinfo", timeout=10)
         data = r.json()
         assert data["status"] == "success"
         info = data["data"]["deviceinfo"]
@@ -67,7 +67,7 @@ class TestJSendFormat:
         assert "currentspeed" in data["data"]
 
     def test_rfremote_success_structure(self):
-        r = requests.post(f"{REST_URL}/rfremote", json={"command": "low", "index": 0}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfremote/command", json={"command": "low", "index": 0}, timeout=10)
         data = r.json()
         assert "status" in data
         if data["status"] == "success":
@@ -75,7 +75,7 @@ class TestJSendFormat:
 
     def test_rfremote_fail_structure(self):
         """Invalid index should return structured fail."""
-        r = requests.post(f"{REST_URL}/rfremote", json={"command": "low", "index": 99}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfremote/command", json={"command": "low", "index": 99}, timeout=10)
         data = r.json()
         assert data["status"] == "fail"
         assert "failreason" in data["data"]
@@ -90,7 +90,7 @@ class TestConfigEndpoints:
         data = r.json()
         assert "itho_rf_support" in data
         assert "mqtt_active" in data
-        assert "api_version" in data
+        assert "api_settings" in data  # api_version removed in v3
 
     def test_config_passwords_masked(self):
         """Passwords in config.json should be masked."""

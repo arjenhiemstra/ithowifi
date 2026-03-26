@@ -104,7 +104,7 @@ class TestSpecEnumValuesWork:
         if "enum" not in cmd_prop:
             pytest.skip("No rfremote command enum found in spec")
         for cmd in cmd_prop["enum"]:
-            r = requests.post(f"{REST_URL}/rfremote", json={"command": cmd, "index": 0}, timeout=10)
+            r = requests.post(f"{REST_URL}/rfremote/command", json={"command": cmd, "index": 0}, timeout=10)
             assert r.status_code < 500, f"rfremote command={cmd} returned {r.status_code}"
 
     def test_all_vremote_command_enum_values(self, spec):

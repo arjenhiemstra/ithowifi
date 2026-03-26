@@ -60,7 +60,7 @@ class TestHTTPStress:
         """Concurrent requests to different endpoints."""
         endpoints = [
             f"{REST_URL}/speed",
-            f"{REST_URL}/device",
+            f"{REST_URL}/deviceinfo",
             f"{REST_URL}/remotes",
             f"{REST_URL}/rfstatus",
             f"{REST_URL}/speed",
@@ -214,7 +214,7 @@ class TestHTTPAndWSConcurrent:
 
     def test_final_health_check(self):
         """Final verification that device is healthy after all stress tests."""
-        r = requests.get(f"{REST_URL}/device", timeout=10)
+        r = requests.get(f"{REST_URL}/deviceinfo", timeout=10)
         assert r.status_code == 200
         data = r.json()
         assert data["status"] == "success"

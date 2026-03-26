@@ -120,7 +120,7 @@ class TestSystemConfigPersistence:
         assert r.status_code == 200
         data = r.json()
         assert "itho_rf_support" in data
-        assert "api_version" in data
+        assert "api_settings" in data  # api_version removed in v3
 
     def test_rf_module_id_persists(self):
         """Module RF ID should survive reboot."""

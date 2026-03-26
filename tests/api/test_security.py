@@ -90,7 +90,7 @@ class TestXSSPrevention:
 
     def test_xss_in_rfremote_body(self):
         payload = "';alert(1);//"
-        r = requests.post(f"{REST_URL}/rfremote", json={"command": payload}, timeout=10)
+        r = requests.post(f"{REST_URL}/rfremote/command", json={"command": payload}, timeout=10)
         assert r.status_code < 500
 
     def test_xss_in_debug_body(self):
