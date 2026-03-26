@@ -154,6 +154,7 @@ void handleOpenAPI(AsyncWebServerRequest *request)
   addRestPost("/api/v2/rfremote/config", "Configure RF remote", "#/components/schemas/RFConfigRequest");
   addRestPost("/api/v2/debug", "Debug actions (reboot, RF debug level)", "#/components/schemas/DebugRequest");
   addRestPost("/api/v2/wpu/outside_temp", "Set outside temperature", "#/components/schemas/OutsideTempRequest");
+  addRestPost("/api/v2/wpu/manual_control", "WPU manual control (4030 command)", "#/components/schemas/ManualControlRequest");
 
   // PUT endpoint
   JsonObject settingsPut = doc["paths"]["/api/v2/settings"]["put"].to<JsonObject>();
@@ -268,6 +269,12 @@ void handleOpenAPI(AsyncWebServerRequest *request)
   JsonObject setProps = addSchema("SetSettingRequest", "Write Itho device setting");
   addProp(setProps, "index", "integer", "Setting index", 0, 255);
   addProp(setProps, "value", "number", "New value (int or float, must be within setting min/max)");
+
+  JsonObject mcProps = addSchema("ManualControlRequest", "WPU manual control (4030 command)");
+  addProp(mcProps, "index", "integer", "Manual operation index (e.g. 0=outside temp, 20=pump speed)");
+  addProp(mcProps, "datatype", "integer", "Data type (uint8)");
+  addProp(mcProps, "value", "integer", "Value (uint16)");
+  addProp(mcProps, "checked", "integer", "Checked flag (uint8)");
 
   // Serialize and send
   AsyncResponseStream *response = request->beginResponseStream("application/json");

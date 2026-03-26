@@ -667,6 +667,36 @@ static void handlePostOutsideTemp(AsyncWebServerRequest *request, JsonVariant &j
     sendError(request, responseDoc["message"] | "internal error");
 }
 
+// POST /api/v2/wpu/manual_control
+// Body: {"index":1,"datatype":1,"value":1,"checked":1}
+static void handlePostManualControl(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  if (!body.containsKey("index"))
+  {
+    sendFail(request, "missing required field: index");
+    return;
+  }
+
+  uint16_t index = body["index"] | 0;
+  uint8_t datatype = body["datatype"] | 0;
+  uint16_t value = body["value"] | 0;
+  uint8_t checked = body["checked"] | 0;
+
+  setSetting4030(index, datatype, value, checked, false);
+
+  JsonDocument data;
+  data["result"] = "manual control command sent";
+  data["index"] = index;
+  data["datatype"] = datatype;
+  data["value"] = value;
+  data["checked"] = checked;
+  sendSuccess(request, data);
+}
+
 // --- Route registration ---
 
 // CORS preflight handler
@@ -700,6 +730,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/rfremote/config", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/debug", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/wpu/outside_temp", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/wpu/manual_control", HTTP_OPTIONS, handleOptions);
 
   // GET endpoints
   server.on("/api/v2/speed", HTTP_GET, handleGetSpeed);
@@ -863,6 +894,25 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
           }
           JsonVariant v = json.as<JsonVariant>();
           handlePostOutsideTemp(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/wpu/manual_control", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostManualControl(request, v);
         }
       });
 
