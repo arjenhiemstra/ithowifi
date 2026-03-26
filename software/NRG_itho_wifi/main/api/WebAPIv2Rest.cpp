@@ -324,6 +324,27 @@ static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
     return;
 
   JsonObject body = json.as<JsonObject>();
+
+  // Validate speed range before delegating
+  if (body.containsKey("speed"))
+  {
+    int speed = body["speed"].as<int>();
+    if (speed < 0 || speed > 255)
+    {
+      sendFail(request, "speed out of range (0-255)");
+      return;
+    }
+  }
+  if (body.containsKey("timer"))
+  {
+    int timer = body["timer"].as<int>();
+    if (timer < 0 || timer > 65535)
+    {
+      sendFail(request, "timer out of range (0-65535)");
+      return;
+    }
+  }
+
   JsonDocument responseDoc;
 
   // Try named command first, then speed/timer
@@ -554,6 +575,8 @@ static void handlePutSettings(AsyncWebServerRequest *request, JsonVariant &json)
 
 // POST /api/v2/debug
 // Body: {"action":"reboot"} or {"action":"level1"}
+static unsigned long lastRebootRequest = 0;
+
 static void handlePostDebug(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (!checkRestAuth(request))
@@ -564,6 +587,17 @@ static void handlePostDebug(AsyncWebServerRequest *request, JsonVariant &json)
   {
     sendFail(request, "missing required field: action");
     return;
+  }
+
+  const char *action = body["action"];
+  if (action != nullptr && strcmp(action, "reboot") == 0)
+  {
+    if (millis() - lastRebootRequest < 5000)
+    {
+      sendFail(request, "reboot rate limited - wait 5 seconds", 429);
+      return;
+    }
+    lastRebootRequest = millis();
   }
 
   JsonDocument params;

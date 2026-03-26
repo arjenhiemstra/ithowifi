@@ -120,7 +120,72 @@ void handleOpenAPI(AsyncWebServerRequest *request)
   resp200["description"] = "JSend response";
   resp200["content"]["application/json"]["schema"]["$ref"] = "#/components/schemas/ApiResponse";
 
-  // GET /api/openapi.json
+  // Mark legacy API as deprecated
+  apiGet["deprecated"] = true;
+
+  // === REST API v2 endpoints ===
+
+  auto addRestGet = [&](const char *path, const char *summary)
+  {
+    JsonObject op = doc["paths"][path]["get"].to<JsonObject>();
+    op["summary"] = summary;
+    op["tags"].add("REST API v2");
+    op["responses"]["200"]["description"] = "JSend success";
+    op["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] = "#/components/schemas/ApiResponse";
+    return op;
+  };
+
+  auto addRestPost = [&](const char *path, const char *summary, const char *schemaRef)
+  {
+    JsonObject op = doc["paths"][path]["post"].to<JsonObject>();
+    op["summary"] = summary;
+    op["tags"].add("REST API v2");
+    op["requestBody"]["required"] = true;
+    op["requestBody"]["content"]["application/json"]["schema"]["$ref"] = schemaRef;
+    op["responses"]["200"]["description"] = "JSend success";
+    op["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] = "#/components/schemas/ApiResponse";
+    op["responses"]["400"]["description"] = "JSend fail (validation error)";
+    return op;
+  };
+
+  // GET endpoints
+  addRestGet("/api/v2/speed", "Get current fan speed");
+  addRestGet("/api/v2/status", "Get Itho device status");
+  addRestGet("/api/v2/device", "Get device info");
+  addRestGet("/api/v2/queue", "Get command queue");
+  addRestGet("/api/v2/lastcmd", "Get last executed command");
+  addRestGet("/api/v2/remotes", "Get RF remotes configuration");
+  addRestGet("/api/v2/vremotes", "Get virtual remotes info");
+
+  JsonObject rfstatusGet = addRestGet("/api/v2/rfstatus", "Get RF device status");
+  JsonArray rfstatusParams = rfstatusGet["parameters"].to<JsonArray>();
+  addParam(rfstatusParams, "name", "Filter by source name", "string");
+
+  JsonObject settingsGet = addRestGet("/api/v2/settings", "Read Itho setting by index");
+  JsonArray settingsParams = settingsGet["parameters"].to<JsonArray>();
+  addParam(settingsParams, "index", "Setting index", "integer", 0, 255);
+
+  // POST endpoints
+  addRestPost("/api/v2/command", "Send fan command", "#/components/schemas/CommandRequest");
+  addRestPost("/api/v2/vremote", "Send virtual remote command", "#/components/schemas/VRemoteRequest");
+  addRestPost("/api/v2/rfremote", "Send RF remote command", "#/components/schemas/RFRemoteRequest");
+  addRestPost("/api/v2/rfco2", "Send CO2 ppm via RF", "#/components/schemas/RFCO2Request");
+  addRestPost("/api/v2/rfdemand", "Send ventilation demand via RF", "#/components/schemas/RFDemandRequest");
+  addRestPost("/api/v2/rf/config", "Configure RF remote", "#/components/schemas/RFConfigRequest");
+  addRestPost("/api/v2/debug", "Debug actions (reboot, RF debug level)", "#/components/schemas/DebugRequest");
+  addRestPost("/api/v2/outside_temp", "Set outside temperature", "#/components/schemas/OutsideTempRequest");
+
+  // PUT endpoint
+  JsonObject settingsPut = doc["paths"]["/api/v2/settings"]["put"].to<JsonObject>();
+  settingsPut["summary"] = "Write Itho setting";
+  settingsPut["tags"].add("REST API v2");
+  settingsPut["requestBody"]["required"] = true;
+  settingsPut["requestBody"]["content"]["application/json"]["schema"]["$ref"] = "#/components/schemas/SetSettingRequest";
+  settingsPut["responses"]["200"]["description"] = "JSend success";
+  settingsPut["responses"]["400"]["description"] = "JSend fail";
+  settingsPut["responses"]["403"]["description"] = "Settings API disabled";
+
+  // Documentation endpoints
   JsonObject specPath = doc["paths"]["/api/openapi.json"]["get"].to<JsonObject>();
   specPath["summary"] = "OpenAPI specification";
   specPath["tags"].add("Documentation");
@@ -167,6 +232,56 @@ void handleOpenAPI(AsyncWebServerRequest *request)
   addProp(mqttProps, "rfdemand", "integer", "Ventilation demand 0-200");
   addProp(mqttProps, "rfzone", "integer", "Zone for rfdemand");
   addProp(mqttProps, "dtype", "string", "Domoticz device type");
+
+  // === REST API v2 request body schemas ===
+
+  // CommandRequest
+  auto addSchema = [&](const char *name, const char *desc) -> JsonObject
+  {
+    JsonObject s = doc["components"]["schemas"][name].to<JsonObject>();
+    s["type"] = "object";
+    if (desc)
+      s["description"] = desc;
+    return s["properties"].to<JsonObject>();
+  };
+
+  JsonObject cmdProps = addSchema("CommandRequest", "Fan command or speed/timer");
+  addProp(cmdProps, "command", "string", "Named command (low/medium/high/timer1-3/away/cook30/cook60/autonight/clearqueue)");
+  addProp(cmdProps, "speed", "integer", "Fan speed", 0, 255);
+  addProp(cmdProps, "timer", "integer", "Timer in minutes", 0, 65535);
+
+  JsonObject vrProps = addSchema("VRemoteRequest", "Virtual remote command");
+  addProp(vrProps, "command", "string", "Command name");
+  addProp(vrProps, "index", "integer", "Virtual remote index", 0, 11);
+  addProp(vrProps, "name", "string", "Virtual remote name (alternative to index)");
+
+  JsonObject rfProps = addSchema("RFRemoteRequest", "RF remote command");
+  addProp(rfProps, "command", "string", "RF command name");
+  addProp(rfProps, "index", "integer", "RF remote index", 0, 11);
+
+  JsonObject co2Props = addSchema("RFCO2Request", "Send CO2 value via RF");
+  addProp(co2Props, "co2", "integer", "CO2 level in ppm", 0, 10000);
+  addProp(co2Props, "index", "integer", "RF remote index (default 0)", 0, 11);
+
+  JsonObject demandProps = addSchema("RFDemandRequest", "Send ventilation demand via RF");
+  addProp(demandProps, "demand", "integer", "Demand level (0=0%, 200=100%)", 0, 200);
+  addProp(demandProps, "zone", "integer", "Zone (default 0)", 0, 255);
+  addProp(demandProps, "index", "integer", "RF remote index (default 0)", 0, 11);
+
+  JsonObject rfcfgProps = addSchema("RFConfigRequest", "Configure RF remote settings");
+  addProp(rfcfgProps, "index", "integer", "RF remote index", 0, 11);
+  addProp(rfcfgProps, "setting", "string", "Setting name (setrfdevicesourceid/setrfdevicedestid/setrfdevicebidirectional)");
+  addProp(rfcfgProps, "value", "string", "Setting value (hex ID like 96,C8,B6 or true/false)");
+
+  JsonObject debugProps = addSchema("DebugRequest", "Debug/reboot actions");
+  addProp(debugProps, "action", "string", "Action (reboot/level0/level1/level2/level3)");
+
+  JsonObject tempProps = addSchema("OutsideTempRequest", "Set outside temperature");
+  addProp(tempProps, "temp", "number", "Temperature in Celsius (-100 to 100)");
+
+  JsonObject setProps = addSchema("SetSettingRequest", "Write Itho device setting");
+  addProp(setProps, "index", "integer", "Setting index", 0, 255);
+  addProp(setProps, "value", "number", "New value (int or float, must be within setting min/max)");
 
   // Serialize and send
   AsyncResponseStream *response = request->beginResponseStream("application/json");

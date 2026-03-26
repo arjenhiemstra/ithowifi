@@ -97,6 +97,9 @@ void handleAPIv2(AsyncWebServerRequest *request)
   if (response_status == ApiResponse::status::CONTINUE)
     response_status = processSetOutsideTemperature(paramsJson, response);
 
+  // Add deprecation notice — clients should migrate to /api/v2/ REST endpoints
+  response["_deprecated"] = "This query-parameter API style is deprecated. Use /api/v2/ REST endpoints instead.";
+
   if (response_status == ApiResponse::status::SUCCESS)
   {
     apiresponse.sendSuccess(response);
