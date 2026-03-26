@@ -9,7 +9,7 @@ The REST API is available at <b>/api/v2/</b> with proper HTTP methods:<br><br>
 <ul>
     <li><b>GET</b> endpoints for reading data (status, speed, device info, settings, remotes, etc.)</li>
     <li><b>POST</b> endpoints for commands and state changes (fan control, RF commands, CO2, demand, debug)</li>
-    <li><b>PUT</b> endpoint for updating device settings</li>
+    <li><b>PUT</b> endpoint for updating device settings (default disabled)</li>
 </ul>
 All responses follow the <a href='https://github.com/omniti-labs/jsend' target='_blank'>JSend</a> specification:<br>
 <ul>
@@ -31,17 +31,17 @@ Examples:<br>
 <strong>Legacy WebAPI v1</strong><br><br>
 A simple legacy WebAPI is available at: <a href='api.html' target='_blank'>api.html</a><br>
 Requests use URL query parameters: <code>http://[IP]/api.html?command=medium</code><br><br>
-<div id="webapitxt">
+<div>
     <ul>
         <li>A successful command will return 'OK', an unsuccessful command will return 'NOK'</li>
         <li>String params/values are supplied without quote marks</li>
         <li>Values outside specified values/ranges will be ignored or 0 in case of an overflow</li>
-        <li>For settings access (getsetting/setsetting), use the REST API v2 instead</li>
+        <li>For more advanced API feature, use the REST API v2 instead</li>
     </ul>
 </div>
 <br>
 <strong>MQTT API</strong><br><br>
-Commands are sent as JSON to the MQTT command topic. The MQTT API supports the same commands as the REST API.<br>
+Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostly the same commands as the REST API.<br>
 <ul>
     <li>The command must be sent as valid JSON</li>
     <li>The command must be sent to the command topic</li>
@@ -58,7 +58,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
             <th style="width:160px">value</th>
             <th>datatype</th>
             <th style="text-align:center">MQTT<br>(JSON)</th>
-            <th style="text-align:center">WebAPI<br>(URL params)</th>
+            <th style="text-align:center">WebAPI v1<br>(URL params)</th>
         </tr>
     </thead>
     <tbody>
@@ -184,11 +184,11 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
             <td>deviceinfo</td>
             <td>JSON</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with device information on the add-on and itho device
-                    connected (as of WebAPIv2). Return type present on MQTT "Device info topic".</em></td>
+                    connected. Use REST API v2: GET /api/v2/device. Return type present on MQTT "Device info topic".</em></td>
         </tr>
         <tr>
             <td colspan="6"><b>Commands below this line work on Itho devices that support the PWM2IC2 protocol. Devices
@@ -264,16 +264,14 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
             <td>0-255</td>
             <td>number</td>
             <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">
                 Comments:<br>
                 <em>
-                    Returns a JSON object containing the result of the API call. If successful it contains a data object
-                    with the current, minimum and
-                    maximum value of the given setting, using its index. If the
-                    setting index is invalid, the data object contains a key failreason.
+                    Use REST API v2: GET /api/v2/settings?index=N.
+                    Returns a JSON object with current, minimum and maximum value of the setting.
                 </em>
             </td>
         </tr>        
@@ -286,7 +284,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
             <td>outside_temp,temporary_outside_temp,valid_until</td>
             <td>number</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">
@@ -299,7 +297,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
                 </em>
                 <br><br>
                 <em>
-                    The WebAPI only supports the <b>outside_temp</b> setting and version 2 of the WebAPI must be used.
+                    Use REST API v2: POST /api/v2/outside_temp with body {"temp":15}.
                 </em>
             </td>
         </tr>
@@ -384,7 +382,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
             <td>0-10000</td>
             <td>string</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Sends a CO2 value (in ppm) via RF using the 1298 command.
@@ -398,7 +396,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
             <td>0-200</td>
             <td>string</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Sends a ventilation demand value via RF using the 31E0 command.
@@ -413,7 +411,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
             <td>0-255</td>
             <td>number</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Zone number for rfdemand command (default 0).
@@ -425,7 +423,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
             <td>rfstatus</td>
             <td>JSON</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with measurement data from monitored RF sources
@@ -449,7 +447,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
             <td>0-255</td>
             <td>number</td>
             <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td>value</td>
@@ -457,25 +455,14 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
             <td>any number</td>
             <td>number</td>
             <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">
                 Comments:<br>
                 <em>
-                    Sets the current value of a setting using its index. The
-                    value must be specified in the "value" parameter. The new
-                    value must be within the minimum and maximum of the setting.<br>
-                    Returns a JSON object containing the result of the API call. If successful it contains a data object
-                    with the current, previous, minimum and
-                    maximum value of the given setting, using its index. If the
-                    setting index or value is invalid, the data object contains a key failreason.
-                </em>
-                <br>
-                <br>
-                Example:<br>
-                <em>
-                    http://192.168.4.1/api.html?setsetting=4&value=10
+                    Use REST API v2: PUT /api/v2/settings with body {"index":N,"value":V}.
+                    The settings API must be enabled in system settings.
                 </em>
             </td>
         </tr>
@@ -484,7 +471,4 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports the s
 <p><br><br></p>
 <script>
     getSettings('syssetup');
-    setTimeout(function () {
-        $id('webapitxt').innerHTML = webapihtml;
-    }, 500);
 </script>
