@@ -274,7 +274,7 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDoc
     return ApiResponse::status::SUCCESS;
   }
 
-  response["failreason"] = "cmdvalue not valid";
+  response["failreason"] = "invalid get value, options: currentspeed, deviceinfo, queue, ithostatus, rfstatus, lastcmd, remotesinfo, vremotesinfo";
   return ApiResponse::status::FAIL;
 }
 
@@ -368,7 +368,7 @@ ApiResponse::api_response_status_t processGetsettingCommands(JsonObject params, 
   }
 
   response["code"] = 400;
-  response["failreason"] = "cmdvalue not valid";
+  response["failreason"] = "invalid getsetting value, must be a valid setting index number";
   return ApiResponse::status::FAIL;
 }
 
@@ -599,7 +599,7 @@ ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, 
   }
 
   response["code"] = 400;
-  response["failreason"] = "cmdvalue not valid";
+  response["failreason"] = "invalid setsetting value, must be a valid setting index with a value parameter";
   return ApiResponse::status::FAIL;
 }
 
@@ -650,7 +650,7 @@ ApiResponse::api_response_status_t processCommand(JsonObject params, JsonDocumen
   }
 
   response["code"] = 400;
-  response["failreason"] = "cmdvalue not valid";
+  response["failreason"] = "invalid setsetting value, must be a valid setting index number with a value parameter";
   return ApiResponse::status::FAIL;
 }
 
@@ -737,7 +737,7 @@ ApiResponse::api_response_status_t processSetRFremote(JsonObject params, JsonDoc
   }
 
   response["code"] = 400;
-  response["failreason"] = "settingvalue not valid";
+  response["failreason"] = "invalid setting, options: setrfdevicebidirectional, setrfdevicesourceid, setrfdevicedestid";
   return ApiResponse::status::FAIL;
 }
 
@@ -772,12 +772,12 @@ ApiResponse::api_response_status_t processRFremoteCommands(JsonObject params, Js
   }
   else
   {
-    response["failreason"] = "rf command unknown";
+    response["failreason"] = "rf command unknown, options: low, medium, high, timer1, timer2, timer3, away, cook30, cook60, auto, autonight, motion_on, motion_off, join, leave";
     return ApiResponse::status::FAIL;
   }
 
   response["code"] = 400;
-  response["failreason"] = "cmdvalue not valid";
+  response["failreason"] = "invalid rfremotecmd value, options: low, medium, high, timer1, timer2, timer3, away, cook30, cook60, auto, autonight, motion_on, motion_off, join, leave";
   return ApiResponse::status::FAIL;
 }
 
@@ -928,7 +928,7 @@ ApiResponse::api_response_status_t processVremoteCommands(JsonObject params, Jso
   }
 
   response["code"] = 400;
-  response["failreason"] = "cmdvalue not valid";
+  response["failreason"] = "invalid vremotecmd value, options: away, low, medium, high, timer1, timer2, timer3, join, leave, auto, autonight, cook30, cook60";
   return ApiResponse::status::FAIL;
 }
 ApiResponse::api_response_status_t processPWMSpeedTimerCommands(JsonObject params, JsonDocument &response)
@@ -973,7 +973,7 @@ ApiResponse::api_response_status_t processPWMSpeedTimerCommands(JsonObject param
   }
 
   response["code"] = 400;
-  response["failreason"] = "cmdvalue not valid";
+  response["failreason"] = "invalid speed/timer value, speed must be 0-255 and timer 0-65535";
   return ApiResponse::status::FAIL;
 }
 ApiResponse::api_response_status_t processi2csnifferCommands(JsonObject params, JsonDocument &response)
@@ -1005,7 +1005,7 @@ ApiResponse::api_response_status_t processi2csnifferCommands(JsonObject params, 
   }
 
   response["code"] = 400;
-  response["failreason"] = "cmdvalue not valid";
+  response["failreason"] = "invalid i2csniffer value, options: on, off";
   return ApiResponse::status::FAIL;
 }
 
@@ -1052,7 +1052,7 @@ ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonD
   }
 
   response["code"] = 400;
-  response["failreason"] = "cmdvalue not valid";
+  response["failreason"] = "invalid debug value, options: level0, level1, level2, level3, reboot";
   return ApiResponse::status::FAIL;
 }
 
