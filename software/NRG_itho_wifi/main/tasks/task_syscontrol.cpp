@@ -115,6 +115,12 @@ void execSystemControlTasks()
   if (!i2c_init_functions_done)
   {
     initI2cFunctions();
+    if (i2c_init_functions_done)
+    {
+      // Reset timers so normal intervals start from init completion
+      query4210tim = millis();
+      query2401tim = millis();
+    }
   }
   // request itho counter status every systemConfig.itho_counter_updatefreq sec.
   else if (millis() - query4210tim >= systemConfig.itho_counter_updatefreq * 1000UL)

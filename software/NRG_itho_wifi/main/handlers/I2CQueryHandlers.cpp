@@ -95,6 +95,21 @@ void initI2cFunctions()
         sendQueryStatus(false);
         N_LOG("I2C: QueryStatus");
       }
+      if (systemConfig.itho_31da == 1)
+      {
+        sendQuery31DA(false);
+        N_LOG("I2C: initial Query31DA");
+      }
+      if (systemConfig.itho_31d9 == 1)
+      {
+        sendQuery31D9(false);
+        N_LOG("I2C: initial Query31D9");
+      }
+      if (systemConfig.itho_4210 == 1)
+      {
+        sendQueryCounters(false);
+        N_LOG("I2C: initial QueryCounters");
+      }
 
       if (systemConfig.i2c_safe_guard > 0 && currentIthoDeviceID() == 0x1B)
       {
