@@ -1221,7 +1221,20 @@ document.addEventListener('DOMContentLoaded', function () {
       update_page('mqtt');
     }
     else if (btnId === 'itho_llm') {
-      websock_send('{"itho_llm":true}');
+      // Auto-save selected remote config before entering learn/leave mode
+      var sel = checkedVal('optionsRemotes');
+      if (sel != null) {
+        var funcEl = $id('func_remote-' + sel);
+        var remfunc = (!funcEl || typeof funcEl.value === 'undefined') ? 0 : funcEl.value;
+        var typeEl = $id('type_remote-' + sel);
+        var remtype = (!typeEl || typeof typeEl.value === 'undefined') ? 0 : typeEl.value;
+        var id = $id('id_remote-' + sel).value;
+        if (id == 'empty slot') id = "00,00,00";
+        if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
+          websock_send(`{"itho_update_remote":${sel},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + sel).value}","remtype":${remtype},"remfunc":${remfunc}}`);
+        }
+      }
+      setTimeout(function() { websock_send('{"itho_llm":true}'); }, 200);
     }
     else if (btnId === 'itho_remove_remote' || btnId === 'itho_remove_vremote') {
       var selected = checkedVal('optionsRemotes');

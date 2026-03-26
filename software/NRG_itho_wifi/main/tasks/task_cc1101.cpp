@@ -595,6 +595,10 @@ void TaskCC1101(void *pvParameters)
                   joinReplyRemIndex = index;
                   sendJoinReply = true;
                 }
+                else if (remotes.getRemoteFunction(index) == RemoteFunctions::MONITOR)
+                {
+                  D_LOG("RFI: Remote index:%d is monitor-only, not sending join reply", index);
+                }
 
                 saveRemotesflag = true;
               }
