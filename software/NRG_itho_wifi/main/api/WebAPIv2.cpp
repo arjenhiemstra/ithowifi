@@ -906,6 +906,12 @@ ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonD
   }
   else if (strcmp(value, "reboot") == 0)
   {
+    if (systemConfig.api_reboot == 0)
+    {
+      response["code"] = 403;
+      response["failreason"] = "reboot via API is disabled, enable it in system settings";
+      return ApiResponse::status::FAIL;
+    }
     logMessagejson("Reboot requested", WEBINTERFACE);
     response["result"] = "reboot requested";
     shouldReboot = true;

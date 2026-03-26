@@ -1141,6 +1141,7 @@ document.addEventListener('DOMContentLoaded', function () {
           syssec_edit: checkedVal('option-syssec_edit'),
           api_normalize: checkedVal('option-api_normalize'),
           api_settings: checkedVal('option-api_settings'),
+          api_reboot: checkedVal('option-api_reboot'),
           api_settings_activated: JSON.parse($val('api_settings_activated')),
           syssht30: checkedVal('option-syssht30'),
           itho_rf_support: checkedVal('option-itho_rf_support'),
