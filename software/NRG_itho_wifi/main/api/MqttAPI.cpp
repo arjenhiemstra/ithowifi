@@ -1,6 +1,25 @@
 #include "api/MqttAPI.h"
 #include "tasks/task_mqtt.h"
 
+static void mqttSendResponse(const char *status, const char *command, const char *message)
+{
+  char responseTopic[160]{};
+  snprintf(responseTopic, sizeof(responseTopic), "%s%s", systemConfig.mqtt_base_topic, "/cmd/response");
+
+  JsonDocument doc;
+  doc["status"] = status;
+  doc["command"] = command;
+  if (message)
+    doc["message"] = message;
+  time_t now;
+  time(&now);
+  doc["timestamp"] = now;
+
+  char buf[256]{};
+  serializeJson(doc, buf, sizeof(buf));
+  mqttClient.publish(responseTopic, buf);
+}
+
 void mqttCallback(const char *topic, const byte *payload, unsigned int length)
 {
 
@@ -64,6 +83,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         jsonCmd = true;
         const char *value = root["command"] | "";
         ithoExecCommand(value, MQTTAPI);
+        mqttSendResponse("success", value, nullptr);
         clean_cmd_topic = true;
       }
       if (!root["vremote"].isNull() || !root["vremotecmd"].isNull())
@@ -89,7 +109,12 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         {
           jsonCmd = true;
           ithoI2CCommand(index, command, MQTTAPI);
+          mqttSendResponse("success", "vremotecmd", command);
           clean_cmd_topic = true;
+        }
+        else
+        {
+          mqttSendResponse("fail", "vremotecmd", "invalid remote index or name");
         }
       }
       if (!root["rfremotecmd"].isNull() || !root["rfremoteindex"].isNull())
@@ -102,7 +127,10 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         if (!root["rfremotecmd"].isNull())
         {
           jsonCmd = true;
-          ithoExecRFCommand(idx, root["rfremotecmd"], MQTTAPI);
+          if (ithoExecRFCommand(idx, root["rfremotecmd"], MQTTAPI))
+            mqttSendResponse("success", "rfremotecmd", root["rfremotecmd"]);
+          else
+            mqttSendResponse("fail", "rfremotecmd", "rf command failed");
           clean_cmd_topic = true;
         }
       }
@@ -114,7 +142,10 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           idx = strtoul(root["rfremoteindex"], NULL, 10);
         }
         jsonCmd = true;
-        ithoSendRFCO2(idx, root["rfco2"].as<uint16_t>(), MQTTAPI);
+        if (ithoSendRFCO2(idx, root["rfco2"].as<uint16_t>(), MQTTAPI))
+          mqttSendResponse("success", "rfco2", "co2 value sent");
+        else
+          mqttSendResponse("fail", "rfco2", "failed - remote must be RFT CO2 type");
         clean_cmd_topic = true;
       }
       if (!root["rfdemand"].isNull())
@@ -130,7 +161,10 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           zone = root["rfzone"].as<uint8_t>();
         }
         jsonCmd = true;
-        ithoSendRFDemand(idx, root["rfdemand"].as<uint8_t>(), zone, MQTTAPI);
+        if (ithoSendRFDemand(idx, root["rfdemand"].as<uint8_t>(), zone, MQTTAPI))
+          mqttSendResponse("success", "rfdemand", "demand value sent");
+        else
+          mqttSendResponse("fail", "rfdemand", "failed - remote must be RFT CO2 or RFT RV type");
         clean_cmd_topic = true;
       }
       if (!root["speed"].isNull())
@@ -139,11 +173,13 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         if (!root["timer"].isNull())
         {
           ithoSetSpeedTimer(root["speed"].as<uint16_t>(), root["timer"].as<uint16_t>(), MQTTAPI);
+          mqttSendResponse("success", "speed+timer", nullptr);
           clean_cmd_topic = true;
         }
         else
         {
           ithoSetSpeed(root["speed"].as<uint16_t>(), MQTTAPI);
+          mqttSendResponse("success", "speed", nullptr);
           clean_cmd_topic = true;
         }
       }
@@ -151,6 +187,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
       {
         jsonCmd = true;
         ithoSetTimer(root["timer"].as<uint16_t>(), MQTTAPI);
+        mqttSendResponse("success", "timer", nullptr);
         clean_cmd_topic = true;
       }
       if (!root["clearqueue"].isNull())
@@ -160,7 +197,12 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         if (strcmp(value, "true") == 0)
         {
           clearQueue = true;
+          mqttSendResponse("success", "clearqueue", nullptr);
           clean_cmd_topic = true;
+        }
+        else
+        {
+          mqttSendResponse("fail", "clearqueue", "value must be \"true\"");
         }
       }
       if (!(const char *)root["outside_temp"].isNull())
@@ -170,6 +212,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         float temporary_outside_temp = root["temporary_outside_temp"].as<float>();
         uint32_t valid_until = root["valid_until"].as<uint32_t>();
         setSettingCE30(static_cast<int16_t>(temporary_outside_temp * 100), static_cast<int16_t>(outside_temp * 100), valid_until, false);
+        mqttSendResponse("success", "outside_temp", nullptr);
         clean_cmd_topic = true;
       }
       if (!(const char *)root["manual_operation_index"].isNull())
@@ -181,11 +224,13 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         uint8_t checked = root["manual_operation_checked"].as<uint8_t>();
         D_LOG("API: index: %d dt: %d value: %d checked: %d", index, datatype, value, checked);
         setSetting4030(index, datatype, value, checked, false);
+        mqttSendResponse("success", "manual_operation", nullptr);
         clean_cmd_topic = true;
       }
       if (!jsonCmd)
       {
         ithoSetSpeed(s_payload, MQTTAPI);
+        mqttSendResponse("success", "speed", s_payload);
         clean_cmd_topic = true;
       }
     }
@@ -194,10 +239,14 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
       if (apiCmdAllowed(s_payload))
       {
         ithoExecCommand(s_payload, MQTTAPI);
+        mqttSendResponse("success", s_payload, nullptr);
         clean_cmd_topic = true;
       }
       else
+      {
+        mqttSendResponse("fail", s_payload, "unknown command");
         D_LOG("API: Invalid MQTT API command");
+      }
     }
   }
   if (strcmp(topic, systemConfig.mqtt_domoticzout_topic) == 0)
