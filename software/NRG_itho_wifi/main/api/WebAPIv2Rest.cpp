@@ -699,7 +699,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/rfremote/demand", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/rfremote/config", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/debug", HTTP_OPTIONS, handleOptions);
-  server.on("/api/v2/outside_temp", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/wpu/outside_temp", HTTP_OPTIONS, handleOptions);
 
   // GET endpoints
   server.on("/api/v2/speed", HTTP_GET, handleGetSpeed);
@@ -848,7 +848,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
       });
 
   server.on(
-      "/api/v2/outside_temp", HTTP_POST,
+      "/api/v2/wpu/outside_temp", HTTP_POST,
       [](AsyncWebServerRequest *request) {},
       nullptr,
       [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)

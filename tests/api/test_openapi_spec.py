@@ -71,7 +71,7 @@ class TestSpecEndpointCompleteness:
         paths = spec["paths"]
         for endpoint in ["/api/v2/command", "/api/v2/vremote", "/api/v2/rfremote/command",
                          "/api/v2/rfremote/co2", "/api/v2/rfremote/demand", "/api/v2/debug",
-                         "/api/v2/outside_temp"]:
+                         "/api/v2/wpu/outside_temp"]:
             assert endpoint in paths, f"Missing POST endpoint: {endpoint}"
 
     def test_put_endpoints(self, spec):

@@ -153,7 +153,7 @@ void handleOpenAPI(AsyncWebServerRequest *request)
   addRestPost("/api/v2/rfremote/demand", "Send ventilation demand via RF", "#/components/schemas/RFDemandRequest");
   addRestPost("/api/v2/rfremote/config", "Configure RF remote", "#/components/schemas/RFConfigRequest");
   addRestPost("/api/v2/debug", "Debug actions (reboot, RF debug level)", "#/components/schemas/DebugRequest");
-  addRestPost("/api/v2/outside_temp", "Set outside temperature", "#/components/schemas/OutsideTempRequest");
+  addRestPost("/api/v2/wpu/outside_temp", "Set outside temperature", "#/components/schemas/OutsideTempRequest");
 
   // PUT endpoint
   JsonObject settingsPut = doc["paths"]["/api/v2/settings"]["put"].to<JsonObject>();
