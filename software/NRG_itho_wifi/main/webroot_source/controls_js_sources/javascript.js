@@ -2728,30 +2728,6 @@ function generateCompactJson() {
   return compactJson;
 }
 
-var webapihtml = `
-                                                                            <p>The WebAPI implementation follows the JSend specification.<br>
-                                                                              More information about JSend can be found on github: <a href="https://github.com/omniti-labs/jsend" target="_blank" rel="noopener noreferrer">https://github.com/omniti-labs/jsend</a>
-                                                                            </p>
-                                                                            <p>The WebAPI always returns a JSON which will at least contain a key "status".<br>
-                                                                              The value of the status key indicates the result of the API call. This can either be "success", "fail" or "error".
-                                                                            </p>
-                                                                            <p>In case of "success" or "fail":<br>
-                                                                              <ul>
-                                                                                <li>the returned JSON will always have a "data" key containing the resulting data of the request</li>
-                                                                                <li>the value can be a string or a JSON object/array</li>
-                                                                                <li>the returned JSON should contain a key "result" that contains a string with a short human readable API call result</li>
-                                                                                <li>the returned JSON should contain a key "cmdkey" that conains a string copy of the given command when a URL encoded key/value pair is present in the API call</li>
-                                                                              </ul>
-                                                                            </p>
-                                                                            <p>In case of "error": <br></p>
-                                                                            <p>
-                                                                              <ul>
-                                                                                <li>the returned JSON will at least contain a key "message" with a value of type string, explaining what went wrong</li>
-                                                                                <li>the returned JSON could also include a key "code" which contains a status code that should adhere to rfc9110</li>
-                                                                              </ul>
-                                                                            </p>
-                                                                            `;
-
 //
 // Setup Wizard
 //

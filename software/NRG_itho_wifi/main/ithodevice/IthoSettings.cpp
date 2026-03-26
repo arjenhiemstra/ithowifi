@@ -37,7 +37,7 @@ int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const u
 
       for (int i = 0; i < 999; i++)
       {
-        if (static_cast<int>(*(*(ithoDevicesptr->settingsMapping + version) + i) == 999))
+        if (static_cast<int>(*(*(ithoDevicesptr->settingsMapping + version) + i)) == 999)
         {
           // end of array
           if (ithoSettingsArray == nullptr)

@@ -162,33 +162,33 @@ void handleAPIv1(AsyncWebServerRequest *request)
     {
       timer = p->value().c_str();
     }
-    else if (strcmp(p->name().c_str(), "i2csniffer") == 0)
-    {
-      auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
-      if (strcmp(p->value().c_str(), "on") == 0)
-      {
-        i2cSnifferEnable();
-        sg->sniffer_enabled = true;
-        sg->sniffer_web_enabled = true;
-        parseOK = true;
-      }
-      else if (strcmp(p->value().c_str(), "off") == 0)
-      {
-        i2cSnifferDisable();
-        sg->sniffer_enabled = false;
-        sg->sniffer_web_enabled = false;
-        parseOK = true;
-      }
-    }
-    else if (strcmp(p->name().c_str(), "debug") == 0)
-    {
-      if (strcmp(p->value().c_str(), "reboot") == 0)
-      {
-        shouldReboot = true;
-        logMessagejson("Reboot requested", WEBINTERFACE);
-        parseOK = true;
-      }
-    }
+    // else if (strcmp(p->name().c_str(), "i2csniffer") == 0)
+    // {
+    //   auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
+    //   if (strcmp(p->value().c_str(), "on") == 0)
+    //   {
+    //     i2cSnifferEnable();
+    //     sg->sniffer_enabled = true;
+    //     sg->sniffer_web_enabled = true;
+    //     parseOK = true;
+    //   }
+    //   else if (strcmp(p->value().c_str(), "off") == 0)
+    //   {
+    //     i2cSnifferDisable();
+    //     sg->sniffer_enabled = false;
+    //     sg->sniffer_web_enabled = false;
+    //     parseOK = true;
+    //   }
+    // }
+    // else if (strcmp(p->name().c_str(), "debug") == 0)
+    // {
+    //   if (strcmp(p->value().c_str(), "reboot") == 0)
+    //   {
+    //     shouldReboot = true;
+    //     logMessagejson("Reboot requested", WEBINTERFACE);
+    //     parseOK = true;
+    //   }
+    // }
   }
 
   if (vremotecmd != nullptr || vremoteidx != nullptr || vremotename != nullptr)

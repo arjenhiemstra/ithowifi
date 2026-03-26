@@ -560,9 +560,6 @@ const messageHandlers = {
     if ("i2cmenu" in x) {
       $id('i2cmenu').classList.toggle('hidden', x.i2cmenu != 1);
     }
-    if ("api_version" in x) {
-      localStorage.setItem("api_version", x.api_version);
-    }
   },
   remotes: function (f) {
     var tbl = $id('RemotesTable');
@@ -1143,9 +1140,9 @@ document.addEventListener('DOMContentLoaded', function () {
           syssec_web: checkedVal('option-syssec_web'),
           syssec_api: checkedVal('option-syssec_api'),
           syssec_edit: checkedVal('option-syssec_edit'),
-          api_version: checkedVal('option-api_version'),
           api_normalize: checkedVal('option-api_normalize'),
           api_settings: checkedVal('option-api_settings'),
+          api_reboot: checkedVal('option-api_reboot'),
           api_settings_activated: JSON.parse($val('api_settings_activated')),
           syssht30: checkedVal('option-syssht30'),
           itho_rf_support: checkedVal('option-itho_rf_support'),
@@ -2732,30 +2729,6 @@ function generateCompactJson() {
   return compactJson;
 }
 
-var webapihtml = `
-                                                                            <p>The WebAPI implementation follows the JSend specification.<br>
-                                                                              More information about JSend can be found on github: <a href="https://github.com/omniti-labs/jsend" target="_blank" rel="noopener noreferrer">https://github.com/omniti-labs/jsend</a>
-                                                                            </p>
-                                                                            <p>The WebAPI always returns a JSON which will at least contain a key "status".<br>
-                                                                              The value of the status key indicates the result of the API call. This can either be "success", "fail" or "error".
-                                                                            </p>
-                                                                            <p>In case of "success" or "fail":<br>
-                                                                              <ul>
-                                                                                <li>the returned JSON will always have a "data" key containing the resulting data of the request</li>
-                                                                                <li>the value can be a string or a JSON object/array</li>
-                                                                                <li>the returned JSON should contain a key "result" that contains a string with a short human readable API call result</li>
-                                                                                <li>the returned JSON should contain a key "cmdkey" that conains a string copy of the given command when a URL encoded key/value pair is present in the API call</li>
-                                                                              </ul>
-                                                                            </p>
-                                                                            <p>In case of "error": <br></p>
-                                                                            <p>
-                                                                              <ul>
-                                                                                <li>the returned JSON will at least contain a key "message" with a value of type string, explaining what went wrong</li>
-                                                                                <li>the returned JSON could also include a key "code" which contains a status code that should adhere to rfc9110</li>
-                                                                              </ul>
-                                                                            </p>
-                                                                            `;
-
 //
 // Setup Wizard
 //
@@ -3553,23 +3526,45 @@ var html_api = `
 </div>
 <h3>API Description</h3>
 <p><a href='swagger' onclick="event.preventDefault(); update_page('swagger');">Interactive API Explorer (Swagger UI)</a> | <a href='/api/openapi.json' target='_blank'>OpenAPI Specification (JSON)</a></p>
-<strong>General information WebAPI</strong><br><br>
-A simple WebAPI is available at the following URL: <a href='api.html' target='_blank'>api.html</a><br><br>
-The request should be formatted as follows: <br>http://[DNS or IP]/api.html?[param]=[value]<br><br>
-ie. http://192.168.4.1/api.html?command=medium<br>
-or<br>
-http://192.168.4.1/api.html?speed=150&timer=15<br><br>
-Unless specified otherwise:<br>
-<div id="webapitxt">
+
+<strong>REST API v2 (recommended)</strong><br><br>
+The REST API is available at <b>/api/v2/</b> with proper HTTP methods:<br><br>
+<ul>
+    <li><b>GET</b> endpoints for reading data (status, speed, device info, settings, remotes, etc.)</li>
+    <li><b>POST</b> endpoints for commands and state changes (fan control, RF commands, CO2, demand, debug)</li>
+    <li><b>PUT</b> endpoint for updating device settings (default disabled)</li>
+</ul>
+All responses follow the <a href='https://github.com/omniti-labs/jsend' target='_blank'>JSend</a> specification:<br>
+<ul>
+    <li>Success: <code>{"status":"success","data":{...}}</code> (HTTP 200)</li>
+    <li>Fail: <code>{"status":"fail","data":{"failreason":"..."}}</code> (HTTP 400/403/404)</li>
+    <li>Error: <code>{"status":"error","message":"..."}</code> (HTTP 500)</li>
+</ul>
+POST/PUT endpoints require <code>Content-Type: application/json</code> with a JSON body.<br>
+When API authentication is enabled, all endpoints require HTTP Basic Auth.<br>
+Cross-origin requests (CORS) are supported on all endpoints.<br><br>
+
+Examples:<br>
+<code>GET /api/v2/speed</code> &rarr; current fan speed<br>
+<code>POST /api/v2/command</code> with body <code>{"command":"low"}</code><br>
+<code>POST /api/v2/command</code> with body <code>{"speed":150,"timer":15}</code><br>
+<code>PUT /api/v2/settings</code> with body <code>{"index":4,"value":10}</code><br>
+<code>POST /api/v2/rfco2</code> with body <code>{"co2":800,"index":2}</code><br>
+<br>
+<strong>Legacy WebAPI v1</strong><br><br>
+A simple legacy WebAPI is available at: <a href='api.html' target='_blank'>api.html</a><br>
+Requests use URL query parameters: <code>http://[IP]/api.html?command=medium</code><br><br>
+<div>
     <ul>
         <li>A successful command will return 'OK', an unsuccessful command will return 'NOK'</li>
         <li>String params/values are supplied without quote marks</li>
         <li>Values outside specified values/ranges will be ignored or 0 in case of an overflow</li>
+        <li>For more advanced API feature, use the REST API v2 instead</li>
     </ul>
 </div>
 <br>
-<strong>General information MQTT API</strong><br><br>
-Unless specified otherwise:<br>
+<strong>MQTT API</strong><br><br>
+Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostly the same commands as the REST API.<br>
 <ul>
     <li>The command must be sent as valid JSON</li>
     <li>The command must be sent to the command topic</li>
@@ -3586,7 +3581,7 @@ Unless specified otherwise:<br>
             <th style="width:160px">value</th>
             <th>datatype</th>
             <th style="text-align:center">MQTT<br>(JSON)</th>
-            <th style="text-align:center">WebAPI<br>(URL params)</th>
+            <th style="text-align:center">WebAPI v1<br>(URL params)</th>
         </tr>
     </thead>
     <tbody>
@@ -3709,14 +3704,36 @@ Unless specified otherwise:<br>
         <tr>
             <td>get</td>
             <td>string</td>
-            <td>deviceinfo</td>
+            <td>lastcmd</td>
             <td>JSON</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
             <td style="text-align:center">●</td>
         </tr>
         <tr>
+            <td colspan="6">Comments:<br><em>Returns JSON with the last received command information.</em></td>
+        </tr>
+        <tr>
+            <td>get</td>
+            <td>string</td>
+            <td>queue</td>
+            <td>JSON</td>
+            <td style="text-align:center">◌</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Returns JSON with the current command queue, including ithoSpeed, ithoOldSpeed and fallBackSpeed.</em></td>
+        </tr>
+        <tr>
+            <td>get</td>
+            <td>string</td>
+            <td>deviceinfo</td>
+            <td>JSON</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with device information on the add-on and itho device
-                    connected (as of WebAPIv2). Return type present on MQTT "Device info topic".</em></td>
+                    connected. Use REST API v2: GET /api/v2/device. Return type present on MQTT "Device info topic".</em></td>
         </tr>
         <tr>
             <td colspan="6"><b>Commands below this line work on Itho devices that support the PWM2IC2 protocol. Devices
@@ -3792,16 +3809,14 @@ Unless specified otherwise:<br>
             <td>0-255</td>
             <td>number</td>
             <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">
                 Comments:<br>
                 <em>
-                    Returns a JSON object containing the result of the API call. If successful it contains a data object
-                    with the current, minimum and
-                    maximum value of the given setting, using its index. If the
-                    setting index is invalid, the data object contains a key failreason.
+                    Use REST API v2: GET /api/v2/settings?index=N.
+                    Returns a JSON object with current, minimum and maximum value of the setting.
                 </em>
             </td>
         </tr>        
@@ -3814,7 +3829,7 @@ Unless specified otherwise:<br>
             <td>outside_temp,temporary_outside_temp,valid_until</td>
             <td>number</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">
@@ -3827,7 +3842,7 @@ Unless specified otherwise:<br>
                 </em>
                 <br><br>
                 <em>
-                    The WebAPI only supports the <b>outside_temp</b> setting and version 2 of the WebAPI must be used.
+                    Use REST API v2: POST /api/v2/outside_temp with body {"temp":15}.
                 </em>
             </td>
         </tr>
@@ -3912,7 +3927,7 @@ Unless specified otherwise:<br>
             <td>0-10000</td>
             <td>string</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Sends a CO2 value (in ppm) via RF using the 1298 command.
@@ -3926,7 +3941,7 @@ Unless specified otherwise:<br>
             <td>0-200</td>
             <td>string</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Sends a ventilation demand value via RF using the 31E0 command.
@@ -3941,7 +3956,7 @@ Unless specified otherwise:<br>
             <td>0-255</td>
             <td>number</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Zone number for rfdemand command (default 0).
@@ -3953,7 +3968,7 @@ Unless specified otherwise:<br>
             <td>rfstatus</td>
             <td>JSON</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with measurement data from monitored RF sources
@@ -3965,10 +3980,7 @@ Unless specified otherwise:<br>
         </tr>
         <tr>
             <td colspan="6"><b style="color: red">API Commands below this line can change the settings of your Itho
-                    Daalderop
-                    unit, and this may affect its behaviour (i.e. turn it to a non working state).
-                    Only use this part of the API if you know what you're doing and are
-                    certain it won't damage your unit.
+                    Daalderop and are only available (after activation) on the REST API, not on the MQTT API.
                 </b></td>
         </tr>
         <tr>
@@ -3977,7 +3989,7 @@ Unless specified otherwise:<br>
             <td>0-255</td>
             <td>number</td>
             <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td>value</td>
@@ -3985,25 +3997,14 @@ Unless specified otherwise:<br>
             <td>any number</td>
             <td>number</td>
             <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">
                 Comments:<br>
                 <em>
-                    Sets the current value of a setting using its index. The
-                    value must be specified in the "value" parameter. The new
-                    value must be within the minimum and maximum of the setting.<br>
-                    Returns a JSON object containing the result of the API call. If successful it contains a data object
-                    with the current, previous, minimum and
-                    maximum value of the given setting, using its index. If the
-                    setting index or value is invalid, the data object contains a key failreason.
-                </em>
-                <br>
-                <br>
-                Example:<br>
-                <em>
-                    http://192.168.4.1/api.html?setsetting=4&value=10
+                    Use REST API v2: PUT /api/v2/settings with body {"index":N,"value":V}.
+                    The settings API must be enabled in system settings.
                 </em>
             </td>
         </tr>
@@ -4012,11 +4013,6 @@ Unless specified otherwise:<br>
 <p><br><br></p>
 <script>
     getSettings('syssetup');
-    setTimeout(function () {
-        if (localStorage.getItem("api_version") == "2") {
-            $id('webapitxt').innerHTML = webapihtml;
-        }
-    }, 500);
 </script>
 `;
 
@@ -4573,12 +4569,6 @@ var html_systemsettings_start = `
       <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
     </div>
     <legend><br>API settings:</legend>
-    <p>WebAPI version</p>
-    <div class="pure-control-group">
-      <label for="option-api_version" class="pure-radio">WebAPI version</label>
-      <input id="option-api_version-1" type="radio" name="option-api_version" value="1"> 1
-      <input id="option-api_version-2" type="radio" name="option-api_version" value="2"> 2
-    </div>
     <p>Have api keys on the WebAPI, MQTT API and Itho Status page normlized (all lowercase, no spaces and special
       characters).</p>
     <div class="pure-control-group">
@@ -4591,6 +4581,11 @@ var html_systemsettings_start = `
       <label for="option-api_settings" class="pure-radio">Enable update settings API</label>
       <input id="option-api_settings-1" type="radio" name="option-api_settings" value="1"> on
       <input id="option-api_settings-0" type="radio" name="option-api_settings" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-api_reboot" class="pure-radio">Enable reboot via API</label>
+      <input id="option-api_reboot-1" type="radio" name="option-api_reboot" value="1"> on
+      <input id="option-api_reboot-0" type="radio" name="option-api_reboot" value="0"> off
     </div>
     <div class="pure-control-group">
       <label for="api_settings_activated">Activate settings indexes</label>
@@ -4748,7 +4743,7 @@ var html_swagger = `
     SwaggerUIBundle({
       url: '/api/openapi.json',
       dom_id: '#swagger-ui',
-      deepLinking: true,
+      deepLinking: false,
       presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
       layout: 'BaseLayout'
     });

@@ -93,7 +93,7 @@ void initI2cFunctions()
       if (systemConfig.itho_2401 == 1)
       {
         sendQueryStatus(false);
-        N_LOG("I2C: QueryStatus");
+        N_LOG("I2C: initial QueryStatus");
       }
       if (systemConfig.itho_31da == 1)
       {
