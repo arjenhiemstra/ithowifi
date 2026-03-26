@@ -15,6 +15,8 @@ public:
 
     void send(int code, const char *contentType, const std::string &content) override
     {
-        _request->send(code, contentType, content.c_str());
+        AsyncWebServerResponse *response = _request->beginResponse(code, contentType, content.c_str());
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        _request->send(response);
     }
 };

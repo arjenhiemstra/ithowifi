@@ -35,6 +35,7 @@ static void sendSuccess(AsyncWebServerRequest *request, JsonDocument &data, int 
   time(&now);
   doc["data"]["timestamp"] = now;
   AsyncResponseStream *response = request->beginResponseStream("application/json");
+  response->addHeader("Access-Control-Allow-Origin", "*");
   response->setCode(statusCode);
   serializeJson(doc, *response);
   request->send(response);
@@ -49,6 +50,7 @@ static void sendFail(AsyncWebServerRequest *request, const char *reason, int sta
   doc["data"]["timestamp"] = now;
   doc["data"]["failreason"] = reason;
   AsyncResponseStream *response = request->beginResponseStream("application/json");
+  response->addHeader("Access-Control-Allow-Origin", "*");
   response->setCode(statusCode);
   serializeJson(doc, *response);
   request->send(response);
@@ -63,6 +65,7 @@ static void sendError(AsyncWebServerRequest *request, const char *message, int s
   time(&now);
   doc["timestamp"] = now;
   AsyncResponseStream *response = request->beginResponseStream("application/json");
+  response->addHeader("Access-Control-Allow-Origin", "*");
   response->setCode(statusCode);
   serializeJson(doc, *response);
   request->send(response);
@@ -649,8 +652,38 @@ static void handlePostOutsideTemp(AsyncWebServerRequest *request, JsonVariant &j
 
 // --- Route registration ---
 
+// CORS preflight handler
+static void handleOptions(AsyncWebServerRequest *request)
+{
+  AsyncWebServerResponse *response = request->beginResponse(204);
+  response->addHeader("Access-Control-Allow-Origin", "*");
+  response->addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
+  response->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  response->addHeader("Access-Control-Max-Age", "86400");
+  request->send(response);
+}
+
 void registerRestAPIv2Routes(AsyncWebServer &server)
 {
+  // CORS preflight for all /api/v2/ endpoints
+  server.on("/api/v2/speed", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/status", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/device", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/queue", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/lastcmd", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/remotes", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/vremotes", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/rfstatus", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/settings", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/command", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/vremote", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/rfremote", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/rfco2", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/rfdemand", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/rf/config", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/debug", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/outside_temp", HTTP_OPTIONS, handleOptions);
+
   // GET endpoints
   server.on("/api/v2/speed", HTTP_GET, handleGetSpeed);
   server.on("/api/v2/status", HTTP_GET, handleGetStatus);
