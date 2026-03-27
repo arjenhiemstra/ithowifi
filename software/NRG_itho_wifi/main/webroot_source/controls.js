@@ -514,9 +514,22 @@ const messageHandlers = {
     if (rfo && x.rfloglevel > 0) rfo.classList.remove('hidden');
   },
   wifistat: function (f) {
+    // Map WiFi status codes to user-friendly text
+    var statusMap = {
+      'WL_CONNECTED': 'Connected',
+      'WL_DISCONNECTED': 'Disconnected',
+      'WL_IDLE_STATUS': 'Idle',
+      'WL_NO_SSID_AVAIL': 'Network not found',
+      'WL_CONNECT_FAILED': 'Connection failed',
+      'WL_CONNECTION_LOST': 'Connection lost',
+      'WL_SCAN_COMPLETED': 'Scan completed'
+    };
+    if (f.wifistat.wificonnstat && statusMap[f.wifistat.wificonnstat]) {
+      f.wifistat.wificonnstat = statusMap[f.wifistat.wificonnstat];
+    }
     processElements(f.wifistat);
     // Stop wizard connect polling once connected
-    if (wizardActive && wizardConnectInterval && f.wifistat.wificonnstat === 'WL_CONNECTED') {
+    if (wizardActive && wizardConnectInterval && f.wifistat.wificonnstat === 'Connected') {
       clearInterval(wizardConnectInterval);
       wizardConnectInterval = null;
     }
@@ -544,6 +557,9 @@ const messageHandlers = {
           execScripts(main);
           websock_send('{"reboot":true}');
         }
+      }
+      if ("itho_control_interface" in x) {
+        localStorage.setItem("itho_control_interface", x.itho_control_interface);
       }
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
         $id('remotemenu').classList.remove('hidden');
@@ -1026,6 +1042,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (target.id === 'wiz-wifi-connect') {
       e.preventDefault();
       wizardSaveWifiSettings();
+      // Show connecting status immediately
+      var statEls = document.querySelectorAll('[name="wificonnstat"]');
+      statEls.forEach(function (el) { el.textContent = 'Connecting...'; });
       getSettings('wifistat');
       if (wizardConnectInterval) clearInterval(wizardConnectInterval);
       wizardConnectInterval = setInterval(function () { getSettings('wifistat'); }, 2000);
@@ -1146,6 +1165,8 @@ document.addEventListener('DOMContentLoaded', function () {
           api_settings_activated: JSON.parse($val('api_settings_activated')),
           syssht30: checkedVal('option-syssht30'),
           itho_rf_support: checkedVal('option-itho_rf_support'),
+          itho_control_interface: checkedVal('option-itho_control_interface'),
+          itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_fallback: $val('itho_fallback'),
           itho_low: $val('itho_low'),
           itho_medium: $val('itho_medium'),
@@ -1222,7 +1243,33 @@ document.addEventListener('DOMContentLoaded', function () {
       update_page('mqtt');
     }
     else if (btnId === 'itho_llm') {
-      websock_send('{"itho_llm":true}');
+      // Auto-save remote config before entering learn/leave mode
+      // Try selected remote first, then save all visible remotes (wizard mode)
+      var sel = checkedVal('optionsRemotes');
+      var indices = [];
+      if (sel != null) {
+        indices.push(parseInt(sel));
+      } else {
+        // No radio selected (wizard mode) — save all remotes that have visible dropdowns
+        for (var ri = 0; ri < 12; ri++) {
+          if ($id('func_remote-' + ri)) indices.push(ri);
+        }
+      }
+      for (var k = 0; k < indices.length; k++) {
+        var idx = indices[k];
+        var funcEl = $id('func_remote-' + idx);
+        var remfunc = (!funcEl || typeof funcEl.value === 'undefined') ? 0 : funcEl.value;
+        var typeEl = $id('type_remote-' + idx);
+        var remtype = (!typeEl || typeof typeEl.value === 'undefined') ? 0 : typeEl.value;
+        var nameEl = $id('name_remote-' + idx);
+        var name = nameEl ? nameEl.value : 'remote' + idx;
+        var id = $id('id_remote-' + idx) ? $id('id_remote-' + idx).value : '00,00,00';
+        if (id == 'empty slot') id = "00,00,00";
+        if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
+          websock_send(`{"itho_update_remote":${idx},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${name}","remtype":${remtype},"remfunc":${remfunc}}`);
+        }
+      }
+      setTimeout(function() { websock_send('{"itho_llm":true}'); }, 500);
     }
     else if (btnId === 'itho_remove_remote' || btnId === 'itho_remove_vremote') {
       var selected = checkedVal('optionsRemotes');
@@ -2743,6 +2790,8 @@ var wizardRemotesInterval = null;
 var wizardWifistatInterval = null;
 var wizardConnectInterval = null;
 var wizardMqttInterval = null;
+var wizardRfCo2Device = false;
+var wizardHru250_300 = false;
 
 function initWizard(startStep) {
   wizardActive = true;
@@ -3006,11 +3055,18 @@ function applyDeviceDefaults() {
   var updatefreqEl = $id('itho_updatefreq');
   if (updatefreqEl) updatefreqEl.value = (deviceTypeQ ? 10 : 60);
 
-  // RF remote type default: RFT AUTO for HRU types, RFT CVE for CVE types
+  // RF remote type and function defaults:
+  // PWM2I2C devices (CVE, HRU200): RFT AUTO, function=receive
+  // Non-PWM2I2C HRU devices (HRU350, HRU250-300, HRU ECO): RFT CO2, function=send
+  wizardRfCo2Device = (cat === 'hru350' || cat === 'hru250_300' || cat === 'hru_eco');
+  wizardHru250_300 = (cat === 'hru250_300');
   var rfRemTypeEl = $id('wiz-rfremtype');
   if (rfRemTypeEl) {
-    var rfUseAuto = (cat === 'cve' || cat === 'hru200' || cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200' || cat === 'hru250_300');
-    rfRemTypeEl.value = rfUseAuto ? '0x22F3' : '0x22F1';
+    rfRemTypeEl.value = wizardRfCo2Device ? '0x1298' : '0x22F3';
+  }
+  // Auto-configure first RF remote as Send+RFTCO2 for non-PWM2I2C HRU devices
+  if (wizardRfCo2Device && wizardHasRF) {
+    setTimeout(function() { wizardAutoConfigRFRemote(); }, 500);
   }
 
   // Update device info display
@@ -3169,6 +3225,10 @@ function wizardFinish() {
       itho_4210: checkedVal('option-itho_4210') || '0'
     }
   };
+  // For non-PWM2I2C HRU devices: enable RF CO2 join on next boot
+  if (wizardRfCo2Device) {
+    sysMsg.systemsettings.itho_rf_co2_join = 1;
+  }
   websock_send(JSON.stringify(sysMsg));
 
   // 2b. Save virtual remote type (if virtual remote is configured)
@@ -3226,7 +3286,8 @@ function wizardFinish() {
   // Determine what action is needed
   var ssidChanged = $val('ssid') !== '';
   var joinEnabled = sendjoinVal !== '0';
-  var needsPowerCycle = joinEnabled && forcemediumVal !== '0';
+  var rfCo2JoinEnabled = wizardRfCo2Device;
+  var needsPowerCycle = (joinEnabled && forcemediumVal !== '0') || (rfCo2JoinEnabled && !wizardHru250_300);
   var needsReboot = ssidChanged && !needsPowerCycle;
 
   // Build target URL — prefer IP address, fall back to hostname.local
@@ -3257,13 +3318,39 @@ function wizardFinish() {
     var pcMsg = $id('wizard-powercycle-msg');
     if (pcMsg) {
       pcMsg.style.display = '';
-      pcMsg.innerHTML = '<strong>Important:</strong> Power cycle your Itho unit to complete the virtual remote pairing. The add-on will restart together with the unit.';
+      if (rfCo2JoinEnabled && !wizardHru250_300) {
+        pcMsg.innerHTML = '<strong>Important:</strong> Power cycle your Itho unit. The add-on will automatically send an RF CO2 join command within 2 minutes after boot. After successful pairing, the add-on will control your Itho via RF CO2 demand commands.';
+      } else {
+        pcMsg.innerHTML = '<strong>Important:</strong> Power cycle your Itho unit to complete the virtual remote pairing. The add-on will restart together with the unit.';
+      }
     }
     if (ssidChanged) {
       var wifiMsg = $id('wizard-wifi-reconnect');
       if (wifiMsg) wifiMsg.style.display = '';
     }
     $id('wizard-finish-status').innerHTML = 'Settings saved. <a href="' + targetUrl + '">Go to device</a>';
+  } else if (wizardHru250_300 && rfCo2JoinEnabled) {
+    // HRU250-300: user must manually put Itho in learn mode, then send join
+    var pcMsg = $id('wizard-powercycle-msg');
+    if (pcMsg) {
+      pcMsg.style.display = '';
+      pcMsg.innerHTML = '<strong>HRU 250/300:</strong> Put your Itho in learn mode (refer to your Itho manual).<br>' +
+        'Then click the button below to send the RF CO2 join command.<br><br>' +
+        '<button id="wizard-send-rf-join" type="button" class="pure-button pure-button-primary">Send RF CO2 Join</button>' +
+        '<span id="wizard-join-status" style="margin-left:10px"></span>';
+    }
+    $id('wizard-finish-status').innerHTML = 'Settings saved. Waiting for RF CO2 join...';
+    // Attach handler for the join button
+    setTimeout(function() {
+      var joinBtn = $id('wizard-send-rf-join');
+      if (joinBtn) {
+        joinBtn.addEventListener('click', function() {
+          websock_send('{"rfremotecmd":"join","rfremoteindex":0}');
+          var st = $id('wizard-join-status');
+          if (st) st.textContent = 'Join command sent, waiting for response...';
+        });
+      }
+    }, 100);
   } else if (needsReboot) {
     $id('wizard-finish-status').textContent = 'Saving configuration and rebooting...';
     $id('wizard-reboot-msg').style.display = '';
@@ -5066,6 +5153,17 @@ var html_systemsettings_cc1101 = `
   <input id="option-itho_remotes-0" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 0)'
     value="0"> off
 </div>
+<legend><br>RF CO2 control:</legend>
+<div class="pure-control-group">
+  <label for="option-itho_control_interface" class="pure-radio">Control interface</label>
+  <input id="option-itho_control_interface-0" type="radio" name="option-itho_control_interface" value="0"> Virtual remote (I2C)
+  <input id="option-itho_control_interface-1" type="radio" name="option-itho_control_interface" value="1"> RF CO2 (demand slider)
+</div>
+<div class="pure-control-group">
+  <label for="option-itho_rf_co2_join" class="pure-radio">Send RF CO2 join</label>
+  <input id="option-itho_rf_co2_join-1" type="radio" name="option-itho_rf_co2_join" value="1"> next power on
+  <input id="option-itho_rf_co2_join-0" type="radio" name="option-itho_rf_co2_join" value="0"> off
+</div>
 <br>
 `;
 
@@ -5130,12 +5228,61 @@ var html_index = `
   </div>
   <div class="pure-u-1 pure-u-md-1-5"></div>
 </div>
+<div id="rfco2interface" class="hidden">
+  <div style="text-align: center; margin: 1em 0;">
+    <label for="rfco2demandslider" style="font-weight:bold;">Ventilation Demand</label>
+    <div style="display:flex; align-items:center; gap:0.5em; margin:0.5em 0;">
+      <span>0%</span>
+      <input id="rfco2demandslider" type="range" min="0" max="200" value="0" class="slider" style="flex:1;">
+      <span>100%</span>
+    </div>
+    <div>
+      <span id="rfco2demandval">0</span> / 200
+      <button id="rfco2demandsend" class="pure-button pure-button-primary" style="margin-left:1em;">Send Demand</button>
+    </div>
+  </div>
+  <div style="text-align: center; margin: 2em 0 0 0;">
+    <button id="rfcmd-low" class="pure-button" style="float: left;">Low</button>
+    <button id="rfcmd-auto" class="pure-button">Auto</button>
+    <button id="rfcmd-high" class="pure-button" style="float: right;">High</button>
+  </div>
+  <div style="text-align: center; margin: 2em 0 0 0;">
+    <button id="rfcmd-timer1" class="pure-button" style="float: left;">Timer1</button>
+    <button id="rfcmd-timer2" class="pure-button">Timer2</button>
+    <button id="rfcmd-timer3" class="pure-button" style="float: right;">Timer3</button>
+  </div>
+  <div style="text-align: center; margin: 2em 0 0 0;">
+    <div id="rfco2_sensor_temp"></div>
+    <div id="rfco2_sensor_hum"></div>
+  </div>
+</div>
 <script>
-  if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
+  var itho_control_interface = parseInt(localStorage.getItem('itho_control_interface') || '0');
+  if (itho_control_interface === 1) {
+    // RF CO2 mode: show demand slider and RF buttons
+    $id('sliderdiv').classList.add('hidden');
+    $id('reminterface').classList.add('hidden');
+    $id('rfco2interface').classList.remove('hidden');
+    var dslide = $id('rfco2demandslider');
+    if (dslide) {
+      dslide.oninput = function() { $id('rfco2demandval').textContent = this.value; };
+    }
+    var dsend = $id('rfco2demandsend');
+    if (dsend) {
+      dsend.onclick = function() {
+        var val = $id('rfco2demandslider').value;
+        websock_send('{"rfdemand":' + val + ',"rfremoteindex":0}');
+      };
+    }
+    // RF command buttons
+    ['low','auto','high','timer1','timer2','timer3'].forEach(function(cmd) {
+      var btn = $id('rfcmd-' + cmd);
+      if (btn) btn.onclick = function() { websock_send('{"rfremotecmd":"' + cmd + '","rfremoteindex":0}'); };
+    });
+  } else if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
     $id('sliderdiv').classList.add('hidden');
     $id('reminterface').innerHTML = '';
-  }
-  else {
+  } else {
     var slide = $id("ithoslider");
     if (!!slide) {
       slide.oninput = function () { $id('ithotextval').innerHTML = this.value; };
@@ -5457,6 +5604,10 @@ var html_wizard = `
               onclick="var x=document.getElementById('passwd');x.type=x.type==='password'?'text':'password';">
           </div>
           <div class="pure-control-group">
+            <label for="hostname">Hostname</label>
+            <input id="hostname" type="text">
+          </div>
+          <div class="pure-control-group">
             <label>&nbsp;</label>
             <button id="wiz-wifi-connect" type="button" class="pure-button pure-button-primary">Connect</button>
           </div>
@@ -5467,10 +5618,6 @@ var html_wizard = `
               <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
               <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off">
               off
-            </div>
-            <div class="pure-control-group">
-              <label for="hostname">Hostname</label>
-              <input id="hostname" type="text">
             </div>
             <div class="pure-control-group">
               <label for="ip">IP address</label>
@@ -5741,6 +5888,7 @@ var html_wizard = `
         <select id="wiz-rfremtype">
           <option value="0x22F1">RFT CVE (medium command)</option>
           <option value="0x22F3">RFT AUTO (auto command)</option>
+          <option value="0x1298">RFT CO2 (demand ventilation)</option>
         </select>
       </div>
     </fieldset>
