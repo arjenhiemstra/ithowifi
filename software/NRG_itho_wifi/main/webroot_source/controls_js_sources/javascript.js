@@ -3181,23 +3181,10 @@ function wizardAutoConfigRFRemote() {
   var idEl = $id('id_remote-0');
   var rfIdEl = $id('module_rf_id_str');
   if (!idEl || !rfIdEl) return;
-  // Only auto-fill if the slot is empty
+  // Only auto-fill if the slot is empty — use the module RF ID directly.
+  // The module ID is type 42 (controller/add-on) which the Itho accepts for all join types.
   if (idEl.value === 'empty slot' || idEl.value === '0,0,0' || idEl.value === '') {
-    // Use module RF ID but ensure it's in the correct device type range
-    // for the configured remote type. RAMSES II device address = type * 0x40000 + id
-    // Type 37 (sensors/thermostats) = 0x940000-0x97FFFF → first byte 0x94-0x97
-    // Type 42 (add-on/controller) = 0xA80000-0xABFFFF → first byte 0xA8-0xAB
-    var rfId = rfIdEl.value.split(',').map(function(s) { return parseInt(s.trim(), 16); });
-    if (rfId.length === 3) {
-      // Derive a unique ID in the type-37 range from the module ID
-      // Keep the lower 18 bits (device ID) and set the upper bits for type 37
-      var fullAddr = 0x940000 + (rfId[0] & 0x03) * 0x10000 + (rfId[1] << 8) + rfId[2];
-      idEl.value = ((fullAddr >> 16) & 0xFF).toString(16).toUpperCase().padStart(2, '0') + ',' +
-                   ((fullAddr >> 8) & 0xFF).toString(16).toUpperCase().padStart(2, '0') + ',' +
-                   (fullAddr & 0xFF).toString(16).toUpperCase().padStart(2, '0');
-    } else {
-      idEl.value = rfIdEl.value;
-    }
+    idEl.value = rfIdEl.value;
   }
   // Set remote function to Send (5)
   var funcEl = $id('func_remote-0');
