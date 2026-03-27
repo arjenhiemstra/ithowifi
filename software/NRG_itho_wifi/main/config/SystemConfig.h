@@ -62,6 +62,8 @@ public:
   uint8_t fw_check;
   uint8_t api_settings;
   uint8_t api_reboot;
+  uint8_t itho_rf_co2_join;
+  uint8_t itho_control_interface;
   JsonDocument api_settings_activated;
   mutable bool rfInitOK;
   uint8_t nonQ_cmd_clearsQ;

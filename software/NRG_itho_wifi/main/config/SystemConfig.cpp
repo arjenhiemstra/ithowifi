@@ -15,6 +15,8 @@ SystemConfig::SystemConfig()
   api_normalize = 0;
   api_settings = 0;
   api_reboot = 0;
+  itho_rf_co2_join = 0;
+  itho_control_interface = 0;
   syssht30 = 0;
   mqtt_active = 0;
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
@@ -138,6 +140,16 @@ bool SystemConfig::set(JsonObject obj)
   {
     updated = true;
     api_reboot = obj["api_reboot"];
+  }
+  if (!obj["itho_rf_co2_join"].isNull())
+  {
+    updated = true;
+    itho_rf_co2_join = obj["itho_rf_co2_join"];
+  }
+  if (!obj["itho_control_interface"].isNull())
+  {
+    updated = true;
+    itho_control_interface = obj["itho_control_interface"];
   }
   if (!obj["api_settings_activated"].isNull())
   {
@@ -431,6 +443,8 @@ void SystemConfig::get(JsonObject obj) const
     obj["fw_check"] = fw_check;
     obj["api_settings"] = api_settings;
     obj["api_reboot"] = api_reboot;
+    obj["itho_rf_co2_join"] = itho_rf_co2_join;
+    obj["itho_control_interface"] = itho_control_interface;
     obj["api_settings_activated"].set(api_settings_activated.as<JsonArrayConst>());
   }
   if (complete || get_mqtt_settings)
