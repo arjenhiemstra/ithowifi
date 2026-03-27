@@ -1,4 +1,5 @@
 #include "tasks/task_syscontrol.h"
+#include "tasks/task_configandlog.h"
 
 bool IthoInit = false;
 int8_t ithoInitResult = 0;
@@ -34,15 +35,21 @@ void initI2cFunctions()
         else if (devId != 0)
           defaultPower = 0x84; // +5 dBm for other I2C devices
 
+        bool changed = false;
         for (int idx = 0; idx < remotes.getMaxRemotes(); idx++)
         {
           if (remotes.isEmptySlot(idx)) continue;
           if (remotes.getRemoteFunction(idx) == RemoteFunctions::SEND && remotes.getRemoteTxPower(idx) == 0xC0)
           {
             remotes.updateRemoteTxPower(idx, defaultPower);
+            changed = true;
           }
         }
-        N_LOG("RF: TX power default 0x%02X for Send remotes (device type 0x%02X)", defaultPower, devId);
+        if (changed)
+        {
+          saveRemotesflag = true;
+        }
+        N_LOG("RF: TX power 0x%02X for Send remotes (device type 0x%02X)", defaultPower, devId);
       }
 
       digitalWrite(hardwareManager.status_pin, HIGH);
