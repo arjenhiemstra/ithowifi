@@ -673,6 +673,14 @@ void handle_ws_message(JsonObject root)
   {
     ithoSetSpeed(root["itho"].as<uint16_t>(), WEB);
   }
+  // RF TX power test (runtime PA value change)
+  if (!root["rftxpower"].isNull())
+  {
+    uint8_t pa = root["rftxpower"].as<uint8_t>();
+    rfManager.radio.setLowTxPower(pa);
+    D_LOG("RF: TX power set to 0x%02X", pa);
+  }
+
   // Learn-Leave mode toggle
   if (root["itho_llm"].is<bool>() && root["itho_llm"].as<bool>())
   {
@@ -733,6 +741,11 @@ void handle_ws_message(JsonObject root)
         uint8_t id2 = arr[2].as<uint8_t>();
         remotes.updateRemoteID(idx, id0, id1, id2);
         rfManager.radio.updateRFDevice(idx, id0, id1, id2, remotes.getRemoteType(idx), bidir);
+        // For Send remotes, the ID is the sourceID (what we transmit as)
+        if (remfunc == RemoteFunctions::SEND)
+        {
+          rfManager.radio.updateSourceID(id0, id1, id2, idx);
+        }
       }
     }
     saveRemotesflag = true;
