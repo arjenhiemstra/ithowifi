@@ -280,43 +280,6 @@ static void handleGetSettings(AsyncWebServerRequest *request)
   sendSuccess(request, data);
 }
 
-// --- POST/PUT helpers ---
-
-// Bridge: convert JSON body to the params format expected by process* functions,
-// call the function, then send the appropriate JSend response.
-static void delegateToProcessor(
-    AsyncWebServerRequest *request,
-    JsonVariant &json,
-    std::function<ApiResponse::api_response_status_t(JsonObject, JsonDocument &)> processor)
-{
-  if (!checkRestAuth(request))
-    return;
-
-  JsonDocument responseDoc;
-  time_t now;
-  time(&now);
-  responseDoc["timestamp"] = now;
-
-  JsonObject body = json.as<JsonObject>();
-  auto status = processor(body, responseDoc);
-
-  switch (status)
-  {
-  case ApiResponse::status::SUCCESS:
-    sendSuccess(request, responseDoc);
-    break;
-  case ApiResponse::status::FAIL:
-    sendFail(request, responseDoc["failreason"] | "request failed");
-    break;
-  case ApiResponse::status::ERROR:
-    sendError(request, responseDoc["message"] | "internal error");
-    break;
-  default:
-    sendFail(request, "unknown or missing command parameters");
-    break;
-  }
-}
-
 // --- POST/PUT endpoint handlers ---
 
 // POST /api/v2/command
@@ -329,7 +292,7 @@ static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
   JsonObject body = json.as<JsonObject>();
 
   // Validate speed range before delegating
-  if (body.containsKey("speed"))
+  if (!body["speed"].isNull())
   {
     int speed = body["speed"].as<int>();
     if (speed < 0 || speed > 255)
@@ -338,7 +301,7 @@ static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
       return;
     }
   }
-  if (body.containsKey("timer"))
+  if (!body["timer"].isNull())
   {
     int timer = body["timer"].as<int>();
     if (timer < 0 || timer > 65535)
@@ -350,15 +313,15 @@ static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
 
   // Convert JSON values to string params (process* functions expect const char*)
   JsonDocument params;
-  if (body.containsKey("command"))
+  if (!body["command"].isNull())
     params["command"] = body["command"];
-  if (body.containsKey("speed"))
+  if (!body["speed"].isNull())
   {
     char buf[8];
     snprintf(buf, sizeof(buf), "%d", body["speed"].as<int>());
     params["speed"] = buf;
   }
-  if (body.containsKey("timer"))
+  if (!body["timer"].isNull())
   {
     char buf[8];
     snprintf(buf, sizeof(buf), "%d", body["timer"].as<int>());
@@ -393,15 +356,15 @@ static void handlePostVRemote(AsyncWebServerRequest *request, JsonVariant &json)
 
   // Map REST field names to the legacy parameter names
   JsonDocument params;
-  if (body.containsKey("command"))
+  if (!body["command"].isNull())
     params["vremotecmd"] = body["command"];
-  if (body.containsKey("index"))
+  if (!body["index"].isNull())
   {
     char idx[8];
     snprintf(idx, sizeof(idx), "%d", body["index"].as<int>());
     params["vremoteindex"] = idx;
   }
-  if (body.containsKey("name"))
+  if (!body["name"].isNull())
     params["vremotename"] = body["name"];
 
   JsonDocument responseDoc;
@@ -424,9 +387,9 @@ static void handlePostRFRemote(AsyncWebServerRequest *request, JsonVariant &json
 
   JsonObject body = json.as<JsonObject>();
   JsonDocument params;
-  if (body.containsKey("command"))
+  if (!body["command"].isNull())
     params["rfremotecmd"] = body["command"];
-  if (body.containsKey("index"))
+  if (!body["index"].isNull())
   {
     char idx[8];
     snprintf(idx, sizeof(idx), "%d", body["index"].as<int>());
@@ -452,7 +415,7 @@ static void handlePostRFCO2(AsyncWebServerRequest *request, JsonVariant &json)
     return;
 
   JsonObject body = json.as<JsonObject>();
-  if (!body.containsKey("co2"))
+  if (body["co2"].isNull())
   {
     sendFail(request, "missing required field: co2");
     return;
@@ -489,7 +452,7 @@ static void handlePostRFDemand(AsyncWebServerRequest *request, JsonVariant &json
     return;
 
   JsonObject body = json.as<JsonObject>();
-  if (!body.containsKey("demand"))
+  if (body["demand"].isNull())
   {
     sendFail(request, "missing required field: demand");
     return;
@@ -529,15 +492,15 @@ static void handlePostRFConfig(AsyncWebServerRequest *request, JsonVariant &json
 
   JsonObject body = json.as<JsonObject>();
   JsonDocument params;
-  if (body.containsKey("index"))
+  if (!body["index"].isNull())
   {
     char idx[8];
     snprintf(idx, sizeof(idx), "%d", body["index"].as<int>());
     params["setrfremote"] = idx;
   }
-  if (body.containsKey("setting"))
+  if (!body["setting"].isNull())
     params["setting"] = body["setting"];
-  if (body.containsKey("value"))
+  if (!body["value"].isNull())
     params["settingvalue"] = body["value"];
 
   JsonDocument responseDoc;
@@ -559,7 +522,7 @@ static void handlePutSettings(AsyncWebServerRequest *request, JsonVariant &json)
     return;
 
   JsonObject body = json.as<JsonObject>();
-  if (!body.containsKey("index") || !body.containsKey("value"))
+  if (body["index"].isNull() || body["value"].isNull())
   {
     sendFail(request, "missing required fields: index and value");
     return;
@@ -603,7 +566,7 @@ static void handlePostDebug(AsyncWebServerRequest *request, JsonVariant &json)
     return;
 
   JsonObject body = json.as<JsonObject>();
-  if (!body.containsKey("action"))
+  if (body["action"].isNull())
   {
     sendFail(request, "missing required field: action");
     return;
@@ -640,7 +603,7 @@ static void handlePostOutsideTemp(AsyncWebServerRequest *request, JsonVariant &j
     return;
 
   JsonObject body = json.as<JsonObject>();
-  if (!body.containsKey("temp"))
+  if (body["temp"].isNull())
   {
     sendFail(request, "missing required field: temp");
     return;
@@ -675,7 +638,7 @@ static void handlePostManualControl(AsyncWebServerRequest *request, JsonVariant 
     return;
 
   JsonObject body = json.as<JsonObject>();
-  if (!body.containsKey("index"))
+  if (body["index"].isNull())
   {
     sendFail(request, "missing required field: index");
     return;

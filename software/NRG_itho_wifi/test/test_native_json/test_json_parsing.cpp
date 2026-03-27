@@ -223,7 +223,7 @@ void test_parse_invalid_json(void) {
     TEST_ASSERT_NOT_EQUAL(DeserializationError::Ok, err);
 }
 
-void test_containsKey_check(void) {
+void test_key_presence_check(void) {
     const char *input = R"({"speed":100})";
     JsonDocument doc;
     deserializeJson(doc, input);
@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
     RUN_TEST(test_parse_speed_timer_from_json);
     RUN_TEST(test_parse_empty_json);
     RUN_TEST(test_parse_invalid_json);
-    RUN_TEST(test_containsKey_check);
+    RUN_TEST(test_key_presence_check);
 
     return UNITY_END();
 }
