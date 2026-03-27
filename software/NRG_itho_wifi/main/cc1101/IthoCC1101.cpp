@@ -80,6 +80,11 @@ RFStatusCallback_t IthoCC1101::rf31D9Callback = nullptr;
 #define HEADER_2E10 0x14              // message type: I, addr2
 #define HEADER_RQ_BIDIRECTIONAL 0x0C  // message type: RQ, addr0+addr1
 
+void IthoCC1101::setLowPowerMode(bool lowPower)
+{
+  lowPowerTx = lowPower;
+}
+
 // default constructor
 IthoCC1101::IthoCC1101() : CC1101()
 {
@@ -187,8 +192,8 @@ void IthoCC1101::initSendMessage(uint8_t len)
   writeRegister(CC1101_ADDR, 0x00);        // 00000000
   writeRegister(CC1101_PKTLEN, 0xFF);      // 11111111  //Not used, no hardware packet handling
 
-  // 0x6F,0x26,0x2E,0x8C,0x87,0xCD,0xC7,0xC0
-  writeBurstRegister(CC1101_PATABLE | CC1101_WRITE_BURST, ithoPaTableSend, 8);
+  // PA table: low power for close-range (add-on inside Itho), normal for long-range
+  writeBurstRegister(CC1101_PATABLE | CC1101_WRITE_BURST, lowPowerTx ? ithoPaTableSendLow : ithoPaTableSend, 8);
 
   // difference, message1 sends a STX here
   writeCommand(CC1101_SIDLE);
