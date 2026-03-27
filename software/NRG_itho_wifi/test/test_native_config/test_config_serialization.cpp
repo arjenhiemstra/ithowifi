@@ -52,6 +52,8 @@ struct SystemConfigDefaults {
     uint8_t itho_rf_support;
     uint8_t fw_check;
     uint8_t nonQ_cmd_clearsQ;
+    uint8_t itho_rf_co2_join;
+    uint8_t itho_control_interface;
 
     SystemConfigDefaults() {
         strlcpy(sys_username, "admin", sizeof(sys_username));
@@ -87,6 +89,8 @@ struct SystemConfigDefaults {
         itho_rf_support = 1;
         fw_check = 1;
         nonQ_cmd_clearsQ = 1;
+        itho_rf_co2_join = 0;
+        itho_control_interface = 0;
     }
 
     void get(JsonObject obj) const {
@@ -123,6 +127,8 @@ struct SystemConfigDefaults {
         obj["itho_rf_support"] = itho_rf_support;
         obj["fw_check"] = fw_check;
         obj["nonQ_cmd_clearsQ"] = nonQ_cmd_clearsQ;
+        obj["itho_rf_co2_join"] = itho_rf_co2_join;
+        obj["itho_control_interface"] = itho_control_interface;
     }
 
     bool set(JsonObject obj) {
@@ -130,6 +136,8 @@ struct SystemConfigDefaults {
         if (!obj["sys_username"].isNull()) { updated = true; strlcpy(sys_username, obj["sys_username"] | "", sizeof(sys_username)); }
         if (!obj["api_settings"].isNull()) { updated = true; api_settings = obj["api_settings"]; }
         if (!obj["api_reboot"].isNull()) { updated = true; api_reboot = obj["api_reboot"]; }
+        if (!obj["itho_rf_co2_join"].isNull()) { updated = true; itho_rf_co2_join = obj["itho_rf_co2_join"]; }
+        if (!obj["itho_control_interface"].isNull()) { updated = true; itho_control_interface = obj["itho_control_interface"]; }
         if (!obj["mqtt_active"].isNull()) { updated = true; mqtt_active = obj["mqtt_active"]; }
         if (!obj["mqtt_port"].isNull()) { updated = true; mqtt_port = obj["mqtt_port"]; }
         if (!obj["itho_low"].isNull()) { updated = true; itho_low = obj["itho_low"]; }
@@ -168,6 +176,43 @@ void test_default_api_reboot_is_zero(void) {
 void test_default_api_settings_is_zero(void) {
     SystemConfigDefaults cfg;
     TEST_ASSERT_EQUAL_UINT8(0, cfg.api_settings);
+}
+
+void test_default_rf_co2_join_is_zero(void) {
+    SystemConfigDefaults cfg;
+    TEST_ASSERT_EQUAL_UINT8(0, cfg.itho_rf_co2_join);
+}
+
+void test_default_control_interface_is_zero(void) {
+    SystemConfigDefaults cfg;
+    TEST_ASSERT_EQUAL_UINT8(0, cfg.itho_control_interface);
+}
+
+void test_set_rf_co2_join(void) {
+    SystemConfigDefaults cfg;
+    JsonDocument doc;
+    doc["itho_rf_co2_join"] = 1;
+    TEST_ASSERT_TRUE(cfg.set(doc.as<JsonObject>()));
+    TEST_ASSERT_EQUAL_UINT8(1, cfg.itho_rf_co2_join);
+}
+
+void test_set_control_interface(void) {
+    SystemConfigDefaults cfg;
+    JsonDocument doc;
+    doc["itho_control_interface"] = 1;
+    TEST_ASSERT_TRUE(cfg.set(doc.as<JsonObject>()));
+    TEST_ASSERT_EQUAL_UINT8(1, cfg.itho_control_interface);
+}
+
+void test_get_includes_rf_co2_fields(void) {
+    SystemConfigDefaults cfg;
+    cfg.itho_rf_co2_join = 1;
+    cfg.itho_control_interface = 1;
+    JsonDocument doc;
+    JsonObject obj = doc.to<JsonObject>();
+    cfg.get(obj);
+    TEST_ASSERT_EQUAL(1, obj["itho_rf_co2_join"].as<int>());
+    TEST_ASSERT_EQUAL(1, obj["itho_control_interface"].as<int>());
 }
 
 void test_default_mqtt_port(void) {
@@ -315,6 +360,8 @@ int main(int argc, char **argv) {
     RUN_TEST(test_default_sys_password);
     RUN_TEST(test_default_api_reboot_is_zero);
     RUN_TEST(test_default_api_settings_is_zero);
+    RUN_TEST(test_default_rf_co2_join_is_zero);
+    RUN_TEST(test_default_control_interface_is_zero);
     RUN_TEST(test_default_mqtt_port);
     RUN_TEST(test_default_itho_speeds);
     RUN_TEST(test_default_itho_timers);
@@ -331,6 +378,11 @@ int main(int argc, char **argv) {
     RUN_TEST(test_set_with_no_keys_returns_false);
     RUN_TEST(test_password_placeholder_ignored);
     RUN_TEST(test_password_real_value_updates);
+
+    // RF CO2 control mode
+    RUN_TEST(test_set_rf_co2_join);
+    RUN_TEST(test_set_control_interface);
+    RUN_TEST(test_get_includes_rf_co2_fields);
 
     return UNITY_END();
 }
