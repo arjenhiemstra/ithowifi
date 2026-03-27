@@ -1295,7 +1295,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
           remotesRefreshNeeded = true;
-          websock_send(`{"${btnId}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + i).value}","remtype":${remtype},"remfunc":${remfunc}}`);
+          var txpEl = $id('txpower-' + i);
+          var txp = txpEl ? parseInt(txpEl.value) : undefined;
+          var msg = `{"${btnId}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + i).value}","remtype":${remtype},"remfunc":${remfunc}`;
+          if (txp !== undefined) msg += `,"tx_power":${txp}`;
+          msg += '}';
+          websock_send(msg);
         }
         else {
           alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
@@ -2309,6 +2314,21 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
             if (remfunction == 5 && remtype == 0x1298) {
               td.insertAdjacentHTML('beforeend', `<br><input type="number" id="co2val-${i}" min="0" max="10000" placeholder="CO2 ppm" style="width:90px;margin-top:4px;"> <button id="button_sendco2-${i}" class="pure-button">Send CO2</button>`);
               td.insertAdjacentHTML('beforeend', `<br><input type="number" id="demandval-${i}" min="0" max="200" placeholder="Demand 0-200" style="width:90px;margin-top:4px;"> <button id="button_senddemand-${i}" class="pure-button">Send Demand</button>`);
+            }
+            if (remfunction == 5) {
+              var curPower = remote["tx_power"] || 192;
+              td.insertAdjacentHTML('beforeend',
+                `<br><label style="font-size:0.85em;">TX Power: </label>` +
+                `<select id="txpower-${i}" style="font-size:0.85em;">` +
+                `<option value="3"${curPower==3?' selected':''}>-30 dBm (min)</option>` +
+                `<option value="38"${curPower==38?' selected':''}>-15 dBm</option>` +
+                `<option value="81"${curPower==81?' selected':''}>-10 dBm</option>` +
+                `<option value="52"${curPower==52?' selected':''}>-6 dBm</option>` +
+                `<option value="96"${curPower==96?' selected':''}>0 dBm</option>` +
+                `<option value="132"${curPower==132?' selected':''}>+5 dBm</option>` +
+                `<option value="197"${curPower==197?' selected':''}>+7 dBm</option>` +
+                `<option value="192"${curPower==192?' selected':''}>+10 dBm (max)</option>` +
+                `</select>`);
             }
           }
           else {

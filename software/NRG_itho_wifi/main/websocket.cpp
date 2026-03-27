@@ -748,6 +748,11 @@ void handle_ws_message(JsonObject root)
         }
       }
     }
+    // TX power
+    if (!root["tx_power"].isNull())
+    {
+      remotes.updateRemoteTxPower(idx, root["tx_power"].as<uint8_t>());
+    }
     saveRemotesflag = true;
   }
 
