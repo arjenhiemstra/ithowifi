@@ -513,9 +513,22 @@ const messageHandlers = {
     if (rfo && x.rfloglevel > 0) rfo.classList.remove('hidden');
   },
   wifistat: function (f) {
+    // Map WiFi status codes to user-friendly text
+    var statusMap = {
+      'WL_CONNECTED': 'Connected',
+      'WL_DISCONNECTED': 'Disconnected',
+      'WL_IDLE_STATUS': 'Idle',
+      'WL_NO_SSID_AVAIL': 'Network not found',
+      'WL_CONNECT_FAILED': 'Connection failed',
+      'WL_CONNECTION_LOST': 'Connection lost',
+      'WL_SCAN_COMPLETED': 'Scan completed'
+    };
+    if (f.wifistat.wificonnstat && statusMap[f.wifistat.wificonnstat]) {
+      f.wifistat.wificonnstat = statusMap[f.wifistat.wificonnstat];
+    }
     processElements(f.wifistat);
     // Stop wizard connect polling once connected
-    if (wizardActive && wizardConnectInterval && f.wifistat.wificonnstat === 'WL_CONNECTED') {
+    if (wizardActive && wizardConnectInterval && f.wifistat.wificonnstat === 'Connected') {
       clearInterval(wizardConnectInterval);
       wizardConnectInterval = null;
     }
@@ -1025,6 +1038,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (target.id === 'wiz-wifi-connect') {
       e.preventDefault();
       wizardSaveWifiSettings();
+      // Show connecting status immediately
+      var statEls = document.querySelectorAll('[name="wificonnstat"]');
+      statEls.forEach(function (el) { el.textContent = 'Connecting...'; });
       getSettings('wifistat');
       if (wizardConnectInterval) clearInterval(wizardConnectInterval);
       wizardConnectInterval = setInterval(function () { getSettings('wifistat'); }, 2000);

@@ -130,6 +130,10 @@
               onclick="var x=document.getElementById('passwd');x.type=x.type==='password'?'text':'password';">
           </div>
           <div class="pure-control-group">
+            <label for="hostname">Hostname</label>
+            <input id="hostname" type="text">
+          </div>
+          <div class="pure-control-group">
             <label>&nbsp;</label>
             <button id="wiz-wifi-connect" type="button" class="pure-button pure-button-primary">Connect</button>
           </div>
@@ -140,10 +144,6 @@
               <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
               <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off">
               off
-            </div>
-            <div class="pure-control-group">
-              <label for="hostname">Hostname</label>
-              <input id="hostname" type="text">
             </div>
             <div class="pure-control-group">
               <label for="ip">IP address</label>
