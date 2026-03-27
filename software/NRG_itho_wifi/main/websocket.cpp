@@ -733,11 +733,6 @@ void handle_ws_message(JsonObject root)
         uint8_t id2 = arr[2].as<uint8_t>();
         remotes.updateRemoteID(idx, id0, id1, id2);
         rfManager.radio.updateRFDevice(idx, id0, id1, id2, remotes.getRemoteType(idx), bidir);
-        // For Send remotes, the ID is also the sourceID (what we transmit as)
-        if (remfunc == RemoteFunctions::SEND)
-        {
-          rfManager.radio.updateSourceID(id0, id1, id2, idx);
-        }
       }
     }
     saveRemotesflag = true;

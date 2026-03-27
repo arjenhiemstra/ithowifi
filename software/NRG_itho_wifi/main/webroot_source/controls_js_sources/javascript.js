@@ -3181,8 +3181,7 @@ function wizardAutoConfigRFRemote() {
   var idEl = $id('id_remote-0');
   var rfIdEl = $id('module_rf_id_str');
   if (!idEl || !rfIdEl) return;
-  // Only auto-fill if the slot is empty — use the module RF ID directly.
-  // The module ID is type 42 (controller/add-on) which the Itho accepts for all join types.
+  // Only auto-fill if the slot is empty
   if (idEl.value === 'empty slot' || idEl.value === '0,0,0' || idEl.value === '') {
     idEl.value = rfIdEl.value;
   }
