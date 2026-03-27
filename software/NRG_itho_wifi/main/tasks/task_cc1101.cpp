@@ -339,6 +339,25 @@ void TaskCC1101(void *pvParameters)
     }
     systemConfig.rfInitOK = true;
 
+    // RF CO2 join on boot: find first Send+RFTCO2 remote and send join
+    if (systemConfig.itho_rf_co2_join == 1)
+    {
+      for (int idx = 0; idx < remotes.getMaxRemotes(); idx++)
+      {
+        if (remotes.isEmptySlot(idx))
+          continue;
+        if (remotes.getRemoteFunction(idx) == RemoteFunctions::SEND &&
+            remotes.getRemoteType(idx) == RemoteTypes::RFTCO2)
+        {
+          I_LOG("RFI: RF CO2 join on boot, remote index:%d", idx);
+          ithoExecRFCommand(idx, "join", HTMLAPI);
+          break;
+        }
+      }
+      systemConfig.itho_rf_co2_join = 0;
+      saveSystemConfigflag = true;
+    }
+
     uint8_t joinReplyRemIndex{255};
     // uint8_t remIndex10E0{255};
 
@@ -561,6 +580,14 @@ void TaskCC1101(void *pvParameters)
             remotes.updateRemoteDestID(remIdx, *(lastID + 0), *(lastID + 1), *(lastID + 2));
             saveRemotesflag = true;
             bindConfirmRemIndex = remIdx;
+            // Auto-switch to RF CO2 control interface if this is an RFTCO2 send remote
+            if (remotes.getRemoteType(remIdx) == RemoteTypes::RFTCO2 &&
+                remotes.getRemoteFunction(remIdx) == RemoteFunctions::SEND)
+            {
+              systemConfig.itho_control_interface = 1;
+              saveSystemConfigflag = true;
+              I_LOG("RFI: RF CO2 join successful, control interface set to RF CO2");
+            }
             // Delay the confirm to let the remaining accepts from the target pass
             rf_message.once_ms(300, []()
                                { sendBindConfirm = true; });
