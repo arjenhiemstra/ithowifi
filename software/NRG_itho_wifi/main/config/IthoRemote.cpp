@@ -363,6 +363,10 @@ void IthoRemote::Remote::set(JsonObject obj)
   {
     copyArray(obj["destid"].as<JsonArray>(), destID);
   }
+  if (!obj["tx_power"].isNull())
+  {
+    tx_power = obj["tx_power"];
+  }
 }
 
 void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index, bool human_reaadble) const
@@ -423,6 +427,7 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
       did.add(destID[y]);
     }
   }
+  obj["tx_power"] = tx_power;
 }
 
 bool IthoRemote::set(JsonObject obj, const char *root)

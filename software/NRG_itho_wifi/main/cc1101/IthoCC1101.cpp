@@ -85,6 +85,12 @@ void IthoCC1101::setLowPowerMode(bool lowPower)
   lowPowerTx = lowPower;
 }
 
+void IthoCC1101::setLowTxPower(uint8_t paValue)
+{
+  ithoPaTableSendLow[7] = paValue;
+  D_LOG("RF: TX low power set to 0x%02X", paValue);
+}
+
 // default constructor
 IthoCC1101::IthoCC1101() : CC1101()
 {

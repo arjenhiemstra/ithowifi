@@ -453,9 +453,17 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
 
   D_LOG("SYS: exec rf cmd:%s, idx: %d", command, remote_index);
   bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
-  // Use low TX power for Send remotes (add-on inside Itho, ~1cm to receiver)
+  // Set per-device TX power: Send remotes use configured (low) power, others use max
   bool isSendRemote = (remotes.getRemoteFunction(remote_index) == RemoteFunctions::SEND);
-  rfManager.radio.setLowPowerMode(isSendRemote);
+  if (isSendRemote && ithoInitResult == 1) // I2C connected
+  {
+    rfManager.radio.setLowTxPower(remotes.getRemoteTxPower(remote_index));
+    rfManager.radio.setLowPowerMode(true);
+  }
+  else
+  {
+    rfManager.radio.setLowPowerMode(false);
+  }
   if (bidirectional)
     rfManager.radio.setSendTries(1);
   disableRF_ISR();
@@ -554,7 +562,15 @@ bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
   D_LOG("SYS: send rfco2:%d, idx:%d", co2level, remote_index);
 
   bool isSendRemote = (remotes.getRemoteFunction(remote_index) == RemoteFunctions::SEND);
-  rfManager.radio.setLowPowerMode(isSendRemote);
+  if (isSendRemote && ithoInitResult == 1)
+  {
+    rfManager.radio.setLowTxPower(remotes.getRemoteTxPower(remote_index));
+    rfManager.radio.setLowPowerMode(true);
+  }
+  else
+  {
+    rfManager.radio.setLowPowerMode(false);
+  }
   bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
   if (bidirectional)
     rfManager.radio.setSendTries(1);
@@ -592,7 +608,15 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
   D_LOG("SYS: send rfdemand:%d, zone:%d, idx:%d", demand, zone, remote_index);
 
   bool isSendRemote = (remotes.getRemoteFunction(remote_index) == RemoteFunctions::SEND);
-  rfManager.radio.setLowPowerMode(isSendRemote);
+  if (isSendRemote && ithoInitResult == 1)
+  {
+    rfManager.radio.setLowTxPower(remotes.getRemoteTxPower(remote_index));
+    rfManager.radio.setLowPowerMode(true);
+  }
+  else
+  {
+    rfManager.radio.setLowPowerMode(false);
+  }
   bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
   if (bidirectional)
     rfManager.radio.setSendTries(1);

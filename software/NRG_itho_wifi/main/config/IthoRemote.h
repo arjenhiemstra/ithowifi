@@ -36,6 +36,7 @@ private:
     mutable RemoteTypes remtype{RemoteTypes::UNSETTYPE};
     mutable RemoteFunctions remfunc{RemoteFunctions::UNSETFUNC};
     bool bidirectional{false};
+    uint8_t tx_power{0xC0};  // PA table value: 0xC0=+10dBm(default), 0x84=+5, 0x03=-30
     JsonDocument capabilities;
     void set(JsonObject);
     void get(JsonObject, RemoteFunctions instanceFunc, int index, bool human_reaadble = false) const;
@@ -119,6 +120,8 @@ public:
   RemoteTypes getRemoteType(const int index) { return remotes[index].remtype; };
   RemoteFunctions getRemoteFunction(const int index) { return remotes[index].remfunc; };
   bool getRemoteBidirectional(const int index) { return remotes[index].bidirectional; };
+  uint8_t getRemoteTxPower(const int index) { return remotes[index].tx_power; };
+  void updateRemoteTxPower(const uint8_t index, uint8_t power) { if (index < maxRemotes) remotes[index].tx_power = power; };
   const char *lastRemoteName;
   bool checkID(uint8_t byte0, uint8_t byte1, uint8_t byte2);
   bool configLoaded;

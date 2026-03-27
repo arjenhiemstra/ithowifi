@@ -23,6 +23,28 @@ void initI2cFunctions()
       ithoInitResult = 1;
       i2c_init_functions_done = true;
 
+      // Auto-set RF TX power for Send remotes based on device type (only for remotes still at default 0xC0)
+      // CVE/HRU200 (0x1B, 0x1D, 0x14, 0x04): add-on inside unit ~1cm → -30dBm (0x03)
+      // Other I2C devices: ~30cm → +5dBm (0x84)
+      {
+        uint8_t devId = currentIthoDeviceID();
+        uint8_t defaultPower = 0xC0;
+        if (devId == 0x1B || devId == 0x1D || devId == 0x14 || devId == 0x04)
+          defaultPower = 0x03; // -30 dBm for CVE/HRU200
+        else if (devId != 0)
+          defaultPower = 0x84; // +5 dBm for other I2C devices
+
+        for (int idx = 0; idx < remotes.getMaxRemotes(); idx++)
+        {
+          if (remotes.isEmptySlot(idx)) continue;
+          if (remotes.getRemoteFunction(idx) == RemoteFunctions::SEND && remotes.getRemoteTxPower(idx) == 0xC0)
+          {
+            remotes.updateRemoteTxPower(idx, defaultPower);
+          }
+        }
+        N_LOG("RF: TX power default 0x%02X for Send remotes (device type 0x%02X)", defaultPower, devId);
+      }
+
       digitalWrite(hardwareManager.status_pin, HIGH);
       if (systemConfig.rfInitOK)
       {
