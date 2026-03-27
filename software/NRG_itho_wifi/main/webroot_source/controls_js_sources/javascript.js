@@ -557,6 +557,9 @@ const messageHandlers = {
           websock_send('{"reboot":true}');
         }
       }
+      if ("itho_control_interface" in x) {
+        localStorage.setItem("itho_control_interface", x.itho_control_interface);
+      }
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
         $id('remotemenu').classList.remove('hidden');
         $id('rfstatusmenu').classList.remove('hidden');
