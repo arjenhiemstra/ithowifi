@@ -1237,17 +1237,30 @@ document.addEventListener('DOMContentLoaded', function () {
       update_page('mqtt');
     }
     else if (btnId === 'itho_llm') {
-      // Auto-save selected remote config before entering learn/leave mode
+      // Auto-save remote config before entering learn/leave mode
+      // Try selected remote first, then save all visible remotes (wizard mode)
       var sel = checkedVal('optionsRemotes');
+      var indices = [];
       if (sel != null) {
-        var funcEl = $id('func_remote-' + sel);
+        indices.push(parseInt(sel));
+      } else {
+        // No radio selected (wizard mode) — save all remotes that have visible dropdowns
+        for (var ri = 0; ri < 12; ri++) {
+          if ($id('func_remote-' + ri)) indices.push(ri);
+        }
+      }
+      for (var k = 0; k < indices.length; k++) {
+        var idx = indices[k];
+        var funcEl = $id('func_remote-' + idx);
         var remfunc = (!funcEl || typeof funcEl.value === 'undefined') ? 0 : funcEl.value;
-        var typeEl = $id('type_remote-' + sel);
+        var typeEl = $id('type_remote-' + idx);
         var remtype = (!typeEl || typeof typeEl.value === 'undefined') ? 0 : typeEl.value;
-        var id = $id('id_remote-' + sel).value;
+        var nameEl = $id('name_remote-' + idx);
+        var name = nameEl ? nameEl.value : 'remote' + idx;
+        var id = $id('id_remote-' + idx) ? $id('id_remote-' + idx).value : '00,00,00';
         if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
-          websock_send(`{"itho_update_remote":${sel},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + sel).value}","remtype":${remtype},"remfunc":${remfunc}}`);
+          websock_send(`{"itho_update_remote":${idx},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${name}","remtype":${remtype},"remfunc":${remfunc}}`);
         }
       }
       setTimeout(function() { websock_send('{"itho_llm":true}'); }, 500);
