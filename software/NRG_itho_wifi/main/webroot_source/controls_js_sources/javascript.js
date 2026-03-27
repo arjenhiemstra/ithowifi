@@ -2784,6 +2784,8 @@ var wizardRemotesInterval = null;
 var wizardWifistatInterval = null;
 var wizardConnectInterval = null;
 var wizardMqttInterval = null;
+var wizardRfCo2Device = false;
+var wizardHru250_300 = false;
 
 function initWizard(startStep) {
   wizardActive = true;
@@ -3047,13 +3049,18 @@ function applyDeviceDefaults() {
   var updatefreqEl = $id('itho_updatefreq');
   if (updatefreqEl) updatefreqEl.value = (deviceTypeQ ? 10 : 60);
 
-  // RF remote type default:
-  // PWM2I2C devices (CVE, HRU200): RFT AUTO
-  // Non-PWM2I2C HRU devices (HRU350, HRU250-300, HRU ECO): RFT CO2
+  // RF remote type and function defaults:
+  // PWM2I2C devices (CVE, HRU200): RFT AUTO, function=receive
+  // Non-PWM2I2C HRU devices (HRU350, HRU250-300, HRU ECO): RFT CO2, function=send
+  wizardRfCo2Device = (cat === 'hru350' || cat === 'hru250_300' || cat === 'hru_eco');
+  wizardHru250_300 = (cat === 'hru250_300');
   var rfRemTypeEl = $id('wiz-rfremtype');
   if (rfRemTypeEl) {
-    var rfUseCO2 = (cat === 'hru350' || cat === 'hru250_300' || cat === 'hru_eco');
-    rfRemTypeEl.value = rfUseCO2 ? '0x1298' : '0x22F3';
+    rfRemTypeEl.value = wizardRfCo2Device ? '0x1298' : '0x22F3';
+  }
+  // Auto-configure first RF remote as Send+RFTCO2 for non-PWM2I2C HRU devices
+  if (wizardRfCo2Device && wizardHasRF) {
+    setTimeout(function() { wizardAutoConfigRFRemote(); }, 500);
   }
 
   // Update device info display
@@ -3212,6 +3219,10 @@ function wizardFinish() {
       itho_4210: checkedVal('option-itho_4210') || '0'
     }
   };
+  // For non-PWM2I2C HRU devices: enable RF CO2 join on next boot
+  if (wizardRfCo2Device) {
+    sysMsg.systemsettings.itho_rf_co2_join = 1;
+  }
   websock_send(JSON.stringify(sysMsg));
 
   // 2b. Save virtual remote type (if virtual remote is configured)
@@ -3269,7 +3280,8 @@ function wizardFinish() {
   // Determine what action is needed
   var ssidChanged = $val('ssid') !== '';
   var joinEnabled = sendjoinVal !== '0';
-  var needsPowerCycle = joinEnabled && forcemediumVal !== '0';
+  var rfCo2JoinEnabled = wizardRfCo2Device;
+  var needsPowerCycle = (joinEnabled && forcemediumVal !== '0') || (rfCo2JoinEnabled && !wizardHru250_300);
   var needsReboot = ssidChanged && !needsPowerCycle;
 
   // Build target URL — prefer IP address, fall back to hostname.local
@@ -3300,13 +3312,39 @@ function wizardFinish() {
     var pcMsg = $id('wizard-powercycle-msg');
     if (pcMsg) {
       pcMsg.style.display = '';
-      pcMsg.innerHTML = '<strong>Important:</strong> Power cycle your Itho unit to complete the virtual remote pairing. The add-on will restart together with the unit.';
+      if (rfCo2JoinEnabled && !wizardHru250_300) {
+        pcMsg.innerHTML = '<strong>Important:</strong> Power cycle your Itho unit. The add-on will automatically send an RF CO2 join command within 2 minutes after boot. After successful pairing, the add-on will control your Itho via RF CO2 demand commands.';
+      } else {
+        pcMsg.innerHTML = '<strong>Important:</strong> Power cycle your Itho unit to complete the virtual remote pairing. The add-on will restart together with the unit.';
+      }
     }
     if (ssidChanged) {
       var wifiMsg = $id('wizard-wifi-reconnect');
       if (wifiMsg) wifiMsg.style.display = '';
     }
     $id('wizard-finish-status').innerHTML = 'Settings saved. <a href="' + targetUrl + '">Go to device</a>';
+  } else if (wizardHru250_300 && rfCo2JoinEnabled) {
+    // HRU250-300: user must manually put Itho in learn mode, then send join
+    var pcMsg = $id('wizard-powercycle-msg');
+    if (pcMsg) {
+      pcMsg.style.display = '';
+      pcMsg.innerHTML = '<strong>HRU 250/300:</strong> Put your Itho in learn mode (refer to your Itho manual).<br>' +
+        'Then click the button below to send the RF CO2 join command.<br><br>' +
+        '<button id="wizard-send-rf-join" type="button" class="pure-button pure-button-primary">Send RF CO2 Join</button>' +
+        '<span id="wizard-join-status" style="margin-left:10px"></span>';
+    }
+    $id('wizard-finish-status').innerHTML = 'Settings saved. Waiting for RF CO2 join...';
+    // Attach handler for the join button
+    setTimeout(function() {
+      var joinBtn = $id('wizard-send-rf-join');
+      if (joinBtn) {
+        joinBtn.addEventListener('click', function() {
+          websock_send('{"rfremotecmd":"join","rfremoteindex":0}');
+          var st = $id('wizard-join-status');
+          if (st) st.textContent = 'Join command sent, waiting for response...';
+        });
+      }
+    }, 100);
   } else if (needsReboot) {
     $id('wizard-finish-status').textContent = 'Saving configuration and rebooting...';
     $id('wizard-reboot-msg').style.display = '';
