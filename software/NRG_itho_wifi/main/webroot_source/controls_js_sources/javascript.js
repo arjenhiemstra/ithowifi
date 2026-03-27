@@ -3047,11 +3047,13 @@ function applyDeviceDefaults() {
   var updatefreqEl = $id('itho_updatefreq');
   if (updatefreqEl) updatefreqEl.value = (deviceTypeQ ? 10 : 60);
 
-  // RF remote type default: RFT AUTO for HRU types, RFT CVE for CVE types
+  // RF remote type default:
+  // PWM2I2C devices (CVE, HRU200): RFT AUTO
+  // Non-PWM2I2C HRU devices (HRU350, HRU250-300, HRU ECO): RFT CO2
   var rfRemTypeEl = $id('wiz-rfremtype');
   if (rfRemTypeEl) {
-    var rfUseAuto = (cat === 'cve' || cat === 'hru200' || cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200' || cat === 'hru250_300');
-    rfRemTypeEl.value = rfUseAuto ? '0x22F3' : '0x22F1';
+    var rfUseCO2 = (cat === 'hru350' || cat === 'hru250_300' || cat === 'hru_eco');
+    rfRemTypeEl.value = rfUseCO2 ? '0x1298' : '0x22F3';
   }
 
   // Update device info display
