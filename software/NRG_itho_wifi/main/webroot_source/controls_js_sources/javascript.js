@@ -1250,7 +1250,7 @@ document.addEventListener('DOMContentLoaded', function () {
           websock_send(`{"itho_update_remote":${sel},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + sel).value}","remtype":${remtype},"remfunc":${remfunc}}`);
         }
       }
-      setTimeout(function() { websock_send('{"itho_llm":true}'); }, 200);
+      setTimeout(function() { websock_send('{"itho_llm":true}'); }, 500);
     }
     else if (btnId === 'itho_remove_remote' || btnId === 'itho_remove_vremote') {
       var selected = checkedVal('optionsRemotes');
