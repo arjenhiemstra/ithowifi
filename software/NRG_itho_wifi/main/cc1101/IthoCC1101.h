@@ -57,9 +57,8 @@ struct ithoRFDevices
 // pa table settings
 const uint8_t ithoPaTableSend[8] = {0x6F, 0x26, 0x2E, 0x8C, 0x87, 0xCD, 0xC7, 0xC0};
 const uint8_t ithoPaTableReceive[8] = {0x6F, 0x26, 0x2E, 0x7F, 0x8A, 0x84, 0xCA, 0xC4};
-// Low power PA table for close-range TX (add-on inside CVE/HRU200, ~1cm to receiver)
-// Index 7 is runtime-configurable via setLowTxPower() for power level testing
-// CC1101 868MHz: 0x03=-30, 0x26=-15, 0x51=-10, 0x34=-6, 0x60=0, 0x84=+5, 0xC5=+7, 0xC0=+10 dBm
+// Low power PA table — index 7 set per-remote at runtime via setLowTxPower()
+// CC1101 868MHz PA values: 0x03=-30, 0x26=-15, 0x34=-6, 0x60=0, 0x84=+5, 0xC5=+7, 0xC0=+10 dBm
 static uint8_t ithoPaTableSendLow[8] = {0x6F, 0x26, 0x2E, 0x8C, 0x87, 0xCD, 0xC7, 0x03};
 
 class IthoPacket;
