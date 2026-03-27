@@ -329,6 +329,11 @@ void TaskCC1101(void *pvParameters)
       rfManager.radio.setBindAllowed(true);
       rfManager.radio.addRFDevice(id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteBidirectional(index));
       rfManager.radio.setBindAllowed(false);
+      // For Send remotes, the ID is the sourceID (what we transmit as)
+      if (remotes.getRemoteFunction(index) == RemoteFunctions::SEND)
+      {
+        rfManager.radio.updateSourceID(id[0], id[1], id[2], index);
+      }
       // Restore persisted target device ID for bidirectional remotes
       uint8_t destId[3]{};
       remotes.getRemoteDestIDbyIndex(index, &destId[0]);
