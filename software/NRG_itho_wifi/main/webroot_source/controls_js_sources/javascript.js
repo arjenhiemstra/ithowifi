@@ -1802,6 +1802,11 @@ function radio(origin, state) {
     $qa(`[id^=id_${origin}-]`).forEach(function (el, index) {
       el.readOnly = (index != state);
     });
+    if (origin == "remote") {
+      $qa('[id^=txpower-]').forEach(function (el, index) {
+        el.disabled = (index != state);
+      });
+    }
     if (origin == "ithoset") {
       $qa('[id^=ithosetrefresh-]').forEach(function (el, index) {
         var ref = $id('ithosetrefresh-' + index);
@@ -2342,6 +2347,10 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
     }
   }
   table.appendChild(tbody);
+  // TX power dropdowns disabled until remote is selected
+  if (!isWizard) {
+    $qa('[id^=txpower-]').forEach(function (el) { el.disabled = true; });
+  }
 }
 
 function buildHtmlStatusTable(table, jsonVar) {
