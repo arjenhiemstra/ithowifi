@@ -1856,8 +1856,12 @@ void IthoCC1101::handleBind(IthoPacket *packetPtr)
   if (msgType == MESSAGE_TYPE_W_MASK && bindInitiatorActive)
   {
     // Binding accept: W --- target self --:-- 1FC9 [31D9+31DA]
-    // Verify deviceId1 matches our defaultID (message is addressed to us)
-    uint32_t ourId = ((uint32_t)defaultID[0] << 16) | ((uint32_t)defaultID[1] << 8) | (uint32_t)defaultID[2];
+    // Verify deviceId1 matches the source ID used for the join offer
+    uint8_t *srcId = ithoRF.device[bindInitiatorRemIndex].sourceID;
+    bool useSrcId = (srcId[0] != 0 || srcId[1] != 0 || srcId[2] != 0);
+    uint32_t ourId = useSrcId
+        ? ((uint32_t)srcId[0] << 16) | ((uint32_t)srcId[1] << 8) | (uint32_t)srcId[2]
+        : ((uint32_t)defaultID[0] << 16) | ((uint32_t)defaultID[1] << 8) | (uint32_t)defaultID[2];
     if (packetPtr->deviceId1 == ourId)
     {
       packetPtr->command = IthoBindAccept;
