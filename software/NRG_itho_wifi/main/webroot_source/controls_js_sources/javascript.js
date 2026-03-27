@@ -1164,6 +1164,8 @@ document.addEventListener('DOMContentLoaded', function () {
           api_settings_activated: JSON.parse($val('api_settings_activated')),
           syssht30: checkedVal('option-syssht30'),
           itho_rf_support: checkedVal('option-itho_rf_support'),
+          itho_control_interface: checkedVal('option-itho_control_interface'),
+          itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_fallback: $val('itho_fallback'),
           itho_low: $val('itho_low'),
           itho_medium: $val('itho_medium'),
