@@ -291,6 +291,82 @@ static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
 
   JsonObject body = json.as<JsonObject>();
 
+  // Handle percentage (0-100) and fandemand (0-200)
+  // RF CO2 mode: auto command + ventilation demand
+  // PWM2I2C mode: mapped to speed (0-255)
+  if (!body["percentage"].isNull() || !body["fandemand"].isNull())
+  {
+    int demand = 0;
+    if (!body["percentage"].isNull())
+    {
+      int pct = body["percentage"].as<int>();
+      if (pct < 0 || pct > 100)
+      {
+        sendFail(request, "percentage out of range (0-100)");
+        return;
+      }
+      demand = pct * 2; // 0-100% → 0-200 demand
+    }
+    else
+    {
+      demand = body["fandemand"].as<int>();
+      if (demand < 0 || demand > 200)
+      {
+        sendFail(request, "fandemand out of range (0-200)");
+        return;
+      }
+    }
+
+    if (systemConfig.itho_control_interface == 1)
+    {
+      // RF CO2 mode: send auto + demand
+      // Find first Send+RFTCO2 remote
+      int rfIdx = -1;
+      for (int ri = 0; ri < remotes.getMaxRemotes(); ri++)
+      {
+        if (remotes.isEmptySlot(ri)) continue;
+        if (remotes.getRemoteFunction(ri) == RemoteFunctions::SEND &&
+            remotes.getRemoteType(ri) == RemoteTypes::RFTCO2)
+        {
+          rfIdx = ri;
+          break;
+        }
+      }
+      if (rfIdx < 0)
+      {
+        sendFail(request, "no Send+RFTCO2 remote configured");
+        return;
+      }
+      ithoExecRFCommand(rfIdx, "auto", HTMLAPI);
+      ithoSendRFDemand(rfIdx, (uint8_t)demand, 0, HTMLAPI);
+      JsonDocument data;
+      data["result"] = "auto + demand sent via RF CO2";
+      data["demand"] = demand;
+      data["index"] = rfIdx;
+      if (!body["percentage"].isNull()) data["percentage"] = body["percentage"].as<int>();
+      sendSuccess(request, data);
+    }
+    else if (systemConfig.itho_pwm2i2c == 1)
+    {
+      // PWM2I2C mode: map demand (0-200) to speed (0-255)
+      int speed = (demand * 255) / 200;
+      char speedStr[8];
+      snprintf(speedStr, sizeof(speedStr), "%d", speed);
+      ithoSetSpeed(speedStr, HTMLAPI);
+      JsonDocument data;
+      data["result"] = "speed set via PWM2I2C";
+      data["speed"] = speed;
+      data["demand"] = demand;
+      if (!body["percentage"].isNull()) data["percentage"] = body["percentage"].as<int>();
+      sendSuccess(request, data);
+    }
+    else
+    {
+      sendFail(request, "device does not support percentage/fandemand - no RF CO2 or PWM2I2C available");
+    }
+    return;
+  }
+
   // Validate speed range before delegating
   if (!body["speed"].isNull())
   {
