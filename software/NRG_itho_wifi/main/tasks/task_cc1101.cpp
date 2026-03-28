@@ -343,7 +343,6 @@ void TaskCC1101(void *pvParameters)
       }
     }
     systemConfig.rfInitOK = true;
-
     // RF CO2 join on boot: find first Send+RFTCO2 remote and send join
     if (systemConfig.itho_rf_co2_join == 1)
     {
