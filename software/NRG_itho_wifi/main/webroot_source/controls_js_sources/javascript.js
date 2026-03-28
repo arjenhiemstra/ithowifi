@@ -2318,7 +2318,8 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
             addRemoteButtons(td, remfunc, remtype, i, false);
             if (remfunction == 5 && remtype == 0x1298) {
               td.insertAdjacentHTML('beforeend', `<br><input type="number" id="co2val-${i}" min="0" max="10000" placeholder="CO2 ppm" style="width:90px;margin-top:4px;"> <button id="button_sendco2-${i}" class="pure-button">Send CO2</button>`);
-              td.insertAdjacentHTML('beforeend', `<br><input type="number" id="demandval-${i}" min="0" max="200" placeholder="Demand 0-200" style="width:90px;margin-top:4px;"> <button id="button_senddemand-${i}" class="pure-button">Send Demand</button>`);
+              td.insertAdjacentHTML('beforeend', `<br><label style="font-size:0.85em;">Demand: <span id="demandlabel-${i}">0</span>/200</label><input type="range" id="demandval-${i}" min="0" max="200" value="0" style="width:150px;" oninput="$id('demandlabel-'+${i}).textContent=this.value" onchange="websock_send(JSON.stringify({rfdemand:parseInt(this.value),rfremoteindex:${i}}))">`);
+
             }
             if (remfunction == 5) {
               var curPower = remote["tx_power"] || 192;

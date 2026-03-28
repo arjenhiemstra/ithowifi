@@ -95,7 +95,7 @@
     // RF command buttons
     ['low','auto','high','timer1','timer2','timer3'].forEach(function(cmd) {
       var btn = $id('rfcmd-' + cmd);
-      if (btn) btn.onclick = function() { websock_send('{"rfremotecmd":"' + cmd + '","rfremoteindex":0}'); };
+      if (btn) btn.onclick = function() { websock_send('{"remote":0, "command":"' + cmd + '"}'); };
     });
   } else if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
     $id('sliderdiv').classList.add('hidden');
