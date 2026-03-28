@@ -338,6 +338,7 @@ static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
         return;
       }
       ithoExecRFCommand(rfIdx, "auto", HTMLAPI);
+      delay(200);
       ithoSendRFDemand(rfIdx, (uint8_t)demand, 0, HTMLAPI);
       JsonDocument data;
       data["result"] = "auto + demand sent via RF CO2";

@@ -196,6 +196,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           if (rfIdx >= 0)
           {
             ithoExecRFCommand(rfIdx, "auto", MQTTAPI);
+            delay(200);
             ithoSendRFDemand(rfIdx, (uint8_t)demand, 0, MQTTAPI);
             mqttSendResponse("success", "percentage", "auto + demand sent");
           }

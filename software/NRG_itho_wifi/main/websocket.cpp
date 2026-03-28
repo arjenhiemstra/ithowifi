@@ -693,6 +693,7 @@ void handle_ws_message(JsonObject root)
             remotes.getRemoteType(ri) == RemoteTypes::RFTCO2)
         {
           ithoExecRFCommand(ri, "auto", WEB);
+          delay(200);
           ithoSendRFDemand(ri, (uint8_t)demand, 0, WEB);
           break;
         }
