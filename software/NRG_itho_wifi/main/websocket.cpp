@@ -709,14 +709,6 @@ void handle_ws_message(JsonObject root)
   {
     ithoSetSpeed(root["itho"].as<uint16_t>(), WEB);
   }
-  // RF TX power test (runtime PA value change)
-  if (!root["rftxpower"].isNull())
-  {
-    uint8_t pa = root["rftxpower"].as<uint8_t>();
-    rfManager.radio.setLowTxPower(pa);
-    D_LOG("RF: TX power set to 0x%02X", pa);
-  }
-
   // Learn-Leave mode toggle
   if (root["itho_llm"].is<bool>() && root["itho_llm"].as<bool>())
   {

@@ -209,6 +209,8 @@ void handleOpenAPI(AsyncWebServerRequest *request)
   addProp(mqttProps, "vremotename", "string");
   addProp(mqttProps, "rfremotecmd", "string");
   addProp(mqttProps, "rfremoteindex", "integer");
+  addProp(mqttProps, "percentage", "integer", "Fan speed as percentage (0-100)");
+  addProp(mqttProps, "fandemand", "integer", "Ventilation demand (0-200)");
   addProp(mqttProps, "rfco2", "integer", "CO2 ppm");
   addProp(mqttProps, "rfdemand", "integer", "Ventilation demand 0-200");
   addProp(mqttProps, "rfzone", "integer", "Zone for rfdemand");
@@ -232,6 +234,8 @@ void handleOpenAPI(AsyncWebServerRequest *request)
     cmdProps["command"]["enum"].add(cmd);
   addProp(cmdProps, "speed", "integer", "Fan speed", 0, 255);
   addProp(cmdProps, "timer", "integer", "Timer in minutes", 0, 65535);
+  addProp(cmdProps, "percentage", "integer", "Fan speed as percentage (0-100)", 0, 100);
+  addProp(cmdProps, "fandemand", "integer", "Ventilation demand (0-200, 0=0% 200=100%)", 0, 200);
 
   JsonObject vrProps = addSchema("VRemoteRequest", "Virtual remote command");
   addProp(vrProps, "command", "string", "Command name");

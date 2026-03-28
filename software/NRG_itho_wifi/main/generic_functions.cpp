@@ -453,11 +453,10 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
 
   D_LOG("SYS: exec rf cmd:%s, idx: %d", command, remote_index);
   bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
-  // Set per-device TX power: Send remotes use configured (low) power, others use max
+  // Set per-device TX power: Send remotes use low power, others use max
   bool isSendRemote = (remotes.getRemoteFunction(remote_index) == RemoteFunctions::SEND);
   if (isSendRemote && ithoInitResult == 1) // I2C connected
   {
-    rfManager.radio.setLowTxPower(remotes.getRemoteTxPower(remote_index));
     rfManager.radio.setLowPowerMode(true);
   }
   else
@@ -564,7 +563,6 @@ bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
   bool isSendRemote = (remotes.getRemoteFunction(remote_index) == RemoteFunctions::SEND);
   if (isSendRemote && ithoInitResult == 1)
   {
-    rfManager.radio.setLowTxPower(remotes.getRemoteTxPower(remote_index));
     rfManager.radio.setLowPowerMode(true);
   }
   else
@@ -610,7 +608,6 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
   bool isSendRemote = (remotes.getRemoteFunction(remote_index) == RemoteFunctions::SEND);
   if (isSendRemote && ithoInitResult == 1)
   {
-    rfManager.radio.setLowTxPower(remotes.getRemoteTxPower(remote_index));
     rfManager.radio.setLowPowerMode(true);
   }
   else

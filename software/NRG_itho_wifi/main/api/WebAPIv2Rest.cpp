@@ -644,18 +644,6 @@ static void handlePostDebug(AsyncWebServerRequest *request, JsonVariant &json)
 
   JsonObject body = json.as<JsonObject>();
 
-  // Runtime TX power adjustment for testing
-  if (!body["txpower"].isNull())
-  {
-    uint8_t pa = body["txpower"].as<uint8_t>();
-    rfManager.radio.setLowTxPower(pa);
-    JsonDocument data;
-    data["result"] = "TX power updated";
-    data["txpower"] = pa;
-    sendSuccess(request, data);
-    return;
-  }
-
   if (body["action"].isNull())
   {
     sendFail(request, "missing required field: action");

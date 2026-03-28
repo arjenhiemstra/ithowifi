@@ -781,6 +781,15 @@ const messageHandlers = {
       var shEl = $id('sensor_hum');
       if (shEl) shEl.innerHTML = `Humidity: ${round(x.sensor_hum, 1)}%`;
     }
+    // Update demand slider on index page with actual fan demand from 31DA
+    if (typeof x.fan_demand !== 'undefined') {
+      var ds = $id('rfco2demandslider');
+      if (ds && !ds.matches(':active')) { // don't override while user is dragging
+        ds.value = x.fan_demand;
+        var dl = $id('rfco2demandval');
+        if (dl) dl.textContent = x.fan_demand;
+      }
+    }
     var memBox = $id('memory_box');
     if (memBox) { memBox.style.display = 'block'; memBox.innerHTML = `<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`; }
     var mqttEl = $id('mqtt_conn');
@@ -1296,7 +1305,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (id == 'empty slot') id = "00,00,00";
         if (isHex(id.split(",")[0]) && isHex(id.split(",")[1]) && isHex(id.split(",")[2])) {
           remotesRefreshNeeded = true;
-          websock_send(`{"${btnId}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + i).value}","remtype":${remtype},"remfunc":${remfunc}}`);
+          var txpEl = $id('txpower-' + i);
+          var txp = txpEl ? parseInt(txpEl.value) : undefined;
+          var msg = `{"${btnId}":${i},"id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}],"value":"${$id('name_remote-' + i).value}","remtype":${remtype},"remfunc":${remfunc}`;
+          if (txp !== undefined) msg += `,"tx_power":${txp}`;
+          msg += '}';
+          websock_send(msg);
         }
         else {
           alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
@@ -1798,6 +1812,11 @@ function radio(origin, state) {
     $qa(`[id^=id_${origin}-]`).forEach(function (el, index) {
       el.readOnly = (index != state);
     });
+    if (origin == "remote") {
+      $qa('[id^=txpower-]').forEach(function (el, index) {
+        el.disabled = (index != state);
+      });
+    }
     if (origin == "ithoset") {
       $qa('[id^=ithosetrefresh-]').forEach(function (el, index) {
         var ref = $id('ithosetrefresh-' + index);
@@ -2309,7 +2328,23 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
             addRemoteButtons(td, remfunc, remtype, i, false);
             if (remfunction == 5 && remtype == 0x1298) {
               td.insertAdjacentHTML('beforeend', `<br><input type="number" id="co2val-${i}" min="0" max="10000" placeholder="CO2 ppm" style="width:90px;margin-top:4px;"> <button id="button_sendco2-${i}" class="pure-button">Send CO2</button>`);
-              td.insertAdjacentHTML('beforeend', `<br><input type="number" id="demandval-${i}" min="0" max="200" placeholder="Demand 0-200" style="width:90px;margin-top:4px;"> <button id="button_senddemand-${i}" class="pure-button">Send Demand</button>`);
+              td.insertAdjacentHTML('beforeend', `<br><label style="font-size:0.85em;">Demand: <span id="demandlabel-${i}">0</span>/200</label><input type="range" id="demandval-${i}" min="0" max="200" value="0" style="width:150px;" oninput="$id('demandlabel-'+${i}).textContent=this.value" onchange="websock_send(JSON.stringify({rfdemand:parseInt(this.value),rfremoteindex:${i}}))">`);
+
+            }
+            if (remfunction == 5) {
+              var curPower = remote["tx_power"] || 192;
+              td.insertAdjacentHTML('beforeend',
+                `<br><label style="font-size:0.85em;">TX Power: </label>` +
+                `<select id="txpower-${i}" style="font-size:0.85em;">` +
+                `<option value="3"${curPower==3?' selected':''}>-30 dBm (min)</option>` +
+                `<option value="38"${curPower==38?' selected':''}>-15 dBm</option>` +
+                `<option value="81"${curPower==81?' selected':''}>-10 dBm</option>` +
+                `<option value="52"${curPower==52?' selected':''}>-6 dBm</option>` +
+                `<option value="96"${curPower==96?' selected':''}>0 dBm</option>` +
+                `<option value="132"${curPower==132?' selected':''}>+5 dBm</option>` +
+                `<option value="197"${curPower==197?' selected':''}>+7 dBm</option>` +
+                `<option value="192"${curPower==192?' selected':''}>+10 dBm (max)</option>` +
+                `</select>`);
             }
           }
           else {
@@ -2323,6 +2358,10 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
     }
   }
   table.appendChild(tbody);
+  // TX power dropdowns disabled until remote is selected
+  if (!isWizard) {
+    $qa('[id^=txpower-]').forEach(function (el) { el.disabled = true; });
+  }
 }
 
 function buildHtmlStatusTable(table, jsonVar) {
@@ -3856,6 +3895,28 @@ Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostl
                     works for single commands</em></td>
         </tr>
         <tr>
+            <td>percentage</td>
+            <td>number</td>
+            <td>0-100</td>
+            <td>number</td>
+            <td style="text-align:center">&#9679;</td>
+            <td style="text-align:center">&#9676;</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Fan speed as percentage. Maps to ventilation demand for RF CO2 devices or PWM speed for CVE/HRU200.</em></td>
+        </tr>
+        <tr>
+            <td>fandemand</td>
+            <td>number</td>
+            <td>0-200</td>
+            <td>number</td>
+            <td style="text-align:center">&#9679;</td>
+            <td style="text-align:center">&#9676;</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Ventilation demand value. Maps to RF demand for RF CO2 devices or PWM speed for CVE/HRU200.</em></td>
+        </tr>
+        <tr>
             <td>timer</td>
             <td>string</td>
             <td>0-65535</td>
@@ -5238,7 +5299,6 @@ var html_index = `
     </div>
     <div>
       <span id="rfco2demandval">0</span> / 200
-      <button id="rfco2demandsend" class="pure-button pure-button-primary" style="margin-left:1em;">Send Demand</button>
     </div>
   </div>
   <div style="text-align: center; margin: 2em 0 0 0;">
@@ -5266,18 +5326,14 @@ var html_index = `
     var dslide = $id('rfco2demandslider');
     if (dslide) {
       dslide.oninput = function() { $id('rfco2demandval').textContent = this.value; };
-    }
-    var dsend = $id('rfco2demandsend');
-    if (dsend) {
-      dsend.onclick = function() {
-        var val = $id('rfco2demandslider').value;
-        websock_send('{"rfdemand":' + val + ',"rfremoteindex":0}');
+      dslide.onchange = function() {
+        websock_send('{"fandemand":' + this.value + '}');
       };
     }
     // RF command buttons
     ['low','auto','high','timer1','timer2','timer3'].forEach(function(cmd) {
       var btn = $id('rfcmd-' + cmd);
-      if (btn) btn.onclick = function() { websock_send('{"rfremotecmd":"' + cmd + '","rfremoteindex":0}'); };
+      if (btn) btn.onclick = function() { websock_send('{"remote":0, "command":"' + cmd + '"}'); };
     });
   } else if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
     $id('sliderdiv').classList.add('hidden');
