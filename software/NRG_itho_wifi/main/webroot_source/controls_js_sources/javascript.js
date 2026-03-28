@@ -780,6 +780,15 @@ const messageHandlers = {
       var shEl = $id('sensor_hum');
       if (shEl) shEl.innerHTML = `Humidity: ${round(x.sensor_hum, 1)}%`;
     }
+    // Update demand slider on index page with actual fan demand from 31DA
+    if (typeof x.fan_demand !== 'undefined') {
+      var ds = $id('rfco2demandslider');
+      if (ds && !ds.matches(':active')) { // don't override while user is dragging
+        ds.value = x.fan_demand;
+        var dl = $id('rfco2demandval');
+        if (dl) dl.textContent = x.fan_demand;
+      }
+    }
     var memBox = $id('memory_box');
     if (memBox) { memBox.style.display = 'block'; memBox.innerHTML = `<p><b>Memory:</b><p><p>free: <b>${x.freemem}</b></p><p>low: <b>${x.memlow}</b></p>`; }
     var mqttEl = $id('mqtt_conn');

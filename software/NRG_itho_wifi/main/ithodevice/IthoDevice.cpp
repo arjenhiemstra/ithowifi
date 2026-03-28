@@ -16,6 +16,7 @@ uint8_t ithoDeviceID = 0;
 uint8_t itho_hwversion = 0;
 uint8_t itho_fwversion = 0;
 volatile uint16_t ithoCurrentVal = 0;
+volatile uint8_t ithoFanDemand = 0;
 const struct ihtoDeviceType *ithoDeviceptr = nullptr;
 int16_t ithoSettingsLength = 0;
 int16_t ithoStatusLabelLength = 0;

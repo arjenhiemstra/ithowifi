@@ -49,6 +49,7 @@ extern uint8_t itho_fwversion;
 extern int16_t ithoSettingsLength;
 extern int16_t ithoStatusLabelLength;
 extern volatile uint16_t ithoCurrentVal;
+extern volatile uint8_t ithoFanDemand; // last demand value from 31DA response (0-200)
 extern const struct ihtoDeviceType *ithoDeviceptr;
 
 // extern bool get2410;

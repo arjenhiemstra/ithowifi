@@ -625,6 +625,8 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
   rfManager.radio.send31E0(remote_index, zone, demand, 0x00);
   enableRF_ISR();
 
+  ithoFanDemand = demand;
+
   rfManager.radio.setLowPowerMode(false);
   if (bidirectional)
     rfManager.radio.setSendTries(3);

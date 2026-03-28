@@ -27,6 +27,7 @@ void jsonSystemstat()
   systemstat["itho_llm"] = remotes.getllModeTime();
   systemstat["copy_id"] = virtualRemotes.getllModeTime();
   systemstat["ithoinit"] = ithoInitResult;
+  systemstat["fan_demand"] = ithoFanDemand;
   systemstat["uuid"] = uuid;
 
   notifyClients(root.as<JsonObject>());
