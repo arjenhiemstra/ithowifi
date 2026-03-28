@@ -56,7 +56,6 @@
     </div>
     <div>
       <span id="rfco2demandval">0</span> / 200
-      <button id="rfco2demandsend" class="pure-button pure-button-primary" style="margin-left:1em;">Send Demand</button>
     </div>
   </div>
   <div style="text-align: center; margin: 2em 0 0 0;">
@@ -84,12 +83,13 @@
     var dslide = $id('rfco2demandslider');
     if (dslide) {
       dslide.oninput = function() { $id('rfco2demandval').textContent = this.value; };
-    }
-    var dsend = $id('rfco2demandsend');
-    if (dsend) {
-      dsend.onclick = function() {
-        var val = $id('rfco2demandslider').value;
-        websock_send('{"rfdemand":' + val + ',"rfremoteindex":0}');
+      dslide.onchange = function() {
+        var val = this.value;
+        // Demand only works in auto mode — send auto command first
+        websock_send('{"remote":0, "command":"auto"}');
+        setTimeout(function() {
+          websock_send('{"rfdemand":' + val + ',"rfremoteindex":0}');
+        }, 300);
       };
     }
     // RF command buttons
