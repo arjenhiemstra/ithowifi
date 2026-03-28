@@ -167,6 +167,53 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           mqttSendResponse("fail", "rfdemand", "failed - remote must be RFT CO2 or RFT RV type");
         clean_cmd_topic = true;
       }
+      if (!root["percentage"].isNull() || !root["fandemand"].isNull())
+      {
+        jsonCmd = true;
+        int demand = 0;
+        if (!root["percentage"].isNull())
+        {
+          int pct = root["percentage"].as<int>();
+          demand = (pct < 0) ? 0 : (pct > 100) ? 200 : pct * 2;
+        }
+        else
+        {
+          demand = root["fandemand"].as<int>();
+          if (demand < 0) demand = 0;
+          if (demand > 200) demand = 200;
+        }
+
+        if (systemConfig.itho_control_interface == 1)
+        {
+          int rfIdx = -1;
+          for (int ri = 0; ri < remotes.getMaxRemotes(); ri++)
+          {
+            if (remotes.isEmptySlot(ri)) continue;
+            if (remotes.getRemoteFunction(ri) == RemoteFunctions::SEND &&
+                remotes.getRemoteType(ri) == RemoteTypes::RFTCO2)
+            { rfIdx = ri; break; }
+          }
+          if (rfIdx >= 0)
+          {
+            ithoExecRFCommand(rfIdx, "auto", MQTTAPI);
+            ithoSendRFDemand(rfIdx, (uint8_t)demand, 0, MQTTAPI);
+            mqttSendResponse("success", "percentage", "auto + demand sent");
+          }
+          else
+            mqttSendResponse("fail", "percentage", "no Send+RFTCO2 remote");
+        }
+        else if (systemConfig.itho_pwm2i2c == 1)
+        {
+          int speed = (demand * 255) / 200;
+          ithoSetSpeed((uint16_t)speed, MQTTAPI);
+          mqttSendResponse("success", "percentage", nullptr);
+        }
+        else
+        {
+          mqttSendResponse("fail", "percentage", "no RF CO2 or PWM2I2C available");
+        }
+        clean_cmd_topic = true;
+      }
       if (!root["speed"].isNull())
       {
         jsonCmd = true;
