@@ -84,12 +84,7 @@
     if (dslide) {
       dslide.oninput = function() { $id('rfco2demandval').textContent = this.value; };
       dslide.onchange = function() {
-        var val = this.value;
-        // Demand only works in auto mode — send auto command first
-        websock_send('{"remote":0, "command":"auto"}');
-        setTimeout(function() {
-          websock_send('{"rfdemand":' + val + ',"rfremoteindex":0}');
-        }, 300);
+        websock_send('{"fandemand":' + this.value + '}');
       };
     }
     // RF command buttons

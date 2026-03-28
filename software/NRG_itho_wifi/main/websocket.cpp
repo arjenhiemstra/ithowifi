@@ -668,6 +668,41 @@ void handle_ws_message(JsonObject root)
       zone = root["rfzone"].as<uint8_t>();
     ithoSendRFDemand(idx, root["rfdemand"].as<uint8_t>(), zone, WEB);
   }
+  // Percentage / fandemand command (unified fan control)
+  if (!root["percentage"].isNull() || !root["fandemand"].isNull())
+  {
+    int demand = 0;
+    if (!root["percentage"].isNull())
+    {
+      int pct = root["percentage"].as<int>();
+      demand = (pct < 0) ? 0 : (pct > 100) ? 200 : pct * 2;
+    }
+    else
+    {
+      demand = root["fandemand"].as<int>();
+      if (demand < 0) demand = 0;
+      if (demand > 200) demand = 200;
+    }
+
+    if (systemConfig.itho_control_interface == 1)
+    {
+      for (int ri = 0; ri < remotes.getMaxRemotes(); ri++)
+      {
+        if (remotes.isEmptySlot(ri)) continue;
+        if (remotes.getRemoteFunction(ri) == RemoteFunctions::SEND &&
+            remotes.getRemoteType(ri) == RemoteTypes::RFTCO2)
+        {
+          ithoExecRFCommand(ri, "auto", WEB);
+          ithoSendRFDemand(ri, (uint8_t)demand, 0, WEB);
+          break;
+        }
+      }
+    }
+    else if (systemConfig.itho_pwm2i2c == 1)
+    {
+      ithoSetSpeed((uint16_t)((demand * 255) / 200), WEB);
+    }
+  }
   // Itho speed command
   if (root["itho"].is<uint16_t>())
   {
