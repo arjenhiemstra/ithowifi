@@ -2,6 +2,7 @@
 
 #include "tasks/task_syscontrol.h"
 #include "../sys_log.h"
+#include "generic_functions.h"
 
 #define TASK_SYS_CONTROL_PRIO 6
 // globals
@@ -105,6 +106,15 @@ void TaskSysControl(void *pvParameters)
 
 void execSystemControlTasks()
 {
+  if (otaUpdateRequested)
+  {
+    otaUpdateRequested = false;
+    if (otaUpdateURL[0] != '\0')
+      performOTAUpdateFromURL(otaUpdateURL);
+    else
+      performOTAUpdate(otaUpdateBeta);
+  }
+
   i2cManager.processQueue();
 
   if (IthoInit && millis() > 250)

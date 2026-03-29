@@ -6,7 +6,6 @@
 
 #include <Arduino.h>
 #include <Ticker.h>
-#include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 #include <string>
 
@@ -55,3 +54,11 @@ double round(float value, int precision);
 char toHex(uint8_t c);
 std::vector<int> parseHexString(const std::string &input);
 void checkFirmwareUpdate();
+void triggerOTAUpdate(bool beta = false);
+void triggerOTAUpdateFromURL(const char *url);
+bool performOTAUpdate(bool beta = false);
+bool performOTAUpdateFromURL(const char *url);
+extern volatile int otaUpdateProgress;
+extern volatile bool otaUpdateRequested;
+extern volatile bool otaUpdateBeta;
+extern char otaUpdateURL[160];

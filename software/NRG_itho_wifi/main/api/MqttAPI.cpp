@@ -275,6 +275,39 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         mqttSendResponse("success", "manual_operation", nullptr);
         clean_cmd_topic = true;
       }
+      if (!root["update_url"].isNull())
+      {
+        jsonCmd = true;
+        const char *url = root["update_url"] | "";
+        if (strncmp(url, "https://github.com/arjenhiemstra/ithowifi/", 42) == 0)
+        {
+          mqttSendResponse("success", "update_url", "update starting");
+          clean_cmd_topic = true;
+          triggerOTAUpdateFromURL(url);
+        }
+        else
+        {
+          mqttSendResponse("fail", "update_url", "invalid URL");
+          clean_cmd_topic = true;
+        }
+      }
+      else if (!root["update"].isNull())
+      {
+        jsonCmd = true;
+        const char *value = root["update"] | "stable";
+        bool beta = (strcmp(value, "beta") == 0);
+        if (strlen(beta ? firmwareInfo.link_beta : firmwareInfo.link) > 0)
+        {
+          mqttSendResponse("success", "update", beta ? "beta update starting" : "update starting");
+          clean_cmd_topic = true;
+          triggerOTAUpdate(beta);
+        }
+        else
+        {
+          mqttSendResponse("fail", "update", "no firmware URL available");
+          clean_cmd_topic = true;
+        }
+      }
       if (!jsonCmd)
       {
         ithoSetSpeed(s_payload, MQTTAPI);

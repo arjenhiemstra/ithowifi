@@ -651,6 +651,37 @@ static void handlePostDebug(AsyncWebServerRequest *request, JsonVariant &json)
   }
 
   const char *action = body["action"];
+  if (action != nullptr && strcmp(action, "update_url") == 0)
+  {
+    const char *url = body["url"] | "";
+    if (strncmp(url, "https://github.com/arjenhiemstra/ithowifi/", 42) != 0)
+    {
+      sendFail(request, "invalid firmware URL");
+      return;
+    }
+    JsonDocument data;
+    data["result"] = "firmware update started";
+    data["url"] = url;
+    sendSuccess(request, data);
+    triggerOTAUpdateFromURL(url);
+    return;
+  }
+  if (action != nullptr && (strcmp(action, "update") == 0 || strcmp(action, "update_beta") == 0))
+  {
+    bool beta = (strcmp(action, "update_beta") == 0);
+    if (strlen(beta ? firmwareInfo.link_beta : firmwareInfo.link) == 0)
+    {
+      sendFail(request, "no firmware URL available - run firmware check first or check internet connection");
+      return;
+    }
+    JsonDocument data;
+    data["result"] = "firmware update started";
+    data["url"] = beta ? firmwareInfo.link_beta : firmwareInfo.link;
+    data["version"] = beta ? firmwareInfo.latest_beta_fw : firmwareInfo.latest_fw;
+    sendSuccess(request, data);
+    triggerOTAUpdate(beta);
+    return;
+  }
   if (action != nullptr && strcmp(action, "reboot") == 0)
   {
     if (millis() - lastRebootRequest < 5000)

@@ -1,6 +1,7 @@
 #include "generic_functions.h"
 #include "config/HADiscConfig.h"
 #include "tasks/task_cc1101.h"
+#include <HTTPUpdate.h>
 
 #define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 2000 // firmware json response should be smaller than this
 
@@ -952,9 +953,10 @@ void checkFirmwareUpdate()
             firmwareInfo.fw_update_available = compareVersions(root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", fw_version);
 
             strlcpy(firmwareInfo.latest_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
-            Serial.printf("latest_fw:%s\n", root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error");
             strlcpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
-            Serial.printf("latest_beta_fw:%s\n", root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error");
+            strlcpy(firmwareInfo.link, root["hw_rev"][hardwareManager.hw_revision]["link"] | "", sizeof(firmwareInfo.link));
+            strlcpy(firmwareInfo.link_beta, root["hw_rev"][hardwareManager.hw_revision]["link_beta"] | "", sizeof(firmwareInfo.link_beta));
+            D_LOG("SYS: latest_fw:%s, latest_beta:%s", firmwareInfo.latest_fw, firmwareInfo.latest_beta_fw);
 
             D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);
             // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful
@@ -964,4 +966,78 @@ void checkFirmwareUpdate()
       https.end();
     }
   }
+}
+
+volatile int otaUpdateProgress = -1; // -1=idle, 0-100=progress, 101=done, -2=error
+volatile bool otaUpdateRequested = false;
+volatile bool otaUpdateBeta = false;
+char otaUpdateURL[160] = {};
+
+void triggerOTAUpdate(bool beta)
+{
+  otaUpdateURL[0] = '\0';
+  otaUpdateBeta = beta;
+  otaUpdateRequested = true;
+}
+
+void triggerOTAUpdateFromURL(const char *url)
+{
+  strlcpy(otaUpdateURL, url, sizeof(otaUpdateURL));
+  otaUpdateRequested = true;
+}
+
+bool performOTAUpdate(bool beta)
+{
+  const char *url = beta ? firmwareInfo.link_beta : firmwareInfo.link;
+  return performOTAUpdateFromURL(url);
+}
+
+bool performOTAUpdateFromURL(const char *url)
+{
+  if (url == nullptr || strlen(url) == 0)
+  {
+    E_LOG("OTA: no firmware URL available");
+    return false;
+  }
+
+  I_LOG("OTA: starting update from %s", url);
+  logMessagejson("Firmware update starting...", WEBINTERFACE);
+
+  WiFiClientSecure secclient;
+  secclient.setInsecure();
+
+  httpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+  httpUpdate.rebootOnUpdate(false);
+
+  otaUpdateProgress = 0;
+
+  httpUpdate.onProgress([](int cur, int total)
+                        {
+    if (total > 0)
+      otaUpdateProgress = (cur * 100) / total; });
+
+  t_httpUpdate_return ret = httpUpdate.update(secclient, url);
+
+  switch (ret)
+  {
+  case HTTP_UPDATE_FAILED:
+    otaUpdateProgress = -2;
+    E_LOG("OTA: update failed: %s", httpUpdate.getLastErrorString().c_str());
+    logMessagejson("Firmware update failed!", WEBINTERFACE);
+    return false;
+
+  case HTTP_UPDATE_NO_UPDATES:
+    otaUpdateProgress = -1;
+    I_LOG("OTA: no update available");
+    return false;
+
+  case HTTP_UPDATE_OK:
+    otaUpdateProgress = 101;
+    I_LOG("OTA: update successful, rebooting...");
+    logMessagejson("Firmware update successful, rebooting...", WEBINTERFACE);
+    delay(1000);
+    shouldReboot = true;
+    return true;
+  }
+  return false;
 }

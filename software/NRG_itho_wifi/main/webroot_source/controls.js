@@ -4557,33 +4557,35 @@ var html_update = `
 <span style="color: #333">Available firmwares:</span>
 <hr style="border-top: 1px solid #eee">
 <div class="pure-control-group">
-  <label for="latest_fw">Latest firmware version:</label>
-  <label id="latest_fw">unknown</label>&nbsp;&nbsp;<a target="_blank" href="" id="release_notes"
-    class="pure-button pure-button hidden">Release notes</a><br>
-  <a href="" id="latest_fw_button" class="pure-button pure-button-primary hidden">Download firmware file</a>
+  <label for="fw_select">Firmware version:</label>
+  <select id="fw_select" onchange="onFwSelect()" style="min-width:200px;">
+    <option value="" disabled selected>Loading...</option>
+  </select>
 </div>
 <br>
-<div id="beta_fw" class="pure-control-group hidden">
-  <label for="latest_beta_fw">Latest beta firmware version:</label>
-  <label id="latest_beta_fw">unknown</label>&nbsp;&nbsp;<a target="_blank" href="" id="release_beta_notes"
-    class="pure-button pure-button hidden">Release notes</a><br>
-  <a href="" id="latest_beta_fw_button" class="pure-button pure-button-primary hidden">Download beta firmware
-    file</a><br><br>
+<div class="pure-control-group">
+  <a target="_blank" href="" id="release_notes" class="pure-button pure-button hidden">Release notes</a>
+  <button id="install_fw_button" class="pure-button hidden" style="margin-left:0.5em;background:#4CAF50;color:white;" onclick="installFirmware()">Install</button>
+</div>
+<br>
+<div id="ota_progress_section" class="hidden" style="margin:1em 0;">
+  <span style="color: #333">Online update progress:</span>
+  <hr style="border-top: 1px solid #eee">
+  <p id="ota_status">Preparing...</p>
+  <div style="border-radius: 20px;max-width: 300px;background-color: #ccc;">
+    <div id="otaBar" style="border-radius: 20px;width: 0%;height: 20px;background-color: #4CAF50;transition: width 0.3s;"></div>
+  </div>
 </div>
 <div class="pure-control-group">
-  <label for="show_beta_fw">Show beta firmware version:</label>
+  <label for="show_beta_fw">Show beta firmware version(s):</label>
   <input id="show_beta_fw" type="checkbox" onclick="toggleBetaFW()">
 </div>
 <br>
-<span>Other firmware versions can be found here:</span>
-<span id="other_firmware"></span>
-<br>
 <form class="pure-form pure-form-stacked" method='POST' action='#' enctype='multipart/form-data' id='updateform'>
   <fieldset>
-    <legend><br>Update the firmware of your device:</legend>
+    <legend><br>Manual firmware update:</legend>
     <ol>
-      <li>Download a firmware file</li>
-      <li>Select the downloaded firmware file with "Choose file" button</li>
+      <li>Select a firmware file with "Choose file" button</li>
       <li>Click update and wait for the process to finish</li>
     </ol>
     <input type='file' name='update'><br>
@@ -4603,34 +4605,90 @@ var html_update = `
 <script>
   $id('firmware_ver').textContent = fw_version;
   $id('hardware_rev').textContent = hw_revision;
-  $id('other_firmware').insertAdjacentHTML('beforeend', '<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/unified_hw2_noncve">link</a>');
+
+  var fwVersions = []; // {version, type, link, release_notes}
+
+  function populateDropdown() {
+    var sel = $id('fw_select');
+    var showBeta = $id('show_beta_fw').checked;
+    var prevVal = sel.value;
+    sel.innerHTML = '';
+    var hasOptions = false;
+    for (var i = 0; i < fwVersions.length; i++) {
+      var fw = fwVersions[i];
+      if (fw.type === 'beta' && !showBeta) continue;
+      var opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = fw.version + (fw.type === 'beta' ? ' (beta)' : '');
+      if (fw.version === fw_version) opt.textContent += ' - current';
+      sel.appendChild(opt);
+      hasOptions = true;
+    }
+    if (!hasOptions) {
+      var opt = document.createElement('option');
+      opt.value = '';
+      opt.disabled = true;
+      opt.selected = true;
+      opt.textContent = 'No firmware available';
+      sel.appendChild(opt);
+    } else if (prevVal !== '') {
+      sel.value = prevVal;
+    }
+    onFwSelect();
+  }
+
+  function onFwSelect() {
+    var sel = $id('fw_select');
+    var idx = parseInt(sel.value);
+    if (isNaN(idx) || idx < 0 || idx >= fwVersions.length) {
+      $id('release_notes').classList.add('hidden');
+      $id('install_fw_button').classList.add('hidden');
+      return;
+    }
+    var fw = fwVersions[idx];
+    if (fw.release_notes) {
+      $id('release_notes').href = fw.release_notes;
+      $id('release_notes').classList.remove('hidden');
+    } else {
+      $id('release_notes').classList.add('hidden');
+    }
+    if (fw.version !== fw_version) {
+      $id('install_fw_button').classList.remove('hidden');
+    } else {
+      $id('install_fw_button').classList.add('hidden');
+    }
+  }
 
   function process(key, value) {
     if (key == hw_revision) {
-      var latest_fw = value.latest_fw;
-      var download_link = value.link;
-      if (latest_fw == fw_version) {
-        $id('latest_fw').textContent = ' firmware is up-to-date';
+      if (value.latest_fw) {
+        fwVersions.push({
+          version: value.latest_fw,
+          type: 'stable',
+          link: value.link,
+          release_notes: value.release_notes || ('https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-' + value.latest_fw)
+        });
       }
-      else {
-        $id('latest_fw').textContent = latest_fw;
-        $id('latest_fw_button').classList.remove('hidden');
-        $id('release_notes').classList.remove('hidden');
-        $id('latest_fw_button').href = download_link;
-        $id('release_notes').href = "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_fw;
+      if (value.latest_beta_fw && value.latest_beta_fw !== value.latest_fw) {
+        fwVersions.push({
+          version: value.latest_beta_fw,
+          type: 'beta',
+          link: value.link_beta,
+          release_notes: value.beta_release_notes || ('https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-' + value.latest_beta_fw)
+        });
       }
-      var latest_beta_fw = value.latest_beta_fw;
-      var download_beta_link = value.link_beta;
-      if (latest_beta_fw == fw_version) {
-        $id('latest_beta_fw').textContent = ' firmware is up-to-date';
+      if (value.versions) {
+        for (var i = 0; i < value.versions.length; i++) {
+          var v = value.versions[i];
+          fwVersions.push({
+            version: v.version,
+            type: v.type || 'stable',
+            link: v.link,
+            release_notes: v.release_notes || ('https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-' + v.version)
+          });
+        }
       }
-      else {
-        $id('latest_beta_fw').textContent = latest_beta_fw;
-        $id('latest_beta_fw_button').classList.remove('hidden');
-        $id('release_beta_notes').classList.remove('hidden');
-        $id('latest_beta_fw_button').href = download_beta_link;
-        $id('release_beta_notes').href = "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_beta_fw;
-      }
+      populateDropdown();
     }
   }
 
@@ -4655,23 +4713,112 @@ var html_update = `
     }
   };
   xhr.onerror = xhr.ontimeout = function () {
-    if (on_ap) {
-      $id('latest_fw').textContent = ' firmware check not possible on Access Point mode';
-      $id('latest_beta_fw').textContent = ' firmware check not possible on Access Point mode';
-    }
-    else {
-      $id('latest_fw').textContent = ' firmware check failed, no internet connection?';
-      $id('latest_beta_fw').textContent = ' firmware check failed, no internet connection?';
-    }
+    var sel = $id('fw_select');
+    sel.innerHTML = '';
+    var opt = document.createElement('option');
+    opt.value = '';
+    opt.disabled = true;
+    opt.selected = true;
+    opt.textContent = on_ap ? 'Not available in AP mode' : 'Check failed, no internet?';
+    sel.appendChild(opt);
   };
   xhr.send();
 
   function toggleBetaFW() {
-    var x = document.getElementById('beta_fw');
-    if (x.classList.contains('hidden')) { x.classList.remove('hidden'); }
-    else { x.classList.add('hidden'); }
+    populateDropdown();
   }
 
+  var otaActive = false;
+  var otaLastProgress = -1;
+  var otaLastProgressTime = 0;
+  var otaTimeout = 120000; // 2 minutes without progress = stuck
+  var otaInterval = null;
+
+  function installFirmware() {
+    var sel = $id('fw_select');
+    var idx = parseInt(sel.value);
+    if (isNaN(idx) || idx < 0 || idx >= fwVersions.length) return;
+    var fw = fwVersions[idx];
+    var label = fw.version + (fw.type === 'beta' ? ' (beta)' : '');
+    if (!confirm('Install firmware ' + label + '? The device will reboot after installation.')) return;
+    $id('ota_progress_section').classList.remove('hidden');
+    $id('ota_status').textContent = 'Requesting firmware update...';
+    $id('otaBar').style.width = '0%';
+    $id('otaBar').style.backgroundColor = '#4CAF50';
+    $id('install_fw_button').disabled = true;
+    sel.disabled = true;
+    otaActive = true;
+    otaLastProgress = -1;
+    otaLastProgressTime = Date.now();
+
+    websock_send(JSON.stringify({update_url: fw.link}));
+
+    otaInterval = setInterval(function() {
+      // Check for timeout (no progress change in 2 minutes)
+      if (otaActive && otaLastProgressTime > 0 && (Date.now() - otaLastProgressTime) > otaTimeout) {
+        otaActive = false;
+        clearInterval(otaInterval);
+        $id('ota_status').textContent = 'Update timed out - no progress for 2 minutes';
+        $id('otaBar').style.backgroundColor = '#f44336';
+        $id('otaBar').style.width = '100%';
+        $id('install_fw_button').disabled = false;
+        sel.disabled = false;
+        return;
+      }
+      var xhr2 = new XMLHttpRequest();
+      xhr2.open('GET', '/api.html?get=ithostatus', true);
+      xhr2.timeout = 3000;
+      xhr2.onload = function() {};
+      xhr2.onerror = xhr2.ontimeout = function() {
+        if (!otaActive) return;
+        otaActive = false;
+        $id('ota_status').textContent = 'Device is rebooting...';
+        $id('otaBar').style.width = '100%';
+        clearInterval(otaInterval);
+        setTimeout(function() { location.reload(); }, 15000);
+      };
+      xhr2.send();
+    }, 3000);
+  }
+
+  function otaResetUI() {
+    otaActive = false;
+    if (otaInterval) clearInterval(otaInterval);
+    $id('install_fw_button').disabled = false;
+    $id('fw_select').disabled = false;
+  }
+
+  if (typeof messageHandlers !== 'undefined') {
+    var origSysstat = messageHandlers.systemstat;
+    messageHandlers.systemstat = function(f) {
+      if (origSysstat) origSysstat(f);
+      var progress = f.systemstat.ota_progress;
+      if (typeof progress === 'undefined') return;
+      if (progress >= 0) {
+        $id('ota_progress_section').classList.remove('hidden');
+        $id('otaBar').style.backgroundColor = '#4CAF50';
+        $id('otaBar').style.width = Math.min(progress, 100) + '%';
+        if (progress !== otaLastProgress) {
+          otaLastProgress = progress;
+          otaLastProgressTime = Date.now();
+        }
+        if (progress === 0) {
+          $id('ota_status').textContent = 'Downloading firmware...';
+        } else if (progress < 100) {
+          $id('ota_status').textContent = 'Downloading and flashing: ' + progress + '%';
+        } else {
+          $id('ota_status').textContent = 'Update complete, rebooting...';
+          $id('otaBar').style.width = '100%';
+        }
+      } else if (progress === -2) {
+        $id('ota_progress_section').classList.remove('hidden');
+        $id('ota_status').textContent = 'Firmware update failed';
+        $id('otaBar').style.backgroundColor = '#f44336';
+        $id('otaBar').style.width = '100%';
+        otaResetUI();
+      }
+    };
+  }
 
 </script>
 `;
