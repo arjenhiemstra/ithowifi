@@ -110,6 +110,7 @@ extern std::vector<ithoDeviceStatus> ithoStatus;
 extern std::vector<ithoDeviceMeasurements> ithoMeasurements;
 extern std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 extern std::vector<ithoDeviceMeasurements> ithoCounters;
+extern SemaphoreHandle_t ithoStatusMutex;
 
 #define MAX_RF_STATUS_SOURCES 20
 

@@ -31,7 +31,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
   if (length > 1023)
     length = 1023;
 
-  char s_payload[length];
+  char s_payload[length + 1];
   std::memcpy(s_payload, payload, length);
   s_payload[length] = '\0';
 
@@ -122,7 +122,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         uint8_t idx = 0;
         if (!root["rfremoteindex"].isNull())
         {
-          idx = strtoul(root["rfremoteindex"], NULL, 10);
+          idx = root["rfremoteindex"].as<uint8_t>();
         }
         if (!root["rfremotecmd"].isNull())
         {
@@ -139,7 +139,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         uint8_t idx = 0;
         if (!root["rfremoteindex"].isNull())
         {
-          idx = strtoul(root["rfremoteindex"], NULL, 10);
+          idx = root["rfremoteindex"].as<uint8_t>();
         }
         jsonCmd = true;
         if (ithoSendRFCO2(idx, root["rfco2"].as<uint16_t>(), MQTTAPI))
@@ -153,7 +153,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         uint8_t idx = 0;
         if (!root["rfremoteindex"].isNull())
         {
-          idx = strtoul(root["rfremoteindex"], NULL, 10);
+          idx = root["rfremoteindex"].as<uint8_t>();
         }
         uint8_t zone = 0;
         if (!root["rfzone"].isNull())

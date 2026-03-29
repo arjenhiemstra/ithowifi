@@ -12,6 +12,7 @@ std::vector<ithoDeviceStatus> ithoStatus;
 std::vector<ithoDeviceMeasurements> ithoMeasurements;
 std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 std::vector<ithoDeviceMeasurements> ithoCounters;
+SemaphoreHandle_t ithoStatusMutex = xSemaphoreCreateMutex();
 
 rfStatusSource rfStatusSources[MAX_RF_STATUS_SOURCES];
 volatile int rfSelectedSourceForParsing = -1;
@@ -84,42 +85,46 @@ void sendQueryStatusFormat(bool updateweb)
     }
   }
 
-  if (!ithoStatus.empty())
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
   {
-    ithoStatus.clear();
-  }
-  if (!(currentItho_fwversion() > 0))
-    return;
-  ithoStatusLabelLength = getStatusLabelLength(currentIthoDeviceGroup(), currentIthoDeviceID(), currentItho_fwversion());
-  const uint8_t endPos = i2cbuf[5];
-
-  for (uint8_t i = 0; i < endPos; i++)
-  {
-    ithoStatus.push_back(ithoDeviceStatus());
-
-    //      char fStringBuf[32];
-    //      getStatusLabel(i, ithoDeviceptr, currentItho_fwversion(), fStringBuf);
-
-    ithoStatus.back().is_signed = getSignedFromDatatype(i2cbuf[6 + i]);
-    ithoStatus.back().length = getLengthFromDatatype(i2cbuf[6 + i]);
-    ithoStatus.back().divider = getDividerFromDatatype(i2cbuf[6 + i]);
-
-    if (ithoStatus.back().divider == 1)
-    { // integer value
-      ithoStatus.back().type = ithoDeviceStatus::is_int;
-    }
-    else
+    if (!ithoStatus.empty())
     {
-      ithoStatus.back().type = ithoDeviceStatus::is_float;
+      ithoStatus.clear();
     }
-    // special cases
-    if (i2cbuf[6 + i] == 0x5B)
+    if (!(currentItho_fwversion() > 0))
     {
-      // legacy itho: 0x5B -> 0x10
-      ithoStatus.back().type = ithoDeviceStatus::is_int;
-      ithoStatus.back().length = 2;
-      ithoStatus.back().is_signed = false;
+      xSemaphoreGive(ithoStatusMutex);
+      return;
     }
+    ithoStatusLabelLength = getStatusLabelLength(currentIthoDeviceGroup(), currentIthoDeviceID(), currentItho_fwversion());
+    const uint8_t endPos = i2cbuf[5];
+
+    for (uint8_t i = 0; i < endPos; i++)
+    {
+      ithoStatus.push_back(ithoDeviceStatus());
+
+      ithoStatus.back().is_signed = getSignedFromDatatype(i2cbuf[6 + i]);
+      ithoStatus.back().length = getLengthFromDatatype(i2cbuf[6 + i]);
+      ithoStatus.back().divider = getDividerFromDatatype(i2cbuf[6 + i]);
+
+      if (ithoStatus.back().divider == 1)
+      { // integer value
+        ithoStatus.back().type = ithoDeviceStatus::is_int;
+      }
+      else
+      {
+        ithoStatus.back().type = ithoDeviceStatus::is_float;
+      }
+      // special cases
+      if (i2cbuf[6 + i] == 0x5B)
+      {
+        // legacy itho: 0x5B -> 0x10
+        ithoStatus.back().type = ithoDeviceStatus::is_int;
+        ithoStatus.back().length = 2;
+        ithoStatus.back().is_signed = false;
+      }
+    }
+    xSemaphoreGive(ithoStatusMutex);
   }
 }
 
@@ -152,6 +157,8 @@ void sendQueryStatus(bool updateweb)
 
   int statusPos = 6; // first byte with status info
   int labelPos = 0;
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return;
   if (!ithoStatus.empty())
   {
     for (auto &ithoStat : ithoStatus)
@@ -265,6 +272,7 @@ void sendQueryStatus(bool updateweb)
       labelPos++;
     }
   }
+  xSemaphoreGive(ithoStatusMutex);
 }
 
 // Helper function to add single byte measurement
@@ -554,6 +562,9 @@ void sendQuery31DA(bool updateweb)
   auto dataLength = i2cbuf[5];
   auto dataStart = 6;
 
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return;
+
   if (!ithoMeasurements.empty())
   {
     ithoMeasurements.clear();
@@ -653,6 +664,8 @@ void sendQuery31DA(bool updateweb)
   // Field 18: Preheater power actual (%) - two byte float with error check
   if (dataLength > 25)
     addTwoByteMeasurement(labels31DA[18], i2cbuf, 26 + dataStart, true, 0x7F, &fanSensorErrors2, true, 100.0f);
+
+  xSemaphoreGive(ithoStatusMutex);
 }
 size_t sendQuery31DA(uint8_t *receive_buffer)
 {
@@ -688,6 +701,9 @@ void sendQuery31D9(bool updateweb)
   }
 
   auto dataStart = 6;
+
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return;
 
   if (!ithoInternalMeasurements.empty())
   {
@@ -755,6 +771,8 @@ void sendQuery31D9(bool updateweb)
   //      //unknown
   //    }
 
+  xSemaphoreGive(ithoStatusMutex);
+
   i2c_31d9_done = true;
 }
 size_t sendQuery31D9(uint8_t *receive_buffer)
@@ -801,6 +819,9 @@ void sendQueryCounters(bool updateweb)
     return;
   }
 
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return;
+
   if (!ithoCounters.empty())
   {
     ithoCounters.clear();
@@ -829,6 +850,7 @@ void sendQueryCounters(bool updateweb)
     ithoCounters.back().type = ithoDeviceMeasurements::is_int;
     ithoCounters.back().value.intval = val;
   }
+  xSemaphoreGive(ithoStatusMutex);
 }
 
 bool saveRFTrackedSources()
