@@ -145,7 +145,11 @@ void initI2cFunctions()
         if (hardwareManager.i2c_sniffer_capable)
         {
           auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
-          if (systemConfig.syssht30 == 0 && currentItho_fwversion() >= 25)
+          if (sg == nullptr)
+          {
+            E_LOG("I2C: safe guard pointer is null");
+          }
+          else if (systemConfig.syssht30 == 0 && currentItho_fwversion() >= 25)
           {
             N_LOG("I2C: safe guard enabled");
             sg->i2c_safe_guard_enabled = true;
@@ -190,7 +194,7 @@ void initI2cFunctions()
       }
       if (HADiscConfigLoaded && (strcmp(haDiscConfig.d, "unset") == 0))
       {
-        strncpy(haDiscConfig.d, getIthoType(), sizeof(haDiscConfig.d));
+        strlcpy(haDiscConfig.d, getIthoType(), sizeof(haDiscConfig.d));
       }
       sendHomeAssistantDiscovery = true;
     }

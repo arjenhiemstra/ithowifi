@@ -2,6 +2,7 @@
 #include "managers/SecureWebCommLite.h"
 
 static std::unordered_map<uint32_t, std::string> g_wsBuffers;
+static SemaphoreHandle_t g_wsBuffersMutex = xSemaphoreCreateMutex();
 // rfSelectedSourceForParsing is defined in IthoStatus.cpp
 AsyncWebServer wsserver(8000);
 WebSerial *webSerial = nullptr;
@@ -84,7 +85,7 @@ void jsonWsSend(const char *rootName)
       snprintf(apremain, sizeof(apremain), "%ld sec.", time);
     }
 
-    static char apssid[32]{};
+    char apssid[32]{};
 
     snprintf(apssid, sizeof(apssid), "%s%02x%02x", espName, sys.getMac(4), sys.getMac(5));
 
@@ -247,7 +248,7 @@ void handle_ws_message(JsonObject root)
     if (wifiObj["secure_credentials"].is<JsonObject>())
     {
       JsonObject creds = wifiObj["secure_credentials"].as<JsonObject>();
-      char decrypted[65];
+      char decrypted[65] = {};
       if (creds["passwd"].is<JsonObject>())
       {
         const char *ct = creds["passwd"]["ct"] | "";
@@ -281,7 +282,7 @@ void handle_ws_message(JsonObject root)
     if (sysObj["secure_credentials"].is<JsonObject>())
     {
       JsonObject creds = sysObj["secure_credentials"].as<JsonObject>();
-      char decrypted[65];
+      char decrypted[65] = {};
       if (creds["sys_password"].is<JsonObject>())
       {
         const char *ct = creds["sys_password"]["ct"] | "";
@@ -934,13 +935,15 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
   }
   else if (type == WS_EVT_DISCONNECT)
   {
-    g_wsBuffers[client->id()].clear();
-    // Serial.printf("ws[%s][%u] disconnect: %u\n", server->url(), client->id(), client->id());
+    xSemaphoreTake(g_wsBuffersMutex, portMAX_DELAY);
+    g_wsBuffers.erase(client->id());
+    xSemaphoreGive(g_wsBuffersMutex);
   }
   else if (type == WS_EVT_ERROR)
   {
-    g_wsBuffers[client->id()].clear();
-    // Serial.printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t *)arg), (char *)data);
+    xSemaphoreTake(g_wsBuffersMutex, portMAX_DELAY);
+    g_wsBuffers.erase(client->id());
+    xSemaphoreGive(g_wsBuffersMutex);
   }
   else if (type == WS_EVT_PONG)
   {
@@ -956,38 +959,46 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
     if (info->index == 0)
     {
       // Clear (or create) the buffer for this client
+      xSemaphoreTake(g_wsBuffersMutex, portMAX_DELAY);
       g_wsBuffers[client->id()].clear();
+      xSemaphoreGive(g_wsBuffersMutex);
     }
 
     // Append this frame’s data if opcode == WS_TEXT
     if (info->opcode == WS_TEXT)
     {
 
+      xSemaphoreTake(g_wsBuffersMutex, portMAX_DELAY);
       auto &msgBuffer = g_wsBuffers[client->id()];
       msgBuffer.append(reinterpret_cast<char *>(data), len);
+      xSemaphoreGive(g_wsBuffersMutex);
 
       size_t currentSize = info->index + len;
 
       // If this is the final frame, we parse the entire message
       if (currentSize >= info->len)
       {
-        JsonDocument wsDoc;
+        xSemaphoreTake(g_wsBuffersMutex, portMAX_DELAY);
+        std::string msgCopy = g_wsBuffers[client->id()];
+        g_wsBuffers[client->id()].clear();
+        xSemaphoreGive(g_wsBuffersMutex);
 
-        auto error = deserializeJson(wsDoc, msgBuffer);
+        JsonDocument wsDoc;
+        auto error = deserializeJson(wsDoc, msgCopy);
+        bool wasPing = (!error) ? false : (msgCopy == "ping");
+        msgCopy.clear(); // free memory immediately after parsing
+
         if (error)
         {
-          if (msgBuffer == "ping")
+          if (wasPing)
           {
             client->text("pong");
           }
           else
           {
             E_LOG("WEB: error - [WS] JSON parse error: %s", error.c_str());
-            Serial.println(msgBuffer.c_str());
           }
         }
-        // buffer no longer needed
-        g_wsBuffers[client->id()].clear();
 
         // if there was an error, we can now safely return (buffer is cleared)
         if (error)
@@ -1007,8 +1018,6 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
         return;
       }
 
-      // at this point the message is either handled or can be discarded, clear the buffer before return of function
-      g_wsBuffers[client->id()].clear();
     }
   }
 }

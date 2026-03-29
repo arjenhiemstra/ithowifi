@@ -183,7 +183,7 @@ bool resetHADiscConfig()
   haDiscConfig.reset();
   if (currentItho_fwversion() > 0)
   {
-    strncpy(haDiscConfig.d, getIthoType(), sizeof(haDiscConfig.d));
+    strlcpy(haDiscConfig.d, getIthoType(), sizeof(haDiscConfig.d));
   }
   saveHADiscConfig("flash");
   return res;

@@ -951,9 +951,9 @@ void checkFirmwareUpdate()
           {
             firmwareInfo.fw_update_available = compareVersions(root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", fw_version);
 
-            strncpy(firmwareInfo.latest_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
+            strlcpy(firmwareInfo.latest_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
             Serial.printf("latest_fw:%s\n", root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error");
-            strncpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
+            strlcpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
             Serial.printf("latest_beta_fw:%s\n", root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error");
 
             D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);

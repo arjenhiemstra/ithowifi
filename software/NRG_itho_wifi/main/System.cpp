@@ -61,7 +61,7 @@ const char* System::uptime()
 }
 
 uint8_t System::getMac(uint8_t i) {
-  static uint8_t mac[6];
+  uint8_t mac[6];
 
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
 

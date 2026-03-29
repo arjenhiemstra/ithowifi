@@ -208,8 +208,8 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
         }
         else
         {
-            strncpy(pct_val_tpl, "{{ (value | int / 2.55) | round | int }}", sizeof(pct_val_tpl));
-            strncpy(pct_cmd_tpl, "{{ (value | int * 2.55) | round | int }}", sizeof(pct_cmd_tpl));
+            strlcpy(pct_val_tpl, "{{ (value | int / 2.55) | round | int }}", sizeof(pct_val_tpl));
+            strlcpy(pct_cmd_tpl, "{{ (value | int * 2.55) | round | int }}", sizeof(pct_cmd_tpl));
             componentJson["pl_off"] = "0"; // payload_off
         }
     }

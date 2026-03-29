@@ -7,7 +7,7 @@ void ArduinoOTAinit()
   ArduinoOTA
       .onStart([]()
                {
-                 static char buf[128]{};
+                 char buf[128]{};
                  strcat(buf, "SYS: firmware update: ");
 
                  if (ArduinoOTA.getCommand() == U_FLASH)
