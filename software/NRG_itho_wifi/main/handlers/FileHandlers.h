@@ -1,5 +1,6 @@
 #pragma once
 
+void handleCoreCrash(AsyncWebServerRequest *request);
 void handleCoredumpDownload(AsyncWebServerRequest *request);
 void handleCurLogDownload(AsyncWebServerRequest *request);
 void handlePrevLogDownload(AsyncWebServerRequest *request);

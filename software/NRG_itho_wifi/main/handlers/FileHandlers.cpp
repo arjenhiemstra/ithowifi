@@ -9,52 +9,46 @@ void handleCoreCrash(AsyncWebServerRequest *request)
 
 void handleCoredumpDownload(AsyncWebServerRequest *request)
 {
-  // httpd_resp_set_type(req, "application/octet-stream");
-  // httpd_resp_set_hdr(req, "Content-Disposition",
-  //                    "attachment;filename=core.bin");
-
   esp_partition_iterator_t partition_iterator = esp_partition_find(
       ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_COREDUMP, "coredump");
 
-  const esp_partition_t *partition = esp_partition_get(partition_iterator);
-
-  esp_core_dump_summary_t *summary = static_cast<esp_core_dump_summary_t *>(malloc(sizeof(esp_core_dump_summary_t)));
-
-  if (summary)
+  if (partition_iterator == NULL)
   {
-    esp_err_t err = esp_core_dump_get_summary(summary);
-    if (err == ESP_OK)
-    {
-      D_LOG("SYS: Getting core dump summary ok.");
-    }
-    else
-    {
-      D_LOG("SYS: Getting core dump summary not ok. Error: %d\n", (int)err);
-      D_LOG("SYS: Probably no coredump present yet.\n");
-      D_LOG("SYS: esp_core_dump_image_check() = %s\n", esp_core_dump_image_check() ? "OK" : "NOK");
-    }
-    free(summary);
+    request->send(404, "text/plain", "No coredump partition found");
+    return;
   }
 
-  int file_size = 65536;
-  int maxLen = 1024;
-  char buffer[maxLen];
+  const esp_partition_t *partition = esp_partition_get(partition_iterator);
+  esp_partition_iterator_release(partition_iterator);
 
-  AsyncWebServerResponse *response = request->beginChunkedResponse("application/octet-stream", [partition, file_size, &buffer](uint8_t *buffer2, size_t maxLen, size_t alreadySent) -> size_t
-                                                                   {
-      if (file_size - alreadySent >= maxLen) {
-        ESP_ERROR_CHECK(
-            esp_partition_read(partition, alreadySent, buffer, maxLen));
-        return maxLen;
-      } else {
-        ESP_ERROR_CHECK(esp_partition_read(partition, alreadySent, buffer,
-                                           file_size - alreadySent));
-        //memcpy(buffer, fileArray + alreadySent, fileSize - alreadySent);
-        return file_size - alreadySent;
-      } });
+  if (partition == NULL)
+  {
+    request->send(404, "text/plain", "Coredump partition not accessible");
+    return;
+  }
+
+  if (esp_core_dump_image_check() != ESP_OK)
+  {
+    request->send(404, "text/plain", "No valid coredump present");
+    return;
+  }
+
+  size_t dump_size = partition->size;
+
+  AsyncWebServerResponse *response = request->beginChunkedResponse(
+      "application/octet-stream",
+      [partition, dump_size](uint8_t *buffer, size_t maxLen, size_t alreadySent) -> size_t
+      {
+        if (alreadySent >= dump_size)
+          return 0;
+        size_t remaining = dump_size - alreadySent;
+        size_t toRead = (remaining > maxLen) ? maxLen : remaining;
+        if (esp_partition_read(partition, alreadySent, buffer, toRead) != ESP_OK)
+          return 0;
+        return toRead;
+      });
 
   response->addHeader("Content-Disposition", "attachment; filename=\"coredump.bin\"");
-  response->addHeader("Transfer-Encoding", "chunked");
   request->send(response);
 }
 
