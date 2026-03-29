@@ -1,0 +1,1050 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "IthoWifi API",
+    "version": "3.0.0-beta1",
+    "description": "API for controlling Itho ventilation units via the IthoWifi add-on. Supports both URL query parameters (WebAPI) and MQTT JSON commands.",
+    "license": {
+      "name": "GPL-3.0",
+      "url": "https://github.com/arjenhiemstra/ithowifi/blob/master/LICENSE"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "This device"
+    }
+  ],
+  "paths": {
+    "/api.html": {
+      "get": {
+        "summary": "Legacy WebAPI v1",
+        "description": "Legacy API with URL query parameters. Returns plain text OK/NOK. For JSON responses and advanced features, use the REST API v2 endpoints.",
+        "tags": [
+          "Legacy WebAPI v1"
+        ],
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "command",
+            "in": "query",
+            "description": "Fan speed/timer command (PWM2I2C devices only)",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "timer1",
+                "timer2",
+                "timer3",
+                "away",
+                "cook30",
+                "cook60",
+                "autonight",
+                "clearqueue"
+              ]
+            }
+          },
+          {
+            "name": "speed",
+            "in": "query",
+            "description": "Set fan speed directly (0-255)",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            }
+          },
+          {
+            "name": "timer",
+            "in": "query",
+            "description": "Timer in minutes (use with speed or command)",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            }
+          },
+          {
+            "name": "vremotecmd",
+            "in": "query",
+            "description": "Virtual remote command (I2C)",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "away",
+                "low",
+                "medium",
+                "high",
+                "timer1",
+                "timer2",
+                "timer3",
+                "join",
+                "leave",
+                "auto",
+                "autonight",
+                "cook30",
+                "cook60"
+              ]
+            }
+          },
+          {
+            "name": "vremoteindex",
+            "in": "query",
+            "description": "Virtual remote index (default 0)",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 11
+            }
+          },
+          {
+            "name": "vremotename",
+            "in": "query",
+            "description": "Select virtual remote by name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "get",
+            "in": "query",
+            "description": "Retrieve data (JSON response)",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ithostatus",
+                "remotesinfo",
+                "currentspeed",
+                "lastcmd",
+                "queue"
+              ]
+            }
+          },
+          {
+            "name": "rfremotecmd",
+            "in": "query",
+            "description": "RF remote command via CC1101",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "away",
+                "low",
+                "medium",
+                "high",
+                "timer1",
+                "timer2",
+                "timer3",
+                "join",
+                "leave",
+                "auto",
+                "autonight",
+                "cook30",
+                "cook60",
+                "motion_on",
+                "motion_off"
+              ]
+            }
+          },
+          {
+            "name": "rfremoteindex",
+            "in": "query",
+            "description": "RF remote index (default 0)",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 11
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK or NOK (plain text), or JSON for get= queries",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/speed": {
+      "get": {
+        "summary": "Get current fan speed",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/ithostatus": {
+      "get": {
+        "summary": "Get Itho device status",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/deviceinfo": {
+      "get": {
+        "summary": "Get device info",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/queue": {
+      "get": {
+        "summary": "Get command queue",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/lastcmd": {
+      "get": {
+        "summary": "Get last executed command",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/remotes": {
+      "get": {
+        "summary": "Get RF remotes configuration",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/vremotes": {
+      "get": {
+        "summary": "Get virtual remotes info",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/rfstatus": {
+      "get": {
+        "summary": "Get RF device status",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Filter by source name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v2/settings": {
+      "get": {
+        "summary": "Read Itho setting by index",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "index",
+            "in": "query",
+            "description": "Setting index",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            }
+          }
+        ]
+      },
+      "put": {
+        "summary": "Write Itho setting",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetSettingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success"
+          },
+          "400": {
+            "description": "JSend fail"
+          },
+          "403": {
+            "description": "Settings API disabled"
+          }
+        }
+      }
+    },
+    "/api/v2/command": {
+      "post": {
+        "summary": "Send fan command",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
+    "/api/v2/vremote": {
+      "post": {
+        "summary": "Send virtual remote command",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VRemoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
+    "/api/v2/rfremote/command": {
+      "post": {
+        "summary": "Send RF remote command",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RFRemoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
+    "/api/v2/rfremote/co2": {
+      "post": {
+        "summary": "Send CO2 ppm via RF",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RFCO2Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
+    "/api/v2/rfremote/demand": {
+      "post": {
+        "summary": "Send ventilation demand via RF",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RFDemandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
+    "/api/v2/rfremote/config": {
+      "post": {
+        "summary": "Configure RF remote",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RFConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
+    "/api/v2/debug": {
+      "post": {
+        "summary": "Debug actions (reboot, RF debug level)",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DebugRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
+    "/api/v2/wpu/outside_temp": {
+      "post": {
+        "summary": "Set outside temperature",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutsideTempRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
+    "/api/v2/wpu/manual_control": {
+      "post": {
+        "summary": "WPU manual control (4030 command)",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualControlRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
+    "/api/openapi.json": {
+      "get": {
+        "summary": "OpenAPI specification",
+        "tags": [
+          "Documentation"
+        ],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.0 JSON spec"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "fail",
+              "error"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "description": "Response data"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "timestamp": {
+            "type": "integer",
+            "description": "Unix timestamp"
+          }
+        },
+        "type": "object"
+      },
+      "MqttCommand": {
+        "type": "object",
+        "description": "MQTT JSON command (send to command topic)",
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "timer1",
+              "timer2",
+              "timer3",
+              "away",
+              "cook30",
+              "cook60",
+              "autonight",
+              "clearqueue"
+            ]
+          },
+          "speed": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "timer": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "vremotecmd": {
+            "type": "string"
+          },
+          "vremoteindex": {
+            "type": "integer"
+          },
+          "vremotename": {
+            "type": "string"
+          },
+          "rfremotecmd": {
+            "type": "string"
+          },
+          "rfremoteindex": {
+            "type": "integer"
+          },
+          "percentage": {
+            "type": "integer",
+            "description": "Fan speed as percentage (0-100)"
+          },
+          "fandemand": {
+            "type": "integer",
+            "description": "Ventilation demand (0-200)"
+          },
+          "rfco2": {
+            "type": "integer",
+            "description": "CO2 ppm"
+          },
+          "rfdemand": {
+            "type": "integer",
+            "description": "Ventilation demand 0-200"
+          },
+          "rfzone": {
+            "type": "integer",
+            "description": "Zone for rfdemand"
+          },
+          "dtype": {
+            "type": "string",
+            "description": "Domoticz device type"
+          }
+        }
+      },
+      "CommandRequest": {
+        "type": "object",
+        "description": "Fan command or speed/timer",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "Named command",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "timer1",
+              "timer2",
+              "timer3",
+              "away",
+              "cook30",
+              "cook60",
+              "autonight",
+              "clearqueue"
+            ]
+          },
+          "speed": {
+            "type": "integer",
+            "description": "Fan speed",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "timer": {
+            "type": "integer",
+            "description": "Timer in minutes",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "percentage": {
+            "type": "integer",
+            "description": "Fan speed as percentage (0-100)",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "fandemand": {
+            "type": "integer",
+            "description": "Ventilation demand (0-200, 0=0% 200=100%)",
+            "minimum": 0,
+            "maximum": 200
+          }
+        }
+      },
+      "VRemoteRequest": {
+        "type": "object",
+        "description": "Virtual remote command",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "Command name",
+            "enum": [
+              "away",
+              "low",
+              "medium",
+              "high",
+              "timer1",
+              "timer2",
+              "timer3",
+              "join",
+              "leave",
+              "auto",
+              "autonight",
+              "cook30",
+              "cook60"
+            ]
+          },
+          "index": {
+            "type": "integer",
+            "description": "Virtual remote index",
+            "minimum": 0,
+            "maximum": 11
+          },
+          "name": {
+            "type": "string",
+            "description": "Virtual remote name (alternative to index)"
+          }
+        }
+      },
+      "RFRemoteRequest": {
+        "type": "object",
+        "description": "RF remote command",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "RF command name",
+            "enum": [
+              "away",
+              "low",
+              "medium",
+              "high",
+              "timer1",
+              "timer2",
+              "timer3",
+              "join",
+              "leave",
+              "auto",
+              "autonight",
+              "cook30",
+              "cook60",
+              "motion_on",
+              "motion_off"
+            ]
+          },
+          "index": {
+            "type": "integer",
+            "description": "RF remote index",
+            "minimum": 0,
+            "maximum": 11
+          }
+        }
+      },
+      "RFCO2Request": {
+        "type": "object",
+        "description": "Send CO2 value via RF",
+        "properties": {
+          "co2": {
+            "type": "integer",
+            "description": "CO2 level in ppm",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "index": {
+            "type": "integer",
+            "description": "RF remote index (default 0)",
+            "minimum": 0,
+            "maximum": 11
+          }
+        }
+      },
+      "RFDemandRequest": {
+        "type": "object",
+        "description": "Send ventilation demand via RF",
+        "properties": {
+          "demand": {
+            "type": "integer",
+            "description": "Demand level (0=0%, 200=100%)",
+            "minimum": 0,
+            "maximum": 200
+          },
+          "zone": {
+            "type": "integer",
+            "description": "Zone (default 0)",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "index": {
+            "type": "integer",
+            "description": "RF remote index (default 0)",
+            "minimum": 0,
+            "maximum": 11
+          }
+        }
+      },
+      "RFConfigRequest": {
+        "type": "object",
+        "description": "Configure RF remote settings",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "RF remote index",
+            "minimum": 0,
+            "maximum": 11
+          },
+          "setting": {
+            "type": "string",
+            "description": "Setting name (setrfdevicesourceid/setrfdevicedestid/setrfdevicebidirectional)"
+          },
+          "value": {
+            "type": "string",
+            "description": "Setting value (hex ID like 96,C8,B6 or true/false)"
+          }
+        }
+      },
+      "DebugRequest": {
+        "type": "object",
+        "description": "Debug/reboot actions",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Action (reboot/level0/level1/level2/level3)"
+          }
+        }
+      },
+      "OutsideTempRequest": {
+        "type": "object",
+        "description": "Set outside temperature",
+        "properties": {
+          "temp": {
+            "type": "number",
+            "description": "Temperature in Celsius (-100 to 100)"
+          }
+        }
+      },
+      "SetSettingRequest": {
+        "type": "object",
+        "description": "Write Itho device setting",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "Setting index",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "value": {
+            "type": "number",
+            "description": "New value (int or float, must be within setting min/max)"
+          }
+        }
+      },
+      "ManualControlRequest": {
+        "type": "object",
+        "description": "WPU manual control (4030 command)",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "Manual operation index (e.g. 0=outside temp, 20=pump speed)"
+          },
+          "datatype": {
+            "type": "integer",
+            "description": "Data type (uint8)"
+          },
+          "value": {
+            "type": "integer",
+            "description": "Value (uint16)"
+          },
+          "checked": {
+            "type": "integer",
+            "description": "Checked flag (uint8)"
+          }
+        }
+      }
+    }
+  }
+}
