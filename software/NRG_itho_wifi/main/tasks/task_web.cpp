@@ -177,6 +177,8 @@ void webServerInit()
     response->print(fw_version);
     response->print("'; var hw_revision = '");
     response->print(hardwareManager.hw_revision);
+    response->print("'; var itho_rf_standalone = '");
+    response->print(systemConfig.itho_rf_standalone);
     response->print("'; var itho_pwm2i2c = '");
     response->print(systemConfig.itho_pwm2i2c);
     response->print("'; document.addEventListener('DOMContentLoaded', function() { var h = $id('headingindex'); h.textContent = hostname; h.href = 'http://' + hostname + '.local'; var m = $id('main'); m.insertAdjacentHTML('beforeend', ");
@@ -209,6 +211,8 @@ void webServerInit()
     response->print(fw_version);
     response->print("'; var hw_revision = '");
     response->print(hardwareManager.hw_revision);
+    response->print("'; var itho_rf_standalone = '");
+    response->print(systemConfig.itho_rf_standalone);
     response->print("'; var itho_pwm2i2c = '");
     response->print(systemConfig.itho_pwm2i2c);
     response->print("'; document.addEventListener('DOMContentLoaded', function() { var h = $id('headingindex'); h.textContent = hostname; h.href = 'http://' + hostname + '.local'; var m = $id('main'); m.insertAdjacentHTML('beforeend', ");

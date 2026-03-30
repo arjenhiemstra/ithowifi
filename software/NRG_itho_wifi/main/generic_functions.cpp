@@ -263,13 +263,16 @@ void getRFStatusConfigJSON(JsonObject root, int sourceIndex)
 
 void getDeviceInfoJSON(JsonObject root)
 {
-  root["itho_devtype"] = getIthoType();
+  root["itho_devtype"] = (systemConfig.itho_rf_standalone == 1 && strcmp(getIthoType(), "Unkown device type") == 0)
+                             ? "Generic Itho device"
+                             : getIthoType();
   root["itho_mfr"] = currentIthoDeviceGroup();
   root["itho_deviceid"] = currentIthoDeviceID();
   root["itho_hwversion"] = currentItho_hwversion();
   root["itho_fwversion"] = currentItho_fwversion();
   root["add-on_hwid"] = WiFi.macAddress();
   root["add-on_fwversion"] = fw_version;
+  root["itho_rf_standalone"] = systemConfig.itho_rf_standalone;
   if (systemConfig.fw_check)
   {
     root["add-on_fwupdate_available"] = firmwareInfo.fw_update_available == 1 ? "true" : "false";

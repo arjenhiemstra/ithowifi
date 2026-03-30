@@ -40,6 +40,7 @@ extern uint8_t timer31DA;
 extern bool sendBindConfirm;
 extern bool sendBatteryStatus;
 extern uint8_t bindConfirmRemIndex;
+extern volatile int8_t bindInitiatorResult;
 
 void startBindInitiatorTimeout();
 void cancelBindInitiatorTimeout();
