@@ -41,6 +41,8 @@ uint8_t getIthoStatusJSON(JsonObject root)
     root["ppmw"] = static_cast<int>(ppmw + 0.5);
     index++;
   }
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return index;
   if (!ithoInternalMeasurements.empty() && systemConfig.itho_31d9 == 1)
   {
     for (const auto &internalMeasurement : ithoInternalMeasurements)
@@ -121,6 +123,7 @@ uint8_t getIthoStatusJSON(JsonObject root)
       index++;
     }
   }
+  xSemaphoreGive(ithoStatusMutex);
   return index;
 }
 
@@ -280,12 +283,15 @@ bool ithoStatusReady()
   auto bp = [&](bool a, bool b)
   { return (a ? 1 : 0) | ((b ? 1 : 0) << 1); };
 
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(50)) != pdTRUE)
+    return false;
   // Build itho_init_status as 2 bits per feature:
   itho_init_status =
       bp(systemConfig.itho_31d9 == 1, !ithoInternalMeasurements.empty())  // bits 0..1
       | (bp(systemConfig.itho_31da == 1, !ithoMeasurements.empty()) << 2) // bits 2..3
       | (bp(systemConfig.itho_2401 == 1, !ithoStatus.empty()) << 4)       // bits 4..5
       | (bp(systemConfig.itho_4210 == 1, !ithoCounters.empty()) << 6);    // bits 6..7
+  xSemaphoreGive(ithoStatusMutex);
 
   // Check if any feature is “activated but not filled”
   for (int i = 0; i < 4; i++)
