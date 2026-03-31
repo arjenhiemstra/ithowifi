@@ -2268,11 +2268,11 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
             var idEl = $id('id_remote-' + i);
             if (!idEl) return;
             if (this.value == 5) {
-              // Send mode: restore saved ID or generate new one
-              var savedId = idEl.dataset.savedId;
-              if (savedId && savedId !== 'empty slot' && savedId !== '0,0,0') {
-                idEl.value = savedId;
-              } else if (idEl.value === 'empty slot' || idEl.value === '0,0,0' || idEl.value === '') {
+              // Send mode: use module RF ID (the add-on's own ID for transmitting)
+              var rfIdEl = $id('module_rf_id_str');
+              if (rfIdEl && rfIdEl.value) {
+                idEl.value = rfIdEl.value;
+              } else {
                 idEl.value = generateRemoteID(i);
               }
             } else {
