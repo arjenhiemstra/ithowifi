@@ -12,15 +12,6 @@ Major release with new features, new RESTful API, and significant improvements t
 - **Security** — Encrypted credential exchange (AES-256-CTR), HTTP Basic Auth, CSRF protection, API parameter whitelisting
 - **jQuery removed** — Full migration to vanilla JS (~30KB flash savings)
 
-### New since beta2
-
-- Fix: MQTT crash when `rfremoteindex` sent as JSON integer instead of string [#350](https://github.com/arjenhiemstra/ithowifi/issues/350)
-- Fix: auto-fill module RF ID when switching remote to Send mode [#352](https://github.com/arjenhiemstra/ithowifi/issues/352)
-- Fix: Itho status I2C mutex to prevent bus lockup under high fan demand
-- Refactor: simplified uptime formatting with snprintf
-- CI: added GitHub Actions build and test workflow
-- Docs: updated README with current features and supported devices
-
 ### Changes since 2.8.0
 
 ### Breaking Changes
@@ -94,6 +85,7 @@ Major release with new features, new RESTful API, and significant improvements t
 - Auto-save remote config before entering learn/leave mode
 - Auto-generate remote ID when switching to Send mode
 - Remote capabilities inputs disabled until remote is selected
+- DemandFlow/QualityFlow wizard defaults (12 virtual remotes, RFT DF/QF type)
 
 ### RF / CC1101
 
@@ -127,7 +119,6 @@ Major release with new features, new RESTful API, and significant improvements t
 - Fix: settings not updated in Itho Settings dialog [#310](https://github.com/arjenhiemstra/ithowifi/issues/310)
 - Fix: setting not updated on 1st try from browser cache [#310](https://github.com/arjenhiemstra/ithowifi/issues/310)
 - Fix: Itho settings via API causes reboot [#316](https://github.com/arjenhiemstra/ithowifi/issues/316)
-- Fix: MQTT RF command crash [#350](https://github.com/arjenhiemstra/ithowifi/issues/350)
 - Fix: web socket parsing issues
 - Fix: mDNS hostname lowercase only
 - Fix: config save before load protection
@@ -150,6 +141,15 @@ Major release with new features, new RESTful API, and significant improvements t
 - Fix: MQTT crash when rfremoteindex sent as JSON integer [#350](https://github.com/arjenhiemstra/ithowifi/issues/350)
 - Fix: auto-fill module RF ID when switching remote to Send mode [#352](https://github.com/arjenhiemstra/ithowifi/issues/352)
 - Fix: Itho status I2C mutex to prevent bus lockup under high fan demand
+- Fix: wizard settings not saved (ArduinoJson v7 string-to-int conversion)
+- Fix: wizard systemsettings response overwriting user-configured form fields
+- Fix: wizard RF remote config not persisted (shared DelayedSave ticker race)
+- Fix: wizard RF remote type read from global dropdown instead of per-remote selection
+- Fix: wizard state not preserved across WiFi reboot on first boot
+- Fix: wizard WiFi status flashing "Disconnected" instead of "Connecting..."
+- Fix: Send remote buttons routed to virtual remote I2C path instead of RF command path
+- Fix: per-remote TX power ignored — hardcoded low power used for all Send remotes
+- Fix: OTA progress percentage exceeding 100%
 - Skip I2C check for WPU devices
 
 ### Security

@@ -1,5 +1,5 @@
 
-var debug = true;
+var debug = false;
 var remotesRefreshNeeded = false;
 var sliderUserInput = 0;
 var count = 0;
@@ -3060,8 +3060,6 @@ function wizardDetectDeviceCategory(devtype) {
 
 function applyDeviceDefaults() {
   var cat = wizardDeviceCategory;
-  console.log("wizardDeviceCategory:" + wizardDeviceCategory)
-
   // Helper to check a radio by name+value
   function checkRadio(name, value) {
     var el = $q('input[name="' + name + '"][value="' + value + '"]');
@@ -3320,7 +3318,6 @@ function wizardFinish() {
   if (rfRemTypeEl) {
     var rfRemType = parseInt(rfRemTypeEl.value);
     var rfSaved = false;
-    console.log('wizardFinish: remotesCount=' + remotesCount + ', rfRemType=' + rfRemType);
     // Try saving from remotes table DOM (when remotes were loaded)
     if (remotesCount > 0) {
       for (var ri = 0; ri < remotesCount; ri++) {
@@ -3337,7 +3334,6 @@ function wizardFinish() {
             value: $id('name_remote-' + ri) ? $id('name_remote-' + ri).value : '',
             id: idEl.value.split(',').map(function(s) { return parseInt(s, 16); })
           };
-          console.log('wizardFinish: saving remote ' + ri, remMsg);
           websock_send(JSON.stringify(remMsg));
           rfSaved = true;
         }
