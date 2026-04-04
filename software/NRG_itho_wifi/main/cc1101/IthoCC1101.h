@@ -85,6 +85,7 @@ private:
   // settings
   uint8_t sendTries;  // number of times a command is send at one button press
   bool lowPowerTx{false}; // use low TX power for close-range communication
+  uint8_t txPowerLevel{0xC0}; // per-remote TX power level (PA table byte 7)
   uint8_t cc_freq[3]; // FREQ0, FREQ1, FREQ2
 
   // Itho remotes
@@ -141,6 +142,7 @@ public:
     sendTries = number;
   }
   void setLowPowerMode(bool lowPower);
+  void setTxPowerLevel(uint8_t power);
   void setDefaultID(uint8_t byte0, uint8_t byte1, uint8_t byte2)
   {
     defaultID[0] = byte0;

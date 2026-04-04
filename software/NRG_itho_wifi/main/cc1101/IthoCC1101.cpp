@@ -85,6 +85,11 @@ void IthoCC1101::setLowPowerMode(bool lowPower)
   lowPowerTx = lowPower;
 }
 
+void IthoCC1101::setTxPowerLevel(uint8_t power)
+{
+  txPowerLevel = power;
+}
+
 // default constructor
 IthoCC1101::IthoCC1101() : CC1101()
 {
@@ -192,8 +197,11 @@ void IthoCC1101::initSendMessage(uint8_t len)
   writeRegister(CC1101_ADDR, 0x00);        // 00000000
   writeRegister(CC1101_PKTLEN, 0xFF);      // 11111111  //Not used, no hardware packet handling
 
-  // PA table: low power for close-range (add-on inside Itho), normal for long-range
-  writeBurstRegister(CC1101_PATABLE | CC1101_WRITE_BURST, lowPowerTx ? ithoPaTableSendLow : ithoPaTableSend, 8);
+  // PA table: use per-remote TX power level (byte 7 of PA table)
+  uint8_t paTable[8];
+  memcpy(paTable, ithoPaTableSend, 8);
+  paTable[7] = txPowerLevel;
+  writeBurstRegister(CC1101_PATABLE | CC1101_WRITE_BURST, paTable, 8);
 
   // difference, message1 sends a STX here
   writeCommand(CC1101_SIDLE);

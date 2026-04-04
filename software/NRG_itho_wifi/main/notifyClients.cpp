@@ -115,7 +115,8 @@ void otaWSupdate(size_t prg, size_t sz)
   if (millis() - LastotaWsUpdate >= 500)
   { // rate limit messages to twice a second
     LastotaWsUpdate = millis();
-    int newPercent = int((prg * 100) / content_len);
+    int newPercent = content_len > 0 ? int((prg * 100) / content_len) : 0;
+    if (newPercent > 100) newPercent = 100;
 
     JsonDocument root;
     JsonObject ota = root["ota"].to<JsonObject>();

@@ -197,6 +197,11 @@ void webServerInit()
       File f = ACTIVE_FS.open("/wizard_state", "r");
       if (f) { wizardStep = f.parseInt(); f.close(); }
     }
+    if (isFirstBoot && wizardStep == 0) {
+      wizardStep = 1;
+      File f = ACTIVE_FS.open("/wizard_state", "w");
+      if (f) { f.print(1); f.close(); }
+    }
     bool showWizard = isFirstBoot || wizardStep > 0;
 
     response->print("var on_ap = true; var first_boot = ");

@@ -22,7 +22,8 @@ FSFilePrint filePrint(ACTIVE_FS, "/logfile", 2, 10000);
 StaticTask_t xTaskConfigAndLogBuffer;
 StackType_t xTaskConfigAndLog[STACK_SIZE_MEDIUM];
 
-Ticker DelayedSave;
+Ticker DelayedSaveRemotes;
+Ticker DelayedSaveVremotes;
 
 unsigned long lastLog = 0;
 
@@ -186,7 +187,7 @@ void execLogAndConfigTasks()
   if (saveRemotesflag && RemotesConfigLoaded)
   {
     saveRemotesflag = false;
-    DelayedSave.once_ms(150, []()
+    DelayedSaveRemotes.once_ms(150, []()
                         {
       saveRemotesConfig("flash");
       jsonWsSend("remotes"); });
@@ -195,7 +196,7 @@ void execLogAndConfigTasks()
   if (saveVremotesflag && VirtualRemotesConfigLoaded)
   {
     saveVremotesflag = false;
-    DelayedSave.once_ms(150, []()
+    DelayedSaveVremotes.once_ms(150, []()
                         {
       saveVirtualRemotesConfig("flash");
       jsonWsSend("vremotes"); });

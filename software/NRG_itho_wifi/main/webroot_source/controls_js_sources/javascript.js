@@ -526,26 +526,57 @@ const messageHandlers = {
     if (f.wifistat.wificonnstat && statusMap[f.wifistat.wificonnstat]) {
       f.wifistat.wificonnstat = statusMap[f.wifistat.wificonnstat];
     }
-    processElements(f.wifistat);
-    // Stop wizard connect polling once connected
-    if (wizardActive && wizardConnectInterval && f.wifistat.wificonnstat === 'Connected') {
-      clearInterval(wizardConnectInterval);
-      wizardConnectInterval = null;
+    // While wizard is waiting for connection, keep showing "Connecting..." unless we get a definitive result
+    if (wizardConnectInterval) {
+      if (f.wifistat.wificonnstat === 'Connected') {
+        clearInterval(wizardConnectInterval);
+        wizardConnectInterval = null;
+      } else if (f.wifistat.wificonnstat === 'Network not found' || f.wifistat.wificonnstat === 'Connection failed') {
+        clearInterval(wizardConnectInterval);
+        wizardConnectInterval = null;
+      } else {
+        f.wifistat.wificonnstat = 'Connecting...';
+      }
     }
+    processElements(f.wifistat);
   },
   debuginfo: function (f) {
     processElements(f.debuginfo);
   },
   systemsettings: function (f) {
     var x = f.systemsettings;
-    processElements(x);
     if (wizardActive) {
+      // Preserve all wizard-controlled form fields before processElements overwrites them
+      var wizardFields = {};
+      var wizardInputIds = ['itho_numvrem', 'itho_updatefreq'];
+      wizardInputIds.forEach(function (id) {
+        var el = $id(id);
+        if (el && el.value !== '') wizardFields[id] = el.value;
+      });
+      var wizardRadios = ['option-itho_sendjoin', 'option-itho_forcemedium', 'option-itho_pwm2i2c',
+        'option-itho_31da', 'option-itho_31d9', 'option-itho_4210'];
+      var savedRadios = {};
+      wizardRadios.forEach(function (name) {
+        var checked = $q('input[name="' + name + '"]:checked');
+        if (checked) savedRadios[name] = checked.value;
+      });
+      processElements(x);
+      // Restore wizard-controlled inputs
+      Object.keys(wizardFields).forEach(function (id) {
+        var el = $id(id);
+        if (el) el.value = wizardFields[id];
+      });
+      Object.keys(savedRadios).forEach(function (name) {
+        var el = $q('input[name="' + name + '"][value="' + savedRadios[name] + '"]');
+        if (el) el.checked = true;
+      });
       if ("rfInitOK" in x) {
         wizardHasRF = (x.itho_rf_support == 1 && x.rfInitOK == true);
         wizardUpdateIndicators();
       }
       return;
     }
+    processElements(x);
     if ("itho_rf_support" in x) {
       if (x.itho_rf_support == 1 && x.rfInitOK == false) {
         if (confirm("For changes to take effect click 'Ok' to reboot")) {
@@ -1053,7 +1084,6 @@ document.addEventListener('DOMContentLoaded', function () {
       // Show connecting status immediately
       var statEls = document.querySelectorAll('[name="wificonnstat"]');
       statEls.forEach(function (el) { el.textContent = 'Connecting...'; });
-      getSettings('wifistat');
       if (wizardConnectInterval) clearInterval(wizardConnectInterval);
       wizardConnectInterval = setInterval(function () { getSettings('wifistat'); }, 2000);
       return;
@@ -2056,7 +2086,7 @@ var remfuncs = [
 ];
 
 function addRemoteButtons(container, remfunc, remtype, vremotenum, seperator) {
-  var remfuncname = remfunc == 1 ? "remote" : "vremote";
+  var remfuncname = (remfunc == 1 || remfunc == 5) ? "remote" : "vremote";
   for (const item of remtypes) {
     if (remtype == item[1]) {
       var newinner = '';
@@ -3024,6 +3054,7 @@ function wizardDetectDeviceCategory(devtype) {
   if (devtype === 'HRU ECO-fan') return 'hru_eco';
   if (devtype === 'CVE-SilentExtPlus') return 'hru200';
   if (devtype.indexOf('CVE') !== -1) return 'cve';
+  if (devtype === 'DemandFlow' || devtype === 'QualityFlow') return 'demandflow';
   return 'other';
 }
 
@@ -3059,7 +3090,11 @@ function applyDeviceDefaults() {
   // Virtual remote and related settings
   var useVirtual = (cat !== 'hru250_300' && cat !== 'wpu');
   var numvremEl = $id('itho_numvrem');
-  if (useVirtual) {
+  if (cat === 'demandflow') {
+    if (numvremEl) numvremEl.value = 12;
+    checkRadio('option-itho_sendjoin', '0');
+    checkRadio('option-itho_forcemedium', '0');
+  } else if (useVirtual) {
     if (numvremEl) numvremEl.value = 1;
     checkRadio('option-itho_sendjoin', '1');
     checkRadio('option-itho_forcemedium', '1');
@@ -3084,12 +3119,16 @@ function applyDeviceDefaults() {
     var devGroup = parseInt(localStorage.getItem("itho_mfr") || "0", 10);
     var devId = parseInt(localStorage.getItem("itho_deviceid") || "0", 10);
     var isOlderCVE = (devGroup === 0x0 && (devId === 0x4 || devId === 0x14));
-    var useAuto = !isOlderCVE && (cat === 'cve' || cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200' || cat === 'hru250_300');
-    vremTypeEl.value = useAuto ? '0x22F3' : '0x22F1';
+    if (cat === 'demandflow') {
+      vremTypeEl.value = '0x22F8';
+    } else {
+      var useAuto = !isOlderCVE && (cat === 'cve' || cat === 'hru350' || cat === 'hru_eco' || cat === 'hru200' || cat === 'hru250_300');
+      vremTypeEl.value = useAuto ? '0x22F3' : '0x22F1';
+    }
   }
 
   // Update frequency
-  var deviceTypeQ = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350' || cat === 'hru250_300');
+  var deviceTypeQ = (cat === 'cve' || cat === 'hru200' || cat === 'hru_eco' || cat === 'hru350' || cat === 'hru250_300' || cat === 'demandflow');
   var updatefreqEl = $id('itho_updatefreq');
   if (updatefreqEl) updatefreqEl.value = (deviceTypeQ ? 10 : 60);
 
@@ -3249,18 +3288,18 @@ function wizardFinish() {
   wizardSaveWifiSettings();
 
   // 2. Save system settings (device defaults from step 2)
-  var sendjoinVal = checkedVal('option-itho_sendjoin') || '0';
-  var forcemediumVal = checkedVal('option-itho_forcemedium') || '0';
+  var sendjoinVal = parseInt(checkedVal('option-itho_sendjoin') || '0');
+  var forcemediumVal = parseInt(checkedVal('option-itho_forcemedium') || '0');
   var sysMsg = {
     systemsettings: {
-      itho_pwm2i2c: checkedVal('option-itho_pwm2i2c'),
-      itho_31da: checkedVal('option-itho_31da'),
-      itho_31d9: checkedVal('option-itho_31d9'),
-      itho_numvrem: $val('itho_numvrem'),
+      itho_pwm2i2c: parseInt(checkedVal('option-itho_pwm2i2c') || '0'),
+      itho_31da: parseInt(checkedVal('option-itho_31da') || '0'),
+      itho_31d9: parseInt(checkedVal('option-itho_31d9') || '0'),
+      itho_numvrem: parseInt($val('itho_numvrem') || '0'),
       itho_sendjoin: sendjoinVal,
       itho_forcemedium: forcemediumVal,
-      itho_updatefreq: $val('itho_updatefreq'),
-      itho_4210: checkedVal('option-itho_4210') || '0'
+      itho_updatefreq: parseInt($val('itho_updatefreq') || '5'),
+      itho_4210: parseInt(checkedVal('option-itho_4210') || '0')
     }
   };
   // For non-PWM2I2C HRU devices: enable RF CO2 join on next boot
@@ -3278,20 +3317,46 @@ function wizardFinish() {
 
   // 2c. Save RF remote type for all configured RF remotes
   var rfRemTypeEl = $id('wiz-rfremtype');
-  if (rfRemTypeEl && remotesCount > 0) {
+  if (rfRemTypeEl) {
     var rfRemType = parseInt(rfRemTypeEl.value);
-    for (var ri = 0; ri < remotesCount; ri++) {
-      var idEl = $id('id_remote-' + ri);
-      if (idEl && idEl.value && idEl.value !== 'empty slot') {
-        var funcEl = $id('func_remote-' + ri);
-        var remfuncVal = funcEl ? parseInt(funcEl.value) : 1;
-        websock_send(JSON.stringify({
-          itho_update_remote: ri,
-          remtype: rfRemType,
-          remfunc: remfuncVal,
-          value: $id('name_remote-' + ri) ? $id('name_remote-' + ri).value : '',
-          id: idEl.value.split(',').map(function(s) { return parseInt(s, 16); })
-        }));
+    var rfSaved = false;
+    console.log('wizardFinish: remotesCount=' + remotesCount + ', rfRemType=' + rfRemType);
+    // Try saving from remotes table DOM (when remotes were loaded)
+    if (remotesCount > 0) {
+      for (var ri = 0; ri < remotesCount; ri++) {
+        var idEl = $id('id_remote-' + ri);
+        if (idEl && idEl.value && idEl.value !== 'empty slot') {
+          var funcEl = $id('func_remote-' + ri);
+          var remfuncVal = funcEl ? parseInt(funcEl.value) : 1;
+          var typeEl = $id('type_remote-' + ri);
+          var remTypeVal = typeEl ? parseInt(typeEl.value) : rfRemType;
+          var remMsg = {
+            itho_update_remote: ri,
+            remtype: remTypeVal,
+            remfunc: remfuncVal,
+            value: $id('name_remote-' + ri) ? $id('name_remote-' + ri).value : '',
+            id: idEl.value.split(',').map(function(s) { return parseInt(s, 16); })
+          };
+          console.log('wizardFinish: saving remote ' + ri, remMsg);
+          websock_send(JSON.stringify(remMsg));
+          rfSaved = true;
+        }
+      }
+    }
+    // Fallback: if no remotes in table but wizard auto-configured a Send remote, save directly
+    if (!rfSaved && wizardRfCo2Device && wizardHasRF) {
+      var rfIdEl = $id('module_rf_id_str');
+      if (rfIdEl && rfIdEl.value) {
+        var idParts = rfIdEl.value.match(/.{1,2}/g);
+        if (idParts && idParts.length >= 3) {
+          websock_send(JSON.stringify({
+            itho_update_remote: 0,
+            remtype: rfRemType,
+            remfunc: 5,
+            value: 'RF Send',
+            id: idParts.slice(0, 3).map(function(s) { return parseInt(s, 16); })
+          }));
+        }
       }
     }
   }
