@@ -19,15 +19,30 @@ MQTT_USERNAME = os.environ.get("MQTT_USERNAME", "")
 MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD", "")
 MQTT_CMD_TOPIC = os.environ.get("MQTT_CMD_TOPIC", "")
 
-if not MQTT_BROKER:
+if not MQTT_BROKER and DEVICE_IP:
     try:
-        r = requests.get(f"{DEVICE_URL}/config.json", timeout=5)
-        if r.status_code == 200:
-            cfg = r.json()
-            MQTT_BROKER = cfg.get("mqtt_serverName", "")
-            MQTT_PORT = int(cfg.get("mqtt_port", 1883))
-            MQTT_USERNAME = cfg.get("mqtt_username", "")
-            base_topic = cfg.get("mqtt_base_topic", "itho")
+        import websocket, json as _json, threading
+        _ws_result = {}
+        _ws_event = threading.Event()
+        def _on_message(ws, message):
+            data = _json.loads(message)
+            if "systemsettings" in data:
+                _ws_result.update(data["systemsettings"])
+                _ws_event.set()
+                ws.close()
+        def _on_open(ws):
+            ws.send('{"mqttsetup":true}')
+        _ws = websocket.WebSocketApp(f"ws://{DEVICE_IP}:8000/ws",
+                                      on_message=_on_message, on_open=_on_open)
+        _t = threading.Thread(target=_ws.run_forever, kwargs={"ping_timeout": 5})
+        _t.daemon = True
+        _t.start()
+        _ws_event.wait(timeout=5)
+        if _ws_result:
+            MQTT_BROKER = _ws_result.get("mqtt_serverName", "")
+            MQTT_PORT = int(_ws_result.get("mqtt_port", 1883))
+            MQTT_USERNAME = _ws_result.get("mqtt_username", "")
+            base_topic = _ws_result.get("mqtt_base_topic", "itho")
             MQTT_CMD_TOPIC = f"{base_topic}/cmd"
     except Exception:
         pass

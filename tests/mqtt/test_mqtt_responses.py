@@ -96,13 +96,9 @@ class TestMqttResponseFormat:
         assert "timestamp" in resp
 
     def test_success_response_for_speed(self, mqtt_response_client):
-        collector = ResponseCollector(mqtt_response_client)
-        collector.clear()
-
-        # Re-subscribe (collector created without topic here, use the fixture directly)
-        collector2 = ResponseCollector(mqtt_response_client, MQTT_RESPONSE_TOPIC)
+        collector = ResponseCollector(mqtt_response_client, MQTT_RESPONSE_TOPIC)
         mqtt_response_client.publish(MQTT_CMD_TOPIC, json.dumps({"speed": 100}))
-        msgs = collector2.wait()
+        msgs = collector.wait()
 
         assert len(msgs) >= 1, "No response for speed command"
         resp = msgs[-1]
