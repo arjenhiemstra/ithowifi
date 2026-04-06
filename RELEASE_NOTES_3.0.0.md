@@ -12,7 +12,7 @@ Major release with new features, new RESTful API, and significant improvements t
 - **Security** — Encrypted credential exchange (AES-256-CTR), HTTP Basic Auth, CSRF protection, API parameter whitelisting
 - **jQuery removed** — Full migration to vanilla JS (~30KB flash savings)
 
-### Changes since 2.8.0
+### Changes since 2.8.x
 
 ### Breaking Changes
 
