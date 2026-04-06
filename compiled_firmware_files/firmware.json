@@ -8,9 +8,9 @@
         },
         "2": {
             "latest_fw": "3.0.0",
-            "link": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v3.0.0.bin",
+            "link": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.0.0/nrgitho-v3.0.0.bin",
             "latest_beta_fw": "3.1.0-beta1",
-            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v3.1.0-beta1.bin",
+            "link_beta": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.0-beta1/nrgitho-v3.1.0-beta1.bin",
             "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.0-beta1",
             "release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.0.0",
             "versions": [
@@ -30,9 +30,9 @@
         },
         "NON-CVE 1": {
             "latest_fw": "3.0.0",
-            "link": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v3.0.0.bin",
+            "link": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.0.0/nrgitho-v3.0.0.bin",
             "latest_beta_fw": "3.1.0-beta1",
-            "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/unified_hw2_noncve/nrgitho-v3.1.0-beta1.bin",
+            "link_beta": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.0-beta1/nrgitho-v3.1.0-beta1.bin",
             "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.0-beta1",
             "release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.0.0",
             "versions": [
