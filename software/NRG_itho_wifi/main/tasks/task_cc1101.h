@@ -6,7 +6,6 @@
 
 #include <Arduino.h>
 #include <Ticker.h>
-#include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 
 #include "config/SystemConfig.h"

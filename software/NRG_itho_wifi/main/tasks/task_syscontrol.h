@@ -40,6 +40,8 @@ struct firmwareinfo
     int fw_update_available{0};
     char latest_fw[16]{};
     char latest_beta_fw[16]{};
+    char link[160]{};
+    char link_beta[160]{};
 };
 
 extern firmwareinfo firmwareInfo;

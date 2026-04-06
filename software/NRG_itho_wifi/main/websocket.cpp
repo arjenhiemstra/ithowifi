@@ -727,6 +727,20 @@ void handle_ws_message(JsonObject root)
     }
   }
 
+  // OTA update from online resource
+  if (!root["update_url"].isNull())
+  {
+    const char *url = root["update_url"] | "";
+    if (strncmp(url, "https://github.com/arjenhiemstra/ithowifi/", 42) == 0)
+      triggerOTAUpdateFromURL(url);
+  }
+  else if (!root["update"].isNull())
+  {
+    const char *value = root["update"] | "stable";
+    bool beta = (strcmp(value, "beta") == 0);
+    triggerOTAUpdate(beta);
+  }
+
   // Removing or updating rf remote
   if (root["itho_remove_remote"].is<int>())
   {

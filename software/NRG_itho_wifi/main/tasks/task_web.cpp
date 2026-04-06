@@ -52,8 +52,6 @@ void TaskWeb(void *pvParameters)
   configASSERT((uint32_t)pvParameters == 1UL);
   Ticker TaskTimeout;
 
-  ArduinoOTAinit();
-
   websocketInit();
 
   webServerInit();
@@ -84,8 +82,6 @@ void TaskWeb(void *pvParameters)
 
 void execWebTasks()
 {
-  ArduinoOTA.handle();
-
   ws.cleanupClients();
 
   if (millis() - previousUpdate >= 5000 || sysStatReq)

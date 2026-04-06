@@ -284,6 +284,9 @@ void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
 
     tmpstr = "{{ {'installed_version': value_json['add-on_fwversion'], 'latest_version': value_json['add-on_latest_fw'], 'title': 'Add-on Firmware', 'release_url': 'https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + std::string(firmwareInfo.latest_fw) + "' } | to_json }}";
     componentJson["val_tpl"] = tmpstr;
+
+    componentJson["cmd_t"] = cmdtopic;
+    componentJson["payload_install"] = "{\"update\":\"stable\"}";
 }
 
 void addHADiscoveryRFSensors(JsonObject components, JsonObject compactJson, const char *deviceName, const char *mqttBaseTopic)
