@@ -117,100 +117,114 @@ void execSystemControlTasks()
 
   i2cManager.processQueue();
 
-  if (IthoInit && millis() > 250)
+  if (systemConfig.itho_rf_standalone == 1)
   {
-    IthoInit = ithoInitCheck();
-  }
-
-  if (!i2c_init_functions_done)
-  {
-    initI2cFunctions();
-    if (i2c_init_functions_done)
+    // RF standalone mode: skip I2C, mark init done
+    if (!i2c_init_functions_done)
     {
-      // Reset timers so normal intervals start from init completion
+      i2c_init_functions_done = true;
+      ithoInitResult = 2; // 2 = RF standalone (not I2C), avoids low-power TX path
+      I_LOG("SYS: RF standalone mode - I2C disabled");
+      sendHomeAssistantDiscovery = true;
+    }
+  }
+  else
+  {
+    if (IthoInit && millis() > 250)
+    {
+      IthoInit = ithoInitCheck();
+    }
+
+    if (!i2c_init_functions_done)
+    {
+      initI2cFunctions();
+      if (i2c_init_functions_done)
+      {
+        // Reset timers so normal intervals start from init completion
+        query4210tim = millis();
+        query2401tim = millis();
+      }
+    }
+    // request itho counter status every systemConfig.itho_counter_updatefreq sec.
+    else if (millis() - query4210tim >= systemConfig.itho_counter_updatefreq * 1000UL)
+    {
       query4210tim = millis();
+      if (systemConfig.itho_4210 == 1)
+      {
+        i2cQueueAddCmd([]()
+                          { sendQueryCounters(false); });
+        i2cQueueAddCmd([]()
+                          { updateMQTTihtoStatus = true; });
+      }
+    }
+    // request itho status every systemConfig.itho_updatefreq sec.
+    else if (millis() - query2401tim >= systemConfig.itho_updatefreq * 1000UL)
+    {
       query2401tim = millis();
+      bool _updateMQTT = false;
+      if (systemConfig.itho_2401 == 1)
+      {
+        _updateMQTT = true;
+        i2cQueueAddCmd([]()
+                          { sendQueryStatus(false); });
+      }
+      if (systemConfig.itho_31da == 1)
+      {
+        _updateMQTT = true;
+        i2cQueueAddCmd([]()
+                          { sendQuery31DA(false); });
+      }
+      if (systemConfig.itho_31d9 == 1)
+      {
+        _updateMQTT = true;
+        i2cQueueAddCmd([]()
+                          { sendQuery31D9(false); });
+      }
+      if (_updateMQTT)
+      {
+        i2cQueueAddCmd([]()
+                          { updateMQTTihtoStatus = true; });
+      }
     }
-  }
-  // request itho counter status every systemConfig.itho_counter_updatefreq sec.
-  else if (millis() - query4210tim >= systemConfig.itho_counter_updatefreq * 1000UL)
-  {
-    query4210tim = millis();
-    if (systemConfig.itho_4210 == 1)
-    {
-      i2cQueueAddCmd([]()
-                        { sendQueryCounters(false); });
-      i2cQueueAddCmd([]()
-                        { updateMQTTihtoStatus = true; });
-    }
-  }
-  // request itho status every systemConfig.itho_updatefreq sec.
-  else if (millis() - query2401tim >= systemConfig.itho_updatefreq * 1000UL)
-  {
-    query2401tim = millis();
-    bool _updateMQTT = false;
-    if (systemConfig.itho_2401 == 1)
-    {
-      _updateMQTT = true;
-      i2cQueueAddCmd([]()
-                        { sendQueryStatus(false); });
-    }
-    if (systemConfig.itho_31da == 1)
-    {
-      _updateMQTT = true;
-      i2cQueueAddCmd([]()
-                        { sendQuery31DA(false); });
-    }
-    if (systemConfig.itho_31d9 == 1)
-    {
-      _updateMQTT = true;
-      i2cQueueAddCmd([]()
-                        { sendQuery31D9(false); });
-    }
-    if (_updateMQTT)
-    {
-      i2cQueueAddCmd([]()
-                        { updateMQTTihtoStatus = true; });
-    }
-  }
 
-  if (systemConfig.itho_sendjoin > 0 && !joinSend && ithoInitResult == 1)
-  {
-    joinSend = true;
-    i2cQueueAddCmd([]()
-                      { sendRemoteCmd(0, IthoJoin); });
-
-    I_LOG("I2C init: Virtual remote join command send");
-
-    if (systemConfig.itho_sendjoin == 1)
+    if (systemConfig.itho_sendjoin > 0 && !joinSend && ithoInitResult == 1)
     {
-      systemConfig.itho_sendjoin = 0;
-      saveSystemConfig("flash");
+      joinSend = true;
+      i2cQueueAddCmd([]()
+                        { sendRemoteCmd(0, IthoJoin); });
+
+      I_LOG("I2C init: Virtual remote join command send");
+
+      if (systemConfig.itho_sendjoin == 1)
+      {
+        systemConfig.itho_sendjoin = 0;
+        saveSystemConfig("flash");
+      }
     }
-  }
 
-  // Itho queue
-  if (clearQueue)
-  {
-    clearQueue = false;
-    ithoQueue.clearQueue();
-  }
-  if (ithoQueue.ithoSpeedUpdated)
-  {
-    ithoQueue.ithoSpeedUpdated = false;
-    uint16_t speed = ithoQueue.get_itho_speed();
-    char buf[32]{};
-    snprintf(buf, sizeof(buf), "speed:%d", speed);
-
-    if (writeIthoVal(speed, &ithoCurrentVal, &updateIthoMQTT))
+    // Itho queue (I2C PWM control)
+    if (clearQueue)
     {
-      if (strcmp(lastCmd.source, "") == 0)
-        logLastCommand(buf, "ithoQueue");
-      sysStatReq = true;
+      clearQueue = false;
+      ithoQueue.clearQueue();
     }
-    else
+    if (ithoQueue.ithoSpeedUpdated)
     {
-      logLastCommand(buf, "ithoQueue_error");
+      ithoQueue.ithoSpeedUpdated = false;
+      uint16_t speed = ithoQueue.get_itho_speed();
+      char buf[32]{};
+      snprintf(buf, sizeof(buf), "speed:%d", speed);
+
+      if (writeIthoVal(speed, &ithoCurrentVal, &updateIthoMQTT))
+      {
+        if (strcmp(lastCmd.source, "") == 0)
+          logLastCommand(buf, "ithoQueue");
+        sysStatReq = true;
+      }
+      else
+      {
+        logLastCommand(buf, "ithoQueue_error");
+      }
     }
   }
   // System control tasks
