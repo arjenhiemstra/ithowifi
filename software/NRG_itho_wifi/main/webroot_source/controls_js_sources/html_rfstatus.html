@@ -1,0 +1,103 @@
+<div class="header">
+  <h1>RF Status</h1>
+</div>
+<p>Real-time status received from Itho devices via RF (31DA/31D9 messages).</p>
+<p>Source device:
+  <select id="rfStatusSource" class="pure-input">
+    <option value="-1">Loading...</option>
+  </select>
+  &nbsp; Last seen: <span id="rfLastSeen">-</span>
+</p>
+<div id="rfTrackRow" style="display:none;">
+  <form class="pure-form pure-form-aligned">
+    <fieldset>
+      <legend><br>Monitor persistently and publish to API:</legend>
+      <p>Enabling monitor will track this device and publish received data on the WebAPI and MQTT API.</p>
+      <div class="pure-control-group">
+        <label for="option-rftrack" class="pure-radio">Monitor</label>
+        <input id="option-rftrack-on" type="radio" name="option-rftrack" value="on"> on
+        <input id="option-rftrack-off" type="radio" name="option-rftrack" value="off"> off
+      </div>
+      <div class="pure-control-group">
+        <label for="rfSourceName">Name</label>
+        <input type="text" id="rfSourceName" maxlength="31" class="pure-input" placeholder="e.g. Bathroom HRU"
+          style="width:200px;">
+      </div>
+      <div class="pure-controls">
+        <button id="rfTrackSave" type="button" class="pure-button pure-button-primary">Save</button>
+        <span id="rfTrackWarn" style="color:red; margin-left:10px; display:none;"></span>
+      </div>
+    </fieldset>
+  </form>
+</div>
+<form class="pure-form pure-form-aligned">
+  <fieldset>
+    <table id="RFStatusTable" class="pure-table pure-table-bordered"></table>
+  </fieldset>
+</form>
+<script>
+  var rfSelectedSource = -1;
+  var rfSourcesData = [];
+  var rfTrackedCount = 0;
+  var rfMaxTracked = 20;
+  $id('rfStatusSource').addEventListener('change', function () {
+    rfSelectedSource = parseInt(this.value);
+    requestRFStatusConfig();
+    requestRFStatus();
+  });
+  $id('rfTrackSave').addEventListener('click', function () {
+    if (rfSelectedSource < 0) return;
+    var trackOn = $id('option-rftrack-on').checked;
+    var warn = $id('rfTrackWarn');
+    var src = rfSourcesData.find(function (s) { return s.index == rfSelectedSource; });
+    var alreadyTracked = src ? !!src.tracked : false;
+    if (trackOn && !alreadyTracked && rfTrackedCount >= rfMaxTracked) {
+      warn.textContent = 'Maximum number of monitored devices (' + rfMaxTracked + ') reached.';
+      warn.style.display = '';
+      return;
+    }
+    warn.style.display = 'none';
+    websock_send(JSON.stringify({
+      rftrack: {
+        index: rfSelectedSource,
+        track: trackOn,
+        name: $id('rfSourceName').value
+      }
+    }));
+  });
+  function updateTrackCheckbox() {
+    var row = $id('rfTrackRow');
+    var nameInput = $id('rfSourceName');
+    if (rfSelectedSource >= 0) {
+      row.style.display = '';
+      var src = rfSourcesData.find(function (s) { return s.index == rfSelectedSource; });
+      var tracked = src ? !!src.tracked : false;
+      $id('option-rftrack-on').checked = tracked;
+      $id('option-rftrack-off').checked = !tracked;
+      nameInput.value = src ? (src.name || '') : '';
+    } else {
+      row.style.display = 'none';
+      $id('option-rftrack-off').checked = true;
+      $id('option-rftrack-on').checked = false;
+      nameInput.value = '';
+    }
+  }
+  function requestRFStatus() {
+    var msg = rfSelectedSource >= 0
+      ? '{"rfstatus":true,"source":' + rfSelectedSource + '}'
+      : '{"rfstatus":true}';
+    websock_send(msg);
+  }
+  function requestRFStatusConfig() {
+    var msg = rfSelectedSource >= 0
+      ? '{"rfstatusconfig":true,"source":' + rfSelectedSource + '}'
+      : '{"rfstatusconfig":true}';
+    websock_send(msg);
+  }
+  function repeatRFStatus() {
+    requestRFStatus();
+    rfstatus_to = setTimeout(repeatRFStatus, 5000);
+  }
+  requestRFStatusConfig();
+  repeatRFStatus();
+</script>

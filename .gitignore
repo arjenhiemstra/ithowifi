@@ -2,4 +2,9 @@ hardware/gerbers 2.1/ithowifi-bom-xlsx.xlsx
 hardware/gerbers 2.1/ithowifi-pos-xlsx.xlsx
 hardware/gerbers 2.1/ithowifi-top-pos.csv
 */.vscode/*
-vscode-build/*
+vscode-build/*__pycache__
+.hypothesis
+*.pyc
+compiled_firmware_files/coredumps/
+software/pure/
+software/NRG_itho_wifi/sdkconfig.release

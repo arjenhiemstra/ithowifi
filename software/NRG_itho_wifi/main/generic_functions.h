@@ -16,7 +16,7 @@
 #include "globals.h"
 #include "sys_log.h"
 #include "notifyClients.h"
-#include "IthoSystem.h"
+#include "ithodevice/IthoDevice.h"
 #include "enum.h"
 
 #include "LittleFS.h"
@@ -27,12 +27,18 @@ inline uint8_t itho_init_status = 0;
 
 const char *hostName();
 uint8_t getIthoStatusJSON(JsonObject root);
-bool itho_status_ready();
+uint8_t getRFStatusJSON(JsonObject root, int sourceIndex = -1, bool trackedOnly = false);
+void getRFStatusConfigJSON(JsonObject root, int sourceIndex = -1);
+bool ithoStatusReady();
 void getRemotesInfoJSON(JsonObject root);
+void getRFDevicesForHADiscJSON(JsonObject root);
+void getVirtualRemotesForHADiscJSON(JsonObject root);
 void getDeviceInfoJSON(JsonObject root);
 void getIthoSettingsBackupJSON(JsonObject root);
 bool ithoExecCommand(const char *command, cmdOrigin origin);
 bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin origin);
+bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin);
+bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOrigin origin);
 bool ithoSetSpeed(const char *speed, cmdOrigin origin);
 bool ithoSetSpeed(uint16_t speed, cmdOrigin origin);
 bool ithoSetTimer(const char *timer, cmdOrigin origin);
@@ -43,9 +49,9 @@ void logLastCommand(const char *command, cmdOrigin origin);
 void logLastCommand(const char *command, const char *source);
 void getLastCMDinfoJSON(JsonObject root);
 void updateItho();
-void add2queue();
+void addToQueue();
 void setRFdebugLevel(uint8_t level);
 double round(float value, int precision);
 char toHex(uint8_t c);
 std::vector<int> parseHexString(const std::string &input);
-void check_firmware_update();
+void checkFirmwareUpdate();

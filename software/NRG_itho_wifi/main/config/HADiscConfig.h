@@ -14,6 +14,8 @@ public:
     uint8_t sscnt;
     char d[32];
     JsonDocument itemsDoc;
+    JsonDocument rfDoc;  // RF device sensor/fan selections
+    JsonDocument vrDoc;  // Virtual remote fan selections
 
     char config_struct_version[4];
 
@@ -25,6 +27,13 @@ public:
     bool set(JsonObject);
     void get(JsonObject) const;
     void reset();
+
+    // RF sensor helpers
+    static const char* getAvailableSensorsForType(uint16_t remoteType);
+    static bool isSensorAvailableForType(uint16_t remoteType, const char* sensor);
+
+    // RF fan presets helper
+    static const char* getPresetsForType(uint16_t remoteType);
 
 protected:
 }; // HADiscConfig

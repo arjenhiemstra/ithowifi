@@ -25,7 +25,7 @@
         style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
     </div>
     <div style="padding-top:5px;">
-        <a href="#" class="pure-button" onclick="$('#rflog').empty()">Clear</a>
+        <a href="#" class="pure-button" onclick="$id('rflog').innerHTML=''">Clear</a>
     </div>
 </div><br><br>
 
@@ -103,8 +103,6 @@
 
 </form>
 <script>
-    $(document).ready(function () {
-        getSettings('logsetup');
-        getlog("/curlog");
-    });
+    getSettings('logsetup');
+    getlog("/curlog");
 </script>

@@ -29,6 +29,7 @@ extern TaskHandle_t xTaskConfigAndLogHandle;
 extern uint32_t TaskConfigAndLogHWmark;
 extern volatile bool saveRemotesflag;
 extern volatile bool saveVremotesflag;
+extern volatile bool saveRFTrackedConfigflag;
 extern bool chkpartition;
 extern int chk_partition_res;
 extern bool formatFileSystem;
@@ -47,7 +48,7 @@ void startTaskConfigAndLog();
 void TaskConfigAndLog(void *pvParameters);
 void execLogAndConfigTasks();
 
-void syslog_queue_worker();
+void syslogQueueWorker();
 bool initFileSystem();
 void logInit();
-void log_mem_info();
+void logMemInfo();

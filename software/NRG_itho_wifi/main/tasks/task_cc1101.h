@@ -15,7 +15,7 @@
 #include "generic_functions.h"
 #include "sys_log.h"
 #include "notifyClients.h"
-#include "IthoSystem.h"
+#include "ithodevice/IthoDevice.h"
 
 #include "cc1101/IthoPacket.h"
 #include "tasks/task_configandlog.h"
@@ -37,7 +37,12 @@ extern bool filter31D9;
 extern bool send31DA;
 extern uint8_t faninfo31DA;
 extern uint8_t timer31DA;
+extern bool sendBindConfirm;
+extern bool sendBatteryStatus;
+extern uint8_t bindConfirmRemIndex;
 
+void startBindInitiatorTimeout();
+void cancelBindInitiatorTimeout();
 void ITHOinterrupt();
 void disableRF_ISR();
 void enableRF_ISR();

@@ -17,7 +17,7 @@
 #include "esp_littlefs.h"
 #include "ArduinoNvs.h"
 
-void backup_all_configs();
-void repartition_device(const char *mode);
-void check_partition_tables();
-int current_partition_scheme();
+void backupAllConfigs();
+void repartitionDevice(const char *mode);
+void checkPartitionTables();
+int currentPartitionScheme();

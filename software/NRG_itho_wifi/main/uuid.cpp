@@ -4,7 +4,7 @@
 
 #include "esp_system.h"
 
-void uuid_generate(uuid_t out)
+void uuidGenerate(uuid_t out)
 {
     esp_fill_random(out, sizeof(uuid_t));
 
@@ -45,7 +45,7 @@ static int unhex(unsigned char *s, size_t s_len, unsigned char *r)
     return 0;
 }
 
-int uuid_parse(const char *in, uuid_t uu)
+int uuidParse(const char *in, uuid_t uu)
 {
     const char *p = in;
     uint8_t *op = (uint8_t *)uu;
@@ -73,7 +73,7 @@ int uuid_parse(const char *in, uuid_t uu)
     return 0;
 }
 
-void uuid_unparse(const uuid_t uu, char *out)
+void uuidUnparse(const uuid_t uu, char *out)
 {
     snprintf(out, UUID_STR_LEN,
              "%02x%02x%02x%02x-%02x%02x-%02x%02x-"

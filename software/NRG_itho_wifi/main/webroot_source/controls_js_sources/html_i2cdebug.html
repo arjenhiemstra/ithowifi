@@ -29,7 +29,7 @@
         style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
       </div>
       <div style="padding-top:5px;">
-        <a href="#" class="pure-button" onclick="$('#i2clog').empty()">Clear</a>
+        <a href="#" class="pure-button" onclick="$id('i2clog').innerHTML=''">Clear</a>
       </div>
     </div>
     <form class="pure-form pure-form-aligned">
@@ -43,9 +43,7 @@
     </form>
     <br><br>
     <script>
-      $(document).ready(function () {
-        getSettings('sysstat');
-        getSettings('i2cdebuglog');
-        getSettings('i2cdebugsettings');
-      });
+      getSettings('sysstat');
+      getSettings('i2cdebuglog');
+      getSettings('i2cdebugsettings');
     </script>

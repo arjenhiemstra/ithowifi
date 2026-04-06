@@ -134,13 +134,17 @@
       <td><span name="mqtt_base_topic"></span>/lwt</td>
       <td>Last will online/offline info topic</td>
     </tr>
+    <tr id="rfstatus_mqtt_row" style="display:none;">
+      <td>RF status</td>
+      <td><span name="mqtt_base_topic"></span>/rfstatus/[name]/31DA<br>
+        <span name="mqtt_base_topic"></span>/rfstatus/[name]/31D9</td>
+      <td>Status data from tracked RF sources (configured via RF status page). [name] is the user-defined name or device ID.</td>
+    </tr>
   </tbody>
 </table>
 <br><br>
 <script>
-  $(document).ready(function () {
-    getSettings('mqttsetup');
-  });
+  getSettings('mqttsetup');
 
   var input = document.getElementById("mqtt_base_topic");
   input.addEventListener('input', updateSpanByName);

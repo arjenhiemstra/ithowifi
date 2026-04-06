@@ -14,6 +14,9 @@ SystemConfig::SystemConfig()
   syssec_edit = 0;
   api_normalize = 0;
   api_settings = 0;
+  api_reboot = 0;
+  itho_rf_co2_join = 0;
+  itho_control_interface = 0;
   syssht30 = 0;
   mqtt_active = 0;
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
@@ -41,7 +44,7 @@ SystemConfig::SystemConfig()
   itho_timer3 = 30;
   itho_numvrem = 1;
   itho_numrfrem = 10;
-  itho_updatefreq = 60;
+  itho_updatefreq = 10;
   itho_counter_updatefreq = 3600;
   itho_sendjoin = 0;
   itho_pwm2i2c = 1;
@@ -52,7 +55,6 @@ SystemConfig::SystemConfig()
   itho_forcemedium = 0;
   itho_vremoteapi = 0;
   itho_rf_support = 1;
-  api_version = 1;
   i2cmenu = 0;
   i2c_safe_guard = 2;
   i2c_sniffer = 0;
@@ -93,8 +95,21 @@ bool SystemConfig::set(JsonObject obj)
   }
   if (!obj["sys_password"].isNull())
   {
-    updated = true;
-    strlcpy(sys_password, obj["sys_password"] | "", sizeof(sys_password));
+    const char* new_password = obj["sys_password"] | "";
+
+    // SECURITY: Ignore placeholder, only update if actual new password
+    if (strcmp(new_password, "********") != 0 && strlen(new_password) > 0)
+    {
+      updated = true;
+      strlcpy(sys_password, new_password, sizeof(sys_password));
+    }
+    // If empty string sent, means user wants to clear password
+    else if (strlen(new_password) == 0)
+    {
+      updated = true;
+      memset(sys_password, 0, sizeof(sys_password));
+    }
+    // If "********", ignore (user didn't change the password field)
   }
   if (!obj["syssec_web"].isNull())
   {
@@ -120,6 +135,21 @@ bool SystemConfig::set(JsonObject obj)
   {
     updated = true;
     api_settings = obj["api_settings"];
+  }
+  if (!obj["api_reboot"].isNull())
+  {
+    updated = true;
+    api_reboot = obj["api_reboot"];
+  }
+  if (!obj["itho_rf_co2_join"].isNull())
+  {
+    updated = true;
+    itho_rf_co2_join = obj["itho_rf_co2_join"];
+  }
+  if (!obj["itho_control_interface"].isNull())
+  {
+    updated = true;
+    itho_control_interface = obj["itho_control_interface"];
   }
   if (!obj["api_settings_activated"].isNull())
   {
@@ -154,8 +184,21 @@ bool SystemConfig::set(JsonObject obj)
   }
   if (!obj["mqtt_password"].isNull())
   {
-    updated = true;
-    strlcpy(mqtt_password, obj["mqtt_password"] | "", sizeof(mqtt_password));
+    const char* new_password = obj["mqtt_password"] | "";
+
+    // SECURITY: Ignore placeholder, only update if actual new password
+    if (strcmp(new_password, "********") != 0 && strlen(new_password) > 0)
+    {
+      updated = true;
+      strlcpy(mqtt_password, new_password, sizeof(mqtt_password));
+    }
+    // If empty string sent, clear password
+    else if (strlen(new_password) == 0)
+    {
+      updated = true;
+      memset(mqtt_password, 0, sizeof(mqtt_password));
+    }
+    // If "********", ignore
   }
   if (!obj["mqtt_port"].isNull())
   {
@@ -340,11 +383,6 @@ bool SystemConfig::set(JsonObject obj)
     updated = true;
     fw_check = obj["fw_check"];
   }
-  if (!obj["api_version"].isNull())
-  {
-    updated = true;
-    api_version = obj["api_version"];
-  }
   if (!obj["rfInitOK"].isNull())
   {
     updated = true;
@@ -371,6 +409,7 @@ void SystemConfig::get(JsonObject obj) const
     get_sys_settings = false;
     obj["sys_username"] = sys_username;
     obj["sys_password"] = sys_password;
+
     obj["syssec_web"] = syssec_web;
     obj["syssec_api"] = syssec_api;
     obj["syssec_edit"] = syssec_edit;
@@ -403,8 +442,10 @@ void SystemConfig::get(JsonObject obj) const
     obj["i2c_sniffer"] = i2c_sniffer;
     obj["fw_check"] = fw_check;
     obj["api_settings"] = api_settings;
+    obj["api_reboot"] = api_reboot;
+    obj["itho_rf_co2_join"] = itho_rf_co2_join;
+    obj["itho_control_interface"] = itho_control_interface;
     obj["api_settings_activated"].set(api_settings_activated.as<JsonArrayConst>());
-    obj["api_version"] = api_version;
   }
   if (complete || get_mqtt_settings)
   {
@@ -413,6 +454,7 @@ void SystemConfig::get(JsonObject obj) const
     obj["mqtt_serverName"] = mqtt_serverName;
     obj["mqtt_username"] = mqtt_username;
     obj["mqtt_password"] = mqtt_password;
+
     obj["mqtt_port"] = mqtt_port;
     obj["mqtt_version"] = mqtt_version;
     obj["mqtt_base_topic"] = mqtt_base_topic;

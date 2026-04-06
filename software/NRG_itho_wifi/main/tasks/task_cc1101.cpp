@@ -16,6 +16,9 @@ bool filter31D9 = false;
 bool send31DA = false;
 bool sendJoinReply = false;
 bool send10E0 = false;
+bool sendBindConfirm = false;
+bool sendBatteryStatus = false;
+uint8_t bindConfirmRemIndex = 255;
 uint8_t faninfo31DA{0};
 uint8_t timer31DA{0};
 
@@ -25,6 +28,7 @@ StackType_t xTaskCC1101Stack[STACK_SIZE];
 
 Ticker timerLearnLeaveMode;
 Ticker rf_message;
+Ticker bindInitiatorTimeout;
 
 volatile bool ithoCheck = false;
 SemaphoreHandle_t isrSemaphore = NULL;
@@ -36,7 +40,7 @@ IRAM_ATTR void ITHOinterrupt()
   {
     // ISR code here
 
-    ithoCheck = rf.receivePacket();
+    ithoCheck = rfManager.radio.receivePacket();
 
     // At the end, give back the semaphore
     xSemaphoreGiveFromISR(isrSemaphore, NULL);
@@ -45,18 +49,24 @@ IRAM_ATTR void ITHOinterrupt()
 
 void disableRF_ISR()
 {
-  detachInterrupt(itho_irq_pin);
+  detachInterrupt(hardwareManager.itho_irq_pin);
 }
 
 void enableRF_ISR()
 {
-  attachInterrupt(itho_irq_pin, ITHOinterrupt, RISING);
+  attachInterrupt(hardwareManager.itho_irq_pin, ITHOinterrupt, RISING);
+  // If GDO is already HIGH, a packet arrived while the ISR was disabled.
+  // The rising edge was missed, so manually trigger a receive.
+  if (digitalRead(hardwareManager.itho_irq_pin) == HIGH)
+  {
+    ithoCheck = rfManager.radio.receivePacket();
+  }
 }
 
 void RFDebug(IthoPacket *packet)
 {
   char debugLog[400] = {0};
-  strncat(debugLog, rf.LastMessageDecoded(packet).c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
+  strncat(debugLog, rfManager.radio.LastMessageDecoded(packet).c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
   // log command
   switch (packet->command)
   {
@@ -126,6 +136,12 @@ void RFDebug(IthoPacket *packet)
   case IthoDeviceInfo:
     strncat(debugLog, " (cmd:ithodeviceinfo)", sizeof(debugLog) - strlen(debugLog) - 1);
     break;
+  case IthoBindAccept:
+    strncat(debugLog, " (cmd:bindaccept)", sizeof(debugLog) - strlen(debugLog) - 1);
+    break;
+  case IthoBindConfirm:
+    strncat(debugLog, " (cmd:bindconfirm)", sizeof(debugLog) - strlen(debugLog) - 1);
+    break;
   }
   // strncat(debugLog, "\n", sizeof(debugLog) - strlen(debugLog) - 1);
 
@@ -146,12 +162,12 @@ void toggleRemoteLLmode(const char *remotetype)
     }
     if (remotes.toggleLearnLeaveMode())
     {
-      // rf.setBindAllowed(true);
+      // rfManager.radio.setBindAllowed(true);
       timerLearnLeaveMode.attach(1, setllModeTimer);
     }
     else
     {
-      // rf.setBindAllowed(false);
+      // rfManager.radio.setBindAllowed(false);
       timerLearnLeaveMode.detach();
       remotes.setllModeTime(0);
       sysStatReq = true;
@@ -203,6 +219,25 @@ void setllModeTimer()
   }
 }
 
+void bindInitiatorTimeoutCallback()
+{
+  if (rfManager.radio.isBindInitiatorActive())
+  {
+    rfManager.radio.setBindInitiatorActive(false);
+    W_LOG("RFI: Bind initiator timeout - no binding accept received");
+  }
+}
+
+void startBindInitiatorTimeout()
+{
+  bindInitiatorTimeout.once_ms(5000, bindInitiatorTimeoutCallback);
+}
+
+void cancelBindInitiatorTimeout()
+{
+  bindInitiatorTimeout.detach();
+}
+
 void set_send10E0_true()
 {
   send10E0 = true;
@@ -239,7 +274,7 @@ void TaskCC1101(void *pvParameters)
 
   // reading the chip version is a non-blocking way to check CC1101 connectivity.
   // if the version is greater than 0 there has been succesful communication and we can continue with the init of the chip.
-  uint8_t chipVersion = rf.getChipVersion();
+  uint8_t chipVersion = rfManager.radio.getChipVersion();
   if (chipVersion)
   {
     N_LOG("SYS: CC1101 RF module found, chip version: 0x%02X", chipVersion);
@@ -256,7 +291,9 @@ void TaskCC1101(void *pvParameters)
     xSemaphoreGive(isrSemaphore);
 
     // init the RF module
-    rf.init();
+    rfManager.radio.init();
+    IthoCC1101::setRF31DACallback(parseRF31DA);
+    IthoCC1101::setRF31D9Callback(parseRF31D9);
     if (systemConfig.module_rf_id[0] == 0 && systemConfig.module_rf_id[1] == 0 && systemConfig.module_rf_id[2] == 0)
     {
       systemConfig.module_rf_id[0] = sys.getMac(3);
@@ -272,26 +309,58 @@ void TaskCC1101(void *pvParameters)
 
     remotes.setMaxRemotes(systemConfig.itho_numrfrem);
 
-    rf.setDefaultID(systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
-    rf.setBindAllowed(false);
-    rf.setAllowAll(false);
+    rfManager.radio.setDefaultID(systemConfig.module_rf_id[0], systemConfig.module_rf_id[1], systemConfig.module_rf_id[2]);
+    rfManager.radio.setBindAllowed(false);
+    rfManager.radio.setAllowAll(false);
 
     setRFdebugLevel(logConfig.rfloglevel);
 
-    pinMode(itho_irq_pin, INPUT);
+    pinMode(hardwareManager.itho_irq_pin, INPUT);
     enableRF_ISR();
 
     systemConfig.itho_rf_support = 1;
     RemotesConfigLoaded = loadRemotesConfig("flash");
-    for (int index = 0; index < remotes.getRemoteCount(); index++)
+    for (int index = 0; index < remotes.getMaxRemotes(); index++)
     {
+      if (remotes.isEmptySlot(index))
+        continue;
       uint8_t id[3]{};
       remotes.getRemoteIDbyIndex(index, &id[0]);
-      rf.setBindAllowed(true);
-      rf.addRFDevice(id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteBidirectional(index));
-      rf.setBindAllowed(false);
+      rfManager.radio.setBindAllowed(true);
+      rfManager.radio.addRFDevice(id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteBidirectional(index));
+      rfManager.radio.setBindAllowed(false);
+      // For Send remotes, set the sourceID to the configured ID (what we transmit as)
+      if (remotes.getRemoteFunction(index) == RemoteFunctions::SEND)
+      {
+        rfManager.radio.updateSourceID(id[0], id[1], id[2], index);
+      }
+      // Restore persisted target device ID for bidirectional remotes
+      uint8_t destId[3]{};
+      remotes.getRemoteDestIDbyIndex(index, &destId[0]);
+      if (destId[0] != 0 || destId[1] != 0 || destId[2] != 0)
+      {
+        rfManager.radio.updateDestinationID(destId[0], destId[1], destId[2], index);
+      }
     }
     systemConfig.rfInitOK = true;
+    // RF CO2 join on boot: find first Send+RFTCO2 remote and send join
+    if (systemConfig.itho_rf_co2_join == 1)
+    {
+      for (int idx = 0; idx < remotes.getMaxRemotes(); idx++)
+      {
+        if (remotes.isEmptySlot(idx))
+          continue;
+        if (remotes.getRemoteFunction(idx) == RemoteFunctions::SEND &&
+            remotes.getRemoteType(idx) == RemoteTypes::RFTCO2)
+        {
+          I_LOG("RFI: RF CO2 join on boot, remote index:%d", idx);
+          ithoExecRFCommand(idx, "join", HTMLAPI);
+          break;
+        }
+      }
+      systemConfig.itho_rf_co2_join = 0;
+      saveSystemConfigflag = true;
+    }
 
     uint8_t joinReplyRemIndex{255};
     // uint8_t remIndex10E0{255};
@@ -307,11 +376,11 @@ void TaskCC1101(void *pvParameters)
       if (send10E0 && !ithoCheck)
       {
         send10E0 = false;
-        rf.setSendTries(1);
+        rfManager.radio.setSendTries(1);
         disableRF_ISR();
-        rf.send10E0();
+        rfManager.radio.send10E0();
         enableRF_ISR();
-        rf.setSendTries(3);
+        rfManager.radio.setSendTries(3);
         rf_message.once_ms(100, set_send31D9_true);
       }
       if (sendJoinReply && !ithoCheck)
@@ -347,14 +416,42 @@ void TaskCC1101(void *pvParameters)
 
         */
         sendJoinReply = false;
-        rf.setSendTries(1);
+        rfManager.radio.setSendTries(1);
         disableRF_ISR();
-        int res = rf.sendJoinReply(joinReplyRemIndex);
+        int res = rfManager.radio.sendJoinReply(joinReplyRemIndex);
         enableRF_ISR();
         D_LOG("RFI: Join reply send, result:%d", res);
-        rf.setSendTries(3);
+        rfManager.radio.setSendTries(3);
         joinReplyRemIndex = 255;
         rf_message.once_ms(100, set_send10E0_true);
+      }
+      if (sendBindConfirm && !ithoCheck)
+      {
+        /*
+          Initiator binding flow:
+          1. We sent the Binding Offer (1FC9 I, self-addressed)
+          2. Target responded with Binding Accept (1FC9 W, 31D9+31DA)
+          3. Now send Binding Confirm (1FC9 I, payload 00, addr0=us addr1=target)
+          4. Then send Battery Status (1060 x3)
+        */
+        sendBindConfirm = false;
+        rfManager.radio.setSendTries(3);
+        disableRF_ISR();
+        rfManager.radio.sendBindConfirm(bindConfirmRemIndex);
+        enableRF_ISR();
+        D_LOG("RFI: Bind confirm sent for remote index:%d", bindConfirmRemIndex);
+        // Schedule battery status after a short delay
+        sendBatteryStatus = true;
+      }
+      if (sendBatteryStatus && !ithoCheck)
+      {
+        sendBatteryStatus = false;
+        rfManager.radio.setSendTries(3); // send 3 times for reliability
+        disableRF_ISR();
+        rfManager.radio.send1060();
+        enableRF_ISR();
+        D_LOG("RFI: Battery status (1060) sent");
+        bindConfirmRemIndex = 255;
       }
       if ((send31D9 || send31D9debug) && !ithoCheck)
       {
@@ -387,11 +484,11 @@ void TaskCC1101(void *pvParameters)
           command[5] = speedstatus;
           command[4] = fanstate;
         }
-        rf.setSendTries(1);
+        rfManager.radio.setSendTries(1);
         disableRF_ISR();
-        rf.send31D9(&command[0]);
+        rfManager.radio.send31D9(&command[0]);
         enableRF_ISR();
-        rf.setSendTries(3);
+        rfManager.radio.setSendTries(3);
       }
       if ((send31DA || send31DAdebug) && !ithoCheck)
       {
@@ -426,22 +523,23 @@ void TaskCC1101(void *pvParameters)
           command[24] = timer31DA;
         }
 
-        rf.setSendTries(1);
+        rfManager.radio.setSendTries(1);
         disableRF_ISR();
-        rf.send31DA(&command[0]);
+        rfManager.radio.send31DA(&command[0]);
         enableRF_ISR();
-        rf.setSendTries(3);
+        rfManager.radio.setSendTries(3);
       }
       if (ithoCheck)
       {
         ithoCheck = false;
 
-        IthoPacket *packet = rf.checkForNewPacket();
-        rf.parseMessage(packet);
+        rfManager.radio.decodeBufferedPacket();
+        IthoPacket *packet = rfManager.radio.checkForNewPacket();
+        rfManager.radio.parseMessage(packet);
 
-        uint8_t *lastID = rf.getLastID(packet);
-        IthoCommand cmd = rf.getLastCommand(packet);
-        RemoteTypes remtype = rf.getLastRemType(packet);
+        uint8_t *lastID = rfManager.radio.getLastID(packet);
+        IthoCommand cmd = rfManager.radio.getLastCommand(packet);
+        RemoteTypes remtype = rfManager.radio.getLastRemType(packet);
         bool chk = remotes.checkID(*(lastID + 0), *(lastID + 1), *(lastID + 2));
         if (logConfig.rfloglevel >= 2)
         {
@@ -462,7 +560,7 @@ void TaskCC1101(void *pvParameters)
             int index = remotes.removeRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2));
             if (index >= 0)
             {
-              rf.removeRFDevice(index);
+              rfManager.radio.removeRFDevice(index);
             }
             switch (index)
             {
@@ -475,40 +573,67 @@ void TaskCC1101(void *pvParameters)
               break;
             }
           }
+          if (cmd == IthoBindAccept)
+          {
+            cancelBindInitiatorTimeout();
+            uint8_t remIdx = rfManager.radio.getBindInitiatorRemIndex();
+            D_LOG("RFI: Binding accept received, remote index:%d", remIdx);
+            // Store the target's device ID as the destination for this remote (runtime)
+            rfManager.radio.updateDestinationID(*(lastID + 0), *(lastID + 1), *(lastID + 2), remIdx);
+            // Persist the target device ID so it survives reboot
+            remotes.updateRemoteDestID(remIdx, *(lastID + 0), *(lastID + 1), *(lastID + 2));
+            saveRemotesflag = true;
+            bindConfirmRemIndex = remIdx;
+            // Auto-switch to RF CO2 control interface if this is an RFTCO2 send remote
+            if (remotes.getRemoteType(remIdx) == RemoteTypes::RFTCO2 &&
+                remotes.getRemoteFunction(remIdx) == RemoteFunctions::SEND)
+            {
+              systemConfig.itho_control_interface = 1;
+              saveSystemConfigflag = true;
+              I_LOG("RFI: RF CO2 join successful, control interface set to RF CO2");
+            }
+            // Delay the confirm to let the remaining accepts from the target pass
+            rf_message.once_ms(300, []()
+                               { sendBindConfirm = true; });
+          }
           if (cmd == IthoJoin || (cmd == IthoLow && remtype == RemoteTypes::RFTSPIDER)) // Itho low for the spider because join can be difficult to send
           {
             D_LOG("RFI: Join command received. Trying to join remote...");
             if (remotes.remoteLearnLeaveStatus())
             {
               int index = remotes.registerNewRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2), remtype);
-              bool bidirectional = remotes.getRemoteBidirectional(index);
-              // bool bidirectional = (remtype == RemoteTypes::RFTAUTON || remtype == RemoteTypes::RFTN || remtype == RemoteTypes::RFTCO2 || remtype == RemoteTypes::RFTRV || remtype == RemoteTypes::RFTSPIDER) ? ((remotes.getRemoteFunction(index) != RemoteFunctions::MONITOR) ? true : false) : false;
-              // remotes.updateRemoteBidirectional(index, bidirectional);
-              rf.updateRFDevice(index, *(lastID + 0), *(lastID + 1), *(lastID + 2), remotes.getRemoteType(index), bidirectional);
+
+              if (index == -1)
+              {
+                // Already registered — look up existing index for re-binding
+                index = remotes.remoteIndex(*(lastID + 0), *(lastID + 1), *(lastID + 2));
+                D_LOG("RFI: Remote already registered at index:%d, re-binding", index);
+              }
+
               if (index >= 0)
               {
-                // int rfresult = rf.getRemoteIndexByID(*(lastID + 0), *(lastID + 1), *(lastID + 2));
+                // Auto-detect bidirectional from remote type (unless monitor mode)
+                bool bidirectional = (remtype == RemoteTypes::RFTAUTON || remtype == RemoteTypes::RFTN ||
+                                      remtype == RemoteTypes::RFTCO2 || remtype == RemoteTypes::RFTRV ||
+                                      remtype == RemoteTypes::RFTSPIDER)
+                                         ? (remotes.getRemoteFunction(index) != RemoteFunctions::MONITOR)
+                                         : false;
+                remotes.updateRemoteBidirectional(index, bidirectional);
+                rfManager.radio.updateRFDevice(index, *(lastID + 0), *(lastID + 1), *(lastID + 2), remotes.getRemoteType(index), bidirectional);
+
                 if (bidirectional)
                 {
-                  // rf.updateSourceID(sys.getMac(3), sys.getMac(4), sys.getMac(5) - 1, index);
-                  // if (index >= 0)
-                  // {
                   joinReplyRemIndex = index;
-                  // D_LOG("RFI: sendJoinReply:true");
-
                   sendJoinReply = true;
-                  // }
+                }
+                else if (remotes.getRemoteFunction(index) == RemoteFunctions::MONITOR)
+                {
+                  D_LOG("RFI: Remote index:%d is monitor-only, not sending join reply", index);
                 }
 
                 saveRemotesflag = true;
               }
-              else
-              {
-                // error
-                // case -1: // failed! - remote already registered
-                //   break;
-                // case -2: // failed! - max number of remotes reached"
-              }
+              // index == -2: max number of remotes reached
             }
             if (virtualRemotes.remoteLearnLeaveStatus())
             {
@@ -584,7 +709,7 @@ void TaskCC1101(void *pvParameters)
               }
               if (cmd == IthoLeave && !remotes.remoteLearnLeaveStatus())
               {
-                ithoQueue.clear_queue();
+                ithoQueue.clearQueue();
               }
               if (cmd == Itho31D9)
               {
@@ -617,7 +742,7 @@ void TaskCC1101(void *pvParameters)
           //("--- RF CMD reveiced but of unknown type ---");
         }
 
-        const ithoRFDevices &rfDevices = rf.getRFdevices();
+        const ithoRFDevices &rfDevices = rfManager.radio.getRFdevices();
         for (auto &item : rfDevices.device)
         {
           if (item.destinationID[0] == 0 && item.destinationID[1] == 0 && item.destinationID[2] == 0)

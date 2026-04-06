@@ -15,7 +15,7 @@
 #include "sys_log.h"
 #include "notifyClients.h"
 #include "tasks/task_configandlog.h"
-#include "i2c_sniffer.h"
+#include "ithodevice/i2c_sniffer.h"
 
 // globals
 extern bool TaskInitReady;

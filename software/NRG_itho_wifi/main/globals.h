@@ -2,6 +2,7 @@
 
 #include "version.h"
 #include "sdkconfig.h"
+#include "constants.h"
 
 #define ACTIVE_FS LittleFS
 
@@ -32,22 +33,8 @@
 #include "cc1101/IthoPacket.h" // Largly based on and thanks to https://github.com/supersjimmie/IthoEcoFanRFT
 #include "config/IthoRemote.h"
 
-extern bool i2c_sniffer_capable;
-extern uint8_t hardware_rev_det;
-
-extern gpio_num_t wifi_led_pin;
-extern gpio_num_t status_pin;
-extern gpio_num_t boot_state_pin;
-extern gpio_num_t itho_irq_pin;
-extern gpio_num_t fail_save_pin;
-// extern gpio_num_t itho_status_pin;
-
-extern const char *cve2;
-extern const char *non_cve1;
-extern const char *hw_revision;
-
-extern WiFiClientSecure client;
-extern WiFiClient defaultclient;
-
-extern IthoCC1101 rf;
-extern IthoPacket packet;
+// Manager classes (Phase 1, 2 & 3 refactoring - all shims removed)
+#include "managers/HardwareManager.h"
+#include "managers/I2CManager.h"
+#include "managers/NetworkManager.h"
+#include "managers/RFManager.h"

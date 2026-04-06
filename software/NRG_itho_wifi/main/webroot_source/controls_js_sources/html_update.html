@@ -61,33 +61,35 @@
   <br><br>
 </form>
 <script>
-  $('#firmware_ver').text(fw_version);
-  $('#hardware_rev').text(hw_revision);
-  $('#other_firmware').append('<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/unified_hw2_noncve">link</a>');
-  
+  $id('firmware_ver').textContent = fw_version;
+  $id('hardware_rev').textContent = hw_revision;
+  $id('other_firmware').insertAdjacentHTML('beforeend', '<a target="_blank" href="https://github.com/arjenhiemstra/ithowifi/tree/master/compiled_firmware_files/unified_hw2_noncve">link</a>');
+
   function process(key, value) {
     if (key == hw_revision) {
-      let latest_fw = value.latest_fw;
-      let download_link = value.link;
+      var latest_fw = value.latest_fw;
+      var download_link = value.link;
       if (latest_fw == fw_version) {
-        $('#latest_fw').text(' firmware is up-to-date');
+        $id('latest_fw').textContent = ' firmware is up-to-date';
       }
       else {
-        $('#latest_fw').text(latest_fw);
-        $('#latest_fw_button, #release_notes').removeClass('hidden');
-        $('#latest_fw_button').attr("href", download_link);
-        $('#release_notes').attr("href", "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_fw);
+        $id('latest_fw').textContent = latest_fw;
+        $id('latest_fw_button').classList.remove('hidden');
+        $id('release_notes').classList.remove('hidden');
+        $id('latest_fw_button').href = download_link;
+        $id('release_notes').href = "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_fw;
       }
-      let latest_beta_fw = value.latest_beta_fw;
-      let download_beta_link = value.link_beta;
+      var latest_beta_fw = value.latest_beta_fw;
+      var download_beta_link = value.link_beta;
       if (latest_beta_fw == fw_version) {
-        $('#latest_beta_fw').text(' firmware is up-to-date');
+        $id('latest_beta_fw').textContent = ' firmware is up-to-date';
       }
       else {
-        $('#latest_beta_fw').text(latest_beta_fw);
-        $('#latest_beta_fw_button, #release_beta_notes').removeClass('hidden');
-        $('#latest_beta_fw_button').attr("href", download_beta_link);
-        $('#release_beta_notes').attr("href", "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_beta_fw);
+        $id('latest_beta_fw').textContent = latest_beta_fw;
+        $id('latest_beta_fw_button').classList.remove('hidden');
+        $id('release_beta_notes').classList.remove('hidden');
+        $id('latest_beta_fw_button').href = download_beta_link;
+        $id('release_beta_notes').href = "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + latest_beta_fw;
       }
     }
   }
@@ -101,24 +103,28 @@
     }
   }
 
-  $.ajax({
-    type: 'GET',
-    url: 'https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json',
-    dataType: 'json',
-    timeout: 3000,
-    success: function (data) {
-      traverse(data, process);
-    },
-    error: function (xhr, type) {
-      if (on_ap) {
-        $('#latest_fw, #latest_beta_fw').text(' firmware check not possible on Access Point mode');
-      }
-      else {
-        $('#latest_fw, #latest_beta_fw').text(' firmware check failed, no internet connection?');
-      }
-
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', 'https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json', true);
+  xhr.timeout = 3000;
+  xhr.onload = function () {
+    if (xhr.status === 200) {
+      try {
+        var data = JSON.parse(xhr.responseText);
+        traverse(data, process);
+      } catch (e) {}
     }
-  })
+  };
+  xhr.onerror = xhr.ontimeout = function () {
+    if (on_ap) {
+      $id('latest_fw').textContent = ' firmware check not possible on Access Point mode';
+      $id('latest_beta_fw').textContent = ' firmware check not possible on Access Point mode';
+    }
+    else {
+      $id('latest_fw').textContent = ' firmware check failed, no internet connection?';
+      $id('latest_beta_fw').textContent = ' firmware check failed, no internet connection?';
+    }
+  };
+  xhr.send();
 
   function toggleBetaFW() {
     var x = document.getElementById('beta_fw');

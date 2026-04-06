@@ -1,25 +1,22 @@
 #include "websocket.h"
+#include "managers/SecureWebCommLite.h"
 
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-#else
 static std::unordered_map<uint32_t, std::string> g_wsBuffers;
+static SemaphoreHandle_t g_wsBuffersMutex = xSemaphoreCreateMutex();
+// rfSelectedSourceForParsing is defined in IthoStatus.cpp
 AsyncWebServer wsserver(8000);
 WebSerial *webSerial = nullptr;
-#endif
 
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-static void wsEvent(struct mg_connection *c, int ev, void *ev_data);
-#else
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
-#endif
 
 void websocketInit()
 {
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-  mg_log_set(0);
-  mg_mgr_init(&mgr);                                   // Initialise event manager
-  mg_http_listen(&mgr, s_listen_on_ws, wsEvent, &mgr); // Create WS listener
-#else
+  // Initialize lightweight secure communication
+  if (!secureWebCommLite.init())
+  {
+    W_LOG("WEB: Secure communication init failed");
+  }
+
   // attach AsyncWebSocket
   ws.onEvent(onWsEvent);
   wsserver.addHandler(&ws);
@@ -30,15 +27,13 @@ void websocketInit()
   {
     webSerial = new WebSerial();
     webSerial->onMessage([](const std::string &msg)
-                        { Serial.println(msg.c_str()); });
+                         { Serial.println(msg.c_str()); });
     if (systemConfig.syssec_web)
     {
       webSerial->setAuthentication(systemConfig.sys_username, systemConfig.sys_password);
     }
     webSerial->begin(&wsserver);
   }
-
-#endif
 }
 
 void jsonWsSend(const char *rootName)
@@ -49,6 +44,9 @@ void jsonWsSend(const char *rootName)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
     wifiConfig.get(nested);
+    // Mask passwords before sending to web UI
+    nested["passwd"] = strlen(wifiConfig.passwd) > 0 ? "********" : "";
+    nested["appasswd"] = strlen(wifiConfig.appasswd) > 0 ? "********" : "";
     if (strcmp(wifiConfig.dhcp, "on") == 0)
     {
       nested["ip"] = WiFi.localIP().toString();
@@ -87,7 +85,7 @@ void jsonWsSend(const char *rootName)
       snprintf(apremain, sizeof(apremain), "%ld sec.", time);
     }
 
-    static char apssid[32]{};
+    char apssid[32]{};
 
     snprintf(apssid, sizeof(apssid), "%s%02x%02x", espName, sys.getMac(4), sys.getMac(5));
 
@@ -104,12 +102,15 @@ void jsonWsSend(const char *rootName)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
     systemConfig.get(nested);
+    // Mask passwords before sending to web UI
+    nested["sys_password"] = strlen(systemConfig.sys_password) > 0 ? "********" : "";
+    nested["mqtt_password"] = strlen(systemConfig.mqtt_password) > 0 ? "********" : "";
   }
   else if (strcmp(rootName, "logsettings") == 0)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
     logConfig.get(nested);
-    if (prevlog_available())
+    if (prevlogAvailable())
     {
       nested["prevlog"] = "/prevlog";
     }
@@ -135,8 +136,11 @@ void jsonWsSend(const char *rootName)
     uint8_t count = getIthoStatusJSON(nested);
     root["count"] = count;
     root["target"] = "hadisc";
-    root["itho_status_ready"] = itho_status_ready();
+    root["itho_status_ready"] = ithoStatusReady();
     root["iis"] = itho_init_status;
+    // Include RF and virtual remote device info for HA discovery
+    getRFDevicesForHADiscJSON(root.as<JsonObject>());
+    getVirtualRemotesForHADiscJSON(root.as<JsonObject>());
   }
   else if (strcmp(rootName, "hadiscsettings") == 0)
   {
@@ -180,6 +184,16 @@ void jsonWsSend(const char *rootName)
     JsonObject obj = root.to<JsonObject>(); // Fill the object
     virtualRemotes.get(obj, rootName);
   }
+  else if (strcmp(rootName, "rfstatusinfo") == 0)
+  {
+    JsonObject nested = root[rootName].to<JsonObject>();
+    getRFStatusJSON(nested, rfSelectedSourceForParsing);
+  }
+  else if (strcmp(rootName, "rfstatusconfig") == 0)
+  {
+    JsonObject nested = root[rootName].to<JsonObject>();
+    getRFStatusConfigJSON(nested, rfSelectedSourceForParsing);
+  }
   else if (strcmp(rootName, "chkpart") == 0)
   {
     root["chkpart"] = chk_partition_res ? "partition scheme supports firmware versions from 2.4.4-beta7 and upwards" : "partion scheme supports firmware versions 2.4.4-beta6 and older";
@@ -190,6 +204,17 @@ void jsonWsSend(const char *rootName)
 void handle_ws_message(JsonObject root)
 {
   // D_LOG("%s", msg.c_str());
+
+  // SECURITY LAYER 2: Handle session key request
+  if (root["command"].is<const char *>())
+  {
+    const char *cmd = root["command"];
+    if (strcmp(cmd, "get_session_key") == 0)
+    {
+      secureWebCommLite.send_session_key_response();
+      return;
+    }
+  }
 
   if (root["wifiscan"].is<bool>() && root["wifiscan"].as<bool>())
   {
@@ -218,16 +243,98 @@ void handle_ws_message(JsonObject root)
   // ---------- WiFi/system/log/hadisc config ----------
   if (root["wifisettings"].is<JsonObject>())
   {
-    if (wifiConfig.set(root["wifisettings"].as<JsonObject>()))
+    JsonObject wifiObj = root["wifisettings"].as<JsonObject>();
+    // Decrypt inline secure credentials before set() processes the fields
+    if (wifiObj["secure_credentials"].is<JsonObject>())
+    {
+      JsonObject creds = wifiObj["secure_credentials"].as<JsonObject>();
+      char decrypted[65] = {};
+      if (creds["passwd"].is<JsonObject>())
+      {
+        const char *ct = creds["passwd"]["ct"] | "";
+        const char *nonce = creds["passwd"]["nonce"] | "";
+        if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
+        {
+          wifiObj["passwd"] = decrypted;
+        }
+      }
+      if (creds["appasswd"].is<JsonObject>())
+      {
+        const char *ct = creds["appasswd"]["ct"] | "";
+        const char *nonce = creds["appasswd"]["nonce"] | "";
+        if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
+        {
+          wifiObj["appasswd"] = decrypted;
+        }
+      }
+      mbedtls_platform_zeroize(decrypted, sizeof(decrypted));
+      wifiObj.remove("secure_credentials");
+    }
+    if (wifiConfig.set(wifiObj))
     {
       saveWifiConfigflag = true;
     }
   }
   if (root["systemsettings"].is<JsonObject>())
   {
-    if (systemConfig.set(root["systemsettings"].as<JsonObject>()))
+    JsonObject sysObj = root["systemsettings"].as<JsonObject>();
+    // Decrypt inline secure credentials before set() processes the fields
+    if (sysObj["secure_credentials"].is<JsonObject>())
+    {
+      JsonObject creds = sysObj["secure_credentials"].as<JsonObject>();
+      char decrypted[65] = {};
+      if (creds["sys_password"].is<JsonObject>())
+      {
+        const char *ct = creds["sys_password"]["ct"] | "";
+        const char *nonce = creds["sys_password"]["nonce"] | "";
+        if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
+        {
+          sysObj["sys_password"] = decrypted;
+        }
+      }
+      if (creds["mqtt_password"].is<JsonObject>())
+      {
+        const char *ct = creds["mqtt_password"]["ct"] | "";
+        const char *nonce = creds["mqtt_password"]["nonce"] | "";
+        if (secureWebCommLite.decryptField(ct, nonce, decrypted, sizeof(decrypted)))
+        {
+          sysObj["mqtt_password"] = decrypted;
+        }
+      }
+      mbedtls_platform_zeroize(decrypted, sizeof(decrypted));
+      sysObj.remove("secure_credentials");
+    }
+    if (systemConfig.set(sysObj))
     {
       saveSystemConfigflag = true;
+      remotes.setMaxRemotes(systemConfig.itho_numrfrem);
+      virtualRemotes.setMaxRemotes(systemConfig.itho_numvrem);
+
+      // Apply itho_pwm2i2c: send I2C init command on CVE devices when enabled
+      if (systemConfig.itho_pwm2i2c == 1 &&
+          (hardwareManager.hardware_rev_det == 0x3F || hardwareManager.hardware_rev_det == 0x03))
+      {
+        sendI2CPWMinit();
+      }
+
+      // Apply i2c_safe_guard and i2c_sniffer: update runtime state
+      if (hardwareManager.i2c_sniffer_capable)
+      {
+        auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
+        sg->i2c_safe_guard_enabled = (systemConfig.i2c_safe_guard > 0 &&
+                                       currentIthoDeviceID() == 0x1B &&
+                                       systemConfig.syssht30 == 0 &&
+                                       currentItho_fwversion() >= 25);
+        sg->sniffer_enabled = (systemConfig.i2c_sniffer == 1);
+        if (sg->i2c_safe_guard_enabled || sg->sniffer_enabled)
+          i2cSnifferEnable();
+        else if (!sg->sniffer_web_enabled)
+          i2cSnifferDisable();
+      }
+
+      // Apply fw_check: trigger firmware update check soon when enabled
+      if (systemConfig.fw_check)
+        getFWupdateInfo = millis() - 24UL * 60 * 60 * 1000 - 1;
     }
   }
   if (root["logsettings"].is<JsonObject>())
@@ -256,7 +363,7 @@ void handle_ws_message(JsonObject root)
     const char *btn = root["button"].as<const char *>();
     if (strcmp(btn, "restorepart") == 0)
     {
-      repartition_device("legacy");
+      repartitionDevice("legacy");
     }
     else if (strcmp(btn, "checkpart") == 0)
     {
@@ -300,8 +407,8 @@ void handle_ws_message(JsonObject root)
       if (root["index"].is<uint8_t>())
       {
         uint8_t idx = root["index"].as<uint8_t>();
-        i2c_queue_add_cmd([idx]()
-                          { getSetting(idx, false, true, false); });
+        i2cQueueAddCmd([idx]()
+                       { getSetting(idx, false, true, false); });
       }
       break;
     }
@@ -415,6 +522,38 @@ void handle_ws_message(JsonObject root)
     jsonWsSend("ithostatusinfo");
     sysStatReq = true;
   }
+  if (root["rfstatus"].is<bool>() && root["rfstatus"].as<bool>())
+  {
+    rfSelectedSourceForParsing = root["source"].is<int>() ? root["source"].as<int>() : -1;
+    jsonWsSend("rfstatusinfo");
+  }
+  if (root["rfstatusconfig"].is<bool>() && root["rfstatusconfig"].as<bool>())
+  {
+    rfSelectedSourceForParsing = root["source"].is<int>() ? root["source"].as<int>() : -1;
+    jsonWsSend("rfstatusconfig");
+  }
+  if (root["rftrack"].is<JsonObject>())
+  {
+    JsonObject trackObj = root["rftrack"].as<JsonObject>();
+    int idx = trackObj["index"].is<int>() ? trackObj["index"].as<int>() : -1;
+    if (idx >= 0 && idx < MAX_RF_STATUS_SOURCES && rfStatusSources[idx].active)
+    {
+      if (trackObj["track"].is<bool>())
+      {
+        bool track = trackObj["track"].as<bool>();
+        rfStatusSources[idx].tracked = track;
+        if (!track)
+        {
+          rfStatusSources[idx].measurements31DA.clear();
+          rfStatusSources[idx].measurements31D9.clear();
+        }
+      }
+      if (trackObj["name"].is<const char *>())
+        strlcpy(rfStatusSources[idx].name, trackObj["name"].as<const char *>(), sizeof(rfStatusSources[idx].name));
+      saveRFTrackedConfigflag = true;
+      jsonWsSend("rfstatusconfig");
+    }
+  }
   if (root["hadiscinfo"].is<bool>() && root["hadiscinfo"].as<bool>())
   {
     jsonWsSend("hadiscinfo");
@@ -426,6 +565,22 @@ void handle_ws_message(JsonObject root)
     sysStatReq = true;
   }
 
+  // ---------- Wizard state persistence ----------
+  if (root["wizardsave"].is<int>())
+  {
+    int step = root["wizardsave"].as<int>();
+    File f = ACTIVE_FS.open("/wizard_state", "w");
+    if (f)
+    {
+      f.print(step);
+      f.close();
+    }
+  }
+  if (root["wizardclear"].is<bool>() && root["wizardclear"].as<bool>())
+  {
+    ACTIVE_FS.remove("/wizard_state");
+  }
+
   // ---------- Itho get/refresh/update settings ----------
   if (root["ithogetsetting"].is<bool>() && root["ithogetsetting"].as<bool>())
   {
@@ -433,14 +588,14 @@ void handle_ws_message(JsonObject root)
     uint8_t idx = root["index"].as<uint8_t>();
     bool upd = root["update"].as<bool>();
 
-    i2c_queue_add_cmd([idx, upd]()
-                      { getSetting(idx, upd, false, true); });
+    i2cQueueAddCmd([idx, upd]()
+                   { getSetting(idx, upd, false, true); });
   }
   if (root["ithosetrefresh"].is<uint8_t>())
   {
     uint8_t idx = root["ithosetrefresh"].as<uint8_t>();
-    i2c_queue_add_cmd([idx]()
-                      { getSetting(idx, true, false, false); });
+    i2cQueueAddCmd([idx]()
+                   { getSetting(idx, true, false, false); });
   }
   if (root["ithosetupdate"].is<uint8_t>() && root["value"].is<float>())
   {
@@ -485,14 +640,70 @@ void handle_ws_message(JsonObject root)
     ithoI2CCommand(root["vremote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
   }
   // "remote" => use ithoExecRFCommand
-  if (root["remote"].is<uint8_t>() && root["command"].is<const char *>())
+  else if (root["remote"].is<uint8_t>() && root["command"].is<const char *>())
   {
     ithoExecRFCommand(root["remote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
   }
   // Single top-level "command"
-  if (root["command"].is<const char *>())
+  else if (root["command"].is<const char *>())
   {
     ithoExecCommand(root["command"].as<const char *>(), WEB);
+    sysStatReq = true;
+  }
+  // RF CO2 value command
+  if (!root["rfco2"].isNull())
+  {
+    uint8_t idx = 0;
+    if (root["rfremoteindex"].is<uint8_t>())
+      idx = root["rfremoteindex"].as<uint8_t>();
+    ithoSendRFCO2(idx, root["rfco2"].as<uint16_t>(), WEB);
+  }
+  // RF demand command
+  if (!root["rfdemand"].isNull())
+  {
+    uint8_t idx = 0;
+    if (root["rfremoteindex"].is<uint8_t>())
+      idx = root["rfremoteindex"].as<uint8_t>();
+    uint8_t zone = 0;
+    if (root["rfzone"].is<uint8_t>())
+      zone = root["rfzone"].as<uint8_t>();
+    ithoSendRFDemand(idx, root["rfdemand"].as<uint8_t>(), zone, WEB);
+  }
+  // Percentage / fandemand command (unified fan control)
+  if (!root["percentage"].isNull() || !root["fandemand"].isNull())
+  {
+    int demand = 0;
+    if (!root["percentage"].isNull())
+    {
+      int pct = root["percentage"].as<int>();
+      demand = (pct < 0) ? 0 : (pct > 100) ? 200 : pct * 2;
+    }
+    else
+    {
+      demand = root["fandemand"].as<int>();
+      if (demand < 0) demand = 0;
+      if (demand > 200) demand = 200;
+    }
+
+    if (systemConfig.itho_control_interface == 1)
+    {
+      for (int ri = 0; ri < remotes.getMaxRemotes(); ri++)
+      {
+        if (remotes.isEmptySlot(ri)) continue;
+        if (remotes.getRemoteFunction(ri) == RemoteFunctions::SEND &&
+            remotes.getRemoteType(ri) == RemoteTypes::RFTCO2)
+        {
+          ithoExecRFCommand(ri, "auto", WEB);
+          delay(200);
+          ithoSendRFDemand(ri, (uint8_t)demand, 0, WEB);
+          break;
+        }
+      }
+    }
+    else if (systemConfig.itho_pwm2i2c == 1)
+    {
+      ithoSetSpeed((uint16_t)((demand * 255) / 200), WEB);
+    }
   }
   // Itho speed command
   if (root["itho"].is<uint16_t>())
@@ -542,8 +753,10 @@ void handle_ws_message(JsonObject root)
     auto rtype = (RemoteTypes)(root["remtype"].is<uint16_t>() ? root["remtype"].as<uint16_t>() : 0);
     remotes.updateRemoteType(idx, rtype);
 
-    // bidirectional
-    bool bidir = root["bidirectional"].is<bool>() ? root["bidirectional"].as<bool>() : false;
+    // bidirectional - derived from remote type
+    bool bidir = (rtype == RemoteTypes::RFTAUTON || rtype == RemoteTypes::RFTN ||
+                  rtype == RemoteTypes::RFTCO2 || rtype == RemoteTypes::RFTRV ||
+                  rtype == RemoteTypes::RFTSPIDER);
     remotes.updateRemoteBidirectional(idx, bidir);
 
     // id array
@@ -556,8 +769,18 @@ void handle_ws_message(JsonObject root)
         uint8_t id1 = arr[1].as<uint8_t>();
         uint8_t id2 = arr[2].as<uint8_t>();
         remotes.updateRemoteID(idx, id0, id1, id2);
-        rf.updateRFDevice(idx, id0, id1, id2, remotes.getRemoteType(idx), bidir);
+        rfManager.radio.updateRFDevice(idx, id0, id1, id2, remotes.getRemoteType(idx), bidir);
+        // For Send remotes, the ID is the sourceID (what we transmit as)
+        if (remfunc == RemoteFunctions::SEND)
+        {
+          rfManager.radio.updateSourceID(id0, id1, id2, idx);
+        }
       }
+    }
+    // TX power
+    if (!root["tx_power"].isNull())
+    {
+      remotes.updateRemoteTxPower(idx, root["tx_power"].as<uint8_t>());
     }
     saveRemotesflag = true;
   }
@@ -618,9 +841,9 @@ void handle_ws_message(JsonObject root)
         systemConfig.module_rf_id[1] = id1;
         systemConfig.module_rf_id[2] = id2;
       }
-      rf.setDefaultID(systemConfig.module_rf_id[0],
-                      systemConfig.module_rf_id[1],
-                      systemConfig.module_rf_id[2]);
+      rfManager.radio.setDefaultID(systemConfig.module_rf_id[0],
+                                   systemConfig.module_rf_id[1],
+                                   systemConfig.module_rf_id[2]);
       saveSystemConfigflag = true;
     }
   }
@@ -647,7 +870,7 @@ void handle_ws_message(JsonObject root)
   if (root["resethadconf"].is<bool>() && root["resethadconf"].as<bool>())
   {
     resetHADiscConfigflag = true;
-  }  
+  }
   if (root["format"].is<bool>() && root["format"].as<bool>())
   {
     formatFileSystem = true;
@@ -684,56 +907,22 @@ void handle_ws_message(JsonObject root)
   // I2C sniffer
   if (root["i2csniffer"].is<uint8_t>())
   {
+    auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
     uint8_t val = root["i2csniffer"].as<uint8_t>();
     if (val == 1)
     {
-      i2c_safe_guard.sniffer_enabled = true;
-      i2c_safe_guard.sniffer_web_enabled = true;
-      i2c_sniffer_enable();
+      sg->sniffer_enabled = true;
+      sg->sniffer_web_enabled = true;
+      i2cSnifferEnable();
     }
     else
     {
-      i2c_safe_guard.sniffer_enabled = false;
-      i2c_safe_guard.sniffer_web_enabled = false;
-      i2c_sniffer_disable();
+      sg->sniffer_enabled = false;
+      sg->sniffer_web_enabled = false;
+      i2cSnifferDisable();
     }
   }
 }
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-static void wsEvent(struct mg_connection *c, int ev, void *ev_data)
-{
-  if (ev == MG_EV_HTTP_MSG)
-  {
-    struct mg_http_message *hm = (struct mg_http_message *)ev_data;
-    if (mg_match(hm->uri, mg_str("/ws"), nullptr))
-    {
-      if (systemConfig.syssec_web && !webauth_ok)
-      {
-        return;
-      }
-      // Upgrade to websocket. From now on, a connection is a full-duplex
-      // Websocket connection, which will receive MG_EV_WS_MSG events.
-      mg_ws_upgrade(c, hm, NULL);
-    }
-  }
-  else if (ev == MG_EV_WS_MSG)
-  {
-    if (systemConfig.syssec_web && !webauth_ok)
-    {
-      return;
-    }
-    // Got websocket frame. Received data is wm->data.
-    struct mg_ws_message *wm = (struct mg_ws_message *)ev_data;
-    std::string msg;
-    msg.assign(wm->data.buf, wm->data.len);
-#error "handle_ws_message not implemented for Mongoose WS"
-    // handle_ws_message(std::move(msg)); --> handle_ws_message(JsonObject);
-
-    wm = nullptr;
-    // msg = std::string();
-  }
-}
-#else
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
   if (!client->id())
@@ -746,13 +935,15 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
   }
   else if (type == WS_EVT_DISCONNECT)
   {
-    g_wsBuffers[client->id()].clear();
-    // Serial.printf("ws[%s][%u] disconnect: %u\n", server->url(), client->id(), client->id());
+    xSemaphoreTake(g_wsBuffersMutex, portMAX_DELAY);
+    g_wsBuffers.erase(client->id());
+    xSemaphoreGive(g_wsBuffersMutex);
   }
   else if (type == WS_EVT_ERROR)
   {
-    g_wsBuffers[client->id()].clear();
-    // Serial.printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t *)arg), (char *)data);
+    xSemaphoreTake(g_wsBuffersMutex, portMAX_DELAY);
+    g_wsBuffers.erase(client->id());
+    xSemaphoreGive(g_wsBuffersMutex);
   }
   else if (type == WS_EVT_PONG)
   {
@@ -768,38 +959,46 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
     if (info->index == 0)
     {
       // Clear (or create) the buffer for this client
+      xSemaphoreTake(g_wsBuffersMutex, portMAX_DELAY);
       g_wsBuffers[client->id()].clear();
+      xSemaphoreGive(g_wsBuffersMutex);
     }
 
     // Append this frame’s data if opcode == WS_TEXT
     if (info->opcode == WS_TEXT)
     {
 
+      xSemaphoreTake(g_wsBuffersMutex, portMAX_DELAY);
       auto &msgBuffer = g_wsBuffers[client->id()];
       msgBuffer.append(reinterpret_cast<char *>(data), len);
+      xSemaphoreGive(g_wsBuffersMutex);
 
       size_t currentSize = info->index + len;
 
       // If this is the final frame, we parse the entire message
       if (currentSize >= info->len)
       {
-        JsonDocument wsDoc;
+        xSemaphoreTake(g_wsBuffersMutex, portMAX_DELAY);
+        std::string msgCopy = g_wsBuffers[client->id()];
+        g_wsBuffers[client->id()].clear();
+        xSemaphoreGive(g_wsBuffersMutex);
 
-        auto error = deserializeJson(wsDoc, msgBuffer);
+        JsonDocument wsDoc;
+        auto error = deserializeJson(wsDoc, msgCopy);
+        bool wasPing = (!error) ? false : (msgCopy == "ping");
+        msgCopy.clear(); // free memory immediately after parsing
+
         if (error)
         {
-          if (msgBuffer == "ping")
+          if (wasPing)
           {
             client->text("pong");
           }
           else
           {
             E_LOG("WEB: error - [WS] JSON parse error: %s", error.c_str());
-            Serial.println(msgBuffer.c_str());
           }
         }
-        // buffer no longer needed
-        g_wsBuffers[client->id()].clear();
 
         // if there was an error, we can now safely return (buffer is cleared)
         if (error)
@@ -819,9 +1018,6 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
         return;
       }
 
-      // at this point the message is either handled or can be discarded, clear the buffer before return of function
-      g_wsBuffers[client->id()].clear();
     }
   }
 }
-#endif

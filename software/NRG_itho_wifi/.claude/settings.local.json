@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(~/.platformio/penv/bin/pio run:*)",
+      "Bash(stat:*)",
+      "Bash(ls:*)",
+      "Bash(xargs:*)",
+      "Bash(size:*)",
+      "Bash(find:*)",
+      "Read(//Users/arjen/ownCloud/SoftwareDevelopment/ithowifi/software/NRG_itho_wifi/**)",
+      "Bash(perl -pi -e 's/\\\\brf\\\\./rfManager.radio./g':*)",
+      "Bash(~/.platformio/penv/bin/pio clean:*)",
+      "Bash(grep:*)",
+      "Bash(pio run:*)",
+      "Bash(~/.platformio/penv/bin/platformio run:*)",
+      "Bash(perl -pi -e 's/#include \"\"IthoSystem\\\\.h\"\"/#include \"\"ithodevice\\\\/IthoDevice.h\"\"/g':*)",
+      "Bash(perl -pi -e 's/#include \"\"i2c_esp32\\\\.h\"\"/#include \"\"ithodevice\\\\/i2c_esp32.h\"\"/g; s/#include \"\"i2c_logger\\\\.h\"\"/#include \"\"ithodevice\\\\/i2c_logger.h\"\"/g; s/#include \"\"i2c_sniffer\\\\.h\"\"/#include \"\"ithodevice\\\\/i2c_sniffer.h\"\"/g':*)",
+      "Bash(perl -pi -e:*)",
+      "Bash(pip3 install:*)",
+      "Bash(export PATH=$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH)",
+      "Bash(python3 -m platformio run:*)",
+      "Bash(git mv:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

@@ -31,7 +31,7 @@
 #include <cinttypes>
 
 #include <Arduino.h>
-#include "i2c_esp32.h"
+#include "ithodevice/i2c_esp32.h"
 
 // Forward declaration
 class SHTSensorDriver;

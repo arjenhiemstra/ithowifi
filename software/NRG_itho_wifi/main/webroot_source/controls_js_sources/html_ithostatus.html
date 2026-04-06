@@ -7,7 +7,7 @@
   generated
   automatically using this Itho model/firmware version information.</p>
 <p>A working I2C connection is needed for these
-  status labels to get populated and updated.</p>
+  status labels to get populated and updated. Status values are retrieved from Itho firmware and presented unchanged.</p>
 <span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span><br><br>
 <style>
   .pure-form-aligned .pure-control-group label {
@@ -20,11 +20,9 @@
   </fieldset>
 </form>
 <script>
-  $(document).ready(function () {
-    function repeat() {
-      getSettings('ithostatus');
-      ithostatus_to = setTimeout(repeat, 5000);
-    }
-    repeat();
-  });
+  function repeat() {
+    getSettings('ithostatus');
+    ithostatus_to = setTimeout(repeat, 5000);
+  }
+  repeat();
 </script>

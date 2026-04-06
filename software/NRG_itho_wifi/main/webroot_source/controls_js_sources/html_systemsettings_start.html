@@ -38,12 +38,6 @@
       <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
     </div>
     <legend><br>API settings:</legend>
-    <p>WebAPI version</p>
-    <div class="pure-control-group">
-      <label for="option-api_version" class="pure-radio">WebAPI version</label>
-      <input id="option-api_version-1" type="radio" name="option-api_version" value="1"> 1
-      <input id="option-api_version-2" type="radio" name="option-api_version" value="2"> 2
-    </div>
     <p>Have api keys on the WebAPI, MQTT API and Itho Status page normlized (all lowercase, no spaces and special
       characters).</p>
     <div class="pure-control-group">
@@ -56,6 +50,11 @@
       <label for="option-api_settings" class="pure-radio">Enable update settings API</label>
       <input id="option-api_settings-1" type="radio" name="option-api_settings" value="1"> on
       <input id="option-api_settings-0" type="radio" name="option-api_settings" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-api_reboot" class="pure-radio">Enable reboot via API</label>
+      <input id="option-api_reboot-1" type="radio" name="option-api_reboot" value="1"> on
+      <input id="option-api_reboot-0" type="radio" name="option-api_reboot" value="0"> off
     </div>
     <div class="pure-control-group">
       <label for="api_settings_activated">Activate settings indexes</label>
@@ -110,10 +109,8 @@
       <label for="itho_counter_updatefreq">Counter update frequency</label>
       <input id="itho_counter_updatefreq" type="number" min="0" max="65535" size="6">
     </div>
-    <legend><br>Virtual remote settings (reboot needed):</legend>
-    <p>The add-on can present itself as a virtual remote. A virtual remote emulates a physical remote through software.
-      A virtual remote must be joined to the Itho unit before it can be used.</p>
-    <p>A join command will only be accepted by the Itho unit within the first 2 minutes after a power cycle.</p>
+    <legend><br>Virtual remote settings:</legend>
+    <p>The add-on can present itself as one or more virtual remote(s). A virtual remote emulates a physical remote through software.</p>
     <div class="pure-control-group">
       <label for="itho_numvrem">Number of virtual remotes</label>
       <input id="itho_numvrem" type="number" min="1" max="12" size="6">
@@ -127,7 +124,6 @@
     <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
     <div class="pure-control-group">
       <label for="option-vremotejoin" class="pure-radio">Send join command</label>
-      <input id="option-vremotejoin-2" type="radio" name="option-itho_sendjoin" value="2"> every power on
       <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1"> next power on
       <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
     </div>
@@ -197,7 +193,5 @@
   </fieldset>
 </form>
 <script>
-  $(document).ready(function () {
-    getSettings('syssetup');
-  });
+  getSettings('syssetup');
 </script>

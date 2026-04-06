@@ -17,11 +17,8 @@
 #include "config/WifiConfig.h"
 #include "config/HADiscConfig.h"
 
-#if defined MG_ENABLE_PACKED_FS && MG_ENABLE_PACKED_FS == 1
-#else
 #include <MycilaWebSerial.h>
 extern WebSerial* webSerial;
-#endif
 
 void websocketInit();
 void jsonWsSend(const char *rootName);

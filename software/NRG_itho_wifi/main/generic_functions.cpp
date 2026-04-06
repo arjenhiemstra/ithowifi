@@ -1,4 +1,6 @@
 #include "generic_functions.h"
+#include "config/HADiscConfig.h"
+#include "tasks/task_cc1101.h"
 
 #define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 2000 // firmware json response should be smaller than this
 
@@ -39,6 +41,8 @@ uint8_t getIthoStatusJSON(JsonObject root)
     root["ppmw"] = static_cast<int>(ppmw + 0.5);
     index++;
   }
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return index;
   if (!ithoInternalMeasurements.empty() && systemConfig.itho_31d9 == 1)
   {
     for (const auto &internalMeasurement : ithoInternalMeasurements)
@@ -119,13 +123,149 @@ uint8_t getIthoStatusJSON(JsonObject root)
       index++;
     }
   }
+  xSemaphoreGive(ithoStatusMutex);
   return index;
+}
+
+uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
+{
+  uint8_t count = 0;
+
+  JsonArray sources = root["sources"].to<JsonArray>();
+  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+  {
+    if (!rfStatusSources[i].active)
+      continue;
+    if (trackedOnly && !rfStatusSources[i].tracked)
+      continue;
+    JsonObject src = sources.add<JsonObject>();
+    char idStr[10];
+    snprintf(idStr, sizeof(idStr), "%02X:%02X:%02X",
+             rfStatusSources[i].id[0], rfStatusSources[i].id[1], rfStatusSources[i].id[2]);
+    src["id"] = idStr;
+    src["index"] = i;
+    src["lastSeen"] = static_cast<int32_t>(rfStatusSources[i].lastSeen);
+
+    if (trackedOnly)
+    {
+      src["tracked"] = rfStatusSources[i].tracked;
+      src["name"] = rfStatusSources[i].name;
+      JsonObject data = src["data"].to<JsonObject>();
+      for (const auto &m : rfStatusSources[i].measurements31D9)
+      {
+        if (m.type == ithoDeviceMeasurements::is_int)
+          data[m.name] = m.value.intval;
+        else if (m.type == ithoDeviceMeasurements::is_float)
+          data[m.name] = round(m.value.floatval, 2);
+        else if (m.type == ithoDeviceMeasurements::is_string)
+          data[m.name] = m.value.stringval;
+        count++;
+      }
+      for (const auto &m : rfStatusSources[i].measurements31DA)
+      {
+        if (m.type == ithoDeviceMeasurements::is_int)
+          data[m.name] = m.value.intval;
+        else if (m.type == ithoDeviceMeasurements::is_float)
+          data[m.name] = round(m.value.floatval, 2);
+        else if (m.type == ithoDeviceMeasurements::is_string)
+          data[m.name] = m.value.stringval;
+        count++;
+      }
+    }
+  }
+
+  if (!trackedOnly)
+  {
+    int idx = sourceIndex;
+    if (idx == -1)
+    {
+      for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+      {
+        if (rfStatusSources[i].active)
+        {
+          idx = i;
+          break;
+        }
+      }
+    }
+
+    if (idx >= 0 && idx < MAX_RF_STATUS_SOURCES && rfStatusSources[idx].active)
+    {
+      root["selectedSource"] = idx;
+      JsonObject data = root["data"].to<JsonObject>();
+
+      for (const auto &m : rfStatusSources[idx].measurements31D9)
+      {
+        if (m.type == ithoDeviceMeasurements::is_int)
+          data[m.name] = m.value.intval;
+        else if (m.type == ithoDeviceMeasurements::is_float)
+          data[m.name] = round(m.value.floatval, 2);
+        else if (m.type == ithoDeviceMeasurements::is_string)
+          data[m.name] = m.value.stringval;
+        count++;
+      }
+
+      for (const auto &m : rfStatusSources[idx].measurements31DA)
+      {
+        if (m.type == ithoDeviceMeasurements::is_int)
+          data[m.name] = m.value.intval;
+        else if (m.type == ithoDeviceMeasurements::is_float)
+          data[m.name] = round(m.value.floatval, 2);
+        else if (m.type == ithoDeviceMeasurements::is_string)
+          data[m.name] = m.value.stringval;
+        count++;
+      }
+    }
+  }
+
+  return count;
+}
+
+void getRFStatusConfigJSON(JsonObject root, int sourceIndex)
+{
+  JsonArray sources = root["sources"].to<JsonArray>();
+  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+  {
+    if (!rfStatusSources[i].active)
+      continue;
+    JsonObject src = sources.add<JsonObject>();
+    char idStr[10];
+    snprintf(idStr, sizeof(idStr), "%02X:%02X:%02X",
+             rfStatusSources[i].id[0], rfStatusSources[i].id[1], rfStatusSources[i].id[2]);
+    src["id"] = idStr;
+    src["index"] = i;
+    src["tracked"] = rfStatusSources[i].tracked;
+    src["name"] = rfStatusSources[i].name;
+  }
+
+  int trackedCount = 0;
+  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+    if (rfStatusSources[i].active && rfStatusSources[i].tracked)
+      trackedCount++;
+  root["trackedCount"] = trackedCount;
+  root["maxTracked"] = MAX_RF_STATUS_SOURCES;
+
+  int idx = sourceIndex;
+  if (idx == -1)
+  {
+    for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+    {
+      if (rfStatusSources[i].active)
+      {
+        idx = i;
+        break;
+      }
+    }
+  }
+  if (idx >= 0 && idx < MAX_RF_STATUS_SOURCES && rfStatusSources[idx].active)
+    root["selectedSource"] = idx;
 }
 
 void getDeviceInfoJSON(JsonObject root)
 {
   root["itho_devtype"] = getIthoType();
   root["itho_mfr"] = currentIthoDeviceGroup();
+  root["itho_deviceid"] = currentIthoDeviceID();
   root["itho_hwversion"] = currentItho_hwversion();
   root["itho_fwversion"] = currentItho_fwversion();
   root["add-on_hwid"] = WiFi.macAddress();
@@ -138,17 +278,20 @@ void getDeviceInfoJSON(JsonObject root)
   }
 }
 
-bool itho_status_ready()
+bool ithoStatusReady()
 {
   auto bp = [&](bool a, bool b)
   { return (a ? 1 : 0) | ((b ? 1 : 0) << 1); };
 
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(50)) != pdTRUE)
+    return false;
   // Build itho_init_status as 2 bits per feature:
   itho_init_status =
       bp(systemConfig.itho_31d9 == 1, !ithoInternalMeasurements.empty())  // bits 0..1
       | (bp(systemConfig.itho_31da == 1, !ithoMeasurements.empty()) << 2) // bits 2..3
       | (bp(systemConfig.itho_2401 == 1, !ithoStatus.empty()) << 4)       // bits 4..5
       | (bp(systemConfig.itho_4210 == 1, !ithoCounters.empty()) << 6);    // bits 6..7
+  xSemaphoreGive(ithoStatusMutex);
 
   // Check if any feature is “activated but not filled”
   for (int i = 0; i < 4; i++)
@@ -164,6 +307,43 @@ void getRemotesInfoJSON(JsonObject root)
 {
 
   remotes.getCapabilities(root);
+}
+
+void getRFDevicesForHADiscJSON(JsonObject root)
+{
+  // Get list of RF devices with their available sensors for HA discovery configuration
+  JsonArray devices = root["rfdevices"].to<JsonArray>();
+  D_LOG("HAD: getRFDevicesForHADiscJSON:%d", remotes.getRemoteCount());
+
+  for (int i = 0; i < remotes.getMaxRemotes(); i++)
+  {
+    if (remotes.isEmptySlot(i))
+      continue;
+    JsonObject device = devices.add<JsonObject>();
+    device["idx"] = i;
+    device["name"] = remotes.getRemoteNamebyIndex(i);
+    uint16_t remType = static_cast<uint16_t>(remotes.getRemoteType(i));
+    device["type"] = remType;
+    device["available"] = HADiscConfig::getAvailableSensorsForType(remType);
+    device["presets"] = HADiscConfig::getPresetsForType(remType);
+  }
+}
+
+void getVirtualRemotesForHADiscJSON(JsonObject root)
+{
+  JsonArray devices = root["vrdevices"].to<JsonArray>();
+
+  for (int i = 0; i < virtualRemotes.getMaxRemotes(); i++)
+  {
+    if (virtualRemotes.isEmptySlot(i))
+      continue;
+    JsonObject device = devices.add<JsonObject>();
+    device["idx"] = i;
+    device["name"] = virtualRemotes.getRemoteNamebyIndex(i);
+    uint16_t remType = static_cast<uint16_t>(virtualRemotes.getRemoteType(i));
+    device["type"] = remType;
+    device["presets"] = HADiscConfig::getPresetsForType(remType);
+  }
 }
 
 void getIthoSettingsBackupJSON(JsonObject root)
@@ -278,67 +458,77 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   bool res = true;
 
   D_LOG("SYS: exec rf cmd:%s, idx: %d", command, remote_index);
+  bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
+  // Set per-remote TX power level
+  bool isSendRemote = (remotes.getRemoteFunction(remote_index) == RemoteFunctions::SEND);
+  rfManager.radio.setTxPowerLevel(remotes.getRemoteTxPower(remote_index));
+  if (bidirectional)
+    rfManager.radio.setSendTries(1);
   disableRF_ISR();
 
   if (strcmp(command, "away") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoAway);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoAway);
   }
   else if (strcmp(command, "low") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoLow);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoLow);
   }
   else if (strcmp(command, "medium") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoMedium);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoMedium);
   }
   else if (strcmp(command, "high") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoHigh);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoHigh);
   }
   else if (strcmp(command, "timer1") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoTimer1);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoTimer1);
   }
   else if (strcmp(command, "timer2") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoTimer2);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoTimer2);
   }
   else if (strcmp(command, "timer3") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoTimer3);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoTimer3);
   }
   else if (strcmp(command, "cook30") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoCook30);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoCook30);
   }
   else if (strcmp(command, "cook60") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoCook60);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoCook60);
   }
   else if (strcmp(command, "auto") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoAuto);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoAuto);
   }
   else if (strcmp(command, "autonight") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoAutoNight);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoAutoNight);
   }
   else if (strcmp(command, "join") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoJoin);
+    rfManager.radio.setBindInitiatorActive(true, remote_index);
+    startBindInitiatorTimeout();
+    rfManager.radio.setSendTries(1);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoJoin);
+    rfManager.radio.setSendTries(3);
   }
   else if (strcmp(command, "leave") == 0)
   {
-    rf.sendRFCommand(remote_index, IthoCommand::IthoLeave);
+    rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoLeave);
   }
   else if (strcmp(command, "motion_on") == 0)
   {
-    rf.send2E10(remote_index, IthoCommand::IthoPIRmotionOn);
+    rfManager.radio.send2E10(remote_index, IthoCommand::IthoPIRmotionOn);
   }
   else if (strcmp(command, "motion_off") == 0)
   {
-    rf.send2E10(remote_index, IthoCommand::IthoPIRmotionOff);
+    rfManager.radio.send2E10(remote_index, IthoCommand::IthoPIRmotionOff);
   }
   else
   {
@@ -350,7 +540,82 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   logLastCommand(buf, origin);
 
   enableRF_ISR();
+  rfManager.radio.setTxPowerLevel(0xC0); // restore default power
+  if (bidirectional)
+    rfManager.radio.setSendTries(3);
   return res;
+}
+
+bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
+{
+  if (remote_index >= remotes.getMaxRemotes())
+    return false;
+
+  if (remotes.getRemoteType(remote_index) != RemoteTypes::RFTCO2)
+  {
+    E_LOG("SYS: rfco2 failed - remote %d is not RFT CO2 type", remote_index);
+    return false;
+  }
+
+  D_LOG("SYS: send rfco2:%d, idx:%d", co2level, remote_index);
+
+  rfManager.radio.setTxPowerLevel(remotes.getRemoteTxPower(remote_index));
+  bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
+  if (bidirectional)
+    rfManager.radio.setSendTries(1);
+
+  disableRF_ISR();
+  rfManager.radio.send1298(remote_index, co2level);
+  enableRF_ISR();
+
+  rfManager.radio.setTxPowerLevel(0xC0);
+  if (bidirectional)
+    rfManager.radio.setSendTries(3);
+
+  char buf[32]{};
+  snprintf(buf, sizeof(buf), "rfco2:%d, idx:%d", co2level, remote_index);
+  logLastCommand(buf, origin);
+
+  return true;
+}
+
+bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOrigin origin)
+{
+  if (remote_index >= remotes.getMaxRemotes())
+    return false;
+
+  RemoteTypes rtype = remotes.getRemoteType(remote_index);
+  if (rtype != RemoteTypes::RFTCO2 && rtype != RemoteTypes::RFTRV)
+  {
+    E_LOG("SYS: rfdemand failed - remote %d is not RFT CO2 or RFT RV type", remote_index);
+    return false;
+  }
+
+  if (demand > 200)
+    demand = 200;
+
+  D_LOG("SYS: send rfdemand:%d, zone:%d, idx:%d", demand, zone, remote_index);
+
+  rfManager.radio.setTxPowerLevel(remotes.getRemoteTxPower(remote_index));
+  bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
+  if (bidirectional)
+    rfManager.radio.setSendTries(1);
+
+  disableRF_ISR();
+  rfManager.radio.send31E0(remote_index, zone, demand, 0x00);
+  enableRF_ISR();
+
+  ithoFanDemand = demand;
+
+  rfManager.radio.setTxPowerLevel(0xC0);
+  if (bidirectional)
+    rfManager.radio.setSendTries(3);
+
+  char buf[40]{};
+  snprintf(buf, sizeof(buf), "rfdemand:%d, zone:%d, idx:%d", demand, zone, remote_index);
+  logLastCommand(buf, origin);
+
+  return true;
 }
 
 bool ithoSetSpeed(const char *speed, cmdOrigin origin)
@@ -483,25 +748,25 @@ void updateItho()
 {
   if (systemConfig.itho_rf_support)
   {
-    IthoCMD.once_ms(150, add2queue);
+    IthoCMD.once_ms(150, addToQueue);
   }
   else
   {
-    add2queue();
+    addToQueue();
   }
 }
 
-void add2queue()
+void addToQueue()
 {
-  ithoQueue.add2queue(nextIthoVal, nextIthoTimer, systemConfig.nonQ_cmd_clearsQ);
+  ithoQueue.addToQueue(nextIthoVal, nextIthoTimer, systemConfig.nonQ_cmd_clearsQ);
 }
 
 void setRFdebugLevel(uint8_t level)
 {
-  rf.setAllowAll(true);
+  rfManager.radio.setAllowAll(true);
   if (level == 2)
   {
-    rf.setAllowAll(false);
+    rfManager.radio.setAllowAll(false);
   }
   I_LOG("SYS: RF debug level = %d", level);
 }
@@ -644,7 +909,7 @@ int compareVersions(const std::string &v1, const std::string &v2)
   return pre1.compare(pre2); // Compare pre-releases if both are not empty
 }
 
-void check_firmware_update()
+void checkFirmwareUpdate()
 {
   WiFiClientSecure *secclient = new WiFiClientSecure;
   if (secclient)
@@ -667,12 +932,12 @@ void check_firmware_update()
           DeserializationError error = deserializeJson(root, payload);
           if (!error)
           {
-            firmwareInfo.fw_update_available = compareVersions(root["hw_rev"][hw_revision]["latest_fw"] | "error", fw_version);
+            firmwareInfo.fw_update_available = compareVersions(root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", fw_version);
 
-            strncpy(firmwareInfo.latest_fw, root["hw_rev"][hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
-            Serial.printf("latest_fw:%s\n", root["hw_rev"][hw_revision]["latest_fw"] | "error");
-            strncpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
-            Serial.printf("latest_beta_fw:%s\n", root["hw_rev"][hw_revision]["latest_beta_fw"] | "error");
+            strlcpy(firmwareInfo.latest_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
+            Serial.printf("latest_fw:%s\n", root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error");
+            strlcpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
+            Serial.printf("latest_beta_fw:%s\n", root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error");
 
             D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);
             // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful

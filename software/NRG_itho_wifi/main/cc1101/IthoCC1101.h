@@ -57,8 +57,13 @@ struct ithoRFDevices
 // pa table settings
 const uint8_t ithoPaTableSend[8] = {0x6F, 0x26, 0x2E, 0x8C, 0x87, 0xCD, 0xC7, 0xC0};
 const uint8_t ithoPaTableReceive[8] = {0x6F, 0x26, 0x2E, 0x7F, 0x8A, 0x84, 0xCA, 0xC4};
+// Low power PA table for close-range communication
+// CC1101 868MHz PA values: 0x03=-30, 0x26=-15, 0x34=-6, 0x60=0, 0x84=+5, 0xC5=+7, 0xC0=+10 dBm
+const uint8_t ithoPaTableSendLow[8] = {0x6F, 0x26, 0x2E, 0x8C, 0x87, 0xCD, 0xC7, 0x03};
 
 class IthoPacket;
+
+typedef void (*RFStatusCallback_t)(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t srcId1, uint8_t srcId2);
 
 class IthoCC1101 : protected CC1101
 {
@@ -66,6 +71,8 @@ private:
   uint8_t chipVersion{};
 
   // receive
+  CC1101Packet inMessage[2];
+  volatile uint8_t inMessageIdx{0}; // ISR writes to inMessage[inMessageIdx], task decodes from inMessage[1 - inMessageIdx]
   IthoPacket inPacket;
 
   // send
@@ -77,11 +84,18 @@ private:
   uint8_t IthoPacketLen{};
   // settings
   uint8_t sendTries;  // number of times a command is send at one button press
+  bool lowPowerTx{false}; // use low TX power for close-range communication
+  uint8_t txPowerLevel{0xC0}; // per-remote TX power level (PA table byte 7)
   uint8_t cc_freq[3]; // FREQ0, FREQ1, FREQ2
 
   // Itho remotes
   bool bindAllowed;
   bool allowAll;
+  bool bindInitiatorActive{false};
+  uint8_t bindInitiatorRemIndex{0};
+
+  static RFStatusCallback_t rf31DACallback;
+  static RFStatusCallback_t rf31D9Callback;
   ithoRFDevices ithoRF;
 
   typedef struct
@@ -127,6 +141,8 @@ public:
   {
     sendTries = number;
   }
+  void setLowPowerMode(bool lowPower);
+  void setTxPowerLevel(uint8_t power);
   void setDefaultID(uint8_t byte0, uint8_t byte1, uint8_t byte2)
   {
     defaultID[0] = byte0;
@@ -171,8 +187,22 @@ public:
   {
     return ithoRF;
   }
+  void setBindInitiatorActive(bool active, uint8_t remIndex = 0)
+  {
+    bindInitiatorActive = active;
+    bindInitiatorRemIndex = remIndex;
+  }
+  bool isBindInitiatorActive() const
+  {
+    return bindInitiatorActive;
+  }
+  uint8_t getBindInitiatorRemIndex() const
+  {
+    return bindInitiatorRemIndex;
+  }
   // receive
   bool receivePacket(); // read RX fifo
+  void decodeBufferedPacket(); // decode raw packet buffered by receivePacket
   IthoPacket *checkForNewPacket();
   bool parseMessage(IthoPacket *packetPtr);
 
@@ -205,6 +235,12 @@ public:
   const uint8_t *getRemoteCmd(const RemoteTypes type, const IthoCommand command);
   void sendRFCommand(uint8_t remote_index, IthoCommand command);
   int8_t sendJoinReply(uint8_t remote_index);
+  void sendBindConfirm(uint8_t remote_index);
+  void send1060();
+  void send1298(uint8_t remote_index, uint16_t co2level);
+  void send12A0(uint8_t remote_index, uint8_t humidity, int16_t temperature, int16_t dewpoint);
+  void send31E0(uint8_t remote_index, uint8_t zone = 0, uint8_t demand = 0, uint8_t flags = 0);
+  void sendRQ31DA(uint8_t remote_index);
   void send10E0();
   void send2E10(uint8_t remote_index, IthoCommand command);
   void send31D9(uint8_t speedstatus = 0, uint8_t info = 0);
@@ -228,5 +264,8 @@ public:
   void handleZoneSetpoint(IthoPacket *packetPtr);
   void handleDeviceInfo(IthoPacket *packetPtr);
   const char *rem_cmd_to_name(IthoCommand code);
+
+  static void setRF31DACallback(RFStatusCallback_t cb) { rf31DACallback = cb; }
+  static void setRF31D9Callback(RFStatusCallback_t cb) { rf31D9Callback = cb; }
 
 }; // IthoCC1101

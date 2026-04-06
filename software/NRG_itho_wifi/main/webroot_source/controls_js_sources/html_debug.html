@@ -9,7 +9,7 @@
     <br>
     <span>File system: </span><span id='bfree'></span><span> bytes used / </span><span id='btotal'></span><span> bytes
         total</span><br>
-    <a href="#" class="pure-button" onclick="$('#main').empty();$('#main').append( html_edit );">Edit
+    <a href="#" class="pure-button" onclick="var m=$id('main');m.innerHTML='';m.insertAdjacentHTML('beforeend',html_edit);execScripts(m);">Edit
         filesystem</a><br><br>
     <p>Partition restore: </p>
     <p>Firmware versions prior to 2.4.4-beta7 used a different partition scheme. Older versions work with the new scheme
@@ -30,6 +30,22 @@
     <span>Config and Log task memory: </span><span id='cltaskmem'></span><span> bytes free</span><br>
     <span>SysControl task memory: </span><span id='syscontaskmem'></span><span> bytes free</span><br>
     <span>Loop task memory: </span><span id='looptaskmem'></span><span> bytes free</span><br><br>
+
+    <p>Setup wizard:</p>
+    <span>Status: </span><span id='wizard_status'>unknown</span><br><br>
+    <label for="wiz-sim-devtype">Simulate device type: </label>
+    <select id="wiz-sim-devtype">
+      <option value="">(actual device)</option>
+      <option value="CVE">CVE</option>
+      <option value="CVE-Silent">CVE-Silent</option>
+      <option value="CVE-S Eco2">CVE-S Eco2</option>
+      <option value="CVE-SilentExtPlus">CVE-SilentExtPlus (HRU200)</option>
+      <option value="HRU 250-300">HRU 250-300</option>
+      <option value="HRU 350">HRU 350</option>
+      <option value="HRU ECO-fan">HRU ECO-fan</option>
+      <option value="Heatpump">Heatpump (WPU)</option>
+    </select><br><br>
+    <button id="button-wizardreactivate" class="pure-button pure-button-primary">Reactivate wizard</button>
 
     <p>JavaScript console debug:</p>
     <button id="jsdebug" class="pure-button pure-button-primary">Toggle</button>
@@ -139,13 +155,20 @@
     </form>
 </div>
 <script>
-    $(document).ready(function () {
-        getSettings('debugvalues');
-        getSettings('sysstat');
-        $("#jsdebug_status").text(debug ? "on" : "off");
+    getSettings('debugvalues');
+    getSettings('sysstat');
+    $id("wizard_status").textContent = (typeof wizard_step !== 'undefined' && wizard_step > 0) ? "enabled" : "disabled";
+    $id("button-wizardreactivate").addEventListener('click', function () {
+        if (confirm("This will reactivate the setup wizard. Are you sure?")) {
+            var simSel = $id('wiz-sim-devtype');
+            wizardSimDevType = (simSel && simSel.value) ? simSel.value : null;
+            update_page('wizard');
+            initWizard(1);
+        }
     });
-    $("#jsdebug").click(function () {
+    $id("jsdebug_status").textContent = debug ? "on" : "off";
+    $id("jsdebug").addEventListener('click', function () {
         debug = !debug;
-        $("#jsdebug_status").text(debug ? "on" : "off");
-    });    
+        $id("jsdebug_status").textContent = debug ? "on" : "off";
+    });
 </script>

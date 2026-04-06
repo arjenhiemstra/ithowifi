@@ -46,22 +46,64 @@
   </div>
   <div class="pure-u-1 pure-u-md-1-5"></div>
 </div>
+<div id="rfco2interface" class="hidden">
+  <div style="text-align: center; margin: 1em 0;">
+    <label for="rfco2demandslider" style="font-weight:bold;">Ventilation Demand</label>
+    <div style="display:flex; align-items:center; gap:0.5em; margin:0.5em 0;">
+      <span>0%</span>
+      <input id="rfco2demandslider" type="range" min="0" max="200" value="0" class="slider" style="flex:1;">
+      <span>100%</span>
+    </div>
+    <div>
+      <span id="rfco2demandval">0</span> / 200
+    </div>
+  </div>
+  <div style="text-align: center; margin: 2em 0 0 0;">
+    <button id="rfcmd-low" class="pure-button" style="float: left;">Low</button>
+    <button id="rfcmd-auto" class="pure-button">Auto</button>
+    <button id="rfcmd-high" class="pure-button" style="float: right;">High</button>
+  </div>
+  <div style="text-align: center; margin: 2em 0 0 0;">
+    <button id="rfcmd-timer1" class="pure-button" style="float: left;">Timer1</button>
+    <button id="rfcmd-timer2" class="pure-button">Timer2</button>
+    <button id="rfcmd-timer3" class="pure-button" style="float: right;">Timer3</button>
+  </div>
+  <div style="text-align: center; margin: 2em 0 0 0;">
+    <div id="rfco2_sensor_temp"></div>
+    <div id="rfco2_sensor_hum"></div>
+  </div>
+</div>
 <script>
-  $(document).ready(function () {
-    if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
-      $('#sliderdiv').addClass('hidden');
-      $('#reminterface').empty();
+  var itho_control_interface = parseInt(localStorage.getItem('itho_control_interface') || '0');
+  if (itho_control_interface === 1) {
+    // RF CO2 mode: show demand slider and RF buttons
+    $id('sliderdiv').classList.add('hidden');
+    $id('reminterface').classList.add('hidden');
+    $id('rfco2interface').classList.remove('hidden');
+    var dslide = $id('rfco2demandslider');
+    if (dslide) {
+      dslide.oninput = function() { $id('rfco2demandval').textContent = this.value; };
+      dslide.onchange = function() {
+        websock_send('{"fandemand":' + this.value + '}');
+      };
     }
-    else {
-      var slide = document.getElementById("ithoslider");
-      if (!!slide) {
-        slide.oninput = function () { $('#ithotextval').html(this.value); };
-        slide.onchange = function () { updateSlider(this.value); };
-      }
+    // RF command buttons
+    ['low','auto','high','timer1','timer2','timer3'].forEach(function(cmd) {
+      var btn = $id('rfcmd-' + cmd);
+      if (btn) btn.onclick = function() { websock_send('{"remote":0, "command":"' + cmd + '"}'); };
+    });
+  } else if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
+    $id('sliderdiv').classList.add('hidden');
+    $id('reminterface').innerHTML = '';
+  } else {
+    var slide = $id("ithoslider");
+    if (!!slide) {
+      slide.oninput = function () { $id('ithotextval').innerHTML = this.value; };
+      slide.onchange = function () { updateSlider(this.value); };
     }
-    getSettings('sysstat');
-    getSettings('remtype');
-  });
+  }
+  getSettings('sysstat');
+  getSettings('remtype');
 
   function load_config() {
     if (websock.readyState === WebSocket.OPEN) {

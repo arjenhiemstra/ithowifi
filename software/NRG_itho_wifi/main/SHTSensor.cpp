@@ -55,14 +55,14 @@ bool SHTI2cSensor::readFromI2c(uint8_t i2cAddress,
                                uint8_t duration)
 {
 
-  if (!i2c_sendCmd(i2cAddress, i2cCommand, commandLength, I2C_CMD_TEMP_READ_CMD))
+  if (!i2cSendCmd(i2cAddress, i2cCommand, commandLength, I2C_CMD_TEMP_READ_CMD))
   {
     return false;
   }
 
   delay(duration);
 
-  i2c_master_read_slave(i2cAddress, data, dataLength, I2C_CMD_TEMP_READ_SLAVE);
+  i2cMasterReadSlave(i2cAddress, data, dataLength, I2C_CMD_TEMP_READ_SLAVE);
 
   return true;
 }
@@ -201,25 +201,25 @@ public:
       interface only. The status register preserves its content.
     */
     // Remove any existing I2C drivers
-    i2c_master_deinit();
-    i2c_slave_deinit();
+    i2cMasterDeinit();
+    i2cSlaveDeinit();
 
-    pinMode(master_sda_pin, OUTPUT); // Make SDA (data) and SCL (clock) pins outputs
-    pinMode(master_scl_pin, OUTPUT);
+    pinMode(i2cManager.master_sda_pin, OUTPUT); // Make SDA (data) and SCL (clock) pins outputs
+    pinMode(i2cManager.master_scl_pin, OUTPUT);
 
-    digitalWrite(master_sda_pin, HIGH);
-    digitalWrite(master_scl_pin, HIGH);
+    digitalWrite(i2cManager.master_sda_pin, HIGH);
+    digitalWrite(i2cManager.master_scl_pin, HIGH);
 
     for (uint i = 0; i < 9; i++)
     {
-      digitalWrite(master_scl_pin, LOW);
+      digitalWrite(i2cManager.master_scl_pin, LOW);
       delayMicroseconds(10);
-      digitalWrite(master_scl_pin, HIGH);
+      digitalWrite(i2cManager.master_scl_pin, HIGH);
       delayMicroseconds(10);
     }
 
-    pinMode(master_sda_pin, INPUT); // and reset pins as tri-state inputs which is the default state on reset
-    pinMode(master_scl_pin, INPUT);
+    pinMode(i2cManager.master_sda_pin, INPUT); // and reset pins as tri-state inputs which is the default state on reset
+    pinMode(i2cManager.master_scl_pin, INPUT);
 
     delayMicroseconds(20);
 

@@ -2,23 +2,46 @@
     <h1>IthoWifi - API</h1>
 </div>
 <h3>API Description</h3>
-<strong>General information WebAPI</strong><br><br>
-A simple WebAPI is available at the following URL: <a href='api.html' target='_blank'>api.html</a><br><br>
-The request should be formatted as follows: <br>http://[DNS or IP]/api.html?[param]=[value]<br><br>
-ie. http://192.168.4.1/api.html?command=medium<br>
-or<br>
-http://192.168.4.1/api.html?speed=150&timer=15<br><br>
-Unless specified otherwise:<br>
-<div id="webapitxt">
+<p><a href='swagger' onclick="event.preventDefault(); update_page('swagger');">Interactive API Explorer (Swagger UI)</a> | <a href='/api/openapi.json' target='_blank'>OpenAPI Specification (JSON)</a></p>
+
+<strong>REST API v2 (recommended)</strong><br><br>
+The REST API is available at <b>/api/v2/</b> with proper HTTP methods:<br><br>
+<ul>
+    <li><b>GET</b> endpoints for reading data (status, speed, device info, settings, remotes, etc.)</li>
+    <li><b>POST</b> endpoints for commands and state changes (fan control, RF commands, CO2, demand, debug)</li>
+    <li><b>PUT</b> endpoint for updating device settings (default disabled)</li>
+</ul>
+All responses follow the <a href='https://github.com/omniti-labs/jsend' target='_blank'>JSend</a> specification:<br>
+<ul>
+    <li>Success: <code>{"status":"success","data":{...}}</code> (HTTP 200)</li>
+    <li>Fail: <code>{"status":"fail","data":{"failreason":"..."}}</code> (HTTP 400/403/404)</li>
+    <li>Error: <code>{"status":"error","message":"..."}</code> (HTTP 500)</li>
+</ul>
+POST/PUT endpoints require <code>Content-Type: application/json</code> with a JSON body.<br>
+When API authentication is enabled, all endpoints require HTTP Basic Auth.<br>
+Cross-origin requests (CORS) are supported on all endpoints.<br><br>
+
+Examples:<br>
+<code>GET /api/v2/speed</code> &rarr; current fan speed<br>
+<code>POST /api/v2/command</code> with body <code>{"command":"low"}</code><br>
+<code>POST /api/v2/command</code> with body <code>{"speed":150,"timer":15}</code><br>
+<code>PUT /api/v2/settings</code> with body <code>{"index":4,"value":10}</code><br>
+<code>POST /api/v2/rfco2</code> with body <code>{"co2":800,"index":2}</code><br>
+<br>
+<strong>Legacy WebAPI v1</strong><br><br>
+A simple legacy WebAPI is available at: <a href='api.html' target='_blank'>api.html</a><br>
+Requests use URL query parameters: <code>http://[IP]/api.html?command=medium</code><br><br>
+<div>
     <ul>
         <li>A successful command will return 'OK', an unsuccessful command will return 'NOK'</li>
         <li>String params/values are supplied without quote marks</li>
         <li>Values outside specified values/ranges will be ignored or 0 in case of an overflow</li>
+        <li>For more advanced API feature, use the REST API v2 instead</li>
     </ul>
 </div>
 <br>
-<strong>General information MQTT API</strong><br><br>
-Unless specified otherwise:<br>
+<strong>MQTT API</strong><br><br>
+Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostly the same commands as the REST API.<br>
 <ul>
     <li>The command must be sent as valid JSON</li>
     <li>The command must be sent to the command topic</li>
@@ -35,7 +58,7 @@ Unless specified otherwise:<br>
             <th style="width:160px">value</th>
             <th>datatype</th>
             <th style="text-align:center">MQTT<br>(JSON)</th>
-            <th style="text-align:center">WebAPI<br>(URL params)</th>
+            <th style="text-align:center">WebAPI v1<br>(URL params)</th>
         </tr>
     </thead>
     <tbody>
@@ -158,14 +181,36 @@ Unless specified otherwise:<br>
         <tr>
             <td>get</td>
             <td>string</td>
-            <td>deviceinfo</td>
+            <td>lastcmd</td>
             <td>JSON</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
             <td style="text-align:center">●</td>
         </tr>
         <tr>
+            <td colspan="6">Comments:<br><em>Returns JSON with the last received command information.</em></td>
+        </tr>
+        <tr>
+            <td>get</td>
+            <td>string</td>
+            <td>queue</td>
+            <td>JSON</td>
+            <td style="text-align:center">◌</td>
+            <td style="text-align:center">●</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Returns JSON with the current command queue, including ithoSpeed, ithoOldSpeed and fallBackSpeed.</em></td>
+        </tr>
+        <tr>
+            <td>get</td>
+            <td>string</td>
+            <td>deviceinfo</td>
+            <td>JSON</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with device information on the add-on and itho device
-                    connected (as of WebAPIv2). Return type present on MQTT "Device info topic".</em></td>
+                    connected. Use REST API v2: GET /api/v2/device. Return type present on MQTT "Device info topic".</em></td>
         </tr>
         <tr>
             <td colspan="6"><b>Commands below this line work on Itho devices that support the PWM2IC2 protocol. Devices
@@ -199,6 +244,28 @@ Unless specified otherwise:<br>
                     the base/fallback speed of the fan. Timers will be queued on highest speed setting first for the
                     duration of the timer.<br>For MQTT; sending only the value instead of a JSON key/value pair also
                     works for single commands</em></td>
+        </tr>
+        <tr>
+            <td>percentage</td>
+            <td>number</td>
+            <td>0-100</td>
+            <td>number</td>
+            <td style="text-align:center">&#9679;</td>
+            <td style="text-align:center">&#9676;</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Fan speed as percentage. Maps to ventilation demand for RF CO2 devices or PWM speed for CVE/HRU200.</em></td>
+        </tr>
+        <tr>
+            <td>fandemand</td>
+            <td>number</td>
+            <td>0-200</td>
+            <td>number</td>
+            <td style="text-align:center">&#9679;</td>
+            <td style="text-align:center">&#9676;</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Ventilation demand value. Maps to RF demand for RF CO2 devices or PWM speed for CVE/HRU200.</em></td>
         </tr>
         <tr>
             <td>timer</td>
@@ -236,6 +303,23 @@ Unless specified otherwise:<br>
             <td colspan="6">Comments:<br><em>Return type present on MQTT "State topic"</em></td>
         </tr>
         <tr>
+            <td>getsetting</td>
+            <td>string</td>
+            <td>0-255</td>
+            <td>number</td>
+            <td style="text-align:center">◌</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
+            <td colspan="6">
+                Comments:<br>
+                <em>
+                    Use REST API v2: GET /api/v2/settings?index=N.
+                    Returns a JSON object with current, minimum and maximum value of the setting.
+                </em>
+            </td>
+        </tr>        
+        <tr>
             <td colspan="6"><b>Commands only for WPU devices</b></td>
         </tr>
         <tr>
@@ -244,7 +328,7 @@ Unless specified otherwise:<br>
             <td>outside_temp,temporary_outside_temp,valid_until</td>
             <td>number</td>
             <td style="text-align:center">●</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">
@@ -257,7 +341,7 @@ Unless specified otherwise:<br>
                 </em>
                 <br><br>
                 <em>
-                    The WebAPI only supports the <b>outside_temp</b> setting and version 2 of the WebAPI must be used.
+                    Use REST API v2: POST /api/v2/outside_temp with body {"temp":15}.
                 </em>
             </td>
         </tr>
@@ -337,30 +421,65 @@ Unless specified otherwise:<br>
                     page.</em></td>
         </tr>
         <tr>
-            <td>getsetting</td>
-            <td>string</td>
-            <td>0-255</td>
+            <td>rfco2</td>
             <td>number</td>
-            <td style="text-align:center">◌</td>
+            <td>0-10000</td>
+            <td>string</td>
             <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
-            <td colspan="6">
-                Comments:<br>
-                <em>
-                    Returns a JSON object containing the result of the API call. If successful it contains a data object
-                    with the current, minimum and
-                    maximum value of the given setting, using its index. If the
-                    setting index is invalid, the data object contains a key failreason.
-                </em>
-            </td>
+            <td colspan="6">Comments:<br><em>Sends a CO2 value (in ppm) via RF using the 1298 command.
+                    The RF remote at the specified index (or index 0 if rfremoteindex is not present)
+                    must be configured as type "RFT CO2". Can be used to emulate a CO2 sensor for
+                    CO2-based ventilation control. Use together with rfremoteindex to select the remote.</em></td>
+        </tr>
+        <tr>
+            <td>rfdemand</td>
+            <td>number</td>
+            <td>0-200</td>
+            <td>string</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Sends a ventilation demand value via RF using the 31E0 command.
+                    Value 0 = 0% demand (minimum), 200 (0xC8) = 100% demand (maximum).
+                    The RF remote must be configured as type "RFT CO2" or "RFT RV".
+                    This is the message that actually drives the Itho fan speed for CO2-based control.
+                    Use together with rfremoteindex and optionally rfzone (default 0).</em></td>
+        </tr>
+        <tr>
+            <td>rfzone</td>
+            <td>number</td>
+            <td>0-255</td>
+            <td>number</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Zone number for rfdemand command (default 0).
+                    Only needed for multi-zone setups.</em></td>
+        </tr>
+        <tr>
+            <td>get</td>
+            <td>string</td>
+            <td>rfstatus</td>
+            <td>JSON</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Returns JSON with measurement data from monitored RF sources
+                    (31DA/31D9 messages). Use the optional <b>name</b> parameter to get data from a specific
+                    source (e.g. <b>get=rfstatus&amp;name=Bathroom</b>).
+                    Monitored sources also publish to MQTT topics:
+                    [base_topic]/rfstatus/[name]/31DA and [base_topic]/rfstatus/[name]/31D9.
+                    Requires a CC1101 RF module.</em></td>
         </tr>
         <tr>
             <td colspan="6"><b style="color: red">API Commands below this line can change the settings of your Itho
-                    Daalderop
-                    unit, and this may affect its behaviour (i.e. turn it to a non working state).
-                    Only use this part of the API if you know what you're doing and are
-                    certain it won't damage your unit.
+                    Daalderop and are only available (after activation) on the REST API, not on the MQTT API.
                 </b></td>
         </tr>
         <tr>
@@ -369,7 +488,7 @@ Unless specified otherwise:<br>
             <td>0-255</td>
             <td>number</td>
             <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td>value</td>
@@ -377,25 +496,14 @@ Unless specified otherwise:<br>
             <td>any number</td>
             <td>number</td>
             <td style="text-align:center">◌</td>
-            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
         </tr>
         <tr>
             <td colspan="6">
                 Comments:<br>
                 <em>
-                    Sets the current value of a setting using its index. The
-                    value must be specified in the "value" parameter. The new
-                    value must be within the minimum and maximum of the setting.<br>
-                    Returns a JSON object containing the result of the API call. If successful it contains a data object
-                    with the current, previous, minimum and
-                    maximum value of the given setting, using its index. If the
-                    setting index or value is invalid, the data object contains a key failreason.
-                </em>
-                <br>
-                <br>
-                Example:<br>
-                <em>
-                    http://192.168.4.1/api.html?setsetting=4&value=10
+                    Use REST API v2: PUT /api/v2/settings with body {"index":N,"value":V}.
+                    The settings API must be enabled in system settings.
                 </em>
             </td>
         </tr>
@@ -403,13 +511,5 @@ Unless specified otherwise:<br>
 </table>
 <p><br><br></p>
 <script>
-    $(document).ready(function () {
-        getSettings('syssetup');
-        setTimeout(function () {
-            if (localStorage.getItem("api_version") == "2") {
-                //$('#webapitxt').html("");
-                $('#webapitxt').html(webapihtml);
-            }
-        }, 500);
-    });
+    getSettings('syssetup');
 </script>

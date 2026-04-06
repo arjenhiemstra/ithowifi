@@ -80,9 +80,22 @@ const IthoRemote::remote_func_char IthoRemote::remote_func_table[]{
 
 const char *IthoRemote::remote_func_unknown_msg = "Function unknown error";
 
-int IthoRemote::getRemoteCount()
+bool IthoRemote::isEmptySlot(int index) const
 {
-  return remoteCount;
+  if (index < 0 || index >= maxRemotes)
+    return true;
+  return (remotes[index].ID[0] == 0 && remotes[index].ID[1] == 0 && remotes[index].ID[2] == 0);
+}
+
+int IthoRemote::getRemoteCount() const
+{
+  int count = 0;
+  for (int i = 0; i < maxRemotes; i++)
+  {
+    if (!isEmptySlot(i))
+      count++;
+  }
+  return count;
 }
 
 bool IthoRemote::toggleLearnLeaveMode()
@@ -109,22 +122,17 @@ int IthoRemote::registerNewRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2, c
   {
     return -1; // remote already registered
   }
-  if (remoteCount >= maxRemotes - 1)
-  {
-    return -2;
-  }
-
   int index = remoteIndex(0, 0, 0); // find first index with no remote ID set
+  if (index < 0)
+  {
+    return -2; // no free slot
+  }
 
   if (copy_id_remote_idx != -1 && copy_id_remote_idx < maxRemotes)
   {
     index = copy_id_remote_idx;
   }
 
-  if (index < 0) // no valid spot found
-  {
-    return index;
-  }
   remotes[index].ID[0] = byte0;
   remotes[index].ID[1] = byte1;
   remotes[index].ID[2] = byte2;
@@ -134,10 +142,6 @@ int IthoRemote::registerNewRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2, c
   if (copy_id_remote_idx > 0) // existing remote updated, reset copy_id_remote_idx;
   {
     copy_id_remote_idx = -1;
-  }
-  else // new remote added, update remote count
-  {
-    remoteCount++;
   }
 
   return index;
@@ -149,11 +153,6 @@ int IthoRemote::removeRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2)
   {
     return -1; // remote not registered
   }
-  if (remoteCount < 1)
-  {
-    return -2;
-  }
-
   int index = remoteIndex(byte0, byte1, byte2);
 
   if (index < 0)
@@ -164,13 +163,10 @@ int IthoRemote::removeRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2)
     remotes[index].ID[i] = 0;
   }
   snprintf(remotes[index].name, sizeof(remotes[index].name), "remote%d", index);
-  // strlcpy(remotes[index].name, remName, sizeof(remotes[index].name));
   remotes[index].remtype = RemoteTypes::UNSETTYPE;
   remotes[index].remfunc = RemoteFunctions::UNSETFUNC;
   remotes[index].capabilities = nullptr;
   remotes[index].bidirectional = false;
-
-  remoteCount--;
 
   return 1;
 }
@@ -181,13 +177,12 @@ int IthoRemote::removeRemote(const uint8_t index)
   if (!(index < maxRemotes))
     return -1;
 
-  if (remotes[index].ID[0] != 0 && remotes[index].ID[1] != 0 && remotes[index].ID[2] != 0)
+  if (!isEmptySlot(index))
   {
     for (uint8_t i = 0; i < 3; i++)
     {
       remotes[index].ID[i] = 0;
     }
-    remoteCount--;
     if (instanceFunc == RemoteFunctions::VREMOTE)
     {
       remotes[index].ID[0] = sys.getMac(3);
@@ -228,6 +223,21 @@ void IthoRemote::updateRemoteID(const uint8_t index, uint8_t byte0, uint8_t byte
   remotes[index].ID[0] = byte0;
   remotes[index].ID[1] = byte1;
   remotes[index].ID[2] = byte2;
+}
+void IthoRemote::updateRemoteDestID(const uint8_t index, uint8_t byte0, uint8_t byte1, uint8_t byte2)
+{
+  remotes[index].destID[0] = byte0;
+  remotes[index].destID[1] = byte1;
+  remotes[index].destID[2] = byte2;
+}
+void IthoRemote::getRemoteDestIDbyIndex(const int index, uint8_t *id)
+{
+  if (!id)
+    return;
+  for (uint8_t i = 0; i < 3; i++)
+  {
+    id[i] = remotes[index].destID[i];
+  }
 }
 void IthoRemote::updateRemoteFunction(const uint8_t index, const uint8_t remfunc)
 {
@@ -349,6 +359,14 @@ void IthoRemote::Remote::set(JsonObject obj)
   {
     bidirectional = obj["bidirectional"];
   }
+  if (!obj["destid"].isNull())
+  {
+    copyArray(obj["destid"].as<JsonArray>(), destID);
+  }
+  if (!obj["tx_power"].isNull())
+  {
+    tx_power = obj["tx_power"];
+  }
 }
 
 void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index, bool human_reaadble) const
@@ -401,6 +419,15 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
     obj["capabilities"] = capabilities;
   }
   obj["bidirectional"] = bidirectional;
+  if (destID[0] != 0 || destID[1] != 0 || destID[2] != 0)
+  {
+    JsonArray did = obj["destid"].to<JsonArray>();
+    for (uint8_t y = 0; y < 3; y++)
+    {
+      did.add(destID[y]);
+    }
+  }
+  obj["tx_power"] = tx_power;
 }
 
 bool IthoRemote::set(JsonObject obj, const char *root)
@@ -419,7 +446,6 @@ bool IthoRemote::set(JsonObject obj, const char *root)
   if (!obj[root].isNull())
   {
     JsonArray remotesArray = obj[root];
-    remoteCount = 0;
     for (JsonObject remote : remotesArray)
     {
       if (!remote["index"].isNull())
@@ -428,23 +454,8 @@ bool IthoRemote::set(JsonObject obj, const char *root)
         if (index < maxRemotes)
         {
           remotes[index].set(remote);
-
-          uint8_t noZero = 0;
-          for (uint8_t y = 0; y < 3; y++)
-          {
-            if (remotes[index].ID[y] == 0)
-            {
-              noZero++;
-            }
-          }
-          if (noZero != 3)
-          {
-            remoteCount++;
-          }
         }
       }
-      if (remoteCount >= maxRemotes)
-        break;
     }
   }
   else
@@ -474,10 +485,12 @@ void IthoRemote::get(JsonObject obj, const char *root) const
 
 void IthoRemote::getCapabilities(JsonObject obj) const
 {
-
-  for (int i = 0; i < remoteCount; i++)
+  for (int i = 0; i < maxRemotes; i++)
   {
-    obj[remotes[i].name] = remotes[i].capabilities;
+    if (!isEmptySlot(i))
+    {
+      obj[remotes[i].name] = remotes[i].capabilities;
+    }
   }
 }
 
