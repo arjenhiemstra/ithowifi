@@ -136,8 +136,12 @@ static void handleGetRemotes(AsyncWebServerRequest *request)
   if (!checkRestAuth(request))
     return;
   JsonDocument data;
-  JsonObject obj = data["remotesinfo"].to<JsonObject>();
-  getRemotesInfoJSON(obj);
+  // Full remote config (new format)
+  JsonObject obj = data.to<JsonObject>();
+  remotes.get(obj, "remotes");
+  // Legacy capabilities (backward compat)
+  JsonObject legacy = data["remotesinfo"].to<JsonObject>();
+  getRemotesInfoJSON(legacy);
   sendSuccess(request, data);
 }
 
