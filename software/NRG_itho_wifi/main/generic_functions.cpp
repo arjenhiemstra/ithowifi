@@ -274,6 +274,7 @@ void getDeviceInfoJSON(JsonObject root)
   root["add-on_hwid"] = WiFi.macAddress();
   root["add-on_fwversion"] = fw_version;
   root["itho_rf_standalone"] = systemConfig.itho_rf_standalone;
+  root["itho_control_interface"] = systemConfig.itho_control_interface;
   if (systemConfig.fw_check)
   {
     root["add-on_fwupdate_available"] = firmwareInfo.fw_update_available == 1 ? "true" : "false";
