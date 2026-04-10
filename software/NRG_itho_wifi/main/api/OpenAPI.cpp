@@ -141,6 +141,8 @@ void handleOpenAPI(AsyncWebServerRequest *request)
   JsonArray rfstatusParams = rfstatusGet["parameters"].to<JsonArray>();
   addParam(rfstatusParams, "name", "Filter by source name", "string");
 
+  addRestGet("/api/v2/ota", "Get firmware version info and OTA update progress");
+
   JsonObject settingsGet = addRestGet("/api/v2/settings", "Read Itho setting by index");
   JsonArray settingsParams = settingsGet["parameters"].to<JsonArray>();
   addParam(settingsParams, "index", "Setting index", "integer", 0, 255);
@@ -153,6 +155,7 @@ void handleOpenAPI(AsyncWebServerRequest *request)
   addRestPost("/api/v2/rfremote/demand", "Send ventilation demand via RF", "#/components/schemas/RFDemandRequest");
   addRestPost("/api/v2/rfremote/config", "Configure RF remote", "#/components/schemas/RFConfigRequest");
   addRestPost("/api/v2/debug", "Debug actions (reboot, RF debug level)", "#/components/schemas/DebugRequest");
+  addRestPost("/api/v2/ota", "Trigger firmware OTA update", "#/components/schemas/OtaInstallRequest");
   addRestPost("/api/v2/wpu/outside_temp", "Set outside temperature", "#/components/schemas/OutsideTempRequest");
   addRestPost("/api/v2/wpu/manual_control", "WPU manual control (4030 command)", "#/components/schemas/ManualControlRequest");
 
@@ -265,7 +268,15 @@ void handleOpenAPI(AsyncWebServerRequest *request)
   addProp(rfcfgProps, "value", "string", "Setting value (hex ID like 96,C8,B6 or true/false)");
 
   JsonObject debugProps = addSchema("DebugRequest", "Debug/reboot actions");
-  addProp(debugProps, "action", "string", "Action (reboot/level0/level1/level2/level3)");
+  addProp(debugProps, "action", "string", "Action name");
+  for (auto a : {"reboot", "level0", "level1", "level2", "level3"})
+    debugProps["action"]["enum"].add(a);
+
+  JsonObject otaProps = addSchema("OtaInstallRequest", "Trigger firmware OTA update");
+  addProp(otaProps, "channel", "string", "Release channel to install (stable or beta)");
+  otaProps["channel"]["enum"].add("stable");
+  otaProps["channel"]["enum"].add("beta");
+  addProp(otaProps, "url", "string", "Firmware URL (alternative to channel; must start with https://github.com/arjenhiemstra/ithowifi/)");
 
   JsonObject tempProps = addSchema("OutsideTempRequest", "Set outside temperature");
   addProp(tempProps, "temp", "number", "Temperature in Celsius (-100 to 100)");

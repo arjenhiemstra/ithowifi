@@ -253,16 +253,21 @@ def update_releaseinfo():
 
         latest_fw_key = "latest_fw" if release == "release" else "latest_beta_fw"
         latest_link_key = "link" if release == "release" else "link_beta"
-        latest_fw_file = "nrgitho" + hwrev + "-v" + fwversion + ".bin"
+        latest_fw_file = "nrgitho-v" + fwversion + ".bin"
         release_notes = "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-"
+        # Use GitHub release-download URLs (not raw/master/...) so firmware.json
+        # links don't depend on the binary being committed to master.
+        latest_link = (
+            "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-"
+            + fwversion
+            + "/"
+            + latest_fw_file
+        )
         releasefile = os.path.join(PROJECT_COMPILED_DIR, "firmware.json")
         with open(releasefile) as f:
             data = json.load(f)
 
-        data["hw_rev"]["2"][latest_link_key] = (
-            "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/"+ HW_BIN_DIR +"/"
-            + latest_fw_file
-        )
+        data["hw_rev"]["2"][latest_link_key] = latest_link
         data["hw_rev"]["2"][latest_fw_key] = fwversion
 
         if release == "release":
@@ -272,10 +277,7 @@ def update_releaseinfo():
             data["hw_rev"]["2"]["beta_release_notes"] = (release_notes+ fwversion)
             data["hw_rev"]["NON-CVE 1"]["beta_release_notes"] = (release_notes+ fwversion)
 
-        data["hw_rev"]["NON-CVE 1"][latest_link_key] = (
-            "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/"+ HW_BIN_DIR +"/"
-            + latest_fw_file
-        )
+        data["hw_rev"]["NON-CVE 1"][latest_link_key] = latest_link
         data["hw_rev"]["NON-CVE 1"][latest_fw_key] = fwversion
         json_object = json.dumps(data, indent=4)
 
@@ -285,9 +287,31 @@ def update_releaseinfo():
             outfile.write(json_object)
 
 
+def set_firmware_json_size_cap():
+    releasefile = os.path.join(PROJECT_COMPILED_DIR, "firmware.json")
+    try:
+        size = os.path.getsize(releasefile)
+    except OSError:
+        print("### firmware.json not found, leaving MAX_FIRMWARE_HTTPS_RESPONSE_SIZE at header default")
+        return
+    # Round up to next whole KiB and add ample headroom (8KiB) so normal
+    # growth (new fields, new hw_rev entries, release notes) doesn't break
+    # the runtime check.
+    size_cap = ((size // 1024) + 9) * 1024
+    print(
+        "\n### firmware.json is "
+        + str(size)
+        + " bytes, setting MAX_FIRMWARE_HTTPS_RESPONSE_SIZE="
+        + str(size_cap)
+        + "\n"
+    )
+    env.Append(CPPDEFINES=[("MAX_FIRMWARE_HTTPS_RESPONSE_SIZE", str(size_cap))])
+
+
 def build_prep(*args, **kwargs):
     print("\n### running build preparation commands...\n")
     export_version()
+    set_firmware_json_size_cap()
     build_webui(*args, **kwargs)
 
 

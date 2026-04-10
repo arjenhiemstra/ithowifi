@@ -3,7 +3,12 @@
 #include "tasks/task_cc1101.h"
 #include <HTTPUpdate.h>
 
-#define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 2000 // firmware json response should be smaller than this
+// MAX_FIRMWARE_HTTPS_RESPONSE_SIZE is normally injected by build_script.py based
+// on the actual firmware.json size + headroom. This fallback only applies if the
+// build flag wasn't set.
+#ifndef MAX_FIRMWARE_HTTPS_RESPONSE_SIZE
+#define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 16384
+#endif
 
 // locals
 Ticker IthoCMD;
@@ -917,42 +922,79 @@ int compareVersions(const std::string &v1, const std::string &v2)
 void checkFirmwareUpdate()
 {
   WiFiClientSecure *secclient = new WiFiClientSecure;
-  if (secclient)
+  if (!secclient)
   {
-    secclient->setInsecure(); // set secure client without certificate
-
-    HTTPClient https;
-
-    if (https.begin(*secclient, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
-    { // HTTPS
-      int httpCode = https.GET();
-      if (httpCode > 0)
-      {
-        if (httpCode == HTTP_CODE_OK && https.getSize() < MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
-        {
-          String payloadString = https.getString().c_str();
-          const char *payload = payloadString.c_str();
-
-          JsonDocument root;
-          DeserializationError error = deserializeJson(root, payload);
-          if (!error)
-          {
-            firmwareInfo.fw_update_available = compareVersions(root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", fw_version);
-
-            strlcpy(firmwareInfo.latest_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
-            strlcpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
-            strlcpy(firmwareInfo.link, root["hw_rev"][hardwareManager.hw_revision]["link"] | "", sizeof(firmwareInfo.link));
-            strlcpy(firmwareInfo.link_beta, root["hw_rev"][hardwareManager.hw_revision]["link_beta"] | "", sizeof(firmwareInfo.link_beta));
-            D_LOG("SYS: latest_fw:%s, latest_beta:%s", firmwareInfo.latest_fw, firmwareInfo.latest_beta_fw);
-
-            D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);
-            // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful
-          }
-        }
-      }
-      https.end();
-    }
+    E_LOG("SYS: firmware check - failed to allocate WiFiClientSecure");
+    return;
   }
+  secclient->setInsecure(); // set secure client without certificate
+
+  HTTPClient https;
+
+  if (!https.begin(*secclient, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
+  {
+    E_LOG("SYS: firmware check - https.begin() failed");
+    delete secclient;
+    return;
+  }
+
+  int httpCode = https.GET();
+  if (httpCode <= 0)
+  {
+    E_LOG("SYS: firmware check - GET failed: %s", https.errorToString(httpCode).c_str());
+    https.end();
+    delete secclient;
+    return;
+  }
+  if (httpCode != HTTP_CODE_OK)
+  {
+    E_LOG("SYS: firmware check - HTTP %d", httpCode);
+    https.end();
+    delete secclient;
+    return;
+  }
+  if (https.getSize() >= MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
+  {
+    E_LOG("SYS: firmware check - response too large: %d", https.getSize());
+    https.end();
+    delete secclient;
+    return;
+  }
+
+  String payloadString = https.getString().c_str();
+  const char *payload = payloadString.c_str();
+
+  JsonDocument root;
+  DeserializationError error = deserializeJson(root, payload);
+  if (error)
+  {
+    E_LOG("SYS: firmware check - JSON parse error: %s", error.c_str());
+    https.end();
+    delete secclient;
+    return;
+  }
+
+  JsonVariant hwNode = root["hw_rev"][hardwareManager.hw_revision];
+  if (hwNode.isNull())
+  {
+    E_LOG("SYS: firmware check - no entry for hw_rev %d in firmware.json", hardwareManager.hw_revision);
+    https.end();
+    delete secclient;
+    return;
+  }
+
+  firmwareInfo.fw_update_available = compareVersions(hwNode["latest_fw"] | "error", fw_version);
+
+  strlcpy(firmwareInfo.latest_fw, hwNode["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
+  strlcpy(firmwareInfo.latest_beta_fw, hwNode["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
+  strlcpy(firmwareInfo.link, hwNode["link"] | "", sizeof(firmwareInfo.link));
+  strlcpy(firmwareInfo.link_beta, hwNode["link_beta"] | "", sizeof(firmwareInfo.link_beta));
+  D_LOG("SYS: latest_fw:%s, latest_beta:%s", firmwareInfo.latest_fw, firmwareInfo.latest_beta_fw);
+  D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);
+  // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful
+
+  https.end();
+  delete secclient;
 }
 
 volatile int otaUpdateProgress = -1; // -1=idle, 0-100=progress, 101=done, -2=error
