@@ -5195,7 +5195,7 @@ var html_systemsettings_start = `
       <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-vremoteapi" class="pure-radio">Map RF remotes to virtual remote</label>
+      <label for="option-vremoteapi" class="pure-radio">Map API key "command" to virtual remote 0</label>
       <input id="option-vremoteapi-1" type="radio" name="option-itho_vremoteapi" value="1"> on
       <input id="option-vremoteapi-0" type="radio" name="option-itho_vremoteapi" value="0"> off
     </div>

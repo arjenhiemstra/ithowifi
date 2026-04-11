@@ -32,8 +32,10 @@ public:
     static const char* getAvailableSensorsForType(uint16_t remoteType);
     static bool isSensorAvailableForType(uint16_t remoteType, const char* sensor);
 
-    // RF fan presets helper
+    // RF fan presets helper (human-readable, used by HA Auto Discovery)
     static const char* getPresetsForType(uint16_t remoteType);
+    // RF fan presets helper (wire format, used by external API consumers)
+    static const char* getWirePresetsForType(uint16_t remoteType);
 
 protected:
 }; // HADiscConfig

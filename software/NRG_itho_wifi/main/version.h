@@ -1,3 +1,3 @@
 #pragma once
 
-inline const char * fw_version = "3.1.0-beta3";
+inline const char * fw_version = "3.1.0-beta4";

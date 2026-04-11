@@ -38,31 +38,67 @@ bool HADiscConfig::isSensorAvailableForType(uint16_t remoteType, const char* sen
     return strstr(available, sensor) != nullptr;
 }
 
-// RF fan presets per remote type
+// RF fan presets per remote type.
+// Derived from the RF remote command maps in IthoCC1101.cpp (RFT*_Remote_Map):
+// a preset is listed here only if the remote type actually has a non-null
+// command entry for it. Kept in lockstep with getWirePresetsForType() below.
 const char* HADiscConfig::getPresetsForType(uint16_t remoteType)
 {
     switch (remoteType)
     {
     case RFTCVE:
-        return "Low,Medium,High,Timer 10min,Timer 20min,Timer 30min";
+        return "Away,Low,Medium,High,Timer 10min,Timer 20min,Timer 30min";
     case RFTAUTO:
-    case RFTAUTON:
         return "Low,Auto,High,AutoNight,Timer 10min,Timer 20min,Timer 30min";
     case RFTN:
-        return "Low,Medium,High,Timer 10min,Timer 20min,Timer 30min";
+        return "Away,Low,Medium,High,Timer 10min,Timer 20min,Timer 30min";
+    case RFTAUTON:
+        return "Away,Low,Medium,High,Auto,AutoNight,Timer 10min,Timer 20min,Timer 30min";
     case DEMANDFLOW:
         return "Low,High,Timer 10min,Timer 20min,Timer 30min,Cook 30min,Cook 60min";
     case RFTRV:
     case RFTCO2:
-        return "Medium,Auto,AutoNight,Timer 10min,Timer 20min,Timer 30min";
+        return "Low,Medium,High,Auto,AutoNight,Timer 10min,Timer 20min,Timer 30min";
     case RFTSPIDER:
-        return "Low,High";
+        return "Low,Medium,High,Auto,AutoNight,Timer 10min,Timer 20min,Timer 30min";
     case ORCON15LF01:
         return "Away,Auto,Low,Medium,High,Timer 10min,Timer 20min,Timer 30min";
     case RFTPIR:
         return ""; // PIR doesn't have fan presets, it's motion-triggered
     default:
         return "Low,Medium,High";
+    }
+}
+
+// Wire-format presets per remote type. Same set as getPresetsForType(), but
+// using the short API command names so external consumers (HA integration,
+// scripts) can dispatch without a translation table. Kept in lockstep with
+// getPresetsForType() — if you add a preset to one, add it to the other.
+const char* HADiscConfig::getWirePresetsForType(uint16_t remoteType)
+{
+    switch (remoteType)
+    {
+    case RFTCVE:
+        return "away,low,medium,high,timer1,timer2,timer3";
+    case RFTAUTO:
+        return "low,auto,high,autonight,timer1,timer2,timer3";
+    case RFTN:
+        return "away,low,medium,high,timer1,timer2,timer3";
+    case RFTAUTON:
+        return "away,low,medium,high,auto,autonight,timer1,timer2,timer3";
+    case DEMANDFLOW:
+        return "low,high,timer1,timer2,timer3,cook30,cook60";
+    case RFTRV:
+    case RFTCO2:
+        return "low,medium,high,auto,autonight,timer1,timer2,timer3";
+    case RFTSPIDER:
+        return "low,medium,high,auto,autonight,timer1,timer2,timer3";
+    case ORCON15LF01:
+        return "away,auto,low,medium,high,timer1,timer2,timer3";
+    case RFTPIR:
+        return "";
+    default:
+        return "low,medium,high";
     }
 }
 

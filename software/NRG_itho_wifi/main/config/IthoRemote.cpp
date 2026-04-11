@@ -1,4 +1,5 @@
 #include "config/IthoRemote.h"
+#include "config/HADiscConfig.h"
 
 // #include <string>
 // #include <Arduino.h>
@@ -464,6 +465,9 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
   obj["tx_power"] = tx_power;
   if (last_cmd[0] != '\0')
     obj["last_cmd"] = last_cmd;
+  // Wire-format preset list so external consumers know which commands
+  // this remote type actually supports.
+  obj["presets"] = HADiscConfig::getWirePresetsForType(static_cast<uint16_t>(remtype));
 }
 
 bool IthoRemote::set(JsonObject obj, const char *root)
