@@ -9,9 +9,9 @@
         "2": {
             "latest_fw": "3.0.0",
             "link": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.0.0/nrgitho-v3.0.0.bin",
-            "latest_beta_fw": "3.1.0-beta2",
-            "link_beta": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.0-beta2/nrgitho-v3.1.0-beta2.bin",
-            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.0-beta2",
+            "latest_beta_fw": "3.1.0-beta3",
+            "link_beta": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.0-beta3/nrgitho-v3.1.0-beta3.bin",
+            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.0-beta3",
             "release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.0.0",
             "versions": [
                 {
@@ -31,9 +31,9 @@
         "NON-CVE 1": {
             "latest_fw": "3.0.0",
             "link": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.0.0/nrgitho-v3.0.0.bin",
-            "latest_beta_fw": "3.1.0-beta2",
-            "link_beta": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.0-beta2/nrgitho-v3.1.0-beta2.bin",
-            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.0-beta2",
+            "latest_beta_fw": "3.1.0-beta3",
+            "link_beta": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.0-beta3/nrgitho-v3.1.0-beta3.bin",
+            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.0-beta3",
             "release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.0.0",
             "versions": [
                 {
