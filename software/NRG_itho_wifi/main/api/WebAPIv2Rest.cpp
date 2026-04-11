@@ -233,7 +233,7 @@ static void handleGetVRemotes(AsyncWebServerRequest *request)
   if (!checkRestAuth(request))
     return;
   JsonDocument data;
-  JsonObject obj = data.as<JsonObject>();
+  JsonObject obj = data.to<JsonObject>();
   virtualRemotes.get(obj, "vremotesinfo");
   sendSuccess(request, data);
 }

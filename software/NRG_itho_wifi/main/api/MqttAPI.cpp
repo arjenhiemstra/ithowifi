@@ -1,5 +1,6 @@
 #include "api/MqttAPI.h"
 #include "tasks/task_mqtt.h"
+#include "generic_functions.h"
 
 static void mqttSendResponse(const char *status, const char *command, const char *message)
 {
@@ -295,6 +296,12 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
       {
         jsonCmd = true;
         const char *value = root["update"] | "stable";
+        // 'auto' resolves to the channel matching the currently running
+        // firmware: pre-release strings → beta, otherwise stable. This is
+        // what the HA Auto Discovery update entity sends so the install
+        // button always installs the right channel.
+        if (strcmp(value, "auto") == 0)
+          value = getUpdateChannel();
         bool beta = (strcmp(value, "beta") == 0);
         if (strlen(beta ? firmwareInfo.link_beta : firmwareInfo.link) > 0)
         {

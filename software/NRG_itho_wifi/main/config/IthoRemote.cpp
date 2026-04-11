@@ -249,6 +249,40 @@ void IthoRemote::updateRemoteBidirectional(const uint8_t index, bool bidirection
   remotes[index].bidirectional = bidirectional;
 }
 
+void IthoRemote::setLastCmd(const int index, const char *cmd)
+{
+  if (index < 0 || index >= maxRemotes || cmd == nullptr)
+    return;
+  strlcpy(remotes[index].last_cmd, cmd, sizeof(remotes[index].last_cmd));
+}
+
+const char *IthoRemote::ithoCommandToShortName(uint8_t code)
+{
+  // Map IthoCommand enum values to their short lowercase command names as
+  // used by the API command set. Returns nullptr for protocol/internal
+  // commands that aren't user-facing fan controls.
+  switch (code)
+  {
+  case IthoAway: return "away";
+  case IthoLow: return "low";
+  case IthoMedium: return "medium";
+  case IthoHigh: return "high";
+  case IthoFull: return "full";
+  case IthoTimer1: return "timer1";
+  case IthoTimer2: return "timer2";
+  case IthoTimer3: return "timer3";
+  case IthoAuto: return "auto";
+  case IthoAutoNight: return "autonight";
+  case IthoCook30: return "cook30";
+  case IthoCook60: return "cook60";
+  case IthoJoin: return "join";
+  case IthoLeave: return "leave";
+  case IthoPIRmotionOn: return "motion_on";
+  case IthoPIRmotionOff: return "motion_off";
+  default: return nullptr;
+  }
+}
+
 void IthoRemote::addCapabilities(uint8_t remoteIndex, const char *name, int32_t value)
 {
   if (strcmp(name, "temp") == 0 || strcmp(name, "dewpoint") == 0 || strcmp(name, "setpoint") == 0)
@@ -428,6 +462,8 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
     }
   }
   obj["tx_power"] = tx_power;
+  if (last_cmd[0] != '\0')
+    obj["last_cmd"] = last_cmd;
 }
 
 bool IthoRemote::set(JsonObject obj, const char *root)

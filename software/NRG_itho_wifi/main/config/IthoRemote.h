@@ -37,6 +37,7 @@ private:
     mutable RemoteFunctions remfunc{RemoteFunctions::UNSETFUNC};
     bool bidirectional{false};
     uint8_t tx_power{0xC0};  // PA table value: 0xC0=+10dBm(default), 0x84=+5, 0x03=-30
+    mutable char last_cmd[16]{}; // last command dispatched via this remote (for vremote / RF SEND remotes)
     JsonDocument capabilities;
     void set(JsonObject);
     void get(JsonObject, RemoteFunctions instanceFunc, int index, bool human_reaadble = false) const;
@@ -122,6 +123,12 @@ public:
   bool getRemoteBidirectional(const int index) { return remotes[index].bidirectional; };
   uint8_t getRemoteTxPower(const int index) { return remotes[index].tx_power; };
   void updateRemoteTxPower(const uint8_t index, uint8_t power) { if (index < maxRemotes) remotes[index].tx_power = power; };
+  void setLastCmd(const int index, const char *cmd);
+  const char *getLastCmd(const int index) const { return (index >= 0 && index < maxRemotes) ? remotes[index].last_cmd : ""; };
+  // Convert an IthoCommand enum value to its short lowercase name (e.g.
+  // IthoLow→"low"). Returns nullptr for commands that aren't user-facing
+  // fan commands (protocol replies, device info queries, etc.).
+  static const char *ithoCommandToShortName(uint8_t code);
   const char *lastRemoteName;
   bool checkID(uint8_t byte0, uint8_t byte1, uint8_t byte2);
   bool configLoaded;

@@ -282,11 +282,19 @@ void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
 
     componentJson["stat_t"] = ithodevicetopic;
 
-    tmpstr = "{{ {'installed_version': value_json['add-on_fwversion'], 'latest_version': value_json['add-on_latest_fw'], 'title': 'Add-on Firmware', 'release_url': 'https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-" + std::string(firmwareInfo.latest_fw) + "' } | to_json }}";
+    // Channel-aware: latest_version and release_url use add-on_latest_for_channel
+    // (computed on the device based on the running version), so beta users see
+    // the latest beta and stable users see the latest stable. The device clamps
+    // latest_for_channel to the installed version when nothing newer is available
+    // on the active channel, keeping HA's update entity quiet.
+    tmpstr = "{{ {'installed_version': value_json['add-on_fwversion'], 'latest_version': value_json['add-on_latest_for_channel'], 'title': 'Add-on Firmware', 'release_url': 'https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-' ~ value_json['add-on_latest_for_channel'] } | to_json }}";
     componentJson["val_tpl"] = tmpstr;
 
     componentJson["cmd_t"] = cmdtopic;
-    componentJson["payload_install"] = "{\"update\":\"stable\"}";
+    // 'auto' resolves to stable or beta on the device based on the running
+    // version, so the install button always installs the channel matching
+    // what the user is currently on.
+    componentJson["payload_install"] = "{\"update\":\"auto\"}";
 }
 
 void addHADiscoveryRFSensors(JsonObject components, JsonObject compactJson, const char *deviceName, const char *mqttBaseTopic)

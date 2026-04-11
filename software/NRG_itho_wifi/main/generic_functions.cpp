@@ -267,6 +267,21 @@ void getRFStatusConfigJSON(JsonObject root, int sourceIndex)
     root["selectedSource"] = idx;
 }
 
+bool isPrereleaseVersion(const char *version)
+{
+  if (version == nullptr)
+    return false;
+  return strstr(version, "-beta") != nullptr ||
+         strstr(version, "-rc") != nullptr ||
+         strstr(version, "-alpha") != nullptr ||
+         strstr(version, "-dev") != nullptr;
+}
+
+const char *getUpdateChannel()
+{
+  return isPrereleaseVersion(fw_version) ? "beta" : "stable";
+}
+
 void getDeviceInfoJSON(JsonObject root)
 {
   root["itho_devtype"] = (systemConfig.itho_rf_standalone == 1 && strcmp(getIthoType(), "Unkown device type") == 0)
@@ -285,6 +300,20 @@ void getDeviceInfoJSON(JsonObject root)
     root["add-on_fwupdate_available"] = firmwareInfo.fw_update_available == 1 ? "true" : "false";
     root["add-on_latest_fw"] = firmwareInfo.latest_fw;
     root["add-on_latest_beta_fw"] = firmwareInfo.latest_beta_fw;
+
+    // Channel-aware fields for HA Auto Discovery: pick stable or beta
+    // based on the running version, and clamp the reported "latest" to
+    // the installed version when the channel target is empty or older.
+    // This keeps HA's update entity quiet for beta users on the latest
+    // beta and prevents spurious "downgrade" prompts.
+    const char *channel = getUpdateChannel();
+    const char *target = (strcmp(channel, "beta") == 0)
+                             ? firmwareInfo.latest_beta_fw
+                             : firmwareInfo.latest_fw;
+    bool target_is_newer = strlen(target) > 0 &&
+                           compareVersions(std::string(target), std::string(fw_version)) > 0;
+    root["add-on_update_channel"] = channel;
+    root["add-on_latest_for_channel"] = target_is_newer ? target : fw_version;
   }
 }
 
@@ -548,6 +577,12 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   char buf[32]{};
   snprintf(buf, sizeof(buf), "rfremotecmd:%s, idx:%d", (res ? command : "unknown"), remote_index);
   logLastCommand(buf, origin);
+
+  // Track last command per remote so external integrations (HA) can show
+  // per-remote state. Only meaningful for SEND remotes — RX remotes get
+  // their own lastcmd via addCapabilities() from received RF messages.
+  if (res && isSendRemote)
+    remotes.setLastCmd(remote_index, command);
 
   enableRF_ISR();
   rfManager.radio.setTxPowerLevel(0xC0); // restore default power
