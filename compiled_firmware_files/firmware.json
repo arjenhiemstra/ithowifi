@@ -7,12 +7,12 @@
             "link_beta": "https://github.com/arjenhiemstra/ithowifi/raw/master/compiled_firmware_files/hardware_rev_1/nrgitho-hw1-v2.2.4.bin"
         },
         "2": {
-            "latest_fw": "3.1.0",
-            "link": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.0/nrgitho-v3.1.0.bin",
-            "latest_beta_fw": "3.1.0",
-            "link_beta": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.0/nrgitho-v3.1.0.bin",
-            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.0",
-            "release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.0",
+            "latest_fw": "3.1.1",
+            "link": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.1/nrgitho-v3.1.1.bin",
+            "latest_beta_fw": "3.1.1",
+            "link_beta": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.1/nrgitho-v3.1.1.bin",
+            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.1",
+            "release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.1",
             "versions": [
                 {
                     "version": "3.0.0",
@@ -35,12 +35,12 @@
             ]
         },
         "NON-CVE 1": {
-            "latest_fw": "3.1.0",
-            "link": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.0/nrgitho-v3.1.0.bin",
-            "latest_beta_fw": "3.1.0",
-            "link_beta": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.0/nrgitho-v3.1.0.bin",
-            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.0",
-            "release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.0",
+            "latest_fw": "3.1.1",
+            "link": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.1/nrgitho-v3.1.1.bin",
+            "latest_beta_fw": "3.1.1",
+            "link_beta": "https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.1/nrgitho-v3.1.1.bin",
+            "beta_release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.1",
+            "release_notes": "https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.1",
             "versions": [
                 {
                     "version": "3.0.0",
