@@ -14,7 +14,24 @@
 
 // --- Helpers ---
 
-static bool checkRestAuth(AsyncWebServerRequest *request)
+// Gate REST requests during active OTA download. The HTTPS TLS session
+// consumes ~30-40KB of heap; concurrent JSON serialization can trigger
+// std::bad_alloc and crash the async_tcp task. Return 503 early so
+// callers (HA integration, scripts, browser) get a clean retry signal
+// instead of a dead device. The /api/v2/ota endpoint is exempt so
+// progress monitoring still works.
+static bool checkOTABusy(AsyncWebServerRequest *request)
+{
+  int p = otaUpdateProgress;
+  if (p >= 0 && p <= 100)
+  {
+    request->send(503, "text/plain", "OTA update in progress");
+    return true;
+  }
+  return false;
+}
+
+static bool checkAuthOnly(AsyncWebServerRequest *request)
 {
   if (systemConfig.syssec_api)
   {
@@ -25,6 +42,13 @@ static bool checkRestAuth(AsyncWebServerRequest *request)
     }
   }
   return true;
+}
+
+static bool checkRestAuth(AsyncWebServerRequest *request)
+{
+  if (checkOTABusy(request))
+    return false;
+  return checkAuthOnly(request);
 }
 
 // Serialize a JSON response via AsyncResponseStream. If heap is
@@ -120,7 +144,8 @@ static void handleGetDevice(AsyncWebServerRequest *request)
 // Combined firmware info + OTA progress for HA / other integrations.
 static void handleGetOTA(AsyncWebServerRequest *request)
 {
-  if (!checkRestAuth(request))
+  // Exempt from OTA-busy gate so progress monitoring works during download.
+  if (!checkAuthOnly(request))
     return;
   JsonDocument data;
   JsonObject obj = data["ota"].to<JsonObject>();
