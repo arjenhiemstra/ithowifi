@@ -500,6 +500,9 @@ function execScripts(container) {
 })();
 
 const messageHandlers = {
+  bind_result: function (f) {
+    if (typeof wizardOnBindResult === 'function') wizardOnBindResult(f.bind_result);
+  },
   session_key: function (f) {
     secureCredentials.handleKeyExchangeResponse(f);
   },
@@ -606,6 +609,13 @@ const messageHandlers = {
     if ("i2cmenu" in x) {
       $id('i2cmenu').classList.toggle('hidden', x.i2cmenu != 1);
     }
+    if ("itho_rf_standalone" in x) {
+      var standalone = x.itho_rf_standalone == 1;
+      var vm = $id('vremotemenu'); if (vm) vm.classList.toggle('hidden', standalone);
+      var im = $id('ithomenu'); if (im) im.classList.toggle('hidden', standalone);
+      var sm = $id('statusmenu'); if (sm) sm.classList.toggle('hidden', standalone);
+      var i2m = $id('i2cmenu'); if (i2m && standalone) i2m.classList.add('hidden');
+    }
   },
   remotes: function (f) {
     var tbl = $id('RemotesTable');
@@ -616,6 +626,10 @@ const messageHandlers = {
       tbl.innerHTML = '';
       buildHtmlTableRemotes(tbl, f.remfunc, f.remotes);
       remotesRefreshNeeded = false;
+      // Auto-configure RF remote after table is built in standalone wizard
+      if (wizardActive && wizardRfStandalone && wizardHasRF) {
+        setTimeout(function() { wizardAutoConfigRFRemote(); }, 100);
+      }
     }
     if (wizardActive && wizardDeviceCategory === 'hru250_300') {
       wizardAutoConfigRFRemote();
@@ -1204,6 +1218,7 @@ document.addEventListener('DOMContentLoaded', function () {
           syssht30: checkedVal('option-syssht30'),
           itho_rf_support: checkedVal('option-itho_rf_support'),
           itho_control_interface: checkedVal('option-itho_control_interface'),
+          itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_fallback: $val('itho_fallback'),
           itho_low: $val('itho_low'),
@@ -2853,6 +2868,7 @@ var wizardHasRF = false;
 var wizardDeviceCategory = 'other';
 var wizardDevType = '';
 var wizardIsOptimaInside = false;
+var wizardRfStandalone = false;
 var wizardSimDevType = null;
 var wizardRemotesInterval = null;
 var wizardWifistatInterval = null;
@@ -3009,6 +3025,11 @@ function wizardGoTo(step) {
       var rb = $id('wiz-rf-buttons'); if (rb) rb.style.display = 'none';
       var rl = $id('wiz-rf-later'); if (rl) rl.style.display = '';
     }
+    // Set RF remote type dropdown for standalone mode
+    if (wizardRfStandalone) {
+      var rfRemTypeEl = $id('wiz-rfremtype');
+      if (rfRemTypeEl) rfRemTypeEl.value = '0x1298';
+    }
   } else if (step === 4) {
     getSettings('mqttsetup');
   }
@@ -3047,7 +3068,7 @@ function wizardAbort() {
 }
 
 function wizardDetectDeviceCategory(devtype) {
-  if (!devtype || devtype === 'Unkown device type') return 'other';
+  if (!devtype || devtype === 'Unkown device type' || devtype === 'Generic Itho device') return 'other';
   if (devtype === 'Heatpump') return 'wpu';
   if (devtype === 'HRU 250-300') return 'hru250_300';
   if (devtype === 'HRU 350') return 'hru350';
@@ -3231,6 +3252,14 @@ function wizardOnDevInfo(devtype, devgroup, devid) {
   // Show CO2 choice for CVE-Silent (device ID 0x1B)
   var co2box = $id('wiz-co2-box');
   if (co2box) co2box.style.display = (effectiveType === 'CVE-Silent') ? '' : 'none';
+
+  // Show RF standalone box when no I2C device detected and RF is available
+  var rfStandaloneBox = $id('wiz-rf-standalone-box');
+  if (rfStandaloneBox) {
+    var noI2C = (wizardDeviceCategory === 'other' && !wizardSimDevType);
+    rfStandaloneBox.style.display = (noI2C && wizardHasRF) ? '' : 'none';
+  }
+
   // Force RF available when simulating
   if (wizardSimDevType) {
     wizardHasRF = true;
@@ -3239,6 +3268,141 @@ function wizardOnDevInfo(devtype, devgroup, devid) {
   applyDeviceDefaults();
   // Request status to check for CO2 sensor (may not be available on first boot)
   if (effectiveType === 'CVE-Silent') getSettings('ithostatus');
+}
+
+function wizardSetRfStandalone(enabled) {
+  wizardRfStandalone = enabled;
+  var box = $id('wiz-rf-standalone-box');
+  var i2cSection = $id('wiz-i2c-section');
+  var vremSection = $id('wiz-vrem-section');
+  var rfNote = $id('wiz-rf-note');
+  var msg = $id('wiz-rf-standalone-msg');
+
+  if (enabled) {
+    // Hide I2C and virtual remote sections
+    if (i2cSection) i2cSection.style.display = 'none';
+    if (vremSection) vremSection.style.display = 'none';
+    if (rfNote) rfNote.style.display = 'none';
+    if (msg) { msg.style.display = ''; msg.textContent = 'RF standalone mode enabled. I2C functions and virtual remotes are disabled. Configure an RF remote in the next step.'; }
+    // Set RF-only defaults
+    function checkRadio(name, value) {
+      var el = $q('input[name="' + name + '"][value="' + value + '"]');
+      if (el) el.checked = true;
+    }
+    checkRadio('option-itho_pwm2i2c', '0');
+    checkRadio('option-itho_31da', '0');
+    checkRadio('option-itho_31d9', '0');
+    checkRadio('option-itho_4210', '0');
+    checkRadio('option-itho_sendjoin', '0');
+    checkRadio('option-itho_forcemedium', '0');
+    var numvremEl = $id('itho_numvrem');
+    if (numvremEl) numvremEl.value = 0;
+    // Auto-configure RF remote as Send+RFTCO2
+    wizardRfCo2Device = true;
+    var rfRemTypeEl = $id('wiz-rfremtype');
+    if (rfRemTypeEl) rfRemTypeEl.value = '0x1298'; // RFT CO2
+    if (wizardHasRF) setTimeout(function() { wizardAutoConfigRFRemote(); }, 500);
+    // Show join section on step 3
+    var joinSection = $id('wiz-join-section');
+    if (joinSection) joinSection.style.display = '';
+  } else {
+    if (i2cSection) i2cSection.style.display = '';
+    if (msg) msg.style.display = 'none';
+    var joinSection = $id('wiz-join-section');
+    if (joinSection) joinSection.style.display = 'none';
+    applyDeviceDefaults();
+  }
+}
+
+var wizardJoinPollInterval = null;
+
+function wizardJoin() {
+  var btn = $id('wiz-join-btn');
+  var status = $id('wiz-join-status');
+  var successBox = $id('wiz-join-success');
+  var failBox = $id('wiz-join-fail');
+  if (btn) btn.disabled = true;
+  if (successBox) successBox.style.display = 'none';
+  if (failBox) failBox.style.display = 'none';
+
+  // Check if remote 0 is configured
+  var idEl = $id('id_remote-0');
+  var funcEl = $id('func_remote-0');
+  if (!idEl || !idEl.value || idEl.value === 'empty slot' || idEl.value === '0,0,0') {
+    if (status) status.textContent = 'Error: configure an RF remote first (click Update)';
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (funcEl && parseInt(funcEl.value) !== 5) {
+    if (status) status.textContent = 'Error: remote must be set to Send function';
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  if (status) status.textContent = 'Saving remote configuration...';
+
+  // Save remote config — force RFT CO2 type in standalone mode
+  var rfRemType = wizardRfStandalone ? 0x1298 : (function() {
+    var typeEl = $id('type_remote-0');
+    return typeEl ? parseInt(typeEl.value) : 0x1298;
+  })();
+  var remfuncVal = funcEl ? parseInt(funcEl.value) : 5;
+  var nameEl = $id('name_remote-0');
+  var nameVal = nameEl ? nameEl.value : 'rftco2';
+  // Parse the ID from the text field (format: "AB,21,9F")
+  var idArr = [0, 0, 0];
+  if (idEl && idEl.value && idEl.value !== 'empty slot') {
+    var parts = idEl.value.split(',');
+    if (parts.length >= 3) {
+      idArr = [parseInt(parts[0], 16), parseInt(parts[1], 16), parseInt(parts[2], 16)];
+    }
+  }
+  websock_send(JSON.stringify({
+    itho_update_remote: 0,
+    remtype: rfRemType,
+    remfunc: remfuncVal,
+    value: nameVal,
+    id: idArr
+  }));
+
+  // Wait for save to be processed, then send join
+  setTimeout(function() {
+    if (status) status.textContent = 'Join command sent. Waiting for device to accept...';
+    websock_send(JSON.stringify({remote: 0, command: 'join'}));
+
+    // Poll for result
+    var pollCount = 0;
+    wizardJoinPollInterval = setInterval(function() {
+      pollCount++;
+      websock_send(JSON.stringify({get_bind_result: true}));
+      if (pollCount > 20) { // 10 seconds
+        clearInterval(wizardJoinPollInterval);
+        if (btn) btn.disabled = false;
+        if (status) status.textContent = '';
+        if (failBox) failBox.style.display = '';
+      }
+    }, 500);
+  }, 2000);
+}
+
+function wizardOnBindResult(result) {
+  if (wizardJoinPollInterval) clearInterval(wizardJoinPollInterval);
+  var btn = $id('wiz-join-btn');
+  var status = $id('wiz-join-status');
+  var successBox = $id('wiz-join-success');
+  var failBox = $id('wiz-join-fail');
+
+  if (result === 1) {
+    if (status) status.textContent = '';
+    if (successBox) successBox.style.display = '';
+    if (failBox) failBox.style.display = 'none';
+    if (btn) btn.disabled = false;
+  } else if (result === -1) {
+    if (status) status.textContent = '';
+    if (successBox) successBox.style.display = 'none';
+    if (failBox) failBox.style.display = '';
+    if (btn) btn.disabled = false;
+  }
 }
 
 function wizardSetCO2Choice(isOptima) {
@@ -3267,10 +3431,15 @@ function wizardAutoConfigRFRemote() {
     funcEl.value = '5';
     funcEl.disabled = false;
   }
+  // Set type to RFT CO2 in standalone mode
+  var typeEl = $id('type_remote-0');
+  if (typeEl && wizardRfStandalone) {
+    typeEl.value = 0x1298; // RFT CO2
+  }
   // Set name
   var nameEl = $id('name_remote-0');
-  if (nameEl && (!nameEl.value || nameEl.value === '')) {
-    nameEl.value = 'RF Send';
+  if (nameEl && (!nameEl.value || nameEl.value === '' || nameEl.value === 'RF Send')) {
+    nameEl.value = wizardRfStandalone ? 'rftco2' : 'RF Send';
     nameEl.readOnly = false;
   }
 }
@@ -3301,8 +3470,14 @@ function wizardFinish() {
     }
   };
   // For non-PWM2I2C HRU devices: enable RF CO2 join on next boot
-  if (wizardRfCo2Device) {
+  // Skip if standalone — join already happened in the wizard
+  if (wizardRfCo2Device && !wizardRfStandalone) {
     sysMsg.systemsettings.itho_rf_co2_join = 1;
+  }
+  // RF standalone mode
+  if (wizardRfStandalone) {
+    sysMsg.systemsettings.itho_rf_standalone = 1;
+    sysMsg.systemsettings.itho_control_interface = 1;
   }
   websock_send(JSON.stringify(sysMsg));
 
@@ -3386,8 +3561,8 @@ function wizardFinish() {
   var ssidChanged = $val('ssid') !== '';
   var joinEnabled = sendjoinVal !== '0';
   var rfCo2JoinEnabled = wizardRfCo2Device;
-  var needsPowerCycle = (joinEnabled && forcemediumVal !== '0') || (rfCo2JoinEnabled && !wizardHru250_300);
-  var needsReboot = ssidChanged && !needsPowerCycle;
+  var needsPowerCycle = !wizardRfStandalone && ((joinEnabled && forcemediumVal !== '0') || (rfCo2JoinEnabled && !wizardHru250_300));
+  var needsReboot = wizardRfStandalone || (ssidChanged && !needsPowerCycle);
 
   // Build target URL — prefer IP address, fall back to hostname.local
   var ipSpan = $q('[name="wifiip"]');

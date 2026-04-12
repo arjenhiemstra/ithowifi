@@ -219,11 +219,14 @@ void setllModeTimer()
   }
 }
 
+volatile int8_t bindInitiatorResult = 0; // 0=idle, 1=success, -1=timeout
+
 void bindInitiatorTimeoutCallback()
 {
   if (rfManager.radio.isBindInitiatorActive())
   {
     rfManager.radio.setBindInitiatorActive(false);
+    bindInitiatorResult = -1;
     W_LOG("RFI: Bind initiator timeout - no binding accept received");
   }
 }
@@ -576,6 +579,7 @@ void TaskCC1101(void *pvParameters)
           if (cmd == IthoBindAccept)
           {
             cancelBindInitiatorTimeout();
+            bindInitiatorResult = 1;
             uint8_t remIdx = rfManager.radio.getBindInitiatorRemIndex();
             D_LOG("RFI: Binding accept received, remote index:%d", remIdx);
             // Store the target's device ID as the destination for this remote (runtime)
@@ -591,6 +595,23 @@ void TaskCC1101(void *pvParameters)
               systemConfig.itho_control_interface = 1;
               saveSystemConfigflag = true;
               I_LOG("RFI: RF CO2 join successful, control interface set to RF CO2");
+            }
+            // Auto-track the Itho device as RF status source for 31DA/31D9 data
+            if (remotes.getRemoteFunction(remIdx) == RemoteFunctions::SEND)
+            {
+              rfStatusSource *src = findOrAllocRFStatusSource(*(lastID + 0), *(lastID + 1), *(lastID + 2));
+              if (src && !src->tracked)
+              {
+                src->tracked = true;
+                const char *remName = remotes.getRemoteNamebyIndex(remIdx);
+                if (remName && strlen(remName) > 0)
+                  strlcpy(src->name, remName, sizeof(src->name));
+                else
+                  strlcpy(src->name, "Itho (auto)", sizeof(src->name));
+                saveRFTrackedSources();
+                I_LOG("RFI: Auto-tracked Itho device %02X:%02X:%02X as '%s'",
+                      *(lastID + 0), *(lastID + 1), *(lastID + 2), src->name);
+              }
             }
             // Delay the confirm to let the remaining accepts from the target pass
             rf_message.once_ms(300, []()

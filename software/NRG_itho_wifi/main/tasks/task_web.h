@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 #include <Ticker.h>
-#include <ArduinoOTA.h>
+#include <Update.h>
 #include "esp_wifi.h"
 
 #include "config/SystemConfig.h"

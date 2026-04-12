@@ -7,6 +7,13 @@
   <input id="option-itho_remotes-0" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 0)'
     value="0"> off
 </div>
+<legend><br>RF standalone mode (no I2C connection):</legend>
+<p>Enable when the add-on has no I2C connection to the Itho unit (e.g. HRU 400). All I2C functions and virtual remotes are disabled. Control is via RF only.</p>
+<div class="pure-control-group">
+  <label for="option-itho_rf_standalone" class="pure-radio">RF standalone</label>
+  <input id="option-itho_rf_standalone-1" type="radio" name="option-itho_rf_standalone" value="1"> on
+  <input id="option-itho_rf_standalone-0" type="radio" name="option-itho_rf_standalone" value="0"> off
+</div>
 <legend><br>RF CO2 control:</legend>
 <div class="pure-control-group">
   <label for="option-itho_control_interface" class="pure-radio">Control interface</label>

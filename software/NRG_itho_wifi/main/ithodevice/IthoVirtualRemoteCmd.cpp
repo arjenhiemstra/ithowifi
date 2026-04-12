@@ -14,6 +14,12 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command)
   if (remoteType == RemoteTypes::UNSETTYPE)
     return;
 
+  // Track last command per virtual remote so external integrations (HA) can
+  // show per-remote state. Only set for user-facing fan commands.
+  const char *cmdName = IthoRemote::ithoCommandToShortName(static_cast<uint8_t>(command));
+  if (cmdName != nullptr)
+    virtualRemotes.setLastCmd(remoteIndex, cmdName);
+
   // Get the corresponding command / remote type combination
   const uint8_t *remote_command = rfManager.radio.getRemoteCmd(remoteType, command);
   if (remote_command == nullptr)

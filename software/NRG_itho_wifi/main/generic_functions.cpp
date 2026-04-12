@@ -1,8 +1,14 @@
 #include "generic_functions.h"
 #include "config/HADiscConfig.h"
 #include "tasks/task_cc1101.h"
+#include <HTTPUpdate.h>
 
-#define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 2000 // firmware json response should be smaller than this
+// MAX_FIRMWARE_HTTPS_RESPONSE_SIZE is normally injected by build_script.py based
+// on the actual firmware.json size + headroom. This fallback only applies if the
+// build flag wasn't set.
+#ifndef MAX_FIRMWARE_HTTPS_RESPONSE_SIZE
+#define MAX_FIRMWARE_HTTPS_RESPONSE_SIZE 16384
+#endif
 
 // locals
 Ticker IthoCMD;
@@ -261,20 +267,53 @@ void getRFStatusConfigJSON(JsonObject root, int sourceIndex)
     root["selectedSource"] = idx;
 }
 
+bool isPrereleaseVersion(const char *version)
+{
+  if (version == nullptr)
+    return false;
+  return strstr(version, "-beta") != nullptr ||
+         strstr(version, "-rc") != nullptr ||
+         strstr(version, "-alpha") != nullptr ||
+         strstr(version, "-dev") != nullptr;
+}
+
+const char *getUpdateChannel()
+{
+  return isPrereleaseVersion(fw_version) ? "beta" : "stable";
+}
+
 void getDeviceInfoJSON(JsonObject root)
 {
-  root["itho_devtype"] = getIthoType();
+  root["itho_devtype"] = (systemConfig.itho_rf_standalone == 1 && strcmp(getIthoType(), "Unkown device type") == 0)
+                             ? "Generic Itho device"
+                             : getIthoType();
   root["itho_mfr"] = currentIthoDeviceGroup();
   root["itho_deviceid"] = currentIthoDeviceID();
   root["itho_hwversion"] = currentItho_hwversion();
   root["itho_fwversion"] = currentItho_fwversion();
   root["add-on_hwid"] = WiFi.macAddress();
   root["add-on_fwversion"] = fw_version;
+  root["itho_rf_standalone"] = systemConfig.itho_rf_standalone;
+  root["itho_control_interface"] = systemConfig.itho_control_interface;
   if (systemConfig.fw_check)
   {
     root["add-on_fwupdate_available"] = firmwareInfo.fw_update_available == 1 ? "true" : "false";
     root["add-on_latest_fw"] = firmwareInfo.latest_fw;
     root["add-on_latest_beta_fw"] = firmwareInfo.latest_beta_fw;
+
+    // Channel-aware fields for HA Auto Discovery: pick stable or beta
+    // based on the running version, and clamp the reported "latest" to
+    // the installed version when the channel target is empty or older.
+    // This keeps HA's update entity quiet for beta users on the latest
+    // beta and prevents spurious "downgrade" prompts.
+    const char *channel = getUpdateChannel();
+    const char *target = (strcmp(channel, "beta") == 0)
+                             ? firmwareInfo.latest_beta_fw
+                             : firmwareInfo.latest_fw;
+    bool target_is_newer = strlen(target) > 0 &&
+                           compareVersions(std::string(target), std::string(fw_version)) > 0;
+    root["add-on_update_channel"] = channel;
+    root["add-on_latest_for_channel"] = target_is_newer ? target : fw_version;
   }
 }
 
@@ -538,6 +577,12 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   char buf[32]{};
   snprintf(buf, sizeof(buf), "rfremotecmd:%s, idx:%d", (res ? command : "unknown"), remote_index);
   logLastCommand(buf, origin);
+
+  // Track last command per remote so external integrations (HA) can show
+  // per-remote state. Only meaningful for SEND remotes — RX remotes get
+  // their own lastcmd via addCapabilities() from received RF messages.
+  if (res && isSendRemote)
+    remotes.setLastCmd(remote_index, command);
 
   enableRF_ISR();
   rfManager.radio.setTxPowerLevel(0xC0); // restore default power
@@ -912,39 +957,151 @@ int compareVersions(const std::string &v1, const std::string &v2)
 void checkFirmwareUpdate()
 {
   WiFiClientSecure *secclient = new WiFiClientSecure;
-  if (secclient)
+  if (!secclient)
   {
-    secclient->setInsecure(); // set secure client without certificate
-
-    HTTPClient https;
-
-    if (https.begin(*secclient, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
-    { // HTTPS
-      int httpCode = https.GET();
-      if (httpCode > 0)
-      {
-        if (httpCode == HTTP_CODE_OK && https.getSize() < MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
-        {
-          String payloadString = https.getString().c_str();
-          const char *payload = payloadString.c_str();
-
-          JsonDocument root;
-          DeserializationError error = deserializeJson(root, payload);
-          if (!error)
-          {
-            firmwareInfo.fw_update_available = compareVersions(root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", fw_version);
-
-            strlcpy(firmwareInfo.latest_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
-            Serial.printf("latest_fw:%s\n", root["hw_rev"][hardwareManager.hw_revision]["latest_fw"] | "error");
-            strlcpy(firmwareInfo.latest_beta_fw, root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
-            Serial.printf("latest_beta_fw:%s\n", root["hw_rev"][hardwareManager.hw_revision]["latest_beta_fw"] | "error");
-
-            D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);
-            // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful
-          }
-        }
-      }
-      https.end();
-    }
+    E_LOG("SYS: firmware check - failed to allocate WiFiClientSecure");
+    return;
   }
+  secclient->setInsecure(); // set secure client without certificate
+
+  HTTPClient https;
+
+  if (!https.begin(*secclient, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
+  {
+    E_LOG("SYS: firmware check - https.begin() failed");
+    delete secclient;
+    return;
+  }
+
+  int httpCode = https.GET();
+  if (httpCode <= 0)
+  {
+    E_LOG("SYS: firmware check - GET failed: %s", https.errorToString(httpCode).c_str());
+    https.end();
+    delete secclient;
+    return;
+  }
+  if (httpCode != HTTP_CODE_OK)
+  {
+    E_LOG("SYS: firmware check - HTTP %d", httpCode);
+    https.end();
+    delete secclient;
+    return;
+  }
+  if (https.getSize() >= MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
+  {
+    E_LOG("SYS: firmware check - response too large: %d", https.getSize());
+    https.end();
+    delete secclient;
+    return;
+  }
+
+  String payloadString = https.getString().c_str();
+  const char *payload = payloadString.c_str();
+
+  JsonDocument root;
+  DeserializationError error = deserializeJson(root, payload);
+  if (error)
+  {
+    E_LOG("SYS: firmware check - JSON parse error: %s", error.c_str());
+    https.end();
+    delete secclient;
+    return;
+  }
+
+  JsonVariant hwNode = root["hw_rev"][hardwareManager.hw_revision];
+  if (hwNode.isNull())
+  {
+    E_LOG("SYS: firmware check - no entry for hw_rev %d in firmware.json", hardwareManager.hw_revision);
+    https.end();
+    delete secclient;
+    return;
+  }
+
+  firmwareInfo.fw_update_available = compareVersions(hwNode["latest_fw"] | "error", fw_version);
+
+  strlcpy(firmwareInfo.latest_fw, hwNode["latest_fw"] | "error", sizeof(firmwareInfo.latest_fw));
+  strlcpy(firmwareInfo.latest_beta_fw, hwNode["latest_beta_fw"] | "error", sizeof(firmwareInfo.latest_beta_fw));
+  strlcpy(firmwareInfo.link, hwNode["link"] | "", sizeof(firmwareInfo.link));
+  strlcpy(firmwareInfo.link_beta, hwNode["link_beta"] | "", sizeof(firmwareInfo.link_beta));
+  D_LOG("SYS: latest_fw:%s, latest_beta:%s", firmwareInfo.latest_fw, firmwareInfo.latest_beta_fw);
+  D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);
+  // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful
+
+  https.end();
+  delete secclient;
+}
+
+volatile int otaUpdateProgress = -1; // -1=idle, 0-100=progress, 101=done, -2=error
+volatile bool otaUpdateRequested = false;
+volatile bool otaUpdateBeta = false;
+char otaUpdateURL[160] = {};
+
+void triggerOTAUpdate(bool beta)
+{
+  otaUpdateURL[0] = '\0';
+  otaUpdateBeta = beta;
+  otaUpdateRequested = true;
+}
+
+void triggerOTAUpdateFromURL(const char *url)
+{
+  strlcpy(otaUpdateURL, url, sizeof(otaUpdateURL));
+  otaUpdateRequested = true;
+}
+
+bool performOTAUpdate(bool beta)
+{
+  const char *url = beta ? firmwareInfo.link_beta : firmwareInfo.link;
+  return performOTAUpdateFromURL(url);
+}
+
+bool performOTAUpdateFromURL(const char *url)
+{
+  if (url == nullptr || strlen(url) == 0)
+  {
+    E_LOG("OTA: no firmware URL available");
+    return false;
+  }
+
+  I_LOG("OTA: starting update from %s", url);
+  logMessagejson("Firmware update starting...", WEBINTERFACE);
+
+  WiFiClientSecure secclient;
+  secclient.setInsecure();
+
+  httpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+  httpUpdate.rebootOnUpdate(false);
+
+  otaUpdateProgress = 0;
+
+  httpUpdate.onProgress([](int cur, int total)
+                        {
+    if (total > 0)
+      otaUpdateProgress = (cur * 100) / total; });
+
+  t_httpUpdate_return ret = httpUpdate.update(secclient, url);
+
+  switch (ret)
+  {
+  case HTTP_UPDATE_FAILED:
+    otaUpdateProgress = -2;
+    E_LOG("OTA: update failed: %s", httpUpdate.getLastErrorString().c_str());
+    logMessagejson("Firmware update failed!", WEBINTERFACE);
+    return false;
+
+  case HTTP_UPDATE_NO_UPDATES:
+    otaUpdateProgress = -1;
+    I_LOG("OTA: no update available");
+    return false;
+
+  case HTTP_UPDATE_OK:
+    otaUpdateProgress = 101;
+    I_LOG("OTA: update successful, rebooting...");
+    logMessagejson("Firmware update successful, rebooting...", WEBINTERFACE);
+    delay(1000);
+    shouldReboot = true;
+    return true;
+  }
+  return false;
 }

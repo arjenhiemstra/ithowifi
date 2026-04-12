@@ -28,6 +28,7 @@ void jsonSystemstat()
   systemstat["copy_id"] = virtualRemotes.getllModeTime();
   systemstat["ithoinit"] = ithoInitResult;
   systemstat["fan_demand"] = ithoFanDemand;
+  systemstat["ota_progress"] = otaUpdateProgress;
   systemstat["uuid"] = uuid;
 
   notifyClients(root.as<JsonObject>());

@@ -302,8 +302,20 @@
     </button>
     <span id="wiz-override-msg" style="margin-left: 8px; color: #666; display: none;">Defaults unlocked - you can now modify all settings</span>
   </div>
+  <div class="wizard-info-box warning" id="wiz-rf-standalone-box" style="display:none">
+    <p><strong>No I2C connection detected.</strong> If your Itho device does not have an I2C
+      connector (e.g. HRU 400), you can use RF standalone mode.</p>
+    <p>In RF standalone mode, the add-on controls the Itho unit via RF commands only.
+      Status data is received wirelessly from the Itho device.</p>
+    <button type="button" class="pure-button pure-button-primary" onclick="wizardSetRfStandalone(true)">
+      Use RF Standalone Mode</button>&nbsp;
+    <button type="button" class="pure-button" onclick="wizardSetRfStandalone(false)">
+      Keep trying I2C</button>
+    <p id="wiz-rf-standalone-msg" style="display:none; margin-top:1em; color:#1cb841; font-weight:bold;"></p>
+  </div>
   <form class="pure-form pure-form-aligned">
     <fieldset>
+      <div id="wiz-i2c-section">
       <legend><br>I2C commands:</legend>
       <div class="pure-control-group">
         <label for="option-pwm2i2c" class="pure-radio">CVE fan control (PWM2I2C)</label>
@@ -359,6 +371,7 @@
         <p><strong>Note:</strong> Your HRU 250/300 is controlled via RF. Virtual remotes are not supported for this
           device. To control your Itho unit, configure a RF remote in the next step (RF Remote Setup) to control the unit.</p>
       </div>
+      </div><!-- end wiz-i2c-section -->
       <legend><br>Status update frequency:</legend>
       <div class="wizard-info-box">
         <p>Controls the rate at which sensor data, status data and system information is requested and updated on the
@@ -433,6 +446,25 @@
       </div>
     </fieldset>
   </form>
+  <div id="wiz-join-section" style="display:none">
+    <legend><br>Join RF remote to Itho device:</legend>
+    <div class="wizard-info-box">
+      <p>Before the add-on can control your Itho device, the RF remote must be joined (paired).</p>
+      <ol>
+        <li>Put your Itho device in <strong>learn mode</strong> (consult your Itho manual)</li>
+        <li>Click the <strong>Join</strong> button below</li>
+        <li>Wait for the result (up to 10 seconds)</li>
+      </ol>
+    </div>
+    <button id="wiz-join-btn" type="button" class="pure-button pure-button-primary" onclick="wizardJoin()">Join</button>
+    <span id="wiz-join-status" style="margin-left: 1em;"></span>
+    <div id="wiz-join-success" class="wizard-info-box" style="display:none; border-color: #1cb841;">
+      <p style="color:#1cb841"><strong>Join successful!</strong> The add-on is now paired with your Itho device. You can proceed to the next step.</p>
+    </div>
+    <div id="wiz-join-fail" class="wizard-info-box warning" style="display:none;">
+      <p>Join failed. Make sure your Itho device is in learn mode and try again.</p>
+    </div>
+  </div>
 </div>
 
 <!-- Step 4: MQTT -->

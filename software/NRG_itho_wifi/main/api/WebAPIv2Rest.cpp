@@ -105,6 +105,88 @@ static void handleGetDevice(AsyncWebServerRequest *request)
   sendSuccess(request, data);
 }
 
+// GET /api/v2/ota
+// Combined firmware info + OTA progress for HA / other integrations.
+static void handleGetOTA(AsyncWebServerRequest *request)
+{
+  if (!checkRestAuth(request))
+    return;
+  JsonDocument data;
+  JsonObject obj = data["ota"].to<JsonObject>();
+  obj["installed_version"] = fw_version;
+  obj["latest_fw"] = firmwareInfo.latest_fw;
+  obj["latest_beta_fw"] = firmwareInfo.latest_beta_fw;
+  obj["fw_update_available"] = firmwareInfo.fw_update_available;
+
+  int p = otaUpdateProgress;
+  const char *state;
+  if (p == -1)
+    state = "idle";
+  else if (p == -2)
+    state = "error";
+  else if (p == 101)
+    state = "done";
+  else if (p == 0)
+    state = "starting";
+  else
+    state = "downloading";
+  obj["state"] = state;
+  obj["progress"] = (p >= 0 && p <= 100) ? p : 0;
+  obj["raw"] = p;
+  sendSuccess(request, data);
+}
+
+// POST /api/v2/ota
+// Body: {"channel":"stable"} | {"channel":"beta"} | {"url":"https://github.com/arjenhiemstra/ithowifi/..."}
+static void handlePostOTA(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+
+  if (!body["url"].isNull())
+  {
+    const char *url = body["url"] | "";
+    if (strncmp(url, "https://github.com/arjenhiemstra/ithowifi/", 42) != 0)
+    {
+      sendFail(request, "invalid firmware URL");
+      return;
+    }
+    JsonDocument data;
+    data["result"] = "firmware update started";
+    data["url"] = url;
+    sendSuccess(request, data);
+    triggerOTAUpdateFromURL(url);
+    return;
+  }
+
+  if (!body["channel"].isNull())
+  {
+    const char *channel = body["channel"] | "";
+    bool beta = (strcmp(channel, "beta") == 0);
+    if (!beta && strcmp(channel, "stable") != 0)
+    {
+      sendFail(request, "invalid channel - must be 'stable' or 'beta'");
+      return;
+    }
+    if (strlen(beta ? firmwareInfo.link_beta : firmwareInfo.link) == 0)
+    {
+      sendFail(request, "no firmware URL available - run firmware check first or check internet connection");
+      return;
+    }
+    JsonDocument data;
+    data["result"] = "firmware update started";
+    data["url"] = beta ? firmwareInfo.link_beta : firmwareInfo.link;
+    data["version"] = beta ? firmwareInfo.latest_beta_fw : firmwareInfo.latest_fw;
+    sendSuccess(request, data);
+    triggerOTAUpdate(beta);
+    return;
+  }
+
+  sendFail(request, "missing required field: channel or url");
+}
+
 // GET /api/v2/queue
 static void handleGetQueue(AsyncWebServerRequest *request)
 {
@@ -136,8 +218,12 @@ static void handleGetRemotes(AsyncWebServerRequest *request)
   if (!checkRestAuth(request))
     return;
   JsonDocument data;
-  JsonObject obj = data["remotesinfo"].to<JsonObject>();
-  getRemotesInfoJSON(obj);
+  // Full remote config (new format)
+  JsonObject obj = data.to<JsonObject>();
+  remotes.get(obj, "remotes");
+  // Legacy capabilities (backward compat)
+  JsonObject legacy = data["remotesinfo"].to<JsonObject>();
+  getRemotesInfoJSON(legacy);
   sendSuccess(request, data);
 }
 
@@ -147,7 +233,7 @@ static void handleGetVRemotes(AsyncWebServerRequest *request)
   if (!checkRestAuth(request))
     return;
   JsonDocument data;
-  JsonObject obj = data.as<JsonObject>();
+  JsonObject obj = data.to<JsonObject>();
   virtualRemotes.get(obj, "vremotesinfo");
   sendSuccess(request, data);
 }
@@ -777,6 +863,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/speed", HTTP_GET, handleGetSpeed);
   server.on("/api/v2/ithostatus", HTTP_GET, handleGetStatus);
   server.on("/api/v2/deviceinfo", HTTP_GET, handleGetDevice);
+  server.on("/api/v2/ota", HTTP_GET, handleGetOTA);
   server.on("/api/v2/queue", HTTP_GET, handleGetQueue);
   server.on("/api/v2/lastcmd", HTTP_GET, handleGetLastCmd);
   server.on("/api/v2/remotes", HTTP_GET, handleGetRemotes);
@@ -897,6 +984,25 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
           }
           JsonVariant v = json.as<JsonVariant>();
           handlePostRFConfig(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/ota", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostOTA(request, v);
         }
       });
 

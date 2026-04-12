@@ -634,15 +634,28 @@ void handle_ws_message(JsonObject root)
     sysStatReq = true;
   }
 
-  // "vremote" => use ithoI2CCommand
+  // "vremote" => use ithoI2CCommand (not available in RF standalone mode)
   if (root["vremote"].is<uint8_t>() && root["command"].is<const char *>())
   {
-    ithoI2CCommand(root["vremote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
+    if (systemConfig.itho_rf_standalone != 1)
+      ithoI2CCommand(root["vremote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
   }
   // "remote" => use ithoExecRFCommand
   else if (root["remote"].is<uint8_t>() && root["command"].is<const char *>())
   {
-    ithoExecRFCommand(root["remote"].as<uint8_t>(), root["command"].as<const char *>(), WEB);
+    const char *cmd = root["command"].as<const char *>();
+    if (strcmp(cmd, "join") == 0)
+      bindInitiatorResult = 0; // reset before join
+    ithoExecRFCommand(root["remote"].as<uint8_t>(), cmd, WEB);
+  }
+  // Poll bind initiator result
+  if (!root["get_bind_result"].isNull())
+  {
+    JsonDocument doc;
+    doc["bind_result"] = bindInitiatorResult; // 0=pending, 1=success, -1=timeout
+    char buf[64]{};
+    serializeJson(doc, buf, sizeof(buf));
+    notifyClients(buf);
   }
   // Single top-level "command"
   else if (root["command"].is<const char *>())
@@ -725,6 +738,20 @@ void handle_ws_message(JsonObject root)
       virtualRemotes.copy_id_remote_idx = number - 1;
       toggleRemoteLLmode("vremote");
     }
+  }
+
+  // OTA update from online resource
+  if (!root["update_url"].isNull())
+  {
+    const char *url = root["update_url"] | "";
+    if (strncmp(url, "https://github.com/arjenhiemstra/ithowifi/", 42) == 0)
+      triggerOTAUpdateFromURL(url);
+  }
+  else if (!root["update"].isNull())
+  {
+    const char *value = root["update"] | "stable";
+    bool beta = (strcmp(value, "beta") == 0);
+    triggerOTAUpdate(beta);
   }
 
   // Removing or updating rf remote

@@ -1,5 +1,6 @@
 #include "api/MqttAPI.h"
 #include "tasks/task_mqtt.h"
+#include "generic_functions.h"
 
 static void mqttSendResponse(const char *status, const char *command, const char *message)
 {
@@ -274,6 +275,45 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
         setSetting4030(index, datatype, value, checked, false);
         mqttSendResponse("success", "manual_operation", nullptr);
         clean_cmd_topic = true;
+      }
+      if (!root["update_url"].isNull())
+      {
+        jsonCmd = true;
+        const char *url = root["update_url"] | "";
+        if (strncmp(url, "https://github.com/arjenhiemstra/ithowifi/", 42) == 0)
+        {
+          mqttSendResponse("success", "update_url", "update starting");
+          clean_cmd_topic = true;
+          triggerOTAUpdateFromURL(url);
+        }
+        else
+        {
+          mqttSendResponse("fail", "update_url", "invalid URL");
+          clean_cmd_topic = true;
+        }
+      }
+      else if (!root["update"].isNull())
+      {
+        jsonCmd = true;
+        const char *value = root["update"] | "stable";
+        // 'auto' resolves to the channel matching the currently running
+        // firmware: pre-release strings → beta, otherwise stable. This is
+        // what the HA Auto Discovery update entity sends so the install
+        // button always installs the right channel.
+        if (strcmp(value, "auto") == 0)
+          value = getUpdateChannel();
+        bool beta = (strcmp(value, "beta") == 0);
+        if (strlen(beta ? firmwareInfo.link_beta : firmwareInfo.link) > 0)
+        {
+          mqttSendResponse("success", "update", beta ? "beta update starting" : "update starting");
+          clean_cmd_topic = true;
+          triggerOTAUpdate(beta);
+        }
+        else
+        {
+          mqttSendResponse("fail", "update", "no firmware URL available");
+          clean_cmd_topic = true;
+        }
       }
       if (!jsonCmd)
       {

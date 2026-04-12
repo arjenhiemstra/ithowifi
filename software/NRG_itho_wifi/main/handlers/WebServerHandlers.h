@@ -1,6 +1,5 @@
 #pragma once
 
-void ArduinoOTAinit();
 void MDNSinit();
 bool prevlogAvailable();
 const char *getCurrentLogPath();
