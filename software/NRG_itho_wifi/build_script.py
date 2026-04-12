@@ -164,6 +164,425 @@ def build_webui(*args, **kwargs):
     print("\n### Webroot sources ready...\n")
 
 
+def build_openapi_spec():
+    """Generate the OpenAPI 3.0 spec as a gzipped C header.
+
+    Ports the runtime C++ builder (main/api/OpenAPI.cpp::handleOpenAPI)
+    to Python so the spec can be served from flash without any runtime
+    JSON construction. fw_version is baked in at build time from the
+    VERSION build flag (same as version.h).
+    """
+    print("\n### Building OpenAPI spec...\n")
+
+    # --- Helpers: mirror the C++ addParam / addEnumParam / addProp shape ---
+    def param(name, description, type_, minimum=None, maximum=None):
+        schema = {"type": type_}
+        if minimum is not None:
+            schema["minimum"] = minimum
+        if maximum is not None:
+            schema["maximum"] = maximum
+        return {"name": name, "in": "query", "description": description, "schema": schema}
+
+    def enum_param(name, description, values):
+        p = param(name, description, "string")
+        p["schema"]["enum"] = list(values)
+        return p
+
+    def prop(type_, description=None, minimum=None, maximum=None):
+        p = {"type": type_}
+        if description is not None:
+            p["description"] = description
+        if minimum is not None:
+            p["minimum"] = minimum
+        if maximum is not None:
+            p["maximum"] = maximum
+        return p
+
+    def rest_get(summary, parameters=None):
+        op = {
+            "summary": summary,
+            "tags": ["REST API v2"],
+            "responses": {
+                "200": {
+                    "description": "JSend success",
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/ApiResponse"}
+                        }
+                    },
+                }
+            },
+        }
+        if parameters:
+            op["parameters"] = parameters
+        return {"get": op}
+
+    def rest_post(summary, schema_ref):
+        return {
+            "post": {
+                "summary": summary,
+                "tags": ["REST API v2"],
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {"schema": {"$ref": schema_ref}}
+                    },
+                },
+                "responses": {
+                    "200": {
+                        "description": "JSend success",
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/ApiResponse"}
+                            }
+                        },
+                    },
+                    "400": {"description": "JSend fail (validation error)"},
+                },
+            }
+        }
+
+    # --- Root ---
+    doc = {
+        "openapi": "3.0.3",
+        "info": {
+            "title": "IthoWifi API",
+            "version": fwversion,
+            "description": (
+                "API for controlling Itho ventilation units via the IthoWifi "
+                "add-on. Supports both URL query parameters (WebAPI) and MQTT "
+                "JSON commands."
+            ),
+            "license": {
+                "name": "GPL-3.0",
+                "url": "https://github.com/arjenhiemstra/ithowifi/blob/master/LICENSE",
+            },
+        },
+        "servers": [{"url": "/", "description": "This device"}],
+        "paths": {},
+        "components": {"schemas": {}},
+    }
+
+    # --- Legacy WebAPI v1 ---
+    doc["paths"]["/api.html"] = {
+        "get": {
+            "summary": "Legacy WebAPI v1",
+            "description": (
+                "Legacy API with URL query parameters. Returns plain text "
+                "OK/NOK. For JSON responses and advanced features, use the "
+                "REST API v2 endpoints."
+            ),
+            "tags": ["Legacy WebAPI v1"],
+            "deprecated": True,
+            "parameters": [
+                enum_param(
+                    "command",
+                    "Fan speed/timer command (PWM2I2C devices only)",
+                    ["low", "medium", "high", "timer1", "timer2", "timer3",
+                     "away", "cook30", "cook60", "autonight", "clearqueue"],
+                ),
+                param("speed", "Set fan speed directly (0-255)", "integer", 0, 255),
+                param("timer", "Timer in minutes (use with speed or command)",
+                      "integer", 0, 65535),
+                enum_param(
+                    "vremotecmd", "Virtual remote command (I2C)",
+                    ["away", "low", "medium", "high", "timer1", "timer2",
+                     "timer3", "join", "leave", "auto", "autonight",
+                     "cook30", "cook60"],
+                ),
+                param("vremoteindex", "Virtual remote index (default 0)", "integer", 0, 11),
+                param("vremotename", "Select virtual remote by name", "string"),
+                enum_param(
+                    "get", "Retrieve data (JSON response)",
+                    ["ithostatus", "remotesinfo", "currentspeed", "lastcmd", "queue"],
+                ),
+                enum_param(
+                    "rfremotecmd", "RF remote command via CC1101",
+                    ["away", "low", "medium", "high", "timer1", "timer2",
+                     "timer3", "join", "leave", "auto", "autonight",
+                     "cook30", "cook60", "motion_on", "motion_off"],
+                ),
+                param("rfremoteindex", "RF remote index (default 0)", "integer", 0, 11),
+            ],
+            "responses": {
+                "200": {
+                    "description": "OK or NOK (plain text), or JSON for get= queries",
+                    "content": {"text/plain": {"schema": {"type": "string"}}},
+                }
+            },
+        }
+    }
+
+    # --- REST API v2 GET endpoints ---
+    doc["paths"]["/api/v2/speed"] = rest_get("Get current fan speed")
+    doc["paths"]["/api/v2/ithostatus"] = rest_get("Get Itho device status")
+    doc["paths"]["/api/v2/deviceinfo"] = rest_get("Get device info")
+    doc["paths"]["/api/v2/queue"] = rest_get("Get command queue")
+    doc["paths"]["/api/v2/lastcmd"] = rest_get("Get last executed command")
+    doc["paths"]["/api/v2/remotes"] = rest_get("Get RF remotes configuration")
+    doc["paths"]["/api/v2/vremotes"] = rest_get("Get virtual remotes info")
+    doc["paths"]["/api/v2/rfstatus"] = rest_get(
+        "Get RF device status",
+        parameters=[param("name", "Filter by source name", "string")],
+    )
+    doc["paths"]["/api/v2/ota"] = rest_get(
+        "Get firmware version info and OTA update progress"
+    )
+    doc["paths"]["/api/v2/settings"] = rest_get(
+        "Read Itho setting by index",
+        parameters=[param("index", "Setting index", "integer", 0, 255)],
+    )
+
+    # --- REST API v2 POST endpoints ---
+    def add_post(path, summary, schema_ref):
+        doc["paths"].setdefault(path, {}).update(rest_post(summary, schema_ref))
+
+    add_post("/api/v2/command", "Send fan command", "#/components/schemas/CommandRequest")
+    add_post("/api/v2/vremote", "Send virtual remote command", "#/components/schemas/VRemoteRequest")
+    add_post("/api/v2/rfremote/command", "Send RF remote command", "#/components/schemas/RFRemoteRequest")
+    add_post("/api/v2/rfremote/co2", "Send CO2 ppm via RF", "#/components/schemas/RFCO2Request")
+    add_post("/api/v2/rfremote/demand", "Send ventilation demand via RF", "#/components/schemas/RFDemandRequest")
+    add_post("/api/v2/rfremote/config", "Configure RF remote", "#/components/schemas/RFConfigRequest")
+    add_post("/api/v2/debug", "Debug actions (reboot, RF debug level)", "#/components/schemas/DebugRequest")
+    add_post("/api/v2/ota", "Trigger firmware OTA update", "#/components/schemas/OtaInstallRequest")
+    add_post("/api/v2/wpu/outside_temp", "Set outside temperature", "#/components/schemas/OutsideTempRequest")
+    add_post("/api/v2/wpu/manual_control", "WPU manual control (4030 command)", "#/components/schemas/ManualControlRequest")
+
+    # --- PUT on /api/v2/settings ---
+    doc["paths"]["/api/v2/settings"]["put"] = {
+        "summary": "Write Itho setting",
+        "tags": ["REST API v2"],
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/SetSettingRequest"}
+                }
+            },
+        },
+        "responses": {
+            "200": {"description": "JSend success"},
+            "400": {"description": "JSend fail"},
+            "403": {"description": "Settings API disabled"},
+        },
+    }
+
+    # --- Documentation endpoint (self-describing) ---
+    doc["paths"]["/api/openapi.json"] = {
+        "get": {
+            "summary": "OpenAPI specification",
+            "tags": ["Documentation"],
+            "responses": {"200": {"description": "OpenAPI 3.0 JSON spec"}},
+        }
+    }
+
+    # --- Components / Schemas ---
+    schemas = doc["components"]["schemas"]
+
+    schemas["ApiResponse"] = {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "enum": ["success", "fail", "error"]},
+            "data": prop("object", "Response data"),
+            "message": prop("string", "Error message"),
+            "timestamp": prop("integer", "Unix timestamp"),
+        },
+    }
+
+    schemas["MqttCommand"] = {
+        "type": "object",
+        "description": "MQTT JSON command (send to command topic)",
+        "properties": {
+            "command": {
+                "type": "string",
+                "enum": ["low", "medium", "high", "timer1", "timer2", "timer3",
+                         "away", "cook30", "cook60", "autonight", "clearqueue"],
+            },
+            "speed": prop("integer", None, 0, 255),
+            "timer": prop("integer", None, 0, 65535),
+            "vremotecmd": prop("string"),
+            "vremoteindex": prop("integer"),
+            "vremotename": prop("string"),
+            "rfremotecmd": prop("string"),
+            "rfremoteindex": prop("integer"),
+            "percentage": prop("integer", "Fan speed as percentage (0-100)"),
+            "fandemand": prop("integer", "Ventilation demand (0-200)"),
+            "rfco2": prop("integer", "CO2 ppm"),
+            "rfdemand": prop("integer", "Ventilation demand 0-200"),
+            "rfzone": prop("integer", "Zone for rfdemand"),
+            "dtype": prop("string", "Domoticz device type"),
+        },
+    }
+
+    schemas["CommandRequest"] = {
+        "type": "object",
+        "description": "Fan command or speed/timer",
+        "properties": {
+            "command": {
+                "type": "string",
+                "description": "Named command",
+                "enum": ["low", "medium", "high", "timer1", "timer2", "timer3",
+                         "away", "cook30", "cook60", "autonight", "clearqueue"],
+            },
+            "speed": prop("integer", "Fan speed", 0, 255),
+            "timer": prop("integer", "Timer in minutes", 0, 65535),
+            "percentage": prop("integer", "Fan speed as percentage (0-100)", 0, 100),
+            "fandemand": prop("integer", "Ventilation demand (0-200, 0=0% 200=100%)", 0, 200),
+        },
+    }
+
+    schemas["VRemoteRequest"] = {
+        "type": "object",
+        "description": "Virtual remote command",
+        "properties": {
+            "command": {
+                "type": "string",
+                "description": "Command name",
+                "enum": ["away", "low", "medium", "high", "timer1", "timer2",
+                         "timer3", "join", "leave", "auto", "autonight",
+                         "cook30", "cook60"],
+            },
+            "index": prop("integer", "Virtual remote index", 0, 11),
+            "name": prop("string", "Virtual remote name (alternative to index)"),
+        },
+    }
+
+    schemas["RFRemoteRequest"] = {
+        "type": "object",
+        "description": "RF remote command",
+        "properties": {
+            "command": {
+                "type": "string",
+                "description": "RF command name",
+                "enum": ["away", "low", "medium", "high", "timer1", "timer2",
+                         "timer3", "join", "leave", "auto", "autonight",
+                         "cook30", "cook60", "motion_on", "motion_off"],
+            },
+            "index": prop("integer", "RF remote index", 0, 11),
+        },
+    }
+
+    schemas["RFCO2Request"] = {
+        "type": "object",
+        "description": "Send CO2 value via RF",
+        "properties": {
+            "co2": prop("integer", "CO2 level in ppm", 0, 10000),
+            "index": prop("integer", "RF remote index (default 0)", 0, 11),
+        },
+    }
+
+    schemas["RFDemandRequest"] = {
+        "type": "object",
+        "description": "Send ventilation demand via RF",
+        "properties": {
+            "demand": prop("integer", "Demand level (0=0%, 200=100%)", 0, 200),
+            "zone": prop("integer", "Zone (default 0)", 0, 255),
+            "index": prop("integer", "RF remote index (default 0)", 0, 11),
+        },
+    }
+
+    schemas["RFConfigRequest"] = {
+        "type": "object",
+        "description": "Configure RF remote settings",
+        "properties": {
+            "index": prop("integer", "RF remote index", 0, 11),
+            "setting": prop(
+                "string",
+                "Setting name (setrfdevicesourceid/setrfdevicedestid/setrfdevicebidirectional)",
+            ),
+            "value": prop("string", "Setting value (hex ID like 96,C8,B6 or true/false)"),
+        },
+    }
+
+    schemas["DebugRequest"] = {
+        "type": "object",
+        "description": "Debug/reboot actions",
+        "properties": {
+            "action": {
+                "type": "string",
+                "description": "Action name",
+                "enum": ["reboot", "level0", "level1", "level2", "level3"],
+            }
+        },
+    }
+
+    schemas["OtaInstallRequest"] = {
+        "type": "object",
+        "description": "Trigger firmware OTA update",
+        "properties": {
+            "channel": {
+                "type": "string",
+                "description": "Release channel to install (stable or beta)",
+                "enum": ["stable", "beta"],
+            },
+            "url": prop(
+                "string",
+                "Firmware URL (alternative to channel; must start with https://github.com/arjenhiemstra/ithowifi/)",
+            ),
+        },
+    }
+
+    schemas["OutsideTempRequest"] = {
+        "type": "object",
+        "description": "Set outside temperature",
+        "properties": {
+            "temp": prop("number", "Temperature in Celsius (-100 to 100)"),
+        },
+    }
+
+    schemas["SetSettingRequest"] = {
+        "type": "object",
+        "description": "Write Itho device setting",
+        "properties": {
+            "index": prop("integer", "Setting index", 0, 255),
+            "value": prop(
+                "number",
+                "New value (int or float, must be within setting min/max)",
+            ),
+        },
+    }
+
+    schemas["ManualControlRequest"] = {
+        "type": "object",
+        "description": "WPU manual control (4030 command)",
+        "properties": {
+            "index": prop(
+                "integer",
+                "Manual operation index (e.g. 0=outside temp, 20=pump speed)",
+            ),
+            "datatype": prop("integer", "Data type (uint8)"),
+            "value": prop("integer", "Value (uint16)"),
+            "checked": prop("integer", "Checked flag (uint8)"),
+        },
+    }
+
+    # Serialize compactly (no indent, no spaces) to minimize flash use.
+    spec_bytes = json.dumps(doc, separators=(",", ":")).encode("utf-8")
+    spec_gzipped = gzip.compress(spec_bytes, 9, mtime=0)
+    print(
+        "\tOpenAPI spec non compressed (" + str(len(spec_bytes))
+        + " bytes), gzipped (" + str(len(spec_gzipped))
+        + " bytes) - writing to: webroot/openapi_json_gz.h"
+    )
+
+    out_path = os.path.join(WEBROOT_OUT_DIR, "openapi_json_gz.h")
+    with open(out_path, "w") as outfile:
+        outfile.write("#pragma once\n\nconst unsigned char openapi_json_gz[] = {\n\t\t")
+        lineBreak = 40
+        for b in spec_gzipped:
+            outfile.write(hex(b))
+            outfile.write(", ")
+            if lineBreak == 0:
+                outfile.write("\n\t\t")
+                lineBreak = 39
+            lineBreak -= 1
+        outfile.write(
+            "};\n\nunsigned int openapi_json_gz_len = "
+            + str(len(spec_gzipped)) + ";\n"
+        )
+    print("\n### OpenAPI spec ready...\n")
+
+
 def copy_firmware():
     if os.path.isfile(os.path.join(PROJECT_BIN_DIR, firmware_bin)):
         dest_fpath = os.path.join(
@@ -313,6 +732,7 @@ def build_prep(*args, **kwargs):
     export_version()
     set_firmware_json_size_cap()
     build_webui(*args, **kwargs)
+    build_openapi_spec()
 
 
 def build_after(*args, **kwargs):
