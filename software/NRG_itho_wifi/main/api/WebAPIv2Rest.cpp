@@ -8,6 +8,7 @@
 #include "ithodevice/IthoDevice.h"
 
 #include <ESPAsyncWebServer.h>
+#include <new>
 #include <AsyncJson.h>
 #include <ArduinoJson.h>
 
@@ -26,6 +27,28 @@ static bool checkRestAuth(AsyncWebServerRequest *request)
   return true;
 }
 
+// Serialize a JSON response via AsyncResponseStream. If heap is
+// exhausted (e.g. during an OTA download), the cbuf::resize inside
+// the stream throws std::bad_alloc which would crash the async_tcp
+// task and wedge the entire network stack. Catch it and fall back
+// to a minimal 503 plain-text response instead.
+static void sendJsonResponse(AsyncWebServerRequest *request, JsonDocument &doc, int statusCode)
+{
+  try
+  {
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    response->setCode(statusCode);
+    serializeJson(doc, *response);
+    request->send(response);
+  }
+  catch (const std::bad_alloc &)
+  {
+    E_LOG("API: heap exhausted while serializing response, returning 503");
+    request->send(503, "text/plain", "Service unavailable (low memory)");
+  }
+}
+
 static void sendSuccess(AsyncWebServerRequest *request, JsonDocument &data, int statusCode = 200)
 {
   JsonDocument doc;
@@ -34,11 +57,7 @@ static void sendSuccess(AsyncWebServerRequest *request, JsonDocument &data, int 
   time_t now;
   time(&now);
   doc["data"]["timestamp"] = now;
-  AsyncResponseStream *response = request->beginResponseStream("application/json");
-  response->addHeader("Access-Control-Allow-Origin", "*");
-  response->setCode(statusCode);
-  serializeJson(doc, *response);
-  request->send(response);
+  sendJsonResponse(request, doc, statusCode);
 }
 
 static void sendFail(AsyncWebServerRequest *request, const char *reason, int statusCode = 400)
@@ -49,11 +68,7 @@ static void sendFail(AsyncWebServerRequest *request, const char *reason, int sta
   time(&now);
   doc["data"]["timestamp"] = now;
   doc["data"]["failreason"] = reason;
-  AsyncResponseStream *response = request->beginResponseStream("application/json");
-  response->addHeader("Access-Control-Allow-Origin", "*");
-  response->setCode(statusCode);
-  serializeJson(doc, *response);
-  request->send(response);
+  sendJsonResponse(request, doc, statusCode);
 }
 
 static void sendError(AsyncWebServerRequest *request, const char *message, int statusCode = 500)
@@ -64,11 +79,7 @@ static void sendError(AsyncWebServerRequest *request, const char *message, int s
   time_t now;
   time(&now);
   doc["timestamp"] = now;
-  AsyncResponseStream *response = request->beginResponseStream("application/json");
-  response->addHeader("Access-Control-Allow-Origin", "*");
-  response->setCode(statusCode);
-  serializeJson(doc, *response);
-  request->send(response);
+  sendJsonResponse(request, doc, statusCode);
 }
 
 // --- GET endpoints ---
