@@ -5024,7 +5024,8 @@ var html_update = `
     $id('fw_select').disabled = false;
   }
 
-  if (typeof messageHandlers !== 'undefined') {
+  if (typeof messageHandlers !== 'undefined' && !messageHandlers._updatePageOtaHooked) {
+    messageHandlers._updatePageOtaHooked = true;
     var origSysstat = messageHandlers.systemstat;
     messageHandlers.systemstat = function(f) {
       if (origSysstat) origSysstat(f);
