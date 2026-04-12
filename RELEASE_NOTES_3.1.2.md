@@ -46,3 +46,4 @@ The [ithowifi-ha-integration](https://github.com/arjenhiemstra/ithowifi-ha-integ
 ### Firmware binary
 
 https://github.com/arjenhiemstra/ithowifi/releases/download/Version-3.1.2/nrgitho-v3.1.2.bin
+
