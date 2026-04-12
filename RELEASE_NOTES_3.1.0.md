@@ -1,5 +1,7 @@
 ## Version 3.1.0
 
+> **⚠️ This version is superseded by [3.1.2](https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.2).** Version 3.1.2 fixes OTA-related crashes that affect 3.1.0. Please upgrade to 3.1.2.
+
 ### Highlights
 
 - **RF standalone mode** — full RF-only operation for devices without I2C (e.g. HRU 400), with guided first-boot setup wizard including interactive RF Join
