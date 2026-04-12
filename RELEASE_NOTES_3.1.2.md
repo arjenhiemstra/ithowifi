@@ -1,6 +1,6 @@
 ## Version 3.1.2
 
-Latest stable release. Supersedes 3.1.0 and 3.1.1.
+> **⚠️ This version is superseded by [3.1.3](https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.3).** Please upgrade to 3.1.3.
 
 ### Highlights
 
