@@ -1,6 +1,6 @@
 ## Version 3.1.1
 
-> **⚠️ This version is superseded by [3.1.2](https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.2).** Version 3.1.2 adds a server-side 503 gate during OTA that protects against all external pollers, not just the HA integration. Please upgrade to 3.1.2.
+> **⚠️ This version is superseded by [3.1.3](https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-3.1.3).** Please upgrade to 3.1.3.
 
 Patch release fixing a crash during OTA firmware updates when REST API requests arrive concurrently.
 

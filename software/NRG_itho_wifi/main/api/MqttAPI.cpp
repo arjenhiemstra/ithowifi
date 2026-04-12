@@ -292,7 +292,7 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           clean_cmd_topic = true;
         }
       }
-      else if (!root["update"].isNull())
+      else if (!root["update"].isNull() && root["update"].is<const char *>())
       {
         jsonCmd = true;
         const char *value = root["update"] | "stable";

@@ -747,7 +747,7 @@ void handle_ws_message(JsonObject root)
     if (strncmp(url, "https://github.com/arjenhiemstra/ithowifi/", 42) == 0)
       triggerOTAUpdateFromURL(url);
   }
-  else if (!root["update"].isNull())
+  else if (!root["update"].isNull() && root["update"].is<const char *>())
   {
     const char *value = root["update"] | "stable";
     bool beta = (strcmp(value, "beta") == 0);
