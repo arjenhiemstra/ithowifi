@@ -27,6 +27,9 @@ void initI2cFunctions()
       // Auto-set RF TX power for Send remotes based on device type (only for remotes still at default 0xC0)
       // CVE/HRU200 (0x1B, 0x1D, 0x14, 0x04): add-on inside unit ~1cm → -30dBm (0x03)
       // Other I2C devices: ~30cm → +5dBm (0x84)
+      // Skip entirely if there is no CC1101 module — the value is meaningless and
+      // logging it is misleading on I2C-only setups.
+      if (systemConfig.rfInitOK)
       {
         uint8_t devId = currentIthoDeviceID();
         uint8_t defaultPower = 0xC0;
@@ -114,7 +117,15 @@ void initI2cFunctions()
         }
       }
 
+      // Boot-time QueryStatusFormat can race with MQTT/web tasks for the
+      // mutex or land on a partial I2C reply, returning 0 items on a device
+      // that actually supports it. One immediate retry covers most flakes.
       sendQueryStatusFormat(false);
+      if (ithoStatus.size() == 0)
+      {
+        delay(100);
+        sendQueryStatusFormat(false);
+      }
       N_LOG("I2C: QueryStatusFormat - items:%lu", static_cast<unsigned long>(ithoStatus.size()));
       if (ithoStatus.size() > 0)
         ithoStatusFormateSuccessful = true;

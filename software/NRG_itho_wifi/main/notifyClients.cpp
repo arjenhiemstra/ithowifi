@@ -1,4 +1,5 @@
 #include <Arduino.h> //fix to prevent INADDR_NONE preprocessor issues
+#include <new>
 #include "notifyClients.h"
 
 
@@ -13,6 +14,9 @@ size_t content_len = 0;
 void notifyClients(const char *message)
 {
   yield();
+  if (ESP.getFreeHeap() < 80000)
+    return; // skip broadcast when heap is low to prevent fragmentation spiral
+
   if (xSemaphoreTake(mutexWSsend, (TickType_t)100 / portTICK_PERIOD_MS) == pdTRUE)
   {
 
@@ -24,17 +28,27 @@ void notifyClients(const char *message)
 
 void notifyClients(JsonObject obj)
 {
+  if (ESP.getFreeHeap() < 80000)
+  {
+    obj.clear();
+    return;
+  }
+
   size_t len = measureJson(obj);
 
-  char *buffer = new char[len + 1];
+  char *buffer = new (std::nothrow) char[len + 1];
 
   if (buffer)
   {
     serializeJson(obj, buffer, len + 1);
     obj.clear();
     notifyClients(buffer);
+    delete[] buffer;
   }
-  delete[] buffer;
+  else
+  {
+    obj.clear();
+  }
 }
 
 void jsonSysmessage(const char *id, const char *message)

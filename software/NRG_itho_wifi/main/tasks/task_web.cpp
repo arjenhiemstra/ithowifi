@@ -90,10 +90,14 @@ void execWebTasks()
     { // rate limit messages to once a second
       sysStatReq = false;
       lastSysMessage = millis();
-      // remotes.llModeTimerUpdated = false;
       previousUpdate = millis();
       sys.updateFreeMem();
-      jsonSystemstat();
+      // Only broadcast systemstat when websocket clients are connected.
+      // Each broadcast allocates a shared buffer + deque nodes per client;
+      // skipping when nobody is listening prevents heap fragmentation from
+      // accumulating over days of continuous operation.
+      if (ws.count() > 0)
+        jsonSystemstat();
     }
   }
 }

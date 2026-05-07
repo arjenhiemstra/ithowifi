@@ -68,7 +68,7 @@ static void sendJsonResponse(AsyncWebServerRequest *request, JsonDocument &doc, 
   }
   catch (const std::bad_alloc &)
   {
-    E_LOG("API: heap exhausted while serializing response, returning 503");
+    E_LOG("API: heap exhausted, returning 503 (free:%d block:%u)", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
     request->send(503, "text/plain", "Service unavailable (low memory)");
   }
 }

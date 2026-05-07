@@ -199,6 +199,15 @@ void mqttInit()
   }
 }
 
+// Grow the MQTT buffer if needed. Never shrink — repeated realloc
+// cycles between the default and a larger size fragment the heap over
+// thousands of publish cycles per day.
+static void mqttEnsureBufferSize(size_t len)
+{
+  if (mqttClient.getBufferSize() < len)
+    mqttClient.setBufferSize(len);
+}
+
 void mqttSendStatus()
 {
 
@@ -211,10 +220,7 @@ void mqttSendStatus()
 
   size_t len = measureJson(root);
 
-  if (mqttClient.getBufferSize() < len)
-  {
-    mqttClient.setBufferSize(len);
-  }
+  mqttEnsureBufferSize(len);
   if (mqttClient.beginPublish(ihtostatustopic, len, true))
   {
     serializeJson(root, mqttClient);
@@ -225,8 +231,6 @@ void mqttSendStatus()
   {
     E_LOG("API: JsonDocument overflowed (itho status)");
   }
-
-  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }
 
 void mqttSendRFStatus()
@@ -272,7 +276,7 @@ void mqttSendRFStatus()
         serializeJson(root, mqttClient);
         mqttClient.endPublish();
       }
-      mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+      // removed: shrink-back fragments heap over thousands of cycles
     }
 
     if (!rfStatusSources[i].measurements31D9.empty())
@@ -299,7 +303,7 @@ void mqttSendRFStatus()
         serializeJson(root, mqttClient);
         mqttClient.endPublish();
       }
-      mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+      // removed: shrink-back fragments heap over thousands of cycles
     }
   }
 }
@@ -400,6 +404,11 @@ void mqttHomeAssistantDiscovery()
     return;
   if (!ithoStatusReady())
     return;
+  if (ESP.getFreeHeap() < 100000)
+  {
+    W_LOG("HAD: skipping HA Discovery, heap too low (%lu)", (unsigned long)ESP.getFreeHeap());
+    return;
+  }
 
   sendHomeAssistantDiscovery = false;
   N_LOG("HAD: publishing HA Discovery");
