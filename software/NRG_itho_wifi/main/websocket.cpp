@@ -700,14 +700,16 @@ void handle_ws_message(JsonObject root)
 
     if (systemConfig.itho_control_interface == 1)
     {
+      // Send 31E0 demand only — the RFT CO2 unit accepts demand both up and
+      // down. Sending "auto" first puts the unit in auto mode in a way that
+      // makes it ignore subsequent demand values lower than the previous
+      // boost, which broke "drag slider down" on the index page.
       for (int ri = 0; ri < remotes.getMaxRemotes(); ri++)
       {
         if (remotes.isEmptySlot(ri)) continue;
         if (remotes.getRemoteFunction(ri) == RemoteFunctions::SEND &&
             remotes.getRemoteType(ri) == RemoteTypes::RFTCO2)
         {
-          ithoExecRFCommand(ri, "auto", WEB);
-          delay(200);
           ithoSendRFDemand(ri, (uint8_t)demand, 0, WEB);
           break;
         }
