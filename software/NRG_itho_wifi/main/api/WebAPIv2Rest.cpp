@@ -441,10 +441,9 @@ static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
 
     if (systemConfig.itho_control_interface == 1)
     {
-      // RF CO2 mode: send 31E0 demand only.
-      // Sending "auto" first puts the unit in a state where it ignores
-      // subsequent demand values lower than the previous boost — broke
-      // "set lower percentage" from HA / REST consumers.
+      // RF CO2 mode: the unit only accepts a 31E0 demand when in auto.
+      // If FanInfo confirms auto, send only the demand. Otherwise send
+      // an "auto" RF command first, then the demand.
       int rfIdx = -1;
       for (int ri = 0; ri < remotes.getMaxRemotes(); ri++)
       {
@@ -461,9 +460,16 @@ static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
         sendFail(request, "no Send+RFTCO2 remote configured");
         return;
       }
+      bool sentAuto = false;
+      if (!fanIsInAuto())
+      {
+        ithoExecRFCommand(rfIdx, "auto", HTMLAPI);
+        delay(200);
+        sentAuto = true;
+      }
       ithoSendRFDemand(rfIdx, (uint8_t)demand, 0, HTMLAPI);
       JsonDocument data;
-      data["result"] = "demand sent via RF CO2";
+      data["result"] = sentAuto ? "auto + demand sent via RF CO2" : "demand sent via RF CO2";
       data["demand"] = demand;
       data["index"] = rfIdx;
       if (!body["percentage"].isNull()) data["percentage"] = body["percentage"].as<int>();

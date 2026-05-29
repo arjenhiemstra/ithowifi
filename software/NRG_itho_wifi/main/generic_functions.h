@@ -38,6 +38,11 @@ bool ithoExecCommand(const char *command, cmdOrigin origin);
 bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin origin);
 bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin);
 bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOrigin origin);
+// Best-effort lookup of the unit's current FanInfo. Checks ithoMeasurements
+// (I2C 31DA) first, then sniffed RF 31DA across active+tracked rfStatusSources.
+// Returns "auto"/"low"/"medium"/... or nullptr if no FanInfo data available.
+const char *getCurrentFanInfo();
+bool fanIsInAuto();
 bool ithoSetSpeed(const char *speed, cmdOrigin origin);
 bool ithoSetSpeed(uint16_t speed, cmdOrigin origin);
 bool ithoSetTimer(const char *timer, cmdOrigin origin);

@@ -14,6 +14,48 @@
 Ticker IthoCMD;
 const char *espName = "nrg-itho-";
 
+const char *getCurrentFanInfo()
+{
+  // Check I2C 31DA measurements first (freshest when itho_31da is enabled).
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
+  {
+    for (const auto &m : ithoMeasurements)
+    {
+      if (m.type == ithoDeviceMeasurements::is_string &&
+          (strcmp(m.name, "FanInfo") == 0 || strcmp(m.name, "fan-info") == 0) &&
+          m.value.stringval != nullptr)
+      {
+        const char *v = m.value.stringval;
+        xSemaphoreGive(ithoStatusMutex);
+        return v;
+      }
+    }
+    xSemaphoreGive(ithoStatusMutex);
+  }
+  // Fall back to sniffed RF 31DA across any active+tracked source.
+  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+  {
+    if (!rfStatusSources[i].active || !rfStatusSources[i].tracked)
+      continue;
+    for (const auto &m : rfStatusSources[i].measurements31DA)
+    {
+      if (m.type == ithoDeviceMeasurements::is_string &&
+          (strcmp(m.name, "FanInfo") == 0 || strcmp(m.name, "fan-info") == 0) &&
+          m.value.stringval != nullptr)
+      {
+        return m.value.stringval;
+      }
+    }
+  }
+  return nullptr;
+}
+
+bool fanIsInAuto()
+{
+  const char *fi = getCurrentFanInfo();
+  return fi != nullptr && strcmp(fi, "auto") == 0;
+}
+
 volatile uint16_t nextIthoVal = 0;
 volatile unsigned long nextIthoTimer = 0;
 

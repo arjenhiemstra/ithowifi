@@ -196,10 +196,18 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           }
           if (rfIdx >= 0)
           {
-            // Send 31E0 demand only. The "auto" precursor caused subsequent
-            // lower demand values to be ignored by the unit.
+            // Unit only accepts 31E0 demand when in auto. Send "auto"
+            // first only when FanInfo doesn't already confirm auto.
+            bool sentAuto = false;
+            if (!fanIsInAuto())
+            {
+              ithoExecRFCommand(rfIdx, "auto", MQTTAPI);
+              delay(200);
+              sentAuto = true;
+            }
             ithoSendRFDemand(rfIdx, (uint8_t)demand, 0, MQTTAPI);
-            mqttSendResponse("success", "percentage", "demand sent");
+            mqttSendResponse("success", "percentage",
+                             sentAuto ? "auto + demand sent" : "demand sent");
           }
           else
             mqttSendResponse("fail", "percentage", "no Send+RFTCO2 remote");

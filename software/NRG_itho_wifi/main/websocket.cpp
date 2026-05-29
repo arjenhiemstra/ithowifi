@@ -314,6 +314,7 @@ void handle_ws_message(JsonObject root)
       if (systemConfig.itho_pwm2i2c == 1 &&
           (hardwareManager.hardware_rev_det == 0x3F || hardwareManager.hardware_rev_det == 0x03))
       {
+        N_LOG("I2C: sendI2CPWMinit triggered by settings save");
         sendI2CPWMinit();
       }
 
@@ -700,16 +701,22 @@ void handle_ws_message(JsonObject root)
 
     if (systemConfig.itho_control_interface == 1)
     {
-      // Send 31E0 demand only — the RFT CO2 unit accepts demand both up and
-      // down. Sending "auto" first puts the unit in auto mode in a way that
-      // makes it ignore subsequent demand values lower than the previous
-      // boost, which broke "drag slider down" on the index page.
+      // The RFT CO2 unit only accepts a 31E0 demand frame when in auto
+      // mode. If FanInfo confirms it's already in auto, send only the
+      // demand (this avoids the boost-mode side-effect that drops
+      // subsequent lower demand values). Otherwise send "auto" first
+      // to switch the unit to auto, then the demand.
       for (int ri = 0; ri < remotes.getMaxRemotes(); ri++)
       {
         if (remotes.isEmptySlot(ri)) continue;
         if (remotes.getRemoteFunction(ri) == RemoteFunctions::SEND &&
             remotes.getRemoteType(ri) == RemoteTypes::RFTCO2)
         {
+          if (!fanIsInAuto())
+          {
+            ithoExecRFCommand(ri, "auto", WEB);
+            delay(200);
+          }
           ithoSendRFDemand(ri, (uint8_t)demand, 0, WEB);
           break;
         }

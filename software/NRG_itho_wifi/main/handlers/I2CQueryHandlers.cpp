@@ -237,12 +237,16 @@ bool ithoInitCheck()
 {
   if (hardwareManager.hardware_rev_det == 0x3F || hardwareManager.hardware_rev_det == 0x03) // CVE
   {
-    if (digitalRead(hardwareManager.status_pin) == LOW)
+    int pinState = digitalRead(hardwareManager.status_pin);
+    N_LOG("I2C: ithoInitCheck status_pin=%s, pwm2i2c=%d",
+          pinState == LOW ? "LOW" : "HIGH", systemConfig.itho_pwm2i2c);
+    if (pinState == LOW)
     {
       return false;
     }
     if (systemConfig.itho_pwm2i2c)
     {
+      N_LOG("I2C: sendI2CPWMinit triggered by ithoInitCheck (boot)");
       sendI2CPWMinit();
       // sendCO2init();
     }
