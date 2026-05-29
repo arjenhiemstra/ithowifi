@@ -130,11 +130,6 @@ void execSystemControlTasks()
   }
   else
   {
-    if (IthoInit && millis() > 250)
-    {
-      IthoInit = ithoInitCheck();
-    }
-
     if (!i2c_init_functions_done)
     {
       initI2cFunctions();
