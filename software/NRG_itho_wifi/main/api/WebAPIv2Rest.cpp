@@ -115,6 +115,15 @@ static void handleGetSpeed(AsyncWebServerRequest *request)
     return;
   JsonDocument data;
   data["currentspeed"] = ithoCurrentVal;
+  // Add-on-tracked timer head-of-queue (timer1/2/3, cook30/60 in PWM2I2C
+  // mode). Itho-side RemainingTime stays 0 for these because the unit
+  // only sees a PWM speed write — surface our own countdown here so
+  // consumers (HA integration) can show a remaining-time entity.
+  unsigned long timerRemainingMs = 0;
+  int16_t timerSpeed = -1;
+  ithoQueue.getHeadTimer(timerRemainingMs, timerSpeed);
+  data["timer_remaining_ms"] = timerRemainingMs;
+  data["timer_speed"] = timerSpeed;
   sendSuccess(request, data);
 }
 
