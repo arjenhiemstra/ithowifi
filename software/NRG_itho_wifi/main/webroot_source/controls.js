@@ -1358,7 +1358,7 @@ document.addEventListener('DOMContentLoaded', function () {
           websock_send(msg);
         }
         else {
-          alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
+          alert("ID error, please use HEX notation separated by ',' (e.g. 'A1,34,7F')");
         }
       }
     }
@@ -1368,7 +1368,7 @@ document.addEventListener('DOMContentLoaded', function () {
         websock_send(`{"update_rf_id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}]}`);
       }
       else {
-        alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
+        alert("ID error, please use HEX notation separated by ',' (e.g. 'A1,34,7F')");
       }
     }
     else if (btnId === 'update_num_rf') {
@@ -3733,7 +3733,7 @@ var html_debug = `
                 <button id="button-i2cdebugoff" class="pure-button pure-button-primary">Debug off</button>
                 <br>
                 <legend><br>I2C sniffer:</legend>
-                <p>Only use this feature (briefly) for debugging issues. The i2c sniffer works only on sniffer capable devices (non-cve; all versions, cve; as of hw rev.
+                <p>Only use this feature (briefly) for debugging issues. The I2C sniffer works only on sniffer capable devices (non-CVE; all versions, CVE; as of hw rev.
                     2.5). <br>See system log for confirmation.<br>
                     Sniffer output is available through syslog. (reboot needed)</p>
                 <button id="button-i2csnifferon" class="pure-button pure-button-primary">Sniffer on</button>
@@ -3793,18 +3793,18 @@ var html_debug = `
                 <span>Result:&nbsp;</span><span id="itho_ce30_result"></span><br>
                 <br>
                 <span style="color:red">Warning!!<br>
-                    4030 is low level "manual control" of your itho unit.<br>
+                    4030 is low level "manual control" of your Itho unit.<br>
                     Use with care and use only if you know what you are doing!</span><br>
                 <button id="button4030" class="pure-button pure-button-primary">Set 4030 Manual Control</button>
                 Index: <input id="itho_4030_index" type="text" size="5">
                 Datatype: <input id="itho_4030_datatype" type="text" size="5">
                 Value: <input id="itho_4030_value" type="text" size="5">
-                Checked: <input id="itho_4030_checked" ttype="text" size="2"><br>
+                Checked: <input id="itho_4030_checked" type="text" size="2"><br>
                 Password: "thisisunsafe": <input id="itho_4030_password" type="string" size="15"><br>
                 <span>Result:&nbsp;</span><span id="itho_4030_result"></span><br>
                 <span style="color:red">
                     WPU 5G: Make sure you set the "Max manual operation time" setting on the "Itho settings" page.<br>
-                    The itho unit will remain in manual mode until the timer expires. 0 means unlimited.<br>
+                    The Itho unit will remain in manual mode until the timer expires. 0 means unlimited.<br>
                     Warning!!<br></span><br>
             </fieldset><br><br><br>
         </fieldset>
@@ -3838,7 +3838,7 @@ var html_i2cdebug = `
 <span>Itho I2C connection status: </span><span id=\'ithoinit\'>unknown</span><br><br>
 <span>If the I2C bus is stuck. Please copy the log below and send it to <a
     href="mailto: info@nrg.watch">info@nrg.watch</a> or add it to the issue on
-  Github.<br>Also try to reset the Temp/Hum sensor below and see if this releases the I2C bus. If succesful then the I2C
+  GitHub.<br>Also try to reset the Temp/Hum sensor below and see if this releases the I2C bus. If successful then the I2C
   connection status should return to 'connected'.</span>
 <style>
   .pure-form-aligned .pure-control-group label {
@@ -3884,9 +3884,9 @@ var html_i2cdebug = `
 
 var html_api = `
 <div class="header">
-    <h1>IthoWifi - API</h1>
+    <h1>IthoWiFi - API</h1>
 </div>
-<h3>API Description</h3>
+<h3>API description</h3>
 <p><a href='swagger' onclick="event.preventDefault(); update_page('swagger');">Interactive API Explorer (Swagger UI)</a> | <a href='/api/openapi.json' target='_blank'>OpenAPI Specification (JSON)</a></p>
 
 <strong>REST API v2 (recommended)</strong><br><br>
@@ -3926,7 +3926,7 @@ Requests use URL query parameters: <code>http://[IP]/api.html?command=medium</co
 </div>
 <br>
 <strong>MQTT API</strong><br><br>
-Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostly the same commands as the REST API.<br>
+Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostly the same commands as the REST API.<br>
 <ul>
     <li>The command must be sent as valid JSON</li>
     <li>The command must be sent to the command topic</li>
@@ -4060,7 +4060,7 @@ Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostl
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key=remote name, value is
                     JSON with all received capabilities of the remote. Depending on make and model this can be the last
-                    command, temperature, humidity, battery and/or co2 levels. Return type present on MQTT "Remotes info
+                    command, temperature, humidity, battery and/or CO2 levels. Return type present on MQTT "Remotes info
                     topic".</em></td>
         </tr>
         <tr>
@@ -4094,7 +4094,7 @@ Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostl
             <td style="text-align:center">◌</td>
         </tr>
         <tr>
-            <td colspan="6">Comments:<br><em>Returns JSON with device information on the add-on and itho device
+            <td colspan="6">Comments:<br><em>Returns JSON with device information on the add-on and Itho device
                     connected. Use REST API v2: GET /api/v2/device. Return type present on MQTT "Device info topic".</em></td>
         </tr>
         <tr>
@@ -4232,9 +4232,9 @@ Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostl
         </tr>
         <tr>
             <td>manual control</td>
-            <td>json</td>
+            <td>JSON</td>
             <td>see comments</td>
-            <td>json</td>
+            <td>JSON</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">◌</td>
         </tr>
@@ -4243,17 +4243,17 @@ Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostl
                 Comments:<br>
                 <em>
                     Warning!!
-                    Manual control ie. the 4030 command is low level "manual control" of your itho unit.
+                    Manual control e.g. the 4030 command is low level "manual control" of your Itho unit.
                     Use with care and use only if you know what you are doing!
                     WPU 5G: Make sure you set the "Max manual operation time" setting in the settings page.
-                    The itho unit will remain in manual mode until the timer expires. 0 means unlimited.
+                    The Itho unit will remain in manual mode until the timer expires. 0 means unlimited.
                     <br>
                     <br>
-                    json keys explaination:<br>
-                    "manual_operation_index": manual_operation_index description (dataype uint16_t)<br>
-                    "manual_operation_datatype": manual_operation_datatype description (dataype uint8_t)<br>
-                    "manual_operation_value": manual_operation_value description (dataype uint16_t)<br>
-                    "manual_operation_checked": manual_operation_checked description (dataype uint8_t)<br><br>
+                    json keys explanation:<br>
+                    "manual_operation_index": manual_operation_index description (datatype uint16_t)<br>
+                    "manual_operation_datatype": manual_operation_datatype description (datatype uint8_t)<br>
+                    "manual_operation_value": manual_operation_value description (datatype uint16_t)<br>
+                    "manual_operation_checked": manual_operation_checked description (datatype uint8_t)<br><br>
                     example json:<br>
                     "{"manual_operation_index":1, "manual_operation_datatype":1,
                     "manual_operation_value": 1, "manual_operation_checked":1}"<br><br>
@@ -4287,7 +4287,7 @@ Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostl
             <td colspan="6">Comments:<br><em>These commands emulate a normal physical remote using the CC1101 module and
                     a RF signal,
                     available commands depend
-                    on type of remote configured to emulate. For these commands to work, the rf remote needs to be
+                    on type of remote configured to emulate. For these commands to work, the RF remote needs to be
                     joined with the Itho unit first. This can be done with a physical remote or with the RF remote
                     buttons on the RF devices page.
                     If the "rfremoteindex" key is not present, the first RF remote will be used.</em></td>
@@ -4439,7 +4439,7 @@ var html_ithostatus = `
 
 var html_wifisetup = `
 <div class="header">
-  <h1>Wifi setup</h1>
+  <h1>WiFi setup</h1>
 </div>
 <div class="pure-g">
   <div class="pure-u-1 pure-u-md-3-5">
@@ -4584,7 +4584,7 @@ var html_wifisetup = `
     <table class="pure-table pure-table-bordered wifiinfo" style="margin-left:auto;margin-right:auto;">
       <thead style="white-space: nowrap;">
         <tr>
-          <th colspan="2">WiFi satus:</th>
+          <th colspan="2">WiFi status:</th>
         </tr>
       </thead>
       <tbody>
@@ -4651,7 +4651,7 @@ var html_wifisetup = `
 
 var html_rfstatus = `
 <div class="header">
-  <h1>RF Status</h1>
+  <h1>RF status</h1>
 </div>
 <p>Real-time status received from Itho devices via RF (31DA/31D9 messages).</p>
 <p>Source device:
@@ -5101,7 +5101,7 @@ var html_systemsettings_start = `
       <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
     </div>
     <legend><br>API settings:</legend>
-    <p>Have api keys on the WebAPI, MQTT API and Itho Status page normlized (all lowercase, no spaces and special
+    <p>Have API keys on the WebAPI, MQTT API and Itho status page normalized (all lowercase, no spaces or special
       characters).</p>
     <div class="pure-control-group">
       <label for="option-api_normalize" class="pure-radio">Normalize keys</label>
@@ -5121,7 +5121,7 @@ var html_systemsettings_start = `
     </div>
     <div class="pure-control-group">
       <label for="api_settings_activated">Activate settings indexes</label>
-      <input id="api_settings_activated" title="Must be a valid JSON array ie.: [12,34]" type="text" maxlength="1024"
+      <input id="api_settings_activated" title="Must be a valid JSON array e.g.: [12,34]" type="text" maxlength="1024"
         size="20">
     </div>
     <p>
@@ -5179,10 +5179,9 @@ var html_systemsettings_start = `
       <input id="itho_numvrem" type="number" min="1" max="12" size="6">
     </div>
     <p>A virtual remote can be used to force the Itho unit in medium mode before sending a command from the add-on. This
-      way the add-on can overrule the current speed settings of the Itho (ie. due to active input from a built in
+      way the add-on can overrule the current speed settings of the Itho (e.g. due to active input from a built-in
       humidity sensor or another remote)</p>
-    <p>Received commands from RF remotes can be translated to matching virtual remote commands with the 'Map RF remotes
-      to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
+    <p>API key "command" (e.g. low, high) can be translated to matching virtual remote commands with 'Map API key "command" to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
       settings do work as expected.</p>
     <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
     <div class="pure-control-group">
@@ -5241,10 +5240,10 @@ var html_systemsettings_start = `
       <input id="option-4210-0" type="radio" name="option-itho_4210" value="0"> off
     </div>
     <legend><br>I2C safe guard:</legend>
-    <p>The i2c safe guard is a protection mechanism ONLY for CVE fans with built-in humidity sensor (models with light
+    <p>The I2C safe guard is a protection mechanism ONLY for CVE fans with built-in humidity sensor (models with light
       grey
       lid)</p>
-    <p>(Note: needs sniffer capable add-on (hw revision 2.5 and up) to work, does not work in conjunction with the i2c
+    <p>(Note: needs sniffer capable add-on (hw revision 2.5 and up) to work, does not work in conjunction with the I2C
       sniffer, reboot needed)
     </p>
     <div class="pure-control-group">
@@ -5262,7 +5261,7 @@ var html_systemsettings_start = `
 
 var html_swagger = `
 <div class="header">
-    <h1>IthoWifi - API Explorer</h1>
+    <h1>IthoWiFi - API Explorer</h1>
 </div>
 <p>Interactive API documentation powered by Swagger UI. Requires internet access to load the UI framework from CDN.</p>
 <p><a href='/api/openapi.json' target='_blank'>Download OpenAPI Specification (JSON)</a></p>
@@ -5356,7 +5355,7 @@ var html_hadiscovery = `
     }
 </style>
 <div class="header">
-    <h1>Home Automation discovery configuration</h1>
+    <h1>Home automation discovery configuration</h1>
 </div>
 <br><br>
 <div id="ithostatusrdy" class="hidden"></div>
@@ -5373,17 +5372,17 @@ var html_hadiscovery = `
     </fieldset>
 </form>
 
-<h3>Itho Status Items</h3>
+<h3>Itho status items</h3>
 <table id="HADiscTable" class="pure-table pure-table-bordered">
     <!-- content dynamically generated -->
 </table>
 
-<h3 id="rfdevices-header" class="hidden">RF Devices</h3>
+<h3 id="rfdevices-header" class="hidden">RF devices</h3>
 <div id="rfdevices-container">
     <!-- RF device sections dynamically generated -->
 </div>
 
-<h3 id="vrdevices-header" class="hidden">Virtual Remotes</h3>
+<h3 id="vrdevices-header" class="hidden">Virtual remotes</h3>
 <div id="vrdevices-container">
     <!-- Virtual remote sections dynamically generated -->
 </div>
@@ -5430,7 +5429,7 @@ var html_mqttsetup = `
   <h1>MQTT setup</h1>
 </div>
 <p>Configuration of the MQTT server to publish the status to and subscribe topic to receive commands</p>
-<p>Note: the MQTT base topic should to be unique for every add-on</p>
+<p>Note: the MQTT base topic should be unique for every add-on</p>
 <style>
   .pure-form-aligned .pure-control-group label {
     width: 15em;
@@ -5807,7 +5806,7 @@ var html_reset = `
     <button id="reboot" class="pure-button">Restart add-on</button><br><br>
     <button id="saveallconfigs" class="pure-button">Save all configs</button><br><br>
     <button id="resetsysconf" class="pure-button">Reset system configs</button>&nbsp;&nbsp;<button id="resetwificonf"
-      class="pure-button">Reset wifi config</button><br><br>
+      class="pure-button">Reset WiFi config</button><br><br>
     <button id="format" class="pure-button">Format filesystem</button>
     <div id="rebootscript"></div>
   </fieldset>
@@ -5816,7 +5815,7 @@ var html_reset = `
 
 var html_remotessetup = `
 <div class="header">
-  <h1>RF Devices setup</h1>
+  <h1>RF devices setup</h1>
 </div>
 <style>
   .pure-form-aligned .pure-control-group label {
@@ -5824,7 +5823,7 @@ var html_remotessetup = `
   }
 </style>
 <br>
-<p>A range of RF devices (ie. remotes, co2 and rv sensors) can be joined to the add-on using the CC1101 RF module.<br> The
+<p>A range of RF devices (e.g. remotes, CO2 and RV sensors) can be joined to the add-on using the CC1101 RF module.<br> The
   add-on will translate commands from a RF device to speed/timer commands towards the Itho.<br>This way the speed status
   of a
   RF device is always correctly represented on the add-on and within your domotica software.</p>
@@ -5832,7 +5831,7 @@ var html_remotessetup = `
   to only monitor RF devices. With this option checked, a RF device still paired with an Itho unit can be monitored without
   influencing
   the commands to your Itho.</p>
-<p>Changing the remote function to "Send" will enable the user to send RF commands. The add-on can present itself with this function as a remote to you Itho.</p>
+<p>Changing the remote function to "Send" will enable the user to send RF commands. The add-on can present itself with this function as a remote to your Itho.</p>
 <p>Last received commands (and if applicable data) received from paired RF devices is available through the MQTT API and
   WebAPI</p>
 <form class="pure-form pure-form-aligned">
@@ -5883,7 +5882,7 @@ var html_remotessetup = `
 
 var html_vremotessetup = `
 <div class="header">
-  <h1>Virtual Remotes setup</h1>
+  <h1>Virtual remotes setup</h1>
 </div>
 <style>
   .pure-form-aligned .pure-control-group label {
@@ -5892,7 +5891,7 @@ var html_vremotessetup = `
 </style>
 <br>
 <p>The add-on can present itself as one or more virtual remote(s). A virtual remote emulates a physical remote through
-  software.<br>A virtual remote must be joined to the Itho unit before it can be used. Refer to your Itho manual how to join new remotes to you specific unit.</p>
+  software.<br>A virtual remote must be joined to the Itho unit before it can be used. Refer to your Itho manual for how to join new remotes to your specific unit.</p>
 <p>With the 'Copy ID' function the ID from an existing physical remote can be copied. If the remote type is supported,
   the type will be detected automatically. If this physical remote is already joined to the Itho unit a new join is not
   necessary.</p>
@@ -5920,7 +5919,7 @@ var html_vremotessetup = `
 
 var html_wizard = `
 <div class="header">
-  <h1>Setup Wizard</h1>
+  <h1>Setup wizard</h1>
 </div>
 <style>
   .wizard-indicators {
@@ -6027,7 +6026,7 @@ var html_wizard = `
 
 <!-- Step 1: WiFi Setup -->
 <div class="wizard-step active" id="wizard-step-1">
-  <h2>WiFi Setup</h2>
+  <h2>WiFi setup</h2>
   <p>Connect your device to your WiFi network.</p>
   <div class="pure-g">
     <div class="pure-u-1 pure-u-md-3-5">
@@ -6210,7 +6209,7 @@ var html_wizard = `
 
 <!-- Step 2: Device & Defaults -->
 <div class="wizard-step" id="wizard-step-2">
-  <h2>Device Settings</h2>
+  <h2>Device settings</h2>
   <div class="wizard-info-box">
     <p><strong>Hardware:</strong> <span id="wiz-hw-revision">detecting...</span></p>
     <p><strong>Device type:</strong> <span id="wiz-dev-type">detecting...</span></p>
@@ -6290,7 +6289,7 @@ var html_wizard = `
       </div>
       <div class="wizard-info-box warning" id="wiz-rf-note" style="display:none">
         <p><strong>Note:</strong> Your HRU 250/300 is controlled via RF. Virtual remotes are not supported for this
-          device. To control your Itho unit, configure a RF remote in the next step (RF Remote Setup) to control the unit.</p>
+          device. To control your Itho unit, configure an RF remote in the next step (RF Remote Setup) to control the unit.</p>
       </div>
       </div><!-- end wiz-i2c-section -->
       <legend><br>Status update frequency:</legend>
@@ -6317,7 +6316,7 @@ var html_wizard = `
 
 <!-- Step 3: RF Setup (conditional) -->
 <div class="wizard-step" id="wizard-step-3">
-  <h2>RF Remote Setup</h2>
+  <h2>RF remote setup</h2>
   <div class="wizard-info-box">
     <p>RF remotes are wireless remotes emulated by the add-on using the CC1101 RF module. By pairing the add-on as an
       RF remote and setting the "Remote function" to "Send", it can send commands (speed, timer) wirelessly to your
@@ -6390,12 +6389,12 @@ var html_wizard = `
 
 <!-- Step 4: MQTT -->
 <div class="wizard-step" id="wizard-step-4">
-  <h2>MQTT Setup</h2>
+  <h2>MQTT setup</h2>
   <div class="wizard-info-box">
     <p>MQTT is a lightweight messaging protocol. The add-on uses MQTT to publish device status
       (fan speed, temperatures, errors) and receive commands (speed changes, timer activation).</p>
-    <p>If you use Home Assistant, Domoticz, or another home automation platform, install a MQTT server, often available
-      as plugin for your home automation platform, and activate the server to integrate your Itho device. The "Server"
+    <p>If you use Home Assistant, Domoticz, or another home automation platform, install an MQTT server, often available
+      as a plugin for your home automation platform, and activate the server to integrate your Itho device. The "Server"
       input field should contain the IP address of your MQTT server. This is often the IP address of your Home
       Assistant, Domoticz etc. device. The Homey app store offers a plugin
       that uses the WebAPI, for that setup MQTT is optional.</p>
@@ -6449,7 +6448,7 @@ var html_wizard = `
 
 <!-- Step 5: HA Discovery (conditional) -->
 <div class="wizard-step" id="wizard-step-5">
-  <h2>Home Assistant Discovery</h2>
+  <h2>Home Assistant discovery</h2>
   <div class="wizard-info-box">
     <p>Home Assistant MQTT Discovery has been enabled. After the device connects to MQTT, it will
       automatically register with Home Assistant.</p>
@@ -6469,7 +6468,7 @@ var html_wizard = `
 <!-- Finish overlay -->
 <div id="wizard-reboot-overlay"
   style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.95); z-index:9999; text-align:center; padding-top:15%;">
-  <h2>Setup Complete!</h2>
+  <h2>Setup complete!</h2>
   <p id="wizard-finish-status">Saving configuration...</p>
   <p id="wizard-powercycle-msg" style="display:none"></p>
   <p id="wizard-reboot-msg" style="display:none">Redirecting in <span id="wizard-reboot-countdown">30</span> seconds...
