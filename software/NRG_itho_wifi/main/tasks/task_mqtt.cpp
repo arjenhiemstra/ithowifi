@@ -1,5 +1,7 @@
 #include "tasks/task_mqtt.h"
 #include <StreamUtils.h>
+#include <esp_heap_caps.h>
+#include <new>
 #include "api/MqttAPI.h"
 #include "ithodevice/IthoDevice.h"
 #include "generic_functions.h"
@@ -404,39 +406,56 @@ void mqttHomeAssistantDiscovery()
     return;
   if (!ithoStatusReady())
     return;
-  if (ESP.getFreeHeap() < 100000)
+
+  // Guard on the largest contiguous block, not total free. Total free can
+  // read fine while the largest free block is too small to satisfy the
+  // JsonDocument / std::string allocations that the JSON build does.
+  size_t largestBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
+  if (largestBlock < 60000)
   {
-    W_LOG("HAD: skipping HA Discovery, heap too low (%lu)", (unsigned long)ESP.getFreeHeap());
+    W_LOG("HAD: skipping HA Discovery, largest free block too small (%lu, total free %lu)",
+          (unsigned long)largestBlock, (unsigned long)ESP.getFreeHeap());
     return;
   }
 
   sendHomeAssistantDiscovery = false;
   N_LOG("HAD: publishing HA Discovery");
 
-  JsonDocument configDoc;
-  JsonObject configObj = configDoc.to<JsonObject>();
+  // Defense in depth: if the build or publish still hits std::bad_alloc
+  // (fragmentation during the run, not visible at the gate above), log and
+  // bail instead of taking the whole device down via std::terminate.
+  try
+  {
+    JsonDocument configDoc;
+    JsonObject configObj = configDoc.to<JsonObject>();
 
-  haDiscConfig.get(configObj);
+    haDiscConfig.get(configObj);
 
-  JsonDocument outputDoc;
-  JsonObject outputObj = outputDoc.to<JsonObject>();
+    JsonDocument outputDoc;
+    JsonObject outputObj = outputDoc.to<JsonObject>();
 
-  generateHADiscoveryJson(configObj, outputObj);
+    generateHADiscoveryJson(configObj, outputObj);
 
-  // config doc is no longer needed, manually clear memory before next step
-  configDoc.clear();
+    // config doc is no longer needed, manually clear memory before next step
+    configDoc.clear();
 
-  char devicetopic[160]{};
+    char devicetopic[160]{};
 
-  snprintf(devicetopic, sizeof(devicetopic), "%s%s%s%s", systemConfig.mqtt_ha_topic, "/device/", hostName(), "/config");
+    snprintf(devicetopic, sizeof(devicetopic), "%s%s%s%s", systemConfig.mqtt_ha_topic, "/device/", hostName(), "/config");
 
-  if (outputDoc.overflowed())
-    E_LOG("HAD: generateHADiscoveryJson overflowed!");
+    if (outputDoc.overflowed())
+      E_LOG("HAD: generateHADiscoveryJson overflowed!");
 
-  // First publish empty payload to remove all previously discovered entities
-  mqttClient.publish(devicetopic, "", true);
+    // First publish empty payload to remove all previously discovered entities
+    mqttClient.publish(devicetopic, "", true);
 
-  MQTTSendBuffered(outputDoc, devicetopic);
+    MQTTSendBuffered(outputDoc, devicetopic);
+  }
+  catch (const std::bad_alloc &e)
+  {
+    E_LOG("HAD: out of memory during HA Discovery (largest free block now %lu), skipping",
+          (unsigned long)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+  }
 }
 
 bool setupMQTTClient()
