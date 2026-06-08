@@ -34,7 +34,6 @@ unsigned long wifiLedUpdate = 0;
 unsigned long SHT3x_readout = 0;
 unsigned long query2401tim = 0;
 unsigned long query4210tim = 0;
-unsigned long pwmInitResendTim = 0;
 unsigned long mqttUpdatetim = 0;
 unsigned long lastVersionCheck = 0;
 unsigned long lastIthoStatusFormatCheck = 0;
@@ -139,7 +138,6 @@ void execSystemControlTasks()
         // Reset timers so normal intervals start from init completion
         query4210tim = millis();
         query2401tim = millis();
-        pwmInitResendTim = millis();
       }
     }
     // request itho counter status every systemConfig.itho_counter_updatefreq sec.
@@ -181,20 +179,6 @@ void execSystemControlTasks()
       {
         i2cQueueAddCmd([]()
                           { updateMQTTihtoStatus = true; });
-      }
-    }
-    else if (millis() - pwmInitResendTim >= I2C_PWM_INIT_RESEND_INTERVAL_MS)
-    {
-      pwmInitResendTim = millis();
-      // Re-send the PWM-over-I2C handshake on CVE hardware so the
-      // first-gen CVE ECO 2 SP stays in PWM-accept mode (see #365).
-      // For other CVE variants this is a harmless no-op frame.
-      if (systemConfig.itho_pwm2i2c == 1 &&
-          (hardwareManager.hardware_rev_det == 0x3F || hardwareManager.hardware_rev_det == 0x03))
-      {
-        N_LOG("I2C: sendI2CPWMinit triggered by periodic re-send");
-        i2cQueueAddCmd([]()
-                          { sendI2CPWMinit(); });
       }
     }
 
