@@ -1357,7 +1357,7 @@ document.addEventListener('DOMContentLoaded', function () {
           websock_send(msg);
         }
         else {
-          alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
+          alert("ID error, please use HEX notation separated by ',' (e.g. 'A1,34,7F')");
         }
       }
     }
@@ -1367,7 +1367,7 @@ document.addEventListener('DOMContentLoaded', function () {
         websock_send(`{"update_rf_id":[${parseInt(id.split(",")[0], 16)},${parseInt(id.split(",")[1], 16)},${parseInt(id.split(",")[2], 16)}]}`);
       }
       else {
-        alert("ID error, please use HEX notation separated by ',' (ie. 'A1,34,7F')");
+        alert("ID error, please use HEX notation separated by ',' (e.g. 'A1,34,7F')");
       }
     }
     else if (btnId === 'update_num_rf') {
