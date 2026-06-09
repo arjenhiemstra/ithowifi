@@ -407,14 +407,23 @@ void mqttHomeAssistantDiscovery()
   if (!ithoStatusReady())
     return;
 
-  // Guard on the largest contiguous block, not total free. Total free can
-  // read fine while the largest free block is too small to satisfy the
-  // JsonDocument / std::string allocations that the JSON build does.
+  // Pre-flight gate: skip if conditions clearly can't support the build.
+  // Total free guards against an exhausted heap; largest contiguous block
+  // guards against fragmentation that lets total free look fine while no
+  // single allocation can land. Thresholds are loose on purpose — the real
+  // safety net is the try/catch around the build below, which catches the
+  // case where fragmentation tips us over mid-run. A healthy CVE-Silent
+  // sits around 140 KB free / 43 KB largest block in steady state, so the
+  // floor must stay well under that to avoid locking out healthy devices.
+  // Clear the trigger flag here too so a persistently low-heap device
+  // doesn't spam the log on every TaskMQTT iteration.
   size_t largestBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
-  if (largestBlock < 60000)
+  size_t totalFree = ESP.getFreeHeap();
+  if (totalFree < 60000 || largestBlock < 20000)
   {
-    W_LOG("HAD: skipping HA Discovery, largest free block too small (%lu, total free %lu)",
-          (unsigned long)largestBlock, (unsigned long)ESP.getFreeHeap());
+    W_LOG("HAD: skipping HA Discovery, heap too tight (largest block %lu, total free %lu)",
+          (unsigned long)largestBlock, (unsigned long)totalFree);
+    sendHomeAssistantDiscovery = false;
     return;
   }
 
