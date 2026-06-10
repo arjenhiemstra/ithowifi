@@ -287,7 +287,11 @@ void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
     // the latest beta and stable users see the latest stable. The device clamps
     // latest_for_channel to the installed version when nothing newer is available
     // on the active channel, keeping HA's update entity quiet.
-    tmpstr = "{{ {'installed_version': value_json['add-on_fwversion'], 'latest_version': value_json['add-on_latest_for_channel'], 'title': 'Add-on Firmware', 'release_url': 'https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-' ~ value_json['add-on_latest_for_channel'] } | to_json }}";
+    //
+    // in_progress / update_percentage come from the firmware's ota_progress
+    // field (default -1 for firmware older than 3.1.5-beta1 that doesn't
+    // emit it). Semantics: -1 idle, 0-100 active, 101 done, -2 error.
+    tmpstr = "{% set p = value_json['ota_progress'] | default(-1) | int %}{{ {'installed_version': value_json['add-on_fwversion'], 'latest_version': value_json['add-on_latest_for_channel'], 'title': 'Add-on Firmware', 'release_url': 'https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-' ~ value_json['add-on_latest_for_channel'], 'in_progress': (p >= 0 and p <= 100), 'update_percentage': (p if (p >= 0 and p <= 100) else None) } | to_json }}";
     componentJson["val_tpl"] = tmpstr;
 
     componentJson["cmd_t"] = cmdtopic;

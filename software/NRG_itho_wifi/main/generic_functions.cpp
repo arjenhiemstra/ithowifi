@@ -335,6 +335,11 @@ void getDeviceInfoJSON(JsonObject root)
   root["itho_fwversion"] = currentItho_fwversion();
   root["add-on_hwid"] = WiFi.macAddress();
   root["add-on_fwversion"] = fw_version;
+  // OTA state for HA's update entity progress bar. otaUpdateProgress
+  // semantics: -1=idle, 0-100=download/flash percentage, 101=done
+  // (reboot pending), -2=error. The HA discovery val_tpl derives
+  // in_progress / update_percentage from this single integer.
+  root["ota_progress"] = static_cast<int>(otaUpdateProgress);
   root["itho_rf_standalone"] = systemConfig.itho_rf_standalone;
   root["itho_control_interface"] = systemConfig.itho_control_interface;
   if (systemConfig.fw_check)

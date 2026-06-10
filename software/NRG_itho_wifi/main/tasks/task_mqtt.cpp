@@ -166,6 +166,28 @@ void execMQTTTasks()
       if (mqttClient.connected())
         mqttSendRFStatus();
     }
+
+    // OTA progress republish. The periodic deviceinfo publish only fires on
+    // the status tick (~60 s), too slow for HA's update entity progress bar
+    // to move. Whenever otaUpdateProgress crosses idle↔active or moves by
+    // any percent and at least 1 s has passed, republish so HA sees current
+    // in_progress / update_percentage. Idle steady-state is a no-op.
+    {
+      static int lastPublishedOtaProgress = -1;
+      static unsigned long lastOtaPublishMs = 0;
+      int p = otaUpdateProgress;
+      unsigned long now = millis();
+      bool changed = (p != lastPublishedOtaProgress);
+      bool transition = ((p >= 0) != (lastPublishedOtaProgress >= 0));
+      bool ratedOk = (now - lastOtaPublishMs >= 1000);
+      if (changed && (transition || ratedOk))
+      {
+        mqttPublishDeviceInfo();
+        lastPublishedOtaProgress = p;
+        lastOtaPublishMs = now;
+      }
+    }
+
     mqttClient.loop();
   }
   else
