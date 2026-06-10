@@ -198,6 +198,10 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
     {
       src["tracked"] = rfStatusSources[i].tracked;
       src["name"] = rfStatusSources[i].name;
+      // Domain byte from the latest 31DA / 31D9 frame. 0 on single-zone
+      // units; non-zero indicates a multi-zone HRU's zone ID (#366).
+      src["zone31DA"] = rfStatusSources[i].lastZone31DA;
+      src["zone31D9"] = rfStatusSources[i].lastZone31D9;
       JsonObject data = src["data"].to<JsonObject>();
       for (const auto &m : rfStatusSources[i].measurements31D9)
       {
@@ -240,6 +244,9 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
     if (idx >= 0 && idx < MAX_RF_STATUS_SOURCES && rfStatusSources[idx].active)
     {
       root["selectedSource"] = idx;
+      // See note above for trackedOnly path.
+      root["zone31DA"] = rfStatusSources[idx].lastZone31DA;
+      root["zone31D9"] = rfStatusSources[idx].lastZone31D9;
       JsonObject data = root["data"].to<JsonObject>();
 
       for (const auto &m : rfStatusSources[idx].measurements31D9)

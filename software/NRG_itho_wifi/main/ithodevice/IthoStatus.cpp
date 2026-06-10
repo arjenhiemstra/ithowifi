@@ -424,13 +424,17 @@ void parseRF31DA(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
 {
   if (len < 2)
     return;
-  if (payload[0] != 0x00)
-    return; // unexpected domain byte
-
+  // payload[0] is the "domain" / zone byte. 0 on single-zone units;
+  // non-zero on multi-zone HRUs (Itho DuoZone broadcasts one 31DA per
+  // zone with the zone ID here). We used to drop everything non-zero,
+  // which made multi-zone HRUs look offline (#366). Now we accept any
+  // zone, record it on the source, and let the consumer disambiguate.
+  const uint8_t zoneId = payload[0];
 
   rfStatusSource *src = findOrAllocRFStatusSource(srcId0, srcId1, srcId2);
   if (!src)
     return;
+  src->lastZone31DA = zoneId;
 
   time_t now;
   time(&now);
@@ -510,12 +514,13 @@ void parseRF31D9(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
 {
   if (len < 3)
     return;
-  if (payload[0] != 0x00)
-    return; // unexpected domain byte
+  // Same multi-zone domain-byte handling as parseRF31DA. See #366.
+  const uint8_t zoneId = payload[0];
 
   rfStatusSource *src = findOrAllocRFStatusSource(srcId0, srcId1, srcId2);
   if (!src)
     return;
+  src->lastZone31D9 = zoneId;
 
   time_t now;
   time(&now);
