@@ -752,7 +752,7 @@ void sendRFStatusRequest(uint8_t remote_index)
   rfManager.radio.setTxPowerLevel(0xC0);
   rfManager.radio.setSendTries(3);
 
-  D_LOG("SYS: sent RF 31DA+31D9 status request via remote idx:%d", remote_index);
+  I_LOG("SYS: sent RF 31DA+31D9 status request via remote idx:%d", remote_index);
 }
 
 bool ithoSetSpeed(const char *speed, cmdOrigin origin)
