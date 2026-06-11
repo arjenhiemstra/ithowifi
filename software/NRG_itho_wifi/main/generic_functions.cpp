@@ -732,7 +732,7 @@ int findFirstBidirectionalSendRemote()
   return -1;
 }
 
-void sendRFStatusRequest(uint8_t remote_index)
+void sendRFStatusRequest(uint8_t remote_index, const uint8_t *destOverride)
 {
   if (remote_index >= remotes.getMaxRemotes())
     return;
@@ -744,15 +744,40 @@ void sendRFStatusRequest(uint8_t remote_index)
   rfManager.radio.setTxPowerLevel(remotes.getRemoteTxPower(remote_index));
   rfManager.radio.setSendTries(1);
 
+  // Optional one-shot destinationID override. Snapshot the slot's
+  // current destinationID via the CC1101 layer's read-only accessor,
+  // swap in the override, send, then restore. Lets the debug page
+  // probe a specific Itho address without modifying the saved config.
+  uint8_t savedDest[3] = {0, 0, 0};
+  bool restoreDest = false;
+  if (destOverride != nullptr)
+  {
+    const auto &devs = rfManager.radio.getRFdevices();
+    savedDest[0] = devs.device[remote_index].destinationID[0];
+    savedDest[1] = devs.device[remote_index].destinationID[1];
+    savedDest[2] = devs.device[remote_index].destinationID[2];
+    rfManager.radio.updateDestinationID(destOverride[0], destOverride[1], destOverride[2], remote_index);
+    restoreDest = true;
+  }
+
   disableRF_ISR();
   rfManager.radio.sendRQ31DA(remote_index);
   rfManager.radio.sendRQ31D9(remote_index);
   enableRF_ISR();
 
+  if (restoreDest)
+  {
+    rfManager.radio.updateDestinationID(savedDest[0], savedDest[1], savedDest[2], remote_index);
+  }
+
   rfManager.radio.setTxPowerLevel(0xC0);
   rfManager.radio.setSendTries(3);
 
-  I_LOG("SYS: sent RF 31DA+31D9 status request via remote idx:%d", remote_index);
+  if (destOverride != nullptr)
+    I_LOG("SYS: sent RF 31DA+31D9 status request via remote idx:%d, dest:%02X,%02X,%02X",
+          remote_index, destOverride[0], destOverride[1], destOverride[2]);
+  else
+    I_LOG("SYS: sent RF 31DA+31D9 status request via remote idx:%d", remote_index);
 }
 
 bool ithoSetSpeed(const char *speed, cmdOrigin origin)

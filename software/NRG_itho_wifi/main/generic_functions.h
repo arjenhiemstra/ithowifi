@@ -50,7 +50,13 @@ int findFirstBidirectionalSendRemote();
 // no-op as far as the Itho is concerned. Caller is responsible for
 // checking the slot is configured the way they expect — this function
 // only guards against an out-of-range index.
-void sendRFStatusRequest(uint8_t remote_index);
+//
+// If destOverride is non-null it points to a 3-byte address that
+// temporarily replaces the slot's destinationID for this one paired
+// request — useful for the debug page where the user wants to probe a
+// specific Itho's address without having to actually join the remote.
+// The slot's stored destinationID is restored after the request.
+void sendRFStatusRequest(uint8_t remote_index, const uint8_t *destOverride = nullptr);
 // Best-effort lookup of the unit's current FanInfo. Checks ithoMeasurements
 // (I2C 31DA) first, then sniffed RF 31DA across active+tracked rfStatusSources.
 // Returns "auto"/"low"/"medium"/... or nullptr if no FanInfo data available.

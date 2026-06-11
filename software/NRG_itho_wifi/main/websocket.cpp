@@ -950,7 +950,27 @@ void handle_ws_message(JsonObject root)
     uint8_t idx = 0;
     if (root["remote"].is<uint8_t>())
       idx = root["remote"].as<uint8_t>();
-    sendRFStatusRequest(idx);
+
+    // Optional dest_id override: 3-byte array. Lets the debug page
+    // target a specific Itho address without modifying the saved
+    // slot config — useful when the slot was never actually joined.
+    if (root["dest_id"].is<JsonArray>())
+    {
+      JsonArray arr = root["dest_id"].as<JsonArray>();
+      if (arr.size() == 3)
+      {
+        uint8_t dest[3] = {arr[0].as<uint8_t>(), arr[1].as<uint8_t>(), arr[2].as<uint8_t>()};
+        sendRFStatusRequest(idx, dest);
+      }
+      else
+      {
+        sendRFStatusRequest(idx);
+      }
+    }
+    else
+    {
+      sendRFStatusRequest(idx);
+    }
   }
 
   // I2C sniffer

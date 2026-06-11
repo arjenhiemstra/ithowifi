@@ -1521,8 +1521,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     else if (btnId.startsWith('rfdebug-')) {
       const items = btnId.split('-');
-      if (items[1] == 0) $id('rflog_outer').classList.add('hidden');
-      if (items[1] > 0) $id('rflog_outer').classList.remove('hidden');
+      // rflog_outer lives on the syslog page; null when clicked from
+      // the debug page. Toggling sticks once syslog is visited later.
+      const rflog = $id('rflog_outer');
+      if (rflog && items[1] == 0) rflog.classList.add('hidden');
+      if (rflog && items[1] > 0) rflog.classList.remove('hidden');
       if (items[1] == 12762) {
         websock_send(`{"rfdebug":${items[1]}, "faninfo":${$id('rfdebug-12762-faninfo').value}, "timer":${$id('rfdebug-12762-timer').value}}`);
       }
@@ -1535,9 +1538,24 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
     else if (btnId === 'rfstatusreq-send') {
-      $id('rflog_outer').classList.remove('hidden');
+      const rflog = $id('rflog_outer');
+      if (rflog) rflog.classList.remove('hidden');
       const idx = parseInt($id('rfstatusreq-remote').value);
-      websock_send(`{"rfstatusrequest":true, "remote":${idx}}`);
+      const destRaw = ($id('rfstatusreq-destid').value || '').trim();
+      let msg = `{"rfstatusrequest":true, "remote":${idx}`;
+      if (destRaw) {
+        // Accept "XX,XX,XX" or "XX:XX:XX" or "XX XX XX" hex triplet.
+        const parts = destRaw.split(/[,: ]+/).filter(Boolean);
+        if (parts.length === 3 && parts.every(p => /^[0-9a-fA-F]{1,2}$/.test(p))) {
+          const bytes = parts.map(p => parseInt(p, 16));
+          msg += `, "dest_id":[${bytes[0]},${bytes[1]},${bytes[2]}]`;
+        } else {
+          alert("dest ID must be a 3-byte hex triplet like 96,A4,3B");
+          return;
+        }
+      }
+      msg += `}`;
+      websock_send(msg);
     }
     else if (btnId.startsWith('i2csniffer-')) {
       const items = btnId.split('-');
@@ -1862,8 +1880,12 @@ function radio(origin, state) {
       el.readOnly = (index != state);
     });
     if (origin == "remote") {
-      $qa('[id^=txpower-]').forEach(function (el, index) {
-        el.disabled = (index != state);
+      // The txpower dropdowns are only rendered for SEND remotes, so the
+      // forEach iteration index is the position in the filtered list, not
+      // the slot index. Parse the slot number from the element id instead.
+      $qa('[id^=txpower-]').forEach(function (el) {
+        var slot = parseInt(el.id.split('-')[1], 10);
+        el.disabled = (slot != state);
       });
     }
     if (origin == "ithoset") {

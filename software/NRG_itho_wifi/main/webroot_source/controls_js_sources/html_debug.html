@@ -82,7 +82,9 @@
                 <option value="9">9</option>
                 <option value="10">10</option>
                 <option value="11">11</option>
-            </select>&nbsp;//uses the source + destination IDs of the selected RF remote slot; the Itho only answers when that slot is bi-directional and joined.
+            </select>&nbsp;dest ID override (optional, hex triplet like <code>96,A4,3B</code>):&nbsp;
+            <input id="rfstatusreq-destid" type="text" size="10" placeholder="">
+            &nbsp;//uses the source ID of the selected RF remote slot, and (if non-empty) the dest ID override as the destination — otherwise the slot's stored destinationID. The Itho only answers when that slot is bi-directional and joined, or when the override targets a real Itho address.
             <br><br>
             <fieldset>
                 <legend><br>I2C extra debug functionality:</legend>
