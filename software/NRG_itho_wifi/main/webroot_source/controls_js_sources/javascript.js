@@ -1534,6 +1534,11 @@ document.addEventListener('DOMContentLoaded', function () {
         websock_send(`{"rfdebug":${items[1]}}`);
       }
     }
+    else if (btnId === 'rfstatusreq-send') {
+      $id('rflog_outer').classList.remove('hidden');
+      const idx = parseInt($id('rfstatusreq-remote').value);
+      websock_send(`{"rfstatusrequest":true, "remote":${idx}}`);
+    }
     else if (btnId.startsWith('i2csniffer-')) {
       const items = btnId.split('-');
       if (items[1] == 0) $id('i2clog_outer').classList.add('hidden');

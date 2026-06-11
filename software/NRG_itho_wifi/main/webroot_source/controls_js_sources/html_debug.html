@@ -68,6 +68,22 @@
                 value="0">&nbsp;timer:&nbsp;<input id="rfdebug-12762-timer" type="number" min="0" max="255" size="6"
                 value="0">&nbsp;//faninfo:0=off,1=low,2=medium,3=high,13=timer3,21=away,24=auto
             <br><br>
+            <button id="rfstatusreq-send" type="button" class="pure-button pure-button-primary">Request 31DA + 31D9 status</button>&nbsp;RF remote:
+            <select id="rfstatusreq-remote">
+                <option value="0">1</option>
+                <option value="1">2</option>
+                <option value="2">3</option>
+                <option value="3">4</option>
+                <option value="4">5</option>
+                <option value="5">6</option>
+                <option value="6">7</option>
+                <option value="7">8</option>
+                <option value="8">9</option>
+                <option value="9">10</option>
+                <option value="10">11</option>
+                <option value="11">12</option>
+            </select>&nbsp;//uses the source + destination IDs of the selected RF remote slot; the Itho only answers when that slot is bi-directional and joined.
+            <br><br>
             <fieldset>
                 <legend><br>I2C extra debug functionality:</legend>
                 <p>Only use this feature (briefly) for debugging issues. This option enables an extra menu where more I2C options and logging is available. <br>Enabling the

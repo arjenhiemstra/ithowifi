@@ -940,6 +940,19 @@ void handle_ws_message(JsonObject root)
     }
   }
 
+  // Debug page: one-shot 31DA + 31D9 RF status request, sent from a
+  // user-selected RF remote slot. The Itho only answers when the slot
+  // is bi-directional and joined — for any other slot the request goes
+  // out but the Itho ignores it. No bidirectional check here so the
+  // debug page can be used to verify behaviour either way.
+  if (root["rfstatusrequest"].is<bool>() && root["rfstatusrequest"].as<bool>())
+  {
+    uint8_t idx = 0;
+    if (root["remote"].is<uint8_t>())
+      idx = root["remote"].as<uint8_t>();
+    sendRFStatusRequest(idx);
+  }
+
   // I2C sniffer
   if (root["i2csniffer"].is<uint8_t>())
   {

@@ -912,6 +912,42 @@ void IthoCC1101::sendRQ31DA(uint8_t remote_index)
   sendRFMessage(&message);
 }
 
+void IthoCC1101::sendRQ31D9(uint8_t remote_index)
+{
+  if (remote_index > MAX_NUM_OF_REMOTES - 1)
+    return;
+
+  uint8_t sourceId[3]{};
+  if (ithoRF.device[remote_index].sourceID[0] == 0 && ithoRF.device[remote_index].sourceID[1] == 0 && ithoRF.device[remote_index].sourceID[2] == 0)
+  {
+    sourceId[0] = defaultID[0];
+    sourceId[1] = defaultID[1];
+    sourceId[2] = defaultID[2];
+  }
+  else
+  {
+    sourceId[0] = ithoRF.device[remote_index].sourceID[0];
+    sourceId[1] = ithoRF.device[remote_index].sourceID[1];
+    sourceId[2] = ithoRF.device[remote_index].sourceID[2];
+  }
+
+  const uint8_t command[] = {0x31, 0xD9, 0x01, 0x00};
+
+  RFmessage message;
+  message.header = HEADER_RQ_BIDIRECTIONAL;
+
+  message.deviceid0[0] = sourceId[0];
+  message.deviceid0[1] = sourceId[1];
+  message.deviceid0[2] = sourceId[2];
+
+  message.deviceid1[0] = ithoRF.device[remote_index].destinationID[0];
+  message.deviceid1[1] = ithoRF.device[remote_index].destinationID[1];
+  message.deviceid1[2] = ithoRF.device[remote_index].destinationID[2];
+
+  message.command = &command[0];
+  sendRFMessage(&message);
+}
+
 void IthoCC1101::send2E10(uint8_t remote_index, IthoCommand command)
 {
   // if (remote_index > MAX_NUM_OF_REMOTES - 1)

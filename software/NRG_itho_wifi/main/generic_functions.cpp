@@ -717,6 +717,44 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
   return true;
 }
 
+int findFirstBidirectionalSendRemote()
+{
+  for (int i = 0; i < remotes.getMaxRemotes(); i++)
+  {
+    if (remotes.isEmptySlot(i))
+      continue;
+    if (remotes.getRemoteFunction(i) != RemoteFunctions::SEND)
+      continue;
+    if (!rfManager.radio.getRFDeviceBidirectional(i))
+      continue;
+    return i;
+  }
+  return -1;
+}
+
+void sendRFStatusRequest(uint8_t remote_index)
+{
+  if (remote_index >= remotes.getMaxRemotes())
+    return;
+
+  // Match the TX-power / send-tries / ISR pattern used by the other RF
+  // send paths in this file (see ithoSendRFDemand at line ~695). The
+  // 31DA/31D9 requests are paired so the Itho answers both in a single
+  // back-and-forth round.
+  rfManager.radio.setTxPowerLevel(remotes.getRemoteTxPower(remote_index));
+  rfManager.radio.setSendTries(1);
+
+  disableRF_ISR();
+  rfManager.radio.sendRQ31DA(remote_index);
+  rfManager.radio.sendRQ31D9(remote_index);
+  enableRF_ISR();
+
+  rfManager.radio.setTxPowerLevel(0xC0);
+  rfManager.radio.setSendTries(3);
+
+  D_LOG("SYS: sent RF 31DA+31D9 status request via remote idx:%d", remote_index);
+}
+
 bool ithoSetSpeed(const char *speed, cmdOrigin origin)
 {
   D_LOG("SYS: ithoSetSpeed: char speed:%s", speed);
