@@ -773,11 +773,15 @@ void sendRFStatusRequest(uint8_t remote_index, const uint8_t *destOverride)
   rfManager.radio.setTxPowerLevel(0xC0);
   rfManager.radio.setSendTries(3);
 
-  if (destOverride != nullptr)
-    I_LOG("SYS: sent RF 31DA+31D9 status request via remote idx:%d, dest:%02X,%02X,%02X",
-          remote_index, destOverride[0], destOverride[1], destOverride[2]);
-  else
-    I_LOG("SYS: sent RF 31DA+31D9 status request via remote idx:%d", remote_index);
+  // Read back the destination that was actually used so the log line
+  // is unambiguous regardless of whether an override was supplied.
+  const auto &devs = rfManager.radio.getRFdevices();
+  uint8_t actualDest[3] = {
+      devs.device[remote_index].destinationID[0],
+      devs.device[remote_index].destinationID[1],
+      devs.device[remote_index].destinationID[2]};
+  I_LOG("SYS: sent RF 31DA+31D9 status request via remote idx:%d, dest:%02X,%02X,%02X",
+        remote_index, actualDest[0], actualDest[1], actualDest[2]);
 }
 
 bool ithoSetSpeed(const char *speed, cmdOrigin origin)

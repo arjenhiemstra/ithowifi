@@ -590,6 +590,12 @@ ApiResponse::api_response_status_t processSetRFremote(JsonObject params, JsonDoc
     else
     {
       rfManager.radio.updateDestinationID(static_cast<uint8_t>(id[0]), static_cast<uint8_t>(id[1]), static_cast<uint8_t>(id[2]), idx);
+      // Also persist so the value survives a reboot and the Update
+      // path on the RF Devices page (which calls updateRFDevice and
+      // would otherwise wipe the runtime destinationID back to the
+      // slot's own source).
+      remotes.updateRemoteDestID(idx, static_cast<uint8_t>(id[0]), static_cast<uint8_t>(id[1]), static_cast<uint8_t>(id[2]));
+      saveRemotesflag = true;
       response["result"] = "destination ID updated";
       response["check"] = rfManager.radio.getDestinationID(idx);
     }

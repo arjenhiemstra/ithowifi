@@ -811,6 +811,16 @@ void handle_ws_message(JsonObject root)
         {
           rfManager.radio.updateSourceID(id0, id1, id2, idx);
         }
+        // updateRFDevice() resets destinationID to the slot's own ID. Re-apply
+        // the persisted destinationID if one is stored, so a joined or
+        // explicitly-configured slot doesn't lose its addressing every time
+        // the user clicks Update on the RF Devices page.
+        uint8_t destId[3]{};
+        remotes.getRemoteDestIDbyIndex(idx, &destId[0]);
+        if (destId[0] != 0 || destId[1] != 0 || destId[2] != 0)
+        {
+          rfManager.radio.updateDestinationID(destId[0], destId[1], destId[2], idx);
+        }
       }
     }
     // TX power
