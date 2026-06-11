@@ -732,15 +732,19 @@ int findFirstBidirectionalSendRemote()
   return -1;
 }
 
-void sendRFStatusRequest(uint8_t remote_index, const uint8_t *destOverride)
+// Single shared implementation behind the three public wrappers below.
+// send31DA / send31D9 bits select which opcode(s) actually go out; the
+// destOverride snapshot-and-restore dance happens once around the
+// whole burst so both halves of a paired call share one destination.
+static void sendRFStatusRequestInternal(uint8_t remote_index, bool send31DA, bool send31D9, const uint8_t *destOverride)
 {
   if (remote_index >= remotes.getMaxRemotes())
     return;
+  if (!send31DA && !send31D9)
+    return;
 
   // Match the TX-power / send-tries / ISR pattern used by the other RF
-  // send paths in this file (see ithoSendRFDemand at line ~695). The
-  // 31DA/31D9 requests are paired so the Itho answers both in a single
-  // back-and-forth round.
+  // send paths in this file (see ithoSendRFDemand at line ~695).
   rfManager.radio.setTxPowerLevel(remotes.getRemoteTxPower(remote_index));
   rfManager.radio.setSendTries(1);
 
@@ -761,8 +765,10 @@ void sendRFStatusRequest(uint8_t remote_index, const uint8_t *destOverride)
   }
 
   disableRF_ISR();
-  rfManager.radio.sendRQ31DA(remote_index);
-  rfManager.radio.sendRQ31D9(remote_index);
+  if (send31DA)
+    rfManager.radio.sendRQ31DA(remote_index);
+  if (send31D9)
+    rfManager.radio.sendRQ31D9(remote_index);
   enableRF_ISR();
 
   if (restoreDest)
@@ -780,8 +786,25 @@ void sendRFStatusRequest(uint8_t remote_index, const uint8_t *destOverride)
       devs.device[remote_index].destinationID[0],
       devs.device[remote_index].destinationID[1],
       devs.device[remote_index].destinationID[2]};
-  I_LOG("SYS: sent RF 31DA+31D9 status request via remote idx:%d, dest:%02X,%02X,%02X",
-        remote_index, actualDest[0], actualDest[1], actualDest[2]);
+  const char *what = (send31DA && send31D9) ? "31DA+31D9"
+                                            : (send31DA ? "31DA" : "31D9");
+  I_LOG("SYS: sent RF %s status request via remote idx:%d, dest:%02X,%02X,%02X",
+        what, remote_index, actualDest[0], actualDest[1], actualDest[2]);
+}
+
+void sendRFStatusRequest(uint8_t remote_index, const uint8_t *destOverride)
+{
+  sendRFStatusRequestInternal(remote_index, true, true, destOverride);
+}
+
+void sendRF31DARequest(uint8_t remote_index, const uint8_t *destOverride)
+{
+  sendRFStatusRequestInternal(remote_index, true, false, destOverride);
+}
+
+void sendRF31D9Request(uint8_t remote_index, const uint8_t *destOverride)
+{
+  sendRFStatusRequestInternal(remote_index, false, true, destOverride);
 }
 
 bool ithoSetSpeed(const char *speed, cmdOrigin origin)

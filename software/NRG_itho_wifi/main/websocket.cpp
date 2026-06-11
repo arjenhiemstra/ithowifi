@@ -964,23 +964,31 @@ void handle_ws_message(JsonObject root)
     // Optional dest_id override: 3-byte array. Lets the debug page
     // target a specific Itho address without modifying the saved
     // slot config — useful when the slot was never actually joined.
+    uint8_t dest[3] = {0, 0, 0};
+    const uint8_t *destPtr = nullptr;
     if (root["dest_id"].is<JsonArray>())
     {
       JsonArray arr = root["dest_id"].as<JsonArray>();
       if (arr.size() == 3)
       {
-        uint8_t dest[3] = {arr[0].as<uint8_t>(), arr[1].as<uint8_t>(), arr[2].as<uint8_t>()};
-        sendRFStatusRequest(idx, dest);
-      }
-      else
-      {
-        sendRFStatusRequest(idx);
+        dest[0] = arr[0].as<uint8_t>();
+        dest[1] = arr[1].as<uint8_t>();
+        dest[2] = arr[2].as<uint8_t>();
+        destPtr = dest;
       }
     }
+
+    // Optional opcode selector. Default (missing/unknown) = send both,
+    // preserving backward compat for callers that only know about the
+    // paired path. The debug page sets "31DA" or "31D9" so the user
+    // can probe one opcode at a time.
+    const char *opcode = root["opcode"] | "";
+    if (strcmp(opcode, "31DA") == 0)
+      sendRF31DARequest(idx, destPtr);
+    else if (strcmp(opcode, "31D9") == 0)
+      sendRF31D9Request(idx, destPtr);
     else
-    {
-      sendRFStatusRequest(idx);
-    }
+      sendRFStatusRequest(idx, destPtr);
   }
 
   // I2C sniffer

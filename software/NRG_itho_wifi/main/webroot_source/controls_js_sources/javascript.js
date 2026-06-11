@@ -1537,12 +1537,13 @@ document.addEventListener('DOMContentLoaded', function () {
         websock_send(`{"rfdebug":${items[1]}}`);
       }
     }
-    else if (btnId === 'rfstatusreq-send') {
+    else if (btnId === 'rfstatusreq-send-31DA' || btnId === 'rfstatusreq-send-31D9') {
       const rflog = $id('rflog_outer');
       if (rflog) rflog.classList.remove('hidden');
+      const opcode = btnId === 'rfstatusreq-send-31DA' ? '31DA' : '31D9';
       const idx = parseInt($id('rfstatusreq-remote').value);
       const destRaw = ($id('rfstatusreq-destid').value || '').trim();
-      let msg = `{"rfstatusrequest":true, "remote":${idx}`;
+      let msg = `{"rfstatusrequest":true, "opcode":"${opcode}", "remote":${idx}`;
       if (destRaw) {
         // Accept "XX,XX,XX" or "XX:XX:XX" or "XX XX XX" hex triplet.
         const parts = destRaw.split(/[,: ]+/).filter(Boolean);

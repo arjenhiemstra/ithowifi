@@ -57,6 +57,14 @@ int findFirstBidirectionalSendRemote();
 // specific Itho's address without having to actually join the remote.
 // The slot's stored destinationID is restored after the request.
 void sendRFStatusRequest(uint8_t remote_index, const uint8_t *destOverride = nullptr);
+
+// Same as sendRFStatusRequest but only the 31DA half. Used by the
+// debug-page button so a user can probe one opcode at a time.
+void sendRF31DARequest(uint8_t remote_index, const uint8_t *destOverride = nullptr);
+
+// Same as sendRFStatusRequest but only the 31D9 half. Used by the
+// debug-page button so a user can probe one opcode at a time.
+void sendRF31D9Request(uint8_t remote_index, const uint8_t *destOverride = nullptr);
 // Best-effort lookup of the unit's current FanInfo. Checks ithoMeasurements
 // (I2C 31DA) first, then sniffed RF 31DA across active+tracked rfStatusSources.
 // Returns "auto"/"low"/"medium"/... or nullptr if no FanInfo data available.

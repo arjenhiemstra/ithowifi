@@ -1538,12 +1538,13 @@ document.addEventListener('DOMContentLoaded', function () {
         websock_send(`{"rfdebug":${items[1]}}`);
       }
     }
-    else if (btnId === 'rfstatusreq-send') {
+    else if (btnId === 'rfstatusreq-send-31DA' || btnId === 'rfstatusreq-send-31D9') {
       const rflog = $id('rflog_outer');
       if (rflog) rflog.classList.remove('hidden');
+      const opcode = btnId === 'rfstatusreq-send-31DA' ? '31DA' : '31D9';
       const idx = parseInt($id('rfstatusreq-remote').value);
       const destRaw = ($id('rfstatusreq-destid').value || '').trim();
-      let msg = `{"rfstatusrequest":true, "remote":${idx}`;
+      let msg = `{"rfstatusrequest":true, "opcode":"${opcode}", "remote":${idx}`;
       if (destRaw) {
         // Accept "XX,XX,XX" or "XX:XX:XX" or "XX XX XX" hex triplet.
         const parts = destRaw.split(/[,: ]+/).filter(Boolean);
@@ -3751,7 +3752,7 @@ var html_debug = `
                 value="0">&nbsp;timer:&nbsp;<input id="rfdebug-12762-timer" type="number" min="0" max="255" size="6"
                 value="0">&nbsp;//faninfo:0=off,1=low,2=medium,3=high,13=timer3,21=away,24=auto
             <br><br>
-            <button id="rfstatusreq-send" type="button" class="pure-button pure-button-primary">Request 31DA + 31D9 status</button>&nbsp;RF remote index:
+            <button id="rfstatusreq-send-31DA" type="button" class="pure-button pure-button-primary">Request 31DA status</button>&nbsp;<button id="rfstatusreq-send-31D9" type="button" class="pure-button pure-button-primary">Request 31D9 status</button>&nbsp;RF remote index:
             <select id="rfstatusreq-remote">
                 <option value="0">0</option>
                 <option value="1">1</option>
