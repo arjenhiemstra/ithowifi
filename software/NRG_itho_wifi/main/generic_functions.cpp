@@ -764,12 +764,26 @@ static void sendRFStatusRequestInternal(uint8_t remote_index, bool send31DA, boo
     restoreDest = true;
   }
 
-  disableRF_ISR();
+  // Each frame gets its own ISR-disabled critical section, mirroring the
+  // single-opcode pattern in task_cc1101.cpp's send31DA/send31D9 blocks.
+  // Stuffing both sends into one block was leaving the CC1101 in an
+  // intermediate state for the second TX — first opcode went out, second
+  // silently didn't. The brief delay between them gives the radio time to
+  // cycle through RX → IDLE → TX again.
   if (send31DA)
+  {
+    disableRF_ISR();
     rfManager.radio.sendRQ31DA(remote_index);
+    enableRF_ISR();
+  }
+  if (send31DA && send31D9)
+    delay(50);
   if (send31D9)
+  {
+    disableRF_ISR();
     rfManager.radio.sendRQ31D9(remote_index);
-  enableRF_ISR();
+    enableRF_ISR();
+  }
 
   if (restoreDest)
   {
