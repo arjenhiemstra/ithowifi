@@ -314,6 +314,7 @@ void handle_ws_message(JsonObject root)
       if (systemConfig.itho_pwm2i2c == 1 &&
           (hardwareManager.hardware_rev_det == 0x3F || hardwareManager.hardware_rev_det == 0x03))
       {
+        N_LOG("I2C: sendI2CPWMinit triggered by settings save");
         sendI2CPWMinit();
       }
 
@@ -700,14 +701,22 @@ void handle_ws_message(JsonObject root)
 
     if (systemConfig.itho_control_interface == 1)
     {
+      // The RFT CO2 unit only accepts a 31E0 demand frame when in auto
+      // mode. If FanInfo confirms it's already in auto, send only the
+      // demand (this avoids the boost-mode side-effect that drops
+      // subsequent lower demand values). Otherwise send "auto" first
+      // to switch the unit to auto, then the demand.
       for (int ri = 0; ri < remotes.getMaxRemotes(); ri++)
       {
         if (remotes.isEmptySlot(ri)) continue;
         if (remotes.getRemoteFunction(ri) == RemoteFunctions::SEND &&
             remotes.getRemoteType(ri) == RemoteTypes::RFTCO2)
         {
-          ithoExecRFCommand(ri, "auto", WEB);
-          delay(200);
+          if (!fanIsInAuto())
+          {
+            ithoExecRFCommand(ri, "auto", WEB);
+            delay(200);
+          }
           ithoSendRFDemand(ri, (uint8_t)demand, 0, WEB);
           break;
         }
@@ -801,6 +810,16 @@ void handle_ws_message(JsonObject root)
         if (remfunc == RemoteFunctions::SEND)
         {
           rfManager.radio.updateSourceID(id0, id1, id2, idx);
+        }
+        // updateRFDevice() resets destinationID to the slot's own ID. Re-apply
+        // the persisted destinationID if one is stored, so a joined or
+        // explicitly-configured slot doesn't lose its addressing every time
+        // the user clicks Update on the RF Devices page.
+        uint8_t destId[3]{};
+        remotes.getRemoteDestIDbyIndex(idx, &destId[0]);
+        if (destId[0] != 0 || destId[1] != 0 || destId[2] != 0)
+        {
+          rfManager.radio.updateDestinationID(destId[0], destId[1], destId[2], idx);
         }
       }
     }
@@ -929,6 +948,47 @@ void handle_ws_message(JsonObject root)
         filter31D9 = root["filter"].as<bool>();
       send31D9debug = true;
     }
+  }
+
+  // Debug page: one-shot 31DA + 31D9 RF status request, sent from a
+  // user-selected RF remote slot. The Itho only answers when the slot
+  // is bi-directional and joined — for any other slot the request goes
+  // out but the Itho ignores it. No bidirectional check here so the
+  // debug page can be used to verify behaviour either way.
+  if (root["rfstatusrequest"].is<bool>() && root["rfstatusrequest"].as<bool>())
+  {
+    uint8_t idx = 0;
+    if (root["remote"].is<uint8_t>())
+      idx = root["remote"].as<uint8_t>();
+
+    // Optional dest_id override: 3-byte array. Lets the debug page
+    // target a specific Itho address without modifying the saved
+    // slot config — useful when the slot was never actually joined.
+    uint8_t dest[3] = {0, 0, 0};
+    const uint8_t *destPtr = nullptr;
+    if (root["dest_id"].is<JsonArray>())
+    {
+      JsonArray arr = root["dest_id"].as<JsonArray>();
+      if (arr.size() == 3)
+      {
+        dest[0] = arr[0].as<uint8_t>();
+        dest[1] = arr[1].as<uint8_t>();
+        dest[2] = arr[2].as<uint8_t>();
+        destPtr = dest;
+      }
+    }
+
+    // Optional opcode selector. Default (missing/unknown) = send both,
+    // preserving backward compat for callers that only know about the
+    // paired path. The debug page sets "31DA" or "31D9" so the user
+    // can probe one opcode at a time.
+    const char *opcode = root["opcode"] | "";
+    if (strcmp(opcode, "31DA") == 0)
+      sendRF31DARequest(idx, destPtr);
+    else if (strcmp(opcode, "31D9") == 0)
+      sendRF31D9Request(idx, destPtr);
+    else
+      sendRFStatusRequest(idx, destPtr);
   }
 
   // I2C sniffer

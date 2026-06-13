@@ -6,6 +6,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Ticker.h>
 
 class HardwareManager
 {
@@ -49,6 +50,18 @@ public:
    * @return Hardware revision byte
    */
   uint8_t getRevision() const { return hardware_rev_det; }
+
+  /**
+   * @brief Blink the status LED for the given duration, then leave it HIGH.
+   * Non-blocking — uses an internal Ticker. Subsequent calls restart the
+   * window. Safe to call from boot init.
+   */
+  void blinkStatusLed(unsigned long durationMs, unsigned long intervalMs = 250);
+
+private:
+  Ticker statusLedBlinkTick;
+  bool statusLedBlinkState;
+  unsigned long statusLedBlinkEndMs;
 };
 
 extern HardwareManager hardwareManager;

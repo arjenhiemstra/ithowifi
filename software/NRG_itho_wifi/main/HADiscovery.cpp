@@ -237,7 +237,11 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
                  "{%% endif %%}",
                  cmdKey, cmdKey, midCmd, cmdKey, cmdKey, lowCmd);
 
-        snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
+        // pct_stat_t is "<base>/state" which publishes a plain integer (see task_mqtt.cpp),
+        // so the template must read `value`, not `value_json[...]`. Earlier versions tried
+        // to subscript the int with the status-field name, producing a runtime template error
+        // in HA on every state update.
+        strlcpy(pct_val_tpl, "{{ value | int }}", sizeof(pct_val_tpl));
         componentJson["pl_off"] = (std::string("{\"") + cmdKey + "\":\"" + lowCmd + "\"}").c_str(); // payload_off
 
         const char *midLabel = (strcmp(midCmd, "auto") == 0) ? "Auto" : "Medium";
@@ -287,7 +291,11 @@ void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
     // the latest beta and stable users see the latest stable. The device clamps
     // latest_for_channel to the installed version when nothing newer is available
     // on the active channel, keeping HA's update entity quiet.
-    tmpstr = "{{ {'installed_version': value_json['add-on_fwversion'], 'latest_version': value_json['add-on_latest_for_channel'], 'title': 'Add-on Firmware', 'release_url': 'https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-' ~ value_json['add-on_latest_for_channel'] } | to_json }}";
+    //
+    // in_progress / update_percentage come from the firmware's ota_progress
+    // field (default -1 for firmware older than 3.1.5-beta1 that doesn't
+    // emit it). Semantics: -1 idle, 0-100 active, 101 done, -2 error.
+    tmpstr = "{% set p = value_json['ota_progress'] | default(-1) | int %}{{ {'installed_version': value_json['add-on_fwversion'], 'latest_version': value_json['add-on_latest_for_channel'], 'title': 'Add-on Firmware', 'release_url': 'https://github.com/arjenhiemstra/ithowifi/releases/tag/Version-' ~ value_json['add-on_latest_for_channel'], 'in_progress': (p >= 0 and p <= 100), 'update_percentage': (p if (p >= 0 and p <= 100) else None) } | to_json }}";
     componentJson["val_tpl"] = tmpstr;
 
     componentJson["cmd_t"] = cmdtopic;

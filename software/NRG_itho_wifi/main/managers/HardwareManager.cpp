@@ -19,8 +19,32 @@ HardwareManager::HardwareManager()
       fail_save_pin(GPIO_NUM_0),
       cve2("2"),
       non_cve1("NON-CVE 1"),
-      hw_revision(nullptr)
+      hw_revision(nullptr),
+      statusLedBlinkState(true),
+      statusLedBlinkEndMs(0)
 {
+}
+
+void HardwareManager::blinkStatusLed(unsigned long durationMs, unsigned long intervalMs)
+{
+  statusLedBlinkEndMs = millis() + durationMs;
+  statusLedBlinkState = true;
+  // Lambda is non-capturing (function pointer) so the templated attach_ms
+  // form is used to forward `this` as the single user argument.
+  statusLedBlinkTick.attach_ms<HardwareManager *>(
+      intervalMs,
+      [](HardwareManager *self)
+      {
+        if (millis() >= self->statusLedBlinkEndMs)
+        {
+          self->statusLedBlinkTick.detach();
+          digitalWrite(self->status_pin, HIGH);
+          return;
+        }
+        self->statusLedBlinkState = !self->statusLedBlinkState;
+        digitalWrite(self->status_pin, self->statusLedBlinkState ? HIGH : LOW);
+      },
+      this);
 }
 
 void HardwareManager::detect()
@@ -104,11 +128,6 @@ void HardwareManager::detect()
   // Configure output pins
   pinMode(wifi_led_pin, OUTPUT);
   digitalWrite(wifi_led_pin, HIGH);
-
-  if (hardware_rev_det == 0x3F || hardware_rev_det == 0x03) // CVE
-  {
-    pinMode(GPIO_NUM_16, INPUT_PULLUP);
-  }
 
   pinMode(status_pin, OUTPUT);
   digitalWrite(status_pin, LOW);

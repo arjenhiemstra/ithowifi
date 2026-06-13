@@ -45,16 +45,16 @@
       <option value="HRU ECO-fan">HRU ECO-fan</option>
       <option value="Heatpump">Heatpump (WPU)</option>
     </select><br><br>
-    <button id="button-wizardreactivate" class="pure-button pure-button-primary">Reactivate wizard</button>
+    <button id="button-wizardreactivate" type="button" class="pure-button pure-button-primary">Reactivate wizard</button>
 
     <p>JavaScript console debug:</p>
-    <button id="jsdebug" class="pure-button pure-button-primary">Toggle</button>
+    <button id="jsdebug" type="button" class="pure-button pure-button-primary">Toggle</button>
     <span>Status: </span><span id='jsdebug_status'>unknown</span>
 
     <form class="pure-form pure-form-aligned">
         <fieldset>
             <legend><br>RF debug (only functional with active CC1101 RF module):</legend><br>
-            <button id="rfdebug-12761" class="pure-button pure-button-primary">Send 31D9</button>&nbsp;speed:
+            <button id="rfdebug-12761" type="button" class="pure-button pure-button-primary">Send 31D9</button>&nbsp;speed:
             <input id="rfdebug-12761-status" type="number" min="0" max="100" size="6" value="0">&nbsp;
             &nbsp;fault:
             <input id="rfdebug-12761-fault" type="number" min="0" max="1" size="6" value="0">&nbsp;
@@ -63,34 +63,52 @@
             &nbsp;filter:
             <input id="rfdebug-12761-filter" type="number" min="0" max="1" size="6" value="0">&nbsp;
             <br><br>
-            <button id="rfdebug-12762" class="pure-button pure-button-primary">Send 31DA</button>&nbsp;faninfo:
+            <button id="rfdebug-12762" type="button" class="pure-button pure-button-primary">Send 31DA</button>&nbsp;faninfo:
             <input id="rfdebug-12762-faninfo" type="number" min="0" max="255" size="6"
                 value="0">&nbsp;timer:&nbsp;<input id="rfdebug-12762-timer" type="number" min="0" max="255" size="6"
                 value="0">&nbsp;//faninfo:0=off,1=low,2=medium,3=high,13=timer3,21=away,24=auto
             <br><br>
+            <button id="rfstatusreq-send-31DA" type="button" class="pure-button pure-button-primary">Request 31DA status</button>&nbsp;<button id="rfstatusreq-send-31D9" type="button" class="pure-button pure-button-primary">Request 31D9 status</button>&nbsp;RF remote index:
+            <select id="rfstatusreq-remote">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+            </select>&nbsp;dest ID override (optional, hex triplet like <code>96,A4,3B</code>):&nbsp;
+            <input id="rfstatusreq-destid" type="text" size="10" placeholder="">
+            &nbsp;//uses the source ID of the selected RF remote slot, and (if non-empty) the dest ID override as the destination — otherwise the slot's stored destinationID. The Itho only answers when that slot is bi-directional and joined, or when the override targets a real Itho address.
+            <br><br>
             <fieldset>
                 <legend><br>I2C extra debug functionality:</legend>
-                <p>This option enables an extra menu where more I2C options and logging is available. <br>Enabling the
+                <p>Only use this feature (briefly) for debugging issues. This option enables an extra menu where more I2C options and logging is available. <br>Enabling the
                     I2C
                     debug menu will also halt I2C bus activity in case of errors to be able to save logging!</p>
-                <button id="button-i2cdebugon" class="pure-button pure-button-primary">Debug on</button>
-                <button id="button-i2cdebugoff" class="pure-button pure-button-primary">Debug off</button>
+                <button id="button-i2cdebugon" type="button" class="pure-button pure-button-primary">Debug on</button>
+                <button id="button-i2cdebugoff" type="button" class="pure-button pure-button-primary">Debug off</button>
                 <br>
                 <legend><br>I2C sniffer:</legend>
-                <p>The i2c sniffer works only on sniffer capable devices (non-cve; all versions, cve; as of hw rev.
+                <p>Only use this feature (briefly) for debugging issues. The I2C sniffer works only on sniffer capable devices (non-CVE; all versions, CVE; as of hw rev.
                     2.5). <br>See system log for confirmation.<br>
                     Sniffer output is available through syslog. (reboot needed)</p>
-                <button id="button-i2csnifferon" class="pure-button pure-button-primary">Sniffer on</button>
-                <button id="button-i2csnifferoff" class="pure-button pure-button-primary">Sniffer off</button>
+                <button id="button-i2csnifferon" type="button" class="pure-button pure-button-primary">Sniffer on</button>
+                <button id="button-i2csnifferoff" type="button" class="pure-button pure-button-primary">Sniffer off</button>
                 <br><br>
                 <legend><br>Low level Itho I2C commands:</legend><br>
-                <button id="ithobutton-type" class="pure-button pure-button-primary">Query Devicetype</button><br>
+                <button id="ithobutton-type" type="button" class="pure-button pure-button-primary">Query Devicetype</button><br>
                 <span>Result:&nbsp;</span><span id="ithotype"></span><br><br>
-                <button id="ithobutton-statusformat" class="pure-button pure-button-primary">Query Status
+                <button id="ithobutton-statusformat" type="button" class="pure-button pure-button-primary">Query Status
                     Format</button><br><span>Result:&nbsp;</span><span id="ithostatusformat"></span><br><br>
-                <button id="ithobutton-status" class="pure-button pure-button-primary">Query
+                <button id="ithobutton-status" type="button" class="pure-button pure-button-primary">Query
                     Status</button><br><span>Result:&nbsp;</span><span id="ithostatus"></span><br><br>
-                <button id="button2410" class="pure-button pure-button-primary">Query 2410</button>setting index: <input
+                <button id="button2410" type="button" class="pure-button pure-button-primary">Query 2410</button>setting index: <input
                     id="itho_setting_id" type="number" min="0" max="255" size="6"
                     value="0"><br><span>Result:&nbsp;</span><span id="itho2410"></span><br>
                 <span>Current:&nbsp;</span><span id="itho2410cur"></span><br>
@@ -99,7 +117,7 @@
                 <span style="color:red">Warning!!<br> "Set 2410" changes the settings of your Itho unit<br>Use with care
                     and
                     use only if you know what you are doing!</span><br>
-                <button id="button2410set" class="pure-button pure-button-primary">Set 2410</button>setting index:
+                <button id="button2410set" type="button" class="pure-button pure-button-primary">Set 2410</button>setting index:
                 <input id="itho_setting_id_set" type="number" min="0" max="255" size="6" value="0"> setting value:
                 <input id="itho_setting_value_set" type="number" min="-2147483647" max="2147483647" size="10"
                     value="0"><br>
@@ -107,27 +125,27 @@
                     id="itho2410setres"></span><br>
                 <span style="color:red">Warning!!</span><br><br>
 
-                <button id="ithobutton-31DA" class="pure-button pure-button-primary">Query
+                <button id="ithobutton-31DA" type="button" class="pure-button pure-button-primary">Query
                     31DA</button><br><span>Result:&nbsp;</span>
                 <span id="itho31DA"></span><br><br><button id="ithobutton-31D9"
-                    class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
+                    type="button" class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
                     id="itho31D9"></span><br><br>
 
-                <button id="ithobutton-10D0" class="pure-button pure-button-primary">Filter
+                <button id="ithobutton-10D0" type="button" class="pure-button pure-button-primary">Filter
                     reset</button><br><span>Filter
                     reset function uses virtual remote 0, this remote needs to be paired with your Itho unit for this
                     command
                     to
                     work</span><br><br>
 
-                <button id="buttonC000" class="pure-button pure-button-primary">Send CO2 speed</button>
+                <button id="buttonC000" type="button" class="pure-button pure-button-primary">Send CO2 speed</button>
                 Speed1: <input id="itho_c000_speed1" type="number" min="0" max="255" size="4" value="0">&nbsp;Speed2:
                 <input id="itho_c000_speed2" type="number" min="0" max="255" size="4" value="0"><br><br>
-                <button id="button9298" class="pure-button pure-button-primary">Send CO2 value</button>
+                <button id="button9298" type="button" class="pure-button pure-button-primary">Send CO2 value</button>
                 Value: <input id="itho_9298_val" type="number" min="0" max="65535" size="4" value="0"><br><br>
-                <button id="button4210" class="pure-button pure-button-primary">Query
+                <button id="button4210" type="button" class="pure-button pure-button-primary">Query
                     Counters</button><br><span>Result:&nbsp;</span><span id="ithocounters"></span><br><br>
-                <button id="buttonCE30" class="pure-button pure-button-primary">Send CE30</button>
+                <button id="buttonCE30" type="button" class="pure-button pure-button-primary">Send CE30</button>
                 Set outside temperature to: <input id="itho_ce30_temp" type="number" min="-20" max="50" size="4"
                     value="15"><br>
                 Optional temporary temperature: <input id="itho_ce30_temptemp" type="number" min="-20" max="50" size="4"
@@ -137,18 +155,18 @@
                 <span>Result:&nbsp;</span><span id="itho_ce30_result"></span><br>
                 <br>
                 <span style="color:red">Warning!!<br>
-                    4030 is low level "manual control" of your itho unit.<br>
+                    4030 is low level "manual control" of your Itho unit.<br>
                     Use with care and use only if you know what you are doing!</span><br>
-                <button id="button4030" class="pure-button pure-button-primary">Set 4030 Manual Control</button>
+                <button id="button4030" type="button" class="pure-button pure-button-primary">Set 4030 Manual Control</button>
                 Index: <input id="itho_4030_index" type="text" size="5">
                 Datatype: <input id="itho_4030_datatype" type="text" size="5">
                 Value: <input id="itho_4030_value" type="text" size="5">
-                Checked: <input id="itho_4030_checked" ttype="text" size="2"><br>
+                Checked: <input id="itho_4030_checked" type="text" size="2"><br>
                 Password: "thisisunsafe": <input id="itho_4030_password" type="string" size="15"><br>
                 <span>Result:&nbsp;</span><span id="itho_4030_result"></span><br>
                 <span style="color:red">
                     WPU 5G: Make sure you set the "Max manual operation time" setting on the "Itho settings" page.<br>
-                    The itho unit will remain in manual mode until the timer expires. 0 means unlimited.<br>
+                    The Itho unit will remain in manual mode until the timer expires. 0 means unlimited.<br>
                     Warning!!<br></span><br>
             </fieldset><br><br><br>
         </fieldset>

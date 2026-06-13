@@ -38,6 +38,38 @@ bool ithoExecCommand(const char *command, cmdOrigin origin);
 bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin origin);
 bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin);
 bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOrigin origin);
+// Index of the first bi-directional Send remote in the configured slots,
+// or -1 if none qualifies. Bi-directional Send remotes are the only
+// remote-slot kind that holds a valid sourceID + destinationID pair joined
+// to the Itho unit, so they're the only ones from which a 31DA/31D9 RF
+// status request can be expected to elicit an answer.
+int findFirstBidirectionalSendRemote();
+// Send a 31DA + 31D9 status request over RF, addressed from the given
+// remote slot's sourceID to its destinationID. The unit answers when
+// the slot is bi-directional and joined; non-bidirectional slots are a
+// no-op as far as the Itho is concerned. Caller is responsible for
+// checking the slot is configured the way they expect — this function
+// only guards against an out-of-range index.
+//
+// If destOverride is non-null it points to a 3-byte address that
+// temporarily replaces the slot's destinationID for this one paired
+// request — useful for the debug page where the user wants to probe a
+// specific Itho's address without having to actually join the remote.
+// The slot's stored destinationID is restored after the request.
+void sendRFStatusRequest(uint8_t remote_index, const uint8_t *destOverride = nullptr);
+
+// Same as sendRFStatusRequest but only the 31DA half. Used by the
+// debug-page button so a user can probe one opcode at a time.
+void sendRF31DARequest(uint8_t remote_index, const uint8_t *destOverride = nullptr);
+
+// Same as sendRFStatusRequest but only the 31D9 half. Used by the
+// debug-page button so a user can probe one opcode at a time.
+void sendRF31D9Request(uint8_t remote_index, const uint8_t *destOverride = nullptr);
+// Best-effort lookup of the unit's current FanInfo. Checks ithoMeasurements
+// (I2C 31DA) first, then sniffed RF 31DA across active+tracked rfStatusSources.
+// Returns "auto"/"low"/"medium"/... or nullptr if no FanInfo data available.
+const char *getCurrentFanInfo();
+bool fanIsInAuto();
 bool ithoSetSpeed(const char *speed, cmdOrigin origin);
 bool ithoSetSpeed(uint16_t speed, cmdOrigin origin);
 bool ithoSetTimer(const char *timer, cmdOrigin origin);

@@ -173,7 +173,4 @@ void hardwareInit()
 
   // Fail-safe boot check
   failSafeBoot();
-
-  // Set initialization flag
-  IthoInit = true;
 }

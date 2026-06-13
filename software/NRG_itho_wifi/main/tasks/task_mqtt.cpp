@@ -1,5 +1,7 @@
 #include "tasks/task_mqtt.h"
 #include <StreamUtils.h>
+#include <esp_heap_caps.h>
+#include <new>
 #include "api/MqttAPI.h"
 #include "ithodevice/IthoDevice.h"
 #include "generic_functions.h"
@@ -164,6 +166,28 @@ void execMQTTTasks()
       if (mqttClient.connected())
         mqttSendRFStatus();
     }
+
+    // OTA progress republish. The periodic deviceinfo publish only fires on
+    // the status tick (~60 s), too slow for HA's update entity progress bar
+    // to move. Whenever otaUpdateProgress crosses idle↔active or moves by
+    // any percent and at least 1 s has passed, republish so HA sees current
+    // in_progress / update_percentage. Idle steady-state is a no-op.
+    {
+      static int lastPublishedOtaProgress = -1;
+      static unsigned long lastOtaPublishMs = 0;
+      int p = otaUpdateProgress;
+      unsigned long now = millis();
+      bool changed = (p != lastPublishedOtaProgress);
+      bool transition = ((p >= 0) != (lastPublishedOtaProgress >= 0));
+      bool ratedOk = (now - lastOtaPublishMs >= 1000);
+      if (changed && (transition || ratedOk))
+      {
+        mqttPublishDeviceInfo();
+        lastPublishedOtaProgress = p;
+        lastOtaPublishMs = now;
+      }
+    }
+
     mqttClient.loop();
   }
   else
@@ -199,6 +223,15 @@ void mqttInit()
   }
 }
 
+// Grow the MQTT buffer if needed. Never shrink — repeated realloc
+// cycles between the default and a larger size fragment the heap over
+// thousands of publish cycles per day.
+static void mqttEnsureBufferSize(size_t len)
+{
+  if (mqttClient.getBufferSize() < len)
+    mqttClient.setBufferSize(len);
+}
+
 void mqttSendStatus()
 {
 
@@ -211,10 +244,7 @@ void mqttSendStatus()
 
   size_t len = measureJson(root);
 
-  if (mqttClient.getBufferSize() < len)
-  {
-    mqttClient.setBufferSize(len);
-  }
+  mqttEnsureBufferSize(len);
   if (mqttClient.beginPublish(ihtostatustopic, len, true))
   {
     serializeJson(root, mqttClient);
@@ -225,8 +255,6 @@ void mqttSendStatus()
   {
     E_LOG("API: JsonDocument overflowed (itho status)");
   }
-
-  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
 }
 
 void mqttSendRFStatus()
@@ -272,7 +300,7 @@ void mqttSendRFStatus()
         serializeJson(root, mqttClient);
         mqttClient.endPublish();
       }
-      mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+      // removed: shrink-back fragments heap over thousands of cycles
     }
 
     if (!rfStatusSources[i].measurements31D9.empty())
@@ -299,7 +327,7 @@ void mqttSendRFStatus()
         serializeJson(root, mqttClient);
         mqttClient.endPublish();
       }
-      mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
+      // removed: shrink-back fragments heap over thousands of cycles
     }
   }
 }
@@ -401,33 +429,64 @@ void mqttHomeAssistantDiscovery()
   if (!ithoStatusReady())
     return;
 
+  // Pre-flight gate: skip if conditions clearly can't support the build.
+  // Total free guards against an exhausted heap; largest contiguous block
+  // guards against fragmentation that lets total free look fine while no
+  // single allocation can land. Thresholds are loose on purpose — the real
+  // safety net is the try/catch around the build below, which catches the
+  // case where fragmentation tips us over mid-run. A healthy CVE-Silent
+  // sits around 140 KB free / 43 KB largest block in steady state, so the
+  // floor must stay well under that to avoid locking out healthy devices.
+  // Clear the trigger flag here too so a persistently low-heap device
+  // doesn't spam the log on every TaskMQTT iteration.
+  size_t largestBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
+  size_t totalFree = ESP.getFreeHeap();
+  if (totalFree < 60000 || largestBlock < 20000)
+  {
+    W_LOG("HAD: skipping HA Discovery, heap too tight (largest block %lu, total free %lu)",
+          (unsigned long)largestBlock, (unsigned long)totalFree);
+    sendHomeAssistantDiscovery = false;
+    return;
+  }
+
   sendHomeAssistantDiscovery = false;
   N_LOG("HAD: publishing HA Discovery");
 
-  JsonDocument configDoc;
-  JsonObject configObj = configDoc.to<JsonObject>();
+  // Defense in depth: if the build or publish still hits std::bad_alloc
+  // (fragmentation during the run, not visible at the gate above), log and
+  // bail instead of taking the whole device down via std::terminate.
+  try
+  {
+    JsonDocument configDoc;
+    JsonObject configObj = configDoc.to<JsonObject>();
 
-  haDiscConfig.get(configObj);
+    haDiscConfig.get(configObj);
 
-  JsonDocument outputDoc;
-  JsonObject outputObj = outputDoc.to<JsonObject>();
+    JsonDocument outputDoc;
+    JsonObject outputObj = outputDoc.to<JsonObject>();
 
-  generateHADiscoveryJson(configObj, outputObj);
+    generateHADiscoveryJson(configObj, outputObj);
 
-  // config doc is no longer needed, manually clear memory before next step
-  configDoc.clear();
+    // config doc is no longer needed, manually clear memory before next step
+    configDoc.clear();
 
-  char devicetopic[160]{};
+    char devicetopic[160]{};
 
-  snprintf(devicetopic, sizeof(devicetopic), "%s%s%s%s", systemConfig.mqtt_ha_topic, "/device/", hostName(), "/config");
+    snprintf(devicetopic, sizeof(devicetopic), "%s%s%s%s", systemConfig.mqtt_ha_topic, "/device/", hostName(), "/config");
 
-  if (outputDoc.overflowed())
-    E_LOG("HAD: generateHADiscoveryJson overflowed!");
+    if (outputDoc.overflowed())
+      E_LOG("HAD: generateHADiscoveryJson overflowed!");
 
-  // First publish empty payload to remove all previously discovered entities
-  mqttClient.publish(devicetopic, "", true);
+    // First publish empty payload to remove all previously discovered entities
+    mqttClient.publish(devicetopic, "", true);
 
-  MQTTSendBuffered(outputDoc, devicetopic);
+    MQTTSendBuffered(outputDoc, devicetopic);
+  }
+  catch (const std::bad_alloc &e)
+  {
+    E_LOG("HAD: out of memory during HA Discovery (largest free block now %lu), skipping",
+          (unsigned long)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+  }
 }
 
 bool setupMQTTClient()

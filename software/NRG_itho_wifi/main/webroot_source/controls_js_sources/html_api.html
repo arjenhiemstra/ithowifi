@@ -1,7 +1,7 @@
 <div class="header">
-    <h1>IthoWifi - API</h1>
+    <h1>IthoWiFi - API</h1>
 </div>
-<h3>API Description</h3>
+<h3>API description</h3>
 <p><a href='swagger' onclick="event.preventDefault(); update_page('swagger');">Interactive API Explorer (Swagger UI)</a> | <a href='/api/openapi.json' target='_blank'>OpenAPI Specification (JSON)</a></p>
 
 <strong>REST API v2 (recommended)</strong><br><br>
@@ -41,7 +41,7 @@ Requests use URL query parameters: <code>http://[IP]/api.html?command=medium</co
 </div>
 <br>
 <strong>MQTT API</strong><br><br>
-Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostly the same commands as the REST API.<br>
+Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostly the same commands as the REST API.<br>
 <ul>
     <li>The command must be sent as valid JSON</li>
     <li>The command must be sent to the command topic</li>
@@ -175,7 +175,7 @@ Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostl
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key=remote name, value is
                     JSON with all received capabilities of the remote. Depending on make and model this can be the last
-                    command, temperature, humidity, battery and/or co2 levels. Return type present on MQTT "Remotes info
+                    command, temperature, humidity, battery and/or CO2 levels. Return type present on MQTT "Remotes info
                     topic".</em></td>
         </tr>
         <tr>
@@ -209,7 +209,7 @@ Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostl
             <td style="text-align:center">◌</td>
         </tr>
         <tr>
-            <td colspan="6">Comments:<br><em>Returns JSON with device information on the add-on and itho device
+            <td colspan="6">Comments:<br><em>Returns JSON with device information on the add-on and Itho device
                     connected. Use REST API v2: GET /api/v2/device. Return type present on MQTT "Device info topic".</em></td>
         </tr>
         <tr>
@@ -347,9 +347,9 @@ Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostl
         </tr>
         <tr>
             <td>manual control</td>
-            <td>json</td>
+            <td>JSON</td>
             <td>see comments</td>
-            <td>json</td>
+            <td>JSON</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">◌</td>
         </tr>
@@ -358,17 +358,17 @@ Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostl
                 Comments:<br>
                 <em>
                     Warning!!
-                    Manual control ie. the 4030 command is low level "manual control" of your itho unit.
+                    Manual control e.g. the 4030 command is low level "manual control" of your Itho unit.
                     Use with care and use only if you know what you are doing!
                     WPU 5G: Make sure you set the "Max manual operation time" setting in the settings page.
-                    The itho unit will remain in manual mode until the timer expires. 0 means unlimited.
+                    The Itho unit will remain in manual mode until the timer expires. 0 means unlimited.
                     <br>
                     <br>
-                    json keys explaination:<br>
-                    "manual_operation_index": manual_operation_index description (dataype uint16_t)<br>
-                    "manual_operation_datatype": manual_operation_datatype description (dataype uint8_t)<br>
-                    "manual_operation_value": manual_operation_value description (dataype uint16_t)<br>
-                    "manual_operation_checked": manual_operation_checked description (dataype uint8_t)<br><br>
+                    json keys explanation:<br>
+                    "manual_operation_index": manual_operation_index description (datatype uint16_t)<br>
+                    "manual_operation_datatype": manual_operation_datatype description (datatype uint8_t)<br>
+                    "manual_operation_value": manual_operation_value description (datatype uint16_t)<br>
+                    "manual_operation_checked": manual_operation_checked description (datatype uint8_t)<br><br>
                     example json:<br>
                     "{"manual_operation_index":1, "manual_operation_datatype":1,
                     "manual_operation_value": 1, "manual_operation_checked":1}"<br><br>
@@ -402,7 +402,7 @@ Command topicmands are sent as JSON to the MQTT com. The MQTT API supports mostl
             <td colspan="6">Comments:<br><em>These commands emulate a normal physical remote using the CC1101 module and
                     a RF signal,
                     available commands depend
-                    on type of remote configured to emulate. For these commands to work, the rf remote needs to be
+                    on type of remote configured to emulate. For these commands to work, the RF remote needs to be
                     joined with the Itho unit first. This can be done with a physical remote or with the RF remote
                     buttons on the RF devices page.
                     If the "rfremoteindex" key is not present, the first RF remote will be used.</em></td>

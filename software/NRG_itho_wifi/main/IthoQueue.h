@@ -37,6 +37,15 @@ public:
   {
     return ithoSpeed;
   };
+  // Head-of-queue timer (the next entry to expire). Used by /api/v2/speed
+  // to surface the add-on-tracked timer remaining for PWM2I2C timer
+  // commands (which the Itho unit itself doesn't know about). Returns
+  // 0 ms / -1 speed when no active timer is queued.
+  void getHeadTimer(unsigned long &remainingMs, int16_t &speed) const
+  {
+    remainingMs = items[0].valid;
+    speed = items[0].speed;
+  }
   mutable bool ithoSpeedUpdated = false;
   void set_itho_fallback_speed(uint16_t speedVal) { fallBackSpeed = speedVal; };
   void get(JsonArray arr);

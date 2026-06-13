@@ -127,14 +127,27 @@ void execSystemControlTasks()
       I_LOG("SYS: RF standalone mode - I2C disabled");
       sendHomeAssistantDiscovery = true;
     }
+
+    // In standalone mode the Itho only reaches us over RF, so the I2C
+    // status-polling loop in the else branch never runs. Reuse the same
+    // configured "Itho status update frequency" to actively request
+    // 31DA + 31D9 over RF — addressed from the first bi-directional
+    // Send remote that's been joined to the unit. Skipped silently when
+    // there is no CC1101, when no qualifying remote is configured, or
+    // when update frequency is set to 0 (off).
+    static unsigned long rfStatusReqTim = 0;
+    if (systemConfig.rfInitOK
+        && systemConfig.itho_updatefreq > 0
+        && millis() - rfStatusReqTim >= systemConfig.itho_updatefreq * 1000UL)
+    {
+      rfStatusReqTim = millis();
+      int idx = findFirstBidirectionalSendRemote();
+      if (idx >= 0)
+        sendRFStatusRequest(static_cast<uint8_t>(idx));
+    }
   }
   else
   {
-    if (IthoInit && millis() > 250)
-    {
-      IthoInit = ithoInitCheck();
-    }
-
     if (!i2c_init_functions_done)
     {
       initI2cFunctions();

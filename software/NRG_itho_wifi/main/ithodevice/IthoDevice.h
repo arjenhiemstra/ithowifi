@@ -120,6 +120,15 @@ struct rfStatusSource
   time_t lastSeen{};
   std::vector<ithoDeviceMeasurements> measurements31DA;
   std::vector<ithoDeviceMeasurements> measurements31D9;
+  // Domain byte from the last 31DA / 31D9 frame's first payload byte.
+  // 0 on plain single-zone units; on multi-zone HRUs (Itho DuoZone) the
+  // unit broadcasts the same opcode once per zone with the zone ID in
+  // this byte. The measurements vector above is overwritten by each
+  // frame so consumers see the most recently broadcast zone's data —
+  // exposing the source byte lets them tell which zone they're looking
+  // at. Proper per-zone storage is a follow-up.
+  uint8_t lastZone31DA{0};
+  uint8_t lastZone31D9{0};
   bool active{false};
   bool tracked{false};
   char name[32]{};

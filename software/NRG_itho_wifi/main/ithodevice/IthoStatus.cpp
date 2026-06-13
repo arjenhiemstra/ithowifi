@@ -85,46 +85,56 @@ void sendQueryStatusFormat(bool updateweb)
     }
   }
 
-  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
+  if (!(currentItho_fwversion() > 0))
+    return;
+
+  // Parse into a local vector first; only swap into the live ithoStatus
+  // if parsing actually produced entries. This way a transient empty/partial
+  // I2C reply can't wipe a previously-good status format.
+  const uint8_t endPos = i2cbuf[5];
+  if (endPos == 0)
   {
-    if (!ithoStatus.empty())
-    {
-      ithoStatus.clear();
+    W_LOG("I2C: QueryStatusFormat reply has 0 entries, keeping previous status");
+    return;
+  }
+
+  std::vector<ithoDeviceStatus> parsed;
+  parsed.reserve(endPos);
+  for (uint8_t i = 0; i < endPos; i++)
+  {
+    parsed.push_back(ithoDeviceStatus());
+
+    parsed.back().is_signed = getSignedFromDatatype(i2cbuf[6 + i]);
+    parsed.back().length = getLengthFromDatatype(i2cbuf[6 + i]);
+    parsed.back().divider = getDividerFromDatatype(i2cbuf[6 + i]);
+
+    if (parsed.back().divider == 1)
+    { // integer value
+      parsed.back().type = ithoDeviceStatus::is_int;
     }
-    if (!(currentItho_fwversion() > 0))
+    else
     {
-      xSemaphoreGive(ithoStatusMutex);
-      return;
+      parsed.back().type = ithoDeviceStatus::is_float;
     }
+    // special cases
+    if (i2cbuf[6 + i] == 0x5B)
+    {
+      // legacy itho: 0x5B -> 0x10
+      parsed.back().type = ithoDeviceStatus::is_int;
+      parsed.back().length = 2;
+      parsed.back().is_signed = false;
+    }
+  }
+
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(500)) == pdTRUE)
+  {
     ithoStatusLabelLength = getStatusLabelLength(currentIthoDeviceGroup(), currentIthoDeviceID(), currentItho_fwversion());
-    const uint8_t endPos = i2cbuf[5];
-
-    for (uint8_t i = 0; i < endPos; i++)
-    {
-      ithoStatus.push_back(ithoDeviceStatus());
-
-      ithoStatus.back().is_signed = getSignedFromDatatype(i2cbuf[6 + i]);
-      ithoStatus.back().length = getLengthFromDatatype(i2cbuf[6 + i]);
-      ithoStatus.back().divider = getDividerFromDatatype(i2cbuf[6 + i]);
-
-      if (ithoStatus.back().divider == 1)
-      { // integer value
-        ithoStatus.back().type = ithoDeviceStatus::is_int;
-      }
-      else
-      {
-        ithoStatus.back().type = ithoDeviceStatus::is_float;
-      }
-      // special cases
-      if (i2cbuf[6 + i] == 0x5B)
-      {
-        // legacy itho: 0x5B -> 0x10
-        ithoStatus.back().type = ithoDeviceStatus::is_int;
-        ithoStatus.back().length = 2;
-        ithoStatus.back().is_signed = false;
-      }
-    }
+    ithoStatus = std::move(parsed);
     xSemaphoreGive(ithoStatusMutex);
+  }
+  else
+  {
+    W_LOG("I2C: QueryStatusFormat could not acquire mutex, skipping update");
   }
 }
 
@@ -157,8 +167,11 @@ void sendQueryStatus(bool updateweb)
 
   int statusPos = 6; // first byte with status info
   int labelPos = 0;
-  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(500)) != pdTRUE)
+  {
+    W_LOG("I2C: QueryStatus could not acquire mutex, skipping update");
     return;
+  }
   if (!ithoStatus.empty())
   {
     for (auto &ithoStat : ithoStatus)
@@ -411,13 +424,17 @@ void parseRF31DA(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
 {
   if (len < 2)
     return;
-  if (payload[0] != 0x00)
-    return; // unexpected domain byte
-
+  // payload[0] is the "domain" / zone byte. 0 on single-zone units;
+  // non-zero on multi-zone HRUs (Itho DuoZone broadcasts one 31DA per
+  // zone with the zone ID here). We used to drop everything non-zero,
+  // which made multi-zone HRUs look offline (#366). Now we accept any
+  // zone, record it on the source, and let the consumer disambiguate.
+  const uint8_t zoneId = payload[0];
 
   rfStatusSource *src = findOrAllocRFStatusSource(srcId0, srcId1, srcId2);
   if (!src)
     return;
+  src->lastZone31DA = zoneId;
 
   time_t now;
   time(&now);
@@ -497,12 +514,13 @@ void parseRF31D9(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
 {
   if (len < 3)
     return;
-  if (payload[0] != 0x00)
-    return; // unexpected domain byte
+  // Same multi-zone domain-byte handling as parseRF31DA. See #366.
+  const uint8_t zoneId = payload[0];
 
   rfStatusSource *src = findOrAllocRFStatusSource(srcId0, srcId1, srcId2);
   if (!src)
     return;
+  src->lastZone31D9 = zoneId;
 
   time_t now;
   time(&now);
@@ -562,8 +580,19 @@ void sendQuery31DA(bool updateweb)
   auto dataLength = i2cbuf[5];
   auto dataStart = 6;
 
-  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+  // A 0-length 31DA reply means a partial / corrupt I2C read; preserve the
+  // previous measurements rather than wiping them.
+  if (dataLength == 0)
+  {
+    W_LOG("I2C: Query31DA reply has 0 entries, keeping previous measurements");
     return;
+  }
+
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(500)) != pdTRUE)
+  {
+    W_LOG("I2C: Query31DA could not acquire mutex, skipping update");
+    return;
+  }
 
   if (!ithoMeasurements.empty())
   {
@@ -702,8 +731,11 @@ void sendQuery31D9(bool updateweb)
 
   auto dataStart = 6;
 
-  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(500)) != pdTRUE)
+  {
+    W_LOG("I2C: Query31D9 could not acquire mutex, skipping update");
     return;
+  }
 
   if (!ithoInternalMeasurements.empty())
   {

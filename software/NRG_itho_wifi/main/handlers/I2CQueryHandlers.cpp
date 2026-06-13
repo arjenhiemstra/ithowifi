@@ -1,7 +1,6 @@
 #include "tasks/task_syscontrol.h"
 #include "tasks/task_configandlog.h"
 
-bool IthoInit = false;
 int8_t ithoInitResult = 0;
 bool ithoStatusFormateSuccessful = false;
 
@@ -24,9 +23,27 @@ void initI2cFunctions()
       ithoInitResult = 1;
       i2c_init_functions_done = true;
 
+      // PWM-over-I2C wake-up handshake. By reaching this point the unit
+      // has answered QueryDevicetype on I2C, so it's the right moment to
+      // issue the init frame — no GPIO read, no race against the
+      // status_pin (which is now LED-only). Only CVE units accept PWM2I2C
+      // commands; the first-generation CVE ECO 2 SP (type:0x04 fw:0x01)
+      // additionally requires this frame before it will act on PWM
+      // commands. For every other CVE variant the frame is a harmless
+      // no-op.
+      if (systemConfig.itho_pwm2i2c &&
+          (hardwareManager.hardware_rev_det == 0x3F || hardwareManager.hardware_rev_det == 0x03))
+      {
+        N_LOG("I2C: sendI2CPWMinit triggered by initI2cFunctions (boot)");
+        sendI2CPWMinit();
+      }
+
       // Auto-set RF TX power for Send remotes based on device type (only for remotes still at default 0xC0)
       // CVE/HRU200 (0x1B, 0x1D, 0x14, 0x04): add-on inside unit ~1cm → -30dBm (0x03)
       // Other I2C devices: ~30cm → +5dBm (0x84)
+      // Skip entirely if there is no CC1101 module — the value is meaningless and
+      // logging it is misleading on I2C-only setups.
+      if (systemConfig.rfInitOK)
       {
         uint8_t devId = currentIthoDeviceID();
         uint8_t defaultPower = 0xC0;
@@ -55,14 +72,8 @@ void initI2cFunctions()
       digitalWrite(hardwareManager.status_pin, HIGH);
       if (systemConfig.rfInitOK)
       {
-        delay(250);
-        digitalWrite(hardwareManager.status_pin, LOW);
-        delay(250);
-        digitalWrite(hardwareManager.status_pin, HIGH);
-        delay(250);
-        digitalWrite(hardwareManager.status_pin, LOW);
-        delay(250);
-        digitalWrite(hardwareManager.status_pin, HIGH);
+        // CC1101 confirmation: blink the status LED for 30 s, non-blocking.
+        hardwareManager.blinkStatusLed(30000);
       }
       if (systemConfig.syssht30 > 0)
       {
@@ -114,7 +125,15 @@ void initI2cFunctions()
         }
       }
 
+      // Boot-time QueryStatusFormat can race with MQTT/web tasks for the
+      // mutex or land on a partial I2C reply, returning 0 items on a device
+      // that actually supports it. One immediate retry covers most flakes.
       sendQueryStatusFormat(false);
+      if (ithoStatus.size() == 0)
+      {
+        delay(100);
+        sendQueryStatusFormat(false);
+      }
       N_LOG("I2C: QueryStatusFormat - items:%lu", static_cast<unsigned long>(ithoStatus.size()));
       if (ithoStatus.size() > 0)
         ithoStatusFormateSuccessful = true;
@@ -222,19 +241,3 @@ void init_vRemote()
   VirtualRemotesConfigLoaded = loadVirtualRemotesConfig("flash");
 }
 
-bool ithoInitCheck()
-{
-  if (hardwareManager.hardware_rev_det == 0x3F || hardwareManager.hardware_rev_det == 0x03) // CVE
-  {
-    if (digitalRead(hardwareManager.status_pin) == LOW)
-    {
-      return false;
-    }
-    if (systemConfig.itho_pwm2i2c)
-    {
-      sendI2CPWMinit();
-      // sendCO2init();
-    }
-  }
-  return false;
-}

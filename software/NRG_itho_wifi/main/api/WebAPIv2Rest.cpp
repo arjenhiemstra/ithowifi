@@ -68,7 +68,7 @@ static void sendJsonResponse(AsyncWebServerRequest *request, JsonDocument &doc, 
   }
   catch (const std::bad_alloc &)
   {
-    E_LOG("API: heap exhausted while serializing response, returning 503");
+    E_LOG("API: heap exhausted, returning 503 (free:%d block:%u)", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
     request->send(503, "text/plain", "Service unavailable (low memory)");
   }
 }
@@ -115,6 +115,15 @@ static void handleGetSpeed(AsyncWebServerRequest *request)
     return;
   JsonDocument data;
   data["currentspeed"] = ithoCurrentVal;
+  // Add-on-tracked timer head-of-queue (timer1/2/3, cook30/60 in PWM2I2C
+  // mode). Itho-side RemainingTime stays 0 for these because the unit
+  // only sees a PWM speed write — surface our own countdown here so
+  // consumers (HA integration) can show a remaining-time entity.
+  unsigned long timerRemainingMs = 0;
+  int16_t timerSpeed = -1;
+  ithoQueue.getHeadTimer(timerRemainingMs, timerSpeed);
+  data["timer_remaining_ms"] = timerRemainingMs;
+  data["timer_speed"] = timerSpeed;
   sendSuccess(request, data);
 }
 
@@ -441,8 +450,9 @@ static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
 
     if (systemConfig.itho_control_interface == 1)
     {
-      // RF CO2 mode: send auto + demand
-      // Find first Send+RFTCO2 remote
+      // RF CO2 mode: the unit only accepts a 31E0 demand when in auto.
+      // If FanInfo confirms auto, send only the demand. Otherwise send
+      // an "auto" RF command first, then the demand.
       int rfIdx = -1;
       for (int ri = 0; ri < remotes.getMaxRemotes(); ri++)
       {
@@ -459,11 +469,16 @@ static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
         sendFail(request, "no Send+RFTCO2 remote configured");
         return;
       }
-      ithoExecRFCommand(rfIdx, "auto", HTMLAPI);
-      delay(200);
+      bool sentAuto = false;
+      if (!fanIsInAuto())
+      {
+        ithoExecRFCommand(rfIdx, "auto", HTMLAPI);
+        delay(200);
+        sentAuto = true;
+      }
       ithoSendRFDemand(rfIdx, (uint8_t)demand, 0, HTMLAPI);
       JsonDocument data;
-      data["result"] = "auto + demand sent via RF CO2";
+      data["result"] = sentAuto ? "auto + demand sent via RF CO2" : "demand sent via RF CO2";
       data["demand"] = demand;
       data["index"] = rfIdx;
       if (!body["percentage"].isNull()) data["percentage"] = body["percentage"].as<int>();

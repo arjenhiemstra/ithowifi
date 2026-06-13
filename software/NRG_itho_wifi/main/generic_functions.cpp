@@ -14,6 +14,48 @@
 Ticker IthoCMD;
 const char *espName = "nrg-itho-";
 
+const char *getCurrentFanInfo()
+{
+  // Check I2C 31DA measurements first (freshest when itho_31da is enabled).
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
+  {
+    for (const auto &m : ithoMeasurements)
+    {
+      if (m.type == ithoDeviceMeasurements::is_string &&
+          (strcmp(m.name, "FanInfo") == 0 || strcmp(m.name, "fan-info") == 0) &&
+          m.value.stringval != nullptr)
+      {
+        const char *v = m.value.stringval;
+        xSemaphoreGive(ithoStatusMutex);
+        return v;
+      }
+    }
+    xSemaphoreGive(ithoStatusMutex);
+  }
+  // Fall back to sniffed RF 31DA across any active+tracked source.
+  for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
+  {
+    if (!rfStatusSources[i].active || !rfStatusSources[i].tracked)
+      continue;
+    for (const auto &m : rfStatusSources[i].measurements31DA)
+    {
+      if (m.type == ithoDeviceMeasurements::is_string &&
+          (strcmp(m.name, "FanInfo") == 0 || strcmp(m.name, "fan-info") == 0) &&
+          m.value.stringval != nullptr)
+      {
+        return m.value.stringval;
+      }
+    }
+  }
+  return nullptr;
+}
+
+bool fanIsInAuto()
+{
+  const char *fi = getCurrentFanInfo();
+  return fi != nullptr && strcmp(fi, "auto") == 0;
+}
+
 volatile uint16_t nextIthoVal = 0;
 volatile unsigned long nextIthoTimer = 0;
 
@@ -156,6 +198,10 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
     {
       src["tracked"] = rfStatusSources[i].tracked;
       src["name"] = rfStatusSources[i].name;
+      // Domain byte from the latest 31DA / 31D9 frame. 0 on single-zone
+      // units; non-zero indicates a multi-zone HRU's zone ID (#366).
+      src["zone31DA"] = rfStatusSources[i].lastZone31DA;
+      src["zone31D9"] = rfStatusSources[i].lastZone31D9;
       JsonObject data = src["data"].to<JsonObject>();
       for (const auto &m : rfStatusSources[i].measurements31D9)
       {
@@ -198,6 +244,9 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
     if (idx >= 0 && idx < MAX_RF_STATUS_SOURCES && rfStatusSources[idx].active)
     {
       root["selectedSource"] = idx;
+      // See note above for trackedOnly path.
+      root["zone31DA"] = rfStatusSources[idx].lastZone31DA;
+      root["zone31D9"] = rfStatusSources[idx].lastZone31D9;
       JsonObject data = root["data"].to<JsonObject>();
 
       for (const auto &m : rfStatusSources[idx].measurements31D9)
@@ -293,6 +342,11 @@ void getDeviceInfoJSON(JsonObject root)
   root["itho_fwversion"] = currentItho_fwversion();
   root["add-on_hwid"] = WiFi.macAddress();
   root["add-on_fwversion"] = fw_version;
+  // OTA state for HA's update entity progress bar. otaUpdateProgress
+  // semantics: -1=idle, 0-100=download/flash percentage, 101=done
+  // (reboot pending), -2=error. The HA discovery val_tpl derives
+  // in_progress / update_percentage from this single integer.
+  root["ota_progress"] = static_cast<int>(otaUpdateProgress);
   root["itho_rf_standalone"] = systemConfig.itho_rf_standalone;
   root["itho_control_interface"] = systemConfig.itho_control_interface;
   if (systemConfig.fw_check)
@@ -661,6 +715,110 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
   logLastCommand(buf, origin);
 
   return true;
+}
+
+int findFirstBidirectionalSendRemote()
+{
+  for (int i = 0; i < remotes.getMaxRemotes(); i++)
+  {
+    if (remotes.isEmptySlot(i))
+      continue;
+    if (remotes.getRemoteFunction(i) != RemoteFunctions::SEND)
+      continue;
+    if (!rfManager.radio.getRFDeviceBidirectional(i))
+      continue;
+    return i;
+  }
+  return -1;
+}
+
+// Single shared implementation behind the three public wrappers below.
+// send31DA / send31D9 bits select which opcode(s) actually go out; the
+// destOverride snapshot-and-restore dance happens once around the
+// whole burst so both halves of a paired call share one destination.
+static void sendRFStatusRequestInternal(uint8_t remote_index, bool send31DA, bool send31D9, const uint8_t *destOverride)
+{
+  if (remote_index >= remotes.getMaxRemotes())
+    return;
+  if (!send31DA && !send31D9)
+    return;
+
+  // Match the TX-power / send-tries / ISR pattern used by the other RF
+  // send paths in this file (see ithoSendRFDemand at line ~695).
+  rfManager.radio.setTxPowerLevel(remotes.getRemoteTxPower(remote_index));
+  rfManager.radio.setSendTries(1);
+
+  // Optional one-shot destinationID override. Snapshot the slot's
+  // current destinationID via the CC1101 layer's read-only accessor,
+  // swap in the override, send, then restore. Lets the debug page
+  // probe a specific Itho address without modifying the saved config.
+  uint8_t savedDest[3] = {0, 0, 0};
+  bool restoreDest = false;
+  if (destOverride != nullptr)
+  {
+    const auto &devs = rfManager.radio.getRFdevices();
+    savedDest[0] = devs.device[remote_index].destinationID[0];
+    savedDest[1] = devs.device[remote_index].destinationID[1];
+    savedDest[2] = devs.device[remote_index].destinationID[2];
+    rfManager.radio.updateDestinationID(destOverride[0], destOverride[1], destOverride[2], remote_index);
+    restoreDest = true;
+  }
+
+  // Each frame gets its own ISR-disabled critical section, mirroring the
+  // single-opcode pattern in task_cc1101.cpp's send31DA/send31D9 blocks.
+  // Stuffing both sends into one block was leaving the CC1101 in an
+  // intermediate state for the second TX — first opcode went out, second
+  // silently didn't. The brief delay between them gives the radio time to
+  // cycle through RX → IDLE → TX again.
+  if (send31DA)
+  {
+    disableRF_ISR();
+    rfManager.radio.sendRQ31DA(remote_index);
+    enableRF_ISR();
+  }
+  if (send31DA && send31D9)
+    delay(50);
+  if (send31D9)
+  {
+    disableRF_ISR();
+    rfManager.radio.sendRQ31D9(remote_index);
+    enableRF_ISR();
+  }
+
+  if (restoreDest)
+  {
+    rfManager.radio.updateDestinationID(savedDest[0], savedDest[1], savedDest[2], remote_index);
+  }
+
+  rfManager.radio.setTxPowerLevel(0xC0);
+  rfManager.radio.setSendTries(3);
+
+  // Read back the destination that was actually used so the log line
+  // is unambiguous regardless of whether an override was supplied.
+  const auto &devs = rfManager.radio.getRFdevices();
+  uint8_t actualDest[3] = {
+      devs.device[remote_index].destinationID[0],
+      devs.device[remote_index].destinationID[1],
+      devs.device[remote_index].destinationID[2]};
+  const char *what = (send31DA && send31D9) ? "31DA+31D9"
+                                            : (send31DA ? "31DA" : "31D9");
+  I_LOG("SYS: sent RF %s status request via remote idx:%d, dest:%02X,%02X,%02X",
+        what, remote_index, actualDest[0], actualDest[1], actualDest[2]);
+}
+
+void sendRFStatusRequest(uint8_t remote_index, const uint8_t *destOverride)
+{
+  sendRFStatusRequestInternal(remote_index, true, true, destOverride);
+}
+
+void sendRF31DARequest(uint8_t remote_index, const uint8_t *destOverride)
+{
+  sendRFStatusRequestInternal(remote_index, true, false, destOverride);
+}
+
+void sendRF31D9Request(uint8_t remote_index, const uint8_t *destOverride)
+{
+  sendRFStatusRequestInternal(remote_index, false, true, destOverride);
 }
 
 bool ithoSetSpeed(const char *speed, cmdOrigin origin)

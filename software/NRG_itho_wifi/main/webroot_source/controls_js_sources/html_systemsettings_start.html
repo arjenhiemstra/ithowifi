@@ -38,7 +38,7 @@
       <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
     </div>
     <legend><br>API settings:</legend>
-    <p>Have api keys on the WebAPI, MQTT API and Itho Status page normlized (all lowercase, no spaces and special
+    <p>Have API keys on the WebAPI, MQTT API and Itho status page normalized (all lowercase, no spaces or special
       characters).</p>
     <div class="pure-control-group">
       <label for="option-api_normalize" class="pure-radio">Normalize keys</label>
@@ -58,7 +58,7 @@
     </div>
     <div class="pure-control-group">
       <label for="api_settings_activated">Activate settings indexes</label>
-      <input id="api_settings_activated" title="Must be a valid JSON array ie.: [12,34]" type="text" maxlength="1024"
+      <input id="api_settings_activated" title="Must be a valid JSON array e.g.: [12,34]" type="text" maxlength="1024"
         size="20">
     </div>
     <p>
@@ -116,10 +116,9 @@
       <input id="itho_numvrem" type="number" min="1" max="12" size="6">
     </div>
     <p>A virtual remote can be used to force the Itho unit in medium mode before sending a command from the add-on. This
-      way the add-on can overrule the current speed settings of the Itho (ie. due to active input from a built in
+      way the add-on can overrule the current speed settings of the Itho (e.g. due to active input from a built-in
       humidity sensor or another remote)</p>
-    <p>Received commands from RF remotes can be translated to matching virtual remote commands with the 'Map RF remotes
-      to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
+    <p>API key "command" (e.g. low, high) can be translated to matching virtual remote commands with 'Map API key "command" to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
       settings do work as expected.</p>
     <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
     <div class="pure-control-group">
@@ -178,10 +177,10 @@
       <input id="option-4210-0" type="radio" name="option-itho_4210" value="0"> off
     </div>
     <legend><br>I2C safe guard:</legend>
-    <p>The i2c safe guard is a protection mechanism ONLY for CVE fans with built-in humidity sensor (models with light
+    <p>The I2C safe guard is a protection mechanism ONLY for CVE fans with built-in humidity sensor (models with light
       grey
       lid)</p>
-    <p>(Note: needs sniffer capable add-on (hw revision 2.5 and up) to work, does not work in conjunction with the i2c
+    <p>(Note: needs sniffer capable add-on (hw revision 2.5 and up) to work, does not work in conjunction with the I2C
       sniffer, reboot needed)
     </p>
     <div class="pure-control-group">
