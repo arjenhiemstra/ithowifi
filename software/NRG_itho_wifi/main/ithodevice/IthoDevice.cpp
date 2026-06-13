@@ -17,6 +17,7 @@ uint8_t itho_hwversion = 0;
 uint8_t itho_fwversion = 0;
 volatile uint16_t ithoCurrentVal = 0;
 volatile uint8_t ithoFanDemand = 0;
+volatile uint16_t ithoLastSentCO2level = 0;
 const struct ihtoDeviceType *ithoDeviceptr = nullptr;
 int16_t ithoSettingsLength = 0;
 int16_t ithoStatusLabelLength = 0;
@@ -28,6 +29,7 @@ const std::map<cmdOrigin, const char *> cmdOriginMap = {
     {cmdOrigin::MQTTAPI, "MQTT API"},
     {cmdOrigin::REMOTE, "remote"},
     {cmdOrigin::WEB, "web interface"},
+    {cmdOrigin::KEEPALIVE, "RF keep-alive"},
     {cmdOrigin::UNKNOWN, "unknown"}};
 
 const struct ihtoDeviceType ithoDevices[]{

@@ -50,6 +50,7 @@ extern int16_t ithoSettingsLength;
 extern int16_t ithoStatusLabelLength;
 extern volatile uint16_t ithoCurrentVal;
 extern volatile uint8_t ithoFanDemand; // last demand value from 31DA response (0-200)
+extern volatile uint16_t ithoLastSentCO2level; // last CO2 level (ppm) actually sent via ithoSendRFCO2, 0 = never sent
 extern const struct ihtoDeviceType *ithoDeviceptr;
 
 // extern bool get2410;

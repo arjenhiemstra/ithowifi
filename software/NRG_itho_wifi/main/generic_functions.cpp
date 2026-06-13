@@ -667,6 +667,8 @@ bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
   rfManager.radio.send1298(remote_index, co2level);
   enableRF_ISR();
 
+  ithoLastSentCO2level = co2level;
+
   rfManager.radio.setTxPowerLevel(0xC0);
   if (bidirectional)
     rfManager.radio.setSendTries(3);
@@ -730,6 +732,23 @@ int findFirstBidirectionalSendRemote()
     return i;
   }
   return -1;
+}
+
+// Used by task_syscontrol's RF CO2 periodic poll: a configured slot index is
+// only safe to send from if it's still non-empty, a SEND remote, and an
+// RFTCO2 type. A user could change the joined remote out from under the
+// stored idx — we silently skip rather than push a bogus frame.
+bool rfco2RemoteValid(uint8_t idx)
+{
+  if (idx >= remotes.getMaxRemotes())
+    return false;
+  if (remotes.isEmptySlot(idx))
+    return false;
+  if (remotes.getRemoteFunction(idx) != RemoteFunctions::SEND)
+    return false;
+  if (remotes.getRemoteType(idx) != RemoteTypes::RFTCO2)
+    return false;
+  return true;
 }
 
 // Single shared implementation behind the three public wrappers below.

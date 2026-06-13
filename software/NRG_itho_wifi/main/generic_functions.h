@@ -44,6 +44,10 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
 // to the Itho unit, so they're the only ones from which a 31DA/31D9 RF
 // status request can be expected to elicit an answer.
 int findFirstBidirectionalSendRemote();
+// True if `idx` currently points at a non-empty, SEND-function, RFTCO2-type
+// remote slot — i.e. one from which the RF CO2 periodic poll in task_syscontrol
+// can safely send. False on out-of-range, empty, wrong function, or wrong type.
+bool rfco2RemoteValid(uint8_t idx);
 // Send a 31DA + 31D9 status request over RF, addressed from the given
 // remote slot's sourceID to its destinationID. The unit answers when
 // the slot is bi-directional and joined; non-bidirectional slots are a
