@@ -237,7 +237,11 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
                  "{%% endif %%}",
                  cmdKey, cmdKey, midCmd, cmdKey, cmdKey, lowCmd);
 
-        snprintf(pct_val_tpl, sizeof(pct_val_tpl), "{{ value_json['%s'] | int }}", actualSpeedLabel.c_str());
+        // pct_stat_t is "<base>/state" which publishes a plain integer (see task_mqtt.cpp),
+        // so the template must read `value`, not `value_json[...]`. Earlier versions tried
+        // to subscript the int with the status-field name, producing a runtime template error
+        // in HA on every state update.
+        strlcpy(pct_val_tpl, "{{ value | int }}", sizeof(pct_val_tpl));
         componentJson["pl_off"] = (std::string("{\"") + cmdKey + "\":\"" + lowCmd + "\"}").c_str(); // payload_off
 
         const char *midLabel = (strcmp(midCmd, "auto") == 0) ? "Auto" : "Medium";
