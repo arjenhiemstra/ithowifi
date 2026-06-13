@@ -17,12 +17,49 @@
 <legend><br>RF CO2 control:</legend>
 <div class="pure-control-group">
   <label for="option-itho_control_interface" class="pure-radio">Control interface</label>
-  <input id="option-itho_control_interface-0" type="radio" name="option-itho_control_interface" value="0"> Virtual remote (I2C)
-  <input id="option-itho_control_interface-1" type="radio" name="option-itho_control_interface" value="1"> RF CO2 (demand slider)
+  <input id="option-itho_control_interface-0" type="radio" name="option-itho_control_interface" value="0" onclick="toggleRfco2PeriodicSection(0)"> Virtual remote (I2C)
+  <input id="option-itho_control_interface-1" type="radio" name="option-itho_control_interface" value="1" onclick="toggleRfco2PeriodicSection(1)"> RF CO2 (demand slider)
 </div>
 <div class="pure-control-group">
   <label for="option-itho_rf_co2_join" class="pure-radio">Send RF CO2 join</label>
   <input id="option-itho_rf_co2_join-1" type="radio" name="option-itho_rf_co2_join" value="1"> next power on
   <input id="option-itho_rf_co2_join-0" type="radio" name="option-itho_rf_co2_join" value="0"> off
+</div>
+<div id="rfco2_periodic_section" class="hidden">
+  <p style="margin-top:1em;"><em>The following requires a RFT CO2 remote configured as <strong>send</strong> and successfully joined to the Itho. The same remote is used for all three periodic operations below.</em></p>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_remote_idx" class="pure-input-1-3">RFT CO2 send remote</label>
+    <select id="itho_rf_co2_remote_idx"><option value="0">No RFT CO2 send remote configured</option></select>
+  </div>
+  <div class="pure-control-group">
+    <label for="option-itho_rf_co2_status_req" class="pure-radio">Periodic 31DA/31D9 status request</label>
+    <input id="option-itho_rf_co2_status_req-1" type="radio" name="option-itho_rf_co2_status_req" value="1"> on
+    <input id="option-itho_rf_co2_status_req-0" type="radio" name="option-itho_rf_co2_status_req" value="0"> off
+    <span style="margin-left:1em;font-size:0.9em;color:#666;">Uses the Itho status update frequency interval.</span>
+  </div>
+  <div class="pure-control-group">
+    <label for="option-itho_rf_co2_keepalive_demand" class="pure-radio">Periodic fan demand keep-alive</label>
+    <input id="option-itho_rf_co2_keepalive_demand-1" type="radio" name="option-itho_rf_co2_keepalive_demand" value="1"> on
+    <input id="option-itho_rf_co2_keepalive_demand-0" type="radio" name="option-itho_rf_co2_keepalive_demand" value="0"> off
+  </div>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_default_demand" class="pure-input-1-3">Default fan demand (0-200)</label>
+    <input id="itho_rf_co2_default_demand" type="number" min="0" max="200" value="50">
+    <span style="margin-left:1em;font-size:0.9em;color:#666;">Used when no last-known sent value is available.</span>
+  </div>
+  <div class="pure-control-group">
+    <label for="option-itho_rf_co2_keepalive_co2" class="pure-radio">Periodic CO2 level keep-alive</label>
+    <input id="option-itho_rf_co2_keepalive_co2-1" type="radio" name="option-itho_rf_co2_keepalive_co2" value="1"> on
+    <input id="option-itho_rf_co2_keepalive_co2-0" type="radio" name="option-itho_rf_co2_keepalive_co2" value="0"> off
+  </div>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_default_co2" class="pure-input-1-3">Default CO2 level (ppm)</label>
+    <input id="itho_rf_co2_default_co2" type="number" min="0" max="5000" value="500">
+    <span style="margin-left:1em;font-size:0.9em;color:#666;">Used when no last-known sent value is available.</span>
+  </div>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_keepalive_freq" class="pure-input-1-3">Keep-alive frequency (seconds)</label>
+    <input id="itho_rf_co2_keepalive_freq" type="number" min="60" max="3600" value="300">
+  </div>
 </div>
 <br>

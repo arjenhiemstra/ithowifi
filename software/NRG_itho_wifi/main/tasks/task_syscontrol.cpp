@@ -127,14 +127,56 @@ void execSystemControlTasks()
       I_LOG("SYS: RF standalone mode - I2C disabled");
       sendHomeAssistantDiscovery = true;
     }
+  }
 
-    // In standalone mode the Itho only reaches us over RF, so the I2C
-    // status-polling loop in the else branch never runs. Reuse the same
-    // configured "Itho status update frequency" to actively request
-    // 31DA + 31D9 over RF — addressed from the first bi-directional
-    // Send remote that's been joined to the unit. Skipped silently when
-    // there is no CC1101, when no qualifying remote is configured, or
-    // when update frequency is set to 0 (off).
+  // RF CO2 control mode owns the status-request poll on the user's selected
+  // RFT CO2 send remote. Runs independently of standalone: in standalone +
+  // RF CO2 it replaces the fallback auto-poll below; in I2C + RF CO2 mode
+  // it adds an RF poll on top of the I2C status traffic.
+  bool rfco2ModeActive = (systemConfig.itho_control_interface == 1
+                          && systemConfig.rfInitOK
+                          && rfco2RemoteValid(systemConfig.itho_rf_co2_remote_idx));
+  if (rfco2ModeActive)
+  {
+    const uint8_t idx = systemConfig.itho_rf_co2_remote_idx;
+
+    static unsigned long rfco2StatusReqTim = 0;
+    if (systemConfig.itho_rf_co2_status_req == 1
+        && systemConfig.itho_updatefreq > 0
+        && millis() - rfco2StatusReqTim >= systemConfig.itho_updatefreq * 1000UL)
+    {
+      rfco2StatusReqTim = millis();
+      sendRFStatusRequest(idx);
+    }
+
+    static unsigned long rfco2KeepaliveTim = 0;
+    if ((systemConfig.itho_rf_co2_keepalive_demand == 1 || systemConfig.itho_rf_co2_keepalive_co2 == 1)
+        && systemConfig.itho_rf_co2_keepalive_freq > 0
+        && millis() - rfco2KeepaliveTim >= systemConfig.itho_rf_co2_keepalive_freq * 1000UL)
+    {
+      rfco2KeepaliveTim = millis();
+      if (systemConfig.itho_rf_co2_keepalive_demand == 1)
+      {
+        // Last-known demand if we have one, otherwise the user-configured
+        // fallback. ithoFanDemand stays at 0 until something has actually
+        // sent a demand value during this boot.
+        uint8_t v = ithoFanDemand > 0 ? ithoFanDemand : systemConfig.itho_rf_co2_default_demand;
+        ithoSendRFDemand(idx, v, 0, cmdOrigin::KEEPALIVE);
+      }
+      if (systemConfig.itho_rf_co2_keepalive_co2 == 1)
+      {
+        uint16_t v = ithoLastSentCO2level > 0 ? ithoLastSentCO2level : systemConfig.itho_rf_co2_default_co2;
+        ithoSendRFCO2(idx, v, cmdOrigin::KEEPALIVE);
+      }
+    }
+  }
+  else if (systemConfig.itho_rf_standalone == 1)
+  {
+    // Standalone fallback poll: when no RF CO2 mode is taking over, the
+    // device is RF-only so we still need to actively pull 31DA + 31D9 from
+    // the Itho. Picks the first bi-directional Send remote that's joined.
+    // Skipped silently when no qualifying remote is configured or the
+    // update frequency is 0.
     static unsigned long rfStatusReqTim = 0;
     if (systemConfig.rfInitOK
         && systemConfig.itho_updatefreq > 0
@@ -146,7 +188,8 @@ void execSystemControlTasks()
         sendRFStatusRequest(static_cast<uint8_t>(idx));
     }
   }
-  else
+
+  if (systemConfig.itho_rf_standalone != 1)
   {
     if (!i2c_init_functions_done)
     {

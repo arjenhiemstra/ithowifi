@@ -17,6 +17,7 @@ var remotesRefreshInterval;
 var rfstatus_to;
 var saved_status_count = 0;
 var current_status_count = 0;
+var cachedRemotes = null; // last seen `ithoremotes` payload, used to populate the RF CO2 dropdown on the system settings page
 localStorage.setItem("statustimer", 0);
 var settingIndex = -1;
 
@@ -617,8 +618,32 @@ const messageHandlers = {
       var sm = $id('statusmenu'); if (sm) sm.classList.toggle('hidden', standalone);
       var i2m = $id('i2cmenu'); if (i2m && standalone) i2m.classList.add('hidden');
     }
+    var rfco2Section = $id('rfco2_periodic_section');
+    if (rfco2Section) {
+      if (x.itho_control_interface == 1) {
+        rfco2Section.classList.remove('hidden');
+        // The dropdown's option list is built async from the ithoremotes
+        // payload, so processElements above can't pre-select the persisted
+        // idx — its target option doesn't exist yet. Stash the desired idx
+        // on the element so populateRfco2RemoteDropdown can apply it once
+        // the options exist.
+        if ("itho_rf_co2_remote_idx" in x) {
+          var sel = $id('itho_rf_co2_remote_idx');
+          if (sel) sel.dataset.desiredIdx = String(x.itho_rf_co2_remote_idx);
+        }
+        if (cachedRemotes) populateRfco2RemoteDropdown();
+        else getSettings('ithoremotes');
+      } else {
+        rfco2Section.classList.add('hidden');
+      }
+    }
   },
   remotes: function (f) {
+    // Cache + drive the RF CO2 dropdown regardless of which page we're on:
+    // a `getSettings('ithoremotes')` triggered by the system settings page
+    // must still populate the dropdown even though there's no RemotesTable.
+    cachedRemotes = f.remotes;
+    if ($id('itho_rf_co2_remote_idx')) populateRfco2RemoteDropdown();
     var tbl = $id('RemotesTable');
     if (!tbl) return;
     if (tbl.querySelector('tbody tr') && !remotesRefreshNeeded) {
@@ -1221,6 +1246,13 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_control_interface: checkedVal('option-itho_control_interface'),
           itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
+          itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
+          itho_rf_co2_keepalive_demand: checkedVal('option-itho_rf_co2_keepalive_demand'),
+          itho_rf_co2_keepalive_co2: checkedVal('option-itho_rf_co2_keepalive_co2'),
+          itho_rf_co2_remote_idx: $val('itho_rf_co2_remote_idx'),
+          itho_rf_co2_keepalive_freq: $val('itho_rf_co2_keepalive_freq'),
+          itho_rf_co2_default_demand: $val('itho_rf_co2_default_demand'),
+          itho_rf_co2_default_co2: $val('itho_rf_co2_default_co2'),
           itho_fallback: $val('itho_fallback'),
           itho_low: $val('itho_low'),
           itho_medium: $val('itho_medium'),
@@ -1912,6 +1944,57 @@ function getSettings(pagevalue) {
   else {
     if (debug) console.log("websock not open, rerequested: " + pagevalue);
     setTimeout(() => { getSettings(pagevalue); }, 250);
+  }
+}
+
+// Fills the RF CO2 send-remote <select> on the system settings page with the
+// non-empty SEND/RFTCO2 slots from cachedRemotes. Called on every fresh
+// `remotes` payload (so a slot configured elsewhere shows up here without a
+// manual reload) and after the systemsettings handler restores the saved
+// `itho_rf_co2_remote_idx`. If no eligible remote exists, leaves a single
+// disabled-looking option so the user understands why nothing's selectable.
+// Live show/hide on the system settings page when the user flips the
+// "Control interface" radio. The systemsettings handler does the same on
+// page render — this just keeps the section in sync while the user is
+// still on the page.
+function toggleRfco2PeriodicSection(controlInterface) {
+  var sec = $id('rfco2_periodic_section');
+  if (!sec) return;
+  if (controlInterface == 1) {
+    sec.classList.remove('hidden');
+    if (cachedRemotes) populateRfco2RemoteDropdown();
+    else getSettings('ithoremotes');
+  } else {
+    sec.classList.add('hidden');
+  }
+}
+
+function populateRfco2RemoteDropdown() {
+  var sel = $id('itho_rf_co2_remote_idx');
+  if (!sel) return;
+  // Prefer the desired idx stashed by the systemsettings handler (the
+  // persisted value, which the option list didn't exist for at the time).
+  // Fall back to the current selection so a live edit isn't clobbered.
+  var desired = sel.dataset.desiredIdx || sel.value;
+  var eligible = (cachedRemotes || []).filter(function (r) {
+    return r && r.remfuncname === 'send' && r.remtypename === 'RFT CO2';
+  });
+  sel.innerHTML = '';
+  if (eligible.length === 0) {
+    var opt = document.createElement('option');
+    opt.value = '0';
+    opt.textContent = 'No RFT CO2 send remote configured';
+    sel.appendChild(opt);
+    return;
+  }
+  eligible.forEach(function (r) {
+    var opt = document.createElement('option');
+    opt.value = r.index;
+    opt.textContent = 'Slot ' + r.index + ' — ' + (r.name || 'unnamed');
+    sel.appendChild(opt);
+  });
+  if (desired !== '' && sel.querySelector('option[value="' + desired + '"]')) {
+    sel.value = desired;
   }
 }
 
@@ -5653,13 +5736,50 @@ var html_systemsettings_cc1101 = `
 <legend><br>RF CO2 control:</legend>
 <div class="pure-control-group">
   <label for="option-itho_control_interface" class="pure-radio">Control interface</label>
-  <input id="option-itho_control_interface-0" type="radio" name="option-itho_control_interface" value="0"> Virtual remote (I2C)
-  <input id="option-itho_control_interface-1" type="radio" name="option-itho_control_interface" value="1"> RF CO2 (demand slider)
+  <input id="option-itho_control_interface-0" type="radio" name="option-itho_control_interface" value="0" onclick="toggleRfco2PeriodicSection(0)"> Virtual remote (I2C)
+  <input id="option-itho_control_interface-1" type="radio" name="option-itho_control_interface" value="1" onclick="toggleRfco2PeriodicSection(1)"> RF CO2 (demand slider)
 </div>
 <div class="pure-control-group">
   <label for="option-itho_rf_co2_join" class="pure-radio">Send RF CO2 join</label>
   <input id="option-itho_rf_co2_join-1" type="radio" name="option-itho_rf_co2_join" value="1"> next power on
   <input id="option-itho_rf_co2_join-0" type="radio" name="option-itho_rf_co2_join" value="0"> off
+</div>
+<div id="rfco2_periodic_section" class="hidden">
+  <p style="margin-top:1em;"><em>The following requires a RFT CO2 remote configured as <strong>send</strong> and successfully joined to the Itho. The same remote is used for all three periodic operations below.</em></p>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_remote_idx" class="pure-input-1-3">RFT CO2 send remote</label>
+    <select id="itho_rf_co2_remote_idx"><option value="0">No RFT CO2 send remote configured</option></select>
+  </div>
+  <div class="pure-control-group">
+    <label for="option-itho_rf_co2_status_req" class="pure-radio">Periodic 31DA/31D9 status request</label>
+    <input id="option-itho_rf_co2_status_req-1" type="radio" name="option-itho_rf_co2_status_req" value="1"> on
+    <input id="option-itho_rf_co2_status_req-0" type="radio" name="option-itho_rf_co2_status_req" value="0"> off
+    <span style="margin-left:1em;font-size:0.9em;color:#666;">Uses the Itho status update frequency interval.</span>
+  </div>
+  <div class="pure-control-group">
+    <label for="option-itho_rf_co2_keepalive_demand" class="pure-radio">Periodic fan demand keep-alive</label>
+    <input id="option-itho_rf_co2_keepalive_demand-1" type="radio" name="option-itho_rf_co2_keepalive_demand" value="1"> on
+    <input id="option-itho_rf_co2_keepalive_demand-0" type="radio" name="option-itho_rf_co2_keepalive_demand" value="0"> off
+  </div>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_default_demand" class="pure-input-1-3">Default fan demand (0-200)</label>
+    <input id="itho_rf_co2_default_demand" type="number" min="0" max="200" value="50">
+    <span style="margin-left:1em;font-size:0.9em;color:#666;">Used when no last-known sent value is available.</span>
+  </div>
+  <div class="pure-control-group">
+    <label for="option-itho_rf_co2_keepalive_co2" class="pure-radio">Periodic CO2 level keep-alive</label>
+    <input id="option-itho_rf_co2_keepalive_co2-1" type="radio" name="option-itho_rf_co2_keepalive_co2" value="1"> on
+    <input id="option-itho_rf_co2_keepalive_co2-0" type="radio" name="option-itho_rf_co2_keepalive_co2" value="0"> off
+  </div>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_default_co2" class="pure-input-1-3">Default CO2 level (ppm)</label>
+    <input id="itho_rf_co2_default_co2" type="number" min="0" max="5000" value="500">
+    <span style="margin-left:1em;font-size:0.9em;color:#666;">Used when no last-known sent value is available.</span>
+  </div>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_keepalive_freq" class="pure-input-1-3">Keep-alive frequency (seconds)</label>
+    <input id="itho_rf_co2_keepalive_freq" type="number" min="60" max="3600" value="300">
+  </div>
 </div>
 <br>
 `;
