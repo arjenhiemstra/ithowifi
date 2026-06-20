@@ -191,7 +191,8 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           {
             if (remotes.isEmptySlot(ri)) continue;
             if (remotes.getRemoteFunction(ri) == RemoteFunctions::SEND &&
-                remotes.getRemoteType(ri) == RemoteTypes::RFTCO2)
+                (remotes.getRemoteType(ri) == RemoteTypes::RFTCO2 ||
+                 remotes.getRemoteType(ri) == RemoteTypes::ORCONCO2))
             { rfIdx = ri; break; }
           }
           if (rfIdx >= 0)

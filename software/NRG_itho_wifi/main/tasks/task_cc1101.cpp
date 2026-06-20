@@ -589,7 +589,8 @@ void TaskCC1101(void *pvParameters)
             saveRemotesflag = true;
             bindConfirmRemIndex = remIdx;
             // Auto-switch to RF CO2 control interface if this is an RFTCO2 send remote
-            if (remotes.getRemoteType(remIdx) == RemoteTypes::RFTCO2 &&
+            if ((remotes.getRemoteType(remIdx) == RemoteTypes::RFTCO2 ||
+                 remotes.getRemoteType(remIdx) == RemoteTypes::ORCONCO2) &&
                 remotes.getRemoteFunction(remIdx) == RemoteFunctions::SEND)
             {
               systemConfig.itho_control_interface = 1;

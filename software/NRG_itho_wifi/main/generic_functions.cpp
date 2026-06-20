@@ -650,9 +650,9 @@ bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
   if (remote_index >= remotes.getMaxRemotes())
     return false;
 
-  if (remotes.getRemoteType(remote_index) != RemoteTypes::RFTCO2)
+  if (remotes.getRemoteType(remote_index) != RemoteTypes::RFTCO2 && remotes.getRemoteType(remote_index) != RemoteTypes::ORCONCO2)
   {
-    E_LOG("SYS: rfco2 failed - remote %d is not RFT CO2 type", remote_index);
+    E_LOG("SYS: rfco2 failed - remote %d is not RFT CO2 / Orcon CO2 type", remote_index);
     return false;
   }
 
@@ -686,9 +686,9 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
     return false;
 
   RemoteTypes rtype = remotes.getRemoteType(remote_index);
-  if (rtype != RemoteTypes::RFTCO2 && rtype != RemoteTypes::RFTRV)
+  if (rtype != RemoteTypes::RFTCO2 && rtype != RemoteTypes::RFTRV && rtype != RemoteTypes::ORCONCO2)
   {
-    E_LOG("SYS: rfdemand failed - remote %d is not RFT CO2 or RFT RV type", remote_index);
+    E_LOG("SYS: rfdemand failed - remote %d is not RFT CO2 / RFT RV / Orcon CO2 type", remote_index);
     return false;
   }
 
