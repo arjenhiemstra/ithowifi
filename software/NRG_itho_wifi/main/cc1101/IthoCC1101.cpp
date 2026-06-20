@@ -125,6 +125,9 @@ const uint8_t *RFTCO2_Remote_Map[] = {nullptr, ithoMessageCO2JoinCommandBytes, i
 const uint8_t *RFTPIR_Remote_Map[] = {nullptr, ithoMessagePIRJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, ithoMessageRFTPIRonCommandBytes, ithoMessageRFTPIRoffCommandBytes};
 const uint8_t *RFTSpider_Remote_Map[] = {nullptr, ithoMessageSpiderJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageSpiderLowCommandBytes, ithoMessageRV_CO2MediumCommandBytes, ithoMessageSpiderHighCommandBytes, nullptr, ithoMessageRV_CO2Timer1CommandBytes, ithoMessageRV_CO2Timer2CommandBytes, ithoMessageRV_CO2Timer3CommandBytes, ithoMessageRV_CO2AutoCommandBytes, ithoMessageRV_CO2AutoNightCommandBytes, nullptr, nullptr, nullptr, ithoMessageJoinReplyCommandBytes, nullptr, nullptr}; // auto night might be wrong
 
+//                                         { IthoUnknown, IthoJoin, IthoLeave, IthoAway, IthoLow, IthoMedium, IthoHigh, IthoFull, IthoTimer1, IthoTimer2, IthoTimer3, IthoAuto, IthoAutoNight, IthoCook30, IthoCook60, IthoTimerUser, IthoJoinReply, IthoPIRmotionOn, IthoPIRmotionOff }
+const uint8_t *ORCON15LF01_Remote_Map[] = {nullptr, orconMessageJoinCommandBytes, ithoMessageLeaveCommandBytes, orconMessageAwayCommandBytes, orconMessageButton1CommandBytes, orconMessageButton2CommandBytes, orconMessageButton3CommandBytes, nullptr, orconMessageTimer1CommandBytes, orconMessageTimer2CommandBytes, orconMessageTimer3CommandBytes, orconMessageAutoCommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+
 struct ihtoRemoteCmdMap
 {
   RemoteTypes type;
@@ -140,7 +143,8 @@ const struct ihtoRemoteCmdMap ihtoRemoteCmdMapping[]{
     {RFTRV, RFTRV_Remote_Map},
     {RFTCO2, RFTCO2_Remote_Map},
     {RFTPIR, RFTPIR_Remote_Map},
-    {RFTSPIDER, RFTSpider_Remote_Map}};
+    {RFTSPIDER, RFTSpider_Remote_Map},
+    {ORCON15LF01, ORCON15LF01_Remote_Map}};
 
 void IthoCC1101::initSendMessage(uint8_t len)
 {
@@ -630,7 +634,17 @@ void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
   message.deviceid0[1] = sourceId[1];
   message.deviceid0[2] = sourceId[2];
 
-  if (ithoRF.device[remote_index].bidirectional)
+  if (ithoRF.device[remote_index].remType == RemoteTypes::ORCON15LF01 && command == IthoCommand::IthoJoin)
+  {
+    // Orcon 15RF broadcasts its join offer as: I <remote> 63:262142(NUL) --:-- 1FC9 ...
+    // header 0x1C = I, addr0+addr1 (distinct from the Itho join, which is addr0+addr2).
+    // deviceid0 is already set to sourceId above; addr1 is the NUL broadcast 0xFFFFFE.
+    message.header = HEADER_RFT_BIDIRECTIONAL;
+    message.deviceid1[0] = 0xFF;
+    message.deviceid1[1] = 0xFF;
+    message.deviceid1[2] = 0xFE;
+  }
+  else if (ithoRF.device[remote_index].bidirectional)
   {
 
     if (command == IthoCommand::IthoJoin || command == IthoCommand::IthoLeave)
@@ -1177,7 +1191,7 @@ void IthoCC1101::sendRFMessage(RFmessage *message)
       sourceId[1] = message->deviceid2[1];
       sourceId[2] = message->deviceid2[2];
     }
-    else if (message->header == HEADER_JOIN_REPLY || message->header == HEADER_REMOTE_1FC9)
+    else if (message->header == HEADER_JOIN_REPLY || message->header == HEADER_REMOTE_1FC9 || message->header == HEADER_RFT_BIDIRECTIONAL)
     {
       sourceId[0] = message->deviceid0[0];
       sourceId[1] = message->deviceid0[1];

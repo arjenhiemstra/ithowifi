@@ -68,7 +68,7 @@ const IthoRemote::remote_type_char IthoRemote::remote_type_table[]{
     {RFTCO2, "RFT CO2"},
     {RFTPIR, "RFT PIR"},
     {RFTSPIDER, "RFT Spider"},
-    {ORCON15LF01, "Orcon 15lf01"}};
+    {ORCON15LF01, "Orcon 15RF"}};
 
 const char *IthoRemote::remote_type_unknown_msg = "Type unknown error";
 
@@ -393,6 +393,11 @@ void IthoRemote::Remote::set(JsonObject obj)
   if (!obj["bidirectional"].isNull())
   {
     bidirectional = obj["bidirectional"];
+  }
+  // Orcon 15RF mandates bidirectional binding when emulated as a SEND remote
+  if (remtype == RemoteTypes::ORCON15LF01 && remfunc == RemoteFunctions::SEND)
+  {
+    bidirectional = true;
   }
   if (!obj["destid"].isNull())
   {
