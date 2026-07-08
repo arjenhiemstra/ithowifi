@@ -128,6 +128,8 @@ const uint8_t *RFTSpider_Remote_Map[] = {nullptr, ithoMessageSpiderJoinCommandBy
 //                                         { IthoUnknown, IthoJoin, IthoLeave, IthoAway, IthoLow, IthoMedium, IthoHigh, IthoFull, IthoTimer1, IthoTimer2, IthoTimer3, IthoAuto, IthoAutoNight, IthoCook30, IthoCook60, IthoTimerUser, IthoJoinReply, IthoPIRmotionOn, IthoPIRmotionOff }
 const uint8_t *ORCON15LF01_Remote_Map[] = {nullptr, orconMessageJoinCommandBytes, ithoMessageLeaveCommandBytes, orconMessageAwayCommandBytes, orconMessageButton1CommandBytes, orconMessageButton2CommandBytes, orconMessageButton3CommandBytes, nullptr, orconMessageTimer1CommandBytes, orconMessageTimer2CommandBytes, orconMessageTimer3CommandBytes, orconMessageAutoCommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 
+// 22F1 fan-mode buttons use scheme 04 (this MVS/VMC-15 family only accepts scheme 04;
+// scheme 07 is ignored). The CO2-sensor join + 31E0 demand are independent of this.
 const uint8_t *ORCONCO2_Remote_Map[] = {nullptr, orconCO2MessageJoinCommandBytes, ithoMessageLeaveCommandBytes, orconMessageAwayCommandBytes, orconMessageButton1CommandBytes, orconMessageButton2CommandBytes, orconMessageButton3CommandBytes, nullptr, orconMessageTimer1CommandBytes, orconMessageTimer2CommandBytes, orconMessageTimer3CommandBytes, orconMessageAutoCommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 
 struct ihtoRemoteCmdMap
@@ -659,11 +661,29 @@ void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
     }
     else
     {
-
-      message.header = HEADER_RFT_BIDIRECTIONAL;
-      message.deviceid1[0] = ithoRF.device[remote_index].destinationID[0];
-      message.deviceid1[1] = ithoRF.device[remote_index].destinationID[1];
-      message.deviceid1[2] = ithoRF.device[remote_index].destinationID[2];
+      // Address the bound fan directly only when we actually have a valid target
+      // (non-zero and not our own source ID). Otherwise fall back to a broadcast
+      // command so a cloned / not-yet-bound remote still reaches a fan that trusts
+      // its source ID (the real Itho/Orcon remotes also use the broadcast form).
+      const uint8_t *dst = ithoRF.device[remote_index].destinationID;
+      bool destValid = (dst[0] != 0 || dst[1] != 0 || dst[2] != 0) &&
+                       !(dst[0] == sourceId[0] && dst[1] == sourceId[1] && dst[2] == sourceId[2]);
+      if (destValid)
+      {
+        message.header = HEADER_RFT_BIDIRECTIONAL;
+        message.deviceid1[0] = dst[0];
+        message.deviceid1[1] = dst[1];
+        message.deviceid1[2] = dst[2];
+      }
+      else
+      {
+        message.header = HEADER_REMOTE_CMD;
+        message.deviceid2[0] = sourceId[0];
+        message.deviceid2[1] = sourceId[1];
+        message.deviceid2[2] = sourceId[2];
+        ithoRF.device[remote_index].counter += 1;
+        message.opt0 = ithoRF.device[remote_index].counter;
+      }
     }
   }
   else
@@ -1901,22 +1921,40 @@ void IthoCC1101::handleBind(IthoPacket *packetPtr)
   uint8_t byte1 = tempID >> 8 & 0xFF;
   uint8_t byte2 = tempID & 0xFF;
 
-  // Check for W-type 1FC9 (binding accept from target device during initiator bind)
+  // Binding accept (W-type 1FC9) sent by the target fan in response to our join offer:
+  //   W --- <fan> <us> --:------ 1FC9 006 00 <opcode> <fanID>
+  // Confirm it for whichever of our remotes the accept is addressed to (deviceId1 ==
+  // that remote's source ID). Matching by source ID rather than only the bind-initiator
+  // timer means re-binds and slow (power-cycle) pairings still get confirmed.
   uint8_t msgType = (packetPtr->header >> 4) & 0x3;
-  if (msgType == MESSAGE_TYPE_W_MASK && bindInitiatorActive)
+  if (msgType == MESSAGE_TYPE_W_MASK)
   {
-    // Binding accept: W --- target self --:-- 1FC9 [31D9+31DA]
-    // Verify deviceId1 matches the source ID used for the join offer
-    uint8_t *srcId = ithoRF.device[bindInitiatorRemIndex].sourceID;
-    bool useSrcId = (srcId[0] != 0 || srcId[1] != 0 || srcId[2] != 0);
-    uint32_t ourId = useSrcId
-        ? ((uint32_t)srcId[0] << 16) | ((uint32_t)srcId[1] << 8) | (uint32_t)srcId[2]
-        : ((uint32_t)defaultID[0] << 16) | ((uint32_t)defaultID[1] << 8) | (uint32_t)defaultID[2];
-    if (packetPtr->deviceId1 == ourId)
+    int8_t bindIdx = -1;
+    for (uint8_t i = 0; i < MAX_NUM_OF_REMOTES; i++)
+    {
+      const uint8_t *s = ithoRF.device[i].sourceID;
+      if (s[0] == 0 && s[1] == 0 && s[2] == 0)
+        continue; // skip empty / default-source slots
+      uint32_t sid = ((uint32_t)s[0] << 16) | ((uint32_t)s[1] << 8) | (uint32_t)s[2];
+      if (packetPtr->deviceId1 == sid)
+      {
+        bindIdx = i;
+        break;
+      }
+    }
+    // Remotes that transmit with the firmware default ID only match while a bind is active.
+    if (bindIdx < 0 && bindInitiatorActive)
+    {
+      uint32_t did = ((uint32_t)defaultID[0] << 16) | ((uint32_t)defaultID[1] << 8) | (uint32_t)defaultID[2];
+      if (packetPtr->deviceId1 == did)
+        bindIdx = bindInitiatorRemIndex;
+    }
+    if (bindIdx >= 0)
     {
       packetPtr->command = IthoBindAccept;
       packetPtr->remType = RemoteTypes::UNSETTYPE;
       bindInitiatorActive = false;
+      bindInitiatorRemIndex = bindIdx;
 
       for (auto &item : ithoRF.device)
       {
