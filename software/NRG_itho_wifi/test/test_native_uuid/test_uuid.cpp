@@ -3,6 +3,7 @@
 
 #include <unity.h>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <cstdio>
 #include <cctype>

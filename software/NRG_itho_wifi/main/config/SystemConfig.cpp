@@ -18,6 +18,10 @@ SystemConfig::SystemConfig()
   itho_rf_co2_join = 0;
   itho_control_interface = 0;
   itho_rf_standalone = 0;
+  sim_active = 0;
+  sim_profile = 0;
+  sim_seed = 12345;
+  sim_scenario = 0;
   itho_rf_co2_status_req = 0;
   itho_rf_co2_keepalive_demand = 0;
   itho_rf_co2_keepalive_co2 = 0;
@@ -163,6 +167,31 @@ bool SystemConfig::set(JsonObject obj)
   {
     updated = true;
     itho_rf_standalone = obj["itho_rf_standalone"];
+  }
+  if (!obj["sim_active"].isNull())
+  {
+    updated = true;
+    sim_active = obj["sim_active"];
+  }
+  if (!obj["sim_profile"].isNull())
+  {
+    updated = true;
+    sim_profile = obj["sim_profile"];
+  }
+  if (!obj["sim_seed"].isNull())
+  {
+    updated = true;
+    sim_seed = obj["sim_seed"];
+  }
+  if (!obj["sim_scenario"].isNull())
+  {
+    updated = true;
+    sim_scenario = obj["sim_scenario"];
+  }
+  // device simulation and RF standalone are mutually exclusive; RF standalone wins
+  if (sim_active == 1 && itho_rf_standalone == 1)
+  {
+    sim_active = 0;
   }
   if (!obj["itho_rf_co2_status_req"].isNull())
   {
@@ -494,6 +523,10 @@ void SystemConfig::get(JsonObject obj) const
     obj["itho_rf_co2_join"] = itho_rf_co2_join;
     obj["itho_control_interface"] = itho_control_interface;
     obj["itho_rf_standalone"] = itho_rf_standalone;
+    obj["sim_active"] = sim_active;
+    obj["sim_profile"] = sim_profile;
+    obj["sim_seed"] = sim_seed;
+    obj["sim_scenario"] = sim_scenario;
     obj["itho_rf_co2_status_req"] = itho_rf_co2_status_req;
     obj["itho_rf_co2_keepalive_demand"] = itho_rf_co2_keepalive_demand;
     obj["itho_rf_co2_keepalive_co2"] = itho_rf_co2_keepalive_co2;

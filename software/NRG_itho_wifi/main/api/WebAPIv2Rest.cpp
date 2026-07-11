@@ -6,6 +6,8 @@
 #include "IthoQueue.h"
 #include "config/IthoRemote.h"
 #include "ithodevice/IthoDevice.h"
+#include "simulation/SimulatedDevice.h"
+#include "tasks/task_syscontrol.h"
 
 #include <ESPAsyncWebServer.h>
 #include <new>
@@ -875,6 +877,134 @@ static void handlePostManualControl(AsyncWebServerRequest *request, JsonVariant 
   sendSuccess(request, data);
 }
 
+// GET /api/v2/simulation
+static void handleGetSimulation(AsyncWebServerRequest *request)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonDocument data;
+  JsonObject obj = data["simulation"].to<JsonObject>();
+  obj["enabled"] = systemConfig.sim_active;
+  obj["active"] = simulatedDevice.active();
+  if (simulatedDevice.active())
+  {
+    obj["profile"] = simulatedDevice.profileIndex();
+    obj["profile_name"] = simulatedDevice.profileName();
+    obj["scenario"] = simulatedDevice.scenarioName();
+    obj["seed"] = simulatedDevice.seed();
+    obj["fan_setpoint"] = static_cast<int>(simulatedDevice.fanSetpointPct() + 0.5f);
+    obj["fan_actual"] = static_cast<int>(simulatedDevice.fanActualPct() + 0.5f);
+    obj["uptime_ms"] = simulatedDevice.uptimeMs(millis());
+  }
+  else
+  {
+    obj["profile"] = systemConfig.sim_profile;
+    obj["profile_name"] = SimulatedDevice::profileNameAt(systemConfig.sim_profile) ? SimulatedDevice::profileNameAt(systemConfig.sim_profile) : "";
+    obj["scenario"] = SimulatedDevice::scenarioNameAt(systemConfig.sim_scenario) ? SimulatedDevice::scenarioNameAt(systemConfig.sim_scenario) : "";
+    obj["seed"] = systemConfig.sim_seed;
+  }
+  obj["reboot_required"] = ((systemConfig.sim_active == 1) != simulatedDevice.active()) ||
+                           (simulatedDevice.active() && (simulatedDevice.profileIndex() != systemConfig.sim_profile ||
+                                                         simulatedDevice.seed() != systemConfig.sim_seed));
+  JsonArray profiles = obj["available_profiles"].to<JsonArray>();
+  for (uint8_t i = 0; i < SimulatedDevice::profileCount(); i++)
+    profiles.add(SimulatedDevice::profileNameAt(i));
+  JsonArray scenarios = obj["available_scenarios"].to<JsonArray>();
+  for (uint8_t i = 0; i < SIM_SCENARIO_COUNT; i++)
+    scenarios.add(SimulatedDevice::scenarioNameAt(i));
+  sendSuccess(request, data);
+}
+
+// POST /api/v2/simulation
+// Body: {"enable":true,"profile":"CVE-Silent" or 0,"seed":12345,"scenario":"normal" or 0}
+// Scenario changes apply live; enable/profile/seed take effect after reboot.
+static void handlePostSimulation(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  bool changed = false;
+
+  if (!body["enable"].isNull())
+  {
+    const bool enable = body["enable"];
+    if (enable && systemConfig.itho_rf_standalone == 1)
+    {
+      sendFail(request, "simulation not available in RF standalone mode");
+      return;
+    }
+    if (systemConfig.sim_active != (enable ? 1 : 0))
+    {
+      systemConfig.sim_active = enable ? 1 : 0;
+      changed = true;
+    }
+  }
+  if (!body["profile"].isNull())
+  {
+    int idx;
+    if (body["profile"].is<const char *>())
+      idx = SimulatedDevice::profileIndexFromName(body["profile"]);
+    else
+      idx = body["profile"].as<int>();
+    if (idx < 0 || idx >= SimulatedDevice::profileCount())
+    {
+      sendFail(request, "invalid profile");
+      return;
+    }
+    if (systemConfig.sim_profile != idx)
+    {
+      systemConfig.sim_profile = idx;
+      changed = true;
+    }
+  }
+  if (!body["seed"].isNull())
+  {
+    const uint32_t seed = body["seed"];
+    if (systemConfig.sim_seed != seed)
+    {
+      systemConfig.sim_seed = seed;
+      changed = true;
+    }
+  }
+  if (!body["scenario"].isNull())
+  {
+    int sc;
+    if (body["scenario"].is<const char *>())
+      sc = SimulatedDevice::scenarioFromName(body["scenario"]);
+    else
+      sc = body["scenario"].as<int>();
+    if (sc < 0 || sc >= SIM_SCENARIO_COUNT)
+    {
+      sendFail(request, "invalid scenario");
+      return;
+    }
+    if (systemConfig.sim_scenario != sc)
+    {
+      systemConfig.sim_scenario = sc;
+      changed = true;
+    }
+    if (simulatedDevice.active())
+      simulatedDevice.setScenario(sc);
+  }
+
+  if (changed)
+    saveSystemConfigflag = true;
+
+  JsonDocument data;
+  data["result"] = changed ? "simulation settings updated" : "no changes";
+  data["enabled"] = systemConfig.sim_active;
+  data["profile"] = systemConfig.sim_profile;
+  data["profile_name"] = SimulatedDevice::profileNameAt(systemConfig.sim_profile) ? SimulatedDevice::profileNameAt(systemConfig.sim_profile) : "";
+  data["scenario"] = SimulatedDevice::scenarioNameAt(systemConfig.sim_scenario) ? SimulatedDevice::scenarioNameAt(systemConfig.sim_scenario) : "";
+  data["seed"] = systemConfig.sim_seed;
+  data["reboot_required"] = ((systemConfig.sim_active == 1) != simulatedDevice.active()) ||
+                            (simulatedDevice.active() && (simulatedDevice.profileIndex() != systemConfig.sim_profile ||
+                                                          simulatedDevice.seed() != systemConfig.sim_seed));
+  sendSuccess(request, data);
+}
+
 // --- Route registration ---
 
 // CORS preflight handler
@@ -909,6 +1039,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/debug", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/wpu/outside_temp", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/wpu/manual_control", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/simulation", HTTP_OPTIONS, handleOptions);
 
   // GET endpoints
   server.on("/api/v2/speed", HTTP_GET, handleGetSpeed);
@@ -921,6 +1052,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/vremotes", HTTP_GET, handleGetVRemotes);
   server.on("/api/v2/rfstatus", HTTP_GET, handleGetRFStatus);
   server.on("/api/v2/settings", HTTP_GET, handleGetSettings);
+  server.on("/api/v2/simulation", HTTP_GET, handleGetSimulation);
 
   // POST/PUT endpoints use query parameters from the JSON body
   // parsed in the onBody handler (avoids AsyncCallbackJsonWebHandler dependency)
@@ -1111,6 +1243,25 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
           }
           JsonVariant v = json.as<JsonVariant>();
           handlePostManualControl(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/simulation", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostSimulation(request, v);
         }
       });
 

@@ -1,5 +1,7 @@
 #include "i2c_esp32.h"
 
+#include "simulation/SimulatedDevice.h"
+
 // I2C globals now managed by I2CManager (see managers/I2CManager.cpp)
 // Removed: i2c_cmd_queue, master/slave pin globals
 
@@ -152,6 +154,13 @@ esp_err_t i2cMasterReadSlave(uint8_t addr, uint8_t *data_rd, size_t size)
 
 bool i2cSendBytes(const uint8_t *buf, size_t len, i2c_cmdref_t origin)
 {
+  // Simulated Device Runtime: handle the frame in software, no bus/pin access.
+  // i2cSendCmd/i2cMasterReadSlave (SHT30 sensor path) stay untouched on purpose.
+  if (simulatedDevice.active())
+  {
+    return simulatedDevice.handleFrame(buf, len, millis());
+  }
+
   if (ithoInitResult == -2)
   {
     return false;
@@ -212,6 +221,11 @@ bool i2cSendCmd(uint8_t addr, const uint8_t *cmd, size_t len)
 
 size_t i2cSlaveReceive(uint8_t *i2c_receive_buf)
 {
+  if (simulatedDevice.active())
+  {
+    return simulatedDevice.popResponse(i2c_receive_buf);
+  }
+
   i2c_config_t conf_slave = {
       .mode = I2C_MODE_SLAVE,
       .sda_io_num = i2cManager.slave_sda_pin,

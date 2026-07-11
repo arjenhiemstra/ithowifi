@@ -1,6 +1,7 @@
 #include "generic_functions.h"
 #include "config/HADiscConfig.h"
 #include "tasks/task_cc1101.h"
+#include "simulation/SimulatedDevice.h"
 #include <HTTPUpdate.h>
 
 // MAX_FIRMWARE_HTTPS_RESPONSE_SIZE is normally injected by build_script.py based
@@ -349,6 +350,11 @@ void getDeviceInfoJSON(JsonObject root)
   root["ota_progress"] = static_cast<int>(otaUpdateProgress);
   root["itho_rf_standalone"] = systemConfig.itho_rf_standalone;
   root["itho_control_interface"] = systemConfig.itho_control_interface;
+  // key only present in simulation mode, so existing clients see no change
+  if (simulatedDevice.active())
+  {
+    root["simulation"] = true;
+  }
   if (systemConfig.fw_check)
   {
     root["add-on_fwupdate_available"] = firmwareInfo.fw_update_available == 1 ? "true" : "false";

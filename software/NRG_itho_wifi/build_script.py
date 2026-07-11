@@ -332,6 +332,9 @@ def build_openapi_spec():
         "Read Itho setting by index",
         parameters=[param("index", "Setting index", "integer", 0, 255)],
     )
+    doc["paths"]["/api/v2/simulation"] = rest_get(
+        "Get device simulation state (Simulated Device Runtime)"
+    )
 
     # --- REST API v2 POST endpoints ---
     def add_post(path, summary, schema_ref):
@@ -347,6 +350,7 @@ def build_openapi_spec():
     add_post("/api/v2/ota", "Trigger firmware OTA update", "#/components/schemas/OtaInstallRequest")
     add_post("/api/v2/wpu/outside_temp", "Set outside temperature", "#/components/schemas/OutsideTempRequest")
     add_post("/api/v2/wpu/manual_control", "WPU manual control (4030 command)", "#/components/schemas/ManualControlRequest")
+    add_post("/api/v2/simulation", "Configure device simulation (scenario applies live, enable/profile/seed after reboot)", "#/components/schemas/SimulationRequest")
 
     # --- PUT on /api/v2/settings ---
     doc["paths"]["/api/v2/settings"]["put"] = {
@@ -503,6 +507,38 @@ def build_openapi_spec():
                 "description": "Action name",
                 "enum": ["reboot", "level0", "level1", "level2", "level3"],
             }
+        },
+    }
+
+    schemas["SimulationRequest"] = {
+        "type": "object",
+        "description": (
+            "Configure the Simulated Device Runtime. Scenario changes apply "
+            "immediately; enable/profile/seed changes take effect after reboot."
+        ),
+        "properties": {
+            "enable": prop("boolean", "Enable/disable device simulation (reboot required)"),
+            "profile": {
+                "description": "Device profile, by index (0-3) or name",
+                "oneOf": [
+                    {"type": "integer", "minimum": 0, "maximum": 3},
+                    {
+                        "type": "string",
+                        "enum": ["CVE-Silent", "HRU 350", "DemandFlow", "Heatpump"],
+                    },
+                ],
+            },
+            "seed": prop("integer", "Deterministic telemetry seed (reboot required)"),
+            "scenario": {
+                "description": "Telemetry scenario, by index (0-4) or name (applies live)",
+                "oneOf": [
+                    {"type": "integer", "minimum": 0, "maximum": 4},
+                    {
+                        "type": "string",
+                        "enum": ["normal", "boost", "fault", "humidity_spike", "co2_rise"],
+                    },
+                ],
+            },
         },
     }
 
