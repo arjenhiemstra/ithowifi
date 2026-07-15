@@ -309,23 +309,27 @@ static void handleGetRFStatus(AsyncWebServerRequest *request)
       obj["name"] = rfStatusSources[i].name;
       obj["lastSeen"] = static_cast<int32_t>(rfStatusSources[i].lastSeen);
       JsonObject mdata = obj["data"].to<JsonObject>();
-      for (const auto &m : rfStatusSources[i].measurements31D9)
+      if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          mdata[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          mdata[m.name] = m.value.floatval;
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          mdata[m.name] = m.value.stringval;
-      }
-      for (const auto &m : rfStatusSources[i].measurements31DA)
-      {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          mdata[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          mdata[m.name] = m.value.floatval;
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          mdata[m.name] = m.value.stringval;
+        for (const auto &m : rfStatusSources[i].measurements31D9)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            mdata[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            mdata[m.name] = m.value.floatval;
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            mdata[m.name] = m.value.stringval;
+        }
+        for (const auto &m : rfStatusSources[i].measurements31DA)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            mdata[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            mdata[m.name] = m.value.floatval;
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            mdata[m.name] = m.value.stringval;
+        }
+        xSemaphoreGive(rfStatusMutex);
       }
       sendSuccess(request, data);
       return;

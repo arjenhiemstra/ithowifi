@@ -283,14 +283,20 @@ void mqttSendRFStatus()
 
       JsonDocument doc;
       JsonObject root = doc.to<JsonObject>();
-      for (const auto &m : rfStatusSources[i].measurements31DA)
+      // Lock only while reading the vector into the doc; the doc keeps static
+      // string pointers + copied values, so publish can happen unlocked.
+      if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          root[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          root[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          root[m.name] = m.value.stringval;
+        for (const auto &m : rfStatusSources[i].measurements31DA)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            root[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            root[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            root[m.name] = m.value.stringval;
+        }
+        xSemaphoreGive(rfStatusMutex);
       }
       size_t len = measureJson(root);
       if (mqttClient.getBufferSize() < len)
@@ -310,14 +316,18 @@ void mqttSendRFStatus()
 
       JsonDocument doc;
       JsonObject root = doc.to<JsonObject>();
-      for (const auto &m : rfStatusSources[i].measurements31D9)
+      if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          root[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          root[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          root[m.name] = m.value.stringval;
+        for (const auto &m : rfStatusSources[i].measurements31D9)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            root[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            root[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            root[m.name] = m.value.stringval;
+        }
+        xSemaphoreGive(rfStatusMutex);
       }
       size_t len = measureJson(root);
       if (mqttClient.getBufferSize() < len)

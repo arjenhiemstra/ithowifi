@@ -545,8 +545,12 @@ void handle_ws_message(JsonObject root)
         rfStatusSources[idx].tracked = track;
         if (!track)
         {
-          rfStatusSources[idx].measurements31DA.clear();
-          rfStatusSources[idx].measurements31D9.clear();
+          if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
+          {
+            rfStatusSources[idx].measurements31DA.clear();
+            rfStatusSources[idx].measurements31D9.clear();
+            xSemaphoreGive(rfStatusMutex);
+          }
         }
       }
       if (trackObj["name"].is<const char *>())

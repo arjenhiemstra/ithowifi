@@ -112,6 +112,11 @@ extern std::vector<ithoDeviceMeasurements> ithoMeasurements;
 extern std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 extern std::vector<ithoDeviceMeasurements> ithoCounters;
 extern SemaphoreHandle_t ithoStatusMutex;
+// Separate mutex for the per-RF-source measurement vectors
+// (rfStatusSource::measurements31DA/31D9). Kept distinct from
+// ithoStatusMutex so RF-frame parsing (CC1101 task) and I2C status
+// serialization don't block each other.
+extern SemaphoreHandle_t rfStatusMutex;
 
 #define MAX_RF_STATUS_SOURCES 20
 
