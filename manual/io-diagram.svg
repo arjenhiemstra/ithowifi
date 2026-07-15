@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 700" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="aBlue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#0969da"/></marker>
+    <marker id="aPurple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8250df"/></marker>
+    <marker id="aOrange" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#bc4c00"/></marker>
+    <marker id="aGreen" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1a7f37"/></marker>
+  </defs>
+  <style>
+    .ttl{font-size:22px;font-weight:700;fill:#24292f}
+    .sub{font-size:13px;fill:#57606a}
+    .colh{font-size:12px;font-weight:700;fill:#8b949e;letter-spacing:.6px}
+    .bt{font-size:15px;font-weight:700;fill:#24292f}
+    .it{font-size:12.5px;fill:#24292f}
+    .itm{font-size:12px;fill:#24292f}
+    .lbl{font-size:11.5px;fill:#57606a}
+    .glbl{font-size:11.5px;font-weight:600;fill:#1a7f37}
+    .hI2C{font-size:13px;font-weight:700;fill:#bc4c00}
+    .hRF{font-size:13px;font-weight:700;fill:#8250df}
+    .hMix{font-size:13px;font-weight:700;fill:#24292f}
+    .leg{font-size:12px;fill:#24292f}
+  </style>
+
+  <rect x="0" y="0" width="1180" height="700" fill="#ffffff"/>
+
+  <text x="40" y="38" class="ttl">Itho WiFi add-on — inputs &amp; outputs</text>
+  <text x="40" y="60" class="sub">Commands flow toward the Itho (blue / orange / purple). Status &amp; sensor data flows back (green).</text>
+
+  <text x="145" y="92" class="colh">CONTROL SOURCES</text>
+  <text x="492" y="92" class="colh" text-anchor="middle">ADD-ON</text>
+  <text x="745" y="92" class="colh" text-anchor="middle">INTERFACES TO THE ITHO</text>
+  <text x="1029" y="92" class="colh" text-anchor="middle">ITHO UNIT</text>
+
+  <!-- control sources -->
+  <rect x="20" y="100" width="250" height="208" rx="10" fill="#eef4fd" stroke="#0969da" stroke-width="1.5"/>
+  <text x="35" y="126" class="bt">Home &amp; cloud (Wi-Fi)</text>
+  <text x="35" y="152" class="it">Home Assistant</text>
+  <text x="35" y="176" class="it">Homey</text>
+  <text x="35" y="200" class="it">Homebridge (HomeKit)</text>
+  <text x="35" y="224" class="it">Domoticz</text>
+  <text x="35" y="252" class="it">Web interface</text>
+  <text x="35" y="276" class="it">REST WebAPI · MQTT</text>
+
+  <rect x="20" y="360" width="250" height="72" rx="10" fill="#f6f0ff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="35" y="388" class="bt">Physical RF remote</text>
+  <text x="35" y="410" class="lbl">handheld / wall — sends RF</text>
+
+  <!-- add-on -->
+  <rect x="400" y="150" width="185" height="320" rx="12" fill="#ffffff" stroke="#24292f" stroke-width="2"/>
+  <text x="492" y="186" class="bt" text-anchor="middle">NRG Watch add-on</text>
+  <text x="492" y="212" class="it" text-anchor="middle">ESP32 · Wi-Fi</text>
+  <text x="492" y="234" class="it" text-anchor="middle">CC1101 RF (optional)</text>
+  <text x="492" y="312" class="lbl" text-anchor="middle">translates between</text>
+  <text x="492" y="330" class="lbl" text-anchor="middle">network and Itho</text>
+
+  <!-- I2C interface -->
+  <rect x="620" y="158" width="250" height="140" rx="10" fill="#fff4ec" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="637" y="181" class="hI2C">I2C — wired</text>
+  <text x="637" y="204" class="itm">• Virtual remote</text>
+  <text x="652" y="220" class="lbl">(emulated remote, via I2C)</text>
+  <text x="637" y="243" class="itm">• PWM2I2C — 0–100%</text>
+  <text x="637" y="265" class="itm">• read Itho status</text>
+  <text x="637" y="287" class="itm">• change Itho settings</text>
+
+  <!-- RF interface -->
+  <rect x="620" y="336" width="250" height="96" rx="10" fill="#f6f0ff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="637" y="361" class="hRF">RF — CC1101 (868 MHz)</text>
+  <text x="637" y="389" class="itm">• Emulated RF remote (send)</text>
+  <text x="637" y="413" class="itm">• RFT CO2 emulation (send) — 0–100%</text>
+
+  <!-- itho -->
+  <rect x="900" y="150" width="258" height="320" rx="12" fill="#f6f8fa" stroke="#24292f" stroke-width="1.5"/>
+  <text x="1029" y="184" class="bt" text-anchor="middle">Itho unit</text>
+  <text x="917" y="216" class="hI2C">Wired (I2C) &amp; RF:</text>
+  <text x="917" y="238" class="it">CVE · CVE-S</text>
+  <text x="917" y="258" class="it">HRU ECO / 150 / 200 / 350</text>
+  <text x="917" y="278" class="it">WPU · DemandFlow · AutoTemp</text>
+  <text x="917" y="314" class="hMix">HRU 250 / 300:</text>
+  <text x="917" y="334" class="itm">I2C: status &amp; settings · RF: control</text>
+  <text x="917" y="370" class="hRF">RF only (standalone):</text>
+  <text x="917" y="392" class="it">HRU 300V / 375V / 400</text>
+
+  <!-- network: commands in (blue) + status out (green) -->
+  <line x1="270" y1="210" x2="398" y2="222" stroke="#0969da" stroke-width="2" marker-end="url(#aBlue)"/>
+  <text x="334" y="200" class="lbl" text-anchor="middle">MQTT · REST · web</text>
+  <line x1="398" y1="252" x2="272" y2="252" stroke="#1a7f37" stroke-width="2.5" marker-end="url(#aGreen)"/>
+  <text x="334" y="270" class="glbl" text-anchor="middle">status out</text>
+
+  <!-- physical remote in (purple) -->
+  <line x1="270" y1="394" x2="398" y2="364" stroke="#8250df" stroke-width="2" marker-end="url(#aPurple)"/>
+  <text x="330" y="412" class="lbl" text-anchor="middle">RF 868 MHz</text>
+
+  <!-- send arrows toward Itho -->
+  <line x1="585" y1="228" x2="618" y2="228" stroke="#bc4c00" stroke-width="2" marker-end="url(#aOrange)"/>
+  <line x1="872" y1="228" x2="898" y2="228" stroke="#bc4c00" stroke-width="2" marker-end="url(#aOrange)"/>
+  <line x1="585" y1="384" x2="618" y2="384" stroke="#8250df" stroke-width="2" marker-end="url(#aPurple)"/>
+  <line x1="872" y1="384" x2="898" y2="384" stroke="#8250df" stroke-width="2" marker-end="url(#aPurple)"/>
+
+  <!-- receive arrows from Itho (green, prominent) -->
+  <line x1="900" y1="318" x2="587" y2="318" stroke="#1a7f37" stroke-width="2.5" marker-end="url(#aGreen)"/>
+  <text x="745" y="311" class="glbl" text-anchor="middle">Itho status — I2C (Device Status / 31DA / 31D9)</text>
+  <line x1="900" y1="452" x2="587" y2="452" stroke="#1a7f37" stroke-width="2.5" marker-end="url(#aGreen)"/>
+  <text x="745" y="445" class="glbl" text-anchor="middle">Itho status — RF (31DA / 31D9)</text>
+
+  <!-- legend -->
+  <line x1="40" y1="566" x2="74" y2="566" stroke="#bc4c00" stroke-width="2" marker-end="url(#aOrange)"/>
+  <text x="82" y="570" class="leg">I2C commands &amp; settings (wired)</text>
+  <line x1="320" y1="566" x2="354" y2="566" stroke="#8250df" stroke-width="2" marker-end="url(#aPurple)"/>
+  <text x="362" y="570" class="leg">RF commands (CC1101, 868 MHz)</text>
+
+  <line x1="40" y1="596" x2="74" y2="596" stroke="#0969da" stroke-width="2" marker-end="url(#aBlue)"/>
+  <text x="82" y="600" class="leg">Wi-Fi · MQTT / REST / web</text>
+  <line x1="320" y1="596" x2="354" y2="596" stroke="#1a7f37" stroke-width="2.5" marker-end="url(#aGreen)"/>
+  <text x="362" y="600" class="leg">Status &amp; sensor data (received)</text>
+
+  <text x="40" y="642" class="lbl">RF features (emulated remote, RFT CO2) and the RF-only HRU 300V/375V/400 require the CC1101 module. HRU 250/300 read status &amp; settings over I2C but are controlled via RF.</text>
+</svg>

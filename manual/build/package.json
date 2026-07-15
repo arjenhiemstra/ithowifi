@@ -1,0 +1,13 @@
+{
+  "name": "itho-manual-build",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Generates the bilingual standalone HTML and the WordPress embed from the Markdown manual sources.",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "marked": "^18.0.0"
+  }
+}
