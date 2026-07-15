@@ -8,3 +8,6 @@ vscode-build/*__pycache__
 compiled_firmware_files/coredumps/
 software/pure/
 software/NRG_itho_wifi/sdkconfig.release
+# Local Claude Code config: agent definitions and local settings contain
+# machine-specific absolute paths — keep them out of the repo.
+.claude/
