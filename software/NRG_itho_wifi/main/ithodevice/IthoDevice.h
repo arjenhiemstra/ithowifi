@@ -158,10 +158,10 @@ struct ithoSettings
     is_float,
     is_unknown
   } type{is_unknown};
-  bool is_signed;
+  bool is_signed{false};
   int32_t value{0};
   uint8_t length{0};
-  uint32_t divider;
+  uint32_t divider{1};
 };
 
 extern ithoSettings *ithoSettingsArray;
