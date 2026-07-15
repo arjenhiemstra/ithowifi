@@ -945,8 +945,8 @@ void logLastCommand(const char *command, cmdOrigin origin)
 void logLastCommand(const char *command, const char *source)
 {
 
-  strlcpy(lastCmd.source, source, sizeof(lastCmd.source));
-  strlcpy(lastCmd.command, command, sizeof(lastCmd.command));
+  strlcpy(lastCmd.source, source ? source : "", sizeof(lastCmd.source));
+  strlcpy(lastCmd.command, command ? command : "", sizeof(lastCmd.command));
 
   if (time(nullptr))
   {

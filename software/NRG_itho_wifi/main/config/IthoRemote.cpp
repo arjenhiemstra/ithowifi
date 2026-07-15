@@ -334,6 +334,8 @@ void IthoRemote::getRemoteIDbyIndex(const int index, uint8_t *id)
 
 const char *IthoRemote::getRemoteNamebyIndex(const int index)
 {
+  if (index < 0 || index >= maxRemotes)
+    return nullptr;
   return remotes[index].name;
 }
 
