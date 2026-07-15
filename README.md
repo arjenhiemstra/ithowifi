@@ -25,6 +25,7 @@ or in my Tindie store:
     - [Home Assistant](https://github.com/arjenhiemstra/ithowifi-ha-integration) (REST API, elementary)
     - [Home Assistant](https://github.com/jasperslits/haithowifi) (MQTT API, feature rich)
     - [Homey](https://homey.app/en-nl/app/nl.monkeysoft.nrgwatch/Itho-Daalderop/) (REST API)
+    - [Homebridge](https://github.com/SanderBaron/homebridge-itho-daalderop-HUE) (Apple HomeKit, REST API / MQTT)
 -   Installation can be done in minutes
 -   Detailed installation manual and setup wizard
 
