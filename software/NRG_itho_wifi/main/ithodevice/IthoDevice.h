@@ -86,7 +86,7 @@ struct ithoDeviceStatus
   uint32_t divider;
   uint8_t updated;
   bool is_signed;
-  ithoDeviceStatus() : updated(0) {};
+  ithoDeviceStatus() : name(nullptr), updated(0) {};
 };
 
 struct ithoDeviceMeasurements

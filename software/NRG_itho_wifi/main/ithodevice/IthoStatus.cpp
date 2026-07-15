@@ -104,6 +104,12 @@ void sendQueryStatusFormat(bool updateweb)
   {
     parsed.push_back(ithoDeviceStatus());
 
+    // Assign the label immediately so the vector is never published with an
+    // unset (indeterminate) name. sendQueryStatus refreshes these later, but
+    // a reader (web/MQTT/HA-discovery) can hit ithoStatus in the window before
+    // the first sendQueryStatus runs. labelPos there is 1:1 with this index.
+    parsed.back().name = getStatusLabel(i, ithoDeviceptr);
+
     parsed.back().is_signed = getSignedFromDatatype(i2cbuf[6 + i]);
     parsed.back().length = getLengthFromDatatype(i2cbuf[6 + i]);
     parsed.back().divider = getDividerFromDatatype(i2cbuf[6 + i]);

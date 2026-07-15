@@ -133,6 +133,8 @@ uint8_t getIthoStatusJSON(JsonObject root)
   {
     for (const auto &ithoStat : ithoStatus)
     {
+      if (ithoStat.name == nullptr)
+        continue;
       if (ithoStat.type == ithoDeviceStatus::is_byte)
       {
         root[ithoStat.name] = ithoStat.value.byteval;
