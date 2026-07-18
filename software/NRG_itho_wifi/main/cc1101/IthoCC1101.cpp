@@ -1386,14 +1386,48 @@ uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet)
   return out_bytecounter;
 }
 
+// Compile-time decode table (lands in flash/.rodata, no runtime init).
+// The RAMSES bit encoding maps 1 decoded byte -> 20 raw bits, so 2 decoded
+// bytes occupy exactly 5 raw bytes and every 5-byte boundary re-aligns to a
+// group boundary. Each 10-bit group is [d x d x d x d x b b]: 4 data bits at
+// even positions, 4 "redundancy" bits at odd positions, and 2 trailing framing
+// bits. Only the data bits carry information; the odd/framing bits are NOT a
+// reliable per-frame integrity signal (real Itho/Orcon frames do not carry the
+// (bit,~bit) complement + "10" framing that this firmware's messageEncode
+// emits), so the decoder simply ignores them, as the original did.
+//   decode[c] : for the 8 data/redundancy bits of a group (c), the reversed
+//               data nibble (first data bit -> nibble bit0).
+namespace
+{
+  struct DecodeLUT
+  {
+    uint8_t decode[256];
+    constexpr DecodeLUT() : decode{}
+    {
+      for (int c = 0; c < 256; c++)
+        decode[c] = (uint8_t)(((c >> 7) & 1) | (((c >> 5) & 1) << 1) |
+                              (((c >> 3) & 1) << 2) | (((c >> 1) & 1) << 3));
+    }
+  };
+  constexpr DecodeLUT kDecodeLUT{};
+
+  // Worst case: MAX_RAW raw bytes -> floor(MAX_RAW*8/10) groups -> up to
+  // ceil(groups*4/8) decoded bytes. For MAX_RAW=162 that is index 64 < 82.
+  // This guards the implicit margin if either constant changes.
+  static_assert(((MAX_RAW * 8 / 10) * 4 + 7) / 8 <= MAX_DECODED,
+                "decoded output can exceed dataDecoded[] for this MAX_RAW");
+}
+
+// Reverses messageEncode. Byte-identical to the previous per-bit implementation
+// for every input (verified: test/test_native_rf_decode fuzzes both against
+// each other over all lengths incl. garbage). The previous version's dead
+// odd-bit "check" bookkeeping and the input-buffer clear (unused; the clear only
+// widened the ISR/decoder race window) have been removed.
 void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *packetPtr)
 {
-
   packetPtr->length = 0;
   int lenInbuf = packet->length;
-
   lenInbuf -= STARTBYTE; // correct for sync byte pos
-
   while (lenInbuf >= 5)
   {
     lenInbuf -= 5;
@@ -1408,60 +1442,58 @@ void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *packetPtr)
   {
     packetPtr->dataDecoded[i] = 0;
   }
-  // for (unsigned int i = 0; i < sizeof(packetPtr->dataDecodedChk) / sizeof(packetPtr->dataDecodedChk[0]); i++)
-  // {
-  //   packetPtr->dataDecodedChk[i] = 0;
-  // }
 
-  uint8_t out_i = 0;         // byte index
-  uint8_t out_j = 4;         // bit index
-  uint8_t out_i_chk = 0;     // byte index
-  uint8_t out_j_chk = 4;     // bit index
-  uint8_t in_bitcounter = 0; // process per 10 input bits
+  const uint8_t *in = &packet->data[STARTBYTE];
+  int n = (int)packet->length - STARTBYTE;
+  if (n < 0)
+    n = 0;
+  int blocks = n / 5;
+  int rem = n - blocks * 5;
+  uint8_t *out = packetPtr->dataDecoded;
 
-  for (int i = STARTBYTE; i < packet->length; i++)
+  for (int b = 0; b < blocks; b++, in += 5, out += 2)
   {
-
-    for (int j = 7; j > -1; j--)
-    {
-      if (in_bitcounter == 0 || in_bitcounter == 2 || in_bitcounter == 4 || in_bitcounter == 6)
-      {                              // select input bits for output
-        uint8_t x = packet->data[i]; // select input byte
-        x = x >> j;                  // select input bit
-        x = x & 0b00000001;
-        x = x << out_j; // set value for output bit
-        packetPtr->dataDecoded[out_i] = packetPtr->dataDecoded[out_i] | x;
-        out_j += 1; // next output bit
-        if (out_j > 7)
-          out_j = 0;
-        if (out_j == 4)
-          out_i += 1;
-      }
-      if (in_bitcounter == 1 || in_bitcounter == 3 || in_bitcounter == 5 || in_bitcounter == 7)
-      {                              // select input bits for check output
-        uint8_t x = packet->data[i]; // select input byte
-        x = x >> j;                  // select input bit
-        x = x & 0b00000001;
-        x = x << out_j_chk; // set value for output bit
-        // packetPtr->dataDecodedChk[out_i_chk] = packetPtr->dataDecodedChk[out_i_chk] | x;
-        out_j_chk += 1; // next output bit
-        if (out_j_chk > 7)
-          out_j_chk = 0;
-        if (out_j_chk == 4)
-        {
-          // packetPtr->dataDecodedChk[out_i_chk] = ~packetPtr->dataDecodedChk[out_i_chk]; // inverse bits
-          out_i_chk += 1;
-        }
-      }
-      in_bitcounter += 1; // continue cyling in groups of 10 bits
-      if (in_bitcounter > 9)
-        in_bitcounter = 0;
-    }
+    // byte loads only (Xtensa-safe, no unaligned 32-bit access): the 40-bit
+    // block is hi (bytes 0..3) + lo (byte 4).
+    uint32_t hi = ((uint32_t)in[0] << 24) | ((uint32_t)in[1] << 16) |
+                  ((uint32_t)in[2] << 8) | (uint32_t)in[3];
+    uint32_t lo = in[4];
+    uint8_t c0 = (uint8_t)(hi >> 24);
+    uint8_t c1 = (uint8_t)((hi >> 14) & 0xFF);
+    uint8_t c2 = (uint8_t)((hi >> 4) & 0xFF);
+    uint8_t c3 = (uint8_t)(((hi << 6) | (lo >> 2)) & 0xFF);
+    out[0] = (uint8_t)((kDecodeLUT.decode[c0] << 4) | kDecodeLUT.decode[c1]);
+    out[1] = (uint8_t)((kDecodeLUT.decode[c2] << 4) | kDecodeLUT.decode[c3]);
   }
-  // clear packet data
-  for (unsigned int i = 0; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
+
+  if (rem)
   {
-    packet->data[i] = 0;
+    // tail (1..4 raw bytes): replicate the original bit loop exactly. At any
+    // 5-byte boundary the decoder state is in_bitcounter==0, out_j==4, out at
+    // block-relative byte 0.
+    uint8_t out_i = 0;
+    uint8_t out_j = 4;
+    uint8_t in_bitcounter = 0;
+    for (int i = 0; i < rem; i++)
+    {
+      uint8_t byte = in[i];
+      for (int j = 7; j > -1; j--)
+      {
+        if ((in_bitcounter & 1) == 0 && in_bitcounter < 8)
+        {
+          uint8_t x = (uint8_t)((byte >> j) & 1u);
+          out[out_i] = out[out_i] | (uint8_t)(x << out_j);
+          out_j += 1;
+          if (out_j > 7)
+            out_j = 0;
+          if (out_j == 4)
+            out_i += 1;
+        }
+        in_bitcounter += 1;
+        if (in_bitcounter > 9)
+          in_bitcounter = 0;
+      }
+    }
   }
 }
 
