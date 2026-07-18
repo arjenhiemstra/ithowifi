@@ -504,6 +504,16 @@ bool IthoCC1101::parseMessage(IthoPacket *packetPtr)
 #endif
   }
 
+  // Integrity gate: only dispatch to handlers (which change fan state, persist
+  // remotes and feed RF status) when the frame passed the additive checksum
+  // (error stays 0). Field parsing above already ran for every frame, so
+  // rfloglevel sniffing still sees corrupt frames — they simply no longer
+  // mutate device state. Previously, with CRC_FILTER disabled, any bit-flipped
+  // frame was dispatched and acted on. (Real frames all pass this checksum;
+  // verified against live RF traffic.)
+  if (packetPtr->error != 0)
+    return true;
+
   // handle command
   switch (packetPtr->opcode)
   {

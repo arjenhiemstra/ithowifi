@@ -68,6 +68,9 @@ void RFDebug(IthoPacket *packet)
 {
   char debugLog[400] = {0};
   strncat(debugLog, rfManager.radio.LastMessageDecoded(packet).c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
+  // integrity: a checksum-failed frame is decoded/logged but not dispatched
+  if (packet->error == 2)
+    strncat(debugLog, " (crc:FAIL)", sizeof(debugLog) - strlen(debugLog) - 1);
   // log command
   switch (packet->command)
   {
