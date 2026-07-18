@@ -25,7 +25,7 @@
 
 struct ithoLabels;
 
-struct ihtoDeviceType
+struct ithoDeviceType
 {
   uint8_t DG; // device group?
   uint8_t ID;
@@ -38,7 +38,7 @@ struct ihtoDeviceType
   const struct ithoLabels *settingsStatusLabels;
 };
 
-extern const struct ihtoDeviceType ithoDevices[];
+extern const struct ithoDeviceType ithoDevices[];
 extern const size_t ithoDevicesLength;
 
 // globals
@@ -51,7 +51,7 @@ extern int16_t ithoStatusLabelLength;
 extern volatile uint16_t ithoCurrentVal;
 extern volatile uint8_t ithoFanDemand; // last demand value from 31DA response (0-200)
 extern volatile uint16_t ithoLastSentCO2level; // last CO2 level (ppm) actually sent via ithoSendRFCO2, 0 = never sent
-extern const struct ihtoDeviceType *ithoDeviceptr;
+extern const struct ithoDeviceType *ithoDeviceptr;
 
 // extern bool get2410;
 // extern bool set2410;
@@ -179,9 +179,9 @@ void getSetting(const uint8_t i, const bool updateState, const bool updateweb, c
 void processSettingResult(const uint8_t index, const bool loop);
 const char *getSpeedLabel();
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
-const char *getStatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr);
+const char *getStatusLabel(const uint8_t i, const struct ithoDeviceType *statusPtr);
 void updateSetting(const uint8_t i, const int32_t value, bool webupdate);
-const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID);
+const struct ithoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID);
 
 uint8_t checksum(const uint8_t *buf, size_t buflen);
 void sendI2CPWMinit();
