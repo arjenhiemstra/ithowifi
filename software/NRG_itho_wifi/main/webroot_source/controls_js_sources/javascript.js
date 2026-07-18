@@ -2282,27 +2282,6 @@ function buildHtmlTablePlain(table, jsonVar) {
 }
 
 
-function generateRemoteID(index) {
-  var rfIdEl = $id('module_rf_id_str');
-  if (!rfIdEl || !rfIdEl.value) return 'empty slot';
-  var parts = rfIdEl.value.split(',');
-  if (parts.length < 3) return 'empty slot';
-  var b0 = parseInt(parts[0], 16);
-  var b1 = parseInt(parts[1], 16);
-  var b2 = (parseInt(parts[2], 16) + index) & 0xFF;
-  // Check for collisions with existing remotes
-  for (var attempt = 0; attempt < 255; attempt++) {
-    var candidate = b0.toString(16).toUpperCase() + ',' + b1.toString(16).toUpperCase() + ',' + ((b2 + attempt) & 0xFF).toString(16).toUpperCase();
-    var collision = false;
-    for (var j = 0; j < remotesCount; j++) {
-      var el = $id('id_remote-' + j);
-      if (el && el.value === candidate) { collision = true; break; }
-    }
-    if (!collision) return candidate;
-  }
-  return 'empty slot';
-}
-
 function formatCapabilities(JSONObj) {
   var str = '';
   if (JSONObj != null) {
@@ -2324,6 +2303,39 @@ function updateRemoteCapabilities(jsonVar) {
       capsCell.innerHTML = formatCapabilities(remote["capabilities"]);
     }
   }
+}
+
+// Pick a unique source ID for a new SEND remote. Uses the module RF ID's first
+// two bytes as the base and searches the third byte for a value that isn't the
+// module ID itself and isn't already used by another remote shown on this page,
+// so a second/third send remote can't reuse an earlier one. The search starts
+// past the address range reserved just above the module ID, keeping generated
+// send IDs in their own recognizable range. Returns the ID as "B0,B1,B2" (hex),
+// or "empty slot" if the module RF ID field isn't available.
+function generateSendRemoteID() {
+  var rfIdEl = $id('module_rf_id_str');
+  if (!rfIdEl || !rfIdEl.value) return 'empty slot';
+  var parts = rfIdEl.value.split(',');
+  if (parts.length < 3) return 'empty slot';
+  var b0 = parseInt(parts[0], 16) & 0xFF;
+  var b1 = parseInt(parts[1], 16) & 0xFF;
+  var moduleB2 = parseInt(parts[2], 16) & 0xFF;
+  var RESERVED = 12; // address slots reserved just above the module ID
+  var hx = function (n) { return n.toString(16).toUpperCase(); };
+  var inUse = function (cand) {
+    for (var j = 0; j < remotesCount; j++) {
+      var el = $id('id_remote-' + j);
+      if (el && el.value.toUpperCase() === cand) return true;
+    }
+    return false;
+  };
+  for (var probe = 0; probe < 256; probe++) {
+    var b2 = (moduleB2 + 1 + RESERVED + probe) & 0xFF;
+    if (b2 === moduleB2) continue;
+    var candidate = hx(b0) + ',' + hx(b1) + ',' + hx(b2);
+    if (!inUse(candidate)) return candidate;
+  }
+  return 'empty slot';
 }
 
 function buildHtmlTableRemotes(table, remfunc, jsonVar) {
@@ -2424,15 +2436,15 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
             var idEl = $id('id_remote-' + i);
             if (!idEl) return;
             if (this.value == 5) {
-              // Send mode: use module RF ID (the add-on's own ID for transmitting)
-              var rfIdEl = $id('module_rf_id_str');
-              if (rfIdEl && rfIdEl.value) {
-                idEl.value = rfIdEl.value;
-              } else {
-                idEl.value = generateRemoteID(i);
-              }
+              // Send mode: restore this remote's own saved ID so toggling the
+              // function away and back doesn't lose it (issue #376). A brand-new
+              // remote has no saved ID, so generate a fresh unique one. Never
+              // reuse the module RF ID here — every send remote needs its own ID.
+              var saved = idEl.dataset.savedId;
+              idEl.value = (saved && saved !== 'empty slot' && saved !== '0,0,0' && saved !== '') ? saved : generateSendRemoteID();
             } else {
-              // Receive/Monitor: save current ID and show empty
+              // Receive/Monitor: remember the current ID so switching back to Send
+              // restores it, then show empty.
               if (idEl.value !== 'empty slot' && idEl.value !== '0,0,0' && idEl.value !== '') {
                 idEl.dataset.savedId = idEl.value;
               }
