@@ -595,6 +595,9 @@ const messageHandlers = {
       if ("itho_control_interface" in x) {
         localStorage.setItem("itho_control_interface", x.itho_control_interface);
       }
+      if ("itho_rf_co2_remote_idx" in x) {
+        localStorage.setItem("itho_rf_co2_remote_idx", x.itho_rf_co2_remote_idx);
+      }
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
         $id('remotemenu').classList.remove('hidden');
         $id('rfstatusmenu').classList.remove('hidden');
@@ -1976,13 +1979,13 @@ function populateRfco2RemoteDropdown() {
   // Fall back to the current selection so a live edit isn't clobbered.
   var desired = sel.dataset.desiredIdx || sel.value;
   var eligible = (cachedRemotes || []).filter(function (r) {
-    return r && r.remfuncname === 'send' && r.remtypename === 'RFT CO2';
+    return r && r.remfuncname === 'send' && (r.remtypename === 'RFT CO2' || r.remtypename === 'Orcon CO2');
   });
   sel.innerHTML = '';
   if (eligible.length === 0) {
     var opt = document.createElement('option');
     opt.value = '0';
-    opt.textContent = 'No RFT CO2 send remote configured';
+    opt.textContent = 'No RFT CO2 / Orcon CO2 send remote configured';
     sel.appendChild(opt);
     return;
   }
@@ -2202,7 +2205,9 @@ var remtypes = [
   ["RFT RV", 0x12A0, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT CO2", 0x1298, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT PIR", 0x2E10, ['motion_on', 'motion_off', 'join', 'leave']],
-  ["RFT Spider", 0x22F2, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
+  ["RFT Spider", 0x22F2, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["Orcon 15RF", 0x6710, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["Orcon CO2", 0x6711, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
 ];
 
 var remfuncs = [
@@ -2481,7 +2486,7 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
           var td = document.createElement('td');
           if (remfunction == 2 || remfunction == 5) {
             addRemoteButtons(td, remfunc, remtype, i, false);
-            if (remfunction == 5 && remtype == 0x1298) {
+            if (remfunction == 5 && (remtype == 0x1298 || remtype == 0x6711)) {
               td.insertAdjacentHTML('beforeend', `<br><input type="number" id="co2val-${i}" min="0" max="10000" placeholder="CO2 ppm" style="width:90px;margin-top:4px;"> <button id="button_sendco2-${i}" class="pure-button">Send CO2</button>`);
               td.insertAdjacentHTML('beforeend', `<br><label style="font-size:0.85em;">Demand: <span id="demandlabel-${i}">0</span>/200</label><input type="range" id="demandval-${i}" min="0" max="200" value="0" style="width:150px;" oninput="$id('demandlabel-'+${i}).textContent=this.value" onchange="websock_send(JSON.stringify({rfdemand:parseInt(this.value),rfremoteindex:${i}}))">`);
 

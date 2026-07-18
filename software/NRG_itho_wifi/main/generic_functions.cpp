@@ -349,6 +349,7 @@ void getDeviceInfoJSON(JsonObject root)
   root["ota_progress"] = static_cast<int>(otaUpdateProgress);
   root["itho_rf_standalone"] = systemConfig.itho_rf_standalone;
   root["itho_control_interface"] = systemConfig.itho_control_interface;
+  root["itho_rf_co2_remote_idx"] = systemConfig.itho_rf_co2_remote_idx;
   if (systemConfig.fw_check)
   {
     root["add-on_fwupdate_available"] = firmwareInfo.fw_update_available == 1 ? "true" : "false";
@@ -650,9 +651,9 @@ bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
   if (remote_index >= remotes.getMaxRemotes())
     return false;
 
-  if (remotes.getRemoteType(remote_index) != RemoteTypes::RFTCO2)
+  if (remotes.getRemoteType(remote_index) != RemoteTypes::RFTCO2 && remotes.getRemoteType(remote_index) != RemoteTypes::ORCONCO2)
   {
-    E_LOG("SYS: rfco2 failed - remote %d is not RFT CO2 type", remote_index);
+    E_LOG("SYS: rfco2 failed - remote %d is not RFT CO2 / Orcon CO2 type", remote_index);
     return false;
   }
 
@@ -660,7 +661,9 @@ bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
 
   rfManager.radio.setTxPowerLevel(remotes.getRemoteTxPower(remote_index));
   bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
-  if (bidirectional)
+  // Orcon CO2 sends a single 1298 frame like the real sensor, regardless of the bidir flag.
+  bool singleSend = bidirectional || remotes.getRemoteType(remote_index) == RemoteTypes::ORCONCO2;
+  if (singleSend)
     rfManager.radio.setSendTries(1);
 
   disableRF_ISR();
@@ -670,7 +673,7 @@ bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
   ithoLastSentCO2level = co2level;
 
   rfManager.radio.setTxPowerLevel(0xC0);
-  if (bidirectional)
+  if (singleSend)
     rfManager.radio.setSendTries(3);
 
   char buf[32]{};
@@ -686,9 +689,9 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
     return false;
 
   RemoteTypes rtype = remotes.getRemoteType(remote_index);
-  if (rtype != RemoteTypes::RFTCO2 && rtype != RemoteTypes::RFTRV)
+  if (rtype != RemoteTypes::RFTCO2 && rtype != RemoteTypes::RFTRV && rtype != RemoteTypes::ORCONCO2)
   {
-    E_LOG("SYS: rfdemand failed - remote %d is not RFT CO2 or RFT RV type", remote_index);
+    E_LOG("SYS: rfdemand failed - remote %d is not RFT CO2 / RFT RV / Orcon CO2 type", remote_index);
     return false;
   }
 
@@ -699,7 +702,9 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
 
   rfManager.radio.setTxPowerLevel(remotes.getRemoteTxPower(remote_index));
   bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
-  if (bidirectional)
+  // Orcon CO2 sends a single 31E0 frame like the real sensor, regardless of the bidir flag.
+  bool singleSend = bidirectional || rtype == RemoteTypes::ORCONCO2;
+  if (singleSend)
     rfManager.radio.setSendTries(1);
 
   disableRF_ISR();
@@ -709,7 +714,7 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
   ithoFanDemand = demand;
 
   rfManager.radio.setTxPowerLevel(0xC0);
-  if (bidirectional)
+  if (singleSend)
     rfManager.radio.setSendTries(3);
 
   char buf[40]{};
@@ -746,7 +751,7 @@ bool rfco2RemoteValid(uint8_t idx)
     return false;
   if (remotes.getRemoteFunction(idx) != RemoteFunctions::SEND)
     return false;
-  if (remotes.getRemoteType(idx) != RemoteTypes::RFTCO2)
+  if (remotes.getRemoteType(idx) != RemoteTypes::RFTCO2 && remotes.getRemoteType(idx) != RemoteTypes::ORCONCO2)
     return false;
   return true;
 }

@@ -706,20 +706,17 @@ void handle_ws_message(JsonObject root)
       // demand (this avoids the boost-mode side-effect that drops
       // subsequent lower demand values). Otherwise send "auto" first
       // to switch the unit to auto, then the demand.
-      for (int ri = 0; ri < remotes.getMaxRemotes(); ri++)
+      // Target the configured RF CO2 send remote (RFT CO2 or Orcon CO2), not the
+      // first matching slot, so the home-page slider hits the right fan.
+      uint8_t ri = systemConfig.itho_rf_co2_remote_idx;
+      if (rfco2RemoteValid(ri))
       {
-        if (remotes.isEmptySlot(ri)) continue;
-        if (remotes.getRemoteFunction(ri) == RemoteFunctions::SEND &&
-            remotes.getRemoteType(ri) == RemoteTypes::RFTCO2)
+        if (!fanIsInAuto())
         {
-          if (!fanIsInAuto())
-          {
-            ithoExecRFCommand(ri, "auto", WEB);
-            delay(200);
-          }
-          ithoSendRFDemand(ri, (uint8_t)demand, 0, WEB);
-          break;
+          ithoExecRFCommand(ri, "auto", WEB);
+          delay(200);
         }
+        ithoSendRFDemand(ri, (uint8_t)demand, 0, WEB);
       }
     }
     else if (systemConfig.itho_pwm2i2c == 1)

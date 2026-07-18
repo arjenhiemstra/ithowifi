@@ -68,7 +68,8 @@ const IthoRemote::remote_type_char IthoRemote::remote_type_table[]{
     {RFTCO2, "RFT CO2"},
     {RFTPIR, "RFT PIR"},
     {RFTSPIDER, "RFT Spider"},
-    {ORCON15LF01, "Orcon 15lf01"}};
+    {ORCON15LF01, "Orcon 15RF"},
+    {ORCONCO2, "Orcon CO2"}};
 
 const char *IthoRemote::remote_type_unknown_msg = "Type unknown error";
 
@@ -393,6 +394,12 @@ void IthoRemote::Remote::set(JsonObject obj)
   if (!obj["bidirectional"].isNull())
   {
     bidirectional = obj["bidirectional"];
+  }
+  // Orcon 15RF / CO2 emulated as SEND remotes are bidirectional: address the fan
+  // directly (addr0+addr1) and transmit once, matching the real remotes.
+  if ((remtype == RemoteTypes::ORCON15LF01 || remtype == RemoteTypes::ORCONCO2) && remfunc == RemoteFunctions::SEND)
+  {
+    bidirectional = true;
   }
   if (!obj["destid"].isNull())
   {
