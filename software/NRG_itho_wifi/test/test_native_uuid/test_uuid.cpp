@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cctype>
+#include <cstdlib> // strtoul
 
 // ---------------------------------------------------------------------------
 // Reimplemented UUID logic
