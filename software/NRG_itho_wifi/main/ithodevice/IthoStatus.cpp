@@ -13,6 +13,7 @@ std::vector<ithoDeviceMeasurements> ithoMeasurements;
 std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 std::vector<ithoDeviceMeasurements> ithoCounters;
 SemaphoreHandle_t ithoStatusMutex = xSemaphoreCreateMutex();
+SemaphoreHandle_t rfStatusMutex = xSemaphoreCreateMutex();
 
 rfStatusSource rfStatusSources[MAX_RF_STATUS_SOURCES];
 volatile int rfSelectedSourceForParsing = -1;
@@ -103,6 +104,12 @@ void sendQueryStatusFormat(bool updateweb)
   for (uint8_t i = 0; i < endPos; i++)
   {
     parsed.push_back(ithoDeviceStatus());
+
+    // Assign the label immediately so the vector is never published with an
+    // unset (indeterminate) name. sendQueryStatus refreshes these later, but
+    // a reader (web/MQTT/HA-discovery) can hit ithoStatus in the window before
+    // the first sendQueryStatus runs. labelPos there is 1:1 with this index.
+    parsed.back().name = getStatusLabel(i, ithoDeviceptr);
 
     parsed.back().is_signed = getSignedFromDatatype(i2cbuf[6 + i]);
     parsed.back().length = getLengthFromDatatype(i2cbuf[6 + i]);
@@ -448,6 +455,12 @@ void parseRF31DA(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
   auto dataStart = 1; // skip domain byte
   auto dataLength = len - 1;
 
+  // Skip this frame's update rather than block the RF task if a reader
+  // (web/MQTT) is mid-serialization. clear()+push_back stays in place, so
+  // no second buffer is allocated.
+  if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return;
+
   src->measurements31DA.clear();
 
   const int labelLen = 19;
@@ -506,6 +519,8 @@ void parseRF31DA(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
   if (dataLength > 25)
     addTwoByteMeasurementTo(t, labels[18], payload, 26 + dataStart, true, 0x7F, &fanSensorErrors2, true, 100.0f);
 
+  xSemaphoreGive(rfStatusMutex);
+
   if (src->tracked)
     updateMQTTRFStatus = true;
 }
@@ -533,6 +548,9 @@ void parseRF31D9(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
 
   auto dataStart = 1; // skip domain byte
 
+  if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return;
+
   src->measurements31D9.clear();
 
   const int labelLen = 4;
@@ -549,6 +567,8 @@ void parseRF31D9(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
   src->measurements31D9.push_back({labels[2], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
   status = (payload[0 + dataStart] & 0x20) ? 1 : 0;
   src->measurements31D9.push_back({labels[3], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
+
+  xSemaphoreGive(rfStatusMutex);
 
   if (src->tracked)
     updateMQTTRFStatus = true;

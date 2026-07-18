@@ -37,15 +37,20 @@ const char *getCurrentFanInfo()
   {
     if (!rfStatusSources[i].active || !rfStatusSources[i].tracked)
       continue;
+    if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+      continue;
     for (const auto &m : rfStatusSources[i].measurements31DA)
     {
       if (m.type == ithoDeviceMeasurements::is_string &&
           (strcmp(m.name, "FanInfo") == 0 || strcmp(m.name, "fan-info") == 0) &&
           m.value.stringval != nullptr)
       {
-        return m.value.stringval;
+        const char *v = m.value.stringval;
+        xSemaphoreGive(rfStatusMutex);
+        return v;
       }
     }
+    xSemaphoreGive(rfStatusMutex);
   }
   return nullptr;
 }
@@ -133,6 +138,8 @@ uint8_t getIthoStatusJSON(JsonObject root)
   {
     for (const auto &ithoStat : ithoStatus)
     {
+      if (ithoStat.name == nullptr)
+        continue;
       if (ithoStat.type == ithoDeviceStatus::is_byte)
       {
         root[ithoStat.name] = ithoStat.value.byteval;
@@ -203,25 +210,32 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
       src["zone31DA"] = rfStatusSources[i].lastZone31DA;
       src["zone31D9"] = rfStatusSources[i].lastZone31D9;
       JsonObject data = src["data"].to<JsonObject>();
-      for (const auto &m : rfStatusSources[i].measurements31D9)
+      // Hold rfStatusMutex only for the traversal. The stored keys/values
+      // (m.name, m.value.stringval) point to static label/error strings, not
+      // into the vector, so the JSON stays valid after the lock is released.
+      if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          data[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          data[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          data[m.name] = m.value.stringval;
-        count++;
-      }
-      for (const auto &m : rfStatusSources[i].measurements31DA)
-      {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          data[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          data[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          data[m.name] = m.value.stringval;
-        count++;
+        for (const auto &m : rfStatusSources[i].measurements31D9)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            data[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            data[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            data[m.name] = m.value.stringval;
+          count++;
+        }
+        for (const auto &m : rfStatusSources[i].measurements31DA)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            data[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            data[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            data[m.name] = m.value.stringval;
+          count++;
+        }
+        xSemaphoreGive(rfStatusMutex);
       }
     }
   }
@@ -249,26 +263,30 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
       root["zone31D9"] = rfStatusSources[idx].lastZone31D9;
       JsonObject data = root["data"].to<JsonObject>();
 
-      for (const auto &m : rfStatusSources[idx].measurements31D9)
+      if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          data[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          data[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          data[m.name] = m.value.stringval;
-        count++;
-      }
+        for (const auto &m : rfStatusSources[idx].measurements31D9)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            data[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            data[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            data[m.name] = m.value.stringval;
+          count++;
+        }
 
-      for (const auto &m : rfStatusSources[idx].measurements31DA)
-      {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          data[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          data[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          data[m.name] = m.value.stringval;
-        count++;
+        for (const auto &m : rfStatusSources[idx].measurements31DA)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            data[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            data[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            data[m.name] = m.value.stringval;
+          count++;
+        }
+        xSemaphoreGive(rfStatusMutex);
       }
     }
   }
@@ -948,8 +966,8 @@ void logLastCommand(const char *command, cmdOrigin origin)
 void logLastCommand(const char *command, const char *source)
 {
 
-  strlcpy(lastCmd.source, source, sizeof(lastCmd.source));
-  strlcpy(lastCmd.command, command, sizeof(lastCmd.command));
+  strlcpy(lastCmd.source, source ? source : "", sizeof(lastCmd.source));
+  strlcpy(lastCmd.command, command ? command : "", sizeof(lastCmd.command));
 
   if (time(nullptr))
   {

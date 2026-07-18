@@ -86,7 +86,7 @@ struct ithoDeviceStatus
   uint32_t divider;
   uint8_t updated;
   bool is_signed;
-  ithoDeviceStatus() : updated(0) {};
+  ithoDeviceStatus() : name(nullptr), updated(0) {};
 };
 
 struct ithoDeviceMeasurements
@@ -112,6 +112,11 @@ extern std::vector<ithoDeviceMeasurements> ithoMeasurements;
 extern std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 extern std::vector<ithoDeviceMeasurements> ithoCounters;
 extern SemaphoreHandle_t ithoStatusMutex;
+// Separate mutex for the per-RF-source measurement vectors
+// (rfStatusSource::measurements31DA/31D9). Kept distinct from
+// ithoStatusMutex so RF-frame parsing (CC1101 task) and I2C status
+// serialization don't block each other.
+extern SemaphoreHandle_t rfStatusMutex;
 
 #define MAX_RF_STATUS_SOURCES 20
 
@@ -158,10 +163,10 @@ struct ithoSettings
     is_float,
     is_unknown
   } type{is_unknown};
-  bool is_signed;
+  bool is_signed{false};
   int32_t value{0};
   uint8_t length{0};
-  uint32_t divider;
+  uint32_t divider{1};
 };
 
 extern ithoSettings *ithoSettingsArray;

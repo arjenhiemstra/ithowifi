@@ -74,23 +74,27 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDoc
         obj["name"] = rfStatusSources[i].name;
         obj["lastSeen"] = static_cast<int32_t>(rfStatusSources[i].lastSeen);
         JsonObject data = obj["data"].to<JsonObject>();
-        for (const auto &m : rfStatusSources[i].measurements31D9)
+        if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
         {
-          if (m.type == ithoDeviceMeasurements::is_int)
-            data[m.name] = m.value.intval;
-          else if (m.type == ithoDeviceMeasurements::is_float)
-            data[m.name] = m.value.floatval;
-          else if (m.type == ithoDeviceMeasurements::is_string)
-            data[m.name] = m.value.stringval;
-        }
-        for (const auto &m : rfStatusSources[i].measurements31DA)
-        {
-          if (m.type == ithoDeviceMeasurements::is_int)
-            data[m.name] = m.value.intval;
-          else if (m.type == ithoDeviceMeasurements::is_float)
-            data[m.name] = m.value.floatval;
-          else if (m.type == ithoDeviceMeasurements::is_string)
-            data[m.name] = m.value.stringval;
+          for (const auto &m : rfStatusSources[i].measurements31D9)
+          {
+            if (m.type == ithoDeviceMeasurements::is_int)
+              data[m.name] = m.value.intval;
+            else if (m.type == ithoDeviceMeasurements::is_float)
+              data[m.name] = m.value.floatval;
+            else if (m.type == ithoDeviceMeasurements::is_string)
+              data[m.name] = m.value.stringval;
+          }
+          for (const auto &m : rfStatusSources[i].measurements31DA)
+          {
+            if (m.type == ithoDeviceMeasurements::is_int)
+              data[m.name] = m.value.intval;
+            else if (m.type == ithoDeviceMeasurements::is_float)
+              data[m.name] = m.value.floatval;
+            else if (m.type == ithoDeviceMeasurements::is_string)
+              data[m.name] = m.value.stringval;
+          }
+          xSemaphoreGive(rfStatusMutex);
         }
         response.add(obj);
         return ApiResponse::status::SUCCESS;
