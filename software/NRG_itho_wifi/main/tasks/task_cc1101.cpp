@@ -1,4 +1,5 @@
 #include "tasks/task_cc1101.h"
+#include "tasks/boot_phases.h"
 
 #define TASK_CC1101_PRIO 5
 
@@ -269,11 +270,13 @@ void startTaskCC1101()
 void TaskCC1101(void *pvParameters)
 {
 
-  D_LOG("SYS: TaskCC1101 started");
   configASSERT((uint32_t)pvParameters == 1UL);
 
-  if (!xTaskMQTTHandle)
-    startTaskMQTT();
+  // Wait BEFORE any logging: sys_log's syslog_queueSemaphore is created in
+  // TaskConfigAndLog, so a D_LOG before PHASE_CONFIG dereferences a null handle.
+  waitPhase(PHASE_CONFIG); // needs systemConfig/logConfig; loads its own remotes config
+
+  D_LOG("SYS: TaskCC1101 started");
 
   // reading the chip version is a non-blocking way to check CC1101 connectivity.
   // if the version is greater than 0 there has been succesful communication and we can continue with the init of the chip.
@@ -367,6 +370,8 @@ void TaskCC1101(void *pvParameters)
 
     uint8_t joinReplyRemIndex{255};
     // uint8_t remIndex10E0{255};
+
+    setPhase(PHASE_RF); // RF module initialised (reached only when a CC1101 is present)
 
     for (;;)
     {

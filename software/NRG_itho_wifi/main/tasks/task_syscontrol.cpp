@@ -1,6 +1,7 @@
 
 
 #include "tasks/task_syscontrol.h"
+#include "tasks/boot_phases.h"
 #include "../sys_log.h"
 #include "generic_functions.h"
 
@@ -57,11 +58,16 @@ void TaskSysControl(void *pvParameters)
   Ticker TaskTimeout;
   Ticker queueUpdater;
 
+  waitPhase(PHASE_CONFIG); // needs systemConfig/wifiConfig/logConfig loaded
+
   networkManager.initialize(); // Initialize network clients (sets secure client to skip CA verification)
 
   delay(2000);
   wifiInit();
   delay(2000);
+
+  setPhase(PHASE_NET); // networkManager + WiFi are up (MQTT/Web depend on this)
+
   syslog.appName(logConfig.logref);
   syslog.deviceHostname(hostName());
   syslog.server(logConfig.logserver, logConfig.logport);
@@ -70,8 +76,6 @@ void TaskSysControl(void *pvParameters)
   init_vRemote();
 
   initSensor();
-
-  startTaskCC1101();
 
   esp_task_wdt_add(NULL);
 

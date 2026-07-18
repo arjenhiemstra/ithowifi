@@ -1,4 +1,5 @@
 #include "tasks/task_configandlog.h"
+#include "tasks/boot_phases.h"
 #include "ithodevice/IthoDevice.h"
 
 #define TASK_CONFIG_AND_LOG_PRIO 5
@@ -44,6 +45,8 @@ void TaskConfigAndLog(void *pvParameters)
 {
   configASSERT((uint32_t)pvParameters == 1UL);
 
+  waitPhase(PHASE_HW); // needs mutexes + hardware from TaskInit
+
   syslog_queueSemaphore = xSemaphoreCreateBinary();
   xSemaphoreGive(syslog_queueSemaphore);
 
@@ -78,7 +81,7 @@ void TaskConfigAndLog(void *pvParameters)
 
   loadRFTrackedSources();
 
-  startTaskSysControl();
+  setPhase(PHASE_CONFIG); // filesystem mounted + config loaded + logging up
   syslogQueueWorker();
 
   esp_task_wdt_add(NULL);

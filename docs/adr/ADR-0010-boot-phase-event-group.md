@@ -65,3 +65,5 @@ Supersedes the boot-startup mechanism of [ADR-0004](ADR-0004-freertos-linear-tas
 ## AI Notes
 
 Boot dependencies are expressed as `waitPhase(...)`/`setPhase(...)`, not by call order. To add or reorder a stage: create the task in `boot()`, wait on the phases it needs, set its own phase when ready — do not reintroduce `startTaskX()`-from-another-task chaining. Every phase a task waits on must be set by some task, or it deadlocks (the timeout will log it). A task's `waitPhase` mask must reflect what its init actually reads (grep for cross-task globals — e.g. anything touching `networkManager` needs `PHASE_NET`).
+
+**`waitPhase(...)` must be a task's FIRST action — before any logging or other dependency use.** `sys_log()` dereferences `syslog_queueSemaphore`, which is created in `TaskConfigAndLog` (`PHASE_CONFIG`); a `D_LOG`/`I_LOG`/etc. before the wait crashes with `StoreProhibited` (this bricked boot once — `TaskCC1101` logged "started" before waiting). For the same reason `waitPhase`'s own timeout message uses `ESP_LOGW`, not `sys_log`, so it is safe before `PHASE_CONFIG`.

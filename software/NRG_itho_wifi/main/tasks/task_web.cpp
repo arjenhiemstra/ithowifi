@@ -1,4 +1,5 @@
 #include "tasks/task_web.h"
+#include "tasks/boot_phases.h"
 #include "api/OpenAPI.h"
 #include "api/WebAPIv2Rest.h"
 
@@ -52,6 +53,8 @@ void TaskWeb(void *pvParameters)
   configASSERT((uint32_t)pvParameters == 1UL);
   Ticker TaskTimeout;
 
+  waitPhase(PHASE_CONFIG | PHASE_NET); // web server + mDNS need the network up
+
   websocketInit();
 
   webServerInit();
@@ -59,6 +62,7 @@ void TaskWeb(void *pvParameters)
   MDNSinit();
 
   TaskInitReady = true;
+  setPhase(PHASE_WEB); // boot complete
 
   esp_task_wdt_add(NULL);
 
