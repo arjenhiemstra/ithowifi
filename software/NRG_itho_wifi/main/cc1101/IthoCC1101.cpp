@@ -1698,11 +1698,19 @@ String IthoCC1101::LastMessageDecoded(IthoPacket *packetPtr)
     str += String(buf);
     str += ":";
 
-    for (int i = packetPtr->payloadPos; i < packetPtr->payloadPos + packetPtr->len; i++)
+    // Clamp to the decoded buffer. A corrupt/noise frame can carry a len byte
+    // far larger than the payload actually present (parseMessage rejects
+    // len > MAX_PAYLOAD but still sets it, and this logging path runs on every
+    // sniffed frame at rfloglevel 3), which would otherwise read past
+    // dataDecoded[].
+    int payloadEnd = packetPtr->payloadPos + packetPtr->len;
+    if (payloadEnd > (int)sizeof(packetPtr->dataDecoded))
+      payloadEnd = (int)sizeof(packetPtr->dataDecoded);
+    for (int i = packetPtr->payloadPos; i < payloadEnd; i++)
     {
       snprintf(buf, sizeof(buf), "%02X", packetPtr->dataDecoded[i]);
       str += String(buf);
-      if (i < packetPtr->payloadPos + packetPtr->len - 1)
+      if (i < payloadEnd - 1)
       {
         str += ",";
       }
