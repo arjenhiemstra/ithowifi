@@ -102,6 +102,16 @@ public:
     }
 
     int getMaxRemotes() const { return maxRemotes; }
+
+    // Mirrors IthoRemote::getRemoteNamebyIndex after the bounds-check fix:
+    // returns nullptr for out-of-range indices instead of reading remotes[]
+    // out of bounds. remoteIndex() returns -1 for an unregistered remote, so
+    // callers can legitimately pass a negative index here.
+    const char *getRemoteNamebyIndex(int index) const {
+        if (index < 0 || index >= maxRemotes)
+            return nullptr;
+        return remotes[index].name;
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -212,6 +222,30 @@ void test_register_after_remove_reuses_slot(void) {
     TEST_ASSERT_EQUAL_INT(2, r.getRemoteCount());
 }
 
+// getRemoteNamebyIndex bounds (regression guard for the out-of-bounds fix)
+void test_getname_valid_index_returns_name(void) {
+    TestIthoRemote r;
+    TEST_ASSERT_EQUAL_STRING("remote0", r.getRemoteNamebyIndex(0));
+    TEST_ASSERT_EQUAL_STRING("remote11", r.getRemoteNamebyIndex(MAX_NUM_OF_REMOTES - 1));
+}
+
+void test_getname_negative_index_returns_null(void) {
+    // remoteIndex() returns -1 for an unregistered remote; getRemoteNamebyIndex
+    // must return nullptr, not read remotes[-1] out of bounds.
+    TestIthoRemote r;
+    TEST_ASSERT_NULL(r.getRemoteNamebyIndex(-1));
+}
+
+void test_getname_index_at_max_returns_null(void) {
+    TestIthoRemote r;
+    TEST_ASSERT_NULL(r.getRemoteNamebyIndex(MAX_NUM_OF_REMOTES));
+}
+
+void test_getname_far_out_of_range_returns_null(void) {
+    TestIthoRemote r;
+    TEST_ASSERT_NULL(r.getRemoteNamebyIndex(9999));
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -233,6 +267,10 @@ int main() {
     RUN_TEST(test_checkID_unregistered_returns_false);
     RUN_TEST(test_remove_nonexistent_returns_neg1);
     RUN_TEST(test_register_after_remove_reuses_slot);
+    RUN_TEST(test_getname_valid_index_returns_name);
+    RUN_TEST(test_getname_negative_index_returns_null);
+    RUN_TEST(test_getname_index_at_max_returns_null);
+    RUN_TEST(test_getname_far_out_of_range_returns_null);
 
     return UNITY_END();
 }
