@@ -1,0 +1,9 @@
+{
+  "name": "nrg-itho-wifi-webui-build",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build-time JS minification for the NRG Itho WiFi web UI. Run 'npm install' here to enable minification; the firmware build falls back to unminified JS if terser is absent.",
+  "devDependencies": {
+    "terser": "^5.31.0"
+  }
+}

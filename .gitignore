@@ -8,3 +8,6 @@ vscode-build/*__pycache__
 compiled_firmware_files/coredumps/
 software/pure/
 software/NRG_itho_wifi/sdkconfig.release
+
+# Node modules for the web-UI build tooling (terser)
+node_modules/

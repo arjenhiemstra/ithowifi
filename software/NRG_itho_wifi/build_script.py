@@ -1,5 +1,5 @@
 Import("env")
-import gzip, os, glob, shutil, json, filecmp
+import gzip, os, glob, shutil, json, filecmp, subprocess
 
 from SCons.Script import (
     ARGUMENTS,
@@ -112,6 +112,42 @@ def pop_first_line(file):
         outfile.write(data)
 
 
+def find_terser():
+    # Prefer the locally installed terser (webroot_source/node_modules), then
+    # fall back to one on PATH. Returns None if terser isn't available.
+    local = os.path.join(WEBROOT_SRC_DIR, "node_modules", ".bin", "terser")
+    for cand in (local + ".cmd", local):  # .cmd first for Windows
+        if os.path.exists(cand):
+            return cand
+    return shutil.which("terser")
+
+
+def minify_controls_js(path):
+    # Minify the combined JS in place: compress + mangle LOCALS only. Top-level
+    # mangling is intentionally left off because ~50 inline HTML event handlers
+    # (onclick/onchange=...) call global functions by name; renaming those would
+    # break the UI. If terser isn't installed the unminified file is shipped so
+    # the firmware build still succeeds ('npm install' in webroot_source enables
+    # minification).
+    terser = find_terser()
+    if not terser:
+        print("\tterser not found - shipping unminified JS (run 'npm install' in webroot_source to enable minification)")
+        return
+    before = os.path.getsize(path)
+    tmp_out = path + ".min"
+    try:
+        subprocess.run([terser, path, "-c", "-m", "-o", tmp_out], check=True)
+        os.replace(tmp_out, path)
+    except (subprocess.CalledProcessError, OSError) as err:
+        print("\tterser failed (%s) - shipping unminified JS" % err)
+        if os.path.exists(tmp_out):
+            os.remove(tmp_out)
+        return
+    after = os.path.getsize(path)
+    print("\tminified JS: %d -> %d bytes (%.1f%% smaller before gzip)"
+          % (before, after, 100.0 * (before - after) / before if before else 0.0))
+
+
 def make_c_header(inName, outName):
     if inName == "controls.js":
         inFileBytes = pop_first_line(os.path.join(WEBROOT_SRC_DIR, "controls.js"))
@@ -155,6 +191,7 @@ def build_webui(*args, **kwargs):
     concat_controls_js()
     print("### Compressing webroot sources into gzipped header files...")
     pop_first_line(os.path.join(WEBROOT_SRC_DIR, "controls.js"))
+    minify_controls_js(os.path.join(WEBROOT_SRC_DIR, "controls_temp.js"))
     make_c_header("controls_temp.js", "controls_js_gz")
     os.remove(os.path.join(WEBROOT_SRC_DIR, "controls_temp.js"))
     make_c_header("index.html", "index_html_gz")
