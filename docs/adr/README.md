@@ -15,6 +15,7 @@ ADRs record durable architectural decisions — not implementation details. Use 
 | [0007](ADR-0007-config-persistence-littlefs-nvs.md) | Config persistence: LittleFS + NVS backup | Accepted |
 | [0008](ADR-0008-hardware-abstraction-managers.md) | Hardware abstraction via manager singletons | Accepted |
 | [0009](ADR-0009-dual-tier-testing-strategy.md) | Dual-tier testing strategy | Accepted |
+| [0010](ADR-0010-boot-phase-event-group.md) | Boot sequencing: event-group phase gates (amends 0004) | Accepted |
 
 ## When an ADR is required
 
@@ -22,7 +23,8 @@ Trigger table — if a change matches a row, check the linked ADR before impleme
 
 | Change area | Relevant ADR(s) |
 |---|---|
-| Task structure, RTOS primitives, inter-task signaling | [0004](ADR-0004-freertos-linear-task-chain.md) |
+| Task structure, RTOS primitives, inter-task signaling (runtime) | [0004](ADR-0004-freertos-linear-task-chain.md) |
+| Boot sequencing / task startup order | [0010](ADR-0010-boot-phase-event-group.md) |
 | MQTT topics/payloads | [0005](ADR-0005-mqtt-integration-design.md) |
 | REST API structure/routing | [0006](ADR-0006-rest-api-v2-logic-routing-split.md) |
 | Config file format / storage backend | [0007](ADR-0007-config-persistence-littlefs-nvs.md) |

@@ -1,6 +1,6 @@
 # ADR-0004: FreeRTOS Linear Task Chain, Flag-Polling Signaling
 
-Status: Accepted
+Status: Accepted — boot-startup mechanism amended by [ADR-0010](ADR-0010-boot-phase-event-group.md) (event-group phase gates); the runtime flag-polling / no-task-queue decision below is unchanged.
 
 ## Context
 

@@ -31,7 +31,7 @@ A spec describes *what* is being built and its immediate risk/test/rollback plan
 
 ## Active specs
 
-_(none yet — add entries here as specs are created in `specs/active/`)_
+- [boot-phase-gates.md](active/boot-phase-gates.md) — replace the linear boot task chain with FreeRTOS event-group phase gates ([ADR-0010](../docs/adr/ADR-0010-boot-phase-event-group.md))
 
 ## Related
 
