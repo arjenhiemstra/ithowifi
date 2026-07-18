@@ -1315,85 +1315,69 @@ uint8_t IthoCC1101::checksum(IthoPacket *itho, uint8_t len)
   return 0 - val;
 }
 
+// Compile-time encode table (flash/.rodata): each nibble m=(m3 m2 m1 m0) maps to
+// its fixed 10-bit group [m0 ~m0 m1 ~m1 m2 ~m2 m3 ~m3 1 0] — the data bits
+// low-to-nibble-high, each followed by its complement, then the "10" framing.
+namespace
+{
+  struct EncodeLUT
+  {
+    uint16_t group[16];
+    constexpr EncodeLUT() : group{}
+    {
+      for (int m = 0; m < 16; m++)
+      {
+        int m0 = m & 1, m1 = (m >> 1) & 1, m2 = (m >> 2) & 1, m3 = (m >> 3) & 1;
+        group[m] = (uint16_t)((m0 << 9) | ((m0 ^ 1) << 8) | (m1 << 7) | ((m1 ^ 1) << 6) |
+                              (m2 << 5) | ((m2 ^ 1) << 4) | (m3 << 3) | ((m3 ^ 1) << 2) | (1 << 1));
+      }
+    }
+  };
+  constexpr EncodeLUT kEncodeLUT{};
+}
+
+// Encodes each decoded byte to 20 raw bits via the nibble->group LUT (2 decoded
+// bytes = exactly 5 raw bytes, the same alignment the decoder exploits).
+// Byte-identical to the previous per-bit implementation for every payload
+// (verified: test/test_native_rf_decode fuzzes both against each other, incl.
+// the returned last-index). Writes are bounded so a pathologically long message
+// can't overrun packet->data[] — sendRFMessage appends an end byte + 7 noise
+// bytes after the returned index, so 8 bytes of headroom are reserved. Real
+// messages are far under this; the previous implementation had no such guard.
 uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet)
 {
-
-  uint8_t out_bytecounter = 14;   // index of Outbuf, start at offset 14, first part of the message is set manually
-  uint8_t out_bitcounter = 0;     // bit position of current outbuf byte
-  uint8_t out_patterncounter = 0; // bit counter to add 1 0 bit pattern after every 8 bits
-  uint8_t bitSelect = 4;          // bit position of the inData byte (4 - 7, 0 - 3)
-  uint8_t out_shift = 7;          // bit shift inData bit in position of outbuf byte
-
-  // we need to zero the out buffer first cause we are using bitshifts
-  for (unsigned int i = out_bytecounter; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
-  {
+  // start at index 14; the first 14 bytes are set manually by createMessageStart
+  for (unsigned int i = 14; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
     packet->data[i] = 0;
-  }
 
-  for (uint8_t dataByte = 0; dataByte < itho->length; dataByte++)
+  const int maxIdx = (int)(sizeof(packet->data) / sizeof(packet->data[0])) - 1 - 8;
+  int outIdx = 14;
+  uint64_t acc = 0;
+  int accBits = 0;
+  for (uint8_t k = 0; k < itho->length && outIdx <= maxIdx; k++)
   {
-    for (uint8_t dataBit = 0; dataBit < 8; dataBit++)
-    { // process a full dataByte at a time resulting in 20 output bits (2.5 bytes) with the pattern 7x6x5x4x 10 3x2x1x0x 10 7x6x5x4x 10 3x2x1x0x 10 etc
-      if (out_bitcounter == 8)
-      { // check if new byte is needed
-        out_bytecounter++;
-        out_bitcounter = 0;
-      }
-
-      if (out_patterncounter == 8)
-      { // check if we have to start with a 1 0 pattern
-        out_patterncounter = 0;
-        packet->data[out_bytecounter] = packet->data[out_bytecounter] | 1 << out_shift;
-        out_shift--;
-        out_bitcounter++;
-        packet->data[out_bytecounter] = packet->data[out_bytecounter] | 0 << out_shift;
-        if (out_shift == 0)
-          out_shift = 8;
-        out_shift--;
-        out_bitcounter++;
-      }
-
-      if (out_bitcounter == 8)
-      { // check if new byte is needed
-        out_bytecounter++;
-        out_bitcounter = 0;
-      }
-
-      // set the even bit
-      uint8_t bit = (itho->dataDecoded[dataByte] & (1 << bitSelect)) >> bitSelect; // select bit and shift to bit pos 0
-      bitSelect++;
-      if (bitSelect == 8)
-        bitSelect = 0;
-
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | bit << out_shift; // shift bit in corect pos of current outbuf byte
-      out_shift--;
-      out_bitcounter++;
-      out_patterncounter++;
-
-      // set the odd bit (inverse of even bit)
-      bit = ~bit & 0b00000001;
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | bit << out_shift;
-      if (out_shift == 0)
-        out_shift = 8;
-      out_shift--;
-      out_bitcounter++;
-      out_patterncounter++;
-    }
-  }
-  if (out_bitcounter < 8)
-  { // add closing 1 0 pattern to fill last packet->data byte and ensure DC balance in the message
-    for (uint8_t i = out_bitcounter; i < 8; i += 2)
+    uint32_t bits20 = ((uint32_t)kEncodeLUT.group[itho->dataDecoded[k] >> 4] << 10) |
+                      kEncodeLUT.group[itho->dataDecoded[k] & 0x0F];
+    acc = (acc << 20) | bits20;
+    accBits += 20;
+    while (accBits >= 8 && outIdx <= maxIdx)
     {
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | 1 << out_shift;
-      out_shift--;
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | 0 << out_shift;
-      if (out_shift == 0)
-        out_shift = 8;
-      out_shift--;
+      packet->data[outIdx++] = (uint8_t)((acc >> (accBits - 8)) & 0xFF);
+      accBits -= 8;
     }
   }
+  // closing framing: pad the final partial byte with "1 0" pairs for DC balance
+  if (accBits > 0 && outIdx <= maxIdx)
+  {
+    while (accBits < 8)
+    {
+      acc = (acc << 2) | 0x2;
+      accBits += 2;
+    }
+    packet->data[outIdx++] = (uint8_t)((acc >> (accBits - 8)) & 0xFF);
+  }
 
-  return out_bytecounter;
+  return (uint8_t)(outIdx - 1);
 }
 
 // Compile-time decode table (lands in flash/.rodata, no runtime init).

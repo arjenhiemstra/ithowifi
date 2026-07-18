@@ -248,6 +248,60 @@ static void messageDecodeNew(RawPacket *packet, DecodedPacket *packetPtr)
 }
 
 // --------------------------------------------------------------------------
+// New LUT-based block encoder (matches the firmware messageEncode)
+// --------------------------------------------------------------------------
+// Each nibble m=(m3 m2 m1 m0) -> a fixed 10-bit group [m0 ~m0 m1 ~m1 m2 ~m2 m3
+// ~m3 1 0] (data bits low-to-nibble-high, each followed by its complement, then
+// the "10" framing). A byte = high-nibble group (10 bits) then low-nibble group
+// (10 bits) = 20 bits; two bytes = exactly 5 raw bytes.
+static uint16_t encode_group_lut[16];
+static void init_encode_lut()
+{
+  for (int m = 0; m < 16; m++)
+  {
+    int m0 = m & 1, m1 = (m >> 1) & 1, m2 = (m >> 2) & 1, m3 = (m >> 3) & 1;
+    encode_group_lut[m] = (uint16_t)((m0 << 9) | ((m0 ^ 1) << 8) | (m1 << 7) | ((m1 ^ 1) << 6) |
+                                     (m2 << 5) | ((m2 ^ 1) << 4) | (m3 << 3) | ((m3 ^ 1) << 2) |
+                                     (1 << 1) | 0);
+  }
+}
+
+template <typename PKT>
+static uint8_t messageEncodeNew(const uint8_t *dataDecoded, uint8_t length, PKT *packet)
+{
+  for (unsigned int i = 14; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
+    packet->data[i] = 0;
+
+  int outIdx = 14;
+  uint64_t acc = 0;
+  int accBits = 0;
+  for (uint8_t k = 0; k < length; k++)
+  {
+    uint8_t B = dataDecoded[k];
+    uint32_t bits20 = ((uint32_t)encode_group_lut[B >> 4] << 10) | encode_group_lut[B & 0x0F];
+    acc = (acc << 20) | bits20;
+    accBits += 20;
+    while (accBits >= 8)
+    {
+      packet->data[outIdx++] = (uint8_t)((acc >> (accBits - 8)) & 0xFF);
+      accBits -= 8;
+    }
+  }
+  // closing framing: fill the remaining bits of the last partial byte with "10"
+  if (accBits > 0)
+  {
+    while (accBits < 8)
+    {
+      acc = (acc << 2) | 0x2; // "1 0"
+      accBits += 2;
+    }
+    packet->data[outIdx++] = (uint8_t)((acc >> (accBits - 8)) & 0xFF);
+    accBits -= 8;
+  }
+  return (uint8_t)(outIdx - 1); // index of last written byte, as the original returns
+}
+
+// --------------------------------------------------------------------------
 // deterministic PRNG
 // --------------------------------------------------------------------------
 static uint64_t rng_state;
@@ -347,16 +401,62 @@ void test_roundtrip_reproduces_payload(void)
     }
 }
 
+void test_encode_equivalence(void)
+{
+  // New LUT encoder must be byte-identical to the original messageEncode,
+  // including the returned last-index, for every payload length.
+  rng_seed(0x6666);
+  for (int len = 1; len <= MAX_PAYLOAD; len++)
+    for (int iter = 0; iter < 60; iter++)
+    {
+      uint8_t payload[MAX_DECODED]{};
+      for (int i = 0; i < len; i++)
+        payload[i] = (uint8_t)xrand();
+      BigPacket a, b;
+      uint8_t ra = messageEncode(payload, (uint8_t)len, &a);
+      uint8_t rb = messageEncodeNew(payload, (uint8_t)len, &b);
+      TEST_ASSERT_EQUAL_UINT8_MESSAGE(ra, rb, "encoder return (last index) differs");
+      TEST_ASSERT_EQUAL_UINT8_ARRAY_MESSAGE(a.data, b.data, sizeof(a.data), "encoder output bytes differ");
+    }
+}
+
+void test_encode_decode_roundtrip_new(void)
+{
+  // New encoder + new decoder must reproduce the payload.
+  rng_seed(0x7777);
+  for (int len = 1; len <= MAX_PAYLOAD; len++)
+    for (int iter = 0; iter < 40; iter++)
+    {
+      uint8_t payload[MAX_DECODED]{};
+      for (int i = 0; i < len; i++)
+        payload[i] = (uint8_t)xrand();
+      BigPacket tx;
+      uint8_t last = messageEncodeNew(payload, (uint8_t)len, &tx);
+      int n = (int)last + 1 - 14;
+      RawPacket rx;
+      memset(&rx, 0, sizeof(rx));
+      rx.length = (uint8_t)n;
+      memcpy(rx.data, &tx.data[14], (size_t)n);
+      DecodedPacket back;
+      messageDecodeNew(&rx, &back);
+      TEST_ASSERT_EQUAL_UINT8(len, back.length);
+      TEST_ASSERT_EQUAL_UINT8_ARRAY(payload, back.dataDecoded, len);
+    }
+}
+
 void setUp(void) {}
 void tearDown(void) {}
 
 int main()
 {
   init_decode_lut();
+  init_encode_lut();
   UNITY_BEGIN();
   RUN_TEST(test_equivalence_valid_encodings);
   RUN_TEST(test_equivalence_garbage);
   RUN_TEST(test_equivalence_patterns);
   RUN_TEST(test_roundtrip_reproduces_payload);
+  RUN_TEST(test_encode_equivalence);
+  RUN_TEST(test_encode_decode_roundtrip_new);
   return UNITY_END();
 }
