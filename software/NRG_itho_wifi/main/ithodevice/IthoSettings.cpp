@@ -16,8 +16,8 @@ std::vector<retryItem> retryList;
 int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version)
 {
 
-  const struct ihtoDeviceType *ithoDevicesptr = ithoDevices;
-  const struct ihtoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
+  const struct ithoDeviceType *ithoDevicesptr = ithoDevices;
+  const struct ithoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
   while (ithoDevicesptr < ithoDevicesendPtr)
   {
     if (ithoDevicesptr->DG == deviceGroup && ithoDevicesptr->ID == deviceID)
@@ -60,7 +60,7 @@ const char *getSettingLabel(const uint8_t index)
 
   int settingsLen = getSettingsLength(deviceGroup, deviceID, version);
 
-  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+  const struct ithoDeviceType *settingsPtr = ithoDeviceptr;
 
   if (settingsPtr == nullptr)
   {
@@ -135,7 +135,7 @@ void getSetting(const uint8_t index, const bool updateState, const bool updatewe
     return;
   }
 
-  // const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+  // const struct ithoDeviceType *settingsPtr = ithoDeviceptr;
 
   JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
@@ -179,7 +179,7 @@ void processSettingResult(const uint8_t index, const bool loop)
 
   const uint8_t version = currentItho_fwversion();
 
-  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+  const struct ithoDeviceType *settingsPtr = ithoDeviceptr;
 
   JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();

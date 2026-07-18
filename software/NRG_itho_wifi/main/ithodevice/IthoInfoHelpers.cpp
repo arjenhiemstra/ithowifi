@@ -4,8 +4,8 @@
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version)
 {
 
-  const struct ihtoDeviceType *ithoDevicesptr = ithoDevices;
-  const struct ihtoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
+  const struct ithoDeviceType *ithoDevicesptr = ithoDevices;
+  const struct ithoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
   while (ithoDevicesptr < ithoDevicesendPtr)
   {
     if (ithoDevicesptr->DG == deviceGroup && ithoDevicesptr->ID == deviceID)
@@ -57,7 +57,7 @@ const char *getSpeedLabel()
   return "no_speed_label_for_this_device_error";
 }
 
-const char *getStatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr)
+const char *getStatusLabel(const uint8_t i, const struct ithoDeviceType *statusPtr)
 {
   const uint8_t deviceGroup = currentIthoDeviceGroup();
   const uint8_t deviceID = currentIthoDeviceID();
