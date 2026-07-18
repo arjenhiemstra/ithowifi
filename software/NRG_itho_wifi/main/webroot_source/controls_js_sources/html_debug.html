@@ -47,6 +47,24 @@
     </select><br><br>
     <button id="button-wizardreactivate" type="button" class="pure-button pure-button-primary">Reactivate wizard</button>
 
+    <fieldset>
+        <legend><br>Live device simulation (Simulated Device Runtime):</legend>
+        <p>When enabled, the firmware behaves as if the selected Itho device is attached: the web interface, REST API
+            and MQTT serve realistic simulated telemetry and accept commands, without any Itho unit connected.<br>
+            Scenario changes apply immediately; enable/profile/seed changes require a reboot.</p>
+        <span>Status: </span><span id="sim_status">unknown</span><br><br>
+        <label for="sim-enable">Enable simulation: </label><input id="sim-enable" type="checkbox"><br><br>
+        <label for="sim-profile">Device profile: </label>
+        <select id="sim-profile"></select><br><br>
+        <label for="sim-scenario">Scenario: </label>
+        <select id="sim-scenario"></select><br><br>
+        <label for="sim-seed">Telemetry seed: </label>
+        <input id="sim-seed" type="number" min="0" max="4294967295" size="12" value="12345"><br><br>
+        <button id="button-sim-apply" class="pure-button pure-button-primary">Apply</button>
+        <button id="button-sim-applyreboot" class="pure-button pure-button-primary">Apply &amp; reboot</button><br><br>
+        <span id="sim_result"></span>
+    </fieldset><br>
+
     <p>JavaScript console debug:</p>
     <button id="jsdebug" type="button" class="pure-button pure-button-primary">Toggle</button>
     <span>Status: </span><span id='jsdebug_status'>unknown</span>
@@ -189,4 +207,52 @@
         debug = !debug;
         $id("jsdebug_status").textContent = debug ? "on" : "off";
     });
+    function simRefresh() {
+        fetch('/api/v2/simulation').then(function (r) { return r.json(); }).then(function (j) {
+            var s = j.data && j.data.simulation;
+            if (!s) return;
+            var prof = $id('sim-profile'), scen = $id('sim-scenario');
+            prof.innerHTML = '';
+            (s.available_profiles || []).forEach(function (n, i) {
+                var o = document.createElement('option'); o.value = i; o.textContent = n; prof.appendChild(o);
+            });
+            scen.innerHTML = '';
+            (s.available_scenarios || []).forEach(function (n, i) {
+                var o = document.createElement('option'); o.value = i; o.textContent = n; scen.appendChild(o);
+            });
+            $id('sim-enable').checked = !!s.enabled;
+            prof.value = s.profile;
+            var scIdx = (s.available_scenarios || []).indexOf(s.scenario);
+            if (scIdx >= 0) scen.value = scIdx;
+            $id('sim-seed').value = s.seed;
+            $id('sim_status').textContent = s.active
+                ? ('running - ' + s.profile_name + ', scenario ' + s.scenario + (s.reboot_required ? ' (reboot required for pending changes)' : ''))
+                : (s.enabled ? 'enabled - reboot required' : 'disabled');
+        }).catch(function () { $id('sim_status').textContent = 'unavailable'; });
+    }
+    function simApply(reboot) {
+        var body = {
+            enable: $id('sim-enable').checked,
+            profile: parseInt($id('sim-profile').value || '0', 10),
+            scenario: parseInt($id('sim-scenario').value || '0', 10),
+            seed: parseInt($id('sim-seed').value || '0', 10)
+        };
+        fetch('/api/v2/simulation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+            .then(function (r) { return r.json(); }).then(function (j) {
+                var d = j.data || {};
+                if (reboot) {
+                    $id('sim_result').textContent = 'settings saved - rebooting...';
+                    websock_send('{"reboot":true}');
+                } else {
+                    $id('sim_result').textContent = (d.result || 'saved') + (d.reboot_required ? ' - reboot required' : '');
+                    simRefresh();
+                }
+            }).catch(function () { $id('sim_result').textContent = 'request failed'; });
+    }
+    $id('button-sim-apply').addEventListener('click', function (e) { e.preventDefault(); simApply(false); });
+    $id('button-sim-applyreboot').addEventListener('click', function (e) {
+        e.preventDefault();
+        if (confirm('Apply simulation settings and reboot?')) simApply(true);
+    });
+    simRefresh();
 </script>
