@@ -11,3 +11,6 @@ software/NRG_itho_wifi/sdkconfig.release
 # Local Claude Code config: agent definitions and local settings contain
 # machine-specific absolute paths — keep them out of the repo.
 .claude/
+
+# Node modules for the web-UI build tooling (terser)
+node_modules/
