@@ -192,6 +192,7 @@ private:
 	// SPI helper functions
 	void select(void);
 	void deselect(void);
+	void waitMisoReady(void);
 
 protected:
 	uint8_t readRegister(uint8_t address);

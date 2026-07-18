@@ -4,6 +4,11 @@
 
 #include "CC1101.h"
 
+#ifndef CC1101_SPI_CLOCK
+#define CC1101_SPI_CLOCK 4000000
+#endif
+static const SPISettings kSpiSettings(CC1101_SPI_CLOCK, MSBFIRST, SPI_MODE0);
+
 // default constructor
 CC1101::CC1101()
 {
@@ -28,6 +33,14 @@ inline void CC1101::deselect(void)
   digitalWrite(SS, HIGH);
 }
 
+void CC1101::waitMisoReady(void)
+{
+  uint32_t start = millis();
+  while (digitalRead(MISO) && (millis() - start < 10))
+  {
+  }
+}
+
 void CC1101::init()
 {
   reset();
@@ -35,14 +48,21 @@ void CC1101::init()
 
 void CC1101::reset()
 {
+  // manual reset (datasheet 19.1)
   deselect();
   delayMicroseconds(5);
   select();
   delayMicroseconds(40);
   deselect();
-  delayMicroseconds(10);
+  delayMicroseconds(45);
 
-  writeCommand(CC1101_SRES);
+  // wait for SO low (chip ready), then strobe SRES in the same CS assertion
+  select();
+  waitMisoReady();
+  SPI.beginTransaction(kSpiSettings);
+  SPI.transfer(CC1101_SRES);
+  SPI.endTransaction();
+  deselect();
 }
 
 uint8_t CC1101::writeCommand(uint8_t command)
@@ -51,7 +71,7 @@ uint8_t CC1101::writeCommand(uint8_t command)
 
   select();
 
-  SPI.beginTransaction(SPISettings());
+  SPI.beginTransaction(kSpiSettings);
   result = SPI.transfer(command);
   SPI.endTransaction();
 
@@ -64,7 +84,7 @@ void CC1101::writeRegister(uint8_t address, uint8_t data)
 {
   select();
 
-  SPI.beginTransaction(SPISettings());
+  SPI.beginTransaction(kSpiSettings);
   SPI.transfer(address);
   SPI.transfer(data);
   SPI.endTransaction();
@@ -78,7 +98,7 @@ uint8_t CC1101::readRegister(uint8_t address)
 
   select();
 
-  SPI.beginTransaction(SPISettings());
+  SPI.beginTransaction(kSpiSettings);
   SPI.transfer(address);
   val = SPI.transfer(0);
   SPI.endTransaction();
@@ -161,16 +181,17 @@ uint8_t CC1101::readRegister(uint8_t address, uint8_t registerType)
 
 void CC1101::writeBurstRegister(const uint8_t address, const uint8_t *data, const uint8_t length)
 {
-  uint8_t i;
-
   select();
 
-  SPI.beginTransaction(SPISettings());
+  SPI.beginTransaction(kSpiSettings);
   SPI.transfer(address | CC1101_WRITE_BURST);
-  for (i = 0; i < length; i++)
-  {
+  // block write (data is const, so not in-place)
+#if defined(ESP32) || defined(ESP8266)
+  SPI.writeBytes(data, length);
+#else
+  for (uint8_t i = 0; i < length; i++)
     SPI.transfer(data[i]);
-  }
+#endif
   SPI.endTransaction();
 
   deselect();
@@ -178,17 +199,12 @@ void CC1101::writeBurstRegister(const uint8_t address, const uint8_t *data, cons
 
 void CC1101::readBurstRegister(uint8_t *buffer, const uint8_t address, const uint8_t length)
 {
-  uint8_t i;
-
   select();
 
-  SPI.beginTransaction(SPISettings());
+  SPI.beginTransaction(kSpiSettings);
   SPI.transfer(address | CC1101_READ_BURST);
-
-  for (i = 0; i < length; i++)
-  {
-    buffer[i] = SPI.transfer(0x00);
-  }
+  // block read; MOSI is don't-care during a burst read, so in-place is fine
+  SPI.transfer(buffer, length);
   SPI.endTransaction();
 
   deselect();
