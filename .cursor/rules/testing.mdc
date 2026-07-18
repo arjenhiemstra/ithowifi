@@ -1,0 +1,16 @@
+---
+description: Dual-tier testing requirements — native Unity tests vs live-hardware pytest
+globs: "software/NRG_itho_wifi/test/**/*.cpp,tests/**/*.py"
+alwaysApply: false
+---
+
+# Testing Rules
+
+Two independent tiers — see `.ai/testing-strategy.md` and `docs/adr/ADR-0009-dual-tier-testing-strategy.md`.
+
+- Pure logic (parsing, validation, response building) changed in `main/` → add/extend the matching `software/NRG_itho_wifi/test/test_native_*` suite. These run in CI (`pio test -e native_test`) on every push/PR — keep them passing.
+- Native suites follow an extraction pattern: they reimplement the pure logic from the corresponding `main/` source file locally (with a `mocks/Arduino.h` shim) rather than linking real ESP32 sources. Match this pattern for new suites.
+- Externally observable behavior (REST response, MQTT payload, websocket message) that needs a real device → add a case to `tests/api/` or `tests/mqtt/` (repo root, pytest, `--device`/`ITHO_DEVICE`). These are **not** run in CI — note in the spec that they need manual verification against a bench device before release.
+- New REST/MQTT command surface should get coverage in both tiers where practical: native for validation logic, pytest for the live end-to-end contract.
+
+Task-specific checklist: `.ai/prompts/test-generation.md`.

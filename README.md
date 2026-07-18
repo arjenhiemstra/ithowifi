@@ -78,6 +78,10 @@ More information is available on the wiki and in the manual:
 |Dutch:  |https://github.com/arjenhiemstra/ithowifi/raw/master/handleiding.pdf  |
 |English:  |https://github.com/arjenhiemstra/ithowifi/raw/master/manual.pdf  |
 
+## Developing / contributing:
+
+For firmware architecture, build/test commands, and AI-assisted development guidelines, start at [AGENTS.md](AGENTS.md). Architectural decisions are tracked in [docs/adr/](docs/adr/), and new features/changes should have a spec in [specs/](specs/).
+
 ## Support this project:
 If you like this project and would like to support it, please contribute with code updates, wiki edits, pull requests etc. You could also buy me a coffee as appreciation.
 I will be really thankfull for anything even if it is just a kind comment towards my work, because that helps me a lot.

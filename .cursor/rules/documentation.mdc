@@ -1,0 +1,15 @@
+---
+description: Prevent documentation duplication and drift; require specs/ADRs for significant changes
+globs: "**/*.md"
+alwaysApply: false
+---
+
+# Documentation Rules
+
+- Before writing new documentation, check whether it already exists in `docs/architecture/repository-map.md` or `.ai/*.md`. If it does, link to it — do not restate it in a new file, PR description, or comment block.
+- Every new feature, non-trivial bugfix, refactor, or API change needs a spec first, from `specs/templates/`, placed in `specs/active/` (see `specs/index.md`). Move it to `specs/completed/` once shipped.
+- Architecturally significant changes (task structure, manager shape, device model, REST/MQTT surface, config format, hardware abstraction) additionally need an ADR — check `docs/adr/README.md`'s trigger table, update an existing ADR or create one from `docs/adr/templates/adr-template.md`. Mark superseded ADRs `Superseded (by ADR-YYYY)`, never delete.
+- After implementation, update `docs/architecture/repository-map.md` and `.ai/architecture-summary.md` if they now describe stale behavior — don't leave them silently out of date.
+- Keep `.ai/*.md` files under ~300 lines and `CLAUDE.md` under ~500 lines: tables/bullets over prose, references over duplication.
+
+Full rule set: `.ai/ai-instructions.md`.
