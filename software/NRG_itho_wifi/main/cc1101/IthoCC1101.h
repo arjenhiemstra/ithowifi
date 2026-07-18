@@ -10,7 +10,6 @@
 #include "CC1101.h"
 #include "IthoPacket.h"
 #include "CC1101Packet.h"
-#include "sys_log.h"
 
 #if !defined(MAX_NUM_OF_REMOTES)
 #define MAX_NUM_OF_REMOTES 12
@@ -72,7 +71,7 @@ private:
 
   // receive
   CC1101Packet inMessage[2];
-  volatile uint8_t inMessageIdx{0}; // ISR writes to inMessage[inMessageIdx], task decodes from inMessage[1 - inMessageIdx]
+  volatile uint8_t inMessageIdx{0}; // receivePacket fills inMessage[inMessageIdx], task decodes from inMessage[1 - inMessageIdx]
   IthoPacket inPacket;
 
   // send

@@ -377,9 +377,12 @@ void IthoCC1101::initReceiveMessage()
 
 bool IthoCC1101::receivePacket()
 {
+  // Runs in task context (TaskCC1101), triggered by the RF ISR's notification —
+  // the FIFO read used to run inside the ISR (up to ~34 ms). The caller is
+  // responsible for serializing radio access against concurrent sends.
   readData(&inMessage[inMessageIdx], MAX_RAW);
   initReceiveMessage();
-  inMessageIdx = 1 - inMessageIdx; // swap buffer so next ISR writes to the other one
+  inMessageIdx = 1 - inMessageIdx; // swap buffer so the next receive uses the other one
 
   return true;
 }
@@ -1282,7 +1285,7 @@ void IthoCC1101::sendRFMessage(RFmessage *message)
   CC1101MessageLen = CC1101Message.length;
   IthoPacketLen = ithoPacket.length;
 
-  // send messages
+  // send messages (caller serializes radio access against receivePacket())
   for (int i = 0; i < sendTries; i++)
   {
 
@@ -2326,7 +2329,6 @@ void IthoCC1101::handle31D9(IthoPacket *packetPtr)
   }
   else
   {
-    D_LOG("RFI: deviceId not found");
     return;
   }
 
@@ -2372,7 +2374,6 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
   }
   else
   {
-    D_LOG("RFI: deviceId not found");
     return;
   }
 

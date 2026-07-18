@@ -32,36 +32,46 @@ Ticker rf_message;
 Ticker bindInitiatorTimeout;
 
 volatile bool ithoCheck = false;
-SemaphoreHandle_t isrSemaphore = NULL;
+
+// Serializes all radio (SPI) access — the task's receivePacket() vs any send —
+// so a send from a web/MQTT task can't collide with a receive on TaskCC1101,
+// nor two sends with each other. A binary semaphore (not a mutex) is used so the
+// unbalanced enableRF_ISR() at init is a harmless give on an already-available
+// semaphore. The CC1101 lib itself stays free of any RTOS dependency; this
+// guard lives entirely in the app around the lib's send/receive entry points.
+SemaphoreHandle_t radioSem = NULL;
 
 IRAM_ATTR void ITHOinterrupt()
 {
-  // Try to take the semaphore
-  if (xSemaphoreTakeFromISR(isrSemaphore, NULL) == pdTRUE)
-  {
-    // ISR code here
-
-    ithoCheck = rfManager.radio.receivePacket();
-
-    // At the end, give back the semaphore
-    xSemaphoreGiveFromISR(isrSemaphore, NULL);
-  }
+  // Just wake TaskCC1101; the FIFO read (receivePacket) now runs in task
+  // context. It used to run here — up to ~34 ms of SPI inside a level-1 ISR.
+  BaseType_t higherPriorityTaskWoken = pdFALSE;
+  if (xTaskCC1101Handle)
+    vTaskNotifyGiveFromISR(xTaskCC1101Handle, &higherPriorityTaskWoken);
+  portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
 
+// disable/enable also acquire/release exclusive radio access: every send is
+// bracketed by disableRF_ISR()/enableRF_ISR(), so the semaphore is held for the
+// whole send and blocks a concurrent receive (and vice versa).
 void disableRF_ISR()
 {
   detachInterrupt(hardwareManager.itho_irq_pin);
+  if (radioSem)
+    xSemaphoreTake(radioSem, portMAX_DELAY);
 }
 
 void enableRF_ISR()
 {
   attachInterrupt(hardwareManager.itho_irq_pin, ITHOinterrupt, RISING);
-  // If GDO is already HIGH, a packet arrived while the ISR was disabled.
-  // The rising edge was missed, so manually trigger a receive.
-  if (digitalRead(hardwareManager.itho_irq_pin) == HIGH)
+  // If GDO is already HIGH, a packet arrived while the ISR was disabled and the
+  // rising edge was missed. Notify the task to read it (in task context).
+  if (digitalRead(hardwareManager.itho_irq_pin) == HIGH && xTaskCC1101Handle)
   {
-    ithoCheck = rfManager.radio.receivePacket();
+    xTaskNotifyGive(xTaskCC1101Handle);
   }
+  if (radioSem)
+    xSemaphoreGive(radioSem);
 }
 
 void RFDebug(IthoPacket *packet)
@@ -292,8 +302,8 @@ void TaskCC1101(void *pvParameters)
   {
     N_LOG("SYS: CC1101 RF module found, chip version: 0x%02X", chipVersion);
 
-    isrSemaphore = xSemaphoreCreateBinary();
-    xSemaphoreGive(isrSemaphore);
+    radioSem = xSemaphoreCreateBinary();
+    xSemaphoreGive(radioSem); // created in the available state
 
     // init the RF module
     rfManager.radio.init();
@@ -819,7 +829,18 @@ void TaskCC1101(void *pvParameters)
         //} //while
       }
       TaskCC1101HWmark = uxTaskGetStackHighWaterMark(NULL);
-      vTaskDelay(25 / portTICK_PERIOD_MS);
+      // Block until the RF ISR notifies that a packet arrived, or a 25 ms tick
+      // to run the periodic work above. On notification, read the FIFO here in
+      // task context (moved out of the ISR); the decode block above processes
+      // it on the next iteration.
+      if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(25)) > 0)
+      {
+        if (radioSem)
+          xSemaphoreTake(radioSem, portMAX_DELAY);
+        ithoCheck = rfManager.radio.receivePacket();
+        if (radioSem)
+          xSemaphoreGive(radioSem);
+      }
     }
   } // if (systemConfig.itho_rf_support)
   else 
