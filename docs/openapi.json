@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "IthoWifi API",
-    "version": "3.0.0-beta1",
+    "version": "3.2.0-beta2",
     "description": "API for controlling Itho ventilation units via the IthoWifi add-on. Supports both URL query parameters (WebAPI) and MQTT JSON commands.",
     "license": {
       "name": "GPL-3.0",
@@ -342,6 +342,57 @@
         ]
       }
     },
+    "/api/v2/ota": {
+      "get": {
+        "summary": "Get firmware version info and OTA update progress",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Trigger firmware OTA update",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtaInstallRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
     "/api/v2/settings": {
       "get": {
         "summary": "Read Itho setting by index",
@@ -397,6 +448,57 @@
           },
           "403": {
             "description": "Settings API disabled"
+          }
+        }
+      }
+    },
+    "/api/v2/simulation": {
+      "get": {
+        "summary": "Get device simulation state (Simulated Device Runtime)",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Configure device simulation (scenario applies live, enable/profile/seed after reboot)",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
           }
         }
       }
@@ -715,6 +817,7 @@
   "components": {
     "schemas": {
       "ApiResponse": {
+        "type": "object",
         "properties": {
           "status": {
             "type": "string",
@@ -736,8 +839,7 @@
             "type": "integer",
             "description": "Unix timestamp"
           }
-        },
-        "type": "object"
+        }
       },
       "MqttCommand": {
         "type": "object",
@@ -993,7 +1095,85 @@
         "properties": {
           "action": {
             "type": "string",
-            "description": "Action (reboot/level0/level1/level2/level3)"
+            "description": "Action name",
+            "enum": [
+              "reboot",
+              "level0",
+              "level1",
+              "level2",
+              "level3"
+            ]
+          }
+        }
+      },
+      "SimulationRequest": {
+        "type": "object",
+        "description": "Configure the Simulated Device Runtime. Scenario changes apply immediately; enable/profile/seed changes take effect after reboot.",
+        "properties": {
+          "enable": {
+            "type": "boolean",
+            "description": "Enable/disable device simulation (reboot required)"
+          },
+          "profile": {
+            "description": "Device profile, by index (0-3) or name",
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "CVE-Silent",
+                  "HRU 350",
+                  "DemandFlow",
+                  "Heatpump"
+                ]
+              }
+            ]
+          },
+          "seed": {
+            "type": "integer",
+            "description": "Deterministic telemetry seed (reboot required)"
+          },
+          "scenario": {
+            "description": "Telemetry scenario, by index (0-4) or name (applies live)",
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "boost",
+                  "fault",
+                  "humidity_spike",
+                  "co2_rise"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "OtaInstallRequest": {
+        "type": "object",
+        "description": "Trigger firmware OTA update",
+        "properties": {
+          "channel": {
+            "type": "string",
+            "description": "Release channel to install (stable or beta)",
+            "enum": [
+              "stable",
+              "beta"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "description": "Firmware URL (alternative to channel; must start with https://github.com/arjenhiemstra/ithowifi/)"
           }
         }
       },

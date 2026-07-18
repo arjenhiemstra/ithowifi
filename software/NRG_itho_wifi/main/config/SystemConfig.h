@@ -65,6 +65,10 @@ public:
   uint8_t itho_rf_co2_join;
   uint8_t itho_control_interface;
   uint8_t itho_rf_standalone;
+  uint8_t sim_active;
+  uint8_t sim_profile;
+  uint32_t sim_seed;
+  uint8_t sim_scenario;
   uint8_t itho_rf_co2_status_req;
   uint8_t itho_rf_co2_keepalive_demand;
   uint8_t itho_rf_co2_keepalive_co2;

@@ -3,6 +3,7 @@
 #include "tasks/task_syscontrol.h"
 #include "../sys_log.h"
 #include "generic_functions.h"
+#include "simulation/SimulatedDevice.h"
 
 #define TASK_SYS_CONTROL_PRIO 6
 // globals
@@ -66,6 +67,16 @@ void TaskSysControl(void *pvParameters)
   syslog.deviceHostname(hostName());
   syslog.server(logConfig.logserver, logConfig.logport);
   syslog.defaultPriority(LOG_KERN);
+
+  // config is loaded before this task starts (TaskConfigAndLog), so the
+  // simulated device can take over the I2C transport before any device I/O
+  if (systemConfig.sim_active == 1 && systemConfig.itho_rf_standalone != 1)
+  {
+    simulatedDevice.begin(systemConfig.sim_profile, systemConfig.sim_seed, systemConfig.sim_scenario, millis());
+    N_LOG("SIM: device simulation active - profile:%s scenario:%s seed:%lu",
+          simulatedDevice.profileName(), simulatedDevice.scenarioName(),
+          static_cast<unsigned long>(simulatedDevice.seed()));
+  }
 
   init_vRemote();
 
