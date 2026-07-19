@@ -1,4 +1,5 @@
 #include "tasks/task_init.h"
+#include "tasks/boot_phases.h"
 
 #define TWDT_TIMEOUT_MS 60000
 
@@ -20,12 +21,11 @@ void TaskInit(void *pvParameters)
     i2cSnifferInit(false);
   }
 
-  startTaskConfigAndLog();
+  setPhase(PHASE_HW);
 
-  while (!TaskInitReady)
-  {
-    yield();
-  }
+  // Boot is complete once TaskWeb comes up (PHASE_WEB). Bounded wait so a stalled
+  // stage is logged instead of spinning forever (replaces while(!TaskInitReady)).
+  waitPhase(PHASE_WEB);
 
 #include "esp_idf_version.h"
 

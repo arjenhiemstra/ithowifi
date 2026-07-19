@@ -1243,6 +1243,7 @@ document.addEventListener('DOMContentLoaded', function () {
           api_normalize: checkedVal('option-api_normalize'),
           api_settings: checkedVal('option-api_settings'),
           api_reboot: checkedVal('option-api_reboot'),
+          fw_check: checkedVal('option-fw_check'),
           api_settings_activated: JSON.parse($val('api_settings_activated')),
           syssht30: checkedVal('option-syssht30'),
           itho_rf_support: checkedVal('option-itho_rf_support'),
@@ -5245,6 +5246,12 @@ var html_systemsettings_start = `
       <label for="option-syssec_edit" class="pure-radio">File editor authentication</label>
       <input id="option-syssec_edit-1" type="radio" name="option-syssec_edit" value="1"> on
       <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="option-fw_check" class="pure-radio"
+        title="Periodically checks GitHub for a newer firmware version. Turn off if the add-on has no internet access, to avoid repeated failed-connection log entries.">Automatic firmware update check</label>
+      <input id="option-fw_check-1" type="radio" name="option-fw_check" value="1"> on
+      <input id="option-fw_check-0" type="radio" name="option-fw_check" value="0"> off
     </div>
     <legend><br>API settings:</legend>
     <p>Have API keys on the WebAPI, MQTT API and Itho status page normalized (all lowercase, no spaces or special

@@ -1,4 +1,5 @@
 #include "tasks/task_mqtt.h"
+#include "tasks/boot_phases.h"
 #include <StreamUtils.h>
 #include <esp_heap_caps.h>
 #include <new>
@@ -41,9 +42,9 @@ void TaskMQTT(void *pvParameters)
 {
   configASSERT((uint32_t)pvParameters == 1UL);
 
-  mqttInit();
+  waitPhase(PHASE_CONFIG | PHASE_NET); // mqttClient binds networkManager.standardClient (NET)
 
-  startTaskWeb();
+  mqttInit();
 
   esp_task_wdt_add(NULL);
 
