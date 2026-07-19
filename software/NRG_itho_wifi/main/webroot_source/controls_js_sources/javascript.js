@@ -1242,6 +1242,7 @@ document.addEventListener('DOMContentLoaded', function () {
           api_normalize: checkedVal('option-api_normalize'),
           api_settings: checkedVal('option-api_settings'),
           api_reboot: checkedVal('option-api_reboot'),
+          fw_check: checkedVal('option-fw_check'),
           api_settings_activated: JSON.parse($val('api_settings_activated')),
           syssht30: checkedVal('option-syssht30'),
           itho_rf_support: checkedVal('option-itho_rf_support'),
