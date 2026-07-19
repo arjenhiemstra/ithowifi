@@ -276,23 +276,19 @@ void TaskCC1101(void *pvParameters)
   // TaskConfigAndLog, so a D_LOG before PHASE_CONFIG dereferences a null handle.
   waitPhase(PHASE_CONFIG); // needs systemConfig/logConfig; loads its own remotes config
 
-  D_LOG("SYS: TaskCC1101 started");
-
   // reading the chip version is a non-blocking way to check CC1101 connectivity.
   // if the version is greater than 0 there has been succesful communication and we can continue with the init of the chip.
   uint8_t chipVersion = rfManager.radio.getChipVersion();
-  if (chipVersion)
-  {
-    N_LOG("SYS: CC1101 RF module found, chip version: 0x%02X", chipVersion);
-  }
-  else
+  if (!chipVersion)
   {
     N_LOG("SYS: no CC1101 RF module found");
     systemConfig.itho_rf_support = 0;
-    systemConfig.rfInitOK = false;
+    systemConfig.rfInitOK = false;    
   }
-  if (systemConfig.itho_rf_support)
+  else if (systemConfig.itho_rf_support)
   {
+    N_LOG("SYS: CC1101 RF module found, chip version: 0x%02X", chipVersion);
+
     isrSemaphore = xSemaphoreCreateBinary();
     xSemaphoreGive(isrSemaphore);
 
@@ -372,7 +368,9 @@ void TaskCC1101(void *pvParameters)
     // uint8_t remIndex10E0{255};
 
     setPhase(PHASE_RF); // RF module initialised (reached only when a CC1101 is present)
-
+    
+    D_LOG("SYS: TaskCC1101 started");
+    
     for (;;)
     {
       yield();
@@ -821,7 +819,10 @@ void TaskCC1101(void *pvParameters)
       vTaskDelay(25 / portTICK_PERIOD_MS);
     }
   } // if (systemConfig.itho_rf_support)
-  // else delete task
+  else 
+  {
+    I_LOG("SYS: CC1101 RF module support disabled");
+  }
   TaskHandle_t xTempTask = xTaskCC1101Handle;
   xTaskCC1101Handle = NULL;
   vTaskDelete(xTempTask);
