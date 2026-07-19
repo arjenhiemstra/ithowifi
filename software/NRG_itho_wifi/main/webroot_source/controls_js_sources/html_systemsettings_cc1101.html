@@ -1,7 +1,7 @@
 <legend><br>Autodetect CC1101 RF module (reboot needed):</legend>
 <p>Activate the CC1101 RF module. If autodetect fails, this setting will be automatically switched off again.</p>
 <div class="pure-control-group">
-  <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
+  <label class="pure-radio" for="option-itho_remotes-1">Itho RF remote support</label>
   <input id="option-itho_remotes-1" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 1)'
     value="1"> on
   <input id="option-itho_remotes-0" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 0)'
@@ -10,18 +10,18 @@
 <legend><br>RF standalone mode (no I2C connection):</legend>
 <p>Enable when the add-on has no I2C connection to the Itho unit (e.g. HRU 400). All I2C functions and virtual remotes are disabled. Control is via RF only.</p>
 <div class="pure-control-group">
-  <label for="option-itho_rf_standalone" class="pure-radio">RF standalone</label>
+  <label class="pure-radio" for="option-itho_rf_standalone-1">RF standalone</label>
   <input id="option-itho_rf_standalone-1" type="radio" name="option-itho_rf_standalone" value="1"> on
   <input id="option-itho_rf_standalone-0" type="radio" name="option-itho_rf_standalone" value="0"> off
 </div>
 <legend><br>RF CO2 control:</legend>
 <div class="pure-control-group">
-  <label for="option-itho_control_interface" class="pure-radio">Control interface</label>
+  <label class="pure-radio" for="option-itho_control_interface-0">Control interface</label>
   <input id="option-itho_control_interface-0" type="radio" name="option-itho_control_interface" value="0" onclick="toggleRfco2PeriodicSection(0)"> Virtual remote (I2C)
   <input id="option-itho_control_interface-1" type="radio" name="option-itho_control_interface" value="1" onclick="toggleRfco2PeriodicSection(1)"> RF CO2 (demand slider)
 </div>
 <div class="pure-control-group">
-  <label for="option-itho_rf_co2_join" class="pure-radio">Send RF CO2 join</label>
+  <label class="pure-radio" for="option-itho_rf_co2_join-1">Send RF CO2 join</label>
   <input id="option-itho_rf_co2_join-1" type="radio" name="option-itho_rf_co2_join" value="1"> next power on
   <input id="option-itho_rf_co2_join-0" type="radio" name="option-itho_rf_co2_join" value="0"> off
 </div>
@@ -32,13 +32,13 @@
     <select id="itho_rf_co2_remote_idx"><option value="0">No RFT CO2 send remote configured</option></select>
   </div>
   <div class="pure-control-group">
-    <label for="option-itho_rf_co2_status_req" class="pure-radio">Periodic 31DA/31D9 status request</label>
+    <label class="pure-radio" for="option-itho_rf_co2_status_req-1">Periodic 31DA/31D9 status request</label>
     <input id="option-itho_rf_co2_status_req-1" type="radio" name="option-itho_rf_co2_status_req" value="1"> on
     <input id="option-itho_rf_co2_status_req-0" type="radio" name="option-itho_rf_co2_status_req" value="0"> off
     <span style="margin-left:1em;font-size:0.9em;color:#666;">Uses the Itho status update frequency interval.</span>
   </div>
   <div class="pure-control-group">
-    <label for="option-itho_rf_co2_keepalive_demand" class="pure-radio">Periodic fan demand keep-alive</label>
+    <label class="pure-radio" for="option-itho_rf_co2_keepalive_demand-1">Periodic fan demand keep-alive</label>
     <input id="option-itho_rf_co2_keepalive_demand-1" type="radio" name="option-itho_rf_co2_keepalive_demand" value="1"> on
     <input id="option-itho_rf_co2_keepalive_demand-0" type="radio" name="option-itho_rf_co2_keepalive_demand" value="0"> off
   </div>
@@ -48,7 +48,7 @@
     <span style="margin-left:1em;font-size:0.9em;color:#666;">Used when no last-known sent value is available.</span>
   </div>
   <div class="pure-control-group">
-    <label for="option-itho_rf_co2_keepalive_co2" class="pure-radio">Periodic CO2 level keep-alive</label>
+    <label class="pure-radio" for="option-itho_rf_co2_keepalive_co2-1">Periodic CO2 level keep-alive</label>
     <input id="option-itho_rf_co2_keepalive_co2-1" type="radio" name="option-itho_rf_co2_keepalive_co2" value="1"> on
     <input id="option-itho_rf_co2_keepalive_co2-0" type="radio" name="option-itho_rf_co2_keepalive_co2" value="0"> off
   </div>

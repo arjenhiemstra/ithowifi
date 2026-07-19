@@ -2501,13 +2501,13 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
             addRemoteButtons(td, remfunc, remtype, i, false);
             if (remfunction == 5 && (remtype == 0x1298 || remtype == 0x6711)) {
               td.insertAdjacentHTML('beforeend', `<br><input type="number" id="co2val-${i}" min="0" max="10000" placeholder="CO2 ppm" style="width:90px;margin-top:4px;"> <button id="button_sendco2-${i}" class="pure-button">Send CO2</button>`);
-              td.insertAdjacentHTML('beforeend', `<br><label style="font-size:0.85em;">Demand: <span id="demandlabel-${i}">0</span>/200</label><input type="range" id="demandval-${i}" min="0" max="200" value="0" style="width:150px;" oninput="$id('demandlabel-'+${i}).textContent=this.value" onchange="websock_send(JSON.stringify({rfdemand:parseInt(this.value),rfremoteindex:${i}}))">`);
+              td.insertAdjacentHTML('beforeend', `<br><span style="font-size:0.85em;">Demand: <span id="demandlabel-${i}">0</span>/200</span><input type="range" id="demandval-${i}" min="0" max="200" value="0" style="width:150px;" oninput="$id('demandlabel-'+${i}).textContent=this.value" onchange="websock_send(JSON.stringify({rfdemand:parseInt(this.value),rfremoteindex:${i}}))">`);
 
             }
             if (remfunction == 5) {
               var curPower = remote["tx_power"] || 192;
               td.insertAdjacentHTML('beforeend',
-                `<br><label style="font-size:0.85em;">TX Power: </label>` +
+                `<br><span style="font-size:0.85em;">TX Power: </span>` +
                 `<select id="txpower-${i}" style="font-size:0.85em;">` +
                 `<option value="3"${curPower==3?' selected':''}>-30 dBm (min)</option>` +
                 `<option value="38"${curPower==38?' selected':''}>-15 dBm</option>` +
@@ -2696,6 +2696,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     includeCheckbox.type = 'checkbox';
     includeCheckbox.checked = false;
     includeCheckbox.dataset.field = 'include';
+    includeCheckbox.id = includeCheckbox.name = 'hadisc-include-' + index;
     var includeTd = document.createElement('td');
     includeTd.appendChild(includeCheckbox);
     row.appendChild(includeTd);
@@ -2713,6 +2714,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     nameInput.value = cleanName;
     nameInput.placeholder = 'Name';
     nameInput.dataset.field = 'name';
+    nameInput.id = nameInput.name = 'hadisc-name-' + index;
     var nameTd = document.createElement('td');
     nameTd.appendChild(nameInput);
     row.appendChild(nameTd);
@@ -2723,6 +2725,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     deviceClassInput.className = 'advanced hidden';
     deviceClassInput.placeholder = 'Device Class';
     deviceClassInput.dataset.field = 'dc';
+    deviceClassInput.id = deviceClassInput.name = 'hadisc-dc-' + index;
     var dcTd = document.createElement('td');
     dcTd.className = 'advanced hidden';
     dcTd.appendChild(deviceClassInput);
@@ -2734,6 +2737,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     stateClassInput.className = 'advanced hidden';
     stateClassInput.placeholder = 'State Class';
     stateClassInput.dataset.field = 'sc';
+    stateClassInput.id = stateClassInput.name = 'hadisc-sc-' + index;
     var scTd = document.createElement('td');
     scTd.className = 'advanced hidden';
     scTd.appendChild(stateClassInput);
@@ -2747,6 +2751,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     valueTemplateInput.value = `{{ value_json['${key}'] }}`;
     valueTemplateInput.dataset.default = `{{ value_json['${key}'] }}`;
     valueTemplateInput.dataset.field = 'vt';
+    valueTemplateInput.id = valueTemplateInput.name = 'hadisc-vt-' + index;
     var vtTd = document.createElement('td');
     vtTd.className = 'advanced hidden';
     vtTd.appendChild(valueTemplateInput);
@@ -2759,6 +2764,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     unitInput.placeholder = 'Unit of Measurement';
     unitInput.value = unitMatch ? unitMatch[1] : '';
     unitInput.dataset.field = 'um';
+    unitInput.id = unitInput.name = 'hadisc-um-' + index;
     var umTd = document.createElement('td');
     umTd.className = 'advanced hidden';
     umTd.appendChild(unitInput);

@@ -2502,13 +2502,13 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
             addRemoteButtons(td, remfunc, remtype, i, false);
             if (remfunction == 5 && (remtype == 0x1298 || remtype == 0x6711)) {
               td.insertAdjacentHTML('beforeend', `<br><input type="number" id="co2val-${i}" min="0" max="10000" placeholder="CO2 ppm" style="width:90px;margin-top:4px;"> <button id="button_sendco2-${i}" class="pure-button">Send CO2</button>`);
-              td.insertAdjacentHTML('beforeend', `<br><label style="font-size:0.85em;">Demand: <span id="demandlabel-${i}">0</span>/200</label><input type="range" id="demandval-${i}" min="0" max="200" value="0" style="width:150px;" oninput="$id('demandlabel-'+${i}).textContent=this.value" onchange="websock_send(JSON.stringify({rfdemand:parseInt(this.value),rfremoteindex:${i}}))">`);
+              td.insertAdjacentHTML('beforeend', `<br><span style="font-size:0.85em;">Demand: <span id="demandlabel-${i}">0</span>/200</span><input type="range" id="demandval-${i}" min="0" max="200" value="0" style="width:150px;" oninput="$id('demandlabel-'+${i}).textContent=this.value" onchange="websock_send(JSON.stringify({rfdemand:parseInt(this.value),rfremoteindex:${i}}))">`);
 
             }
             if (remfunction == 5) {
               var curPower = remote["tx_power"] || 192;
               td.insertAdjacentHTML('beforeend',
-                `<br><label style="font-size:0.85em;">TX Power: </label>` +
+                `<br><span style="font-size:0.85em;">TX Power: </span>` +
                 `<select id="txpower-${i}" style="font-size:0.85em;">` +
                 `<option value="3"${curPower==3?' selected':''}>-30 dBm (min)</option>` +
                 `<option value="38"${curPower==38?' selected':''}>-15 dBm</option>` +
@@ -2697,6 +2697,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     includeCheckbox.type = 'checkbox';
     includeCheckbox.checked = false;
     includeCheckbox.dataset.field = 'include';
+    includeCheckbox.id = includeCheckbox.name = 'hadisc-include-' + index;
     var includeTd = document.createElement('td');
     includeTd.appendChild(includeCheckbox);
     row.appendChild(includeTd);
@@ -2714,6 +2715,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     nameInput.value = cleanName;
     nameInput.placeholder = 'Name';
     nameInput.dataset.field = 'name';
+    nameInput.id = nameInput.name = 'hadisc-name-' + index;
     var nameTd = document.createElement('td');
     nameTd.appendChild(nameInput);
     row.appendChild(nameTd);
@@ -2724,6 +2726,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     deviceClassInput.className = 'advanced hidden';
     deviceClassInput.placeholder = 'Device Class';
     deviceClassInput.dataset.field = 'dc';
+    deviceClassInput.id = deviceClassInput.name = 'hadisc-dc-' + index;
     var dcTd = document.createElement('td');
     dcTd.className = 'advanced hidden';
     dcTd.appendChild(deviceClassInput);
@@ -2735,6 +2738,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     stateClassInput.className = 'advanced hidden';
     stateClassInput.placeholder = 'State Class';
     stateClassInput.dataset.field = 'sc';
+    stateClassInput.id = stateClassInput.name = 'hadisc-sc-' + index;
     var scTd = document.createElement('td');
     scTd.className = 'advanced hidden';
     scTd.appendChild(stateClassInput);
@@ -2748,6 +2752,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     valueTemplateInput.value = `{{ value_json['${key}'] }}`;
     valueTemplateInput.dataset.default = `{{ value_json['${key}'] }}`;
     valueTemplateInput.dataset.field = 'vt';
+    valueTemplateInput.id = valueTemplateInput.name = 'hadisc-vt-' + index;
     var vtTd = document.createElement('td');
     vtTd.className = 'advanced hidden';
     vtTd.appendChild(valueTemplateInput);
@@ -2760,6 +2765,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     unitInput.placeholder = 'Unit of Measurement';
     unitInput.value = unitMatch ? unitMatch[1] : '';
     unitInput.dataset.field = 'um';
+    unitInput.id = unitInput.name = 'hadisc-um-' + index;
     var umTd = document.createElement('td');
     umTd.className = 'advanced hidden';
     umTd.appendChild(unitInput);
@@ -4605,8 +4611,8 @@ var html_wifisetup = `
           <span id="passwd-msg" style="color: red;"></span>
         </div>
         <div class="pure-control-group">
-          <label>Show Password</label>
-          <input type="checkbox" onclick="togglePwd()">
+          <label for="wifi-showpwd">Show Password</label>
+          <input id="wifi-showpwd" type="checkbox" onclick="togglePwd()">
         </div>
         <div class="pure-controls">
           <button id="wifisubmit" class="pure-button pure-button-primary">Save</button>&nbsp;&nbsp;
@@ -4615,7 +4621,7 @@ var html_wifisetup = `
         <div id="rebootscript"></div>
         <br>
         <div class="pure-control-group">
-          <label class="pure-radio">Use DHCP</label>
+          <label class="pure-radio" for="option-dhcp-on">Use DHCP</label>
           <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
           <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off"> off
         </div>
@@ -4813,7 +4819,7 @@ var html_rfstatus = `
       <legend><br>Monitor persistently and publish to API:</legend>
       <p>Enabling monitor will track this device and publish received data on the WebAPI and MQTT API.</p>
       <div class="pure-control-group">
-        <label for="option-rftrack" class="pure-radio">Monitor</label>
+        <label class="pure-radio" for="option-rftrack-on">Monitor</label>
         <input id="option-rftrack-on" type="radio" name="option-rftrack" value="on"> on
         <input id="option-rftrack-off" type="radio" name="option-rftrack" value="off"> off
       </div>
@@ -4928,13 +4934,13 @@ var html_update = `
 <span style="color: #333">Current system firmware:</span>
 <hr style="border-top: 1px solid #eee">
 <div class="pure-control-group">
-  <label>Current firmware version:</label>
-  <label id="firmware_ver">unknown</label>
+  <span>Current firmware version:</span>
+  <span id="firmware_ver">unknown</span>
 </div>
 <br>
 <div class="pure-control-group">
-  <label for="hardware_rev">Hardware revision:</label>
-  <label id="hardware_rev">unknown</label>
+  <span>Hardware revision:</span>
+  <span id="hardware_rev">unknown</span>
 </div>
 <br><br>
 <span style="color: #333">Available firmwares:</span>
@@ -5233,22 +5239,22 @@ var html_systemsettings_start = `
       <span id="password-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
-      <label for="option-syssec_web" class="pure-radio">Web interface authentication</label>
+      <label class="pure-radio" for="option-syssec_web-1">Web interface authentication</label>
       <input id="option-syssec_web-1" type="radio" name="option-syssec_web" value="1"> on
       <input id="option-syssec_web-0" type="radio" name="option-syssec_web" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-syssec_api" class="pure-radio">API authentication</label>
+      <label class="pure-radio" for="option-syssec_api-1">API authentication</label>
       <input id="option-syssec_api-1" type="radio" name="option-syssec_api" value="1"> on
       <input id="option-syssec_api-0" type="radio" name="option-syssec_api" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-syssec_edit" class="pure-radio">File editor authentication</label>
+      <label class="pure-radio" for="option-syssec_edit-1">File editor authentication</label>
       <input id="option-syssec_edit-1" type="radio" name="option-syssec_edit" value="1"> on
       <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-fw_check" class="pure-radio"
+      <label class="pure-radio" for="option-fw_check-1"
         title="Periodically checks GitHub for a newer firmware version. Turn off if the add-on has no internet access, to avoid repeated failed-connection log entries.">Automatic firmware update check</label>
       <input id="option-fw_check-1" type="radio" name="option-fw_check" value="1"> on
       <input id="option-fw_check-0" type="radio" name="option-fw_check" value="0"> off
@@ -5257,18 +5263,18 @@ var html_systemsettings_start = `
     <p>Have API keys on the WebAPI, MQTT API and Itho status page normalized (all lowercase, no spaces or special
       characters).</p>
     <div class="pure-control-group">
-      <label for="option-api_normalize" class="pure-radio">Normalize keys</label>
+      <label class="pure-radio" for="option-api_normalize-1">Normalize keys</label>
       <input id="option-api_normalize-1" type="radio" name="option-api_normalize" value="1"> on
       <input id="option-api_normalize-0" type="radio" name="option-api_normalize" value="0"> off
     </div>
     <p>Enable the WebAPI for updating your device's settings.</p>
     <div class="pure-control-group">
-      <label for="option-api_settings" class="pure-radio">Enable update settings API</label>
+      <label class="pure-radio" for="option-api_settings-1">Enable update settings API</label>
       <input id="option-api_settings-1" type="radio" name="option-api_settings" value="1"> on
       <input id="option-api_settings-0" type="radio" name="option-api_settings" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-api_reboot" class="pure-radio">Enable reboot via API</label>
+      <label class="pure-radio" for="option-api_reboot-1">Enable reboot via API</label>
       <input id="option-api_reboot-1" type="radio" name="option-api_reboot" value="1"> on
       <input id="option-api_reboot-0" type="radio" name="option-api_reboot" value="0"> off
     </div>
@@ -5338,17 +5344,17 @@ var html_systemsettings_start = `
       settings do work as expected.</p>
     <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
     <div class="pure-control-group">
-      <label for="option-vremotejoin" class="pure-radio">Send join command</label>
+      <label class="pure-radio" for="option-vremotejoin-1">Send join command</label>
       <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1"> next power on
       <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-vremotemedium" class="pure-radio">Force medium/auto mode</label>
+      <label class="pure-radio" for="option-vremotemedium-1">Force medium/auto mode</label>
       <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1"> on
       <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-vremoteapi" class="pure-radio">Map API key "command" to virtual remote 0</label>
+      <label class="pure-radio" for="option-vremoteapi-1">Map API key "command" to virtual remote 0</label>
       <input id="option-vremoteapi-1" type="radio" name="option-itho_vremoteapi" value="1"> on
       <input id="option-vremoteapi-0" type="radio" name="option-itho_vremoteapi" value="0"> off
     </div>
@@ -5359,7 +5365,7 @@ var html_systemsettings_start = `
       humidity changes) and to access an alternative or a retrofitted SHT30 sensor.</p>
     <br>
     <div class="pure-control-group">
-      <label for="option-syssht30" class="pure-radio">Additional sensor support</label>
+      <label class="pure-radio" for="option-syssht30-1">Additional sensor support</label>
       <input id="option-syssht30-1" type="radio" name="option-syssht30" value="1"> on
       <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
     </div>
@@ -5368,27 +5374,27 @@ var html_systemsettings_start = `
       commands. <br>Disabling PWM2I2C will also change the main page user interface to use the Virtual Remote.</p>
     <br>
     <div class="pure-control-group">
-      <label for="option-pwm2i2c" class="pure-radio">CVE fan control (PWM2I2C)</label>
+      <label class="pure-radio" for="option-pwm2i2c-1">CVE fan control (PWM2I2C)</label>
       <input id="option-pwm2i2c-1" type="radio" name="option-itho_pwm2i2c" value="1"> on
       <input id="option-pwm2i2c-0" type="radio" name="option-itho_pwm2i2c" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-31da" class="pure-radio">Ventilation status (31DA)</label>
+      <label class="pure-radio" for="option-31da-1">Ventilation status (31DA)</label>
       <input id="option-31da-1" type="radio" name="option-itho_31da" value="1"> on
       <input id="option-31da-0" type="radio" name="option-itho_31da" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-31d9" class="pure-radio">Fan system status (31D9)</label>
+      <label class="pure-radio" for="option-31d9-1">Fan system status (31D9)</label>
       <input id="option-31d9-1" type="radio" name="option-itho_31d9" value="1"> on
       <input id="option-31d9-0" type="radio" name="option-itho_31d9" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-2401" class="pure-radio">System status (2401)</label>
+      <label class="pure-radio" for="option-2401-1">System status (2401)</label>
       <input id="option-2401-1" type="radio" name="option-itho_2401" value="1"> on
       <input id="option-2401-0" type="radio" name="option-itho_2401" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-4210" class="pure-radio">WPU counters (4210)</label>
+      <label class="pure-radio" for="option-4210-1">WPU counters (4210)</label>
       <input id="option-4210-1" type="radio" name="option-itho_4210" value="1"> on
       <input id="option-4210-0" type="radio" name="option-itho_4210" value="0"> off
     </div>
@@ -5400,7 +5406,7 @@ var html_systemsettings_start = `
       sniffer, reboot needed)
     </p>
     <div class="pure-control-group">
-      <label for="option-i2c_safe_guard" class="pure-radio">I2C safe guard</label>
+      <label class="pure-radio" for="option-i2c_safe_guard-2">I2C safe guard</label>
       <input id="option-i2c_safe_guard-2" type="radio" name="option-i2c_safe_guard" value="2"> auto
       <input id="option-i2c_safe_guard-1" type="radio" name="option-i2c_safe_guard" value="1"> on
       <input id="option-i2c_safe_guard-0" type="radio" name="option-i2c_safe_guard" value="0"> off
@@ -5591,12 +5597,12 @@ var html_mqttsetup = `
 <form class="pure-form pure-form-aligned">
   <fieldset>
     <div class="pure-control-group">
-      <label>MQTT Status</label>
+      <label for="mqtt_conn">MQTT Status</label>
       <button id="mqtt_conn" class="pure-button" style="pointer-events:none;">Unknown</button>
     </div>
     <br>
     <div class="pure-control-group">
-      <label for="option-mqtt_active" class="pure-radio">MQTT Active</label>
+      <label class="pure-radio" for="option-mqtt_active-1">MQTT Active</label>
       <input id="option-mqtt_active-1" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 1)'
         value="1"> on
       <input id="option-mqtt_active-0" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 0)'
@@ -5629,7 +5635,7 @@ var html_mqttsetup = `
     </div>
     <br>
     <div class="pure-control-group">
-      <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
+      <label class="pure-radio" for="option-mqtt_ha_active-1">Home Assistant MQTT Discovery</label>
       <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active"
         onchange='radio("mqtt_ha_active", 1)' value="1"> on
       <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active"
@@ -5641,7 +5647,7 @@ var html_mqttsetup = `
     </div>
     <br>
     <div class="pure-control-group">
-      <label for="option-mqtt_domoticz_active" class="pure-radio">Domoticz MQTT</label>
+      <label class="pure-radio" for="option-mqtt_domoticz_active-1">Domoticz MQTT</label>
       <input id="option-mqtt_domoticz_active-1" type="radio" name="option-mqtt_domoticz_active"
         onchange='radio("mqtt_domoticz_active", 1)' value="1"> on
       <input id="option-mqtt_domoticz_active-0" type="radio" name="option-mqtt_domoticz_active"
@@ -5744,7 +5750,7 @@ var html_systemsettings_cc1101 = `
 <legend><br>Autodetect CC1101 RF module (reboot needed):</legend>
 <p>Activate the CC1101 RF module. If autodetect fails, this setting will be automatically switched off again.</p>
 <div class="pure-control-group">
-  <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
+  <label class="pure-radio" for="option-itho_remotes-1">Itho RF remote support</label>
   <input id="option-itho_remotes-1" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 1)'
     value="1"> on
   <input id="option-itho_remotes-0" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 0)'
@@ -5753,18 +5759,18 @@ var html_systemsettings_cc1101 = `
 <legend><br>RF standalone mode (no I2C connection):</legend>
 <p>Enable when the add-on has no I2C connection to the Itho unit (e.g. HRU 400). All I2C functions and virtual remotes are disabled. Control is via RF only.</p>
 <div class="pure-control-group">
-  <label for="option-itho_rf_standalone" class="pure-radio">RF standalone</label>
+  <label class="pure-radio" for="option-itho_rf_standalone-1">RF standalone</label>
   <input id="option-itho_rf_standalone-1" type="radio" name="option-itho_rf_standalone" value="1"> on
   <input id="option-itho_rf_standalone-0" type="radio" name="option-itho_rf_standalone" value="0"> off
 </div>
 <legend><br>RF CO2 control:</legend>
 <div class="pure-control-group">
-  <label for="option-itho_control_interface" class="pure-radio">Control interface</label>
+  <label class="pure-radio" for="option-itho_control_interface-0">Control interface</label>
   <input id="option-itho_control_interface-0" type="radio" name="option-itho_control_interface" value="0" onclick="toggleRfco2PeriodicSection(0)"> Virtual remote (I2C)
   <input id="option-itho_control_interface-1" type="radio" name="option-itho_control_interface" value="1" onclick="toggleRfco2PeriodicSection(1)"> RF CO2 (demand slider)
 </div>
 <div class="pure-control-group">
-  <label for="option-itho_rf_co2_join" class="pure-radio">Send RF CO2 join</label>
+  <label class="pure-radio" for="option-itho_rf_co2_join-1">Send RF CO2 join</label>
   <input id="option-itho_rf_co2_join-1" type="radio" name="option-itho_rf_co2_join" value="1"> next power on
   <input id="option-itho_rf_co2_join-0" type="radio" name="option-itho_rf_co2_join" value="0"> off
 </div>
@@ -5775,13 +5781,13 @@ var html_systemsettings_cc1101 = `
     <select id="itho_rf_co2_remote_idx"><option value="0">No RFT CO2 send remote configured</option></select>
   </div>
   <div class="pure-control-group">
-    <label for="option-itho_rf_co2_status_req" class="pure-radio">Periodic 31DA/31D9 status request</label>
+    <label class="pure-radio" for="option-itho_rf_co2_status_req-1">Periodic 31DA/31D9 status request</label>
     <input id="option-itho_rf_co2_status_req-1" type="radio" name="option-itho_rf_co2_status_req" value="1"> on
     <input id="option-itho_rf_co2_status_req-0" type="radio" name="option-itho_rf_co2_status_req" value="0"> off
     <span style="margin-left:1em;font-size:0.9em;color:#666;">Uses the Itho status update frequency interval.</span>
   </div>
   <div class="pure-control-group">
-    <label for="option-itho_rf_co2_keepalive_demand" class="pure-radio">Periodic fan demand keep-alive</label>
+    <label class="pure-radio" for="option-itho_rf_co2_keepalive_demand-1">Periodic fan demand keep-alive</label>
     <input id="option-itho_rf_co2_keepalive_demand-1" type="radio" name="option-itho_rf_co2_keepalive_demand" value="1"> on
     <input id="option-itho_rf_co2_keepalive_demand-0" type="radio" name="option-itho_rf_co2_keepalive_demand" value="0"> off
   </div>
@@ -5791,7 +5797,7 @@ var html_systemsettings_cc1101 = `
     <span style="margin-left:1em;font-size:0.9em;color:#666;">Used when no last-known sent value is available.</span>
   </div>
   <div class="pure-control-group">
-    <label for="option-itho_rf_co2_keepalive_co2" class="pure-radio">Periodic CO2 level keep-alive</label>
+    <label class="pure-radio" for="option-itho_rf_co2_keepalive_co2-1">Periodic CO2 level keep-alive</label>
     <input id="option-itho_rf_co2_keepalive_co2-1" type="radio" name="option-itho_rf_co2_keepalive_co2" value="1"> on
     <input id="option-itho_rf_co2_keepalive_co2-0" type="radio" name="option-itho_rf_co2_keepalive_co2" value="0"> off
   </div>
@@ -6207,6 +6213,12 @@ var html_wizard = `
   .pure-form-aligned .pure-control-group label {
     width: 15em;
   }
+  .pure-form-aligned .pure-control-group .label-spacer {
+    display: inline-block;
+    width: 15em;
+    margin: 0 1em 0 0;
+    vertical-align: middle;
+  }
 </style>
 
 <ul class="wizard-indicators" id="wizard-indicators">
@@ -6238,8 +6250,8 @@ var html_wizard = `
             <span id="passwd-msg" style="color: red;"></span>
           </div>
           <div class="pure-control-group">
-            <label>Show Password</label>
-            <input type="checkbox"
+            <label for="wiz-showpwd">Show Password</label>
+            <input id="wiz-showpwd" type="checkbox"
               onclick="var x=document.getElementById('passwd');x.type=x.type==='password'?'text':'password';">
           </div>
           <div class="pure-control-group">
@@ -6247,13 +6259,13 @@ var html_wizard = `
             <input id="hostname" type="text">
           </div>
           <div class="pure-control-group">
-            <label>&nbsp;</label>
+            <span class="label-spacer">&nbsp;</span>
             <button id="wiz-wifi-connect" type="button" class="pure-button pure-button-primary">Connect</button>
           </div>
           <details id="wiz-wifi-advanced">
             <summary style="cursor:pointer; margin:1em 0; font-weight:bold;">Advanced network settings</summary>
             <div class="pure-control-group">
-              <label class="pure-radio">Use DHCP</label>
+              <label class="pure-radio" for="option-dhcp-on">Use DHCP</label>
               <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
               <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off">
               off
@@ -6431,22 +6443,22 @@ var html_wizard = `
       <div id="wiz-i2c-section">
       <legend><br>I2C commands:</legend>
       <div class="pure-control-group">
-        <label for="option-pwm2i2c" class="pure-radio">CVE fan control (PWM2I2C)</label>
+        <label class="pure-radio" for="option-pwm2i2c-1">CVE fan control (PWM2I2C)</label>
         <input id="option-pwm2i2c-1" type="radio" name="option-itho_pwm2i2c" value="1"> on
         <input id="option-pwm2i2c-0" type="radio" name="option-itho_pwm2i2c" value="0"> off
       </div>
       <div class="pure-control-group">
-        <label for="option-31da" class="pure-radio">Ventilation status (31DA)</label>
+        <label class="pure-radio" for="option-31da-1">Ventilation status (31DA)</label>
         <input id="option-31da-1" type="radio" name="option-itho_31da" value="1"> on
         <input id="option-31da-0" type="radio" name="option-itho_31da" value="0"> off
       </div>
       <div class="pure-control-group">
-        <label for="option-31d9" class="pure-radio">Fan system status (31D9)</label>
+        <label class="pure-radio" for="option-31d9-1">Fan system status (31D9)</label>
         <input id="option-31d9-1" type="radio" name="option-itho_31d9" value="1"> on
         <input id="option-31d9-0" type="radio" name="option-itho_31d9" value="0"> off
       </div>
       <div class="pure-control-group">
-        <label for="option-4210" class="pure-radio">WPU counters (4210)</label>
+        <label class="pure-radio" for="option-4210-1">WPU counters (4210)</label>
         <input id="option-4210-1" type="radio" name="option-itho_4210" value="1"> on
         <input id="option-4210-0" type="radio" name="option-itho_4210" value="0"> off
       </div>
@@ -6462,12 +6474,12 @@ var html_wizard = `
           <input id="itho_numvrem" type="number" min="0" max="12" size="6">
         </div>
         <div class="pure-control-group">
-          <label for="option-vremotejoin" class="pure-radio">Send join command</label>
+          <label class="pure-radio" for="option-vremotejoin-1">Send join command</label>
           <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1" checked> next power on
           <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
         </div>
         <div class="pure-control-group">
-          <label for="option-vremotemedium" class="pure-radio">Force medium/auto mode</label>
+          <label class="pure-radio" for="option-vremotemedium-1">Force medium/auto mode</label>
           <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1" checked> on
           <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
         </div>
@@ -6595,7 +6607,7 @@ var html_wizard = `
   <form class="pure-form pure-form-aligned">
     <fieldset>
       <div class="pure-control-group">
-        <label for="option-mqtt_active" class="pure-radio">MQTT Active</label>
+        <label class="pure-radio" for="option-mqtt_active-1">MQTT Active</label>
         <input id="option-mqtt_active-1" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 1)'
           value="1"> on
         <input id="option-mqtt_active-0" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 0)'
@@ -6623,13 +6635,13 @@ var html_wizard = `
         <input id="mqtt_base_topic" maxlength="120" type="text">
       </div>
       <div class="pure-control-group">
-        <label>&nbsp;</label>
+        <span class="label-spacer">&nbsp;</span>
         <button id="wiz-mqtt-connect" type="button" class="pure-button pure-button-primary">Connect</button>
         <span id="wiz-mqtt-status" style="margin-left:8px;"></span>
       </div>
       <br>
       <div class="pure-control-group">
-        <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
+        <label class="pure-radio" for="option-mqtt_ha_active-1">Home Assistant MQTT Discovery</label>
         <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active"
           onchange='radio("mqtt_ha_active", 1)' value="1"> on
         <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active"
@@ -6726,7 +6738,7 @@ var html_syslog = `
             </select>
         </div>
         <div class="pure-control-group">
-            <label for="option-esplog_active" class="pure-radio">Include ESP-IDF error log</label>
+            <label class="pure-radio" for="option-esplog_active-1">Include ESP-IDF error log</label>
             <input id="option-esplog_active-1" type="radio" name="option-esplog_active"
                 onchange='radio("esplog_active", 1)' value="1"> on
             <input id="option-esplog_active-0" type="radio" name="option-esplog_active"
@@ -6734,7 +6746,7 @@ var html_syslog = `
         </div>
         <br>
         <div class="pure-control-group">
-            <label for="option-webserial_active" class="pure-radio">Webserial active (reboot needed)</label>
+            <label class="pure-radio" for="option-webserial_active-1">Webserial active (reboot needed)</label>
             <input id="option-webserial_active-1" type="radio" name="option-webserial_active"
                 onchange='radio("webserial_active", 1)' value="1"> on
             <input id="option-webserial_active-0" type="radio" name="option-webserial_active"
@@ -6758,7 +6770,7 @@ var html_syslog = `
         <br>
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">
-            <label for="option-syslog_active" class="pure-radio">Syslog Active</label>
+            <label class="pure-radio" for="option-syslog_active-1">Syslog Active</label>
             <input id="option-syslog_active-1" type="radio" name="option-syslog_active"
                 onchange='radio("syslog_active", 1)' value="1"> on
             <input id="option-syslog_active-0" type="radio" name="option-syslog_active"

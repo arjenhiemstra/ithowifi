@@ -18,8 +18,8 @@
           <span id="passwd-msg" style="color: red;"></span>
         </div>
         <div class="pure-control-group">
-          <label>Show Password</label>
-          <input type="checkbox" onclick="togglePwd()">
+          <label for="wifi-showpwd">Show Password</label>
+          <input id="wifi-showpwd" type="checkbox" onclick="togglePwd()">
         </div>
         <div class="pure-controls">
           <button id="wifisubmit" class="pure-button pure-button-primary">Save</button>&nbsp;&nbsp;
@@ -28,7 +28,7 @@
         <div id="rebootscript"></div>
         <br>
         <div class="pure-control-group">
-          <label class="pure-radio">Use DHCP</label>
+          <label class="pure-radio" for="option-dhcp-on">Use DHCP</label>
           <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
           <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off"> off
         </div>

@@ -23,22 +23,22 @@
       <span id="password-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
-      <label for="option-syssec_web" class="pure-radio">Web interface authentication</label>
+      <label class="pure-radio" for="option-syssec_web-1">Web interface authentication</label>
       <input id="option-syssec_web-1" type="radio" name="option-syssec_web" value="1"> on
       <input id="option-syssec_web-0" type="radio" name="option-syssec_web" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-syssec_api" class="pure-radio">API authentication</label>
+      <label class="pure-radio" for="option-syssec_api-1">API authentication</label>
       <input id="option-syssec_api-1" type="radio" name="option-syssec_api" value="1"> on
       <input id="option-syssec_api-0" type="radio" name="option-syssec_api" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-syssec_edit" class="pure-radio">File editor authentication</label>
+      <label class="pure-radio" for="option-syssec_edit-1">File editor authentication</label>
       <input id="option-syssec_edit-1" type="radio" name="option-syssec_edit" value="1"> on
       <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-fw_check" class="pure-radio"
+      <label class="pure-radio" for="option-fw_check-1"
         title="Periodically checks GitHub for a newer firmware version. Turn off if the add-on has no internet access, to avoid repeated failed-connection log entries.">Automatic firmware update check</label>
       <input id="option-fw_check-1" type="radio" name="option-fw_check" value="1"> on
       <input id="option-fw_check-0" type="radio" name="option-fw_check" value="0"> off
@@ -47,18 +47,18 @@
     <p>Have API keys on the WebAPI, MQTT API and Itho status page normalized (all lowercase, no spaces or special
       characters).</p>
     <div class="pure-control-group">
-      <label for="option-api_normalize" class="pure-radio">Normalize keys</label>
+      <label class="pure-radio" for="option-api_normalize-1">Normalize keys</label>
       <input id="option-api_normalize-1" type="radio" name="option-api_normalize" value="1"> on
       <input id="option-api_normalize-0" type="radio" name="option-api_normalize" value="0"> off
     </div>
     <p>Enable the WebAPI for updating your device's settings.</p>
     <div class="pure-control-group">
-      <label for="option-api_settings" class="pure-radio">Enable update settings API</label>
+      <label class="pure-radio" for="option-api_settings-1">Enable update settings API</label>
       <input id="option-api_settings-1" type="radio" name="option-api_settings" value="1"> on
       <input id="option-api_settings-0" type="radio" name="option-api_settings" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-api_reboot" class="pure-radio">Enable reboot via API</label>
+      <label class="pure-radio" for="option-api_reboot-1">Enable reboot via API</label>
       <input id="option-api_reboot-1" type="radio" name="option-api_reboot" value="1"> on
       <input id="option-api_reboot-0" type="radio" name="option-api_reboot" value="0"> off
     </div>
@@ -128,17 +128,17 @@
       settings do work as expected.</p>
     <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
     <div class="pure-control-group">
-      <label for="option-vremotejoin" class="pure-radio">Send join command</label>
+      <label class="pure-radio" for="option-vremotejoin-1">Send join command</label>
       <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1"> next power on
       <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-vremotemedium" class="pure-radio">Force medium/auto mode</label>
+      <label class="pure-radio" for="option-vremotemedium-1">Force medium/auto mode</label>
       <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1"> on
       <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-vremoteapi" class="pure-radio">Map API key "command" to virtual remote 0</label>
+      <label class="pure-radio" for="option-vremoteapi-1">Map API key "command" to virtual remote 0</label>
       <input id="option-vremoteapi-1" type="radio" name="option-itho_vremoteapi" value="1"> on
       <input id="option-vremoteapi-0" type="radio" name="option-itho_vremoteapi" value="0"> off
     </div>
@@ -149,7 +149,7 @@
       humidity changes) and to access an alternative or a retrofitted SHT30 sensor.</p>
     <br>
     <div class="pure-control-group">
-      <label for="option-syssht30" class="pure-radio">Additional sensor support</label>
+      <label class="pure-radio" for="option-syssht30-1">Additional sensor support</label>
       <input id="option-syssht30-1" type="radio" name="option-syssht30" value="1"> on
       <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
     </div>
@@ -158,27 +158,27 @@
       commands. <br>Disabling PWM2I2C will also change the main page user interface to use the Virtual Remote.</p>
     <br>
     <div class="pure-control-group">
-      <label for="option-pwm2i2c" class="pure-radio">CVE fan control (PWM2I2C)</label>
+      <label class="pure-radio" for="option-pwm2i2c-1">CVE fan control (PWM2I2C)</label>
       <input id="option-pwm2i2c-1" type="radio" name="option-itho_pwm2i2c" value="1"> on
       <input id="option-pwm2i2c-0" type="radio" name="option-itho_pwm2i2c" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-31da" class="pure-radio">Ventilation status (31DA)</label>
+      <label class="pure-radio" for="option-31da-1">Ventilation status (31DA)</label>
       <input id="option-31da-1" type="radio" name="option-itho_31da" value="1"> on
       <input id="option-31da-0" type="radio" name="option-itho_31da" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-31d9" class="pure-radio">Fan system status (31D9)</label>
+      <label class="pure-radio" for="option-31d9-1">Fan system status (31D9)</label>
       <input id="option-31d9-1" type="radio" name="option-itho_31d9" value="1"> on
       <input id="option-31d9-0" type="radio" name="option-itho_31d9" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-2401" class="pure-radio">System status (2401)</label>
+      <label class="pure-radio" for="option-2401-1">System status (2401)</label>
       <input id="option-2401-1" type="radio" name="option-itho_2401" value="1"> on
       <input id="option-2401-0" type="radio" name="option-itho_2401" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-4210" class="pure-radio">WPU counters (4210)</label>
+      <label class="pure-radio" for="option-4210-1">WPU counters (4210)</label>
       <input id="option-4210-1" type="radio" name="option-itho_4210" value="1"> on
       <input id="option-4210-0" type="radio" name="option-itho_4210" value="0"> off
     </div>
@@ -190,7 +190,7 @@
       sniffer, reboot needed)
     </p>
     <div class="pure-control-group">
-      <label for="option-i2c_safe_guard" class="pure-radio">I2C safe guard</label>
+      <label class="pure-radio" for="option-i2c_safe_guard-2">I2C safe guard</label>
       <input id="option-i2c_safe_guard-2" type="radio" name="option-i2c_safe_guard" value="2"> auto
       <input id="option-i2c_safe_guard-1" type="radio" name="option-i2c_safe_guard" value="1"> on
       <input id="option-i2c_safe_guard-0" type="radio" name="option-i2c_safe_guard" value="0"> off

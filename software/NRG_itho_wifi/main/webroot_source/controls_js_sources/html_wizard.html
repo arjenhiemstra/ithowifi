@@ -94,6 +94,12 @@
   .pure-form-aligned .pure-control-group label {
     width: 15em;
   }
+  .pure-form-aligned .pure-control-group .label-spacer {
+    display: inline-block;
+    width: 15em;
+    margin: 0 1em 0 0;
+    vertical-align: middle;
+  }
 </style>
 
 <ul class="wizard-indicators" id="wizard-indicators">
@@ -125,8 +131,8 @@
             <span id="passwd-msg" style="color: red;"></span>
           </div>
           <div class="pure-control-group">
-            <label>Show Password</label>
-            <input type="checkbox"
+            <label for="wiz-showpwd">Show Password</label>
+            <input id="wiz-showpwd" type="checkbox"
               onclick="var x=document.getElementById('passwd');x.type=x.type==='password'?'text':'password';">
           </div>
           <div class="pure-control-group">
@@ -134,13 +140,13 @@
             <input id="hostname" type="text">
           </div>
           <div class="pure-control-group">
-            <label>&nbsp;</label>
+            <span class="label-spacer">&nbsp;</span>
             <button id="wiz-wifi-connect" type="button" class="pure-button pure-button-primary">Connect</button>
           </div>
           <details id="wiz-wifi-advanced">
             <summary style="cursor:pointer; margin:1em 0; font-weight:bold;">Advanced network settings</summary>
             <div class="pure-control-group">
-              <label class="pure-radio">Use DHCP</label>
+              <label class="pure-radio" for="option-dhcp-on">Use DHCP</label>
               <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
               <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off">
               off
@@ -318,22 +324,22 @@
       <div id="wiz-i2c-section">
       <legend><br>I2C commands:</legend>
       <div class="pure-control-group">
-        <label for="option-pwm2i2c" class="pure-radio">CVE fan control (PWM2I2C)</label>
+        <label class="pure-radio" for="option-pwm2i2c-1">CVE fan control (PWM2I2C)</label>
         <input id="option-pwm2i2c-1" type="radio" name="option-itho_pwm2i2c" value="1"> on
         <input id="option-pwm2i2c-0" type="radio" name="option-itho_pwm2i2c" value="0"> off
       </div>
       <div class="pure-control-group">
-        <label for="option-31da" class="pure-radio">Ventilation status (31DA)</label>
+        <label class="pure-radio" for="option-31da-1">Ventilation status (31DA)</label>
         <input id="option-31da-1" type="radio" name="option-itho_31da" value="1"> on
         <input id="option-31da-0" type="radio" name="option-itho_31da" value="0"> off
       </div>
       <div class="pure-control-group">
-        <label for="option-31d9" class="pure-radio">Fan system status (31D9)</label>
+        <label class="pure-radio" for="option-31d9-1">Fan system status (31D9)</label>
         <input id="option-31d9-1" type="radio" name="option-itho_31d9" value="1"> on
         <input id="option-31d9-0" type="radio" name="option-itho_31d9" value="0"> off
       </div>
       <div class="pure-control-group">
-        <label for="option-4210" class="pure-radio">WPU counters (4210)</label>
+        <label class="pure-radio" for="option-4210-1">WPU counters (4210)</label>
         <input id="option-4210-1" type="radio" name="option-itho_4210" value="1"> on
         <input id="option-4210-0" type="radio" name="option-itho_4210" value="0"> off
       </div>
@@ -349,12 +355,12 @@
           <input id="itho_numvrem" type="number" min="0" max="12" size="6">
         </div>
         <div class="pure-control-group">
-          <label for="option-vremotejoin" class="pure-radio">Send join command</label>
+          <label class="pure-radio" for="option-vremotejoin-1">Send join command</label>
           <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1" checked> next power on
           <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
         </div>
         <div class="pure-control-group">
-          <label for="option-vremotemedium" class="pure-radio">Force medium/auto mode</label>
+          <label class="pure-radio" for="option-vremotemedium-1">Force medium/auto mode</label>
           <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1" checked> on
           <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
         </div>
@@ -482,7 +488,7 @@
   <form class="pure-form pure-form-aligned">
     <fieldset>
       <div class="pure-control-group">
-        <label for="option-mqtt_active" class="pure-radio">MQTT Active</label>
+        <label class="pure-radio" for="option-mqtt_active-1">MQTT Active</label>
         <input id="option-mqtt_active-1" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 1)'
           value="1"> on
         <input id="option-mqtt_active-0" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 0)'
@@ -510,13 +516,13 @@
         <input id="mqtt_base_topic" maxlength="120" type="text">
       </div>
       <div class="pure-control-group">
-        <label>&nbsp;</label>
+        <span class="label-spacer">&nbsp;</span>
         <button id="wiz-mqtt-connect" type="button" class="pure-button pure-button-primary">Connect</button>
         <span id="wiz-mqtt-status" style="margin-left:8px;"></span>
       </div>
       <br>
       <div class="pure-control-group">
-        <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
+        <label class="pure-radio" for="option-mqtt_ha_active-1">Home Assistant MQTT Discovery</label>
         <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active"
           onchange='radio("mqtt_ha_active", 1)' value="1"> on
         <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active"
