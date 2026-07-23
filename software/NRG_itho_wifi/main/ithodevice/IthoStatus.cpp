@@ -780,7 +780,7 @@ void sendQuery31D9(bool updateweb)
   ithoInternalMeasurements.push_back(sTemp);
 
   int status = 0;
-  if (i2cbuf[0 + dataStart] == 0x80)
+  if (i2cbuf[0 + dataStart] & 0x80)
   {
     status = 1; // fault
   }
@@ -789,7 +789,7 @@ void sendQuery31D9(bool updateweb)
     status = 0; // no fault
   }
   ithoInternalMeasurements.push_back({labels31D9[1], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
-  if (i2cbuf[0 + dataStart] == 0x40)
+  if (i2cbuf[0 + dataStart] & 0x40)
   {
     status = 1; // frost cycle active
   }
@@ -798,7 +798,7 @@ void sendQuery31D9(bool updateweb)
     status = 0; // frost cycle not active
   }
   ithoInternalMeasurements.push_back({labels31D9[2], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
-  if (i2cbuf[0 + dataStart] == 0x20)
+  if (i2cbuf[0 + dataStart] & 0x20)
   {
     status = 1; // filter dirty
   }
