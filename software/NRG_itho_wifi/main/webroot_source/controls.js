@@ -4769,6 +4769,10 @@ var html_wifisetup = `
           <td>WiFi IP:</td>
           <td><span name="wifiip">unknown</span></td>
         </tr>
+        <tr>
+          <td>WiFi security:</td>
+          <td><span name="wifiauth">unknown</span></td>
+        </tr>
       </tbody>
     </table>
     <br><br><br><br>
