@@ -93,6 +93,27 @@ void jsonWsSend(const char *rootName)
     wifiinfo["wifimac"] = WiFi.macAddress();
     wifiinfo["wificonnstat"] = wifiConfig.wl_status_to_name(WiFi.status());
     wifiinfo["wifiip"] = wifiip;
+    // Negotiated WiFi security of the STA link (confirms WPA2 vs WPA3 in use)
+    {
+      wifi_ap_record_t aprec;
+      const char *authStr = "-";
+      if (WiFi.isConnected() && esp_wifi_sta_get_ap_info(&aprec) == ESP_OK)
+      {
+        switch (aprec.authmode)
+        {
+        case WIFI_AUTH_OPEN: authStr = "Open"; break;
+        case WIFI_AUTH_WEP: authStr = "WEP"; break;
+        case WIFI_AUTH_WPA_PSK: authStr = "WPA-PSK"; break;
+        case WIFI_AUTH_WPA2_PSK: authStr = "WPA2-PSK"; break;
+        case WIFI_AUTH_WPA_WPA2_PSK: authStr = "WPA/WPA2-PSK"; break;
+        case WIFI_AUTH_WPA2_ENTERPRISE: authStr = "WPA2-Enterprise"; break;
+        case WIFI_AUTH_WPA3_PSK: authStr = "WPA3-PSK"; break;
+        case WIFI_AUTH_WPA2_WPA3_PSK: authStr = "WPA2/WPA3-PSK"; break;
+        default: authStr = "Unknown"; break;
+        }
+      }
+      wifiinfo["wifiauth"] = authStr;
+    }
     wifiinfo["apactive"] = wifiModeAP ? "yes" : "no";
     wifiinfo["apremain"] = apremain;
     wifiinfo["apssid"] = apssid;
