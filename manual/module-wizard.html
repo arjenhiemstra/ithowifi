@@ -1,0 +1,269 @@
+<!--
+  Itho WiFi add-on — "Which module do I need?" buying wizard (bilingual NL/EN).
+  Self-contained: paste into a WordPress "Custom HTML" block. Needs JavaScript for the
+  interactive flow; a static fallback table is shown when scripts are disabled.
+
+  Device -> module mapping is based on the README of github.com/arjenhiemstra/ithowifi.
+  Product links are set in the PRODUCT object in the <script> below.
+-->
+<style>
+.itho-wizard{--iw-fg:#24292f;--iw-line:#e1e4e8;--iw-soft:#f6f8fa;--iw-link:#0969da;--iw-ok:#1a7f37;
+  color:var(--iw-fg);line-height:1.6;max-width:720px;margin:0 auto;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+.itho-wizard *{box-sizing:border-box;}
+.itho-wizard .iw-bar{display:flex;justify-content:flex-end;gap:.4rem;margin-bottom:1rem;}
+.itho-wizard .iw-langs button{cursor:pointer;padding:.3em .85em;border:1px solid #d0d7de;background:#fff;
+  border-radius:999px;font-size:.85rem;color:var(--iw-fg);}
+.itho-wizard .iw-langs button.iw-on{background:var(--iw-link);color:#fff;border-color:var(--iw-link);}
+.itho-wizard .iw-card{border:1px solid var(--iw-line);border-radius:12px;padding:1.4rem 1.4rem 1.6rem;background:#fff;}
+.itho-wizard h2{margin:.2em 0 .1em;font-size:1.5rem;line-height:1.25;}
+.itho-wizard .iw-intro{color:#57606a;margin:.2em 0 1.2em;}
+.itho-wizard .iw-q{font-weight:600;margin:0 0 .6em;}
+.itho-wizard select{width:100%;padding:.6em .7em;font-size:1rem;border:1px solid #d0d7de;border-radius:8px;background:#fff;}
+.itho-wizard .iw-choices{display:flex;flex-wrap:wrap;gap:.6rem;}
+.itho-wizard .iw-choices button{cursor:pointer;padding:.6em 1.1em;font-size:1rem;border:1px solid var(--iw-link);
+  background:#fff;color:var(--iw-link);border-radius:8px;}
+.itho-wizard .iw-choices button:hover{background:#eef4fd;}
+.itho-wizard .iw-result{border-left:4px solid var(--iw-ok);background:var(--iw-soft);border-radius:0 8px 8px 0;
+  padding:.8em 1em;margin:.4em 0 1em;}
+.itho-wizard .iw-result h3{margin:.1em 0 .5em;font-size:1.15rem;}
+.itho-wizard .iw-photo{display:flex;flex-wrap:wrap;gap:.8rem;margin:.2em 0 1.1em;}
+.itho-wizard .iw-photo img{max-width:200px;max-height:200px;width:auto;height:auto;border:1px solid var(--iw-line);border-radius:8px;background:#fff;padding:6px;}
+.itho-wizard .iw-needs{list-style:none;margin:.2em 0;padding:0;}
+.itho-wizard .iw-needs li{padding:.25em 0 .25em 1.6em;position:relative;}
+.itho-wizard .iw-needs li::before{content:"\2714";color:var(--iw-ok);position:absolute;left:0;font-weight:700;}
+.itho-wizard .iw-note{font-size:.9rem;color:#57606a;background:#fff;border:1px solid var(--iw-line);
+  border-radius:8px;padding:.6em .8em;margin:.6em 0;}
+.itho-wizard .iw-actions{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem;align-items:center;}
+.itho-wizard .iw-shop{display:inline-block;padding:.6em 1.2em;background:var(--iw-link);color:#fff;
+  border-radius:8px;text-decoration:none;font-weight:600;}
+.itho-wizard .iw-shop:hover{filter:brightness(.95);}
+.itho-wizard .iw-restart{cursor:pointer;background:none;border:none;color:var(--iw-link);font-size:.92rem;padding:.4em;}
+.itho-wizard .iw-fallback{border:1px solid var(--iw-line);border-radius:8px;padding:1em;}
+.itho-wizard table{border-collapse:collapse;width:100%;margin:.5em 0;font-size:.92rem;}
+.itho-wizard th,.itho-wizard td{border:1px solid var(--iw-line);padding:.45em .6em;text-align:left;vertical-align:top;}
+@media print{.itho-wizard .iw-bar,.itho-wizard .iw-actions{display:none;}}
+</style>
+
+<div class="itho-wizard" data-lang="nl">
+  <div class="iw-bar">
+    <div class="iw-langs">
+      <button type="button" data-setlang="nl" class="iw-on">Nederlands</button>
+      <button type="button" data-setlang="en">English</button>
+    </div>
+  </div>
+
+  <div class="iw-card"><div class="iw-app"><!-- rendered by script --></div></div>
+
+  <noscript>
+    <div class="iw-fallback">
+      <p><strong>Welke module past bij jouw Itho? / Which module fits your Itho?</strong></p>
+      <table>
+        <tr><th>Itho</th><th>Module</th></tr>
+        <tr><td>CVE ECO 2 / CVE ECO RFT / CVE-S (ECO, PAK, Optima, CO2) / HRU 150 / HRU 200</td>
+            <td><a href="https://www.nrgwatch.nl/product/itho-cve-rft-wifi-add-on/">CVE Add-on</a></td></tr>
+        <tr><td>HRU ECO-fan / HRU 350 / DemandFlow / QualityFlow / WPU 4G/5G / AutoTemp</td>
+            <td><a href="https://www.nrgwatch.nl/product/itho-non-cve-wifi-module/">non-CVE WiFi module</a> + netwerkkabel</td></tr>
+        <tr><td>HRU 250, HRU 300 P, HRU 300 R</td><td>non-CVE module + CC1101 + adapterbordje &amp; PCI-e splitterkabel + netwerkkabel</td></tr>
+        <tr><td>HRU 300 V / HRU 375 V / HRU 400</td><td>non-CVE module met CC1101 + USB-voedingsadapter + USB-C kabel (RF-standalone)</td></tr>
+      </table>
+      <p>Webshop: <a href="https://www.nrgwatch.nl">https://www.nrgwatch.nl</a></p>
+    </div>
+  </noscript>
+</div>
+
+<script>
+(function(){
+  var root = document.querySelector('.itho-wizard');
+  if(!root) return;
+
+  // ---- shop links ----
+  var SHOP = 'https://www.nrgwatch.nl';
+  var PRODUCT = {
+    cve: 'https://www.nrgwatch.nl/product/itho-cve-rft-wifi-add-on/',
+    noncve: 'https://www.nrgwatch.nl/product/itho-non-cve-wifi-module/'
+  };
+  // Base URL where the device images (from manual/wizard_images/) are uploaded (no trailing slash).
+  var IMG_BASE = 'https://www.nrgwatch.nl/wp-content/uploads';
+
+  var T = {
+    nl: {
+      title:'Welke module heb ik nodig?',
+      intro:'Kies hieronder je Itho-apparaat. We tonen direct welke add-on daarbij past. Het typenummer is vaak te vinden op een sticker op het apparaat.',
+      q1:'Welk Itho-apparaat heb je?',
+      ph:'Kies je apparaat…',
+      qrf:'Wil je ook RF-functies gebruiken? (RF-afstandsbedieningen, of het emuleren van een RFT CO2-sensor)',
+      rfYes:'Ja, RF gebruiken', rfNo:'Nee, alleen bekabeld (I2C)',
+      back:'← Terug', restart:'Opnieuw beginnen',
+      adviceFor:'Ons advies voor', needs:'Je hebt nodig:',
+      shop:'Naar de webshop',
+      cve:'CVE Add-on', noncve:'non-CVE WiFi module',
+      rf:'CC1101 RF-module',
+      adapter:'HRU 250/300 adapterbordje + PCI-e splitterkabel',
+      ethernet:'Netwerkkabel (bijv. CAT6a STP, kort)',
+      usbAdapter:'USB-voedingsadapter', usbCable:'USB-C kabel', enclosure:'Behuizing (optioneel)',
+      groups:{cve:'CVE-units', hru:'HRU', other:'Overige systemen', misc:''},
+      noteCve:'Let op: de CVE add-on stuurt de unit in de stand “gemiddeld”. Staat de Itho op “laag” of “hoog”, dan accepteert hij geen I2C-commando’s (gedrag van Itho zelf). Met een CC1101 RF-module en/of de virtual-remote functie omzeil je dit.',
+      noteGreyLid:'CVE’s met een lichtgrijze kap (in plaats van blauw) hebben al een ingebouwde temperatuur- en vochtsensor.',
+      noteAddSensor:'Deze Itho heeft een blauwe deksel en bevat geen ingebouwde temperatuur- en vochtsensor. Deze is eventueel zelf in te bouwen; zie de beschrijving bij <a href="https://www.nrgwatch.nl/product/hum-temp-sensor-for-itho-cve/" target="_blank" rel="noopener">dit product</a>.',
+      noteRfIncluded:'De CC1101 RF-module is standaard inbegrepen bij de CVE add-on.',
+      noteLongHeaders:'De CVE-S Optima Inside heeft een ingebouwde sensor; bestel de CVE add-on met lange headers, zodat de printen gestapeld kunnen worden. Andere CVE-varianten hebben dit niet nodig.',
+      noteInternalCo2:'De prioriteit van de interne CO2-sensor is door Itho ingesteld en overruled sommige andere inputs, hierdoor zijn de besturingsmogelijkheden iets beperkter dan voor modellen zonder ingebouwde CO2-sensor.',
+      noteAdapter:'Voor de HRU 250/300 zijn het adapterbordje en de PCI-e splitterkabel nodig voor de aansluiting, het uitlezen van de status en het eventueel aanpassen van instellingen.',
+      noteStandalone:'De HRU 400 heeft geen bruikbare I2C-verbinding en wordt volledig via RF (CC1101) aangestuurd (RF-standalone modus). De add-on krijgt daarom stroom via een USB-voedingsadapter en USB-C kabel, niet via een netwerkkabel.',
+      unknownTitle:'Niet zeker welk model?',
+      unknown:'Kijk naar de aansluiting: heeft je Itho een printplaat met een 2×4-pins header, dan past de <strong>CVE Add-on</strong>. Heeft je Itho een COM/Service-poort (RJ45-achtig), dan past de <strong>non-CVE WiFi module</strong> (met netwerkkabel). Twijfel je? Neem contact op via de webshop of bekijk de handleiding.'
+    },
+    en: {
+      title:'Which module do I need?',
+      intro:'Pick your Itho device below and we’ll show which add-on fits. The type number is often on a sticker on the device.',
+      q1:'Which Itho device do you have?',
+      ph:'Choose your device…',
+      qrf:'Do you also want RF features? (RF remotes, or emulating an RFT CO2 sensor)',
+      rfYes:'Yes, use RF', rfNo:'No, wired only (I2C)',
+      back:'← Back', restart:'Start over',
+      adviceFor:'Our recommendation for', needs:'You need:',
+      shop:'Go to the webshop',
+      cve:'CVE Add-on', noncve:'non-CVE WiFi module',
+      rf:'CC1101 RF module',
+      adapter:'HRU 250/300 adapter board + PCI-e splitter cable',
+      ethernet:'Network cable (e.g. CAT6a STP, short)',
+      usbAdapter:'USB power adapter', usbCable:'USB-C cable', enclosure:'Enclosure (optional)',
+      groups:{cve:'CVE units', hru:'HRU', other:'Other systems', misc:''},
+      noteCve:'Note: the CVE add-on drives the unit in “medium” mode. If the Itho is set to “low” or “high” it will not accept I2C commands (Itho’s own behaviour). A CC1101 RF module and/or the virtual-remote function works around this.',
+      noteGreyLid:'CVE units with a light grey lid (instead of blue) already have a built-in temperature and humidity sensor.',
+      noteAddSensor:'This Itho has a blue lid and has no built-in temperature and humidity sensor. You can optionally add one yourself; see the description at <a href="https://www.nrgwatch.nl/product/hum-temp-sensor-for-itho-cve/" target="_blank" rel="noopener">this product</a>.',
+      noteRfIncluded:'The CC1101 RF module is included as standard with the CVE add-on.',
+      noteLongHeaders:'The CVE-S Optima Inside has a built-in sensor; order the CVE add-on with long headers so the boards can be stacked. Other CVE variants do not need this.',
+      noteInternalCo2:'The priority of the internal CO2 sensor is set by Itho and overrides some other inputs, so the control options are slightly more limited than on models without a built-in CO2 sensor.',
+      noteAdapter:'For the HRU 250/300, the adapter board and PCI-e splitter cable are needed for the connection, reading the status and optionally changing settings.',
+      noteStandalone:'The HRU 400 has no usable I2C connection and is controlled entirely via RF (CC1101) — RF standalone mode. The add-on is therefore powered by a USB power adapter and USB-C cable, not by a network cable.',
+      unknownTitle:'Not sure which model?',
+      unknown:'Check the connection: if your Itho has a board with a 2×4-pin header, the <strong>CVE Add-on</strong> fits. If your Itho has a COM/Service port (RJ45-like), the <strong>non-CVE WiFi module</strong> fits (with a network cable). In doubt? Get in touch via the webshop or check the manual.'
+    }
+  };
+
+  // module: 'cve' | 'noncve' | 'unknown'; rf: 'required' | 'optional' | 'none'
+  // standalone (HRU 400): powered via USB, no network cable. non-CVE (non-standalone): network cable.
+  var DEVICES = [
+    {id:'cve_eco2', g:'cve', nl:'CVE ECO 2', en:'CVE ECO 2', module:'cve', rf:'included', addSensor:true, img:'cve.jpg'},
+    {id:'cve_rft', g:'cve', nl:'CVE ECO RFT (SE/SP, HE/HP)', en:'CVE ECO RFT (SE/SP, HE/HP)', module:'cve', rf:'included', addSensor:true, img:'cve.jpg'},
+    {id:'cve_s', g:'cve', nl:'CVE-S (alle varianten behalve Optima Inside)', en:'CVE-S (all variants except Optima Inside)', module:'cve', rf:'included', cveSensor:true, img:'cves.jpg'},
+    {id:'cve_optima_inside', g:'cve', nl:'CVE-S Optima Inside', en:'CVE-S Optima Inside', module:'cve', rf:'included', cveSensor:true, longheaders:true, internalCo2:true, img:'cves.jpg'},
+    {id:'hru150', g:'hru', nl:'HRU 150', en:'HRU 150', module:'cve', rf:'included', img:'hru150.jpg'},
+    {id:'hru200', g:'hru', nl:'HRU 200', en:'HRU 200', module:'cve', rf:'included', img:'hru200.png'},
+    {id:'hru_eco', g:'hru', nl:'HRU ECO-fan', en:'HRU ECO-fan', module:'noncve', rf:'optional', img:'hrueco.jpg'},
+    {id:'hru350', g:'hru', nl:'HRU 350', en:'HRU 350', module:'noncve', rf:'optional', img:'hru350.png'},
+    {id:'hru250_300', g:'hru', nl:'HRU 250, HRU 300 P en HRU 300 R', en:'HRU 250, HRU 300 P and HRU 300 R', module:'noncve', rf:'required', adapter:true, img:'hru250_300_p_r.png'},
+    {id:'hru400', g:'hru', nl:'HRU 300 V / HRU 375 V / HRU 400', en:'HRU 300 V / HRU 375 V / HRU 400', module:'noncve', rf:'required', standalone:true, img:['hru300v.jpg','hru400.png']},
+    {id:'demandflow', g:'other', nl:'DemandFlow / QualityFlow', en:'DemandFlow / QualityFlow', module:'noncve', rf:'optional', img:'demandflow.jpg'},
+    {id:'wpu', g:'other', nl:'WPU 4G / 5G (warmtepomp)', en:'WPU 4G / 5G (heat pump)', module:'noncve', rf:'none', img:['wpu4g.jpg','wpu5g.jpg']},
+    {id:'autotemp', g:'other', nl:'AutoTemp', en:'AutoTemp', module:'noncve', rf:'none', img:'autotemp.jpg'},
+    {id:'unknown', g:'misc', nl:'Weet ik niet / ander model', en:'Not sure / other model', module:'unknown', rf:'none'}
+  ];
+
+  var state = {lang:'nl', deviceId:null, rf:null};
+  function t(){ return T[state.lang]; }
+  function dev(){ return DEVICES.filter(function(d){return d.id===state.deviceId;})[0]; }
+
+  function render(){
+    root.setAttribute('data-lang', state.lang);
+    root.querySelectorAll('.iw-langs button').forEach(function(b){
+      b.classList.toggle('iw-on', b.getAttribute('data-setlang')===state.lang);
+    });
+    var L = t(), app = root.querySelector('.iw-app'), html = '';
+    html += '<h2>'+L.title+'</h2><p class="iw-intro">'+L.intro+'</p>';
+
+    if(!state.deviceId){
+      html += '<p class="iw-q">'+L.q1+'</p><select class="iw-select"><option value="">'+L.ph+'</option>';
+      ['cve','hru','other','misc'].forEach(function(g){
+        var items = DEVICES.filter(function(d){return d.g===g;});
+        if(!items.length) return;
+        var label = L.groups[g];
+        if(label) html += '<optgroup label="'+label+'">';
+        items.forEach(function(d){ html += '<option value="'+d.id+'">'+d[state.lang]+'</option>'; });
+        if(label) html += '</optgroup>';
+      });
+      html += '</select>';
+    } else {
+      var d = dev();
+      html += photoHtml(d);
+      if(d.rf==='optional' && state.rf===null){
+        html += '<p class="iw-q">'+L.qrf+'</p><div class="iw-choices">'+
+          '<button type="button" data-rf="yes">'+L.rfYes+'</button>'+
+          '<button type="button" data-rf="no">'+L.rfNo+'</button></div>'+
+          '<div class="iw-actions"><button type="button" class="iw-restart" data-restart>'+L.back+'</button></div>';
+      } else {
+        html += renderResult(d, L);
+      }
+    }
+    app.innerHTML = html;
+  }
+
+  function photoHtml(d){
+    if(!d.img) return '';
+    var imgs = Array.isArray(d.img) ? d.img : [d.img];
+    var h = '<div class="iw-photo">';
+    imgs.forEach(function(f){ h += '<img src="'+IMG_BASE+'/'+f+'" alt="'+d[state.lang]+'" loading="lazy">'; });
+    return h + '</div>';
+  }
+
+  function renderResult(d, L){
+    var html = '';
+    if(d.module==='unknown'){
+      html += '<div class="iw-result"><h3>'+L.unknownTitle+'</h3><p>'+L.unknown+'</p></div>';
+      html += actions(L, SHOP);
+      return html;
+    }
+    var withRf = (d.rf==='required') || (d.rf==='optional' && state.rf==='yes');
+    var needs = [];
+    needs.push(d.module==='cve' ? L.cve : L.noncve);
+    if(withRf) needs.push(L.rf);
+    if(d.adapter) needs.push(L.adapter);
+    if(d.standalone){ needs.push(L.usbAdapter); needs.push(L.usbCable); }
+    else if(d.module==='noncve'){ needs.push(L.ethernet); }
+    if(d.module==='noncve') needs.push(L.enclosure);
+
+    html += '<div class="iw-result"><h3>'+L.adviceFor+' '+d[state.lang]+'</h3>'+
+            '<p>'+L.needs+'</p><ul class="iw-needs">';
+    needs.forEach(function(n){ html += '<li>'+n+'</li>'; });
+    html += '</ul></div>';
+
+    if(d.standalone) html += '<div class="iw-note">'+L.noteStandalone+'</div>';
+    if(d.adapter) html += '<div class="iw-note">'+L.noteAdapter+'</div>';
+    if(d.module==='cve'){
+      html += '<div class="iw-note">'+L.noteRfIncluded+'</div>';
+      if(d.longheaders) html += '<div class="iw-note">'+L.noteLongHeaders+'</div>';
+      if(d.internalCo2) html += '<div class="iw-note">'+L.noteInternalCo2+'</div>';
+      if(d.cveSensor) html += '<div class="iw-note">'+L.noteGreyLid+'</div>';
+      if(d.addSensor) html += '<div class="iw-note">'+L.noteAddSensor+'</div>';
+    }
+
+    html += actions(L, PRODUCT[d.module] || SHOP);
+    return html;
+  }
+
+  function actions(L, shopUrl){
+    var html = '<div class="iw-actions">';
+    if(shopUrl){
+      html += '<a class="iw-shop" href="'+shopUrl+'" target="_blank" rel="noopener">'+L.shop+'</a>';
+    }
+    html += '<button type="button" class="iw-restart" data-restart>'+L.restart+'</button></div>';
+    return html;
+  }
+
+  root.addEventListener('click', function(e){
+    var lb = e.target.closest('[data-setlang]');
+    if(lb){ state.lang = lb.getAttribute('data-setlang'); render(); return; }
+    var rf = e.target.closest('[data-rf]');
+    if(rf){ state.rf = rf.getAttribute('data-rf'); render(); return; }
+    if(e.target.closest('[data-restart]')){ state.deviceId=null; state.rf=null; render(); return; }
+  });
+  root.addEventListener('change', function(e){
+    var s = e.target.closest('.iw-select');
+    if(s){ state.deviceId = s.value || null; state.rf=null; render(); }
+  });
+
+  render();
+})();
+</script>
