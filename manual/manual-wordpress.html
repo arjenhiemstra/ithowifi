@@ -79,7 +79,7 @@
 <div class="im-body">
 <div class="im-lang-block im-nl-block" lang="nl">
 <nav class="im-menu" aria-label="Inhoud"><ul><li><a href="#nl-start">Start</a></li><li><a href="#nl-voorwoord">Voorwoord</a></li><li><a href="#nl-fysieke-installatie-cve-add-on">Fysieke Installatie CVE Add-on</a></li><li><a href="#nl-fysieke-installatie-non-cve-add-on">Fysieke Installatie non-CVE Add-on</a></li><li><a href="#nl-extra-informatie-voor-de-hru250-en-hru300">Extra informatie voor de HRU250 en HRU300</a></li><li><a href="#nl-add-on-instellen">Add-on Instellen</a></li><li><a href="#nl-gebruik-webinterface-api">Gebruik (Webinterface, API)</a></li><li><a href="#nl-apparaat-specifieke-informatie">Apparaat-specifieke informatie</a></li><li><a href="#nl-temperatuurvochtsensor">Temperatuur/Vochtsensor</a></li><li><a href="#nl-virtual-remote">Virtual Remote</a></li><li><a href="#nl-rf-module">RF-Module</a></li><li><a href="#nl-firmware-bijwerken">Firmware bijwerken</a></li><li><a href="#nl-module-resetten">Module resetten</a></li><li><a href="#nl-hmmm-maar-waar-vind-ik-verdere-informatie">Hmmm, maar…. Waar vind ik verdere informatie?</a></li><li><a href="#nl-hardware-revisies">Hardware revisies</a></li><li><a href="#nl-installatievoorbeeld">Installatievoorbeeld</a></li><li><a href="#nl-node-red-automatiseringsvoorbeeld">Node-RED automatiseringsvoorbeeld</a></li><li><a href="#nl-ondersteunde-afstandsbedieningen">Ondersteunde afstandsbedieningen</a></li></ul></nav>
-<main class="im-content"><section class="im-chapter" id="nl-start"><h1 id="nl-itho-wifi-add-on-gebruikershandleiding">Itho WiFi add-on — Gebruikershandleiding</h1>
+<main class="im-content"><section class="im-chapter" id="nl-start"><h1 id="nl-itho-wifi-add-on-gebruikershandleiding">Itho WiFi add-on: Gebruikershandleiding</h1>
 <p><strong>Versie:</strong> V1.13</p>
 <p><strong>Datum:</strong> 14-06-2026</p>
 <table>
@@ -153,7 +153,7 @@ Zie Installatievoorbeeld, in het rood omcirkeld, waar de 2×4 pin interface zich
 <p>Deze modellen zijn iets beperkter in de bediening via de add-on in vergelijking met andere Itho modellen. Om deze HRU te bedienen moet je gebruik maken van de CC1101 RF module op de add-on. De Virtual Remote optie werkt bij deze HRU modellen niet.</p>
 <p>Om gebruik te maken van de RF module moet deze via de web interface van de add-on geactiveerd worden, dat kan onder het menu &quot;System settings&quot;. Na een reboot komt er een menu item bij genaamd &quot;RF Devices&quot;. Hier kan een RF device geconfigureerd worden. Dit RF device moet vervolgens gekoppeld worden aan de HRU. Volg hiervoor dezelfde procedure als waarmee ook fysieke remotes gekoppeld worden.</p></section><section class="im-chapter" id="nl-add-on-instellen"><h2>Add-on Instellen</h2>
 <p>Hieronder treft je een genummerde lijst met stappen om de basis instellingen van de add-on te maken.</p>
-<h3 id="nl-add-on-instellen-verbinden-met-de-add-on">Add-on instellen — <em>Verbinden met de add-on</em></h3>
+<h3 id="nl-add-on-instellen-verbinden-met-de-add-on">Add-on instellen: <em>Verbinden met de add-on</em></h3>
 <ol>
 <li><p>Na het aansluiten start de add-on automatisch een WiFi access point. De WiFi status led knippert dan 1x per seconde (zie Hardware revisies).</p>
 <p>Let op: zolang de add-on nog geen verbinding heeft met je WiFi-netwerk, blijft het access point actief. Zodra de add-on verbonden is, schakelt het access point na de ingestelde tijd (standaard 15 minuten) automatisch uit. Deze tijd is aan te passen in de instellingen.</p>
@@ -169,25 +169,23 @@ Zie Installatievoorbeeld, in het rood omcirkeld, waar de 2×4 pin interface zich
 Werkt dit niet (bijv. op Android)? Ga dan naar <a href="http://192.168.4.1">http://192.168.4.1</a></p>
 </li>
 </ol>
-<h3 id="nl-add-on-instellen-setup-wizard">Add-on instellen — <em>Setup Wizard</em></h3>
+<h3 id="nl-add-on-instellen-setup-wizard">Add-on instellen: <em>Setup Wizard</em></h3>
 <p>Vanaf firmware versie 3.0 start automatisch een Setup Wizard die je in een aantal stappen door de configuratie leidt:</p>
-<p><strong>Stap 1 — WiFi</strong></p>
-<p>Vul de naam (SSID) en het wachtwoord van je eigen WiFi netwerk in. Optioneel kun je een eigen hostname instellen. Klik op Connect en wacht tot de verbinding bevestigd wordt. Noteer het IP-adres dat getoond wordt — dit heb je nodig om de add-on later te bereiken vanuit je eigen netwerk.</p>
-<p><strong>Stap 2 — Device</strong></p>
+<p><strong>Stap 1: WiFi</strong></p>
+<p>Vul de naam (SSID) en het wachtwoord van je eigen WiFi netwerk in. Optioneel kun je een eigen hostname instellen. Klik op Connect en wacht tot de verbinding bevestigd wordt. Noteer het IP-adres dat getoond wordt: dit heb je nodig om de add-on later te bereiken vanuit je eigen netwerk.</p>
+<p><strong>Stap 2: Device</strong></p>
 <p>De wizard detecteert automatisch welk type Itho apparaat is aangesloten (bijv. CVE-Silent, HRU 350, DemandFlow) en stelt de meest voorkomende standaardinstellingen in. Bij apparaten zonder I2C-verbinding (bijv. HRU 400) wordt de optie aangeboden om RF standalone modus te activeren.</p>
-<p><strong>Stap 3 — RF</strong> (wordt overgeslagen als er geen CC1101 RF module aanwezig is)</p>
+<p><strong>Stap 3: RF</strong> (wordt overgeslagen als er geen CC1101 RF module aanwezig is)</p>
 <p>Hier configureer je de RF-afstandsbedieningen. Je kunt een afstandsbediening koppelen (join) met de Itho apparaat, of deze stap overslaan en later via het menu &quot;RF Devices&quot; instellen.</p>
-<p>Werk je in RF-standalone modus (een apparaat zonder I2C, bijvoorbeeld de HRU 400)? Dan is dit het moment om een geëmuleerde RFT CO2-remote aan de Itho te koppelen — daarmee stuur je het apparaat vervolgens aan en lees je de status uit.</p>
-<p><strong>Stap 4 — MQTT</strong> (optioneel)</p>
+<p>Werk je in RF-standalone modus (een apparaat zonder I2C, bijvoorbeeld de HRU 400)? Dan is dit het moment om een geëmuleerde RFT CO2-remote aan de Itho te koppelen; daarmee stuur je het apparaat vervolgens aan en lees je de status uit.</p>
+<p><strong>Stap 4: MQTT</strong> (optioneel)</p>
 <p>Vul de gegevens van je MQTT server in als je de add-on wilt koppelen aan Home Assistant, Domoticz of een ander domotica platform via MQTT. Schakel eventueel Home Assistant MQTT Auto Discovery in zodat de add-on automatisch als apparaat in Home Assistant verschijnt.</p>
-<p><strong>Stap 5 — HA Discovery</strong> (wordt overgeslagen als MQTT niet is ingeschakeld)</p>
+<p><strong>Stap 5: HA Discovery</strong> (wordt overgeslagen als MQTT niet is ingeschakeld)</p>
 <p>Configureer welke sensoren en statusinformatie via HA Auto Discovery beschikbaar worden gesteld aan Home Assistant.</p>
-<h3 id="nl-add-on-instellen-na-de-wizard">Add-on instellen — <em>Na de wizard</em></h3>
+<h3 id="nl-add-on-instellen-na-de-wizard">Add-on instellen: <em>Na de wizard</em></h3>
 <p>Verbind je telefoon/computer weer met je eigen WiFi netwerk en open de browser op het IP-adres uit de wizard.</p>
 <p>Alle instellingen zijn ook achteraf aan te passen via de web interface. De wizard hoeft niet opnieuw doorlopen te worden.</p></section><section class="im-chapter" id="nl-gebruik-webinterface-api"><h2>Gebruik (Webinterface, API)</h2>
 <p>De Itho unit is nu d.m.v. de web interface (<a href="http://nrg-itho-A1B2.local">http://nrg-itho-A1B2.local</a>, A1B2 vervangen), via MQTT of WebAPI te bedienen.</p>
-<p>Wil je de add-on via MQTT koppelen aan domotica? Dan heb je een MQTT-server (broker) nodig. De web interface en de WebAPI werken overigens ook zonder MQTT. Heb je nog geen MQTT-server, dan vind je via onderstaande link een prima voorbeeld hoe je deze installeert op bijvoorbeeld een Raspberry Pi:</p>
-<p><a href="https://randomnerdtutorials.com/how-to-install-mosquitto-broker-on-raspberry-pi/">https://randomnerdtutorials.com/how-to-install-mosquitto-broker-on-raspberry-pi/</a></p>
 <h3 id="nl-itho-bedienen">Itho bedienen</h3>
 <p>Er zijn verschillende mogelijkheden om de Itho te bedienen en de settings aan te passen.</p>
 <p>Voor CVE&#39;s en de HRU 200 zijn er 2 manieren om de snelheid te regelen: remote-commando&#39;s (virtual of RF) en het traploze PWM2I2C-protocol. Voor andere apparaten (bijvoorbeeld de HRU 350) zijn alleen de remote-commando&#39;s (virtual remote en/of RF-remote) beschikbaar. Voor de HRU 250 en HRU 300 werken uitsluitend RF-remote commando&#39;s. Om RF-remote commando&#39;s te versturen moet de CC1101 RF-module aanwezig zijn op de add-on. Virtual-remote commando&#39;s (waarbij de add-on een fysieke remote emuleert) worden via de fysieke I2C-verbinding met de Itho verstuurd.</p>
@@ -195,38 +193,42 @@ Werkt dit niet (bijv. op Android)? Ga dan naar <a href="http://192.168.4.1">http
 <p>Meer details over de verschillende mogelijkheden en de eventuele beperkingen zijn op de wiki te vinden:</p>
 <p><a href="https://github.com/arjenhiemstra/ithowifi/wiki/Controlling-the-speed-of-a-fan">https://github.com/arjenhiemstra/ithowifi/wiki/Controlling-the-speed-of-a-fan</a></p>
 <h3 id="nl-koppeling-met-home-domotica-software">Koppeling met Home Domotica software</h3>
-<p>De add-on kan met andere apparaten en domotica gekoppeld worden via MQTT en de WebAPI. De details hiervan staan in het kopje <em>De API gebruiken</em> hieronder.</p>
-<p>Voor de meest gebruikte platforms zijn er kant-en-klare integraties:</p>
+<p>De add-on kan eenvoudig met domotica software gekoppeld worden. Voor oa. Home Assistant, Homey en HomeBridge kan dit eenvoudig met een plugin of app. Een andere mogelijkheid is integratie met behulp van de REST API en/of MQTT API. De details hiervan staan in het kopje <em>De API gebruiken</em> hieronder.</p>
+<p>Overzicht van domotica platform integraties:</p>
 <ul>
-<li><strong>Home Assistant — MQTT Auto Discovery.</strong> Schakel je MQTT in met Home Assistant MQTT Auto Discovery, dan wordt de add-on automatisch als apparaat in Home Assistant geconfigureerd met een basis configuratie. Deze kan handmatig aangepast en uitgebreid worden.</li>
-<li><strong>Home Assistant — losse integraties.</strong> Er zijn daarnaast twee community-integraties voor Home Assistant:<ul>
-<li><a href="https://github.com/arjenhiemstra/ithowifi-ha-integration">ithowifi-ha-integration</a> — gebruikt de REST API (lokaal, eenvoudig).</li>
-<li><a href="https://github.com/jasperslits/haithowifi">haithowifi</a> — gebruikt de MQTT API (uitgebreider).</li>
+<li><strong>Home Assistant:</strong><ul>
+<li><a href="https://github.com/arjenhiemstra/ithowifi-ha-integration">ithowifi-ha-integration</a>: eenvoudige setup via HACS (REST API)</li>
+<li><a href="https://github.com/jasperslits/haithowifi">haithowifi</a>: uitgebreide community plugin op basis van MQTT API (MQTT broker setup nodig)</li>
+<li>MQTT Auto Discovery: onderdeel van de add-on firmware (MQTT broker setup nodig)</li>
 </ul>
 </li>
-<li><strong>Homey.</strong> De <a href="https://homey.app/en-nl/app/nl.monkeysoft.nrgwatch/Itho-Daalderop/">Itho Daalderop-app</a> in de Homey app store gebruikt de WebAPI (REST); MQTT is daarvoor niet nodig.</li>
-<li><strong>Homebridge (Apple HomeKit).</strong> De community-plugin <a href="https://github.com/SanderBaron/homebridge-itho-daalderop-HUE">Homebridge Itho Daalderop HUE</a> brengt je CVE naar Apple HomeKit. Hij communiceert via de WebAPI of MQTT (MQTT aanbevolen voor directe updates) en biedt optioneel een koppeling met Philips Hue.</li>
-<li><strong>Domoticz en andere platforms.</strong> Koppeling verloopt via MQTT (of de WebAPI).</li>
+<li><strong>Homey:</strong> De <a href="https://homey.app/en-nl/app/nl.monkeysoft.nrgwatch/Itho-Daalderop/">Itho Daalderop-app</a> in de Homey app store (REST API)</li>
+<li><strong>Homebridge (Apple HomeKit):</strong> De community-plugin <a href="https://github.com/SanderBaron/homebridge-itho-daalderop-HUE">Homebridge Itho Daalderop HUE</a> brengt je CVE naar Apple HomeKit. Hij communiceert via de WebAPI of MQTT (MQTT aanbevolen voor directe updates) en biedt optioneel een koppeling met Philips Hue.</li>
+<li><strong>Domoticz en andere platforms:</strong> Koppeling verloopt via REST API en/of MQTT API.</li>
 </ul>
+<p>Documentatie van de API mogelijkheden zijn oa. beschikbaar via de web interface van de add-on.</p>
+<h3 id="nl-mqtt">MQTT</h3>
+<p>Wil je de add-on via MQTT koppelen aan domotica? Dan heb je een MQTT-server (broker) nodig. De web interface en de WebAPI werken overigens ook zonder MQTT. Heb je nog geen MQTT-server, dan vind je via onderstaande link een prima voorbeeld hoe je deze installeert op bijvoorbeeld een Raspberry Pi:</p>
+<p><a href="https://randomnerdtutorials.com/how-to-install-mosquitto-broker-on-raspberry-pi/">https://randomnerdtutorials.com/how-to-install-mosquitto-broker-on-raspberry-pi/</a></p>
 <h3 id="nl-de-api-gebruiken-webapi-en-mqtt">De API gebruiken (WebAPI en MQTT)</h3>
 <p>De add-on heeft twee API&#39;s waarmee je de Itho kunt uitlezen en bedienen, bijvoorbeeld vanuit eigen scripts of domotica: een <strong>WebAPI</strong> (HTTP) en een <strong>MQTT API</strong>. Beide accepteren dezelfde commando&#39;s.</p>
 <p>De volledige en altijd actuele lijst met endpoints en commando&#39;s voor jouw firmwareversie vind je in de web interface onder het menu <strong>API</strong> (interactieve documentatie). De onderliggende OpenAPI-specificatie is ook rechtstreeks op te halen via <code>http://&lt;add-on&gt;/api/openapi.json</code>.</p>
 <p><strong>WebAPI (HTTP)</strong></p>
 <p>Er zijn twee varianten:</p>
 <ul>
-<li><p><strong>REST API (v2)</strong> — een JSON-API onder <code>/api/v2/…</code>. Een greep uit de endpoints:</p>
+<li><p><strong>REST API (v2)</strong>: een JSON-API onder <code>/api/v2/…</code>. Een greep uit de endpoints:</p>
 <ul>
-<li><code>GET /api/v2/deviceinfo</code> — apparaat- en firmware-informatie</li>
-<li><code>GET /api/v2/ithostatus</code> — alle actuele statuswaarden</li>
-<li><code>GET /api/v2/speed</code> en <code>GET /api/v2/lastcmd</code> — huidige snelheid en laatste commando</li>
-<li><code>GET /api/v2/remotes</code>, <code>/api/v2/vremotes</code> en <code>/api/v2/rfstatus</code> — (virtuele) remotes en RF-status</li>
-<li><code>GET</code> en <code>PUT /api/v2/settings</code> — instellingen uitlezen en wijzigen</li>
-<li><code>POST /api/v2/command</code> — een commando sturen (bijvoorbeeld een ventilatiestand)</li>
-<li><code>POST /api/v2/vremote</code> en <code>POST /api/v2/rfremote/command</code>, <code>/co2</code>, <code>/demand</code>, <code>/config</code> — virtual- en RF-remote commando&#39;s</li>
-<li><code>POST /api/v2/wpu/outside_temp</code> en <code>/api/v2/wpu/manual_control</code> — WPU-specifiek</li>
+<li><code>GET /api/v2/deviceinfo</code>: apparaat- en firmware-informatie</li>
+<li><code>GET /api/v2/ithostatus</code>: alle actuele statuswaarden</li>
+<li><code>GET /api/v2/speed</code> en <code>GET /api/v2/lastcmd</code>: huidige snelheid en laatste commando</li>
+<li><code>GET /api/v2/remotes</code>, <code>/api/v2/vremotes</code> en <code>/api/v2/rfstatus</code>: (virtuele) remotes en RF-status</li>
+<li><code>GET</code> en <code>PUT /api/v2/settings</code>: instellingen uitlezen en wijzigen</li>
+<li><code>POST /api/v2/command</code>: een commando sturen (bijvoorbeeld een ventilatiestand)</li>
+<li><code>POST /api/v2/vremote</code> en <code>POST /api/v2/rfremote/command</code>, <code>/co2</code>, <code>/demand</code>, <code>/config</code>: virtual- en RF-remote commando&#39;s</li>
+<li><code>POST /api/v2/wpu/outside_temp</code> en <code>/api/v2/wpu/manual_control</code>: WPU-specifiek</li>
 </ul>
 </li>
-<li><p><strong>Legacy API (v1)</strong> — eenvoudige uitlees-API in query-stijl via <code>/api.html</code>, bijvoorbeeld:</p>
+<li><p><strong>Legacy API (v1)</strong>: eenvoudige uitlees-API in query-stijl via <code>/api.html</code>, bijvoorbeeld:</p>
 <ul>
 <li><code>http://&lt;add-on&gt;/api.html?get=ithostatus</code></li>
 <li><code>http://&lt;add-on&gt;/api.html?get=currentspeed</code> (overige waarden: <code>lastcmd</code>, <code>queue</code>, <code>remotesinfo</code>)</li>
@@ -237,14 +239,14 @@ Werkt dit niet (bijv. op Android)? Ga dan naar <a href="http://192.168.4.1">http
 <p><strong>MQTT API</strong></p>
 <p>Als MQTT is geconfigureerd, gebruikt de add-on onderstaande topics. Het <em>base topic</em> is instelbaar (standaard <code>itho</code>):</p>
 <ul>
-<li><code>itho/cmd</code> — publiceer hier je commando&#39;s naar de add-on (dezelfde set als de WebAPI).</li>
-<li><code>itho/cmd/response</code> — het antwoord van de add-on op een commando.</li>
-<li><code>itho/state</code> — hier publiceert de add-on een JSON met alle statuswaarden.</li>
-<li><code>itho/lwt</code> — de online/offline status van de add-on (Last Will &amp; Testament).</li>
+<li><code>itho/cmd</code>: publiceer hier je commando&#39;s naar de add-on (dezelfde set als de WebAPI).</li>
+<li><code>itho/cmd/response</code>: het antwoord van de add-on op een commando.</li>
+<li><code>itho/state</code>: hier publiceert de add-on een JSON met alle statuswaarden.</li>
+<li><code>itho/lwt</code>: de online/offline status van de add-on (Last Will &amp; Testament).</li>
 </ul>
 <p>Een werkend voorbeeld (Node-RED) dat naar <code>itho/cmd</code> publiceert, staat in het <a href="#nl-node-red-automatiseringsvoorbeeld">Node-RED automatiseringsvoorbeeld</a>.</p></section><section class="im-chapter" id="nl-apparaat-specifieke-informatie"><h2>Apparaat-specifieke informatie</h2>
 <p>De add-on herkent automatisch welk Itho-apparaat is aangesloten en past de beschikbare instellingen en uitleesbare statuswaarden daarop aan. Hieronder staat per apparaat(groep) hoe het wordt aangestuurd, welke informatie de add-on uitleest en waar je op moet letten.</p>
-<p>Naast de hieronder per apparaat beschreven aansturing kan vanaf de add-on bij <strong>elke ventilator (CVE en HRU)</strong> en <strong>DemandFlow</strong> een RFT CO2-remote geëmuleerd worden. Na koppeling met het apparaat kan het daarmee traploos van 0–100% aangestuurd worden, in stapjes van een half procent. Dit werkt zowel bij een I2C-aansluiting als in RF-standalone modus. Alleen bij de CVE&#39;s kan deze RF-communicatie minder betrouwbaar zijn; zie het hoofdstuk <em>CVE-familie</em> hieronder.</p>
+<p>Naast de hieronder per apparaat beschreven aansturing kan vanaf de add-on bij <strong>elke ventilator (CVE en HRU)</strong> en <strong>DemandFlow</strong> een RFT CO2-remote geëmuleerd worden. Na koppeling met het apparaat kan het daarmee traploos van 0-100% aangestuurd worden, in stapjes van een half procent. Dit werkt zowel bij een I2C-aansluiting als in RF-standalone modus. Alleen bij de CVE&#39;s kan deze RF-communicatie minder betrouwbaar zijn; zie het hoofdstuk <em>CVE-familie</em> hieronder.</p>
 <blockquote>
 <p><strong>Let op:</strong> welke statuswaarden en instellingen precies beschikbaar zijn, hangt af van het model én de firmwareversie van het Itho-apparaat. De web interface en de API-pagina tonen altijd de actuele, volledige lijst voor jouw apparaat. De waarden hieronder zijn voorbeelden van wat een apparaat zoal rapporteert.</p>
 </blockquote>
@@ -252,34 +254,34 @@ Werkt dit niet (bijv. op Android)? Ga dan naar <a href="http://192.168.4.1">http
 <p><strong>Modellen:</strong> CVE, CVE-Silent en de HRU 200 (in de web interface herkend als <em>CVE-SilentExtPlus</em>). Ook de CVE ECO2 en CVE-SilentExt worden herkend, maar bieden alleen basisstatus.</p>
 <p><strong>Aansturing:</strong> deze units communiceren via de fysieke I2C-verbinding op de basisprint. De snelheid kan op twee manieren geregeld worden:</p>
 <ul>
-<li><strong>Remote-commando&#39;s</strong> — een <em>virtual remote</em> die de add-on emuleert, of een fysieke/RF-remote (RF vereist de CC1101-module).</li>
-<li><strong>PWM2I2C</strong> — een traploos protocol voor staploze regeling (0–100%). Dit is alleen beschikbaar op de CVE&#39;s en de HRU 200, niet op de andere apparaten.</li>
+<li><strong>Remote-commando&#39;s</strong>: een <em>virtual remote</em> die de add-on emuleert, of een fysieke/RF-remote (RF vereist de CC1101-module).</li>
+<li><strong>PWM2I2C</strong>: een traploos protocol voor staploze regeling (0-100%). Dit is alleen beschikbaar op de CVE&#39;s en de HRU 200, niet op de andere apparaten.</li>
 </ul>
 <p>Standaard staat de add-on in PWM2I2C-modus; de remote-modus kun je instellen via <em>System settings</em>.</p>
 <blockquote>
-<p><strong>Let op (modellen met ingebouwde CO2-sensor):</strong> bij CVE-S Optima Inside-modellen met een ingebouwde CO2-sensor werkt PWM2I2C niet — de PWM2I2C-commando&#39;s worden overruled door de interne CO2-sensor. Gebruik bij deze modellen virtual remote-aansturing.</p>
+<p><strong>Let op (modellen met ingebouwde CO2-sensor):</strong> bij CVE-S Optima Inside-modellen met een ingebouwde CO2-sensor werkt PWM2I2C niet: de PWM2I2C-commando&#39;s worden overruled door de interne CO2-sensor. Gebruik bij deze modellen virtual remote-aansturing.</p>
 </blockquote>
-<p><strong>Wat de add-on uitleest (o.a.):</strong> ventilatieniveau/-setpoint (%), gevraagd en actueel toerental (rpm), gekozen stand, foutcode, opstartteller, bedrijfsuren, <strong>CO2-waarde (ppm)</strong>, klepstand en aanwezigheidstimer. Nieuwere CVE&#39;s hebben een ingebouwde vochtsensor — zie het hoofdstuk <a href="#nl-temperatuurvochtsensor">Temperatuur/Vochtsensor</a>.</p>
+<p><strong>Wat de add-on uitleest (o.a.):</strong> ventilatieniveau/-setpoint (%), gevraagd en actueel toerental (rpm), gekozen stand, foutcode, opstartteller, bedrijfsuren, <strong>CO2-waarde (ppm)</strong>, klepstand en aanwezigheidstimer. Nieuwere CVE&#39;s hebben een ingebouwde vochtsensor; zie het hoofdstuk <a href="#nl-temperatuurvochtsensor">Temperatuur/Vochtsensor</a>.</p>
 <p>De <strong>CVE-Silent</strong> meldt aanvullend onder meer de hoogst gemeten CO2 (ppm) en RH (%), de interne luchtvochtigheid (%) en temperatuur (°C) en afwezigheidstimers. De <strong>HRU 200</strong> heeft de meest uitgebreide set van de familie, met daarnaast onder meer filtergebruik (uren), buiten- en afblaastemperatuur, gemiddelde uitblaastemperatuur, bypassmodus en -stand, en de maximale CO2-/RH-niveaus.</p>
 <blockquote>
 <p><strong>Let op (RF bij CVE&#39;s):</strong> bij de CVE&#39;s zitten de antennes van de add-on en de unit dicht bij elkaar. Dit kan bij RF-aansturing (zoals een geëmuleerde RFT CO2-remote) tot communicatieproblemen leiden. Gebruik bij de CVE&#39;s daarom bij voorkeur de I2C-aansturing (virtual remote of PWM2I2C).</p>
 </blockquote>
 <h3 id="nl-hru-warmteterugwinning-via-i2c-hru-350-hru-eco-fan">HRU warmteterugwinning via I2C (HRU 350, HRU ECO-fan)</h3>
 <p><strong>Modellen:</strong> HRU 350 en HRU ECO-fan.</p>
-<p><strong>Aansturing:</strong> via de I2C-verbinding, met remote-commando&#39;s (virtual remote of RF). Het traploze PWM2I2C-protocol is bij deze modellen <strong>niet</strong> beschikbaar — alleen de remote-standen/commando&#39;s.</p>
+<p><strong>Aansturing:</strong> via de I2C-verbinding, met remote-commando&#39;s (virtual remote of RF). Het traploze PWM2I2C-protocol is bij deze modellen <strong>niet</strong> beschikbaar: alleen de remote-standen/commando&#39;s.</p>
 <p><strong>Wat de add-on uitleest (o.a.):</strong> gevraagde ventilatiestand (%), balans (%), toevoer- en afvoerventilator (zowel gevraagd als actueel toerental), toevoer-, afvoer-, ruimte- en buitentemperatuur (°C), klep- en bypassstand, vorst- en boilertimers, filterteller, globale foutcode, actuele modus, hoogst gemeten CO2 (ppm) en RH (%), luchtkwaliteit (%) en de resterende override-timer. De HRU ECO-fan rapporteert een vergelijkbare set rond toevoer/afvoer, temperaturen, bypass en filtergebruik.</p>
 <blockquote>
 <p><strong>DuoZone:</strong> HRU-units met twee zones (DuoZone) worden herkend; de zonegegevens verschijnen op de RF Status-pagina van de web interface (en via <code>GET /api/v2/rfstatus</code>).</p>
 </blockquote>
 <h3 id="nl-hru-250-hru-300">HRU 250 / HRU 300</h3>
-<p><strong>Aansturing:</strong> deze modellen worden <strong>uitsluitend via RF (CC1101)</strong> aangestuurd en uitgelezen — de Virtual Remote-optie werkt hier niet. Er moet daarvoor een RF-remote vanaf de add-on gekoppeld worden.</p>
+<p><strong>Aansturing:</strong> deze modellen worden <strong>uitsluitend via RF (CC1101)</strong> aangestuurd en uitgelezen; de Virtual Remote-optie werkt hier niet. Er moet daarvoor een RF-remote vanaf de add-on gekoppeld worden.</p>
 <p><strong>Speciale hardware:</strong> een adapterbordje en een PCI-e splitterkabel zijn nodig. De fysieke installatie hiervan staat in het hoofdstuk <a href="#nl-extra-informatie-voor-de-hru250-en-hru300">Extra informatie voor de HRU250 en HRU300</a>. Bij sommige revisies van de HRU 300 kan de unit te weinig stroom leveren; sluit in dat geval een USB-voeding aan op de add-on.</p>
 <p><strong>Wat de add-on uitleest (o.a.):</strong> buiten- en gemengde-luchttemperatuur (°C), toevoer- en afvoerdebiet (m³/h), inlaat-, afvoer- en uitgeblazen-luchttemperatuur (°C), relatieve en absolute ventilatorsnelheid (%), de massflow in- en uitgaand (kg/h), bypassstand (%), gewenste inlaattemperatuur, uitgebreide vorstgegevens, motortoerental (rpm), de hoogst gemeten RH/CO2 en het stroomverbruik van de ventilator (mA).</p>
-<h3 id="nl-apparaten-zonder-i2c-rf-standalone-bijv-hru-400">Apparaten zonder I2C — RF-standalone (bijv. HRU 400)</h3>
+<h3 id="nl-apparaten-zonder-i2c-rf-standalone-bijv-hru-400">Apparaten zonder I2C: RF-standalone (bijv. HRU 400)</h3>
 <p>Sommige units (bijvoorbeeld de HRU 400) hebben geen voor de add-on bruikbare I2C-verbinding. Hiervoor is de <strong>RF-standalone modus</strong>: de add-on slaat I2C volledig over en werkt alleen via RF (CC1101).</p>
 <ul>
 <li><strong>Activeren:</strong> de Setup Wizard biedt dit aan bij apparaten zonder I2C; later kan het ook via <em>System settings</em>.</li>
-<li>Vanaf de add-on kan een RFT CO2-remote geëmuleerd worden. Nadat deze aan de HRU is gekoppeld, kan de HRU hiermee traploos aangestuurd worden van 0–100% in stapjes van een half procent.</li>
+<li>Vanaf de add-on kan een RFT CO2-remote geëmuleerd worden. Nadat deze aan de HRU is gekoppeld, kan de HRU hiermee traploos aangestuurd worden van 0-100% in stapjes van een half procent.</li>
 <li>Met een gekoppelde, geëmuleerde RFT CO2-remote kan periodiek de status (zoals ventilatiestand en temperaturen) opgevraagd worden.</li>
 </ul>
 <p>Voor deze modus is een CC1101 RF-module vereist.</p>
@@ -339,7 +341,7 @@ De meest verkochte afstandsbedieningen van Itho worden ondersteund.</p>
 </ol>
 <p><img src="https://www.nrgwatch.nl/wp-content/uploads/08-rf-remotes-setup-screenshot.png" alt="RF Remotes setup screenshot"></p>
 <p><strong>De add-on als geëmuleerde RF-remote.</strong> De add-on kan zich ook voordoen als een geëmuleerde RF-remote: via de CC1101-module gedraagt de add-on zich draadloos als een Itho-afstandsbediening. Met de <em>Remote function</em> op <strong>Send</strong> verstuurt de add-on draadloos snelheids- en timercommando&#39;s naar de Itho. Dit wordt gebruikt bij apparaten zonder bruikbare I2C-verbinding (zoals de HRU 250, HRU 300 en HRU 400) en om bijvoorbeeld een RFT CO2-sensor te emuleren.</p>
-<p>Voordat een geëmuleerde RF-remote werkt, moet deze eenmalig aan de Itho gekoppeld (joined) worden — net als een fysieke remote. Zet de Itho daarvoor in zijn koppel-/learn-modus (zie handleiding van je Itho) en start het koppelen met de blauwe join-knop bij de betreffende remote op de <strong>RF devices</strong>-pagina. Daarna is de add-on te gebruiken zoals een echte fysieke remote.</p>
+<p>Voordat een geëmuleerde RF-remote werkt, moet deze eenmalig aan de Itho gekoppeld (joined) worden, net als een fysieke remote. Zet de Itho daarvoor in zijn koppel-/learn-modus (zie handleiding van je Itho) en start het koppelen met de blauwe join-knop bij de betreffende remote op de <strong>RF devices</strong>-pagina. Daarna is de add-on te gebruiken zoals een echte fysieke remote.</p>
 <p><strong>Opmerking:</strong> Er is een debug optie om RF-commando&#39;s zichtbaar te maken in de web interface. Stel hiervoor op de <strong>Syslog</strong> pagina, bij <em>RF Debug log level</em>, één van de volgende niveaus in:</p>
 <ul>
 <li><strong>Level 1:</strong> toont alle herkende Itho remote commando&#39;s incl. remote ID</li>
@@ -353,15 +355,15 @@ De meest verkochte afstandsbedieningen van Itho worden ondersteund.</p>
 <ol>
 <li>Open de web interface en ga naar het menu <strong>Update</strong>.</li>
 <li>Kies welke firmware je wilt installeren:<ul>
-<li><strong>Stable</strong> — de aanbevolen, stabiele versie.</li>
-<li><strong>Beta</strong> — de nieuwste testversie met de laatste functies (kan nog fouten bevatten).</li>
+<li><strong>Stable</strong>: de aanbevolen, stabiele versie.</li>
+<li><strong>Beta</strong>: de nieuwste testversie met de laatste functies (kan nog fouten bevatten).</li>
 </ul>
 </li>
 <li>Klik op de knop <strong>Install</strong>.</li>
 <li>De add-on haalt de gekozen firmware automatisch op van GitHub en installeert deze. Volg de voortgang op de pagina; zodra de update klaar is, herstart de add-on automatisch.</li>
 </ol>
 <p>Bij een normale update blijven je instellingen behouden. Alleen een factory reset wist de configuratie (zie <a href="#nl-module-resetten">Module resetten</a>).</p>
-<p><strong>Voortgang in Home Assistant.</strong> Beide Home Assistant-integraties — de REST- en de MQTT-variant — tonen de add-on als <em>update entity</em>; tijdens een update wordt de voortgang als voortgangsbalk getoond.</p>
+<p><strong>Voortgang in Home Assistant.</strong> Beide Home Assistant-integraties, de REST- en de MQTT-variant, tonen de add-on als <em>update entity</em>; tijdens een update wordt de voortgang als voortgangsbalk getoond.</p>
 <p><strong>Zelf een firmwarebestand uploaden.</strong> Lukt het automatisch ophalen niet (bijvoorbeeld zonder internetverbinding), dan kun je op de Update-pagina ook handmatig een <code>.bin</code>-firmwarebestand uploaden. Datzelfde kan via de nood-firmware na een failsafe boot (zie <a href="#nl-module-resetten">Module resetten</a>).</p></section><section class="im-chapter" id="nl-module-resetten"><h2>Module resetten</h2>
 <h3 id="nl-fail-safe-boot-module-factory-reset">Fail safe boot / module factory reset</h3>
 <p>Mocht het onverhoopt voorkomen dat de module door een verkeerde configuratie niet meer bereikbaar is, dan is het mogelijk om de module te booten in fail safe mode. Hierbij wordt het bestandssysteem met configuratie bestanden geformatteerd, en start de module een vereenvoudigde web interface waarmee het mogelijk is om een nieuwe firmware te flashen.</p>
@@ -395,7 +397,7 @@ De link is: <a href="https://gathering.tweakers.net/forum/list_messages/1976492/
 <p>Voor verdere vragen, feedback en code aanpassingen kun je contact opnemen via <a href="mailto:info@nrgwatch.nl">info@nrgwatch.nl</a> of <a href="https://www.github.com/arjenhiemstra/ithowifi">https://www.github.com/arjenhiemstra/ithowifi</a>.</p></section><section class="im-chapter" id="nl-hardware-revisies"><h2>Hardware revisies</h2>
 <p>Afbeeldingen kunnen iets afwijken met het product dat u ontvangen heeft, de werking is echter gelijk.</p>
 <p><strong>Hardware revisie 1:</strong></p>
-<p><img src="https://www.nrgwatch.nl/wp-content/uploads/10-hwrev1-led-locations.png" alt="Hardware revisie 1 — Status LED, Wifi led, Connectie itho print"></p>
+<p><img src="https://www.nrgwatch.nl/wp-content/uploads/10-hwrev1-led-locations.png" alt="Hardware revisie 1: Status LED, Wifi led, Connectie itho print"></p>
 <p><strong>Hardware revisie 2 (nieuwe revisies met fail safe knop):</strong></p>
 <p><img src="https://www.nrgwatch.nl/wp-content/uploads/11-hwrev2-new-failsafe-button.jpg" alt="Hardware revisie 2 met fail safe knop"></p>
 <p><strong>Hardware revisie 2 (oude revisies met failsafe soldeer optie):</strong></p>
@@ -413,7 +415,7 @@ Afhankelijk van de productiedatum van de Itho box, kan de print er iets anders u
 </div>
 <div class="im-lang-block im-en-block" lang="en">
 <nav class="im-menu" aria-label="Contents"><ul><li><a href="#en-start">Home</a></li><li><a href="#en-foreword">Foreword</a></li><li><a href="#en-physical-installation-cve-add-on">Physical Installation CVE Add-on</a></li><li><a href="#en-physical-installation-non-cve-add-on">Physical Installation non-CVE Add-on</a></li><li><a href="#en-additional-information-for-the-hru250-and-hru300">Additional information for the HRU250 and HRU300</a></li><li><a href="#en-configuring-the-add-on">Configuring the Add-on</a></li><li><a href="#en-usage-web-interface-api">Usage (Web interface, API)</a></li><li><a href="#en-device-specific-information">Device-specific information</a></li><li><a href="#en-temperaturehumidity-sensor">Temperature/Humidity sensor</a></li><li><a href="#en-virtual-remote">Virtual Remote</a></li><li><a href="#en-rf-module">RF Module</a></li><li><a href="#en-updating-firmware">Updating firmware</a></li><li><a href="#en-resetting-the-module">Resetting the module</a></li><li><a href="#en-hmmm-where-do-i-find-more-information">Hmmm… where do I find more information?</a></li><li><a href="#en-hardware-revisions">Hardware revisions</a></li><li><a href="#en-installation-example">Installation example</a></li><li><a href="#en-node-red-automation-example">Node-red automation example</a></li><li><a href="#en-supported-remotes">Supported remotes</a></li></ul></nav>
-<main class="im-content"><section class="im-chapter" id="en-start"><h1 id="en-itho-wifi-add-on-user-manual">Itho WiFi add-on — User Manual</h1>
+<main class="im-content"><section class="im-chapter" id="en-start"><h1 id="en-itho-wifi-add-on-user-manual">Itho WiFi add-on: User Manual</h1>
 <p><strong>Version:</strong> V1.13</p>
 <p><strong>Date:</strong> 14-06-2026</p>
 <table>
@@ -440,10 +442,10 @@ Afhankelijk van de productiedatum van de Itho box, kan de print er iets anders u
 <td></td>
 </tr>
 </tbody></table></section><section class="im-chapter" id="en-foreword"><h2>Foreword</h2>
-<p>Thank you for purchasing one (or more) add-on modules — enjoy using it!</p>
+<p>Thank you for purchasing one (or more) add-on modules; enjoy using it!</p>
 <p>An important warning first! Several Itho devices (at least the CVE&#39;s and the HRU200) are not touch-safe when powered, including the low-voltage parts. Therefore, always disconnect power from the device when installing an add-on on the circuit board. This prevents harm to yourself and to your Itho! If needed, operate the buttons on the CVE add-on circuit board only with a non-conductive material.</p>
 <p>This is a concise manual to help you physically install the add-on and connect it to your own WiFi network. Information about further specific installations can be found online.</p>
-<p>This manual, the plug-ins for e.g. Home Assistant and Homey, the wiki and further information online are a community effort — a collection of contributions from users for users. Without these contributions this document, among other things, would not exist. Additions, changes and/or suggestions are highly appreciated!</p>
+<p>This manual, the plug-ins for e.g. Home Assistant and Homey, the wiki and further information online are a community effort: a collection of contributions from users for users. Without these contributions this document, among other things, would not exist. Additions, changes and/or suggestions are highly appreciated!</p>
 <p><strong>Sources where further information can be found:</strong></p>
 <ul>
 <li>Wiki page: <a href="https://github.com/arjenhiemstra/ithowifi/wiki">https://github.com/arjenhiemstra/ithowifi/wiki</a></li>
@@ -455,7 +457,7 @@ Afhankelijk van de productiedatum van de Itho box, kan de print er iets anders u
 <p>Below is a numbered list of steps to complete the installation of the add-on.</p>
 <ol>
 <li>Take the add-on out of the antistatic bag;</li>
-<li>Besides the add-on, you will also find a PCB spacer — set it aside for now.</li>
+<li>Besides the add-on, you will also find a PCB spacer; set it aside for now.</li>
 <li>Now disconnect power from the Itho ventilation unit by pulling the plug from the wall socket;</li>
 <li>To reach the Itho&#39;s main board, remove the cover of the unit. This can be done by releasing the clips on the top and bottom with a flat screwdriver. You now see the housing that contains the main board; it is easily reached by opening the little door, or in case of a black cap it can be removed by combining some sideways pressure with an upward pulling motion. See the manufacturer&#39;s installation &amp; user manual for any other/specific instructions;</li>
 <li>Now place the PCB spacer with the curved / short side into the hole on the Itho main board that matches the hole on the add-on. Using this spacer reduces the chance of soldered joints vibrating loose over time. This step can optionally also be done after testing the add-on;</li>
@@ -487,7 +489,7 @@ See Installation example, circled in red, for where the 2×4 pin interface is lo
 <p>These models are somewhat more limited in control via the add-on compared to other Itho models. To control this HRU you must use the CC1101 RF module on the add-on. The Virtual Remote option does not work on these HRU models.</p>
 <p>To use the RF module it must be activated via the add-on&#39;s web interface, under the &quot;System settings&quot; menu. After a reboot, an additional menu item named &quot;RF Devices&quot; appears. Here an RF device can be configured. This RF device must then be paired with the HRU. Follow the same procedure used to pair physical remotes.</p></section><section class="im-chapter" id="en-configuring-the-add-on"><h2>Configuring the Add-on</h2>
 <p>Below is a numbered list of steps to make the basic settings of the add-on.</p>
-<h3 id="en-configuring-the-add-on-connecting-to-the-add-on">Configuring the add-on — <em>Connecting to the add-on</em></h3>
+<h3 id="en-configuring-the-add-on-connecting-to-the-add-on">Configuring the add-on: <em>Connecting to the add-on</em></h3>
 <ol>
 <li><p>After connecting, the add-on automatically starts a WiFi access point. The WiFi status LED then blinks once per second (see Hardware revisions).</p>
 <p>Note: as long as the add-on is not yet connected to your WiFi network, the access point stays active. Once the add-on is connected, the access point automatically switches off after the configured time (15 minutes by default). This time can be changed in the settings.</p>
@@ -503,25 +505,23 @@ See Installation example, circled in red, for where the 2×4 pin interface is lo
 Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http://192.168.4.1</a></p>
 </li>
 </ol>
-<h3 id="en-configuring-the-add-on-setup-wizard">Configuring the add-on — <em>Setup Wizard</em></h3>
+<h3 id="en-configuring-the-add-on-setup-wizard">Configuring the add-on: <em>Setup Wizard</em></h3>
 <p>From firmware version 3.0 onward, a Setup Wizard automatically starts and guides you through the configuration in a number of steps:</p>
-<p><strong>Step 1 — WiFi</strong></p>
-<p>Enter the name (SSID) and password of your own WiFi network. Optionally you can set a custom hostname. Click Connect and wait until the connection is confirmed. Note the IP address that is shown — you need it to reach the add-on later from your own network.</p>
-<p><strong>Step 2 — Device</strong></p>
+<p><strong>Step 1: WiFi</strong></p>
+<p>Enter the name (SSID) and password of your own WiFi network. Optionally you can set a custom hostname. Click Connect and wait until the connection is confirmed. Note the IP address that is shown: you need it to reach the add-on later from your own network.</p>
+<p><strong>Step 2: Device</strong></p>
 <p>The wizard automatically detects which type of Itho device is connected (e.g. CVE-Silent, HRU 350, DemandFlow) and applies the most common default settings. For devices without an I2C connection (e.g. the HRU 400), the option to activate RF standalone mode is offered.</p>
-<p><strong>Step 3 — RF</strong> (skipped if no CC1101 RF module is present)</p>
+<p><strong>Step 3: RF</strong> (skipped if no CC1101 RF module is present)</p>
 <p>Here you configure the RF remotes. You can pair (join) a remote with the Itho device, or skip this step and set it up later via the &quot;RF Devices&quot; menu.</p>
-<p>Working in RF-standalone mode (a device without I2C, for example the HRU 400)? Then this is the moment to pair an emulated RFT CO2 remote with the Itho — you then use it to control the device and read out its status.</p>
-<p><strong>Step 4 — MQTT</strong> (optional)</p>
+<p>Working in RF-standalone mode (a device without I2C, for example the HRU 400)? Then this is the moment to pair an emulated RFT CO2 remote with the Itho; you then use it to control the device and read out its status.</p>
+<p><strong>Step 4: MQTT</strong> (optional)</p>
 <p>Enter the details of your MQTT server if you want to connect the add-on to Home Assistant, Domoticz or another home automation platform via MQTT. Optionally enable Home Assistant MQTT Auto Discovery so the add-on automatically appears as a device in Home Assistant.</p>
-<p><strong>Step 5 — HA Discovery</strong> (skipped if MQTT is not enabled)</p>
+<p><strong>Step 5: HA Discovery</strong> (skipped if MQTT is not enabled)</p>
 <p>Configure which sensors and status information are made available to Home Assistant via HA Auto Discovery.</p>
-<h3 id="en-configuring-the-add-on-after-the-wizard">Configuring the add-on — <em>After the wizard</em></h3>
+<h3 id="en-configuring-the-add-on-after-the-wizard">Configuring the add-on: <em>After the wizard</em></h3>
 <p>Reconnect your phone/computer to your own WiFi network and open the browser at the IP address from the wizard.</p>
 <p>All settings can also be changed afterwards via the web interface. The wizard does not need to be run again.</p></section><section class="im-chapter" id="en-usage-web-interface-api"><h2>Usage (Web interface, API)</h2>
 <p>The Itho unit can now be controlled via the web interface (<a href="http://nrg-itho-A1B2.local">http://nrg-itho-A1B2.local</a>, replace A1B2), via MQTT or the WebAPI.</p>
-<p>Do you want to connect the add-on to home automation via MQTT? Then you need an MQTT server (broker). Note that the web interface and the WebAPI also work without MQTT. If you don&#39;t have an MQTT server yet, the link below provides a good example of how to install one on, for example, a Raspberry Pi:</p>
-<p><a href="https://randomnerdtutorials.com/how-to-install-mosquitto-broker-on-raspberry-pi/">https://randomnerdtutorials.com/how-to-install-mosquitto-broker-on-raspberry-pi/</a></p>
 <h3 id="en-controlling-the-itho">Controlling the Itho</h3>
 <p>There are several ways to control the Itho and change its settings.</p>
 <p>For CVE&#39;s and the HRU 200 there are 2 ways to control the speed: remote commands (virtual or RF) and the stepless PWM2I2C protocol. For other devices (for example the HRU 350) only the remote commands (virtual remote and/or RF remote) are available. For the HRU 250 and HRU 300 only RF remote commands work. To send RF remote commands the CC1101 RF module must be present on the add-on. Virtual remote commands (where the add-on emulates a physical remote) are sent via the physical I2C connection with the Itho.</p>
@@ -529,38 +529,42 @@ Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http
 <p>More details about the various options and any limitations can be found on the wiki:</p>
 <p><a href="https://github.com/arjenhiemstra/ithowifi/wiki/Controlling-the-speed-of-a-fan">https://github.com/arjenhiemstra/ithowifi/wiki/Controlling-the-speed-of-a-fan</a></p>
 <h3 id="en-connecting-to-home-automation-software">Connecting to home automation software</h3>
-<p>The add-on can be connected to other devices and home automation via MQTT and the WebAPI. The details are described under the <em>Using the API</em> heading below.</p>
-<p>For the most commonly used platforms there are ready-made integrations:</p>
+<p>The add-on can easily be connected to home automation software. For Home Assistant, Homey and Homebridge, among others, this is easy with a plugin or app. Another option is integration using the REST API and/or MQTT API. The details are described under the <em>Using the API</em> heading below.</p>
+<p>Overview of home automation platform integrations:</p>
 <ul>
-<li><strong>Home Assistant — MQTT Auto Discovery.</strong> If you enable MQTT with Home Assistant MQTT Auto Discovery, the add-on is automatically configured as a device in Home Assistant with a basic configuration. This can be adjusted and extended manually.</li>
-<li><strong>Home Assistant — separate integrations.</strong> In addition, there are two community integrations for Home Assistant:<ul>
-<li><a href="https://github.com/arjenhiemstra/ithowifi-ha-integration">ithowifi-ha-integration</a> — uses the REST API (local, basic).</li>
-<li><a href="https://github.com/jasperslits/haithowifi">haithowifi</a> — uses the MQTT API (more extensive).</li>
+<li><strong>Home Assistant:</strong><ul>
+<li><a href="https://github.com/arjenhiemstra/ithowifi-ha-integration">ithowifi-ha-integration</a>: easy setup via HACS (REST API)</li>
+<li><a href="https://github.com/jasperslits/haithowifi">haithowifi</a>: extensive community plugin based on the MQTT API (requires an MQTT broker)</li>
+<li>MQTT Auto Discovery: part of the add-on firmware (requires an MQTT broker)</li>
 </ul>
 </li>
-<li><strong>Homey.</strong> The <a href="https://homey.app/en-nl/app/nl.monkeysoft.nrgwatch/Itho-Daalderop/">Itho Daalderop app</a> in the Homey app store uses the WebAPI (REST); MQTT is not required for it.</li>
-<li><strong>Homebridge (Apple HomeKit).</strong> The community plugin <a href="https://github.com/SanderBaron/homebridge-itho-daalderop-HUE">Homebridge Itho Daalderop HUE</a> brings your CVE to Apple HomeKit. It talks to the add-on via the WebAPI or MQTT (MQTT recommended for instant updates) and optionally integrates with Philips Hue.</li>
-<li><strong>Domoticz and other platforms.</strong> Integration is done via MQTT (or the WebAPI).</li>
+<li><strong>Homey:</strong> The <a href="https://homey.app/en-nl/app/nl.monkeysoft.nrgwatch/Itho-Daalderop/">Itho Daalderop app</a> in the Homey app store (REST API)</li>
+<li><strong>Homebridge (Apple HomeKit):</strong> The community plugin <a href="https://github.com/SanderBaron/homebridge-itho-daalderop-HUE">Homebridge Itho Daalderop HUE</a> brings your CVE to Apple HomeKit. It talks to the add-on via the WebAPI or MQTT (MQTT recommended for instant updates) and optionally integrates with Philips Hue.</li>
+<li><strong>Domoticz and other platforms:</strong> Integration is done via the REST API and/or MQTT API.</li>
 </ul>
+<p>Documentation of the API options is available in the add-on&#39;s web interface, among other places.</p>
+<h3 id="en-mqtt">MQTT</h3>
+<p>Do you want to connect the add-on to home automation via MQTT? Then you need an MQTT server (broker). Note that the web interface and the WebAPI also work without MQTT. If you don&#39;t have an MQTT server yet, the link below provides a good example of how to install one on, for example, a Raspberry Pi:</p>
+<p><a href="https://randomnerdtutorials.com/how-to-install-mosquitto-broker-on-raspberry-pi/">https://randomnerdtutorials.com/how-to-install-mosquitto-broker-on-raspberry-pi/</a></p>
 <h3 id="en-using-the-api-webapi-and-mqtt">Using the API (WebAPI and MQTT)</h3>
 <p>The add-on has two APIs with which you can read out and control the Itho, for example from your own scripts or home automation: a <strong>WebAPI</strong> (HTTP) and an <strong>MQTT API</strong>. Both accept the same commands.</p>
 <p>The complete and always up-to-date list of endpoints and commands for your firmware version is in the web interface under the <strong>API</strong> menu (interactive documentation). The underlying OpenAPI specification can also be retrieved directly via <code>http://&lt;add-on&gt;/api/openapi.json</code>.</p>
 <p><strong>WebAPI (HTTP)</strong></p>
 <p>There are two variants:</p>
 <ul>
-<li><p><strong>REST API (v2)</strong> — a JSON API under <code>/api/v2/…</code>. A selection of the endpoints:</p>
+<li><p><strong>REST API (v2)</strong>: a JSON API under <code>/api/v2/…</code>. A selection of the endpoints:</p>
 <ul>
-<li><code>GET /api/v2/deviceinfo</code> — device and firmware information</li>
-<li><code>GET /api/v2/ithostatus</code> — all current status values</li>
-<li><code>GET /api/v2/speed</code> and <code>GET /api/v2/lastcmd</code> — current speed and last command</li>
-<li><code>GET /api/v2/remotes</code>, <code>/api/v2/vremotes</code> and <code>/api/v2/rfstatus</code> — (virtual) remotes and RF status</li>
-<li><code>GET</code> and <code>PUT /api/v2/settings</code> — read and change settings</li>
-<li><code>POST /api/v2/command</code> — send a command (for example a ventilation level)</li>
-<li><code>POST /api/v2/vremote</code> and <code>POST /api/v2/rfremote/command</code>, <code>/co2</code>, <code>/demand</code>, <code>/config</code> — virtual and RF remote commands</li>
-<li><code>POST /api/v2/wpu/outside_temp</code> and <code>/api/v2/wpu/manual_control</code> — WPU-specific</li>
+<li><code>GET /api/v2/deviceinfo</code>: device and firmware information</li>
+<li><code>GET /api/v2/ithostatus</code>: all current status values</li>
+<li><code>GET /api/v2/speed</code> and <code>GET /api/v2/lastcmd</code>: current speed and last command</li>
+<li><code>GET /api/v2/remotes</code>, <code>/api/v2/vremotes</code> and <code>/api/v2/rfstatus</code>: (virtual) remotes and RF status</li>
+<li><code>GET</code> and <code>PUT /api/v2/settings</code>: read and change settings</li>
+<li><code>POST /api/v2/command</code>: send a command (for example a ventilation level)</li>
+<li><code>POST /api/v2/vremote</code> and <code>POST /api/v2/rfremote/command</code>, <code>/co2</code>, <code>/demand</code>, <code>/config</code>: virtual and RF remote commands</li>
+<li><code>POST /api/v2/wpu/outside_temp</code> and <code>/api/v2/wpu/manual_control</code>: WPU-specific</li>
 </ul>
 </li>
-<li><p><strong>Legacy API (v1)</strong> — a simple read-only API in query style via <code>/api.html</code>, for example:</p>
+<li><p><strong>Legacy API (v1)</strong>: a simple read-only API in query style via <code>/api.html</code>, for example:</p>
 <ul>
 <li><code>http://&lt;add-on&gt;/api.html?get=ithostatus</code></li>
 <li><code>http://&lt;add-on&gt;/api.html?get=currentspeed</code> (other values: <code>lastcmd</code>, <code>queue</code>, <code>remotesinfo</code>)</li>
@@ -571,14 +575,14 @@ Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http
 <p><strong>MQTT API</strong></p>
 <p>If MQTT is configured, the add-on uses the topics below. The <em>base topic</em> is configurable (default <code>itho</code>):</p>
 <ul>
-<li><code>itho/cmd</code> — publish your commands to the add-on here (same set as the WebAPI).</li>
-<li><code>itho/cmd/response</code> — the add-on&#39;s response to a command.</li>
-<li><code>itho/state</code> — the add-on publishes a JSON with all status values here.</li>
-<li><code>itho/lwt</code> — the online/offline status of the add-on (Last Will &amp; Testament).</li>
+<li><code>itho/cmd</code>: publish your commands to the add-on here (same set as the WebAPI).</li>
+<li><code>itho/cmd/response</code>: the add-on&#39;s response to a command.</li>
+<li><code>itho/state</code>: the add-on publishes a JSON with all status values here.</li>
+<li><code>itho/lwt</code>: the online/offline status of the add-on (Last Will &amp; Testament).</li>
 </ul>
 <p>A working example (Node-RED) that publishes to <code>itho/cmd</code> is in the <a href="#en-node-red-automation-example">Node-red automation example</a>.</p></section><section class="im-chapter" id="en-device-specific-information"><h2>Device-specific information</h2>
 <p>The add-on automatically detects which Itho device is connected and adapts the available settings and readable status values accordingly. Below is described, per device (group), how it is controlled, which information the add-on reads out and what to watch out for.</p>
-<p>In addition to the per-device control described below, the add-on can emulate an RFT CO2 remote for <strong>every fan (CVE and HRU)</strong> and for <strong>DemandFlow</strong>. After pairing it with the device, it can be controlled steplessly from 0–100%, in steps of half a percent. This works both with an I2C connection and in RF-standalone mode. Only with the CVE&#39;s can this RF communication be less reliable; see the <em>CVE family</em> section below.</p>
+<p>In addition to the per-device control described below, the add-on can emulate an RFT CO2 remote for <strong>every fan (CVE and HRU)</strong> and for <strong>DemandFlow</strong>. After pairing it with the device, it can be controlled steplessly from 0-100%, in steps of half a percent. This works both with an I2C connection and in RF-standalone mode. Only with the CVE&#39;s can this RF communication be less reliable; see the <em>CVE family</em> section below.</p>
 <blockquote>
 <p><strong>Note:</strong> which status values and settings are exactly available depends on the model and the firmware version of the Itho device. The web interface and the API page always show the current, complete list for your device. The values below are examples of what a device typically reports.</p>
 </blockquote>
@@ -586,34 +590,34 @@ Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http
 <p><strong>Models:</strong> CVE, CVE-Silent and the HRU 200 (recognized in the web interface as <em>CVE-SilentExtPlus</em>). The CVE ECO2 and CVE-SilentExt are also recognized, but only provide basic status.</p>
 <p><strong>Control:</strong> these units communicate via the physical I2C connection on the main board. The speed can be controlled in two ways:</p>
 <ul>
-<li><strong>Remote commands</strong> — a <em>virtual remote</em> emulated by the add-on, or a physical/RF remote (RF requires the CC1101 module).</li>
-<li><strong>PWM2I2C</strong> — a stepless protocol for continuous control (0–100%). This is only available on the CVE&#39;s and the HRU 200, not on the other devices.</li>
+<li><strong>Remote commands</strong>: a <em>virtual remote</em> emulated by the add-on, or a physical/RF remote (RF requires the CC1101 module).</li>
+<li><strong>PWM2I2C</strong>: a stepless protocol for continuous control (0-100%). This is only available on the CVE&#39;s and the HRU 200, not on the other devices.</li>
 </ul>
 <p>By default the add-on is in PWM2I2C mode; the remote mode can be set via <em>System settings</em>.</p>
 <blockquote>
-<p><strong>Note (models with a built-in CO2 sensor):</strong> on CVE-S Optima Inside models with a built-in CO2 sensor, PWM2I2C does not work — the PWM2I2C commands are overruled by the internal CO2 sensor. Use virtual remote control on these models.</p>
+<p><strong>Note (models with a built-in CO2 sensor):</strong> on CVE-S Optima Inside models with a built-in CO2 sensor, PWM2I2C does not work: the PWM2I2C commands are overruled by the internal CO2 sensor. Use virtual remote control on these models.</p>
 </blockquote>
-<p><strong>What the add-on reads out (among others):</strong> ventilation level/setpoint (%), requested and actual speed (rpm), selected mode, error code, startup counter, operating hours, <strong>CO2 value (ppm)</strong>, valve position and presence timer. Newer CVE&#39;s have a built-in humidity sensor — see the <a href="#en-temperaturehumidity-sensor">Temperature/Humidity sensor</a> chapter.</p>
+<p><strong>What the add-on reads out (among others):</strong> ventilation level/setpoint (%), requested and actual speed (rpm), selected mode, error code, startup counter, operating hours, <strong>CO2 value (ppm)</strong>, valve position and presence timer. Newer CVE&#39;s have a built-in humidity sensor; see the <a href="#en-temperaturehumidity-sensor">Temperature/Humidity sensor</a> chapter.</p>
 <p>The <strong>CVE-Silent</strong> additionally reports, among other things, the highest measured CO2 (ppm) and RH (%), the internal humidity (%) and temperature (°C), and absence timers. The <strong>HRU 200</strong> has the most extensive set of the family, additionally including filter usage (hours), outside and exhaust temperature, average outlet temperature, bypass mode and position, and the maximum CO2/RH levels.</p>
 <blockquote>
 <p><strong>Note (RF with CVE&#39;s):</strong> on the CVE&#39;s the antennas of the add-on and the unit are close together. This can cause communication problems with RF control (such as an emulated RFT CO2 remote). On the CVE&#39;s, therefore, preferably use I2C control (virtual remote or PWM2I2C).</p>
 </blockquote>
 <h3 id="en-hru-heat-recovery-via-i2c-hru-350-hru-eco-fan">HRU heat recovery via I2C (HRU 350, HRU ECO-fan)</h3>
 <p><strong>Models:</strong> HRU 350 and HRU ECO-fan.</p>
-<p><strong>Control:</strong> via the I2C connection, with remote commands (virtual remote or RF). The stepless PWM2I2C protocol is <strong>not</strong> available on these models — only the remote modes/commands.</p>
+<p><strong>Control:</strong> via the I2C connection, with remote commands (virtual remote or RF). The stepless PWM2I2C protocol is <strong>not</strong> available on these models: only the remote modes/commands.</p>
 <p><strong>What the add-on reads out (among others):</strong> requested ventilation level (%), balance (%), supply and exhaust fan (both requested and actual speed), supply, exhaust, room and outside temperature (°C), valve and bypass position, frost and boiler timers, filter counter, global fault code, current mode, highest measured CO2 (ppm) and RH (%), air quality (%) and the remaining override timer. The HRU ECO-fan reports a comparable set around supply/exhaust, temperatures, bypass and filter usage.</p>
 <blockquote>
 <p><strong>DuoZone:</strong> HRU units with two zones (DuoZone) are recognized; the zone data appears on the RF Status page of the web interface (and via <code>GET /api/v2/rfstatus</code>).</p>
 </blockquote>
 <h3 id="en-hru-250-hru-300">HRU 250 / HRU 300</h3>
-<p><strong>Control:</strong> these models are controlled and read out <strong>exclusively via RF (CC1101)</strong> — the Virtual Remote option does not work here. An RF remote must therefore be paired from the add-on.</p>
+<p><strong>Control:</strong> these models are controlled and read out <strong>exclusively via RF (CC1101)</strong>; the Virtual Remote option does not work here. An RF remote must therefore be paired from the add-on.</p>
 <p><strong>Special hardware:</strong> an adapter board and a PCI-e splitter cable are required. The physical installation is described in the <a href="#en-additional-information-for-the-hru250-and-hru300">Additional information for the HRU250 and HRU300</a> chapter. On some revisions of the HRU 300 the unit may supply too little power; in that case, connect a USB power supply to the add-on.</p>
 <p><strong>What the add-on reads out (among others):</strong> outside and mixed-air temperature (°C), supply and exhaust airflow (m³/h), inlet, exhaust and blown-out air temperature (°C), relative and absolute fan speed (%), the inbound and outbound mass flow (kg/h), bypass position (%), desired inlet temperature, extensive frost data, motor speed (rpm), the highest measured RH/CO2 and the fan&#39;s current consumption (mA).</p>
-<h3 id="en-devices-without-i2c-rf-standalone-eg-hru-400">Devices without I2C — RF standalone (e.g. HRU 400)</h3>
+<h3 id="en-devices-without-i2c-rf-standalone-eg-hru-400">Devices without I2C: RF standalone (e.g. HRU 400)</h3>
 <p>Some units (for example the HRU 400) have no I2C connection usable by the add-on. For these there is <strong>RF standalone mode</strong>: the add-on skips I2C entirely and works only via RF (CC1101).</p>
 <ul>
 <li><strong>Activating:</strong> the Setup Wizard offers this for devices without I2C; later it can also be done via <em>System settings</em>.</li>
-<li>The add-on can emulate an RFT CO2 remote. After it is paired with the HRU, the HRU can be controlled steplessly from 0–100% in steps of half a percent.</li>
+<li>The add-on can emulate an RFT CO2 remote. After it is paired with the HRU, the HRU can be controlled steplessly from 0-100% in steps of half a percent.</li>
 <li>With a paired, emulated RFT CO2 remote, the status (such as ventilation level and temperatures) can be requested periodically.</li>
 </ul>
 <p>This mode requires a CC1101 RF module.</p>
@@ -651,7 +655,7 @@ Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http
 </tbody></table>
 <p>Here you can find an example of a tweaker who did this successfully:</p>
 <p><a href="https://gathering.tweakers.net/forum/list_message/66500576#66500576">https://gathering.tweakers.net/forum/list_message/66500576#66500576</a></p></section><section class="im-chapter" id="en-virtual-remote"><h2>Virtual Remote</h2>
-<p>The add-on can present itself as one or more <strong>virtual remotes</strong>. A virtual remote emulates a physical remote entirely in software and controls the Itho directly over the <strong>I2C connection</strong> (the wired connection on the main board) — so no CC1101 RF module is required.</p>
+<p>The add-on can present itself as one or more <strong>virtual remotes</strong>. A virtual remote emulates a physical remote entirely in software and controls the Itho directly over the <strong>I2C connection</strong> (the wired connection on the main board), so no CC1101 RF module is required.</p>
 <p><strong>Which devices?</strong> Virtual remotes work with the I2C-connected ventilation devices, such as the CVE family, the HRU 350 and the HRU ECO. Most fan devices benefit from at least one virtual remote for control. They do <strong>not</strong> work with the HRU 250, HRU 300 and HRU 400, which are controlled exclusively via RF (see <a href="#en-rf-module">RF Module</a>).</p>
 <p><strong>Pairing.</strong> Like a physical remote, a virtual remote must first be joined to the Itho. The add-on can send a join command automatically (the <em>Send join command</em> option, on the next power-on).</p>
 <p><strong>Difference from an emulated RF remote.</strong> A <em>virtual remote</em> communicates with the Itho over the wired <strong>I2C connection</strong>; an <em>emulated RF remote</em> communicates <strong>wirelessly via the CC1101 module</strong> (868 MHz), just like a physical remote. Use a virtual remote for devices with an I2C connection, and an emulated RF remote for devices that only work via RF (HRU 250/300/400) or to emulate wireless sensors (such as RFT CO2).</p></section><section class="im-chapter" id="en-rf-module"><h2>RF Module</h2>
@@ -673,7 +677,7 @@ The most commonly sold Itho remotes are supported.</p>
 </ol>
 <p><img src="https://www.nrgwatch.nl/wp-content/uploads/08-rf-remotes-setup-screenshot.png" alt="RF Remotes setup screenshot"></p>
 <p><strong>The add-on as an emulated RF remote.</strong> The add-on can also present itself as an emulated RF remote: via the CC1101 module it behaves wirelessly like an Itho remote. With the <em>Remote function</em> set to <strong>Send</strong>, the add-on sends speed and timer commands to the Itho over the air. This is used for devices without a usable I2C connection (such as the HRU 250, HRU 300 and HRU 400) and to emulate, for example, an RFT CO2 sensor.</p>
-<p>Before an emulated RF remote works, it must be joined to the Itho once — just like a physical remote. Put the Itho in its pairing/learn mode (see your Itho&#39;s manual) and start the join with the blue join button next to the relevant remote on the <strong>RF devices</strong> page. After that, the add-on can be used like a real physical remote.</p>
+<p>Before an emulated RF remote works, it must be joined to the Itho once, just like a physical remote. Put the Itho in its pairing/learn mode (see your Itho&#39;s manual) and start the join with the blue join button next to the relevant remote on the <strong>RF devices</strong> page. After that, the add-on can be used like a real physical remote.</p>
 <p><strong>Note:</strong> There is a debug option to make RF commands visible in the web interface. Set one of the following levels on the <strong>Syslog</strong> page, under <em>RF Debug log level</em>:</p>
 <ul>
 <li><strong>Level 1:</strong> shows all recognized Itho remote commands incl. remote ID</li>
@@ -687,15 +691,15 @@ The most commonly sold Itho remotes are supported.</p>
 <ol>
 <li>Open the web interface and go to the <strong>Update</strong> menu.</li>
 <li>Choose which firmware you want to install:<ul>
-<li><strong>Stable</strong> — the recommended, stable version.</li>
-<li><strong>Beta</strong> — the newest test version with the latest features (may still contain bugs).</li>
+<li><strong>Stable</strong>: the recommended, stable version.</li>
+<li><strong>Beta</strong>: the newest test version with the latest features (may still contain bugs).</li>
 </ul>
 </li>
 <li>Click the <strong>Install</strong> button.</li>
 <li>The add-on automatically retrieves the chosen firmware from GitHub and installs it. Follow the progress on the page; once the update is done, the add-on automatically reboots.</li>
 </ol>
 <p>With a normal update your settings are preserved. Only a factory reset erases the configuration (see <a href="#en-resetting-the-module">Resetting the module</a>).</p>
-<p><strong>Progress in Home Assistant.</strong> Both Home Assistant integrations — the REST and the MQTT one — show the add-on as an <em>update entity</em>; during an update the progress is shown as a progress bar.</p>
+<p><strong>Progress in Home Assistant.</strong> Both Home Assistant integrations, the REST and the MQTT one, show the add-on as an <em>update entity</em>; during an update the progress is shown as a progress bar.</p>
 <p><strong>Uploading a firmware file yourself.</strong> If the automatic retrieval does not work (for example without an internet connection), you can also manually upload a <code>.bin</code> firmware file on the Update page. The same can be done via the emergency firmware after a failsafe boot (see <a href="#en-resetting-the-module">Resetting the module</a>).</p></section><section class="im-chapter" id="en-resetting-the-module"><h2>Resetting the module</h2>
 <h3 id="en-fail-safe-boot-module-factory-reset">Fail safe boot / module factory reset</h3>
 <p>Should it unexpectedly happen that the module is no longer reachable due to an incorrect configuration, it is possible to boot the module in fail safe mode. This formats the file system with the configuration files, and the module starts a simplified web interface with which it is possible to flash new firmware.</p>
@@ -729,7 +733,7 @@ The link is: <a href="https://gathering.tweakers.net/forum/list_messages/1976492
 <p>For further questions, feedback and code changes, you can get in touch via <a href="mailto:info@nrgwatch.nl">info@nrgwatch.nl</a> or <a href="https://www.github.com/arjenhiemstra/ithowifi">https://www.github.com/arjenhiemstra/ithowifi</a>.</p></section><section class="im-chapter" id="en-hardware-revisions"><h2>Hardware revisions</h2>
 <p>Images may differ slightly from the product you received; the operation is identical.</p>
 <p><strong>Hardware revision 1:</strong></p>
-<p><img src="https://www.nrgwatch.nl/wp-content/uploads/10-hwrev1-led-locations.png" alt="Hardware revision 1 — Status LED, WiFi LED, connection to Itho board"></p>
+<p><img src="https://www.nrgwatch.nl/wp-content/uploads/10-hwrev1-led-locations.png" alt="Hardware revision 1: Status LED, WiFi LED, connection to Itho board"></p>
 <p><strong>Hardware revision 2 (newer revisions with fail safe button):</strong></p>
 <p><img src="https://www.nrgwatch.nl/wp-content/uploads/11-hwrev2-new-failsafe-button.jpg" alt="Hardware revision 2 with fail safe button"></p>
 <p><strong>Hardware revision 2 (older revisions with failsafe solder option):</strong></p>
