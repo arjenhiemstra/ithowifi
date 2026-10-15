@@ -774,6 +774,22 @@ bool rfco2RemoteValid(uint8_t idx)
   return true;
 }
 
+// Validity check for the user-selected RF status-poll remote (task_syscontrol's
+// periodic 31DA/31D9 poll). Type-agnostic sibling of rfco2RemoteValid: the slot
+// just has to be a non-empty, bi-directional SEND remote (e.g. an RFT Spider).
+bool statusPollRemoteValid(uint8_t idx)
+{
+  if (idx >= remotes.getMaxRemotes())
+    return false;
+  if (remotes.isEmptySlot(idx))
+    return false;
+  if (remotes.getRemoteFunction(idx) != RemoteFunctions::SEND)
+    return false;
+  if (!rfManager.radio.getRFDeviceBidirectional(idx))
+    return false;
+  return true;
+}
+
 // Single shared implementation behind the three public wrappers below.
 // send31DA / send31D9 bits select which opcode(s) actually go out; the
 // destOverride snapshot-and-restore dance happens once around the

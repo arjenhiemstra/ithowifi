@@ -65,6 +65,8 @@ public:
   uint8_t itho_rf_co2_join;
   uint8_t itho_control_interface;
   uint8_t itho_rf_standalone;
+  uint8_t itho_rf_status_poll;
+  uint8_t itho_rf_status_poll_idx;
   uint8_t itho_rf_co2_status_req;
   uint8_t itho_rf_co2_keepalive_demand;
   uint8_t itho_rf_co2_keepalive_co2;
