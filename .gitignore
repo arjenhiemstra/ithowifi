@@ -14,3 +14,7 @@ software/NRG_itho_wifi/sdkconfig.release
 
 # Node modules for the web-UI build tooling (terser)
 node_modules/
+
+# Website working files live in the nrgwatch-website repo; never commit them here
+website/
+.secrets.env
