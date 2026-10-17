@@ -379,6 +379,7 @@ def build_openapi_spec():
     add_post("/api/v2/rfremote/command", "Send RF remote command", "#/components/schemas/RFRemoteRequest")
     add_post("/api/v2/rfremote/co2", "Send CO2 ppm via RF", "#/components/schemas/RFCO2Request")
     add_post("/api/v2/rfremote/demand", "Send ventilation demand via RF", "#/components/schemas/RFDemandRequest")
+    add_post("/api/v2/rfremote/setpoint", "Set heating setpoint of a discovered Itho Spider thermostat", "#/components/schemas/RFSetpointRequest")
     add_post("/api/v2/rfremote/config", "Configure RF remote", "#/components/schemas/RFConfigRequest")
     add_post("/api/v2/debug", "Debug actions (reboot, RF debug level)", "#/components/schemas/DebugRequest")
     add_post("/api/v2/ota", "Trigger firmware OTA update", "#/components/schemas/OtaInstallRequest")
@@ -447,6 +448,7 @@ def build_openapi_spec():
             "rfco2": prop("integer", "CO2 ppm"),
             "rfdemand": prop("integer", "Ventilation demand 0-200"),
             "rfzone": prop("integer", "Zone for rfdemand"),
+            "rfsetpoint": prop("number", "Spider heating setpoint in C (use with rfremoteindex)"),
             "dtype": prop("string", "Domoticz device type"),
         },
     }
@@ -515,6 +517,16 @@ def build_openapi_spec():
             "demand": prop("integer", "Demand level (0=0%, 200=100%)", 0, 200),
             "zone": prop("integer", "Zone (default 0)", 0, 255),
             "index": prop("integer", "RF remote index (default 0)", 0, 11),
+        },
+    }
+
+    schemas["RFSetpointRequest"] = {
+        "type": "object",
+        "description": "Set the heating setpoint of a discovered Itho Spider thermostat (index = its RF device slot). Delivered at the Spider's next listen window; confirmed when capability setpoint equals setpoint_cmd",
+        "required": ["index", "setpoint"],
+        "properties": {
+            "index": prop("integer", "RF remote index of the Spider", 0, 11),
+            "setpoint": prop("number", "Heating setpoint in C, clamped to 5-30 in 0.5 steps", 5, 30),
         },
     }
 

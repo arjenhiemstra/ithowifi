@@ -27,6 +27,7 @@ Examples:<br>
 <code>POST /api/v2/command</code> with body <code>{"speed":150,"timer":15}</code><br>
 <code>PUT /api/v2/settings</code> with body <code>{"index":4,"value":10}</code><br>
 <code>POST /api/v2/rfco2</code> with body <code>{"co2":800,"index":2}</code><br>
+<code>POST /api/v2/rfremote/setpoint</code> with body <code>{"index":0,"setpoint":20.5}</code> (Itho Spider thermostat)<br>
 <br>
 <strong>Legacy WebAPI v1</strong><br><br>
 A simple legacy WebAPI is available at: <a href='api.html' target='_blank'>api.html</a><br>
@@ -175,8 +176,9 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key=remote name, value is
                     JSON with all received capabilities of the remote. Depending on make and model this can be the last
-                    command, temperature, humidity, battery and/or CO2 levels. Return type present on MQTT "Remotes info
-                    topic".</em></td>
+                    command, temperature, humidity, battery and/or CO2 levels. An Itho Spider thermostat also reports
+                    setpoint, setpoint_cool, setpoint_cmd, demand (%), schedule and manual. Return type present on MQTT
+                    "Remotes info topic".</em></td>
         </tr>
         <tr>
             <td>get</td>
@@ -460,6 +462,21 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td colspan="6">Comments:<br><em>Zone number for rfdemand command (default 0).
                     Only needed for multi-zone setups.</em></td>
+        </tr>
+        <tr>
+            <td>rfsetpoint</td>
+            <td>number</td>
+            <td>5-30</td>
+            <td>string</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Sets the heating setpoint (in &deg;C, 0.5 steps) of an Itho Spider thermostat.
+                    The Spider must first be found with Spider discovery on the "RF devices" page; use rfremoteindex to
+                    select it. The Spider only listens shortly after it transmits, so the setpoint is delivered at its next
+                    listen window (seconds to about 10 minutes). It is confirmed when the remote's capability "setpoint"
+                    equals "setpoint_cmd".</em></td>
         </tr>
         <tr>
             <td>get</td>
