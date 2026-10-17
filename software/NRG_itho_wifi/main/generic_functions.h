@@ -38,6 +38,8 @@ bool ithoExecCommand(const char *command, cmdOrigin origin);
 bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin origin);
 bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin);
 bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOrigin origin);
+// Set the heating setpoint (in C) of a bound Itho Spider thermostat slot. Returns nullptr on success, else the reason.
+const char *ithoSetSpiderSetpoint(int remote_index, float celsius);
 // Index of the first bi-directional Send remote in the configured slots,
 // or -1 if none qualifies. Bi-directional Send remotes are the only
 // remote-slot kind that holds a valid sourceID + destinationID pair joined

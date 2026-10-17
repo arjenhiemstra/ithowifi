@@ -4,6 +4,8 @@
 
 #include "IthoCC1101.h"
 #include "IthoPacket.h"
+#include "spider_protocol.h"
+#include "sys_log.h" // Spider bind/TX logging
 #include <string>
 
 RFStatusCallback_t IthoCC1101::rf31DACallback = nullptr;
@@ -417,6 +419,7 @@ bool IthoCC1101::parseMessage(IthoPacket *packetPtr)
   packetPtr->error = 0;
   packetPtr->remType = RemoteTypes::UNSETTYPE;
   packetPtr->command = IthoUnknown;
+  packetPtr->spiderHeatingJoin = false;
 
   // first byte is the header of the message, this determines the structure of the rest of the message
   // The bits are used as follows <00TTAAPP>
@@ -562,6 +565,12 @@ bool IthoCC1101::parseMessage(IthoPacket *packetPtr)
     break;
   case IthoPacket::Type::DEVICEINFO:
     handleDeviceInfo(packetPtr);
+    break;
+  case IthoPacket::Type::SPIDERSTATUS:
+    handleSpiderStatus(packetPtr);
+    break;
+  case IthoPacket::Type::RELAYDEMAND:
+    handleRelayDemand(packetPtr);
     break;
     // default:
     //   return false;
@@ -1838,6 +1847,13 @@ bool IthoCC1101::updateRFDevice(uint8_t remote_index, uint8_t byte0, uint8_t byt
   ithoRF.device[remote_index].hum = 0xEFFF;
   ithoRF.device[remote_index].dewpoint = 0xEFFF;
   ithoRF.device[remote_index].battery = 0xEFFF;
+  ithoRF.device[remote_index].setpoint = 0xEFFF;
+  ithoRF.device[remote_index].setpointCool = 0xEFFF;
+  ithoRF.device[remote_index].spiderFlags = 0xEF;
+  ithoRF.device[remote_index].demand = 0xFF;
+  ithoRF.device[remote_index].thermostat = false;
+  ithoRF.device[remote_index].setpointCmd = 0xEFFF;
+  memset(ithoRF.device[remote_index].controllerID, 0, 3);
 
   if (remote_index > ithoRF.count)
     ithoRF.count = remote_index;
@@ -1883,6 +1899,13 @@ bool IthoCC1101::removeRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2)
       item.hum = 0xEFFF;
       item.dewpoint = 0xEFFF;
       item.battery = 0xEFFF;
+      item.setpoint = 0xEFFF;
+      item.setpointCool = 0xEFFF;
+      item.spiderFlags = 0xEF;
+      item.demand = 0xFF;
+      item.thermostat = false;
+      item.setpointCmd = 0xEFFF;
+      memset(item.controllerID, 0, 3);
       ithoRF.count--;
       return true;
     }
@@ -1910,6 +1933,13 @@ bool IthoCC1101::removeRFDevice(uint8_t remote_index)
   ithoRF.device[remote_index].hum = 0xEFFF;
   ithoRF.device[remote_index].dewpoint = 0xEFFF;
   ithoRF.device[remote_index].battery = 0xEFFF;
+  ithoRF.device[remote_index].setpoint = 0xEFFF;
+  ithoRF.device[remote_index].setpointCool = 0xEFFF;
+  ithoRF.device[remote_index].spiderFlags = 0xEF;
+  ithoRF.device[remote_index].demand = 0xFF;
+  ithoRF.device[remote_index].thermostat = false;
+  ithoRF.device[remote_index].setpointCmd = 0xEFFF;
+  memset(ithoRF.device[remote_index].controllerID, 0, 3);
 
   return true;
 }
@@ -2045,7 +2075,28 @@ void IthoCC1101::handleBind(IthoPacket *packetPtr)
     }
   }
 
-  if (checkIthoCommand(packetPtr, ithoMessageLeaveCommandBytes) || checkIthoCommand(packetPtr, ithoMessageAUTORFTLeaveCommandBytes))
+  // Itho Spider heating joins (checked before the ventilation templates). The controller join (home icon)
+  // offers 22C9 and is accepted with 00 01FF <id>; the relay join (3150/0008) needs an accept we do not know.
+  const spider::JoinKind spiderJoin = (msgType == MESSAGE_TYPE_I_MASK && packetPtr->error == 0)
+                                          ? spider::heatingJoinKind(&packetPtr->dataDecoded[packetPtr->payloadPos], packetPtr->len)
+                                          : spider::JoinKind::None;
+  if (spiderJoin == spider::JoinKind::Relay)
+  {
+    // Heater bind (0008/3150, accepted by the heater with 00 3EF0). Not ours to answer: use Spider discovery.
+    N_LOG("RF: Spider %02X:%02X:%02X heater join seen, not answered (use Spider discovery)", byte0, byte1, byte2);
+    return;
+  }
+  if (spiderJoin == spider::JoinKind::Controller)
+  {
+    packetPtr->command = IthoJoin;
+    packetPtr->remType = RemoteTypes::RFTSPIDER;
+    packetPtr->spiderHeatingJoin = true;
+    if (bindAllowed)
+    {
+      addRFDevice(byte0, byte1, byte2, RemoteTypes::RFTSPIDER, true);
+    }
+  }
+  else if (checkIthoCommand(packetPtr, ithoMessageLeaveCommandBytes) || checkIthoCommand(packetPtr, ithoMessageAUTORFTLeaveCommandBytes))
   {
     packetPtr->command = IthoLeave;
     if (bindAllowed)
@@ -2673,6 +2724,8 @@ void IthoCC1101::handleZoneTemp(IthoPacket *packetPtr)
   {
     if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
+      if (item.temp != tempTemp)
+        remoteStatusChanged = true;
       item.timestamp = now;
       item.temp = tempTemp;
       return;
@@ -2715,11 +2768,224 @@ void IthoCC1101::handleZoneSetpoint(IthoPacket *packetPtr)
   {
     if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
+      if (item.setpoint != tempSetpoint)
+        remoteStatusChanged = true;
       item.timestamp = now;
       item.setpoint = tempSetpoint;
       return;
     }
   }
+}
+
+void IthoCC1101::handleSpiderStatus(IthoPacket *packetPtr)
+{
+  /*
+     message length: 26
+     message opcode: 0x01FF (Itho Spider thermostat status, sent by the Spider as RQ/I)
+     byte[2]    : room temperature, 0.5 C units (0x80 = none)
+     byte[3]    : heating setpoint, 0.5 C units
+     byte[4]    : second (cooling) setpoint, 0.5 C units
+     byte[5]    : flags, bit 6 schedule active, bit 5 adjusted on the device
+  */
+  if (packetPtr->error > 0) // Spider frames are often corrupted; never act on a bad checksum
+    return;
+  spider::Status st{};
+  if (!spider::decodeStatus(&packetPtr->dataDecoded[packetPtr->payloadPos], packetPtr->len, st))
+    return;
+  uint32_t tempID = packetPtr->deviceId0 != 0 ? packetPtr->deviceId0 : packetPtr->deviceId2;
+  if (tempID == 0)
+    return;
+
+  uint8_t byte0 = tempID >> 16 & 0xFF;
+  uint8_t byte1 = tempID >> 8 & 0xFF;
+  uint8_t byte2 = tempID & 0xFF;
+
+  if (!checkRFDevice(byte0, byte1, byte2))
+    return;
+
+  time_t now;
+  time(&now);
+
+  for (auto &item : ithoRF.device)
+  {
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
+    {
+      const int32_t temp = st.roomTemp != spider::TEMP_NONE ? spider::halfToCenti(st.roomTemp) : item.temp;
+      const int32_t sp = spider::halfToCenti(st.heatSetpoint);
+      const int32_t spc = spider::halfToCenti(st.coolSetpoint);
+      if (temp != item.temp || sp != item.setpoint || spc != item.setpointCool || st.flags != item.spiderFlags)
+        remoteStatusChanged = true;
+      item.timestamp = now;
+      item.temp = temp;
+      item.setpoint = sp;
+      item.setpointCool = spc;
+      item.spiderFlags = st.flags;
+      // Bound Spider asking its controller (us) for the setpoint: answer from TaskCC1101 right away
+      if (item.thermostat && ((packetPtr->header >> 4) & 0x3) == MESSAGE_TYPE_RQ_MASK)
+      {
+        uint8_t me[3];
+        ownID(item, me);
+        if (packetPtr->deviceId1 == ((uint32_t)me[0] << 16 | (uint32_t)me[1] << 8 | me[2]))
+        {
+          spiderReplyID[0] = byte0;
+          spiderReplyID[1] = byte1;
+          spiderReplyID[2] = byte2;
+          spiderReplyPending = true;
+        }
+      }
+      return;
+    }
+  }
+}
+
+void IthoCC1101::handleRelayDemand(IthoPacket *packetPtr)
+{
+  /*
+     message length: 2
+     message opcode: 0x0008 (relay demand, broadcast by e.g. the Itho Spider thermostat)
+     byte[0]    : domain
+     byte[1]    : demand, 0-200 (0.5 %)
+  */
+  if (packetPtr->error > 0 || packetPtr->len != 2)
+    return;
+  const uint32_t src = packetPtr->deviceId0 != 0 ? packetPtr->deviceId0 : packetPtr->deviceId2;
+  const uint8_t id[3]{(uint8_t)(src >> 16), (uint8_t)(src >> 8), (uint8_t)src};
+  ithoRFDevice *dev = findRFDevice(id);
+  if (!dev)
+    return;
+  const uint8_t v = packetPtr->dataDecoded[packetPtr->payloadPos + 1];
+  if (v > 200)
+    return;
+  if (v != dev->demand)
+    remoteStatusChanged = true;
+  dev->demand = v;
+  time(&dev->timestamp);
+}
+
+ithoRFDevice *IthoCC1101::findRFDevice(const uint8_t id[3])
+{
+  if (id[0] == 0 && id[1] == 0 && id[2] == 0)
+    return nullptr;
+  for (auto &item : ithoRF.device)
+  {
+    if (item.destinationID[0] == id[0] && item.destinationID[1] == id[1] && item.destinationID[2] == id[2])
+      return &item;
+  }
+  return nullptr;
+}
+
+// Id we use towards the Spider: the learned controller (its heater, spoofed) if set, else our own
+void IthoCC1101::ownID(const ithoRFDevice &dev, uint8_t out[3]) const
+{
+  const bool hasCtl = dev.controllerID[0] != 0 || dev.controllerID[1] != 0 || dev.controllerID[2] != 0;
+  const bool hasSource = dev.sourceID[0] != 0 || dev.sourceID[1] != 0 || dev.sourceID[2] != 0;
+  for (int i = 0; i < 3; i++)
+    out[i] = hasCtl ? dev.controllerID[i] : (hasSource ? dev.sourceID[i] : defaultID[i]);
+}
+
+bool IthoCC1101::setThermostat(const uint8_t id[3], bool on, int32_t setpointCmd, const uint8_t ctl[3])
+{
+  ithoRFDevice *dev = findRFDevice(id);
+  if (!dev)
+    return false;
+  dev->thermostat = on;
+  dev->setpointCmd = on ? setpointCmd : 0xEFFF;
+  for (int i = 0; i < 3; i++)
+    dev->controllerID[i] = (on && ctl) ? ctl[i] : 0;
+  return true;
+}
+
+bool IthoCC1101::setThermostatSetpoint(const uint8_t id[3], int32_t setpointCmd)
+{
+  ithoRFDevice *dev = findRFDevice(id);
+  if (!dev || !dev->thermostat)
+    return false;
+  dev->setpointCmd = spider::clampSetpoint(setpointCmd);
+  return true;
+}
+
+bool IthoCC1101::consumeSpiderReply(uint8_t id[3])
+{
+  if (!spiderReplyPending)
+    return false;
+  spiderReplyPending = false;
+  id[0] = spiderReplyID[0];
+  id[1] = spiderReplyID[1];
+  id[2] = spiderReplyID[2];
+  return true;
+}
+
+// Addressed controller -> Spider message: addr0 = our id, addr1 = the Spider
+void IthoCC1101::sendToSpider(const uint8_t id[3], uint8_t header, const uint8_t *command)
+{
+  const ithoRFDevice *dev = findRFDevice(id);
+  if (!dev)
+    return;
+  uint8_t me[3];
+  ownID(*dev, me);
+  sendToSpiderAs(me, id, header, command);
+}
+
+void IthoCC1101::sendToSpiderAs(const uint8_t from[3], const uint8_t id[3], uint8_t header, const uint8_t *command)
+{
+  RFmessage message;
+  message.header = header;
+  message.deviceid0[0] = from[0];
+  message.deviceid0[1] = from[1];
+  message.deviceid0[2] = from[2];
+  message.deviceid1[0] = id[0];
+  message.deviceid1[1] = id[1];
+  message.deviceid1[2] = id[2];
+  message.command = command;
+  sendRFMessage(&message);
+  D_LOG("RF: Spider TX hdr %02X %02X%02X len %u from %02X:%02X:%02X to %02X:%02X:%02X", header, command[0], command[1], command[2],
+        message.deviceid0[0], message.deviceid0[1], message.deviceid0[2], id[0], id[1], id[2]);
+}
+
+void IthoCC1101::sendSpiderBindAccept(const uint8_t id[3])
+{
+  const ithoRFDevice *dev = findRFDevice(id);
+  if (!dev)
+    return;
+  uint8_t me[3];
+  ownID(*dev, me);
+  uint8_t cmd[3 + spider::BIND_ENTRY_LEN + 1]{0x1F, 0xC9, spider::BIND_ENTRY_LEN};
+  spider::buildBindAccept(&cmd[3], me);
+  sendToSpider(id, HEADER_JOIN_REPLY, cmd);
+}
+
+// RP 01FF (answer to the Spider's RQ) or W 01FF (push); setpoint is the commanded one, else the Spider's own
+void IthoCC1101::sendSpiderStatus(const uint8_t id[3], bool reply)
+{
+  const ithoRFDevice *dev = findRFDevice(id);
+  if (!dev)
+    return;
+  const int32_t sp = dev->setpointCmd != 0xEFFF ? dev->setpointCmd : dev->setpoint;
+  if (sp == 0xEFFF)
+    return; // nothing known yet: do not answer with a made-up setpoint
+  uint8_t cmd[3 + spider::STATUS_LEN + 1]{0x01, 0xFF, spider::STATUS_LEN};
+  spider::buildControllerStatus(&cmd[3], sp);
+  sendToSpider(id, reply ? HEADER_RP_BIDIRECTIONAL : HEADER_JOIN_REPLY, cmd);
+}
+
+// RQ 01FF: the Spider answers with RP 01FF holding room temp, setpoint and flags (one frame, decoded as usual)
+void IthoCC1101::sendSpiderRequest(const uint8_t id[3])
+{
+  static const uint8_t cmd[5]{0x01, 0xFF, 0x01, 0x00, 0x00};
+  sendToSpider(id, HEADER_RQ_BIDIRECTIONAL, cmd);
+}
+
+void IthoCC1101::sendSpiderProbe(const uint8_t id[3], const uint8_t ctl[3])
+{
+  static const uint8_t cmd[5]{0x01, 0xFF, 0x01, 0x00, 0x00};
+  sendToSpiderAs(ctl, id, HEADER_RQ_BIDIRECTIONAL, cmd);
+}
+
+void IthoCC1101::sendSpiderZoneEcho(const uint8_t id[3], int32_t setpointCenti)
+{
+  uint8_t cmd[3 + spider::ZONE_SETPOINT_ECHO_LEN + 1]{0x22, 0xC9, spider::ZONE_SETPOINT_ECHO_LEN};
+  spider::buildZoneSetpointEcho(&cmd[3], setpointCenti);
+  sendToSpider(id, HEADER_RFT_BIDIRECTIONAL, cmd);
 }
 
 void IthoCC1101::handleDeviceInfo(IthoPacket *packetPtr)

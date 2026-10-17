@@ -169,6 +169,9 @@ int IthoRemote::removeRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2)
   remotes[index].remfunc = RemoteFunctions::UNSETFUNC;
   remotes[index].capabilities = nullptr;
   remotes[index].bidirectional = false;
+  remotes[index].thermostat = false;
+  remotes[index].setpointCmd = 0xEFFF;
+  memset(remotes[index].ctlID, 0, 3);
 
   return 1;
 }
@@ -207,6 +210,9 @@ int IthoRemote::removeRemote(const uint8_t index)
   }
   remotes[index].capabilities = nullptr;
   remotes[index].bidirectional = false;
+  remotes[index].thermostat = false;
+  remotes[index].setpointCmd = 0xEFFF;
+  memset(remotes[index].ctlID, 0, 3);
 
   return 1;
 }
@@ -287,7 +293,7 @@ const char *IthoRemote::ithoCommandToShortName(uint8_t code)
 
 void IthoRemote::addCapabilities(uint8_t remoteIndex, const char *name, int32_t value)
 {
-  if (strcmp(name, "temp") == 0 || strcmp(name, "dewpoint") == 0 || strcmp(name, "setpoint") == 0)
+  if (strcmp(name, "temp") == 0 || strcmp(name, "dewpoint") == 0 || strcmp(name, "setpoint") == 0 || strcmp(name, "setpoint_cool") == 0 || strcmp(name, "setpoint_cmd") == 0)
   {
     remotes[remoteIndex].capabilities[name] = static_cast<int>((value / 100.0) * 10 + 0.5) / 10.0;
   }
@@ -411,6 +417,15 @@ void IthoRemote::Remote::set(JsonObject obj)
   {
     tx_power = obj["tx_power"];
   }
+  // Optional thermostat keys (absent in older configs: feature off)
+  if (!obj["thermostat"].isNull())
+  {
+    thermostat = obj["thermostat"];
+  }
+  if (obj["ctlid"].is<JsonArray>())
+  {
+    copyArray(obj["ctlid"].as<JsonArray>(), ctlID);
+  }
 }
 
 void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index, bool human_reaadble) const
@@ -472,6 +487,16 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
     }
   }
   obj["tx_power"] = tx_power;
+  if (thermostat)
+  {
+    obj["thermostat"] = true;
+    if (ctlID[0] != 0 || ctlID[1] != 0 || ctlID[2] != 0)
+    {
+      JsonArray c = obj["ctlid"].to<JsonArray>();
+      for (int i = 0; i < 3; i++)
+        c.add(ctlID[i]);
+    }
+  }
   if (last_cmd[0] != '\0')
     obj["last_cmd"] = last_cmd;
   // Wire-format preset list so external consumers know which commands
