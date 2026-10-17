@@ -194,7 +194,9 @@ public:
     BATTERY = 0x1060,
     ZONETEMP = 0x30C9,
     ZONESETPOINT = 0x22C9,
-    DEVICEINFO = 0x10E0
+    DEVICEINFO = 0x10E0,
+    SPIDERSTATUS = 0x01FF,
+    RELAYDEMAND = 0x0008
   };
 
   RemoteTypes remType;
@@ -219,6 +221,7 @@ public:
   uint8_t error{0};
 
   uint8_t payloadPos{0};
+  bool spiderHeatingJoin{false}; // 1FC9 offer is an Itho Spider controller (22C9) join
 
   uint8_t dataDecoded[MAX_DECODED]{};
   uint8_t length{0};
