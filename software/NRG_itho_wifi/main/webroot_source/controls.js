@@ -652,11 +652,32 @@ const messageHandlers = {
       else getSettings('ithoremotes');
     }
   },
+  spiderdiscovery: function (f) {
+    var el = $id('spider_disc_status');
+    if (!el) return;
+    var d = f.spiderdiscovery || {};
+    var msg = {
+      idle: '',
+      wait_setpoint: 'Set the Spider to ' + d.target + ' \u00B0C now and leave it there. Most Spiders are found within a minute or two, some take up to 15 minutes.',
+      wait_heater: 'Spider ' + d.spider + ' found. Listening for its heater (up to 12 minutes)...',
+      done: 'Done: Spider ' + d.spider + ' controls heater ' + d.heater + ' (RF device slot ' + d.slot + '). Set the Spider back to your normal temperature, on the Spider or in the table below.',
+      timeout: 'Timed out without a result. Start again.',
+      cancelled: 'Cancelled.',
+      noslot: 'Spider found, but there is no free RF device slot.'
+    };
+    el.textContent = msg[d.state] !== undefined ? msg[d.state] : d.state;
+    if (d.state === 'done') getSettings('ithoremotes');
+  },
+  spidersetpoint: function (f) {
+    var r = (f.spidersetpoint || {}).result;
+    if (r && r !== 'ok') alert('Setpoint not sent: ' + r);
+  },
   remotes: function (f) {
     // Cache + drive the RF CO2 dropdown regardless of which page we're on:
     // a `getSettings('ithoremotes')` triggered by the system settings page
     // must still populate the dropdown even though there's no RemotesTable.
     cachedRemotes = f.remotes;
+    updateSpiderTable(f.remotes);
     if ($id('itho_rf_co2_remote_idx')) populateRfco2RemoteDropdown();
     if ($id('itho_rf_status_poll_idx')) populateStatusPollRemoteDropdown();
     var tbl = $id('RemotesTable');
@@ -1810,6 +1831,20 @@ document.addEventListener('DOMContentLoaded', function () {
       updateStatusTableFromCompactJson(JSON.parse(obj));
       localStorage.removeItem("ithostatus");
     }
+    else if (btnId === 'spider_disc_start' || btnId === 'spider_disc_cancel') {
+      websock_send(JSON.stringify({ spider_discovery: btnId === 'spider_disc_start' ? 'start' : 'cancel' }));
+    }
+    else if (btnId.startsWith('spider_set-')) {
+      var spIdx = parseInt(btnId.split('-')[1], 10);
+      var spVal = parseFloat($val('spider_sp-' + spIdx));
+      if (isNaN(spVal)) alert('Please enter a setpoint.');
+      else {
+        websock_send(JSON.stringify({ spider_setpoint: { index: spIdx, setpoint: spVal } }));
+        var spSt = $id('spider_set_status');
+        if (spSt) spSt.textContent = spVal + ' \u00B0C sent. The Spider picks it up the next time it listens (usually within a few minutes, up to about 10 for a Spider with a relay); the table shows it until then.';
+        setTimeout(function () { getSettings('ithoremotes'); }, 1000);
+      }
+    }
     else if (btnId === 'save_update_had') {
       var jsonvar = generateCompactJson();
       websock_send(JSON.stringify({
@@ -2371,6 +2406,37 @@ function formatCapabilities(JSONObj) {
     }
   }
   return str;
+}
+
+// Itho Spider thermostats (remotes with the thermostat capability): current values + setpoint input.
+// Rows are created once and then only their value cells are updated, so typing is not interrupted.
+function updateSpiderTable(rems) {
+  var tbl = $id('SpiderTable');
+  if (!tbl) return;
+  var list = (rems || []).filter(function (r) { return r && r.capabilities && r.capabilities.thermostat; });
+  if (list.length === 0) { tbl.innerHTML = ''; return; }
+  if (!tbl.querySelector('thead')) {
+    tbl.innerHTML = '<thead><tr><th>Slot</th><th>Name</th><th>Room temp</th><th>Setpoint</th><th>Heat demand</th><th>New setpoint</th></tr></thead><tbody></tbody>';
+  }
+  var body = tbl.querySelector('tbody');
+  var deg = ' \u00B0C';
+  list.forEach(function (r) {
+    var c = r.capabilities, i = r.index, row = $id('spider_row-' + i);
+    if (!row) {
+      row = document.createElement('tr');
+      row.id = 'spider_row-' + i;
+      row.innerHTML = '<td>' + i + '</td><td></td><td></td><td></td><td></td>' +
+        '<td><input id="spider_sp-' + i + '" type="number" min="5" max="30" step="0.5" style="width:5em"> ' +
+        '<button id="spider_set-' + i + '" class="pure-button">Set</button></td>';
+      body.appendChild(row);
+    }
+    row.cells[1].textContent = r.name || '';
+    row.cells[2].textContent = c.temp != null ? c.temp + deg : '-';
+    var sp = c.setpoint != null ? c.setpoint + deg : '-';
+    if (c.setpoint_cmd != null && c.setpoint_cmd !== c.setpoint) sp += ' \u2192 ' + c.setpoint_cmd + deg + ' (waiting for the Spider)';
+    row.cells[3].textContent = sp;
+    row.cells[4].textContent = c.demand != null ? c.demand + ' %' : '-';
+  });
 }
 
 function updateRemoteCapabilities(jsonVar) {
@@ -4141,6 +4207,7 @@ Examples:<br>
 <code>POST /api/v2/command</code> with body <code>{"speed":150,"timer":15}</code><br>
 <code>PUT /api/v2/settings</code> with body <code>{"index":4,"value":10}</code><br>
 <code>POST /api/v2/rfco2</code> with body <code>{"co2":800,"index":2}</code><br>
+<code>POST /api/v2/rfremote/setpoint</code> with body <code>{"index":0,"setpoint":20.5}</code> (Itho Spider thermostat)<br>
 <br>
 <strong>Legacy WebAPI v1</strong><br><br>
 A simple legacy WebAPI is available at: <a href='api.html' target='_blank'>api.html</a><br>
@@ -4289,8 +4356,9 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key=remote name, value is
                     JSON with all received capabilities of the remote. Depending on make and model this can be the last
-                    command, temperature, humidity, battery and/or CO2 levels. Return type present on MQTT "Remotes info
-                    topic".</em></td>
+                    command, temperature, humidity, battery and/or CO2 levels. An Itho Spider thermostat also reports
+                    setpoint, setpoint_cool, setpoint_cmd, demand (%), schedule and manual. Return type present on MQTT
+                    "Remotes info topic".</em></td>
         </tr>
         <tr>
             <td>get</td>
@@ -4574,6 +4642,21 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td colspan="6">Comments:<br><em>Zone number for rfdemand command (default 0).
                     Only needed for multi-zone setups.</em></td>
+        </tr>
+        <tr>
+            <td>rfsetpoint</td>
+            <td>number</td>
+            <td>5-30</td>
+            <td>string</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Sets the heating setpoint (in &deg;C, 0.5 steps) of an Itho Spider thermostat.
+                    The Spider must first be found with Spider discovery on the "RF devices" page; use rfremoteindex to
+                    select it. The Spider only listens shortly after it transmits, so the setpoint is delivered at its next
+                    listen window (seconds to about 10 minutes). It is confirmed when the remote's capability "setpoint"
+                    equals "setpoint_cmd".</em></td>
         </tr>
         <tr>
             <td>get</td>
@@ -6153,6 +6236,22 @@ var html_remotessetup = `
       <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote"
         class="pure-button">Remove</button>
     </div>
+  </fieldset>
+  <fieldset>
+    <br>
+    <legend><br>Itho Spider thermostat:</legend>
+    <p>The add-on can read and set the heating setpoint of an Itho Spider room thermostat, without pairing it.
+      Start discovery and set the Spider to the temperature shown (a random value between 23 and 30 &deg;C). The add-on
+      recognises the Spider by that value, finds the heater it controls and adds the Spider as a monitor-only RF device.
+      Your heating may switch on during discovery. After that the setpoint can be changed here, via MQTT/REST or from
+      Home Assistant.</p>
+    <div class="pure-control-group">
+      <label for="spider_disc_start">Spider discovery</label>
+      <button id="spider_disc_start" class="pure-button">Start</button>&nbsp;<button id="spider_disc_cancel"
+        class="pure-button">Cancel</button>&nbsp;<span id="spider_disc_status"></span>
+    </div>
+    <table id="SpiderTable" class="pure-table pure-table-bordered" style="text-align: center;"></table>
+    <p id="spider_set_status"></p>
   </fieldset>
 </form>
 <script>
