@@ -785,7 +785,7 @@ bool statusPollRemoteValid(uint8_t idx)
     return false;
   if (remotes.getRemoteFunction(idx) != RemoteFunctions::SEND)
     return false;
-  if (!rfManager.radio.getRFDeviceBidirectional(idx))
+  if (!remotes.getRemoteBidirectional(idx)) // the remote config, which the radio slot is filled from
     return false;
   return true;
 }
