@@ -436,58 +436,21 @@ void logInit()
 
   flashLogInitReady = true;
 
-  uint8_t reason = esp_reset_reason();
-  char buf[32]{};
-
-  switch (reason)
+  // esp_reset_reason() values (esp_reset_reason_t), not the ROM rtc reset codes
+  const char *buf;
+  switch (esp_reset_reason())
   {
-  case 1:
-    strlcpy(buf, "POWERON_RESET", sizeof(buf));
-    break; /**<1,  Vbat power on reset*/
-  case 3:
-    strlcpy(buf, "SW_RESET", sizeof(buf));
-    break; /**<3,  Software reset digital core*/
-  case 4:
-    strlcpy(buf, "OWDT_RESET", sizeof(buf));
-    break; /**<4,  Legacy watch dog reset digital core*/
-  case 5:
-    strlcpy(buf, "DEEPSLEEP_RESET", sizeof(buf));
-    break; /**<5,  Deep Sleep reset digital core*/
-  case 6:
-    strlcpy(buf, "SDIO_RESET", sizeof(buf));
-    break; /**<6,  Reset by SLC module, reset digital core*/
-  case 7:
-    strlcpy(buf, "TG0WDT_SYS_RESET", sizeof(buf));
-    break; /**<7,  Timer Group0 Watch dog reset digital core*/
-  case 8:
-    strlcpy(buf, "TG1WDT_SYS_RESET", sizeof(buf));
-    break; /**<8,  Timer Group1 Watch dog reset digital core*/
-  case 9:
-    strlcpy(buf, "RTCWDT_SYS_RESET", sizeof(buf));
-    break; /**<9,  RTC Watch dog Reset digital core*/
-  case 10:
-    strlcpy(buf, "INTRUSION_RESET", sizeof(buf));
-    break; /**<10, Instrusion tested to reset CPU*/
-  case 11:
-    strlcpy(buf, "TGWDT_CPU_RESET", sizeof(buf));
-    break; /**<11, Time Group reset CPU*/
-  case 12:
-    strlcpy(buf, "SW_CPU_RESET", sizeof(buf));
-    break; /**<12, Software reset CPU*/
-  case 13:
-    strlcpy(buf, "RTCWDT_CPU_RESET", sizeof(buf));
-    break; /**<13, RTC Watch dog Reset CPU*/
-  case 14:
-    strlcpy(buf, "EXT_CPU_RESET", sizeof(buf));
-    break; /**<14, for APP CPU, reseted by PRO CPU*/
-  case 15:
-    strlcpy(buf, "RTCWDT_BROWN_OUT_RESET", sizeof(buf));
-    break; /**<15, Reset when the vdd voltage is not stable*/
-  case 16:
-    strlcpy(buf, "RTCWDT_RTC_RESET", sizeof(buf));
-    break; /**<16, RTC Watch dog reset digital core and rtc module*/
-  default:
-    strlcpy(buf, "NO_MEAN", sizeof(buf));
+  case ESP_RST_POWERON: buf = "POWERON_RESET"; break;
+  case ESP_RST_EXT: buf = "EXT_RESET"; break;
+  case ESP_RST_SW: buf = "SW_RESET"; break;
+  case ESP_RST_PANIC: buf = "PANIC_RESET (crash, coredump stored)"; break;
+  case ESP_RST_INT_WDT: buf = "INT_WDT_RESET"; break;
+  case ESP_RST_TASK_WDT: buf = "TASK_WDT_RESET"; break;
+  case ESP_RST_WDT: buf = "WDT_RESET"; break;
+  case ESP_RST_DEEPSLEEP: buf = "DEEPSLEEP_RESET"; break;
+  case ESP_RST_BROWNOUT: buf = "BROWNOUT_RESET"; break;
+  case ESP_RST_SDIO: buf = "SDIO_RESET"; break;
+  default: buf = "UNKNOWN_RESET"; break;
   }
 
   N_LOG("SYS: last reset reason: %s", buf);
