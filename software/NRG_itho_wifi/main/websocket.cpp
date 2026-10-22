@@ -792,6 +792,7 @@ void handle_ws_message(JsonObject root)
     if (index > 0 && index <= remotes.getMaxRemotes())
     {
       remotes.removeRemote(index - 1);
+      rfManager.radio.removeRFDevice(index - 1); // keep the radio slot in sync with the remote slot
       saveRemotesflag = true;
     }
   }

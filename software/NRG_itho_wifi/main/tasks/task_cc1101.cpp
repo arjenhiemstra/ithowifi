@@ -341,9 +341,9 @@ void TaskCC1101(void *pvParameters)
         continue;
       uint8_t id[3]{};
       remotes.getRemoteIDbyIndex(index, &id[0]);
-      rfManager.radio.setBindAllowed(true);
-      rfManager.radio.addRFDevice(id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteBidirectional(index));
-      rfManager.radio.setBindAllowed(false);
+      // Same slot as the remote: index-based radio calls (bidirectional, source/dest ID, type) rely on it.
+      // addRFDevice() takes the first free slot and shifts everything after a gap in the remotes list.
+      rfManager.radio.updateRFDevice(index, id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteBidirectional(index));
       // For Send remotes, set the sourceID to the configured ID (what we transmit as)
       if (remotes.getRemoteFunction(index) == RemoteFunctions::SEND)
       {
@@ -576,10 +576,12 @@ void TaskCC1101(void *pvParameters)
           if (cmd == IthoLeave && remotes.remoteLearnLeaveStatus())
           {
             D_LOG("RFI: Leave command received. Trying to remove remote...");
+            // removeRemote() returns a status (1 = removed), not the slot: look the slot up first
+            const int slot = remotes.remoteIndex(*(lastID + 0), *(lastID + 1), *(lastID + 2));
             int index = remotes.removeRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2));
-            if (index >= 0)
+            if (index == 1 && slot >= 0)
             {
-              rfManager.radio.removeRFDevice(index);
+              rfManager.radio.removeRFDevice(slot);
             }
             switch (index)
             {
