@@ -1333,14 +1333,14 @@ document.addEventListener('DOMContentLoaded', function () {
       update_page('mqtt');
     }
     else if (btnId === 'itho_llm') {
-      // Auto-save remote config before entering learn/leave mode
-      // Try selected remote first, then save all visible remotes (wizard mode)
+      // Auto-save remote config before entering learn/leave mode: the selected remote, or in the
+      // wizard all remotes with visible dropdowns. On the RF devices page without a selection nothing
+      // is saved (a join registers the remote itself), so the config is not saved once per row.
       var sel = checkedVal('optionsRemotes');
       var indices = [];
       if (sel != null) {
         indices.push(parseInt(sel));
-      } else {
-        // No radio selected (wizard mode) — save all remotes that have visible dropdowns
+      } else if ($id('wizard-indicators')) {
         for (var ri = 0; ri < 12; ri++) {
           if ($id('func_remote-' + ri)) indices.push(ri);
         }
