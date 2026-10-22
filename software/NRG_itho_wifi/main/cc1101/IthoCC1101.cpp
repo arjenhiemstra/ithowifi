@@ -377,9 +377,12 @@ void IthoCC1101::initReceiveMessage()
 
 bool IthoCC1101::receivePacket()
 {
+  // Runs in task context (TaskCC1101), triggered by the RF ISR's notification —
+  // the FIFO read used to run inside the ISR (up to ~34 ms). The caller is
+  // responsible for serializing radio access against concurrent sends.
   readData(&inMessage[inMessageIdx], MAX_RAW);
   initReceiveMessage();
-  inMessageIdx = 1 - inMessageIdx; // swap buffer so next ISR writes to the other one
+  inMessageIdx = 1 - inMessageIdx; // swap buffer so the next receive uses the other one
 
   return true;
 }
@@ -503,6 +506,16 @@ bool IthoCC1101::parseMessage(IthoPacket *packetPtr)
     return false;
 #endif
   }
+
+  // Integrity gate: only dispatch to handlers (which change fan state, persist
+  // remotes and feed RF status) when the frame passed the additive checksum
+  // (error stays 0). Field parsing above already ran for every frame, so
+  // rfloglevel sniffing still sees corrupt frames — they simply no longer
+  // mutate device state. Previously, with CRC_FILTER disabled, any bit-flipped
+  // frame was dispatched and acted on. (Real frames all pass this checksum;
+  // verified against live RF traffic.)
+  if (packetPtr->error != 0)
+    return true;
 
   // handle command
   switch (packetPtr->opcode)
@@ -1272,7 +1285,7 @@ void IthoCC1101::sendRFMessage(RFmessage *message)
   CC1101MessageLen = CC1101Message.length;
   IthoPacketLen = ithoPacket.length;
 
-  // send messages
+  // send messages (caller serializes radio access against receivePacket())
   for (int i = 0; i < sendTries; i++)
   {
 
@@ -1305,95 +1318,113 @@ uint8_t IthoCC1101::checksum(IthoPacket *itho, uint8_t len)
   return 0 - val;
 }
 
-uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet)
+// Compile-time encode table (flash/.rodata): each nibble m=(m3 m2 m1 m0) maps to
+// its fixed 10-bit group [m0 ~m0 m1 ~m1 m2 ~m2 m3 ~m3 1 0] — the data bits
+// low-to-nibble-high, each followed by its complement, then the "10" framing.
+namespace
 {
-
-  uint8_t out_bytecounter = 14;   // index of Outbuf, start at offset 14, first part of the message is set manually
-  uint8_t out_bitcounter = 0;     // bit position of current outbuf byte
-  uint8_t out_patterncounter = 0; // bit counter to add 1 0 bit pattern after every 8 bits
-  uint8_t bitSelect = 4;          // bit position of the inData byte (4 - 7, 0 - 3)
-  uint8_t out_shift = 7;          // bit shift inData bit in position of outbuf byte
-
-  // we need to zero the out buffer first cause we are using bitshifts
-  for (unsigned int i = out_bytecounter; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
+  struct EncodeLUT
   {
-    packet->data[i] = 0;
-  }
-
-  for (uint8_t dataByte = 0; dataByte < itho->length; dataByte++)
-  {
-    for (uint8_t dataBit = 0; dataBit < 8; dataBit++)
-    { // process a full dataByte at a time resulting in 20 output bits (2.5 bytes) with the pattern 7x6x5x4x 10 3x2x1x0x 10 7x6x5x4x 10 3x2x1x0x 10 etc
-      if (out_bitcounter == 8)
-      { // check if new byte is needed
-        out_bytecounter++;
-        out_bitcounter = 0;
-      }
-
-      if (out_patterncounter == 8)
-      { // check if we have to start with a 1 0 pattern
-        out_patterncounter = 0;
-        packet->data[out_bytecounter] = packet->data[out_bytecounter] | 1 << out_shift;
-        out_shift--;
-        out_bitcounter++;
-        packet->data[out_bytecounter] = packet->data[out_bytecounter] | 0 << out_shift;
-        if (out_shift == 0)
-          out_shift = 8;
-        out_shift--;
-        out_bitcounter++;
-      }
-
-      if (out_bitcounter == 8)
-      { // check if new byte is needed
-        out_bytecounter++;
-        out_bitcounter = 0;
-      }
-
-      // set the even bit
-      uint8_t bit = (itho->dataDecoded[dataByte] & (1 << bitSelect)) >> bitSelect; // select bit and shift to bit pos 0
-      bitSelect++;
-      if (bitSelect == 8)
-        bitSelect = 0;
-
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | bit << out_shift; // shift bit in corect pos of current outbuf byte
-      out_shift--;
-      out_bitcounter++;
-      out_patterncounter++;
-
-      // set the odd bit (inverse of even bit)
-      bit = ~bit & 0b00000001;
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | bit << out_shift;
-      if (out_shift == 0)
-        out_shift = 8;
-      out_shift--;
-      out_bitcounter++;
-      out_patterncounter++;
-    }
-  }
-  if (out_bitcounter < 8)
-  { // add closing 1 0 pattern to fill last packet->data byte and ensure DC balance in the message
-    for (uint8_t i = out_bitcounter; i < 8; i += 2)
+    uint16_t group[16];
+    constexpr EncodeLUT() : group{}
     {
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | 1 << out_shift;
-      out_shift--;
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | 0 << out_shift;
-      if (out_shift == 0)
-        out_shift = 8;
-      out_shift--;
+      for (int m = 0; m < 16; m++)
+      {
+        int m0 = m & 1, m1 = (m >> 1) & 1, m2 = (m >> 2) & 1, m3 = (m >> 3) & 1;
+        group[m] = (uint16_t)((m0 << 9) | ((m0 ^ 1) << 8) | (m1 << 7) | ((m1 ^ 1) << 6) |
+                              (m2 << 5) | ((m2 ^ 1) << 4) | (m3 << 3) | ((m3 ^ 1) << 2) | (1 << 1));
+      }
     }
-  }
-
-  return out_bytecounter;
+  };
+  constexpr EncodeLUT kEncodeLUT{};
 }
 
+// Encodes each decoded byte to 20 raw bits via the nibble->group LUT (2 decoded
+// bytes = exactly 5 raw bytes, the same alignment the decoder exploits).
+// Byte-identical to the previous per-bit implementation for every payload
+// (verified: test/test_native_rf_decode fuzzes both against each other, incl.
+// the returned last-index). Writes are bounded so a pathologically long message
+// can't overrun packet->data[] — sendRFMessage appends an end byte + 7 noise
+// bytes after the returned index, so 8 bytes of headroom are reserved. Real
+// messages are far under this; the previous implementation had no such guard.
+uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet)
+{
+  // start at index 14; the first 14 bytes are set manually by createMessageStart
+  for (unsigned int i = 14; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
+    packet->data[i] = 0;
+
+  const int maxIdx = (int)(sizeof(packet->data) / sizeof(packet->data[0])) - 1 - 8;
+  int outIdx = 14;
+  uint64_t acc = 0;
+  int accBits = 0;
+  for (uint8_t k = 0; k < itho->length && outIdx <= maxIdx; k++)
+  {
+    uint32_t bits20 = ((uint32_t)kEncodeLUT.group[itho->dataDecoded[k] >> 4] << 10) |
+                      kEncodeLUT.group[itho->dataDecoded[k] & 0x0F];
+    acc = (acc << 20) | bits20;
+    accBits += 20;
+    while (accBits >= 8 && outIdx <= maxIdx)
+    {
+      packet->data[outIdx++] = (uint8_t)((acc >> (accBits - 8)) & 0xFF);
+      accBits -= 8;
+    }
+  }
+  // closing framing: pad the final partial byte with "1 0" pairs for DC balance
+  if (accBits > 0 && outIdx <= maxIdx)
+  {
+    while (accBits < 8)
+    {
+      acc = (acc << 2) | 0x2;
+      accBits += 2;
+    }
+    packet->data[outIdx++] = (uint8_t)((acc >> (accBits - 8)) & 0xFF);
+  }
+
+  return (uint8_t)(outIdx - 1);
+}
+
+// Compile-time decode table (lands in flash/.rodata, no runtime init).
+// The RAMSES bit encoding maps 1 decoded byte -> 20 raw bits, so 2 decoded
+// bytes occupy exactly 5 raw bytes and every 5-byte boundary re-aligns to a
+// group boundary. Each 10-bit group is [d x d x d x d x b b]: 4 data bits at
+// even positions, 4 "redundancy" bits at odd positions, and 2 trailing framing
+// bits. Only the data bits carry information; the odd/framing bits are NOT a
+// reliable per-frame integrity signal (real Itho/Orcon frames do not carry the
+// (bit,~bit) complement + "10" framing that this firmware's messageEncode
+// emits), so the decoder simply ignores them, as the original did.
+//   decode[c] : for the 8 data/redundancy bits of a group (c), the reversed
+//               data nibble (first data bit -> nibble bit0).
+namespace
+{
+  struct DecodeLUT
+  {
+    uint8_t decode[256];
+    constexpr DecodeLUT() : decode{}
+    {
+      for (int c = 0; c < 256; c++)
+        decode[c] = (uint8_t)(((c >> 7) & 1) | (((c >> 5) & 1) << 1) |
+                              (((c >> 3) & 1) << 2) | (((c >> 1) & 1) << 3));
+    }
+  };
+  constexpr DecodeLUT kDecodeLUT{};
+
+  // Worst case: MAX_RAW raw bytes -> floor(MAX_RAW*8/10) groups -> up to
+  // ceil(groups*4/8) decoded bytes. For MAX_RAW=162 that is index 64 < 82.
+  // This guards the implicit margin if either constant changes.
+  static_assert(((MAX_RAW * 8 / 10) * 4 + 7) / 8 <= MAX_DECODED,
+                "decoded output can exceed dataDecoded[] for this MAX_RAW");
+}
+
+// Reverses messageEncode. Byte-identical to the previous per-bit implementation
+// for every input (verified: test/test_native_rf_decode fuzzes both against
+// each other over all lengths incl. garbage). The previous version's dead
+// odd-bit "check" bookkeeping and the input-buffer clear (unused; the clear only
+// widened the ISR/decoder race window) have been removed.
 void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *packetPtr)
 {
-
   packetPtr->length = 0;
   int lenInbuf = packet->length;
-
   lenInbuf -= STARTBYTE; // correct for sync byte pos
-
   while (lenInbuf >= 5)
   {
     lenInbuf -= 5;
@@ -1408,60 +1439,58 @@ void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *packetPtr)
   {
     packetPtr->dataDecoded[i] = 0;
   }
-  // for (unsigned int i = 0; i < sizeof(packetPtr->dataDecodedChk) / sizeof(packetPtr->dataDecodedChk[0]); i++)
-  // {
-  //   packetPtr->dataDecodedChk[i] = 0;
-  // }
 
-  uint8_t out_i = 0;         // byte index
-  uint8_t out_j = 4;         // bit index
-  uint8_t out_i_chk = 0;     // byte index
-  uint8_t out_j_chk = 4;     // bit index
-  uint8_t in_bitcounter = 0; // process per 10 input bits
+  const uint8_t *in = &packet->data[STARTBYTE];
+  int n = (int)packet->length - STARTBYTE;
+  if (n < 0)
+    n = 0;
+  int blocks = n / 5;
+  int rem = n - blocks * 5;
+  uint8_t *out = packetPtr->dataDecoded;
 
-  for (int i = STARTBYTE; i < packet->length; i++)
+  for (int b = 0; b < blocks; b++, in += 5, out += 2)
   {
-
-    for (int j = 7; j > -1; j--)
-    {
-      if (in_bitcounter == 0 || in_bitcounter == 2 || in_bitcounter == 4 || in_bitcounter == 6)
-      {                              // select input bits for output
-        uint8_t x = packet->data[i]; // select input byte
-        x = x >> j;                  // select input bit
-        x = x & 0b00000001;
-        x = x << out_j; // set value for output bit
-        packetPtr->dataDecoded[out_i] = packetPtr->dataDecoded[out_i] | x;
-        out_j += 1; // next output bit
-        if (out_j > 7)
-          out_j = 0;
-        if (out_j == 4)
-          out_i += 1;
-      }
-      if (in_bitcounter == 1 || in_bitcounter == 3 || in_bitcounter == 5 || in_bitcounter == 7)
-      {                              // select input bits for check output
-        uint8_t x = packet->data[i]; // select input byte
-        x = x >> j;                  // select input bit
-        x = x & 0b00000001;
-        x = x << out_j_chk; // set value for output bit
-        // packetPtr->dataDecodedChk[out_i_chk] = packetPtr->dataDecodedChk[out_i_chk] | x;
-        out_j_chk += 1; // next output bit
-        if (out_j_chk > 7)
-          out_j_chk = 0;
-        if (out_j_chk == 4)
-        {
-          // packetPtr->dataDecodedChk[out_i_chk] = ~packetPtr->dataDecodedChk[out_i_chk]; // inverse bits
-          out_i_chk += 1;
-        }
-      }
-      in_bitcounter += 1; // continue cyling in groups of 10 bits
-      if (in_bitcounter > 9)
-        in_bitcounter = 0;
-    }
+    // byte loads only (Xtensa-safe, no unaligned 32-bit access): the 40-bit
+    // block is hi (bytes 0..3) + lo (byte 4).
+    uint32_t hi = ((uint32_t)in[0] << 24) | ((uint32_t)in[1] << 16) |
+                  ((uint32_t)in[2] << 8) | (uint32_t)in[3];
+    uint32_t lo = in[4];
+    uint8_t c0 = (uint8_t)(hi >> 24);
+    uint8_t c1 = (uint8_t)((hi >> 14) & 0xFF);
+    uint8_t c2 = (uint8_t)((hi >> 4) & 0xFF);
+    uint8_t c3 = (uint8_t)(((hi << 6) | (lo >> 2)) & 0xFF);
+    out[0] = (uint8_t)((kDecodeLUT.decode[c0] << 4) | kDecodeLUT.decode[c1]);
+    out[1] = (uint8_t)((kDecodeLUT.decode[c2] << 4) | kDecodeLUT.decode[c3]);
   }
-  // clear packet data
-  for (unsigned int i = 0; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
+
+  if (rem)
   {
-    packet->data[i] = 0;
+    // tail (1..4 raw bytes): replicate the original bit loop exactly. At any
+    // 5-byte boundary the decoder state is in_bitcounter==0, out_j==4, out at
+    // block-relative byte 0.
+    uint8_t out_i = 0;
+    uint8_t out_j = 4;
+    uint8_t in_bitcounter = 0;
+    for (int i = 0; i < rem; i++)
+    {
+      uint8_t byte = in[i];
+      for (int j = 7; j > -1; j--)
+      {
+        if ((in_bitcounter & 1) == 0 && in_bitcounter < 8)
+        {
+          uint8_t x = (uint8_t)((byte >> j) & 1u);
+          out[out_i] = out[out_i] | (uint8_t)(x << out_j);
+          out_j += 1;
+          if (out_j > 7)
+            out_j = 0;
+          if (out_j == 4)
+            out_i += 1;
+        }
+        in_bitcounter += 1;
+        if (in_bitcounter > 9)
+          in_bitcounter = 0;
+      }
+    }
   }
 }
 
@@ -1656,11 +1685,19 @@ String IthoCC1101::LastMessageDecoded(IthoPacket *packetPtr)
     str += String(buf);
     str += ":";
 
-    for (int i = packetPtr->payloadPos; i < packetPtr->payloadPos + packetPtr->len; i++)
+    // Clamp to the decoded buffer. A corrupt/noise frame can carry a len byte
+    // far larger than the payload actually present (parseMessage rejects
+    // len > MAX_PAYLOAD but still sets it, and this logging path runs on every
+    // sniffed frame at rfloglevel 3), which would otherwise read past
+    // dataDecoded[].
+    int payloadEnd = packetPtr->payloadPos + packetPtr->len;
+    if (payloadEnd > (int)sizeof(packetPtr->dataDecoded))
+      payloadEnd = (int)sizeof(packetPtr->dataDecoded);
+    for (int i = packetPtr->payloadPos; i < payloadEnd; i++)
     {
       snprintf(buf, sizeof(buf), "%02X", packetPtr->dataDecoded[i]);
       str += String(buf);
-      if (i < packetPtr->payloadPos + packetPtr->len - 1)
+      if (i < payloadEnd - 1)
       {
         str += ",";
       }
@@ -2292,7 +2329,6 @@ void IthoCC1101::handle31D9(IthoPacket *packetPtr)
   }
   else
   {
-    D_LOG("RFI: deviceId not found");
     return;
   }
 
@@ -2338,7 +2374,6 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
   }
   else
   {
-    D_LOG("RFI: deviceId not found");
     return;
   }
 

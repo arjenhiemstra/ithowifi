@@ -6718,7 +6718,7 @@ var html_syslog = `
 <div id="rflog_outer" class="hidden">
     <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
     <div id="rflog"
-        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+        style="padding:10px;background-color:black;height:40vh;min-height:6em;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa;resize:both">
     </div>
     <div style="padding-top:5px;">
         <a href="#" class="pure-button" onclick="$id('rflog').innerHTML=''">Clear</a>
