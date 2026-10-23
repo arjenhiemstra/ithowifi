@@ -79,6 +79,7 @@ RFStatusCallback_t IthoCC1101::rf31D9Callback = nullptr;
 #define HEADER_31DA 0x18              // message type: I, addr0+addr2
 #define HEADER_2E10 0x14              // message type: I, addr2
 #define HEADER_RQ_BIDIRECTIONAL 0x0C  // message type: RQ, addr0+addr1
+#define HEADER_RP_BIDIRECTIONAL 0x3C  // message type: RP, addr0+addr1
 
 void IthoCC1101::setLowPowerMode(bool lowPower)
 {
@@ -1155,6 +1156,25 @@ void IthoCC1101::send31DA(uint8_t *command)
   message.deviceid2[0] = defaultID[0];
   message.deviceid2[1] = defaultID[1];
   message.deviceid2[2] = defaultID[2];
+
+  message.command = &command[0];
+
+  sendRFMessage(&message);
+}
+// 31DA to one device, the way an Itho fan answers a bound remote (captured 2026-10-22): RP 31DA to its
+// RQ 31DA, and I 31DA addressed to it after a command
+void IthoCC1101::send31DATo(uint8_t *command, const uint8_t to[3], bool reply)
+{
+  RFmessage message;
+  message.header = reply ? HEADER_RP_BIDIRECTIONAL : HEADER_RFT_BIDIRECTIONAL;
+
+  message.deviceid0[0] = defaultID[0];
+  message.deviceid0[1] = defaultID[1];
+  message.deviceid0[2] = defaultID[2];
+
+  message.deviceid1[0] = to[0];
+  message.deviceid1[1] = to[1];
+  message.deviceid1[2] = to[2];
 
   message.command = &command[0];
 

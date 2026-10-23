@@ -259,6 +259,51 @@ void set_send10E0_true()
 {
   send10E0 = true;
 }
+// Fan status (31DA) for RF: the I2C status when available, else the default template. The last one is kept
+// so replies to bound remotes go out at once instead of waiting for a new I2C query.
+static uint8_t last31DA[32]{};
+static uint32_t last31DAAt = 0;
+constexpr uint32_t LAST_31DA_MAX_AGE_MS = 60 * 1000;
+
+static void build31DA(uint8_t *command, bool query)
+{
+  static const uint8_t tmpl[32] = {0x31, 0xDA, 0x1D, 0x00, 0xC8, 0x40, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0xEF, 0xF8, 0x08, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEF, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF};
+  memcpy(command, tmpl, sizeof(tmpl));
+  if (!query)
+    return;
+  uint8_t receive_buffer[256]{};
+  size_t result = sendQuery31DA(&receive_buffer[0]);
+  // 80 82 B1 DA 01 1C C8 40 03 A5 39 EF 7F FF 7F FF 7F FF 7F FF F8 08 EF 98 05 00 00 00 EF EF 7F FF 7F FF 20
+  // 1D:            00,C8,40,04,7B,38,EF,7F,FF,7F,FF,7F,FF,7F,FF,F8,08,EF,98,05,00,00,00,EF,EF,7F,FF,7F,FF
+  if (result > 4)
+  {
+    for (uint8_t i = 4; i < sizeof(tmpl); i++)
+      command[i] = receive_buffer[i + 2];
+    memcpy(last31DA, command, sizeof(tmpl));
+    last31DAAt = millis();
+  }
+  else
+  {
+    E_LOG("I2C: error - sendQuery31DA failed");
+  }
+}
+
+// Answer a bound remote like the fan does: RP 31DA to its RQ 31DA, I 31DA to it after a command.
+// Without this an RFT CO2 shows a join error and an RFT AUTO-N repeats its commands and shows red.
+static void reply31DA(const uint8_t to[3], bool reply)
+{
+  uint8_t command[32];
+  if (last31DAAt != 0 && millis() - last31DAAt < LAST_31DA_MAX_AGE_MS)
+    memcpy(command, last31DA, sizeof(command));
+  else
+    build31DA(command, true);
+  rfManager.radio.setSendTries(1);
+  disableRF_ISR();
+  rfManager.radio.send31DATo(command, to, reply);
+  enableRF_ISR();
+  rfManager.radio.setSendTries(3);
+}
+
 void set_send31D9_true()
 {
   send31D9 = true;
@@ -511,29 +556,9 @@ void TaskCC1101(void *pvParameters)
       }
       if ((send31DA || send31DAdebug) && !ithoCheck)
       {
-        uint8_t command[] = {0x31, 0xDA, 0x1D, 0x00, 0xC8, 0x40, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0xEF, 0xF8, 0x08, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEF, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF};
-
-        if (send31DA)
-        {
-          send31DA = false;
-
-          uint8_t receive_buffer[256]{};
-          size_t result = sendQuery31DA(&receive_buffer[0]);
-          // 80 82 B1 DA 01 1C C8 40 03 A5 39 EF 7F FF 7F FF 7F FF 7F FF F8 08 EF 98 05 00 00 00 EF EF 7F FF 7F FF 20
-          // 1D:            00,C8,40,04,7B,38,EF,7F,FF,7F,FF,7F,FF,7F,FF,F8,08,EF,98,05,00,00,00,EF,EF,7F,FF,7F,FF
-
-          if (result > 4)
-          {
-            for (uint8_t i = 4; i < sizeof(command); i++)
-            {
-              command[i] = receive_buffer[i + 2];
-            }
-          }
-          else
-          {
-            E_LOG("I2C: error - sendQuery31DA failed");
-          }
-        }
+        uint8_t command[32];
+        build31DA(command, send31DA);
+        send31DA = false;
         if (send31DAdebug)
         {
           send31DAdebug = false;
@@ -755,20 +780,17 @@ void TaskCC1101(void *pvParameters)
               {
                 // send31D9 = true;
               }
-              if (cmd == Itho31DA)
-              {
-                // send31DA = true;
+              if (cmd == Itho31DA && ((packet->header >> 4) & 0x3) == 0 && rfManager.radio.isOwnID(packet->deviceId1))
+              { // RQ 31DA from a bound remote (an RFT CO2 asks right after joining)
+                reply31DA(lastID, true);
               }
               if (cmd == IthoDeviceInfo)
               {
                 // send10E0 = true;
               }
-              if (bidirect && (cmd != IthoJoin && cmd != IthoLeave))
-              { // trigger fan status update if there is a bi-directional remote in the known list of remotes
-                // rf_message.once_ms(100, set_send31D9_true);
-                rf_message.once_ms(150, set_send31DA_true);
-                // send31D9 = true;
-                // send31DA = true;
+              if (bidirect && cmd != IthoJoin && cmd != IthoLeave && cmd != Itho31DA && cmd != Itho31D9 && cmd != IthoDeviceInfo)
+              { // acknowledge a bi-directional remote's command with the fan status addressed to it, at once
+                reply31DA(lastID, false);
               }
             }
           }

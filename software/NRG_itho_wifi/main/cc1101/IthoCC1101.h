@@ -247,6 +247,8 @@ public:
   void send31D9(uint8_t *command);
   void send31DA(uint8_t faninfo = 0, uint8_t timer_remaining = 0);
   void send31DA(uint8_t *command);
+  void send31DATo(uint8_t *command, const uint8_t to[3], bool reply); // addressed: RP (reply) or I (acknowledge)
+  bool isOwnID(uint32_t id) const { return id == ((uint32_t)defaultID[0] << 16 | (uint32_t)defaultID[1] << 8 | defaultID[2]); }
   void sendRFMessage(RFmessage *message);
   void sendCommand(IthoCommand command);
 
