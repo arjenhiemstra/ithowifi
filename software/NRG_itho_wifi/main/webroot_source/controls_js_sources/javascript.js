@@ -1332,14 +1332,14 @@ document.addEventListener('DOMContentLoaded', function () {
       update_page('mqtt');
     }
     else if (btnId === 'itho_llm') {
-      // Auto-save remote config before entering learn/leave mode
-      // Try selected remote first, then save all visible remotes (wizard mode)
+      // Auto-save remote config before entering learn/leave mode: the selected remote, or in the
+      // wizard all remotes with visible dropdowns. On the RF devices page without a selection nothing
+      // is saved (a join registers the remote itself), so the config is not saved once per row.
       var sel = checkedVal('optionsRemotes');
       var indices = [];
       if (sel != null) {
         indices.push(parseInt(sel));
-      } else {
-        // No radio selected (wizard mode) — save all remotes that have visible dropdowns
+      } else if ($id('wizard-indicators')) {
         for (var ri = 0; ri < 12; ri++) {
           if ($id('func_remote-' + ri)) indices.push(ri);
         }
@@ -2327,7 +2327,7 @@ function generateSendRemoteID() {
   var b1 = parseInt(parts[1], 16) & 0xFF;
   var moduleB2 = parseInt(parts[2], 16) & 0xFF;
   var RESERVED = 12; // address slots reserved just above the module ID
-  var hx = function (n) { return n.toString(16).toUpperCase(); };
+  var hx = hexByte;
   var inUse = function (cand) {
     for (var j = 0; j < remotesCount; j++) {
       var el = $id('id_remote-' + j);
@@ -2342,6 +2342,11 @@ function generateSendRemoteID() {
     if (!inUse(candidate)) return candidate;
   }
   return 'empty slot';
+}
+
+// RF ID byte as two hex digits: 07, not 7
+function hexByte(n) {
+  return n.toString(16).toUpperCase().padStart(2, '0');
 }
 
 function buildHtmlTableRemotes(table, remfunc, jsonVar) {
@@ -2416,8 +2421,8 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
       else if (key === "id") {
         var cellValue = value.toString();
         if (cellValue == null) cellValue = '';
-        cellValue = `${value[0].toString(16).toUpperCase()},${value[1].toString(16).toUpperCase()},${value[2].toString(16).toUpperCase()}`;
-        if (cellValue == "0,0,0") cellValue = "empty slot";
+        cellValue = `${hexByte(value[0])},${hexByte(value[1])},${hexByte(value[2])}`;
+        if (cellValue == "00,00,00") cellValue = "empty slot";
         var idval = `id_remote-${i}`;
         var td = document.createElement('td');
         td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}' data-saved-id='${cellValue}'${isWizard ? '' : " readonly=''"} />`;
