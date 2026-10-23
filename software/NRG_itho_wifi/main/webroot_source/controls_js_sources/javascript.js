@@ -2327,7 +2327,7 @@ function generateSendRemoteID() {
   var b1 = parseInt(parts[1], 16) & 0xFF;
   var moduleB2 = parseInt(parts[2], 16) & 0xFF;
   var RESERVED = 12; // address slots reserved just above the module ID
-  var hx = function (n) { return n.toString(16).toUpperCase(); };
+  var hx = hexByte;
   var inUse = function (cand) {
     for (var j = 0; j < remotesCount; j++) {
       var el = $id('id_remote-' + j);
@@ -2342,6 +2342,11 @@ function generateSendRemoteID() {
     if (!inUse(candidate)) return candidate;
   }
   return 'empty slot';
+}
+
+// RF ID byte as two hex digits: 07, not 7
+function hexByte(n) {
+  return n.toString(16).toUpperCase().padStart(2, '0');
 }
 
 function buildHtmlTableRemotes(table, remfunc, jsonVar) {
@@ -2416,8 +2421,8 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
       else if (key === "id") {
         var cellValue = value.toString();
         if (cellValue == null) cellValue = '';
-        cellValue = `${value[0].toString(16).toUpperCase()},${value[1].toString(16).toUpperCase()},${value[2].toString(16).toUpperCase()}`;
-        if (cellValue == "0,0,0") cellValue = "empty slot";
+        cellValue = `${hexByte(value[0])},${hexByte(value[1])},${hexByte(value[2])}`;
+        if (cellValue == "00,00,00") cellValue = "empty slot";
         var idval = `id_remote-${i}`;
         var td = document.createElement('td');
         td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}' data-saved-id='${cellValue}'${isWizard ? '' : " readonly=''"} />`;
