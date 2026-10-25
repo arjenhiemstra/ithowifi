@@ -32,6 +32,7 @@ A spec describes *what* is being built and its immediate risk/test/rollback plan
 ## Active specs
 
 - [boot-phase-gates.md](active/boot-phase-gates.md) — replace the linear boot task chain with FreeRTOS event-group phase gates ([ADR-0010](../docs/adr/ADR-0010-boot-phase-event-group.md))
+- [status-sensor-error-latch.md](active/status-sensor-error-latch.md) — 2401 status sensor errors are judged per poll instead of latching until reboot (#295)
 
 ## Related
 

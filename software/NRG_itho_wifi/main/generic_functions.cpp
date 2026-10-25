@@ -140,7 +140,11 @@ uint8_t getIthoStatusJSON(JsonObject root)
     {
       if (ithoStat.name == nullptr)
         continue;
-      if (ithoStat.type == ithoDeviceStatus::is_byte)
+      if (ithoStat.error)
+      {
+        root[ithoStat.name] = ithoStat.error;
+      }
+      else if (ithoStat.type == ithoDeviceStatus::is_byte)
       {
         root[ithoStat.name] = ithoStat.value.byteval;
       }
@@ -151,10 +155,6 @@ uint8_t getIthoStatusJSON(JsonObject root)
       else if (ithoStat.type == ithoDeviceStatus::is_float)
       {
         root[ithoStat.name] = round(ithoStat.value.floatval, 2);
-      }
-      else if (ithoStat.type == ithoDeviceStatus::is_string)
-      {
-        root[ithoStat.name] = ithoStat.value.stringval;
       }
       index++;
     }

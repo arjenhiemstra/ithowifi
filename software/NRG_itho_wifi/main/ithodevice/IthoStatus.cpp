@@ -193,7 +193,7 @@ void sendQueryStatus(bool updateweb)
       ithoStatusUpdateField(ithoStat, tempVal, fanSensorErrors.begin()->second);
       statusPos += ithoStat.length;
 
-      if (ithoStat.type == ithoDeviceStatus::is_float && systemConfig.syssht30 == 0)
+      if (!ithoStat.error && systemConfig.syssht30 == 0)
       {
         if (ithoStatusIsHumidity(ithoStat.name))
         {

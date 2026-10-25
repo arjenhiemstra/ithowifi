@@ -13,8 +13,7 @@ struct ithoDeviceStatus
   {
     is_byte,
     is_int,
-    is_float,
-    is_string
+    is_float
   } type;
   uint8_t length;
   union
@@ -22,12 +21,12 @@ struct ithoDeviceStatus
     uint8_t byteval;
     int32_t intval;
     float floatval;
-    const char *stringval;
   } value;
   uint32_t divider;
   uint8_t updated;
   bool is_signed;
-  ithoDeviceStatus() : name(nullptr), updated(0) {};
+  const char *error; // set while the Itho reports this field's sensor as unavailable
+  ithoDeviceStatus() : name(nullptr), updated(0), error(nullptr) {};
 };
 
 inline int castToSignedInt(int val, int length)
@@ -53,6 +52,18 @@ inline bool ithoStatusIsHumidity(const char *name)
 inline bool ithoStatusIsTemperature(const char *name)
 {
   return strcmp("Temperature", name) == 0 || strcmp("temperature", name) == 0;
+}
+
+// Whether this poll's value is the Itho's way of saying the field's sensor gave no reading.
+inline bool ithoStatusSensorUnavailable(const ithoDeviceStatus &ithoStat)
+{
+  if (strcmp("Highest CO2 concentration (ppm)", ithoStat.name) == 0 || strcmp("highest-co2-concentration_ppm", ithoStat.name) == 0)
+    return ithoStat.value.intval == 0x8200;
+  if (strcmp("Highest RH concentration (%)", ithoStat.name) == 0 || strcmp("highest-rh-concentration_perc", ithoStat.name) == 0)
+    return ithoStat.value.intval == 0xEF;
+  if (ithoStatusIsHumidity(ithoStat.name) || ithoStatusIsTemperature(ithoStat.name))
+    return !(ithoStat.value.floatval > 1.0 && ithoStat.value.floatval < 100.0);
+  return false;
 }
 
 // Store one poll's raw value in the field. sensorError is the text a field shows when the
@@ -107,28 +118,5 @@ inline void ithoStatusUpdateField(ithoDeviceStatus &ithoStat, int tempVal, const
     }
   }
 
-  if (strcmp("Highest CO2 concentration (ppm)", ithoStat.name) == 0 || strcmp("highest-co2-concentration_ppm", ithoStat.name) == 0)
-  {
-    if (ithoStat.value.intval == 0x8200)
-    {
-      ithoStat.type = ithoDeviceStatus::is_string;
-      ithoStat.value.stringval = sensorError;
-    }
-  }
-  if (strcmp("Highest RH concentration (%)", ithoStat.name) == 0 || strcmp("highest-rh-concentration_perc", ithoStat.name) == 0)
-  {
-    if (ithoStat.value.intval == 0xEF)
-    {
-      ithoStat.type = ithoDeviceStatus::is_string;
-      ithoStat.value.stringval = sensorError;
-    }
-  }
-  if (ithoStatusIsHumidity(ithoStat.name) || ithoStatusIsTemperature(ithoStat.name))
-  {
-    if (!(ithoStat.value.floatval > 1.0 && ithoStat.value.floatval < 100.0))
-    {
-      ithoStat.type = ithoDeviceStatus::is_string;
-      ithoStat.value.stringval = sensorError;
-    }
-  }
+  ithoStat.error = ithoStatusSensorUnavailable(ithoStat) ? sensorError : nullptr;
 }
