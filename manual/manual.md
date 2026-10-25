@@ -367,7 +367,7 @@ The most commonly sold Itho remotes are supported.
 
 > **Note:** handling the RF commands of existing remotes via the add-on is not available for the HRU 250, HRU 300 and HRU 400. Monitoring RF communication is possible, however. Therefore, leave existing RF remotes paired with the Itho and pair the add-on as an additional remote with your HRU.
 
-1. Unlearn the remote by sending a leave command within the first 2 minutes after powering on the Itho unit (on the remote you do this by pressing all 4 buttons simultaneously);
+1. Unpair the remote from the Itho by sending a leave command within the first 2 minutes after powering on the Itho unit. On most remotes you do this by pressing all 4 buttons simultaneously. On newer remotes, such as the RFT AUTO-N, that does not work: press 2 diagonally placed buttons simultaneously for 3 to 8 seconds instead. If in doubt, check the manual of your remote;
 2. If you have not already done so, configure the add-on module further and (last) activate the RF module under the "System settings" menu;
 3. The add-on reboots;
 4. If the RF module is correctly detected, the option to manage Itho remotes appears in the same menu. Only add remotes after the Itho unit is out of learn/leave mode (so at least 2 minutes after powering on), otherwise the remote will be paired with the Itho again;

@@ -367,7 +367,7 @@ De meest verkochte afstandsbedieningen van Itho worden ondersteund.
 
 > **Let op:** de keuze voor het afhandelen van RF commando's van bestaande remotes via de add-on is niet beschikbaar voor de HRU 250, HRU 300 en HRU 400. Het monitoren van RF communicatie is wel mogelijk. Laat daarom bestaande RF remotes gekoppeld aan de Itho en koppel de add-on als extra remote aan je HRU.
 
-1. Ontleer de afstandsbediening door een leave commando te versturen binnen de eerste 2 minuten nadat je de Itho unit aan hebt gezet (op de afstandsbediening doe je dat door alle 4 de knoppen tegelijkertijd in te drukken);
+1. Ontkoppel de afstandsbediening van de Itho door binnen 2 minuten nadat je de Itho unit aan hebt gezet een leave commando te versturen. Op de meeste afstandsbedieningen doe je dat door alle 4 de knoppen tegelijkertijd in te drukken. Bij nieuwere afstandsbedieningen, zoals de RFT AUTO-N, werkt dat niet: druk daar 2 diagonaal geplaatste knoppen 3 tot 8 seconden tegelijkertijd in. Zie bij twijfel de handleiding van je afstandsbediening;
 2. Als je dat nog niet gedaan hebt; stel de add-on module verder in en activeer (als laatste) de RF-module onder het menu "System settings";
 3. De add-on reboot;
 4. Als de RF-module correct gedetecteerd is verschijnt in hetzelfde menu de optie om Itho afstandsbedieningen te beheren. Voeg pas afstandsbedieningen toe, nadat de Itho unit uit learn/leave mode is (dus minimaal 2 minuten na inschakelen) anders wordt de remote opnieuw aan de Itho gekoppeld;
