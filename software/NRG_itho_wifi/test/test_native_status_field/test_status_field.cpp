@@ -144,6 +144,16 @@ void test_normalized_labels_get_the_same_sensor_checks()
     TEST_ASSERT_EQUAL_STRING(NOT_AVAILABLE, rhMax.error);
 }
 
+void test_update_reports_only_the_poll_a_sensor_error_starts()
+{
+    auto f = makeField("RelativeHumidity", ithoDeviceStatus::is_float, 2, 100, false);
+    TEST_ASSERT_FALSE(ithoStatusUpdateField(f, 4714, NOT_AVAILABLE));
+    TEST_ASSERT_TRUE(ithoStatusUpdateField(f, 0, NOT_AVAILABLE));
+    TEST_ASSERT_FALSE(ithoStatusUpdateField(f, 0, NOT_AVAILABLE));
+    TEST_ASSERT_FALSE(ithoStatusUpdateField(f, 4690, NOT_AVAILABLE));
+    TEST_ASSERT_TRUE(ithoStatusUpdateField(f, 10001, NOT_AVAILABLE));
+}
+
 int main()
 {
     UNITY_BEGIN();
@@ -161,6 +171,7 @@ int main()
     RUN_TEST(test_co2_sensor_error_code_shows_error_then_recovers);
     RUN_TEST(test_highest_rh_sensor_error_code_shows_error_then_recovers);
     RUN_TEST(test_normalized_labels_get_the_same_sensor_checks);
+    RUN_TEST(test_update_reports_only_the_poll_a_sensor_error_starts);
 
     return UNITY_END();
 }

@@ -15,6 +15,8 @@ After days to weeks, `RelativeHumidity` and/or `Temperature` read "not available
 
 A field keeps its type. `ithoStatusUpdateField` sets the field's `error` from the current value on every poll, `getIthoStatusJSON` shows the error text while it is set, and `ithoHum`/`ithoTemp` only take a value that has no error. The per-field update lives in `main/ithodevice/IthoStatusField.h`, free of Arduino and FreeRTOS, so `test_native_status_field` runs the firmware's own code.
 
+The poll on which a humidity or temperature reading goes out of range logs a warning with the raw value, the reply length and the frame's length byte, so the bad reads behind #295 become visible and a short frame can be told from a sensor reading 0. It logs once per error, not on every poll while the error lasts.
+
 ## Acceptance Criteria
 
 - [x] A humidity or temperature field reads its value again on the first valid poll after an out-of-range one
@@ -31,6 +33,7 @@ A field keeps its type. `ithoStatusUpdateField` sets the field's `error` from th
 
 - `ithoHum`/`ithoTemp` are now guarded by the field's `error` instead of an inline range check, so a bad read must not reach them. The guard is in `sendQueryStatus`, which the native tests do not cover.
 - A sensor that keeps failing now alternates between a value and "not available" instead of freezing on its last value.
+- A unit whose humidity or temperature field reads out of range from the first poll (no sensor fitted) logs the warning once at every boot.
 
 ## Test Requirements
 

@@ -190,7 +190,12 @@ void sendQueryStatus(bool updateweb)
         tempVal |= i2cbuf[statusPos + (ithoStat.length - i)] << ((i - 1) * 8);
       }
 
-      ithoStatusUpdateField(ithoStat, tempVal, fanSensorErrors.begin()->second);
+      if (ithoStatusUpdateField(ithoStat, tempVal, fanSensorErrors.begin()->second) &&
+          (ithoStatusIsHumidity(ithoStat.name) || ithoStatusIsTemperature(ithoStat.name)))
+      {
+        W_LOG("I2C: status %s out of range, raw value 0x%X (reply %u bytes, length byte %u)", ithoStat.name,
+              static_cast<unsigned>(tempVal), static_cast<unsigned>(result), static_cast<unsigned>(i2cbuf[5]));
+      }
       statusPos += ithoStat.length;
 
       if (!ithoStat.error && systemConfig.syssht30 == 0)

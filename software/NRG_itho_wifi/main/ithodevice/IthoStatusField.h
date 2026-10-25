@@ -67,8 +67,8 @@ inline bool ithoStatusSensorUnavailable(const ithoDeviceStatus &ithoStat)
 }
 
 // Store one poll's raw value in the field. sensorError is the text a field shows when the
-// Itho reports its sensor as unavailable.
-inline void ithoStatusUpdateField(ithoDeviceStatus &ithoStat, int tempVal, const char *sensorError)
+// Itho reports its sensor as unavailable. Returns true on the poll that error starts.
+inline bool ithoStatusUpdateField(ithoDeviceStatus &ithoStat, int tempVal, const char *sensorError)
 {
   if (ithoStat.type == ithoDeviceStatus::is_byte)
   {
@@ -118,5 +118,7 @@ inline void ithoStatusUpdateField(ithoDeviceStatus &ithoStat, int tempVal, const
     }
   }
 
+  bool wasUnavailable = ithoStat.error != nullptr;
   ithoStat.error = ithoStatusSensorUnavailable(ithoStat) ? sensorError : nullptr;
+  return ithoStat.error && !wasUnavailable;
 }
