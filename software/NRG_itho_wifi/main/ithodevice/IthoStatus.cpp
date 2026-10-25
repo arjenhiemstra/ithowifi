@@ -190,102 +190,20 @@ void sendQueryStatus(bool updateweb)
         tempVal |= i2cbuf[statusPos + (ithoStat.length - i)] << ((i - 1) * 8);
       }
 
-      if (ithoStat.type == ithoDeviceStatus::is_byte)
-      {
-        if (ithoStat.value.byteval == (byte)tempVal)
-        {
-          ithoStat.updated = 0;
-        }
-        else
-        {
-          ithoStat.updated = 1;
-          ithoStat.value.byteval = (byte)tempVal;
-        }
-      }
-      if (ithoStat.type == ithoDeviceStatus::is_int)
-      {
-        if (ithoStat.is_signed)
-        {
-          // interpret raw bytes as signed integer
-          tempVal = castToSignedInt(tempVal, ithoStat.length);
-        }
-        if (ithoStat.value.intval == tempVal)
-        {
-          ithoStat.updated = 0;
-        }
-        else
-        {
-          ithoStat.updated = 1;
-          ithoStat.value.intval = tempVal;
-        }
-      }
-      if (ithoStat.type == ithoDeviceStatus::is_float)
-      {
-        float t = ithoStat.value.floatval * ithoStat.divider;
-        if (static_cast<uint32_t>(t) == tempVal) // better compare needed of float val, worst case this will result in an extra update of the value, so limited impact
-        {
-          ithoStat.updated = 0;
-        }
-        else
-        {
-          ithoStat.updated = 1;
-          if (ithoStat.is_signed)
-          {
-            // interpret raw bytes as signed integer
-            tempVal = castToSignedInt(tempVal, ithoStat.length);
-          }
-          ithoStat.value.floatval = static_cast<float>(tempVal) / ithoStat.divider;
-        }
-      }
-
+      ithoStatusUpdateField(ithoStat, tempVal, fanSensorErrors.begin()->second);
       statusPos += ithoStat.length;
 
-      if (strcmp("Highest CO2 concentration (ppm)", ithoStat.name) == 0 || strcmp("highest-co2-concentration_ppm", ithoStat.name) == 0)
+      if (!ithoStat.error && systemConfig.syssht30 == 0)
       {
-        if (ithoStat.value.intval == 0x8200)
+        if (ithoStatusIsHumidity(ithoStat.name))
         {
-          ithoStat.type = ithoDeviceStatus::is_string;
-          ithoStat.value.stringval = fanSensorErrors.begin()->second;
+          ithoHum = ithoStat.value.floatval;
+          itho_internal_hum_temp = true;
         }
-      }
-      if (strcmp("Highest RH concentration (%)", ithoStat.name) == 0 || strcmp("highest-rh-concentration_perc", ithoStat.name) == 0)
-      {
-        if (ithoStat.value.intval == 0xEF)
+        if (ithoStatusIsTemperature(ithoStat.name))
         {
-          ithoStat.type = ithoDeviceStatus::is_string;
-          ithoStat.value.stringval = fanSensorErrors.begin()->second;
-        }
-      }
-      if (strcmp("RelativeHumidity", ithoStat.name) == 0 || strcmp("relativehumidity", ithoStat.name) == 0)
-      {
-        if (ithoStat.value.floatval > 1.0 && ithoStat.value.floatval < 100.0)
-        {
-          if (systemConfig.syssht30 == 0)
-          {
-            ithoHum = ithoStat.value.floatval;
-            itho_internal_hum_temp = true;
-          }
-        }
-        else
-        {
-          ithoStat.type = ithoDeviceStatus::is_string;
-          ithoStat.value.stringval = fanSensorErrors.begin()->second;
-        }
-      }
-      if (strcmp("Temperature", ithoStat.name) == 0 || strcmp("temperature", ithoStat.name) == 0)
-      {
-        if (ithoStat.value.floatval > 1.0 && ithoStat.value.floatval < 100.0)
-        {
-          if (systemConfig.syssht30 == 0)
-          {
-            ithoTemp = ithoStat.value.floatval;
-            itho_internal_hum_temp = true;
-          }
-        }
-        else
-        {
-          ithoStat.type = ithoDeviceStatus::is_string;
-          ithoStat.value.stringval = fanSensorErrors.begin()->second;
+          ithoTemp = ithoStat.value.floatval;
+          itho_internal_hum_temp = true;
         }
       }
 

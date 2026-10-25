@@ -22,6 +22,7 @@
 #include "IthoQueue.h"
 #include "enum.h"
 #include "tasks/task_syscontrol.h"
+#include "IthoStatusField.h"
 
 struct ithoLabels;
 
@@ -64,30 +65,6 @@ extern bool i2c_31d9_done;
 extern bool itho_internal_hum_temp;
 extern float ithoHum;
 extern float ithoTemp;
-
-struct ithoDeviceStatus
-{
-  const char *name;
-  enum : uint8_t
-  {
-    is_byte,
-    is_int,
-    is_float,
-    is_string
-  } type;
-  uint8_t length;
-  union
-  {
-    byte byteval;
-    int32_t intval;
-    float floatval;
-    const char *stringval;
-  } value;
-  uint32_t divider;
-  uint8_t updated;
-  bool is_signed;
-  ithoDeviceStatus() : name(nullptr), updated(0) {};
-};
 
 struct ithoDeviceMeasurements
 {
@@ -219,7 +196,6 @@ size_t sendI2cQuery(uint8_t *i2c_command, size_t i2c_command_length, uint8_t *re
 int quickPow10(int n);
 std::string i2cBufToString(const uint8_t *data, size_t len);
 bool checkI2cReply(const uint8_t *buf, size_t buflen, const uint16_t opcode);
-int castToSignedInt(int val, int length);
 int64_t castRawBytesToInt(int32_t *valptr, int length, bool is_signed);
 uint32_t getDividerFromDatatype(int8_t datatype);
 uint8_t getLengthFromDatatype(int8_t datatype);

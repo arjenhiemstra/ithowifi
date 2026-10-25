@@ -192,21 +192,6 @@ bool checkI2cReply(const uint8_t *buf, size_t buflen, const uint16_t opcode)
 
   return ((buf[2] << 8 | buf[3]) & 0x3FFF) == (opcode & 0x3FFF);
 }
-int castToSignedInt(int val, int length)
-{
-  switch (length)
-  {
-  case 4:
-    return static_cast<int32_t>(val);
-  case 2:
-    return static_cast<int16_t>(val);
-  case 1:
-    return static_cast<int8_t>(val);
-  default:
-    return 0;
-  }
-}
-
 int64_t castRawBytesToInt(int32_t *valptr, int length, bool is_signed)
 // valptr is a pointer to 4 rawbytes, which are casted to the
 //  correct value and returned as int32.

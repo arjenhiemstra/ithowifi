@@ -6,7 +6,7 @@ Two independent tiers — know which one applies before writing or running tests
 
 Location: `software/NRG_itho_wifi/test/test_native_*/`, PlatformIO + Unity framework, each suite has a local `mocks/` (mostly a minimal `Arduino.h` shim).
 
-**Pattern**: each suite largely *reimplements/extracts* the pure logic from the corresponding `main/` source file rather than linking the real ESP32 sources — this keeps them decoupled from hardware/RTOS/network. When you change logic in a file that has a corresponding `test_native_*` suite, update both the source and the extracted test copy.
+**Pattern**: each suite largely *reimplements/extracts* the pure logic from the corresponding `main/` source file rather than linking the real ESP32 sources — this keeps them decoupled from hardware/RTOS/network. When you change logic in a file that has a corresponding `test_native_*` suite, update both the source and the extracted test copy. A suite may instead include a `main/` header directly when that header has no Arduino or FreeRTOS dependencies, so it tests the firmware's own code (`test_native_status_field` includes `ithodevice/IthoStatusField.h`).
 
 | Suite | Covers |
 |---|---|
@@ -20,6 +20,7 @@ Location: `software/NRG_itho_wifi/test/test_native_*/`, PlatformIO + Unity frame
 | `test_native_remote` | `IthoRemote` slot management |
 | `test_native_rf` | RF end-byte selection, command name lookup |
 | `test_native_speed_parse` | Speed/timer parsing (`ithoSetSpeed`, `ithoSetTimer`, `ithoExecCommand`) |
+| `test_native_status_field` | 2401 status field decoding per poll (`ithoStatusUpdateField`, runs the firmware's own header) |
 | `test_native_uuid` | `uuidUnparse`/`uuidParse` |
 | `test_native_wifi_config` | `WifiConfig` serialization round-trip |
 
