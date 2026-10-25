@@ -10,7 +10,7 @@ See [.ai/testing-strategy.md](../testing-strategy.md) for the full tier breakdow
 ## Native Unity test checklist
 
 1. Match the existing suite naming: `test_native_<area>`.
-2. Follow the established pattern — extract/reimplement the pure logic under test into the suite's own files rather than linking ESP32 sources (see any existing `test_native_*` suite for the shape).
+2. Follow the established pattern — extract/reimplement the pure logic under test into the suite's own files rather than linking ESP32 sources (see any existing `test_native_*` suite for the shape). A suite may instead include a `main/` header directly when that header has no Arduino or FreeRTOS dependencies, so it tests the firmware's own code (`test_native_status_field` includes `ithodevice/IthoStatusField.h`).
 3. Add a local `mocks/Arduino.h` shim only if the suite doesn't already have one and needs Arduino symbols.
 4. Confirm it runs via `pio test -e native_test` from `software/NRG_itho_wifi/`.
 

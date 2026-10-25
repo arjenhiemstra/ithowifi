@@ -30,7 +30,7 @@ Minimal-token lookup table of the highest-value files/classes/tasks/interfaces. 
 | Interface | File |
 |---|---|
 | Device table | `main/ithodevice/IthoDevice.h` (`ithoDeviceType`), `IthoDevice.cpp` (`ithoDevices[]`) |
-| Device status parsing | `main/ithodevice/IthoStatus.cpp` |
+| Device status parsing | `main/ithodevice/IthoStatus.cpp`, per-field update in `IthoStatusField.h` |
 | Device settings get/set | `main/ithodevice/IthoSettings.cpp` |
 | Virtual remote commands | `main/ithodevice/IthoVirtualRemoteCmd.cpp` |
 | I2C transport | `main/ithodevice/i2c_esp32.cpp` |
