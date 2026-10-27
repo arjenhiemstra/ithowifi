@@ -669,6 +669,10 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
             E_LOG("HAD: error - HA Discovery Config does not match no. of status items, please update the config HA Discovery config");
     }
 
+    // Component ids from dev.ids (hostname, by default with the MAC), like the status sensors: dev.name defaults
+    // to the Itho type, so two units of the same type collided (#387)
+    const char *devIds = outputJson["dev"]["ids"].as<const char *>();
+
     // Add extra components (fan and firmware updates)
     // Skip fan entity for WPU, Autotemp, and DemandFlow — not fully supported
     const uint8_t dg = currentIthoDeviceGroup();
@@ -677,18 +681,17 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
                          (dg == 0x00 && (did == 0x0F || did == 0x30)) ||       // Autotemp
                          (dg == 0x00 && did == 0x0B);                          // DemandFlow
     if (!skipFanEntity)
-        addHADiscoveryFan(components, outputJson["dev"]["name"].as<const char *>());
-    // dev.ids (hostname), not dev.name: two units of the same Itho type must not share this id (#387)
-    addHADiscoveryFWUpdate(components, outputJson["dev"]["ids"].as<const char *>());
+        addHADiscoveryFan(components, devIds);
+    addHADiscoveryFWUpdate(components, devIds);
 
     // Add RF device sensors
-    addHADiscoveryRFSensors(components, compactJson, outputJson["dev"]["name"].as<const char *>(), systemConfig.mqtt_base_topic);
+    addHADiscoveryRFSensors(components, compactJson, devIds, systemConfig.mqtt_base_topic);
 
     // Add RF device fans
-    addHADiscoveryRemoteFan(components, compactJson, outputJson["dev"]["name"].as<const char *>(), systemConfig.mqtt_base_topic,
+    addHADiscoveryRemoteFan(components, compactJson, devIds, systemConfig.mqtt_base_topic,
                             "rf", "rfremotecmd", "rfremoteindex", "rf", true);
 
     // Add virtual remote fans
-    addHADiscoveryRemoteFan(components, compactJson, outputJson["dev"]["name"].as<const char *>(), systemConfig.mqtt_base_topic,
+    addHADiscoveryRemoteFan(components, compactJson, devIds, systemConfig.mqtt_base_topic,
                             "vr", "vremotecmd", "vremoteindex", "vr", false);
 }
