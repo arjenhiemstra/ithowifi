@@ -38,6 +38,25 @@ void addHADevInfo(JsonObject obj)
     dev["cu"] = cu;                          // configuration_url
 }
 
+// Status label with label index labelIdx for the current Itho fw version, wherever that version puts it;
+// empty if this version has no such field (#388)
+static std::string getStatusLabelByIndex(uint8_t labelIdx)
+{
+    if (ithoDeviceptr == nullptr || ithoDeviceptr->statusLabelMapping == nullptr)
+        return "";
+    const uint8_t version = currentItho_fwversion();
+    const int len = getStatusLabelLength(currentIthoDeviceGroup(), currentIthoDeviceID(), version);
+    if (len <= 0)
+        return "";
+    const uint8_t *map = *(ithoDeviceptr->statusLabelMapping + version);
+    for (int i = 0; i < len; i++)
+    {
+        if (map[i] == labelIdx)
+            return getStatusLabel(i, ithoDeviceptr);
+    }
+    return "";
+}
+
 static std::string getActualSpeedLabel()
 {
     const uint8_t deviceID = currentIthoDeviceID();
@@ -47,8 +66,8 @@ static std::string getActualSpeedLabel()
         return getStatusLabel(10, ithoDeviceptr);
     if (deviceGroup == 0x00 && deviceID == 0x2B) // HRU350
         return getStatusLabel(0, ithoDeviceptr);
-    if (deviceGroup == 0x00 && deviceID == 0x03) // HRU-eco
-        return getStatusLabel(22, ithoDeviceptr);
+    if (deviceGroup == 0x00 && deviceID == 0x03) // HRU-eco: "Requested speed (%)", only in fw 10-12
+        return getStatusLabelByIndex(22);
     if (deviceGroup == 0x00 && deviceID == 0x1D) // HRU200
         return getStatusLabel(0, ithoDeviceptr);
     if (deviceGroup == 0x00 && deviceID == 0x04) // CVE Eco2
@@ -176,7 +195,7 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
     }
     else if (deviceGroup == 0x00 && deviceID == 0x03) // HRU-eco
     {
-        actualSpeedLabel = getStatusLabel(22, ithoDeviceptr); //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hrueco.h
+        actualSpeedLabel = getStatusLabelByIndex(22); //-> {"Requested speed (%)", "requested-speed_perc"}, of hrueco.h
         pr_mode_val_tpl_ver = 1;
     }
     // else if (deviceGroup == 0x00 && deviceID == 0x0D) // WPU
@@ -256,9 +275,12 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
                  actualSpeedLabel.c_str(), midLabel, lowLabel);
     }
 
-    componentJson["pct_cmd_tpl"] = pct_cmd_tpl;         // percentage_command_template
-    componentJson["pr_mode_val_tpl"] = pr_mode_val_tpl; // preset_mode_value_template
-    componentJson["pct_val_tpl"] = pct_val_tpl;         // percentage_value_template
+    componentJson["pct_cmd_tpl"] = pct_cmd_tpl; // percentage_command_template
+    componentJson["pct_val_tpl"] = pct_val_tpl; // percentage_value_template
+    if (actualSpeedLabel.empty())
+        componentJson.remove("pr_mode_stat_t"); // no speed field to derive the preset from (#388)
+    else
+        componentJson["pr_mode_val_tpl"] = pr_mode_val_tpl; // preset_mode_value_template
 }
 
 void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
