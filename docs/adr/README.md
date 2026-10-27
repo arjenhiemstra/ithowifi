@@ -16,6 +16,7 @@ ADRs record durable architectural decisions — not implementation details. Use 
 | [0008](ADR-0008-hardware-abstraction-managers.md) | Hardware abstraction via manager singletons | Accepted |
 | [0009](ADR-0009-dual-tier-testing-strategy.md) | Dual-tier testing strategy | Accepted |
 | [0010](ADR-0010-boot-phase-event-group.md) | Boot sequencing: event-group phase gates (amends 0004) | Accepted |
+| [0011](ADR-0011-rf-spider-thermostat-role.md) | RF thermostat role for the Itho Spider | Accepted |
 
 ## When an ADR is required
 

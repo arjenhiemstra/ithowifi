@@ -844,6 +844,14 @@ void handle_ws_message(JsonObject root)
         {
           rfManager.radio.updateDestinationID(destId[0], destId[1], destId[2], idx);
         }
+        // updateRFDevice() also clears the thermostat role; restore it unless the type is no longer a Spider
+        if (rtype != RemoteTypes::RFTSPIDER)
+          remotes.setThermostat(idx, false);
+        else if (remotes.isThermostat(idx))
+        {
+          const uint8_t sid[3]{id0, id1, id2};
+          rfManager.radio.setThermostat(sid, true, remotes.getThermostatSetpoint(idx), remotes.getThermostatCtl(idx));
+        }
       }
     }
     // TX power
@@ -852,6 +860,28 @@ void handle_ws_message(JsonObject root)
       remotes.updateRemoteTxPower(idx, root["tx_power"].as<uint8_t>());
     }
     saveRemotesflag = true;
+  }
+
+  // Itho Spider thermostat: discovery wizard and setpoint (ADR-0011)
+  if (root["spider_discovery"].is<const char *>())
+  {
+    const char *action = root["spider_discovery"];
+    if (strcmp(action, "start") == 0)
+      spiderDiscoveryRequest(true);
+    else if (strcmp(action, "cancel") == 0)
+      spiderDiscoveryRequest(false);
+    JsonDocument doc;
+    JsonObject o = doc["spiderdiscovery"].to<JsonObject>();
+    spiderDiscoveryStatus(o);
+    notifyClients(doc.as<JsonObject>());
+  }
+  if (root["spider_setpoint"].is<JsonObject>())
+  {
+    JsonObject sp = root["spider_setpoint"];
+    const char *err = ithoSetSpiderSetpoint(sp["index"] | -1, sp["setpoint"] | -1.0f);
+    JsonDocument doc;
+    doc["spidersetpoint"]["result"] = err ? err : "ok";
+    notifyClients(doc.as<JsonObject>());
   }
 
   // Removing or updating virtual remote

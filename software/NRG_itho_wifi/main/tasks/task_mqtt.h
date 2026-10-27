@@ -29,6 +29,7 @@ extern bool dontReconnectMQTT;
 extern bool updateMQTTihtoStatus;
 extern bool updateMQTTmodeStatus;
 extern bool updateMQTTRFStatus;
+extern bool updateMQTTRemotesInfo;
 extern PubSubClient mqttClient;
 extern Ticker TaskMQTTTimeout;
 extern bool sendHomeAssistantDiscovery;

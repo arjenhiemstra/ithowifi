@@ -38,6 +38,9 @@ private:
     bool bidirectional{false};
     uint8_t tx_power{0xC0};  // PA table value: 0xC0=+10dBm(default), 0x84=+5, 0x03=-30
     mutable char last_cmd[16]{}; // last command dispatched via this remote (for vremote / RF SEND remotes)
+    bool thermostat{false};      // Itho Spider heating side bound to this module (ADR-0011)
+    int32_t setpointCmd{0xEFFF}; // last commanded heating setpoint, 0.01 C, RAM only; 0xEFFF = none
+    uint8_t ctlID[3]{0, 0, 0};    // Spider's heater/gateway learned by discovery; 0 = bound to us
     JsonDocument capabilities;
     void set(JsonObject);
     void get(JsonObject, RemoteFunctions instanceFunc, int index, bool human_reaadble = false) const;
@@ -112,6 +115,28 @@ public:
   void updateRemoteDestID(const uint8_t index, uint8_t byte0, uint8_t byte1, uint8_t byte2);
   void getRemoteDestIDbyIndex(const int index, uint8_t *id);
   void updateRemoteBidirectional(const uint8_t index, bool bidirectional);
+  void setThermostat(const uint8_t index, bool on)
+  {
+    if (index < maxRemotes)
+    {
+      remotes[index].thermostat = on;
+      if (!on)
+      {
+        remotes[index].setpointCmd = 0xEFFF;
+        remotes[index].ctlID[0] = remotes[index].ctlID[1] = remotes[index].ctlID[2] = 0;
+      }
+    }
+  };
+  bool isThermostat(const int index) const { return index >= 0 && index < maxRemotes && remotes[index].thermostat; };
+  void setThermostatCtl(const uint8_t index, const uint8_t id[3])
+  {
+    if (index < maxRemotes)
+      for (int i = 0; i < 3; i++)
+        remotes[index].ctlID[i] = id[i];
+  };
+  const uint8_t *getThermostatCtl(const int index) const { return (index >= 0 && index < maxRemotes) ? remotes[index].ctlID : nullptr; };
+  void setThermostatSetpoint(const uint8_t index, int32_t centi) { if (index < maxRemotes) remotes[index].setpointCmd = centi; };
+  int32_t getThermostatSetpoint(const int index) const { return (index >= 0 && index < maxRemotes) ? remotes[index].setpointCmd : 0xEFFF; };
   void updateRemoteFunction(const uint8_t index, const uint8_t remfunc);
   // int remoteIndex(const int32_t id);
   int remoteIndex(uint8_t byte0, uint8_t byte1, uint8_t byte2);

@@ -48,6 +48,22 @@
         class="pure-button">Remove</button>
     </div>
   </fieldset>
+  <fieldset>
+    <br>
+    <legend><br>Itho Spider thermostat:</legend>
+    <p>The add-on can read and set the heating setpoint of an Itho Spider room thermostat, without pairing it.
+      Start discovery and set the Spider to the temperature shown (a random value between 23 and 30 &deg;C). The add-on
+      recognises the Spider by that value, finds the heater it controls and adds the Spider as a monitor-only RF device.
+      Your heating may switch on during discovery. After that the setpoint can be changed here, via MQTT/REST or from
+      Home Assistant.</p>
+    <div class="pure-control-group">
+      <label for="spider_disc_start">Spider discovery</label>
+      <button id="spider_disc_start" class="pure-button">Start</button>&nbsp;<button id="spider_disc_cancel"
+        class="pure-button">Cancel</button>&nbsp;<span id="spider_disc_status"></span>
+    </div>
+    <table id="SpiderTable" class="pure-table pure-table-bordered" style="text-align: center;"></table>
+    <p id="spider_set_status"></p>
+  </fieldset>
 </form>
 <script>
   $id('main').style.maxWidth = '1400px';

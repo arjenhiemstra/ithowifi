@@ -1,6 +1,7 @@
 #include "generic_functions.h"
 #include "config/HADiscConfig.h"
 #include "tasks/task_cc1101.h"
+#include "cc1101/spider_protocol.h"
 #include <HTTPUpdate.h>
 
 // MAX_FIRMWARE_HTTPS_RESPONSE_SIZE is normally injected by build_script.py based
@@ -699,6 +700,23 @@ bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
   logLastCommand(buf, origin);
 
   return true;
+}
+
+const char *ithoSetSpiderSetpoint(int remote_index, float celsius)
+{
+  if (remote_index < 0 || remote_index >= remotes.getMaxRemotes() || remotes.isEmptySlot(remote_index))
+    return "invalid remote index";
+  if (!remotes.isThermostat(remote_index))
+    return "remote is not a bound Spider thermostat";
+  if (!(celsius >= 0.0f && celsius <= 50.0f))
+    return "setpoint out of range";
+  const int32_t centi = spider::clampSetpoint(static_cast<int32_t>(celsius * 100.0f + 0.5f));
+  uint8_t id[3]{};
+  remotes.getRemoteIDbyIndex(remote_index, &id[0]);
+  remotes.setThermostatSetpoint(remote_index, centi);
+  rfManager.radio.setThermostatSetpoint(id, centi);
+  requestSpiderPush(id); // delivered by TaskCC1101 at the Spider's next wake-up
+  return nullptr; // not persisted: only relevant until the Spider confirms it
 }
 
 bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOrigin origin)

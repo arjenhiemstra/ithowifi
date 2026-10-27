@@ -701,6 +701,33 @@ static void handlePostRFDemand(AsyncWebServerRequest *request, JsonVariant &json
   }
 }
 
+// POST /api/v2/rfremote/setpoint
+// Body: {"index":2,"setpoint":20.5}  (discovered Itho Spider thermostat, 5-30 C in 0.5 steps)
+static void handlePostRFSetpoint(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  if (body["setpoint"].isNull() || body["index"].isNull())
+  {
+    sendFail(request, "missing required field: setpoint or index");
+    return;
+  }
+  const int idx = body["index"].as<int>();
+  const char *err = ithoSetSpiderSetpoint(idx, body["setpoint"].as<float>());
+  if (err != nullptr)
+  {
+    sendFail(request, err);
+    return;
+  }
+  JsonDocument data;
+  data["result"] = "setpoint sent";
+  data["setpoint"] = remotes.getThermostatSetpoint(idx) / 100.0;
+  data["index"] = idx;
+  sendSuccess(request, data);
+}
+
 // POST /api/v2/rf/config
 // Body: {"index":1,"setting":"setrfdevicesourceid","value":"96,C8,B6"}
 static void handlePostRFConfig(AsyncWebServerRequest *request, JsonVariant &json)
@@ -909,6 +936,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/rfremote/command", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/rfremote/co2", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/rfremote/demand", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/rfremote/setpoint", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/rfremote/config", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/debug", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/wpu/outside_temp", HTTP_OPTIONS, handleOptions);
@@ -1020,6 +1048,25 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
           }
           JsonVariant v = json.as<JsonVariant>();
           handlePostRFDemand(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/rfremote/setpoint", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostRFSetpoint(request, v);
         }
       });
 

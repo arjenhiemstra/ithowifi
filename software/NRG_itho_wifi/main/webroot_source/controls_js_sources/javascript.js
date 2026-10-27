@@ -651,11 +651,32 @@ const messageHandlers = {
       else getSettings('ithoremotes');
     }
   },
+  spiderdiscovery: function (f) {
+    var el = $id('spider_disc_status');
+    if (!el) return;
+    var d = f.spiderdiscovery || {};
+    var msg = {
+      idle: '',
+      wait_setpoint: 'Set the Spider to ' + d.target + ' \u00B0C now and leave it there. Most Spiders are found within a minute or two, some take up to 15 minutes.',
+      wait_heater: 'Spider ' + d.spider + ' found. Listening for its heater (up to 12 minutes)...',
+      done: 'Done: Spider ' + d.spider + ' controls heater ' + d.heater + ' (RF device slot ' + d.slot + '). Set the Spider back to your normal temperature, on the Spider or in the table below.',
+      timeout: 'Timed out without a result. Start again.',
+      cancelled: 'Cancelled.',
+      noslot: 'Spider found, but there is no free RF device slot.'
+    };
+    el.textContent = msg[d.state] !== undefined ? msg[d.state] : d.state;
+    if (d.state === 'done') getSettings('ithoremotes');
+  },
+  spidersetpoint: function (f) {
+    var r = (f.spidersetpoint || {}).result;
+    if (r && r !== 'ok') alert('Setpoint not sent: ' + r);
+  },
   remotes: function (f) {
     // Cache + drive the RF CO2 dropdown regardless of which page we're on:
     // a `getSettings('ithoremotes')` triggered by the system settings page
     // must still populate the dropdown even though there's no RemotesTable.
     cachedRemotes = f.remotes;
+    updateSpiderTable(f.remotes);
     if ($id('itho_rf_co2_remote_idx')) populateRfco2RemoteDropdown();
     if ($id('itho_rf_status_poll_idx')) populateStatusPollRemoteDropdown();
     var tbl = $id('RemotesTable');
@@ -1809,6 +1830,20 @@ document.addEventListener('DOMContentLoaded', function () {
       updateStatusTableFromCompactJson(JSON.parse(obj));
       localStorage.removeItem("ithostatus");
     }
+    else if (btnId === 'spider_disc_start' || btnId === 'spider_disc_cancel') {
+      websock_send(JSON.stringify({ spider_discovery: btnId === 'spider_disc_start' ? 'start' : 'cancel' }));
+    }
+    else if (btnId.startsWith('spider_set-')) {
+      var spIdx = parseInt(btnId.split('-')[1], 10);
+      var spVal = parseFloat($val('spider_sp-' + spIdx));
+      if (isNaN(spVal)) alert('Please enter a setpoint.');
+      else {
+        websock_send(JSON.stringify({ spider_setpoint: { index: spIdx, setpoint: spVal } }));
+        var spSt = $id('spider_set_status');
+        if (spSt) spSt.textContent = spVal + ' \u00B0C sent. The Spider picks it up the next time it listens (usually within a few minutes, up to about 10 for a Spider with a relay); the table shows it until then.';
+        setTimeout(function () { getSettings('ithoremotes'); }, 1000);
+      }
+    }
     else if (btnId === 'save_update_had') {
       var jsonvar = generateCompactJson();
       websock_send(JSON.stringify({
@@ -2370,6 +2405,37 @@ function formatCapabilities(JSONObj) {
     }
   }
   return str;
+}
+
+// Itho Spider thermostats (remotes with the thermostat capability): current values + setpoint input.
+// Rows are created once and then only their value cells are updated, so typing is not interrupted.
+function updateSpiderTable(rems) {
+  var tbl = $id('SpiderTable');
+  if (!tbl) return;
+  var list = (rems || []).filter(function (r) { return r && r.capabilities && r.capabilities.thermostat; });
+  if (list.length === 0) { tbl.innerHTML = ''; return; }
+  if (!tbl.querySelector('thead')) {
+    tbl.innerHTML = '<thead><tr><th>Slot</th><th>Name</th><th>Room temp</th><th>Setpoint</th><th>Heat demand</th><th>New setpoint</th></tr></thead><tbody></tbody>';
+  }
+  var body = tbl.querySelector('tbody');
+  var deg = ' \u00B0C';
+  list.forEach(function (r) {
+    var c = r.capabilities, i = r.index, row = $id('spider_row-' + i);
+    if (!row) {
+      row = document.createElement('tr');
+      row.id = 'spider_row-' + i;
+      row.innerHTML = '<td>' + i + '</td><td></td><td></td><td></td><td></td>' +
+        '<td><input id="spider_sp-' + i + '" type="number" min="5" max="30" step="0.5" style="width:5em"> ' +
+        '<button id="spider_set-' + i + '" class="pure-button">Set</button></td>';
+      body.appendChild(row);
+    }
+    row.cells[1].textContent = r.name || '';
+    row.cells[2].textContent = c.temp != null ? c.temp + deg : '-';
+    var sp = c.setpoint != null ? c.setpoint + deg : '-';
+    if (c.setpoint_cmd != null && c.setpoint_cmd !== c.setpoint) sp += ' \u2192 ' + c.setpoint_cmd + deg + ' (waiting for the Spider)';
+    row.cells[3].textContent = sp;
+    row.cells[4].textContent = c.demand != null ? c.demand + ' %' : '-';
+  });
 }
 
 function updateRemoteCapabilities(jsonVar) {

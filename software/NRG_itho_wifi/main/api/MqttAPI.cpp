@@ -168,6 +168,16 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
           mqttSendResponse("fail", "rfdemand", "failed - remote must be RFT CO2 or RFT RV type");
         clean_cmd_topic = true;
       }
+      if (!root["rfsetpoint"].isNull())
+      {
+        jsonCmd = true;
+        const char *err = ithoSetSpiderSetpoint(root["rfremoteindex"] | -1, root["rfsetpoint"].as<float>());
+        if (err == nullptr)
+          mqttSendResponse("success", "rfsetpoint", "setpoint sent");
+        else
+          mqttSendResponse("fail", "rfsetpoint", err);
+        clean_cmd_topic = true;
+      }
       if (!root["percentage"].isNull() || !root["fandemand"].isNull())
       {
         jsonCmd = true;

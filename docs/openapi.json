@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "IthoWifi API",
-    "version": "3.0.0-beta1",
+    "version": "3.3.0-beta2",
     "description": "API for controlling Itho ventilation units via the IthoWifi add-on. Supports both URL query parameters (WebAPI) and MQTT JSON commands.",
     "license": {
       "name": "GPL-3.0",
@@ -342,6 +342,57 @@
         ]
       }
     },
+    "/api/v2/ota": {
+      "get": {
+        "summary": "Get firmware version info and OTA update progress",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Trigger firmware OTA update",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtaInstallRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
     "/api/v2/settings": {
       "get": {
         "summary": "Read Itho setting by index",
@@ -566,6 +617,39 @@
         }
       }
     },
+    "/api/v2/rfremote/setpoint": {
+      "post": {
+        "summary": "Set heating setpoint of a discovered Itho Spider thermostat",
+        "tags": [
+          "REST API v2"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RFSetpointRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "JSend fail (validation error)"
+          }
+        }
+      }
+    },
     "/api/v2/rfremote/config": {
       "post": {
         "summary": "Configure RF remote",
@@ -715,6 +799,7 @@
   "components": {
     "schemas": {
       "ApiResponse": {
+        "type": "object",
         "properties": {
           "status": {
             "type": "string",
@@ -736,8 +821,7 @@
             "type": "integer",
             "description": "Unix timestamp"
           }
-        },
-        "type": "object"
+        }
       },
       "MqttCommand": {
         "type": "object",
@@ -803,6 +887,10 @@
           "rfzone": {
             "type": "integer",
             "description": "Zone for rfdemand"
+          },
+          "rfsetpoint": {
+            "type": "number",
+            "description": "Spider heating setpoint in C (use with rfremoteindex)"
           },
           "dtype": {
             "type": "string",
@@ -967,6 +1055,28 @@
           }
         }
       },
+      "RFSetpointRequest": {
+        "type": "object",
+        "description": "Set the heating setpoint of a discovered Itho Spider thermostat (index = its RF device slot). Delivered at the Spider's next listen window; confirmed when capability setpoint equals setpoint_cmd",
+        "required": [
+          "index",
+          "setpoint"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "RF remote index of the Spider",
+            "minimum": 0,
+            "maximum": 11
+          },
+          "setpoint": {
+            "type": "number",
+            "description": "Heating setpoint in C, clamped to 5-30 in 0.5 steps",
+            "minimum": 5,
+            "maximum": 30
+          }
+        }
+      },
       "RFConfigRequest": {
         "type": "object",
         "description": "Configure RF remote settings",
@@ -993,7 +1103,32 @@
         "properties": {
           "action": {
             "type": "string",
-            "description": "Action (reboot/level0/level1/level2/level3)"
+            "description": "Action name",
+            "enum": [
+              "reboot",
+              "level0",
+              "level1",
+              "level2",
+              "level3"
+            ]
+          }
+        }
+      },
+      "OtaInstallRequest": {
+        "type": "object",
+        "description": "Trigger firmware OTA update",
+        "properties": {
+          "channel": {
+            "type": "string",
+            "description": "Release channel to install (stable or beta)",
+            "enum": [
+              "stable",
+              "beta"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "description": "Firmware URL (alternative to channel; must start with https://github.com/arjenhiemstra/ithowifi/)"
           }
         }
       },

@@ -20,6 +20,7 @@ StackType_t xTaskMQTTStack[STACK_SIZE_MEDIUM];
 bool sendHomeAssistantDiscovery = false;
 bool updateIthoMQTT = false;
 bool updateMQTTRFStatus = false;
+bool updateMQTTRemotesInfo = false;
 
 Ticker TaskMQTTTimeout;
 
@@ -166,6 +167,12 @@ void execMQTTTasks()
       updateMQTTRFStatus = false;
       if (mqttClient.connected())
         mqttSendRFStatus();
+    }
+    if (updateMQTTRemotesInfo)
+    {
+      updateMQTTRemotesInfo = false;
+      if (mqttClient.connected())
+        mqttSendRemotesInfo();
     }
 
     // OTA progress republish. The periodic deviceinfo publish only fires on
