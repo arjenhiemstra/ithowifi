@@ -634,7 +634,8 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
                          (dg == 0x00 && did == 0x0B);                          // DemandFlow
     if (!skipFanEntity)
         addHADiscoveryFan(components, outputJson["dev"]["name"].as<const char *>());
-    addHADiscoveryFWUpdate(components, outputJson["dev"]["name"].as<const char *>());
+    // dev.ids (hostname), not dev.name: two units of the same Itho type must not share this id (#387)
+    addHADiscoveryFWUpdate(components, outputJson["dev"]["ids"].as<const char *>());
 
     // Add RF device sensors
     addHADiscoveryRFSensors(components, compactJson, outputJson["dev"]["name"].as<const char *>(), systemConfig.mqtt_base_topic);
