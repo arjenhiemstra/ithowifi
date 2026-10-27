@@ -348,6 +348,7 @@ ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, 
   if (resultPtr2410 == nullptr)
   {
     response["message"] = "The I2C command failed";
+    response["code"] = 503; // temporary, the client can retry (#390)
     return ApiResponse::status::ERROR;
   }
 

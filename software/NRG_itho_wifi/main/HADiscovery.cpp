@@ -38,6 +38,25 @@ void addHADevInfo(JsonObject obj)
     dev["cu"] = cu;                          // configuration_url
 }
 
+// Status label with label index labelIdx for the current Itho fw version, wherever that version puts it;
+// empty if this version has no such field (#388)
+static std::string getStatusLabelByIndex(uint8_t labelIdx)
+{
+    if (ithoDeviceptr == nullptr || ithoDeviceptr->statusLabelMapping == nullptr)
+        return "";
+    const uint8_t version = currentItho_fwversion();
+    const int len = getStatusLabelLength(currentIthoDeviceGroup(), currentIthoDeviceID(), version);
+    if (len <= 0)
+        return "";
+    const uint8_t *map = *(ithoDeviceptr->statusLabelMapping + version);
+    for (int i = 0; i < len; i++)
+    {
+        if (map[i] == labelIdx)
+            return getStatusLabel(i, ithoDeviceptr);
+    }
+    return "";
+}
+
 static std::string getActualSpeedLabel()
 {
     const uint8_t deviceID = currentIthoDeviceID();
@@ -47,8 +66,8 @@ static std::string getActualSpeedLabel()
         return getStatusLabel(10, ithoDeviceptr);
     if (deviceGroup == 0x00 && deviceID == 0x2B) // HRU350
         return getStatusLabel(0, ithoDeviceptr);
-    if (deviceGroup == 0x00 && deviceID == 0x03) // HRU-eco
-        return getStatusLabel(22, ithoDeviceptr);
+    if (deviceGroup == 0x00 && deviceID == 0x03) // HRU-eco: "Requested speed (%)", only in fw 10-12
+        return getStatusLabelByIndex(22);
     if (deviceGroup == 0x00 && deviceID == 0x1D) // HRU200
         return getStatusLabel(0, ithoDeviceptr);
     if (deviceGroup == 0x00 && deviceID == 0x04) // CVE Eco2
@@ -96,10 +115,14 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
     bool useRemotePresets = false;
     uint16_t firstRemoteType = 0;
 
-    if ((deviceGroup == 0x07 && deviceID == 0x01) ||                                                                                                  // HRU250-300
-        (deviceGroup == 0x00 && deviceID == 0x2B) ||                                                                                                  // HRU350
-        (deviceGroup == 0x00 && deviceID == 0x03) ||                                                                                                  // HRU-eco
-        (deviceGroup == 0x00 && (deviceID == 0x4 || deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B) && systemConfig.itho_pwm2i2c != 1)) // CVE/HRU200 with PWM2I2C off
+    const bool cveGroup = deviceGroup == 0x00 && (deviceID == 0x4 || deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B); // CVE/HRU200
+    const bool pwm2i2c = cveGroup && systemConfig.itho_pwm2i2c == 1;
+
+    // PWM2I2C: plain commands go to virtual remote 0 only when "map API commands to virtual remote 0" is on (#384)
+    if ((deviceGroup == 0x07 && deviceID == 0x01) || // HRU250-300
+        (deviceGroup == 0x00 && deviceID == 0x2B) || // HRU350
+        (deviceGroup == 0x00 && deviceID == 0x03) || // HRU-eco
+        (cveGroup && (!pwm2i2c || systemConfig.itho_vremoteapi)))
     {
         if (deviceGroup == 0x07 && deviceID == 0x01) // HRU250-300: use RF remote at index 0
         {
@@ -130,6 +153,16 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
                 modes.add(presets.c_str());
             }
         }
+    }
+    else if (pwm2i2c)
+    {
+        // the speeds the PWM2I2C command mapping has; away/auto/autonight only repeat low/medium (#384)
+        modes.add("Low");
+        modes.add("Medium");
+        modes.add("High");
+        modes.add("Timer 10min");
+        modes.add("Timer 20min");
+        modes.add("Timer 30min");
     }
     else
     {
@@ -176,7 +209,7 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
     }
     else if (deviceGroup == 0x00 && deviceID == 0x03) // HRU-eco
     {
-        actualSpeedLabel = getStatusLabel(22, ithoDeviceptr); //-> {"Requested fanspeed (%)", "requested-fanspeed_perc"}, of hrueco.h
+        actualSpeedLabel = getStatusLabelByIndex(22); //-> {"Requested speed (%)", "requested-speed_perc"}, of hrueco.h
         pr_mode_val_tpl_ver = 1;
     }
     // else if (deviceGroup == 0x00 && deviceID == 0x0D) // WPU
@@ -221,7 +254,15 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
     if (pr_mode_val_tpl_ver == 0)
     {
         componentJson["pr_mode_cmd_tpl"] = "{%- if value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- else %}{{value.lower()}}{%- endif -%}";
-        snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 90 %%}High{%%- elif speed > 35 %%}Medium{%%- elif speed > 10 %%}Low{%%- else %%}Auto{%%- endif -%%}", actualSpeedLabel.c_str());
+        // lowest speed is Low (the unit's minimum), the middle band is whatever middle preset is offered (#384)
+        bool hasMedium = false, hasAuto = false;
+        for (JsonVariant m : modes)
+        {
+            hasMedium |= strcmp(m.as<const char *>(), "Medium") == 0;
+            hasAuto |= strcmp(m.as<const char *>(), "Auto") == 0;
+        }
+        const char *midLabel = (!hasMedium && hasAuto) ? "Auto" : "Medium";
+        snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 90 %%}High{%%- elif speed > 35 %%}%s{%%- else %%}Low{%%- endif -%%}", actualSpeedLabel.c_str(), midLabel);
     }
     else if (pr_mode_val_tpl_ver == 1)
     {
@@ -256,9 +297,12 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
                  actualSpeedLabel.c_str(), midLabel, lowLabel);
     }
 
-    componentJson["pct_cmd_tpl"] = pct_cmd_tpl;         // percentage_command_template
-    componentJson["pr_mode_val_tpl"] = pr_mode_val_tpl; // preset_mode_value_template
-    componentJson["pct_val_tpl"] = pct_val_tpl;         // percentage_value_template
+    componentJson["pct_cmd_tpl"] = pct_cmd_tpl; // percentage_command_template
+    componentJson["pct_val_tpl"] = pct_val_tpl; // percentage_value_template
+    if (actualSpeedLabel.empty())
+        componentJson.remove("pr_mode_stat_t"); // no speed field to derive the preset from (#388)
+    else
+        componentJson["pr_mode_val_tpl"] = pr_mode_val_tpl; // preset_mode_value_template
 }
 
 void addHADiscoveryFWUpdate(JsonObject obj, const char *name)
@@ -392,7 +436,7 @@ void addHADiscoveryRFSensors(JsonObject components, JsonObject compactJson, cons
                 // Convert lastcmdmsg to human-readable: IthoLow->Low, IthoTimer1->Timer 10min, etc.
                 char lastcmdTpl[512]{};
                 snprintf(lastcmdTpl, sizeof(lastcmdTpl),
-                         "{%%- set cmd = value_json['%s']['lastcmdmsg'] | default('') -%%}"
+                         "{%%- set cmd = value_json['%s']['lastcmdmsg'] | default('', true) -%%}"
                          "{%%- if cmd.startswith('Itho') -%%}"
                          "{%%- set c = cmd[4:] -%%}"
                          "{%%- if c == 'Timer1' -%%}Timer 10min"
@@ -466,7 +510,7 @@ void addHADiscoveryRemoteFan(JsonObject components, JsonObject compactJson, cons
         {
             char valTpl[512]{};
             snprintf(valTpl, sizeof(valTpl),
-                     "{%%- set cmd = value_json['%s']['lastcmdmsg'] | default('') -%%}"
+                     "{%%- set cmd = value_json['%s']['lastcmdmsg'] | default('', true) -%%}"
                      "{%%- if cmd.startswith('Itho') -%%}"
                      "{%%- set c = cmd[4:] -%%}"
                      "{%%- if c == 'Timer1' -%%}Timer 10min"
@@ -634,7 +678,8 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
                          (dg == 0x00 && did == 0x0B);                          // DemandFlow
     if (!skipFanEntity)
         addHADiscoveryFan(components, outputJson["dev"]["name"].as<const char *>());
-    addHADiscoveryFWUpdate(components, outputJson["dev"]["name"].as<const char *>());
+    // dev.ids (hostname), not dev.name: two units of the same Itho type must not share this id (#387)
+    addHADiscoveryFWUpdate(components, outputJson["dev"]["ids"].as<const char *>());
 
     // Add RF device sensors
     addHADiscoveryRFSensors(components, compactJson, outputJson["dev"]["name"].as<const char *>(), systemConfig.mqtt_base_topic);

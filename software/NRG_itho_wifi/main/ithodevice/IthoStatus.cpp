@@ -380,6 +380,7 @@ void parseRF31DA(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
     return;
 
   src->measurements31DA.clear();
+  src->zoneMeasurements31DA = zoneId;
 
   const int labelLen = 19;
   const char *labels[labelLen];

@@ -369,6 +369,9 @@ def build_openapi_spec():
         "Read Itho setting by index",
         parameters=[param("index", "Setting index", "integer", 0, 255)],
     )
+    doc["paths"]["/api/v2/settings"]["get"]["responses"]["503"] = {
+        "description": "JSend error: the I2C read failed, retry later"
+    }
 
     # --- REST API v2 POST endpoints ---
     def add_post(path, summary, schema_ref):
@@ -402,6 +405,7 @@ def build_openapi_spec():
             "200": {"description": "JSend success"},
             "400": {"description": "JSend fail"},
             "403": {"description": "Settings API disabled"},
+            "503": {"description": "JSend error: the I2C command failed, retry later"},
         },
     }
 

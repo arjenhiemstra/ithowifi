@@ -396,7 +396,7 @@ static void handleGetSettings(AsyncWebServerRequest *request)
 
   if (resultPtr2410 == nullptr)
   {
-    sendError(request, "I2C command failed");
+    sendError(request, "I2C command failed", 503); // temporary, the client can retry (#390)
     return;
   }
 
@@ -796,7 +796,7 @@ static void handlePutSettings(AsyncWebServerRequest *request, JsonVariant &json)
   else if (status == ApiResponse::status::FAIL)
     sendFail(request, responseDoc["failreason"] | "setting update failed", responseDoc["code"] | 400);
   else if (status == ApiResponse::status::ERROR)
-    sendError(request, responseDoc["message"] | "I2C error");
+    sendError(request, responseDoc["message"] | "I2C error", responseDoc["code"] | 500);
   else
     sendFail(request, "unable to process setting");
 }

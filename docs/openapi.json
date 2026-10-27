@@ -409,6 +409,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "JSend error: the I2C read failed, retry later"
           }
         },
         "parameters": [
@@ -448,6 +451,9 @@
           },
           "403": {
             "description": "Settings API disabled"
+          },
+          "503": {
+            "description": "JSend error: the I2C command failed, retry later"
           }
         }
       }
