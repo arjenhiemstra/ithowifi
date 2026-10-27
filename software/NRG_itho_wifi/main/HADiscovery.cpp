@@ -115,10 +115,14 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
     bool useRemotePresets = false;
     uint16_t firstRemoteType = 0;
 
-    if ((deviceGroup == 0x07 && deviceID == 0x01) ||                                                                                                  // HRU250-300
-        (deviceGroup == 0x00 && deviceID == 0x2B) ||                                                                                                  // HRU350
-        (deviceGroup == 0x00 && deviceID == 0x03) ||                                                                                                  // HRU-eco
-        (deviceGroup == 0x00 && (deviceID == 0x4 || deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B) && systemConfig.itho_pwm2i2c != 1)) // CVE/HRU200 with PWM2I2C off
+    const bool cveGroup = deviceGroup == 0x00 && (deviceID == 0x4 || deviceID == 0x1D || deviceID == 0x14 || deviceID == 0x1B); // CVE/HRU200
+    const bool pwm2i2c = cveGroup && systemConfig.itho_pwm2i2c == 1;
+
+    // PWM2I2C: plain commands go to virtual remote 0 only when "map API commands to virtual remote 0" is on (#384)
+    if ((deviceGroup == 0x07 && deviceID == 0x01) || // HRU250-300
+        (deviceGroup == 0x00 && deviceID == 0x2B) || // HRU350
+        (deviceGroup == 0x00 && deviceID == 0x03) || // HRU-eco
+        (cveGroup && (!pwm2i2c || systemConfig.itho_vremoteapi)))
     {
         if (deviceGroup == 0x07 && deviceID == 0x01) // HRU250-300: use RF remote at index 0
         {
@@ -149,6 +153,16 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
                 modes.add(presets.c_str());
             }
         }
+    }
+    else if (pwm2i2c)
+    {
+        // the speeds the PWM2I2C command mapping has; away/auto/autonight only repeat low/medium (#384)
+        modes.add("Low");
+        modes.add("Medium");
+        modes.add("High");
+        modes.add("Timer 10min");
+        modes.add("Timer 20min");
+        modes.add("Timer 30min");
     }
     else
     {
@@ -240,7 +254,15 @@ void addHADiscoveryFan(JsonObject obj, const char *name)
     if (pr_mode_val_tpl_ver == 0)
     {
         componentJson["pr_mode_cmd_tpl"] = "{%- if value == 'Timer 10min' %}{{'timer1'}}{%- elif value == 'Timer 20min' %}{{'timer2'}}{%- elif value == 'Timer 30min' %}{{'timer3'}}{%- else %}{{value.lower()}}{%- endif -%}";
-        snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 90 %%}High{%%- elif speed > 35 %%}Medium{%%- elif speed > 10 %%}Low{%%- else %%}Auto{%%- endif -%%}", actualSpeedLabel.c_str());
+        // lowest speed is Low (the unit's minimum), the middle band is whatever middle preset is offered (#384)
+        bool hasMedium = false, hasAuto = false;
+        for (JsonVariant m : modes)
+        {
+            hasMedium |= strcmp(m.as<const char *>(), "Medium") == 0;
+            hasAuto |= strcmp(m.as<const char *>(), "Auto") == 0;
+        }
+        const char *midLabel = (!hasMedium && hasAuto) ? "Auto" : "Medium";
+        snprintf(pr_mode_val_tpl, sizeof(pr_mode_val_tpl), "{%%- set speed = value_json['%s'] | int %%}{%%- if speed > 90 %%}High{%%- elif speed > 35 %%}%s{%%- else %%}Low{%%- endif -%%}", actualSpeedLabel.c_str(), midLabel);
     }
     else if (pr_mode_val_tpl_ver == 1)
     {
