@@ -18,6 +18,8 @@ SystemConfig::SystemConfig()
   itho_rf_co2_join = 0;
   itho_control_interface = 0;
   itho_rf_standalone = 0;
+  itho_rf_status_poll = 0;
+  itho_rf_status_poll_idx = 0;
   itho_rf_co2_status_req = 0;
   itho_rf_co2_keepalive_demand = 0;
   itho_rf_co2_keepalive_co2 = 0;
@@ -163,6 +165,16 @@ bool SystemConfig::set(JsonObject obj)
   {
     updated = true;
     itho_rf_standalone = obj["itho_rf_standalone"];
+  }
+  if (!obj["itho_rf_status_poll"].isNull())
+  {
+    updated = true;
+    itho_rf_status_poll = obj["itho_rf_status_poll"];
+  }
+  if (!obj["itho_rf_status_poll_idx"].isNull())
+  {
+    updated = true;
+    itho_rf_status_poll_idx = obj["itho_rf_status_poll_idx"];
   }
   if (!obj["itho_rf_co2_status_req"].isNull())
   {
@@ -494,6 +506,8 @@ void SystemConfig::get(JsonObject obj) const
     obj["itho_rf_co2_join"] = itho_rf_co2_join;
     obj["itho_control_interface"] = itho_control_interface;
     obj["itho_rf_standalone"] = itho_rf_standalone;
+    obj["itho_rf_status_poll"] = itho_rf_status_poll;
+    obj["itho_rf_status_poll_idx"] = itho_rf_status_poll_idx;
     obj["itho_rf_co2_status_req"] = itho_rf_co2_status_req;
     obj["itho_rf_co2_keepalive_demand"] = itho_rf_co2_keepalive_demand;
     obj["itho_rf_co2_keepalive_co2"] = itho_rf_co2_keepalive_co2;

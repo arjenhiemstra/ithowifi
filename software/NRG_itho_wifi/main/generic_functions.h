@@ -48,6 +48,11 @@ int findFirstBidirectionalSendRemote();
 // remote slot — i.e. one from which the RF CO2 periodic poll in task_syscontrol
 // can safely send. False on out-of-range, empty, wrong function, or wrong type.
 bool rfco2RemoteValid(uint8_t idx);
+// True if `idx` points at a non-empty, SEND-function, bi-directional remote slot
+// (any type, e.g. an RFT Spider) — i.e. one the user can select for the periodic
+// 31DA/31D9 RF status poll in task_syscontrol. False on out-of-range, empty,
+// wrong function, or non-bidirectional.
+bool statusPollRemoteValid(uint8_t idx);
 // Send a 31DA + 31D9 status request over RF, addressed from the given
 // remote slot's sourceID to its destinationID. The unit answers when
 // the slot is bi-directional and joined; non-bidirectional slots are a

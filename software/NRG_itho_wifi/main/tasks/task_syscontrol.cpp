@@ -174,20 +174,28 @@ void execSystemControlTasks()
       }
     }
   }
-  else if (systemConfig.itho_rf_standalone == 1)
+  else
   {
-    // Standalone fallback poll: when no RF CO2 mode is taking over, the
-    // device is RF-only so we still need to actively pull 31DA + 31D9 from
-    // the Itho. Picks the first bi-directional Send remote that's joined.
-    // Skipped silently when no qualifying remote is configured or the
-    // update frequency is 0.
+    // General RF status-request poll. Runs when the user explicitly enables the
+    // dedicated toggle, OR implicitly in RF standalone mode (RF-only device must
+    // actively pull 31DA + 31D9 from the Itho). Unlike the RF CO2 poll above it
+    // is type-agnostic: any bi-directional SEND remote works, so an RFT Spider
+    // (or any two-way remote a CO2 remote can't cover) can drive it. When the
+    // toggle is on it uses the user-selected remote; standalone mode falls back
+    // to the first bi-directional send remote. Skipped silently when disabled,
+    // no qualifying remote is joined/selected, or the update frequency is 0.
     static unsigned long rfStatusReqTim = 0;
-    if (systemConfig.rfInitOK
+    if ((systemConfig.itho_rf_status_poll == 1 || systemConfig.itho_rf_standalone == 1)
+        && systemConfig.rfInitOK
         && systemConfig.itho_updatefreq > 0
         && millis() - rfStatusReqTim >= systemConfig.itho_updatefreq * 1000UL)
     {
       rfStatusReqTim = millis();
-      int idx = findFirstBidirectionalSendRemote();
+      int idx = -1;
+      if (systemConfig.itho_rf_status_poll == 1 && statusPollRemoteValid(systemConfig.itho_rf_status_poll_idx))
+        idx = systemConfig.itho_rf_status_poll_idx;
+      else if (systemConfig.itho_rf_standalone == 1)
+        idx = findFirstBidirectionalSendRemote();
       if (idx >= 0)
         sendRFStatusRequest(static_cast<uint8_t>(idx));
     }

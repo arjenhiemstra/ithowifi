@@ -598,6 +598,8 @@ const messageHandlers = {
       if ("itho_rf_co2_remote_idx" in x) {
         localStorage.setItem("itho_rf_co2_remote_idx", x.itho_rf_co2_remote_idx);
       }
+      var rfsm = $id('rfsettingsmenu');
+      if (rfsm) rfsm.classList.toggle('hidden', !(typeof hw_revision !== 'undefined' && (hw_revision == "2" || hw_revision.startsWith('NON-CVE '))));
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
         $id('remotemenu').classList.remove('hidden');
         $id('rfstatusmenu').classList.remove('hidden');
@@ -639,6 +641,15 @@ const messageHandlers = {
         rfco2Section.classList.add('hidden');
       }
     }
+    // RF status-poll remote dropdown (always visible). Same async pattern as
+    // the CO2 dropdown: stash the persisted idx so populate can select it once
+    // the ithoremotes payload has built the option list.
+    var spSel = $id('itho_rf_status_poll_idx');
+    if (spSel) {
+      if ("itho_rf_status_poll_idx" in x) spSel.dataset.desiredIdx = String(x.itho_rf_status_poll_idx);
+      if (cachedRemotes) populateStatusPollRemoteDropdown();
+      else getSettings('ithoremotes');
+    }
   },
   remotes: function (f) {
     // Cache + drive the RF CO2 dropdown regardless of which page we're on:
@@ -646,6 +657,7 @@ const messageHandlers = {
     // must still populate the dropdown even though there's no RemotesTable.
     cachedRemotes = f.remotes;
     if ($id('itho_rf_co2_remote_idx')) populateRfco2RemoteDropdown();
+    if ($id('itho_rf_status_poll_idx')) populateStatusPollRemoteDropdown();
     var tbl = $id('RemotesTable');
     if (!tbl) return;
     if (tbl.querySelector('tbody tr') && !remotesRefreshNeeded) {
@@ -1248,6 +1260,8 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_rf_support: checkedVal('option-itho_rf_support'),
           itho_control_interface: checkedVal('option-itho_control_interface'),
           itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
+          itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
+          itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
           itho_rf_co2_keepalive_demand: checkedVal('option-itho_rf_co2_keepalive_demand'),
@@ -1284,6 +1298,26 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       websock_send(JSON.stringify(sysMsg));
       update_page('system');
+    }
+    else if (btnId === 'rfsumbit') {
+      websock_send(JSON.stringify({
+        systemsettings: {
+          itho_rf_support: checkedVal('option-itho_rf_support'),
+          itho_control_interface: checkedVal('option-itho_control_interface'),
+          itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
+          itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
+          itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
+          itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
+          itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
+          itho_rf_co2_keepalive_demand: checkedVal('option-itho_rf_co2_keepalive_demand'),
+          itho_rf_co2_keepalive_co2: checkedVal('option-itho_rf_co2_keepalive_co2'),
+          itho_rf_co2_remote_idx: $val('itho_rf_co2_remote_idx'),
+          itho_rf_co2_keepalive_freq: $val('itho_rf_co2_keepalive_freq'),
+          itho_rf_co2_default_demand: $val('itho_rf_co2_default_demand'),
+          itho_rf_co2_default_co2: $val('itho_rf_co2_default_co2')
+        }
+      }));
+      update_page('rfsettings');
     }
     else if (btnId === 'syslogsubmit') {
       websock_send(JSON.stringify({
@@ -2001,6 +2035,37 @@ function populateRfco2RemoteDropdown() {
   }
 }
 
+// Fills the RF status-poll send-remote <select> with the non-empty, bi-directional
+// SEND slots from cachedRemotes (any type — RFT Spider, RFT CO2, RFT RV, ...), so
+// the user can pick which remote drives the periodic 31DA/31D9 poll. Mirrors
+// populateRfco2RemoteDropdown; the remote type is shown so bidirectional slots are
+// easy to tell apart.
+function populateStatusPollRemoteDropdown() {
+  var sel = $id('itho_rf_status_poll_idx');
+  if (!sel) return;
+  var desired = sel.dataset.desiredIdx || sel.value;
+  var eligible = (cachedRemotes || []).filter(function (r) {
+    return r && r.remfuncname === 'send' && r.bidirectional;
+  });
+  sel.innerHTML = '';
+  if (eligible.length === 0) {
+    var opt = document.createElement('option');
+    opt.value = '0';
+    opt.textContent = 'No bi-directional send remote configured';
+    sel.appendChild(opt);
+    return;
+  }
+  eligible.forEach(function (r) {
+    var opt = document.createElement('option');
+    opt.value = r.index;
+    opt.textContent = 'Slot ' + r.index + ' — ' + (r.name || 'unnamed') + ' (' + (r.remtypename || '') + ')';
+    sel.appendChild(opt);
+  });
+  if (desired !== '' && sel.querySelector('option[value="' + desired + '"]')) {
+    sel.value = desired;
+  }
+}
+
 //
 // Reboot script
 //
@@ -2063,8 +2128,14 @@ function update_page(page) {
   if (page == 'system') {
     main.insertAdjacentHTML('beforeend', html_systemsettings_start);
     var sf = $id('sys_fieldset');
-    if (hw_revision == "2" || hw_revision.startsWith('NON-CVE ')) { sf.insertAdjacentHTML('beforeend', html_systemsettings_cc1101); }
     sf.insertAdjacentHTML('beforeend', html_systemsettings_end);
+  }
+  if (page == 'rfsettings') {
+    main.insertAdjacentHTML('beforeend', '<div class="header"><h1>RF settings</h1></div><p>Configuration of the CC1101 RF module and RF control.</p><form class="pure-form pure-form-aligned"><fieldset id="rf_fieldset"></fieldset></form>');
+    var rff = $id('rf_fieldset');
+    rff.insertAdjacentHTML('beforeend', html_systemsettings_cc1101);
+    rff.insertAdjacentHTML('beforeend', '<div class="pure-controls"><button id="rfsumbit" class="pure-button pure-button-primary">Save</button></div>');
+    getSettings('syssetup');
   }
   if (page == 'itho') { main.insertAdjacentHTML('beforeend', html_ithosettings); }
   if (page == 'status') { main.insertAdjacentHTML('beforeend', html_ithostatus); }
