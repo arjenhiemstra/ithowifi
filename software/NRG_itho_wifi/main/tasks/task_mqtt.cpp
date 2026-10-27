@@ -295,6 +295,7 @@ void mqttSendRFStatus()
       // string pointers + copied values, so publish can happen unlocked.
       if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
+        root["zone"] = rfStatusSources[i].zoneMeasurements31DA; // DuoZone: one 31DA per zone (#383)
         for (const auto &m : rfStatusSources[i].measurements31DA)
         {
           if (m.type == ithoDeviceMeasurements::is_int)
