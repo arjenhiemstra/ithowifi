@@ -62,7 +62,7 @@ Both: touching the display wakes the Spider at once. **Many received Spider fram
 
 The Spider wizard on the RF remotes page finds a Spider and its controller:
 
-1. The add-on shows one random setpoint between 23 and 30 °C; the user sets it on the Spider.
+1. The add-on shows one random setpoint between 21.5 and 24 °C; the user sets it on the Spider.
 2. Spider/controller pairs are learned from polls and answers at all times.
 3. A Spider broadcasting `22C9` with the target is found directly. A Spider that raises its heat demand (`I 0008`) becomes a candidate (max 4) and is asked up to 3 times with `RQ 01FF` as its controller, in its poll window; the `RP 01FF` setpoint identifies it, a wrong value rejects it.
 4. Found: the Spider is stored on a free slot (function Monitor), marked thermostat, with `ctlid`. Timeout 20 min.

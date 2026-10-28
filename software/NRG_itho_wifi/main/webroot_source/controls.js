@@ -6241,7 +6241,7 @@ var html_remotessetup = `
     <br>
     <legend><br>Itho Spider thermostat:</legend>
     <p>The add-on can read and set the heating setpoint of an Itho Spider room thermostat, without pairing it.
-      Start discovery and set the Spider to the temperature shown (a random value between 23 and 30 &deg;C). The add-on
+      Start discovery and set the Spider to the temperature shown (a random value between 21.5 and 24 &deg;C). The add-on
       recognises the Spider by that value, finds the heater it controls and adds the Spider as a monitor-only RF device.
       Your heating may switch on during discovery. After that the setpoint can be changed here, via MQTT/REST or from
       Home Assistant.</p>

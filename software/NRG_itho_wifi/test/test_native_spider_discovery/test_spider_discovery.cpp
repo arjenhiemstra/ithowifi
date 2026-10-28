@@ -43,13 +43,13 @@ static void status01ff(uint8_t *p, uint8_t setpointHalf)
 
 void test_pick_target_range()
 {
-  TEST_ASSERT_EQUAL(2300, Discovery::pickTarget(0));
-  TEST_ASSERT_EQUAL(3000, Discovery::pickTarget(14));
-  TEST_ASSERT_EQUAL(2300, Discovery::pickTarget(15));
+  TEST_ASSERT_EQUAL(2150, Discovery::pickTarget(0));
+  TEST_ASSERT_EQUAL(2400, Discovery::pickTarget(5));
+  TEST_ASSERT_EQUAL(2150, Discovery::pickTarget(6));
   for (uint32_t r = 0; r < 100; r++)
   {
     const int32_t t = Discovery::pickTarget(r * 7919);
-    TEST_ASSERT_TRUE(t >= 2300 && t <= 3000 && t % 50 == 0);
+    TEST_ASSERT_TRUE(t >= 2150 && t <= 2400 && t % 50 == 0);
   }
 }
 
