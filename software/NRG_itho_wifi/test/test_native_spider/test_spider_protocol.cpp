@@ -134,6 +134,23 @@ void test_bind_accept()
   TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 6);
 }
 
+void test_zone_setpoint_change()
+{
+  // W 22C9 from a user log: 22.0 C in zone 06 -> 06 0898 08FC 01
+  uint8_t out[spider::ZONE_SETPOINT_ECHO_LEN];
+  spider::buildZoneSetpointChange(out, 0x06, 2200);
+  const uint8_t expect[6] = {0x06, 0x08, 0x98, 0x08, 0xFC, 0x01};
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 6);
+  // 20.5 C -> 0802 0866; clamped to 30.0 above the range
+  spider::buildZoneSetpointChange(out, 0x03, 2050);
+  TEST_ASSERT_EQUAL_HEX8(0x03, out[0]);
+  TEST_ASSERT_EQUAL_HEX8(0x08, out[1]);
+  TEST_ASSERT_EQUAL_HEX8(0x02, out[2]);
+  TEST_ASSERT_EQUAL_HEX8(0x66, out[4]);
+  spider::buildZoneSetpointChange(out, 0x06, 4000);
+  TEST_ASSERT_EQUAL(3000, out[1] << 8 | out[2]);
+}
+
 int main(int, char **)
 {
   UNITY_BEGIN();
@@ -146,5 +163,6 @@ int main(int, char **)
   RUN_TEST(test_encodings_do_not_cross);
   RUN_TEST(test_heating_join_detection);
   RUN_TEST(test_bind_accept);
+  RUN_TEST(test_zone_setpoint_change);
   return UNITY_END();
 }

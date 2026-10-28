@@ -172,6 +172,7 @@ int IthoRemote::removeRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2)
   remotes[index].thermostat = false;
   remotes[index].setpointCmd = 0xEFFF;
   memset(remotes[index].ctlID, 0, 3);
+  remotes[index].zone = 0xFF;
 
   return 1;
 }
@@ -213,6 +214,7 @@ int IthoRemote::removeRemote(const uint8_t index)
   remotes[index].thermostat = false;
   remotes[index].setpointCmd = 0xEFFF;
   memset(remotes[index].ctlID, 0, 3);
+  remotes[index].zone = 0xFF;
 
   return 1;
 }
@@ -426,6 +428,10 @@ void IthoRemote::Remote::set(JsonObject obj)
   {
     copyArray(obj["ctlid"].as<JsonArray>(), ctlID);
   }
+  if (!obj["zone"].isNull())
+  {
+    zone = obj["zone"];
+  }
 }
 
 void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index, bool human_reaadble) const
@@ -496,6 +502,8 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
       for (int i = 0; i < 3; i++)
         c.add(ctlID[i]);
     }
+    if (zone != 0xFF)
+      obj["zone"] = zone;
   }
   if (last_cmd[0] != '\0')
     obj["last_cmd"] = last_cmd;

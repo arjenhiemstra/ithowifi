@@ -708,6 +708,8 @@ const char *ithoSetSpiderSetpoint(int remote_index, float celsius)
     return "invalid remote index";
   if (!remotes.isThermostat(remote_index))
     return "remote is not a bound Spider thermostat";
+  if (remotes.getThermostatZone(remote_index) != spider::ZONE_NONE && systemConfig.spider_zone_setpoint != 1)
+    return "setpoint via a zone controller is off (RF settings, experimental)";
   if (!(celsius >= 0.0f && celsius <= 50.0f))
     return "setpoint out of range";
   const int32_t centi = spider::clampSetpoint(static_cast<int32_t>(celsius * 100.0f + 0.5f));

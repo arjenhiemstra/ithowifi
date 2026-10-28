@@ -85,6 +85,22 @@ inline void buildZoneSetpointEcho(uint8_t out[ZONE_SETPOINT_ECHO_LEN], int32_t c
   out[5] = 0x01;
 }
 
+// W 22C9 a Spider on a zone controller (AutoTemp) sends on a dial change: [zone][setpoint][setpoint + 1 C][flag].
+// Flag seen as 02 on the first change and 01 after it (user log 2026-10-28), meaning unknown; we send 01.
+constexpr uint8_t ZONE_NONE = 0xFF; // Spider not on a zone controller
+
+inline void buildZoneSetpointChange(uint8_t out[ZONE_SETPOINT_ECHO_LEN], uint8_t zone, int32_t centi)
+{
+  const uint16_t v = static_cast<uint16_t>(clampSetpoint(centi));
+  const uint16_t v2 = static_cast<uint16_t>(v + 100);
+  out[0] = zone;
+  out[1] = v >> 8;
+  out[2] = v & 0xFF;
+  out[3] = v2 >> 8;
+  out[4] = v2 & 0xFF;
+  out[5] = 0x01;
+}
+
 // 1FC9 offer entries are [domain][code BE16][device id].
 constexpr size_t BIND_ENTRY_LEN = 6;
 

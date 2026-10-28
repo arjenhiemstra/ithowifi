@@ -1854,6 +1854,7 @@ bool IthoCC1101::updateRFDevice(uint8_t remote_index, uint8_t byte0, uint8_t byt
   ithoRF.device[remote_index].thermostat = false;
   ithoRF.device[remote_index].setpointCmd = 0xEFFF;
   memset(ithoRF.device[remote_index].controllerID, 0, 3);
+  ithoRF.device[remote_index].zone = 0xFF;
 
   if (remote_index > ithoRF.count)
     ithoRF.count = remote_index;
@@ -1906,6 +1907,7 @@ bool IthoCC1101::removeRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2)
       item.thermostat = false;
       item.setpointCmd = 0xEFFF;
       memset(item.controllerID, 0, 3);
+      item.zone = 0xFF;
       ithoRF.count--;
       return true;
     }
@@ -1940,6 +1942,7 @@ bool IthoCC1101::removeRFDevice(uint8_t remote_index)
   ithoRF.device[remote_index].thermostat = false;
   ithoRF.device[remote_index].setpointCmd = 0xEFFF;
   memset(ithoRF.device[remote_index].controllerID, 0, 3);
+  ithoRF.device[remote_index].zone = 0xFF;
 
   return true;
 }
@@ -2756,13 +2759,21 @@ void IthoCC1101::handleZoneSetpoint(IthoPacket *packetPtr)
   uint8_t byte1 = tempID >> 8 & 0xFF;
   uint8_t byte2 = tempID & 0xFF;
 
-  if (!checkRFDevice(byte0, byte1, byte2))
-    return;
-  // int32_t tempZone = packetPtr->dataDecoded[packetPtr->payloadPos + 0];
   int32_t tempSetpoint = packetPtr->dataDecoded[packetPtr->payloadPos + 1] << 8 | packetPtr->dataDecoded[packetPtr->payloadPos + 2];
 
   time_t now;
   time(&now);
+
+  if (ithoRFDevice *dev = findZoneDevice(tempID, packetPtr->dataDecoded[packetPtr->payloadPos + 0]))
+  { // zone controller (AutoTemp) confirming a zone's setpoint: belongs to that zone's Spider
+    if (dev->setpoint != tempSetpoint)
+      remoteStatusChanged = true;
+    dev->timestamp = now;
+    dev->setpoint = tempSetpoint;
+    return;
+  }
+  if (!checkRFDevice(byte0, byte1, byte2))
+    return;
 
   for (auto &item : ithoRF.device)
   {
@@ -2821,7 +2832,7 @@ void IthoCC1101::handleSpiderStatus(IthoPacket *packetPtr)
       item.setpointCool = spc;
       item.spiderFlags = st.flags;
       // Bound Spider asking its controller (us) for the setpoint: answer from TaskCC1101 right away
-      if (item.thermostat && ((packetPtr->header >> 4) & 0x3) == MESSAGE_TYPE_RQ_MASK)
+      if (item.thermostat && item.zone == spider::ZONE_NONE && ((packetPtr->header >> 4) & 0x3) == MESSAGE_TYPE_RQ_MASK)
       {
         uint8_t me[3];
         ownID(item, me);
@@ -2850,7 +2861,9 @@ void IthoCC1101::handleRelayDemand(IthoPacket *packetPtr)
     return;
   const uint32_t src = packetPtr->deviceId0 != 0 ? packetPtr->deviceId0 : packetPtr->deviceId2;
   const uint8_t id[3]{(uint8_t)(src >> 16), (uint8_t)(src >> 8), (uint8_t)src};
-  ithoRFDevice *dev = findRFDevice(id);
+  ithoRFDevice *dev = findZoneDevice(src, packetPtr->dataDecoded[packetPtr->payloadPos + 0]); // zone controller: [zone, demand]
+  if (!dev)
+    dev = findRFDevice(id);
   if (!dev)
     return;
   const uint8_t v = packetPtr->dataDecoded[packetPtr->payloadPos + 1];
@@ -2860,6 +2873,19 @@ void IthoCC1101::handleRelayDemand(IthoPacket *packetPtr)
     remoteStatusChanged = true;
   dev->demand = v;
   time(&dev->timestamp);
+}
+
+// Spider on zone `zone` of zone controller `ctl` (AutoTemp), whose broadcasts carry only the controller's id
+ithoRFDevice *IthoCC1101::findZoneDevice(uint32_t ctl, uint8_t zone)
+{
+  if (ctl == 0 || zone == spider::ZONE_NONE)
+    return nullptr;
+  for (auto &item : ithoRF.device)
+  {
+    if (item.zone == zone && ((uint32_t)item.controllerID[0] << 16 | (uint32_t)item.controllerID[1] << 8 | item.controllerID[2]) == ctl)
+      return &item;
+  }
+  return nullptr;
 }
 
 ithoRFDevice *IthoCC1101::findRFDevice(const uint8_t id[3])
@@ -2883,7 +2909,7 @@ void IthoCC1101::ownID(const ithoRFDevice &dev, uint8_t out[3]) const
     out[i] = hasCtl ? dev.controllerID[i] : (hasSource ? dev.sourceID[i] : defaultID[i]);
 }
 
-bool IthoCC1101::setThermostat(const uint8_t id[3], bool on, int32_t setpointCmd, const uint8_t ctl[3])
+bool IthoCC1101::setThermostat(const uint8_t id[3], bool on, int32_t setpointCmd, const uint8_t ctl[3], uint8_t zone)
 {
   ithoRFDevice *dev = findRFDevice(id);
   if (!dev)
@@ -2892,6 +2918,7 @@ bool IthoCC1101::setThermostat(const uint8_t id[3], bool on, int32_t setpointCmd
   dev->setpointCmd = on ? setpointCmd : 0xEFFF;
   for (int i = 0; i < 3; i++)
     dev->controllerID[i] = (on && ctl) ? ctl[i] : 0;
+  dev->zone = (on && ctl) ? zone : spider::ZONE_NONE;
   return true;
 }
 
@@ -2973,6 +3000,17 @@ void IthoCC1101::sendSpiderRequest(const uint8_t id[3])
 {
   static const uint8_t cmd[5]{0x01, 0xFF, 0x01, 0x00, 0x00};
   sendToSpider(id, HEADER_RQ_BIDIRECTIONAL, cmd);
+}
+
+// W 22C9 [zone][setpoint][setpoint + 1 C][01] as the Spider to its zone controller, like a dial change on the Spider
+void IthoCC1101::sendSpiderZoneSetpoint(const uint8_t id[3])
+{
+  const ithoRFDevice *dev = findRFDevice(id);
+  if (!dev || dev->zone == spider::ZONE_NONE || dev->setpointCmd == 0xEFFF)
+    return;
+  uint8_t cmd[3 + spider::ZONE_SETPOINT_ECHO_LEN + 1]{0x22, 0xC9, spider::ZONE_SETPOINT_ECHO_LEN};
+  spider::buildZoneSetpointChange(&cmd[3], dev->zone, dev->setpointCmd);
+  sendToSpiderAs(id, dev->controllerID, HEADER_JOIN_REPLY, cmd);
 }
 
 void IthoCC1101::sendSpiderProbe(const uint8_t id[3], const uint8_t ctl[3])
