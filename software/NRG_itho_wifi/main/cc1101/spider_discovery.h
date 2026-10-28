@@ -5,6 +5,8 @@
 // then poll their controller (RQ 3EF0 / 3EF1) about every minute. Those Spiders become candidates and
 // are asked once per poll with RQ 01FF, sent as their controller; the RP 01FF setpoint identifies them.
 // Spider-controller pairs are learned from the polls all the time, not only during discovery.
+// A Spider on a zone controller (AutoTemp) does not poll: it reports a dial change with W 22C9 to the
+// controller, which echoes it as I 22C9. Such a pair is marked zone: we cannot pose as that controller.
 // Dependency-free so the native unit tests can include it directly.
 
 #include <cstddef>
@@ -60,6 +62,7 @@ public:
   {
     nCand_ = 0;
     spider_ = heater_ = 0;
+    zone_ = false;
     probe_ = Probe{};
     target_ = target;
     state_ = State::WaitSetpoint;
@@ -69,13 +72,13 @@ public:
   int32_t target() const { return target_; }
   uint32_t spider() const { return spider_; }
   uint32_t heater() const { return heater_; }
+  bool zoneController() const { return zone_; } // heater() is a zone controller (AutoTemp): read only
+
   size_t candidates() const { return nCand_; }
   uint32_t controllerOf(uint32_t spider) const
   {
-    for (size_t i = 0; i < nPair_; i++)
-      if (pair_[i].spider == spider)
-        return pair_[i].ctl;
-    return 0;
+    const Pair *p = findPair(spider);
+    return p ? p->ctl : 0;
   }
 
   // Feed every received frame (checksum OK), also while idle. Returns true when the state advanced.
@@ -89,6 +92,8 @@ public:
     {
     case State::WaitSetpoint:
     {
+      if (f.opcode == 0x22C9 && f.msgType == MSG_I && isController(src))
+        return false; // a zone controller's echo of a Spider's W 22C9, not the Spider
       if (f.opcode == 0x0008 && f.msgType == MSG_I && f.len >= 2 && f.payload)
       { // heat demand went up: the Spider the user just turned up?
         const uint8_t v = f.payload[1];
@@ -111,12 +116,15 @@ public:
       spider_ = f.addr0 != 0 ? f.addr0 : f.addr2;
       heater_ = ctl != 0 ? ctl : controllerOf(spider_);
       state_ = heater_ != 0 ? State::Done : State::WaitHeater;
+      if (state_ == State::Done)
+        zone_ = isZonePair(spider_, heater_);
       return true;
     }
     case State::WaitHeater:
       heater_ = controllerOf(spider_);
       if (heater_ == 0)
         return false;
+      zone_ = isZonePair(spider_, heater_);
       state_ = State::Done;
       return true;
     default:
@@ -151,16 +159,40 @@ private:
   {
     uint32_t spider;
     uint32_t ctl;
+    bool zone; // learned only from zone controller traffic (W 22C9, RQ 0008, I 30C9)
   };
 
-  // Setpoint a Spider reports: I 22C9 (0.01 C) or 01FF byte 3 (0.5 C; RQ/RP go to its controller)
+  const Pair *findPair(uint32_t spider) const
+  {
+    for (size_t i = 0; i < nPair_; i++)
+      if (pair_[i].spider == spider)
+        return &pair_[i];
+    return nullptr;
+  }
+  bool isController(uint32_t id) const
+  {
+    for (size_t i = 0; i < nPair_; i++)
+      if (pair_[i].ctl == id)
+        return true;
+    return false;
+  }
+  bool isZonePair(uint32_t spider, uint32_t ctl) const
+  {
+    const Pair *p = findPair(spider);
+    return p == nullptr || p->ctl != ctl || p->zone;
+  }
+
+  // Setpoint a Spider reports: I 22C9 (0.01 C), W 22C9 to its zone controller, or 01FF byte 3 (0.5 C;
+  // RQ/RP go to its controller)
   static bool reportedSetpoint(const Frame &f, int32_t &centi, uint32_t &ctl)
   {
     if (f.payload == nullptr)
       return false;
-    if (f.opcode == 0x22C9 && f.msgType == MSG_I && f.len >= 3)
+    if (f.opcode == 0x22C9 && f.len >= 3 && (f.msgType == MSG_I || (f.msgType == MSG_W && f.addr0 && f.addr1)))
     {
       centi = static_cast<int32_t>(f.payload[1]) << 8 | f.payload[2];
+      if (f.msgType == MSG_W)
+        ctl = f.addr1;
       return true;
     }
     if (f.opcode == 0x01FF && f.msgType != MSG_W && f.len >= 26)
@@ -173,11 +205,20 @@ private:
     return false;
   }
 
-  // Spider polls its heater (3EF0), relay (3EF1) or gateway (01FF); the controller answers or echoes 3150
+  // Spider polls its heater (3EF0), relay (3EF1) or gateway (01FF); the controller answers or echoes 3150.
+  // On a zone controller the Spider sends W 22C9, RQ 0008 and I 30C9 to it instead.
   void learnPair(const Frame &f)
   {
     uint32_t s = 0, c = 0;
-    if (f.msgType == MSG_RQ && (f.opcode == 0x3EF0 || f.opcode == 0x3EF1 || (f.opcode == 0x01FF && f.len >= 26)))
+    bool zone = false;
+    if (f.addr0 != 0 && f.addr1 != 0 && ((f.msgType == MSG_W && f.opcode == 0x22C9) || (f.msgType == MSG_RQ && f.opcode == 0x0008) ||
+                                         (f.msgType == MSG_I && f.opcode == 0x30C9)))
+    {
+      s = f.addr0;
+      c = f.addr1;
+      zone = true;
+    }
+    else if (f.msgType == MSG_RQ && (f.opcode == 0x3EF0 || f.opcode == 0x3EF1 || (f.opcode == 0x01FF && f.len >= 26)))
     { // a 1-byte RQ 01FF is a controller asking the Spider, not the Spider asking
       s = f.addr0;
       c = f.addr1;
@@ -197,16 +238,19 @@ private:
     for (size_t i = 0; i < nPair_; i++)
       if (pair_[i].spider == s)
       {
+        if (zone && !pair_[i].zone && pair_[i].ctl == c)
+          return; // a polled controller stays one we can pose as
         pair_[i].ctl = c;
+        pair_[i].zone = zone;
         return;
       }
     if (nPair_ < MAX_PAIRS)
-      pair_[nPair_++] = Pair{s, c};
+      pair_[nPair_++] = Pair{s, c, zone};
     else
     {
       for (size_t i = 1; i < MAX_PAIRS; i++)
         pair_[i - 1] = pair_[i];
-      pair_[MAX_PAIRS - 1] = Pair{s, c};
+      pair_[MAX_PAIRS - 1] = Pair{s, c, zone};
     }
   }
 
@@ -250,6 +294,7 @@ private:
   Probe probe_{};
   uint32_t spider_{0};
   uint32_t heater_{0};
+  bool zone_{false};
 };
 
 } // namespace spider

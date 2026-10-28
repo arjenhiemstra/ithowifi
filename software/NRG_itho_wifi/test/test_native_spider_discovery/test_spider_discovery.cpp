@@ -156,6 +156,52 @@ void test_pairs_ignore_other_traffic()
   TEST_ASSERT_EQUAL_HEX32(RELAY, d.controllerOf(SPIDER2));
 }
 
+// AutoTemp zone controller, frames from a user log (Spider 56:26:8F, AutoTemp 0B:A2:58, zone 06)
+static const uint32_t SPIDER_AT = 0x56268F;
+static const uint32_t AUTOTEMP = 0x0BA258;
+static const uint8_t at30c9[3] = {0x00, 0x08, 0x4E};
+static const uint8_t atRq0008[1] = {0x06};
+static const uint8_t atSp20[6] = {0x06, 0x07, 0xD0, 0x08, 0x34, 0x02};
+static const uint8_t atSp22[6] = {0x06, 0x08, 0x98, 0x08, 0xFC, 0x01};
+
+void test_autotemp_spider_found_from_w22c9()
+{
+  Discovery d;
+  // I --- 56:26:8F 0B:A2:58 --:------ 30C9 003 00084E
+  d.feed(Frame{spider::MSG_I, SPIDER_AT, AUTOTEMP, 0, 0x30C9, at30c9, 3});
+  TEST_ASSERT_EQUAL_HEX32(AUTOTEMP, d.controllerOf(SPIDER_AT));
+  d.start(2200);
+  // W --- 56:26:8F 0B:A2:58 --:------ 22C9 006 0607D0083402: another setpoint
+  TEST_ASSERT_FALSE(d.feed(Frame{spider::MSG_W, SPIDER_AT, AUTOTEMP, 0, 0x22C9, atSp20, 6}));
+  TEST_ASSERT_TRUE(d.feed(Frame{spider::MSG_W, SPIDER_AT, AUTOTEMP, 0, 0x22C9, atSp22, 6}));
+  TEST_ASSERT_TRUE(d.state() == Discovery::State::Done);
+  TEST_ASSERT_EQUAL_HEX32(SPIDER_AT, d.spider());
+  TEST_ASSERT_EQUAL_HEX32(AUTOTEMP, d.heater());
+  TEST_ASSERT_TRUE(d.zoneController());
+}
+
+void test_autotemp_echo_is_not_the_spider()
+{
+  Discovery d;
+  // RQ --- 56:26:8F 0B:A2:58 --:------ 0008 001 06
+  d.feed(Frame{spider::MSG_RQ, SPIDER_AT, AUTOTEMP, 0, 0x0008, atRq0008, 1});
+  d.start(2200);
+  // I --- --:------ --:------ 0B:A2:58 22C9 006 06089808FC01: the AutoTemp's echo
+  TEST_ASSERT_FALSE(d.feed(Frame{spider::MSG_I, 0, 0, AUTOTEMP, 0x22C9, atSp22, 6}));
+  TEST_ASSERT_TRUE(d.state() == Discovery::State::WaitSetpoint);
+}
+
+void test_polled_controller_is_not_zone()
+{
+  Discovery d;
+  d.feed(Frame{spider::MSG_RQ, SPIDER, HEATER, 0, 0x3EF0, rq00, 1});
+  // a 30C9 to the same heater must not turn the polled pair into a zone pair
+  d.feed(Frame{spider::MSG_I, SPIDER, HEATER, 0, 0x30C9, at30c9, 3});
+  d.start(TARGET);
+  TEST_ASSERT_TRUE(d.feed(zoneSetpoint(SPIDER, sp275)));
+  TEST_ASSERT_FALSE(d.zoneController());
+}
+
 void test_idle_and_restart()
 {
   Discovery d;
@@ -180,6 +226,9 @@ int main(int, char **)
   RUN_TEST(test_wrong_answer_rejects_candidate);
   RUN_TEST(test_probe_limit_and_no_demand);
   RUN_TEST(test_pairs_ignore_other_traffic);
+  RUN_TEST(test_autotemp_spider_found_from_w22c9);
+  RUN_TEST(test_autotemp_echo_is_not_the_spider);
+  RUN_TEST(test_polled_controller_is_not_zone);
   RUN_TEST(test_idle_and_restart);
   return UNITY_END();
 }

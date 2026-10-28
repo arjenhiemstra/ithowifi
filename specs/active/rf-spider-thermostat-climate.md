@@ -66,6 +66,7 @@ The Spider wizard on the RF remotes page finds a Spider and its controller:
 2. Spider/controller pairs are learned from polls and answers at all times.
 3. A Spider broadcasting `22C9` with the target is found directly. A Spider that raises its heat demand (`I 0008`) becomes a candidate (max 4) and is asked up to 3 times with `RQ 01FF` as its controller, in its poll window; the `RP 01FF` setpoint identifies it, a wrong value rejects it.
 4. Found: the Spider is stored on a free slot (function Monitor), marked thermostat, with `ctlid`. Timeout 20 min.
+5. Zone controller (AutoTemp): the Spider's `W 22C9` to the controller identifies both; the controller's `I 22C9` echo is ignored. The Spider is stored read only (Monitor, not thermostat) and the wizard says so; setting the setpoint via a zone controller is not supported yet.
 
 ## Acceptance Criteria
 
