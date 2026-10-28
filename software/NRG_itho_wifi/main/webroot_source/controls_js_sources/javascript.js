@@ -666,6 +666,7 @@ const messageHandlers = {
       wait_setpoint: 'Set the Spider to ' + d.target + ' \u00B0C now and leave it there. Most Spiders are found within a minute or two, some take up to 15 minutes.',
       wait_heater: 'Spider ' + d.spider + ' found. Listening for its heater (up to 12 minutes)...',
       done: 'Done: Spider ' + d.spider + ' controls heater ' + d.heater + ' (RF device slot ' + d.slot + '). Set the Spider back to your normal temperature, on the Spider or in the table below.',
+      done_zone: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. Its values can be read; setting the setpoint through a zone controller is not supported yet. Set the Spider back to your normal temperature.',
       timeout: 'Timed out without a result. Start again.',
       cancelled: 'Cancelled.',
       noslot: 'Spider found, but there is no free RF device slot.'

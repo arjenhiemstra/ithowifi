@@ -134,6 +134,16 @@ static void spiderDiscoveryFinish()
     remotes.updateRemoteFunction(index, static_cast<uint8_t>(RemoteFunctions::MONITOR));
     remotes.updateRemoteName(index, "Spider");
   }
+  if (spiderDisc.zoneController())
+  { // zone controller (AutoTemp): we cannot pose as it, so read only and nothing is sent
+    if (!rfManager.radio.checkRFDevice(sid[0], sid[1], sid[2]))
+      rfManager.radio.updateRFDevice(index, sid[0], sid[1], sid[2], RemoteTypes::RFTSPIDER, false);
+    saveRemotesflag = true;
+    spiderDiscSlot = index;
+    spiderDiscResult = "done_zone";
+    N_LOG("RFI: Spider %02X:%02X:%02X discovered on zone controller %02X:%02X:%02X, slot %d (read only)", sid[0], sid[1], sid[2], hid[0], hid[1], hid[2], index);
+    return;
+  }
   remotes.setThermostat(index, true);
   remotes.setThermostatCtl(index, hid);
   if (!rfManager.radio.checkRFDevice(sid[0], sid[1], sid[2]))
