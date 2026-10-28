@@ -133,13 +133,16 @@ void execSystemControlTasks()
     }
   }
 
-  // RF CO2 control mode owns the status-request poll on the user's selected
-  // RFT CO2 send remote. Runs independently of standalone: in standalone +
-  // RF CO2 it replaces the fallback auto-poll below; in I2C + RF CO2 mode
-  // it adds an RF poll on top of the I2C status traffic.
+  // RF CO2 control mode can poll the status on the user's selected RFT CO2
+  // send remote. Runs independently of standalone: with its status request on
+  // it replaces the general poll below; in I2C + RF CO2 mode it adds an RF
+  // poll on top of the I2C status traffic.
   bool rfco2ModeActive = (systemConfig.itho_control_interface == 1
                           && systemConfig.rfInitOK
                           && rfco2RemoteValid(systemConfig.itho_rf_co2_remote_idx));
+  // Only skip the general poll when the CO2 poll runs: 31D9 (speed status,
+  // fault, filter) only comes as a reply to a status request
+  const bool rfco2Polls = rfco2ModeActive && systemConfig.itho_rf_co2_status_req == 1;
   if (rfco2ModeActive)
   {
     const uint8_t idx = systemConfig.itho_rf_co2_remote_idx;
@@ -174,7 +177,7 @@ void execSystemControlTasks()
       }
     }
   }
-  else
+  if (!rfco2Polls)
   {
     // General RF status-request poll. Runs when the user explicitly enables the
     // dedicated toggle, OR implicitly in RF standalone mode (RF-only device must
