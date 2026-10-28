@@ -47,6 +47,7 @@ public:
   uint8_t itho_numvrem;
   uint8_t itho_numrfrem;
   uint8_t itho_sendjoin;
+  uint8_t itho_sendjoin_idx;
   uint8_t itho_pwm2i2c;
   uint8_t itho_31da;
   uint8_t itho_31d9;
