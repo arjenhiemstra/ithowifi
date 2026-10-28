@@ -1,5 +1,59 @@
 #include "config/Config.h"
 
+// Write via <file>.tmp + rename: a reset during the write leaves the old file intact instead of an empty one
+template <typename TWrite>
+static bool writeFileAtomic(const char *filename, TWrite write)
+{
+  char tmp[48];
+  snprintf(tmp, sizeof(tmp), "%s.tmp", filename);
+  File f = ACTIVE_FS.open(tmp, "w");
+  if (!f)
+    return false;
+  const size_t written = write(f);
+  f.close();
+  if (written == 0)
+  {
+    ACTIVE_FS.remove(tmp);
+    return false;
+  }
+  if (!ACTIVE_FS.rename(tmp, filename))
+  {
+    ACTIVE_FS.remove(filename); // in case rename does not replace an existing file
+    if (!ACTIVE_FS.rename(tmp, filename))
+    {
+      ACTIVE_FS.remove(tmp);
+      return false;
+    }
+  }
+  return true;
+}
+
+// False if the file is empty or not valid JSON; open errors and oversize files are left to the caller
+static bool configFileParses(const char *filename, size_t maxSize)
+{
+  File f = ACTIVE_FS.open(filename, "r");
+  if (!f)
+    return true;
+  const size_t size = f.size();
+  if (size > maxSize)
+    return true;
+  if (size == 0)
+    return false;
+  JsonDocument doc;
+  return !deserializeJson(doc, f);
+}
+
+// Move an unreadable config file to <file>.bad so the caller starts from the backup or defaults, and saving works again
+static void quarantineConfigFile(const char *filename)
+{
+  char bad[48];
+  snprintf(bad, sizeof(bad), "%s.bad", filename);
+  ACTIVE_FS.remove(bad);
+  if (!ACTIVE_FS.rename(filename, bad))
+    ACTIVE_FS.remove(filename);
+  E_LOG("SYS: error - %s unreadable, moved to %s, using defaults", filename, bad);
+}
+
 template <typename TRef>
 bool saveConfigFile(const char *location, const char *filename, size_t size, const char *config_type, TRef &ref)
 {
@@ -10,14 +64,11 @@ bool saveConfigFile(const char *location, const char *filename, size_t size, con
 
   if (strcmp("flash", location) == 0)
   {
-    File configFile = ACTIVE_FS.open(filename, "w");
-    if (!configFile)
+    if (!writeFileAtomic(filename, [&](File &f) { return serializeJson(root, f); }))
     {
-      E_LOG("SYS: error - failed to create %s file for writing", filename);
+      E_LOG("SYS: error - failed to write %s file", filename);
       return false;
     }
-
-    serializeJson(root, configFile);
   }
   else if (strcmp("nvs", location) == 0)
   {
@@ -38,6 +89,8 @@ bool loadConfigFile(const char *location, const char *nvs_backup_key, const char
 {
   if (strcmp("flash", location) == 0)
   {
+    if (ACTIVE_FS.exists(filename) && !configFileParses(filename, size))
+      quarantineConfigFile(filename);
     if (!ACTIVE_FS.exists(filename))
     {
       D_LOG("SYS: loadConfigFile %s:%d", nvs_backup_key, static_cast<uint8_t>(NVS.getInt(nvs_backup_key)));
@@ -242,13 +295,11 @@ bool saveFileRemotes(const char *location, const char *filename, const char *con
 {
   if (strcmp("flash", location) == 0)
   {
-    File configFile = ACTIVE_FS.open(filename, "w");
-    if (!configFile)
+    if (!writeFileAtomic(filename, [&](File &f) { return serializeRemotes(filename, remotes, f); }))
     {
-      E_LOG("SYS: error - failed to create %s file", filename);
+      E_LOG("SYS: error - failed to write %s file", filename);
       return false;
     }
-    serializeRemotes(filename, remotes, configFile);
   }
   else if (strcmp("nvs", location) == 0)
   {
@@ -307,6 +358,8 @@ bool loadFileRemotes(const char *location, const char *filename, const char *con
 {
   if (strcmp("flash", location) == 0)
   {
+    if (ACTIVE_FS.exists(filename) && !configFileParses(filename, 4000))
+      quarantineConfigFile(filename);
     if (!ACTIVE_FS.exists(filename))
     {
       if (NVS.getInt(nvs_backup_key) == 1)
