@@ -61,6 +61,15 @@
       <button id="spider_disc_start" class="pure-button">Start</button>&nbsp;<button id="spider_disc_cancel"
         class="pure-button">Cancel</button>&nbsp;<span id="spider_disc_status"></span>
     </div>
+    <p>Experimental: bind the add-on as the Spider's gateway, the way an Itho gateway or the RAMSES blueprint does.
+      Press 'Bind as gateway' and put the Spider in pairing mode within 3 minutes (see the Spider manual). The Spider
+      then asks the add-on for its setpoint (about every 9 minutes and when you touch its display) and takes the new
+      value itself, also on its display. Its link to the heater or AutoTemp should stay as it is. Only for Spiders that
+      offer this in their pairing message; other thermostats are ignored.</p>
+    <div class="pure-control-group">
+      <label for="spider_gw_bind">Spider gateway</label>
+      <button id="spider_gw_bind" class="pure-button">Bind as gateway</button>
+    </div>
     <table id="SpiderTable" class="pure-table pure-table-bordered" style="text-align: center;"></table>
     <p id="spider_set_status"></p>
   </fieldset>

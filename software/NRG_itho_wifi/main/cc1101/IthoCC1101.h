@@ -206,7 +206,7 @@ public:
   bool setThermostatSetpoint(const uint8_t id[3], int32_t setpointCmd);
   bool consumeSpiderReply(uint8_t id[3]);
   void sendSpiderBindAccept(const uint8_t id[3]);
-  void sendSpiderStatus(const uint8_t id[3], bool reply);
+  void sendSpiderStatus(const uint8_t id[3], bool reply, bool useCmd = true);
   void sendSpiderZoneEcho(const uint8_t id[3], int32_t setpointCenti);
   void sendSpiderRequest(const uint8_t id[3]);
   void sendSpiderZoneSetpoint(const uint8_t id[3]); // W 22C9 as the Spider to its zone controller

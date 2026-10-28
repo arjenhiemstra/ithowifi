@@ -67,12 +67,20 @@ static int spiderDiscSlot = -1;
 static bool spiderDiscNotify = false;
 constexpr uint32_t SPIDER_DISC_TIMEOUT_MS = 20 * 60 * 1000; // fallback: some Spiders send 22C9 only every ~15 min
 constexpr uint32_t SPIDER_DISC_HEATER_MS = 12 * 60 * 1000; // relay-bound Spiders poll every 5-10 min when idle
+static uint32_t spiderGwUntil = 0;  // gateway bind window end (accept a Spider's 01FF bind), 0 = off
+static uint32_t spiderGwSpider = 0; // Spider bound in the last gateway bind window
+constexpr uint32_t SPIDER_GW_MS = 3 * 60 * 1000;
 static uint32_t spiderProbeAt = 0; // pending discovery probe (RQ 01FF as the candidate's controller), 0 = none
 static spider::Probe spiderProbe{};
 
 void spiderDiscoveryRequest(bool start)
 {
   spiderDiscCmd = start ? 1 : 2;
+}
+
+void spiderGatewayBindRequest()
+{
+  spiderDiscCmd = 3;
 }
 
 static void spiderIdStr(uint32_t id, char *out, size_t len)
@@ -90,14 +98,16 @@ void spiderDiscoveryStatus(JsonObject obj)
   case S::WaitHeater: st = "wait_heater"; break;
   default: break;
   }
+  if (spiderGwUntil != 0)
+    st = "gw_wait";
   obj["state"] = st;
   if (spiderDisc.target() != 0)
     obj["target"] = spiderDisc.target() / 100.0f;
   obj["candidates"] = spiderDisc.candidates();
   char buf[10];
-  if (spiderDisc.spider())
+  if (spiderDisc.spider() || spiderGwSpider)
   {
-    spiderIdStr(spiderDisc.spider(), buf, sizeof(buf));
+    spiderIdStr(spiderDisc.spider() ? spiderDisc.spider() : spiderGwSpider, buf, sizeof(buf));
     obj["spider"] = buf;
   }
   if (spiderDisc.heater())
@@ -177,6 +187,8 @@ static void spiderDiscoveryFinish()
   N_LOG("RFI: Spider %02X:%02X:%02X discovered, controller %02X:%02X:%02X, slot %d", sid[0], sid[1], sid[2], hid[0], hid[1], hid[2], index);
 }
 
+static uint32_t idTo32(const uint8_t id[3]) { return (uint32_t)id[0] << 16 | (uint32_t)id[1] << 8 | id[2]; }
+
 // Called from other tasks (MQTT/web) after a setpoint change: push W 01FF 3x, 1 s apart
 void requestSpiderPush(const uint8_t id[3])
 {
@@ -187,16 +199,21 @@ void requestSpiderPush(const uint8_t id[3])
   spiderPending[idx].pushUntil = millis() + SPIDER_PUSH_MS;
   spiderPending[idx].lastPush = 0;
   spiderPending[idx].push = true;
+  const uint8_t *ctl = remotes.getThermostatCtl(idx);
   if (remotes.getThermostatZone(idx) != spider::ZONE_NONE)
   { // zone controller (AutoTemp) is always listening: W 22C9 now, repeated until it echoes the setpoint
     spiderPending[idx].repeatLeft = SPIDER_ZONE_TRIES;
+    spiderPending[idx].repeatAt = millis();
+  }
+  else if (!ctl || idTo32(ctl) == 0)
+  { // bound to us (gateway): W 01FF now, a wired Spider takes it; a battery Spider gets it in our next RP
+    spiderPending[idx].repeatLeft = 1 + SPIDER_PUSH_REPEATS;
     spiderPending[idx].repeatAt = millis();
   }
 }
 
 // Called for every clean received frame: confirm a pending setpoint, or use the Spider's
 // listen window right after its own I broadcast to send W 01FF or RQ 01FF.
-static uint32_t idTo32(const uint8_t id[3]) { return (uint32_t)id[0] << 16 | (uint32_t)id[1] << 8 | id[2]; }
 
 static void spiderSendProbe(const spider::Probe &pr)
 {
@@ -275,11 +292,31 @@ static void spiderOnFrame(const IthoPacket *packet)
   if (idx < 0 || idx >= MAX_NUM_OF_REMOTES || !remotes.isThermostat(idx))
     return;
   const uint8_t *ctl = remotes.getThermostatCtl(idx);
+  SpiderPending &p = spiderPending[idx];
   if (!ctl || idTo32(ctl) == 0)
-    return; // bound to us: the Spider polls and gets our RP instead
+  { // bound to us (gateway): the Spider polls and gets our RP instead
+    if (!p.push)
+      return;
+    if (spiderConfirmed(sid))
+    {
+      p.push = false;
+      p.repeatLeft = 0;
+    }
+    else if (type == 2 && packet->opcode == IthoPacket::Type::ZONESETPOINT && packet->deviceId0 == spider)
+    { // W 22C9: setpoint changed on the Spider itself, newer than ours
+      p.push = false;
+      p.repeatLeft = 0;
+      I_LOG("RFI: Spider %02X:%02X:%02X setpoint changed on the Spider, pending setpoint dropped", sid[0], sid[1], sid[2]);
+    }
+    else if ((int32_t)(millis() - p.pushUntil) >= 0)
+    {
+      p.push = false;
+      W_LOG("RFI: Spider %02X:%02X:%02X did not confirm the setpoint", sid[0], sid[1], sid[2]);
+    }
+    return;
+  }
   if (remotes.getThermostatZone(idx) != spider::ZONE_NONE)
     return; // zone controller: we send to the controller (repeat loop), never to the Spider
-  SpiderPending &p = spiderPending[idx];
   if ((p.push || p.repeatLeft > 0) && spiderConfirmed(sid))
   {
     p.push = false; // Spider reports the commanded setpoint
@@ -728,6 +765,8 @@ void TaskCC1101(void *pvParameters)
 
       if (spiderDiscCmd != 0)
       {
+        spiderGwUntil = 0;
+        spiderGwSpider = 0;
         if (spiderDiscCmd == 1)
         {
           spiderDisc.start(spider::Discovery::pickTarget(esp_random()));
@@ -735,6 +774,14 @@ void TaskCC1101(void *pvParameters)
           spiderDiscStarted = spiderDiscStepAt = millis();
           spiderDiscSlot = -1;
           spiderDiscResult = "idle";
+        }
+        else if (spiderDiscCmd == 3)
+        { // gateway bind: accept the next Spider 01FF bind offer (pairing mode on the Spider)
+          spiderDisc.cancel();
+          spiderDiscSlot = -1;
+          spiderGwUntil = millis() + SPIDER_GW_MS;
+          if (spiderGwUntil == 0)
+            spiderGwUntil = 1;
         }
         else
         {
@@ -754,6 +801,12 @@ void TaskCC1101(void *pvParameters)
           spiderDiscResult = "timeout";
           spiderDiscNotify = true;
         }
+        if (spiderGwUntil != 0 && (int32_t)(millis() - spiderGwUntil) >= 0)
+        {
+          spiderGwUntil = 0;
+          spiderDiscResult = "gw_timeout";
+          spiderDiscNotify = true;
+        }
       }
       if (spiderDiscNotify)
       {
@@ -768,10 +821,14 @@ void TaskCC1101(void *pvParameters)
       }
       uint8_t spiderID[3];
       if (!ithoCheck && rfManager.radio.consumeSpiderReply(spiderID))
-      { // answer the bound Spider's RQ 01FF straight away, single try
+      { // answer the bound Spider's RQ 01FF straight away, single try; our setpoint only while a push is pending,
+        // else the Spider's own, so a change on the Spider itself is not undone
+        const int ridx = remotes.remoteIndex(spiderID[0], spiderID[1], spiderID[2]);
+        const bool useCmd = ridx >= 0 && ridx < MAX_NUM_OF_REMOTES && spiderPending[ridx].push &&
+                            (int32_t)(millis() - spiderPending[ridx].pushUntil) < 0;
         rfManager.radio.setSendTries(1);
         disableRF_ISR();
-        rfManager.radio.sendSpiderStatus(spiderID, true);
+        rfManager.radio.sendSpiderStatus(spiderID, true, useCmd);
         enableRF_ISR();
         rfManager.radio.setSendTries(3);
       }
@@ -1082,9 +1139,15 @@ void TaskCC1101(void *pvParameters)
           if (cmd == IthoJoin || (cmd == IthoLow && remtype == RemoteTypes::RFTSPIDER)) // Itho low for the spider because join can be difficult to send
           {
             D_LOG("RFI: Join command received. Trying to join remote...");
-            if (remotes.remoteLearnLeaveStatus())
+            const bool gwBind = spiderGwUntil != 0 && packet->spiderHeatingJoin; // gateway bind button, Spider offers only
+            if (remotes.remoteLearnLeaveStatus() || gwBind)
             {
               int index = remotes.registerNewRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2), remtype);
+              if (index >= 0 && gwBind)
+              { // new slot from the gateway bind: monitor only, like discovery (no fan commands)
+                remotes.updateRemoteFunction(index, static_cast<uint8_t>(RemoteFunctions::MONITOR));
+                remotes.updateRemoteName(index, "Spider");
+              }
 
               if (index == -1)
               {
@@ -1109,6 +1172,20 @@ void TaskCC1101(void *pvParameters)
                 sendSpiderBind = true;
                 saveRemotesflag = true;
                 N_LOG("RFI: Spider %02X:%02X:%02X heating join accepted in slot %d", spiderBindID[0], spiderBindID[1], spiderBindID[2], index);
+                if (gwBind)
+                {
+                  spiderGwUntil = 0;
+                  spiderGwSpider = idTo32(spiderBindID);
+                  spiderDiscSlot = index;
+                  spiderDiscResult = "done_gateway";
+                  spiderDiscNotify = true;
+                }
+              }
+              else if (index < 0 && gwBind)
+              {
+                spiderGwUntil = 0;
+                spiderDiscResult = "noslot";
+                spiderDiscNotify = true;
               }
               else if (index >= 0)
               {

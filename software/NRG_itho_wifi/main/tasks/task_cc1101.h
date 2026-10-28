@@ -51,6 +51,7 @@ void toggleRemoteLLmode(const char *remotetype);
 void setllModeTimer();
 void requestSpiderPush(const uint8_t id[3]);
 void spiderDiscoveryRequest(bool start);
+void spiderGatewayBindRequest();
 void spiderDiscoveryStatus(JsonObject obj);
 void startTaskCC1101();
 void TaskCC1101(void *pvParameters);
