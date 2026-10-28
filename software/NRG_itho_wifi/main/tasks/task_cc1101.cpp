@@ -621,6 +621,10 @@ void TaskCC1101(void *pvParameters)
   // reading the chip version is a non-blocking way to check CC1101 connectivity.
   // if the version is greater than 0 there has been succesful communication and we can continue with the init of the chip.
   uint8_t chipVersion = rfManager.radio.getChipVersion();
+  if (chipVersion && rfManager.radio.getDetectAttempt() == 1)
+    W_LOG("SYS: CC1101 answered only after a reset");
+  else if (chipVersion && rfManager.radio.getDetectAttempt() == 2)
+    W_LOG("SYS: CC1101 answered only at 1 MHz SPI, staying at 1 MHz");
   if (!chipVersion)
   {
     N_LOG("SYS: no CC1101 RF module found");

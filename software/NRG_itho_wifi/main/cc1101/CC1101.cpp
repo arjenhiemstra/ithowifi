@@ -7,7 +7,7 @@
 #ifndef CC1101_SPI_CLOCK
 #define CC1101_SPI_CLOCK 4000000
 #endif
-static const SPISettings kSpiSettings(CC1101_SPI_CLOCK, MSBFIRST, SPI_MODE0);
+static SPISettings spiSettings(CC1101_SPI_CLOCK, MSBFIRST, SPI_MODE0);
 
 // default constructor
 CC1101::CC1101()
@@ -41,6 +41,11 @@ void CC1101::waitMisoReady(void)
   }
 }
 
+void CC1101::setSpiClock(uint32_t hz)
+{
+  spiSettings = SPISettings(hz, MSBFIRST, SPI_MODE0);
+}
+
 void CC1101::init()
 {
   reset();
@@ -59,7 +64,7 @@ void CC1101::reset()
   // wait for SO low (chip ready), then strobe SRES in the same CS assertion
   select();
   waitMisoReady();
-  SPI.beginTransaction(kSpiSettings);
+  SPI.beginTransaction(spiSettings);
   SPI.transfer(CC1101_SRES);
   SPI.endTransaction();
   deselect();
@@ -71,7 +76,7 @@ uint8_t CC1101::writeCommand(uint8_t command)
 
   select();
 
-  SPI.beginTransaction(kSpiSettings);
+  SPI.beginTransaction(spiSettings);
   result = SPI.transfer(command);
   SPI.endTransaction();
 
@@ -84,7 +89,7 @@ void CC1101::writeRegister(uint8_t address, uint8_t data)
 {
   select();
 
-  SPI.beginTransaction(kSpiSettings);
+  SPI.beginTransaction(spiSettings);
   SPI.transfer(address);
   SPI.transfer(data);
   SPI.endTransaction();
@@ -98,7 +103,7 @@ uint8_t CC1101::readRegister(uint8_t address)
 
   select();
 
-  SPI.beginTransaction(kSpiSettings);
+  SPI.beginTransaction(spiSettings);
   SPI.transfer(address);
   val = SPI.transfer(0);
   SPI.endTransaction();
@@ -183,7 +188,7 @@ void CC1101::writeBurstRegister(const uint8_t address, const uint8_t *data, cons
 {
   select();
 
-  SPI.beginTransaction(kSpiSettings);
+  SPI.beginTransaction(spiSettings);
   SPI.transfer(address | CC1101_WRITE_BURST);
   // block write (data is const, so not in-place)
 #if defined(ESP32) || defined(ESP8266)
@@ -201,7 +206,7 @@ void CC1101::readBurstRegister(uint8_t *buffer, const uint8_t address, const uin
 {
   select();
 
-  SPI.beginTransaction(kSpiSettings);
+  SPI.beginTransaction(spiSettings);
   SPI.transfer(address | CC1101_READ_BURST);
   // block read; MOSI is don't-care during a burst read, so in-place is fine
   SPI.transfer(buffer, length);
