@@ -41,6 +41,7 @@ private:
     bool thermostat{false};      // Itho Spider heating side bound to this module (ADR-0011)
     int32_t setpointCmd{0xEFFF}; // last commanded heating setpoint, 0.01 C, RAM only; 0xEFFF = none
     uint8_t ctlID[3]{0, 0, 0};    // Spider's heater/gateway learned by discovery; 0 = bound to us
+    uint8_t zone{0xFF};           // Spider's zone on a zone controller (AutoTemp, ctlID), 0xFF = none
     JsonDocument capabilities;
     void set(JsonObject);
     void get(JsonObject, RemoteFunctions instanceFunc, int index, bool human_reaadble = false) const;
@@ -124,6 +125,7 @@ public:
       {
         remotes[index].setpointCmd = 0xEFFF;
         remotes[index].ctlID[0] = remotes[index].ctlID[1] = remotes[index].ctlID[2] = 0;
+        remotes[index].zone = 0xFF;
       }
     }
   };
@@ -135,6 +137,8 @@ public:
         remotes[index].ctlID[i] = id[i];
   };
   const uint8_t *getThermostatCtl(const int index) const { return (index >= 0 && index < maxRemotes) ? remotes[index].ctlID : nullptr; };
+  void setThermostatZone(const uint8_t index, uint8_t zone) { if (index < maxRemotes) remotes[index].zone = zone; };
+  uint8_t getThermostatZone(const int index) const { return (index >= 0 && index < maxRemotes) ? remotes[index].zone : 0xFF; };
   void setThermostatSetpoint(const uint8_t index, int32_t centi) { if (index < maxRemotes) remotes[index].setpointCmd = centi; };
   int32_t getThermostatSetpoint(const int index) const { return (index >= 0 && index < maxRemotes) ? remotes[index].setpointCmd : 0xEFFF; };
   void updateRemoteFunction(const uint8_t index, const uint8_t remfunc);

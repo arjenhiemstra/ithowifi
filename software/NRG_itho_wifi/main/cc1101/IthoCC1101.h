@@ -33,6 +33,7 @@ struct ithoRFDevice
   bool thermostat{false};       // Spider heating side bound to us: answer its RQ 01FF
   int32_t setpointCmd{0xEFFF};  // commanded heating setpoint (0.01 C), 0xEFFF = echo the Spider's own
   uint8_t controllerID[3]{};    // Spider's heater/gateway: W 01FF is sent as this id; 0 = our own id
+  uint8_t zone{0xFF};           // Spider on a zone controller (controllerID): its zone, 0xFF = none
   int32_t hum{0xEFFF};
   uint8_t pir{0xEF};
   int32_t dewpoint{0xEFFF};
@@ -106,6 +107,7 @@ private:
   bool spiderReplyPending{false};
   uint8_t spiderReplyID[3]{};
   ithoRFDevice *findRFDevice(const uint8_t id[3]);
+  ithoRFDevice *findZoneDevice(uint32_t ctl, uint8_t zone);
   void ownID(const ithoRFDevice &dev, uint8_t out[3]) const;
   void sendToSpider(const uint8_t id[3], uint8_t header, const uint8_t *command);
   void sendToSpiderAs(const uint8_t from[3], const uint8_t id[3], uint8_t header, const uint8_t *command);
@@ -200,13 +202,14 @@ public:
     return ithoRF;
   }
   // Itho Spider heating thermostat role (ADR-0011); devices are looked up by id, not slot index
-  bool setThermostat(const uint8_t id[3], bool on, int32_t setpointCmd, const uint8_t ctl[3] = nullptr);
+  bool setThermostat(const uint8_t id[3], bool on, int32_t setpointCmd, const uint8_t ctl[3] = nullptr, uint8_t zone = 0xFF);
   bool setThermostatSetpoint(const uint8_t id[3], int32_t setpointCmd);
   bool consumeSpiderReply(uint8_t id[3]);
   void sendSpiderBindAccept(const uint8_t id[3]);
   void sendSpiderStatus(const uint8_t id[3], bool reply);
   void sendSpiderZoneEcho(const uint8_t id[3], int32_t setpointCenti);
   void sendSpiderRequest(const uint8_t id[3]);
+  void sendSpiderZoneSetpoint(const uint8_t id[3]); // W 22C9 as the Spider to its zone controller
   void sendSpiderProbe(const uint8_t id[3], const uint8_t ctl[3]); // RQ 01FF as ctl, Spider not registered
   bool consumeRemoteStatusChanged()
   {

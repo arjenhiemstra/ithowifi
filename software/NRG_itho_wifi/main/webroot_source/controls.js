@@ -667,6 +667,7 @@ const messageHandlers = {
       wait_setpoint: 'Set the Spider to ' + d.target + ' \u00B0C now and leave it there. Most Spiders are found within a minute or two, some take up to 15 minutes.',
       wait_heater: 'Spider ' + d.spider + ' found. Listening for its heater (up to 12 minutes)...',
       done: 'Done: Spider ' + d.spider + ' controls heater ' + d.heater + ' (RF device slot ' + d.slot + '). Set the Spider back to your normal temperature, on the Spider or in the table below.',
+      done_zone_set: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. Setting the setpoint goes through the zone controller (experimental). Set the Spider back to your normal temperature.',
       done_zone: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. Its values can be read; setting the setpoint through a zone controller is not supported yet. Set the Spider back to your normal temperature.',
       timeout: 'Timed out without a result. Start again.',
       cancelled: 'Cancelled.',
@@ -1290,6 +1291,7 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_control_interface: checkedVal('option-itho_control_interface'),
           itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
           itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
+          spider_zone_setpoint: checkedVal('option-spider_zone_setpoint'),
           itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
@@ -1335,6 +1337,7 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_control_interface: checkedVal('option-itho_control_interface'),
           itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
           itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
+          spider_zone_setpoint: checkedVal('option-spider_zone_setpoint'),
           itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
@@ -5950,6 +5953,13 @@ var html_systemsettings_cc1101 = `
   <label class="pure-radio" for="option-itho_rf_status_poll-1">RF status request</label>
   <input id="option-itho_rf_status_poll-1" type="radio" name="option-itho_rf_status_poll" value="1"> on
   <input id="option-itho_rf_status_poll-0" type="radio" name="option-itho_rf_status_poll" value="0"> off
+</div>
+<legend><br>Itho Spider on a zone controller (experimental):</legend>
+<p>A Spider bound to a zone controller (for example an AutoTemp) is read only by default. When on, the add-on sets a new setpoint by sending it to the zone controller as if it came from the Spider. Untested on most installations: only switch on if you want to test it. Run the Spider wizard again after switching it on.</p>
+<div class="pure-control-group">
+  <label class="pure-radio" for="option-spider_zone_setpoint-1">Setpoint via zone controller</label>
+  <input id="option-spider_zone_setpoint-1" type="radio" name="option-spider_zone_setpoint" value="1"> on
+  <input id="option-spider_zone_setpoint-0" type="radio" name="option-spider_zone_setpoint" value="0"> off
 </div>
 <legend><br>RF CO2 control:</legend>
 <div class="pure-control-group">

@@ -25,6 +25,13 @@
   <input id="option-itho_rf_status_poll-1" type="radio" name="option-itho_rf_status_poll" value="1"> on
   <input id="option-itho_rf_status_poll-0" type="radio" name="option-itho_rf_status_poll" value="0"> off
 </div>
+<legend><br>Itho Spider on a zone controller (experimental):</legend>
+<p>A Spider bound to a zone controller (for example an AutoTemp) is read only by default. When on, the add-on sets a new setpoint by sending it to the zone controller as if it came from the Spider. Untested on most installations: only switch on if you want to test it. Run the Spider wizard again after switching it on.</p>
+<div class="pure-control-group">
+  <label class="pure-radio" for="option-spider_zone_setpoint-1">Setpoint via zone controller</label>
+  <input id="option-spider_zone_setpoint-1" type="radio" name="option-spider_zone_setpoint" value="1"> on
+  <input id="option-spider_zone_setpoint-0" type="radio" name="option-spider_zone_setpoint" value="0"> off
+</div>
 <legend><br>RF CO2 control:</legend>
 <div class="pure-control-group">
   <label class="pure-radio" for="option-itho_control_interface-0">Control interface</label>

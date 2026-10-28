@@ -45,6 +45,7 @@ constexpr uint32_t SPIDER_PUSH_GAP_MS = 30 * 1000; // after plain broadcasts; po
 constexpr uint32_t SPIDER_POLL_MS = 5 * 60 * 1000;
 constexpr uint8_t SPIDER_PUSH_REPEATS = 2;      // copies after the first one, like the spider.yaml blueprint
 constexpr uint32_t SPIDER_REPEAT_MS = 1000;
+constexpr uint8_t SPIDER_ZONE_TRIES = 3; // W 22C9 to a zone controller, 1 s apart, until it echoes the setpoint
 
 static bool spiderConfirmed(const uint8_t sid[3])
 {
@@ -134,10 +135,27 @@ static void spiderDiscoveryFinish()
     remotes.updateRemoteFunction(index, static_cast<uint8_t>(RemoteFunctions::MONITOR));
     remotes.updateRemoteName(index, "Spider");
   }
-  if (spiderDisc.zoneController())
-  { // zone controller (AutoTemp): we cannot pose as it, so read only and nothing is sent
+  if (spiderDisc.zoneController() && systemConfig.spider_zone_setpoint == 1 && spiderDisc.zoneId() != spider::ZONE_NONE)
+  { // experimental: setpoint sent as the Spider to its zone controller (W 22C9), never as the controller to the Spider
+    remotes.setThermostat(index, true);
+    remotes.setThermostatCtl(index, hid);
+    remotes.setThermostatZone(index, spiderDisc.zoneId());
     if (!rfManager.radio.checkRFDevice(sid[0], sid[1], sid[2]))
       rfManager.radio.updateRFDevice(index, sid[0], sid[1], sid[2], RemoteTypes::RFTSPIDER, false);
+    rfManager.radio.setThermostat(sid, true, remotes.getThermostatSetpoint(index), hid, spiderDisc.zoneId());
+    remotes.addCapabilities(index, "thermostat", 1);
+    saveRemotesflag = true;
+    spiderDiscSlot = index;
+    spiderDiscResult = "done_zone_set";
+    N_LOG("RFI: Spider %02X:%02X:%02X discovered on zone controller %02X:%02X:%02X zone %u, slot %d", sid[0], sid[1], sid[2], hid[0], hid[1], hid[2], spiderDisc.zoneId(), index);
+    return;
+  }
+  if (spiderDisc.zoneController())
+  { // zone controller (AutoTemp): we cannot pose as it, so read only and nothing is sent
+    remotes.setThermostat(index, false); // also clears a role from an earlier run
+    if (!rfManager.radio.checkRFDevice(sid[0], sid[1], sid[2]))
+      rfManager.radio.updateRFDevice(index, sid[0], sid[1], sid[2], RemoteTypes::RFTSPIDER, false);
+    rfManager.radio.setThermostat(sid, false, 0xEFFF);
     saveRemotesflag = true;
     spiderDiscSlot = index;
     spiderDiscResult = "done_zone";
@@ -146,6 +164,7 @@ static void spiderDiscoveryFinish()
   }
   remotes.setThermostat(index, true);
   remotes.setThermostatCtl(index, hid);
+  remotes.setThermostatZone(index, spider::ZONE_NONE);
   if (!rfManager.radio.checkRFDevice(sid[0], sid[1], sid[2]))
   {
     rfManager.radio.updateRFDevice(index, sid[0], sid[1], sid[2], RemoteTypes::RFTSPIDER, false); // radio slot = remote slot
@@ -168,6 +187,11 @@ void requestSpiderPush(const uint8_t id[3])
   spiderPending[idx].pushUntil = millis() + SPIDER_PUSH_MS;
   spiderPending[idx].lastPush = 0;
   spiderPending[idx].push = true;
+  if (remotes.getThermostatZone(idx) != spider::ZONE_NONE)
+  { // zone controller (AutoTemp) is always listening: W 22C9 now, repeated until it echoes the setpoint
+    spiderPending[idx].repeatLeft = SPIDER_ZONE_TRIES;
+    spiderPending[idx].repeatAt = millis();
+  }
 }
 
 // Called for every clean received frame: confirm a pending setpoint, or use the Spider's
@@ -253,6 +277,8 @@ static void spiderOnFrame(const IthoPacket *packet)
   const uint8_t *ctl = remotes.getThermostatCtl(idx);
   if (!ctl || idTo32(ctl) == 0)
     return; // bound to us: the Spider polls and gets our RP instead
+  if (remotes.getThermostatZone(idx) != spider::ZONE_NONE)
+    return; // zone controller: we send to the controller (repeat loop), never to the Spider
   SpiderPending &p = spiderPending[idx];
   if ((p.push || p.repeatLeft > 0) && spiderConfirmed(sid))
   {
@@ -661,7 +687,7 @@ void TaskCC1101(void *pvParameters)
       }
       if (remotes.isThermostat(index))
       {
-        rfManager.radio.setThermostat(id, true, remotes.getThermostatSetpoint(index), remotes.getThermostatCtl(index));
+        rfManager.radio.setThermostat(id, true, remotes.getThermostatSetpoint(index), remotes.getThermostatCtl(index), remotes.getThermostatZone(index));
         remotes.addCapabilities(index, "thermostat", 1); // listed right away, not only after the first RF frame
       }
     }
@@ -772,13 +798,23 @@ void TaskCC1101(void *pvParameters)
           p.push = false;
           continue;
         }
+        const bool zone = remotes.getThermostatZone(i) != spider::ZONE_NONE;
         rfManager.radio.setSendTries(1);
         disableRF_ISR();
-        rfManager.radio.sendSpiderStatus(sid, false);
+        if (zone)
+          rfManager.radio.sendSpiderZoneSetpoint(sid);
+        else
+          rfManager.radio.sendSpiderStatus(sid, false);
         enableRF_ISR();
         rfManager.radio.setSendTries(3);
         p.repeatLeft = p.repeatLeft - 1;
         p.repeatAt = millis() + SPIDER_REPEAT_MS;
+        if (zone)
+        {
+          I_LOG("RFI: Spider %02X:%02X:%02X setpoint sent to its zone controller", sid[0], sid[1], sid[2]);
+          if (p.repeatLeft == 0)
+            p.push = false;
+        }
       }
       if (sendSpiderBind && !ithoCheck)
       {
@@ -1065,6 +1101,7 @@ void TaskCC1101(void *pvParameters)
                 {
                   const uint8_t none[3]{};
                   remotes.setThermostatCtl(index, none); // bound to us now, not to a learned controller
+                  remotes.setThermostatZone(index, spider::ZONE_NONE);
                 }
                 rfManager.radio.updateRFDevice(index, *(lastID + 0), *(lastID + 1), *(lastID + 2), RemoteTypes::RFTSPIDER, true);
                 memcpy(spiderBindID, lastID, 3);

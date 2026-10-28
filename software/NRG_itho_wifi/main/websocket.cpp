@@ -849,7 +849,7 @@ void handle_ws_message(JsonObject root)
         else if (remotes.isThermostat(idx))
         {
           const uint8_t sid[3]{id0, id1, id2};
-          rfManager.radio.setThermostat(sid, true, remotes.getThermostatSetpoint(idx), remotes.getThermostatCtl(idx));
+          rfManager.radio.setThermostat(sid, true, remotes.getThermostatSetpoint(idx), remotes.getThermostatCtl(idx), remotes.getThermostatZone(idx));
         }
       }
     }

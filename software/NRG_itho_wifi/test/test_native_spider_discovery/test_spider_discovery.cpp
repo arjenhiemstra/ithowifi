@@ -178,6 +178,7 @@ void test_autotemp_spider_found_from_w22c9()
   TEST_ASSERT_EQUAL_HEX32(SPIDER_AT, d.spider());
   TEST_ASSERT_EQUAL_HEX32(AUTOTEMP, d.heater());
   TEST_ASSERT_TRUE(d.zoneController());
+  TEST_ASSERT_EQUAL_HEX8(0x06, d.zoneId());
 }
 
 void test_autotemp_echo_is_not_the_spider()
@@ -200,6 +201,7 @@ void test_polled_controller_is_not_zone()
   d.start(TARGET);
   TEST_ASSERT_TRUE(d.feed(zoneSetpoint(SPIDER, sp275)));
   TEST_ASSERT_FALSE(d.zoneController());
+  TEST_ASSERT_EQUAL_HEX8(0xFF, d.zoneId());
 }
 
 void test_idle_and_restart()

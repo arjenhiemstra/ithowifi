@@ -63,6 +63,7 @@ public:
     nCand_ = 0;
     spider_ = heater_ = 0;
     zone_ = false;
+    zoneId_ = 0xFF;
     probe_ = Probe{};
     target_ = target;
     state_ = State::WaitSetpoint;
@@ -72,7 +73,8 @@ public:
   int32_t target() const { return target_; }
   uint32_t spider() const { return spider_; }
   uint32_t heater() const { return heater_; }
-  bool zoneController() const { return zone_; } // heater() is a zone controller (AutoTemp): read only
+  bool zoneController() const { return zone_; } // heater() is a zone controller (AutoTemp)
+  uint8_t zoneId() const { return zoneId_; }      // the Spider's zone on that controller, 0xFF if not seen
 
   size_t candidates() const { return nCand_; }
   uint32_t controllerOf(uint32_t spider) const
@@ -115,6 +117,8 @@ public:
       }
       spider_ = f.addr0 != 0 ? f.addr0 : f.addr2;
       heater_ = ctl != 0 ? ctl : controllerOf(spider_);
+      if (f.opcode == 0x22C9 && f.msgType == MSG_W)
+        zoneId_ = f.payload[0];
       state_ = heater_ != 0 ? State::Done : State::WaitHeater;
       if (state_ == State::Done)
         zone_ = isZonePair(spider_, heater_);
@@ -295,6 +299,7 @@ private:
   uint32_t spider_{0};
   uint32_t heater_{0};
   bool zone_{false};
+  uint8_t zoneId_{0xFF};
 };
 
 } // namespace spider
