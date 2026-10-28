@@ -614,6 +614,12 @@ const messageHandlers = {
     else $id('hadiscmenu').classList.add('hidden');
     if ("i2cmenu" in x) {
       $id('i2cmenu').classList.toggle('hidden', x.i2cmenu != 1);
+      var i2cds = $id('i2cdebug_status');
+      if (i2cds) i2cds.textContent = x.i2cmenu == 1 ? "on" : "off";
+    }
+    if ("i2c_sniffer" in x) {
+      var i2css = $id('i2csniffer_status');
+      if (i2css) i2css.textContent = x.i2c_sniffer == 1 ? "on" : "off";
     }
     if ("itho_rf_standalone" in x) {
       var standalone = x.itho_rf_standalone == 1;

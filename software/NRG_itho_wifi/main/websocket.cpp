@@ -9,6 +9,23 @@ WebSerial *webSerial = nullptr;
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 
+// Apply i2c_safe_guard and i2c_sniffer to the running sniffer
+static void applyI2CSnifferState()
+{
+  if (!hardwareManager.i2c_sniffer_capable)
+    return;
+  auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
+  sg->i2c_safe_guard_enabled = (systemConfig.i2c_safe_guard > 0 &&
+                                 currentIthoDeviceID() == 0x1B &&
+                                 systemConfig.syssht30 == 0 &&
+                                 currentItho_fwversion() >= 25);
+  sg->sniffer_enabled = (systemConfig.i2c_sniffer == 1);
+  if (sg->i2c_safe_guard_enabled || sg->sniffer_enabled)
+    i2cSnifferEnable();
+  else if (!sg->sniffer_web_enabled)
+    i2cSnifferDisable();
+}
+
 void websocketInit()
 {
   // Initialize lightweight secure communication
@@ -339,20 +356,7 @@ void handle_ws_message(JsonObject root)
         sendI2CPWMinit();
       }
 
-      // Apply i2c_safe_guard and i2c_sniffer: update runtime state
-      if (hardwareManager.i2c_sniffer_capable)
-      {
-        auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
-        sg->i2c_safe_guard_enabled = (systemConfig.i2c_safe_guard > 0 &&
-                                       currentIthoDeviceID() == 0x1B &&
-                                       systemConfig.syssht30 == 0 &&
-                                       currentItho_fwversion() >= 25);
-        sg->sniffer_enabled = (systemConfig.i2c_sniffer == 1);
-        if (sg->i2c_safe_guard_enabled || sg->sniffer_enabled)
-          i2cSnifferEnable();
-        else if (!sg->sniffer_web_enabled)
-          i2cSnifferDisable();
-      }
+      applyI2CSnifferState();
 
       // Apply fw_check: trigger firmware update check soon when enabled
       if (systemConfig.fw_check)
@@ -391,25 +395,20 @@ void handle_ws_message(JsonObject root)
     {
       chkpartition = true;
     }
-    else if (strcmp(btn, "i2cdebugon") == 0)
+    else if (strcmp(btn, "i2cdebugon") == 0 || strcmp(btn, "i2cdebugoff") == 0 ||
+             strcmp(btn, "i2csnifferon") == 0 || strcmp(btn, "i2csnifferoff") == 0)
     {
-      systemConfig.i2cmenu = 1;
+      const bool on = strcmp(btn + strlen(btn) - 2, "on") == 0;
+      if (strncmp(btn, "i2cdebug", 8) == 0)
+        systemConfig.i2cmenu = on;
+      else
+      {
+        systemConfig.i2c_sniffer = on;
+        applyI2CSnifferState();
+      }
       saveSystemConfigflag = true;
-    }
-    else if (strcmp(btn, "i2cdebugoff") == 0)
-    {
-      systemConfig.i2cmenu = 0;
-      saveSystemConfigflag = true;
-    }
-    else if (strcmp(btn, "i2csnifferon") == 0)
-    {
-      systemConfig.i2c_sniffer = 1;
-      saveSystemConfigflag = true;
-    }
-    else if (strcmp(btn, "i2csnifferoff") == 0)
-    {
-      systemConfig.i2c_sniffer = 0;
-      saveSystemConfigflag = true;
+      systemConfig.get_sys_settings = true;
+      jsonWsSend("systemsettings"); // updates the status on the debug page and the I2C menu
     }
   }
 
