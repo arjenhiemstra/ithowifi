@@ -58,6 +58,7 @@ SystemConfig::SystemConfig()
   itho_updatefreq = 10;
   itho_counter_updatefreq = 3600;
   itho_sendjoin = 0;
+  itho_sendjoin_idx = 0;
   itho_pwm2i2c = 1;
   itho_31da = 0;
   itho_31d9 = 0;
@@ -385,6 +386,11 @@ bool SystemConfig::set(JsonObject obj)
     updated = true;
     itho_sendjoin = obj["itho_sendjoin"];
   }
+  if (!obj["itho_sendjoin_idx"].isNull())
+  {
+    updated = true;
+    itho_sendjoin_idx = obj["itho_sendjoin_idx"];
+  }
   if (!obj["itho_pwm2i2c"].isNull())
   {
     updated = true;
@@ -495,6 +501,7 @@ void SystemConfig::get(JsonObject obj) const
     obj["itho_numvrem"] = itho_numvrem;
     obj["itho_numrfrem"] = itho_numrfrem;
     obj["itho_sendjoin"] = itho_sendjoin;
+    obj["itho_sendjoin_idx"] = itho_sendjoin_idx;
     obj["itho_pwm2i2c"] = itho_pwm2i2c;
     obj["itho_31da"] = itho_31da;
     obj["itho_31d9"] = itho_31d9;

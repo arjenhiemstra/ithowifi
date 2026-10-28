@@ -647,6 +647,18 @@ const messageHandlers = {
         rfco2Section.classList.add('hidden');
       }
     }
+    var sjSel = $id('itho_sendjoin_idx');
+    if (sjSel && "itho_numvrem" in x) {
+      var sjNum = $id('itho_numvrem');
+      var fillSendJoin = function (idx) {
+        var n = Math.max(1, parseInt(sjNum && sjNum.value ? sjNum.value : x.itho_numvrem) || 1);
+        sjSel.innerHTML = '';
+        for (var i = 0; i < n; i++) sjSel.insertAdjacentHTML('beforeend', '<option value="' + i + '">' + i + '</option>');
+        sjSel.value = String(idx < n ? idx : 0);
+      };
+      fillSendJoin(parseInt(x.itho_sendjoin_idx) || 0);
+      if (sjNum) sjNum.oninput = function () { fillSendJoin(parseInt(sjSel.value) || 0); };
+    }
     // RF status-poll remote dropdown (always visible). Same async pattern as
     // the CO2 dropdown: stash the persisted idx so populate can select it once
     // the ithoremotes payload has built the option list.
@@ -970,7 +982,7 @@ const messageHandlers = {
     if (copyEl) {
       if (x.copy_id > 0) {
         copyEl.className = "pure-button button-success";
-        copyEl.textContent = `Press join. Time remaining: ${x.copy_id}`;
+        copyEl.textContent = `Press join on the physical remote. Time remaining: ${x.copy_id}`;
       }
       else {
         copyEl.className = "pure-button";
@@ -1312,6 +1324,7 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_numvrem: $val('itho_numvrem'),
           //itho_numrfrem: $id('itho_numrfrem').value,
           itho_sendjoin: checkedVal('option-itho_sendjoin'),
+          itho_sendjoin_idx: $val('itho_sendjoin_idx'),
           itho_forcemedium: checkedVal('option-itho_forcemedium'),
           itho_vremoteapi: checkedVal('option-itho_vremoteapi'),
           itho_pwm2i2c: checkedVal('option-itho_pwm2i2c'),

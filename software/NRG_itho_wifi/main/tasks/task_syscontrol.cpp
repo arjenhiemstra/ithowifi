@@ -261,10 +261,11 @@ void execSystemControlTasks()
     if (systemConfig.itho_sendjoin > 0 && !joinSend && ithoInitResult == 1)
     {
       joinSend = true;
-      i2cQueueAddCmd([]()
-                        { sendRemoteCmd(0, IthoJoin); });
+      const uint8_t joinIdx = systemConfig.itho_sendjoin_idx < systemConfig.itho_numvrem ? systemConfig.itho_sendjoin_idx : 0;
+      i2cQueueAddCmd([joinIdx]()
+                        { sendRemoteCmd(joinIdx, IthoJoin); });
 
-      I_LOG("I2C init: Virtual remote join command send");
+      I_LOG("I2C init: Virtual remote %d join command send", joinIdx);
 
       if (systemConfig.itho_sendjoin == 1)
       {

@@ -126,12 +126,17 @@
       humidity sensor or another remote)</p>
     <p>API key "command" (e.g. low, high) can be translated to matching virtual remote commands with 'Map API key "command" to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
       settings do work as expected.</p>
-    <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
+    <p>'Send join command' sends a join from the selected virtual remote when the add-on starts, once ('next power on' switches itself off after that). The Itho unit only accepts a join shortly after it gets power (usually within 2 minutes), so power cycle the Itho unit; the add-on restarts with it. A restart of only the add-on uses up the join while the unit does not accept it.</p>
     <div class="pure-control-group">
       <label class="pure-radio" for="option-vremotejoin-1">Send join command</label>
       <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1"> next power on
       <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
     </div>
+    <div class="pure-control-group">
+      <label for="itho_sendjoin_idx">Join from virtual remote</label>
+      <select id="itho_sendjoin_idx"><option value="0">0</option></select>
+    </div>
+    <p>The following settings work on virtual remote 0.</p>
     <div class="pure-control-group">
       <label class="pure-radio" for="option-vremotemedium-1">Force medium/auto mode</label>
       <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1"> on

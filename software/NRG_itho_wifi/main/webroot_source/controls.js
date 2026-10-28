@@ -648,6 +648,18 @@ const messageHandlers = {
         rfco2Section.classList.add('hidden');
       }
     }
+    var sjSel = $id('itho_sendjoin_idx');
+    if (sjSel && "itho_numvrem" in x) {
+      var sjNum = $id('itho_numvrem');
+      var fillSendJoin = function (idx) {
+        var n = Math.max(1, parseInt(sjNum && sjNum.value ? sjNum.value : x.itho_numvrem) || 1);
+        sjSel.innerHTML = '';
+        for (var i = 0; i < n; i++) sjSel.insertAdjacentHTML('beforeend', '<option value="' + i + '">' + i + '</option>');
+        sjSel.value = String(idx < n ? idx : 0);
+      };
+      fillSendJoin(parseInt(x.itho_sendjoin_idx) || 0);
+      if (sjNum) sjNum.oninput = function () { fillSendJoin(parseInt(sjSel.value) || 0); };
+    }
     // RF status-poll remote dropdown (always visible). Same async pattern as
     // the CO2 dropdown: stash the persisted idx so populate can select it once
     // the ithoremotes payload has built the option list.
@@ -971,7 +983,7 @@ const messageHandlers = {
     if (copyEl) {
       if (x.copy_id > 0) {
         copyEl.className = "pure-button button-success";
-        copyEl.textContent = `Press join. Time remaining: ${x.copy_id}`;
+        copyEl.textContent = `Press join on the physical remote. Time remaining: ${x.copy_id}`;
       }
       else {
         copyEl.className = "pure-button";
@@ -1313,6 +1325,7 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_numvrem: $val('itho_numvrem'),
           //itho_numrfrem: $id('itho_numrfrem').value,
           itho_sendjoin: checkedVal('option-itho_sendjoin'),
+          itho_sendjoin_idx: $val('itho_sendjoin_idx'),
           itho_forcemedium: checkedVal('option-itho_forcemedium'),
           itho_vremoteapi: checkedVal('option-itho_vremoteapi'),
           itho_pwm2i2c: checkedVal('option-itho_pwm2i2c'),
@@ -5522,12 +5535,17 @@ var html_systemsettings_start = `
       humidity sensor or another remote)</p>
     <p>API key "command" (e.g. low, high) can be translated to matching virtual remote commands with 'Map API key "command" to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
       settings do work as expected.</p>
-    <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
+    <p>'Send join command' sends a join from the selected virtual remote when the add-on starts, once ('next power on' switches itself off after that). The Itho unit only accepts a join shortly after it gets power (usually within 2 minutes), so power cycle the Itho unit; the add-on restarts with it. A restart of only the add-on uses up the join while the unit does not accept it.</p>
     <div class="pure-control-group">
       <label class="pure-radio" for="option-vremotejoin-1">Send join command</label>
       <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1"> next power on
       <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
     </div>
+    <div class="pure-control-group">
+      <label for="itho_sendjoin_idx">Join from virtual remote</label>
+      <select id="itho_sendjoin_idx"><option value="0">0</option></select>
+    </div>
+    <p>The following settings work on virtual remote 0.</p>
     <div class="pure-control-group">
       <label class="pure-radio" for="option-vremotemedium-1">Force medium/auto mode</label>
       <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1"> on
@@ -6304,10 +6322,14 @@ var html_vremotessetup = `
 </style>
 <br>
 <p>The add-on can present itself as one or more virtual remote(s). A virtual remote emulates a physical remote through
-  software.<br>A virtual remote must be joined to the Itho unit before it can be used. Refer to your Itho manual for how to join new remotes to your specific unit.</p>
-<p>With the 'Copy ID' function the ID from an existing physical remote can be copied. If the remote type is supported,
-  the type will be detected automatically. If this physical remote is already joined to the Itho unit a new join is not
-  necessary.</p>
+  software.<br>A virtual remote must be joined to the Itho unit before it can be used. The Itho unit only accepts a join
+  shortly after it gets power (usually within 2 minutes): power cycle the Itho unit and press the 'Join' button of the
+  virtual remote within that time. A restart of only the add-on is not enough. 'Send join command' in the system settings
+  can also do this at the next power on. Refer to your Itho manual for how to join new remotes to your specific unit.</p>
+<p>With the 'Copy ID' function the ID from an existing physical remote can be copied: select a virtual remote, press
+  'Copy ID' and, while the button is green and counts down, press join on the physical remote (not a button on this
+  page). If the remote type is supported, the type will be detected automatically. If this physical remote is already
+  joined to the Itho unit a new join is not necessary.</p>
 <p>There are multiple types of remotes that can be emulated; The RFT CVE (536-0020, 536-0024, 536-0124), RFT AUTO(-N)
   (536-0150), RFT DemandFlow/QualityFlow (536-0146).<br>Pictures of these remotes can be found here: <a
     href='https://github.com/arjenhiemstra/ithowifi/tree/master/remotes'
