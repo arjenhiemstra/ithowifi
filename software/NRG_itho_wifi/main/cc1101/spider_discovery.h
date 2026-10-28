@@ -1,6 +1,6 @@
 #pragma once
 // Discovery of an Itho Spider thermostat and the heater (or relay) it is bound to (ADR-0011).
-// The user sets the Spider to one random setpoint (23-30 C). Some Spiders broadcast I 22C9 at once,
+// The user sets the Spider to one random setpoint (21.5-24 C). Some Spiders broadcast I 22C9 at once,
 // relay-bound ones only every ~15 min, but they do send their raised heat demand (I 0008) at once and
 // then poll their controller (RQ 3EF0 / 3EF1) about every minute. Those Spiders become candidates and
 // are asked once per poll with RQ 01FF, sent as their controller; the RP 01FF setpoint identifies them.
@@ -48,8 +48,8 @@ public:
     Done
   };
 
-  static constexpr int32_t MIN_TARGET = 2300; // 23.0 C
-  static constexpr int32_t TARGET_STEPS = 15; // 23.0 .. 30.0 in 0.5 C steps
+  static constexpr int32_t MIN_TARGET = 2150; // 21.5 C
+  static constexpr int32_t TARGET_STEPS = 6;  // 21.5 .. 24.0 in 0.5 C steps; Spiders on an AutoTemp go up to 24 C
   static constexpr size_t MAX_CANDIDATES = 4;
   static constexpr size_t MAX_PAIRS = 8;
   static constexpr uint8_t MAX_PROBES = 3; // per candidate
