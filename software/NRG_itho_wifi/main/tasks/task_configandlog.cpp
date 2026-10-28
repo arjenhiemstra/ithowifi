@@ -75,6 +75,10 @@ void TaskConfigAndLog(void *pvParameters)
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
   if (systemConfig.fw_check)
     getFWupdateInfo = 25 * 60 * 60 * 1000; // trigger firmware update check after boot
+  if (systemConfig.i2cmenu)
+    W_LOG("I2C: debug mode is on (halts I2C on errors), turn it off when debugging is done");
+  if (systemConfig.i2c_sniffer && hardwareManager.i2c_sniffer_capable)
+    W_LOG("I2C: sniffer is on, turn it off when debugging is done");
   syslogQueueWorker();
 
   HADiscConfigLoaded = loadHADiscConfig("flash");
@@ -470,8 +474,6 @@ void logInit()
   if (hardwareManager.i2c_sniffer_capable)
   {
     D_LOG("I2C: sniffer pins - SDA: %d SCL: %d", i2cManager.sniffer_sda_pin, i2cManager.sniffer_scl_pin);
-    D_LOG("I2C: debug menu: %s", systemConfig.i2cmenu ? "on" : "off");
-    D_LOG("I2C: sniffer state: %s", systemConfig.i2c_sniffer ? "on" : "off");
   }
 }
 

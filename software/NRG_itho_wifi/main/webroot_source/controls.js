@@ -615,6 +615,12 @@ const messageHandlers = {
     else $id('hadiscmenu').classList.add('hidden');
     if ("i2cmenu" in x) {
       $id('i2cmenu').classList.toggle('hidden', x.i2cmenu != 1);
+      var i2cds = $id('i2cdebug_status');
+      if (i2cds) i2cds.textContent = x.i2cmenu == 1 ? "on" : "off";
+    }
+    if ("i2c_sniffer" in x) {
+      var i2css = $id('i2csniffer_status');
+      if (i2css) i2css.textContent = x.i2c_sniffer == 1 ? "on" : "off";
     }
     if ("itho_rf_standalone" in x) {
       var standalone = x.itho_rf_standalone == 1;
@@ -4024,15 +4030,15 @@ var html_debug = `
                 <p>Only use this feature (briefly) for debugging issues. This option enables an extra menu where more I2C options and logging is available. <br>Enabling the
                     I2C
                     debug menu will also halt I2C bus activity in case of errors to be able to save logging!</p>
-                <button id="button-i2cdebugon" type="button" class="pure-button pure-button-primary">Debug on</button>
-                <button id="button-i2cdebugoff" type="button" class="pure-button pure-button-primary">Debug off</button>
+                <button id="i2cdebug_toggle" type="button" class="pure-button pure-button-primary">Toggle</button>
+                <span>Status: </span><span id="i2cdebug_status">unknown</span>
                 <br>
                 <legend><br>I2C sniffer:</legend>
                 <p>Only use this feature (briefly) for debugging issues. The I2C sniffer works only on sniffer capable devices (non-CVE; all versions, CVE; as of hw rev.
                     2.5). <br>See system log for confirmation.<br>
-                    Sniffer output is available through syslog. (reboot needed)</p>
-                <button id="button-i2csnifferon" type="button" class="pure-button pure-button-primary">Sniffer on</button>
-                <button id="button-i2csnifferoff" type="button" class="pure-button pure-button-primary">Sniffer off</button>
+                    Sniffer output is available through syslog.</p>
+                <button id="i2csniffer_toggle" type="button" class="pure-button pure-button-primary">Toggle</button>
+                <span>Status: </span><span id="i2csniffer_status">unknown</span>
                 <br><br>
                 <legend><br>Low level Itho I2C commands:</legend><br>
                 <button id="ithobutton-type" type="button" class="pure-button pure-button-primary">Query Devicetype</button><br>
@@ -4121,6 +4127,13 @@ var html_debug = `
     $id("jsdebug").addEventListener('click', function () {
         debug = !debug;
         $id("jsdebug_status").textContent = debug ? "on" : "off";
+    });
+    getSettings('syssetup'); // fills the I2C debug and sniffer status
+    $id("i2cdebug_toggle").addEventListener('click', function () {
+        websock_send(JSON.stringify({ button: $id("i2cdebug_status").textContent === "on" ? "i2cdebugoff" : "i2cdebugon" }));
+    });
+    $id("i2csniffer_toggle").addEventListener('click', function () {
+        websock_send(JSON.stringify({ button: $id("i2csniffer_status").textContent === "on" ? "i2csnifferoff" : "i2csnifferon" }));
     });
 </script>
 `;
