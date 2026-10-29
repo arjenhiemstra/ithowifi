@@ -2788,6 +2788,21 @@ void IthoCC1101::handleZoneSetpoint(IthoPacket *packetPtr)
         remoteStatusChanged = true;
       item.timestamp = now;
       item.setpoint = tempSetpoint;
+      // W 22C9 from a Spider bound to us (gateway): answer with I 22C9 from TaskCC1101, else it repeats the W
+      const bool hasCtl = item.controllerID[0] != 0 || item.controllerID[1] != 0 || item.controllerID[2] != 0;
+      if (item.thermostat && !hasCtl && item.zone == spider::ZONE_NONE && ((packetPtr->header >> 4) & 0x3) == MESSAGE_TYPE_W_MASK)
+      {
+        uint8_t me[3];
+        ownID(item, me);
+        if (packetPtr->deviceId1 == ((uint32_t)me[0] << 16 | (uint32_t)me[1] << 8 | me[2]))
+        {
+          spiderEchoID[0] = byte0;
+          spiderEchoID[1] = byte1;
+          spiderEchoID[2] = byte2;
+          spiderEchoSetpoint = tempSetpoint;
+          spiderEchoPending = true;
+        }
+      }
       return;
     }
   }
@@ -2944,6 +2959,18 @@ bool IthoCC1101::consumeSpiderReply(uint8_t id[3])
   id[0] = spiderReplyID[0];
   id[1] = spiderReplyID[1];
   id[2] = spiderReplyID[2];
+  return true;
+}
+
+bool IthoCC1101::consumeSpiderEcho(uint8_t id[3], int32_t &setpointCenti)
+{
+  if (!spiderEchoPending)
+    return false;
+  spiderEchoPending = false;
+  id[0] = spiderEchoID[0];
+  id[1] = spiderEchoID[1];
+  id[2] = spiderEchoID[2];
+  setpointCenti = spiderEchoSetpoint;
   return true;
 }
 

@@ -57,6 +57,7 @@ Both: touching the display wakes the Spider at once. **Many received Spider fram
 
 - Heater/relay join (offers `0008`/`3150`/`10E0`/`1FC9`): the heater accepts with `W 1FC9 00 3EF0 <heater>`. The add-on does not answer it.
 - Controller join ("home icon", offers `22C9`/`22F1`/`000E`; seen in ramses_cc #151, not captured on our Spiders): accepted with `W 1FC9 00 01FF <controller>`. The add-on accepts it in learn mode, or in the 3 minute window of the "Bind as gateway" button (Spider offers only), and becomes the Spider's controller. Per the community blueprint the Spider polls this gateway with `RQ 01FF` about every 9 minutes and on a display touch, takes the `RP 01FF` setpoint itself, and forwards it to an AutoTemp with `W 22C9`.
+- Gateway bind verified on a Spider WP (CCU-12T20) wired to a WPU 5G over OpenTherm (user log 2026-10-29). Pairing on the Spider: hold the logo 5 s, pick the HUIS (gateway) symbol, confirm with the logo. The offer carries `22C9`/`3110`/`22F1`/`3EF0`/`10E0`/`1FC9`. The OpenTherm link to the WPU stays. The Spider answers a `W 01FF` within a second with `I 01FF` holding the new setpoint, and polls with `RQ 01FF` every few minutes. After each poll and each dial change it sends `W 22D0 00,04|14,00,00,10,03,00,20` (`14` while cooling) and on a dial change `W 22C9 00,<sp>,<sp2>,<flag>` to the gateway, each 3 times. To an AutoTemp it sends `W 22C9` once and gets an `I 22C9`, so the repeats are likely retries for a missing answer. The add-on answers a `W 22C9` with the blueprint's `I 22C9 00,<sp>,08,02,01` (addr0 = us, addr1 = the Spider); whether that stops the repeats is untested. `22D0` is not answered (answer format unknown).
 
 ## Discovery
 
@@ -76,8 +77,9 @@ The Spider wizard on the RF remotes page finds a Spider and its controller:
 - [x] `W 01FF` sent as the controller in listen windows, 2 repeats 1 s apart, pending until the Spider reports the commanded setpoint or 15 min pass; status `RQ 01FF` every 5 min.
 - [x] Manual change on the Spider shows up as the new setpoint (next `01FF`/`22C9`).
 - [x] HA `climate` entity (HA integration v0.7.0): current temperature, target temperature, heating action, opt-in per Spider; shows the requested value until confirmed.
-- [ ] Controller join accepted in learn mode and the add-on's `RP 01FF` answers held by a Spider (bind mode).
-- [ ] Gateway bind on a Spider on an AutoTemp: the Spider display follows and the AutoTemp gets the setpoint from the Spider; a dial change on the Spider is kept.
+- [x] Controller join accepted ("Bind as gateway") and the add-on's setpoint held by a Spider; a dial change on the Spider is kept (OpenTherm-wired Spider WP, user log 2026-10-29).
+- [ ] Gateway bind on a Spider on an AutoTemp: the Spider display follows and the AutoTemp gets the setpoint from the Spider.
+- [ ] `I 22C9` answer to the Spider's `W 22C9` stops its repeats.
 - [x] Existing `RFTSPIDER` ventilation behaviour unchanged; nothing is sent for slots without the thermostat flag.
 
 ## Architecture Impact

@@ -836,6 +836,15 @@ void TaskCC1101(void *pvParameters)
         enableRF_ISR();
         rfManager.radio.setSendTries(3);
       }
+      int32_t echoSetpoint = 0;
+      if (!ithoCheck && rfManager.radio.consumeSpiderEcho(spiderID, echoSetpoint))
+      { // acknowledge a setpoint change on a Spider bound to us (W 22C9) like the blueprint, single try
+        rfManager.radio.setSendTries(1);
+        disableRF_ISR();
+        rfManager.radio.sendSpiderZoneEcho(spiderID, echoSetpoint);
+        enableRF_ISR();
+        rfManager.radio.setSendTries(3);
+      }
       for (int i = 0; i < MAX_NUM_OF_REMOTES && !ithoCheck; i++)
       { // Spider polled its controller and we missed the answer: use the window anyway
         SpiderPending &p = spiderPending[i];

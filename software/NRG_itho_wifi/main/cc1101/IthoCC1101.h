@@ -107,6 +107,9 @@ private:
   bool remoteStatusChanged{false}; // set by handlers whose data should be published right away
   bool spiderReplyPending{false};
   uint8_t spiderReplyID[3]{};
+  bool spiderEchoPending{false};
+  uint8_t spiderEchoID[3]{};
+  int32_t spiderEchoSetpoint{0};
   ithoRFDevice *findRFDevice(const uint8_t id[3]);
   ithoRFDevice *findZoneDevice(uint32_t ctl, uint8_t zone);
   void ownID(const ithoRFDevice &dev, uint8_t out[3]) const;
@@ -206,6 +209,7 @@ public:
   bool setThermostat(const uint8_t id[3], bool on, int32_t setpointCmd, const uint8_t ctl[3] = nullptr, uint8_t zone = 0xFF);
   bool setThermostatSetpoint(const uint8_t id[3], int32_t setpointCmd);
   bool consumeSpiderReply(uint8_t id[3]);
+  bool consumeSpiderEcho(uint8_t id[3], int32_t &setpointCenti);
   void sendSpiderBindAccept(const uint8_t id[3]);
   void sendSpiderStatus(const uint8_t id[3], bool reply, bool useCmd = true);
   void sendSpiderZoneEcho(const uint8_t id[3], int32_t setpointCenti);
