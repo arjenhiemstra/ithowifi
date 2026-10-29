@@ -1546,23 +1546,28 @@ uint8_t IthoCC1101::ReadRSSI()
 
 uint8_t IthoCC1101::getChipVersion()
 {
-  // try to find the CC1101 chip
-  uint8_t i = 0;
-  bool flagFound = false;
-  while ((i < 10) && !flagFound)
+  // try to find the CC1101 chip: plain reads, then after a manual reset, then at 1 MHz SPI
+  for (uint8_t attempt = 0; attempt < 3; attempt++)
   {
-    chipVersion = CC1101::getChipVersion();
-    if ((chipVersion == CC1101_VERSION_CURRENT) || (chipVersion == CC1101_VERSION_LEGACY) || (chipVersion == CC1101_VERSION_CLONE))
+    if (attempt == 2)
+      setSpiClock(1000000);
+    if (attempt > 0)
     {
-      flagFound = true;
-    }
-    else
-    {
+      reset();
       delay(10);
-      i++;
+    }
+    for (uint8_t i = 0; i < 10; i++)
+    {
+      chipVersion = CC1101::getChipVersion();
+      if ((chipVersion == CC1101_VERSION_CURRENT) || (chipVersion == CC1101_VERSION_LEGACY) || (chipVersion == CC1101_VERSION_CLONE))
+      {
+        detectAttempt = attempt;
+        return chipVersion;
+      }
+      delay(10);
     }
   }
-
+  detectAttempt = 3; // no known version read
   return chipVersion;
 }
 

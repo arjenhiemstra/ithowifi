@@ -75,6 +75,7 @@ class IthoCC1101 : protected CC1101
 {
 private:
   uint8_t chipVersion{};
+  uint8_t detectAttempt{};
 
   // receive
   CC1101Packet inMessage[2];
@@ -255,6 +256,7 @@ public:
 
   uint8_t ReadRSSI();
   uint8_t getChipVersion();
+  uint8_t getDetectAttempt() const { return detectAttempt; } // 0 plain, 1 after reset, 2 at 1 MHz SPI, 3 not found
   // bool checkID(const uint8_t *id);
   uint8_t *getLastID(IthoPacket *packetPtr);
   String getLastIDstr(IthoPacket *packetPtr, bool ashex);

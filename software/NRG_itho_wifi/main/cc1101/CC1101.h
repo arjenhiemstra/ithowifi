@@ -200,5 +200,6 @@ protected:
 	uint8_t readRegisterWithSyncProblem(uint8_t address, uint8_t registerType);
 
 	void reset();
+	void setSpiClock(uint32_t hz);
 
 }; // CC1101
