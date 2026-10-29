@@ -353,6 +353,10 @@ Ticker rf_message;
 Ticker bindInitiatorTimeout;
 
 volatile bool ithoCheck = false;
+// RF receive counters since boot ("RFSTAT" log line every minute while RF logging is on). sync is counted in the ISR.
+volatile uint32_t rfSyncCount = 0;
+rfsignal::Counters rfStats;
+unsigned long rfStatsLastLog = 0;
 
 // Serializes all radio (SPI) access — the task's receivePacket() vs any send —
 // so a send from a web/MQTT task can't collide with a receive on TaskCC1101,
@@ -366,6 +370,7 @@ IRAM_ATTR void ITHOinterrupt()
 {
   // Just wake TaskCC1101; the FIFO read (receivePacket) now runs in task
   // context. It used to run here — up to ~34 ms of SPI inside a level-1 ISR.
+  rfSyncCount = rfSyncCount + 1;
   BaseType_t higherPriorityTaskWoken = pdFALSE;
   if (xTaskCC1101Handle)
     vTaskNotifyGiveFromISR(xTaskCC1101Handle, &higherPriorityTaskWoken);
@@ -399,6 +404,10 @@ void RFDebug(IthoPacket *packet)
 {
   char debugLog[400] = {0};
   strncat(debugLog, rfManager.radio.LastMessageDecoded(packet).c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
+  char sig[64];
+  snprintf(sig, sizeof(sig), " [rssi:%ddBm lqi:%u foff:%ldHz err:%u]", rfManager.radio.lastRssiDbm(),
+           rfManager.radio.lastLinkQuality(), rfManager.radio.lastFreqOffsetHz(), packet->error);
+  strncat(debugLog, sig, sizeof(debugLog) - strlen(debugLog) - 1);
   // integrity: a checksum-failed frame is decoded/logged but not dispatched
   if (packet->error == 2)
     strncat(debugLog, " (crc:FAIL)", sizeof(debugLog) - strlen(debugLog) - 1);
@@ -1064,6 +1073,7 @@ void TaskCC1101(void *pvParameters)
         IthoCommand cmd = rfManager.radio.getLastCommand(packet);
         RemoteTypes remtype = rfManager.radio.getLastRemType(packet);
         bool chk = remotes.checkID(*(lastID + 0), *(lastID + 1), *(lastID + 2));
+        rfsignal::count(rfStats, packet->error, chk);
         if (logConfig.rfloglevel >= 2)
         {
           if (chk || logConfig.rfloglevel == 3)
@@ -1389,12 +1399,24 @@ void TaskCC1101(void *pvParameters)
           updateMQTTRemotesInfo = true;
         //} //while
       }
+      if (logConfig.rfloglevel > 0 && millis() - rfStatsLastLog >= 60000)
+      {
+        rfStatsLastLog = millis();
+        rfStats.sync = rfSyncCount;
+        N_LOG("RFSTAT: sync:%lu decoded:%lu coalesced:%lu hdrerr:%lu chkerr:%lu known:%lu knownerr:%lu",
+              (unsigned long)rfStats.sync, (unsigned long)rfStats.decoded, (unsigned long)rfStats.coalesced,
+              (unsigned long)rfStats.hdrErr, (unsigned long)rfStats.chkErr, (unsigned long)rfStats.known,
+              (unsigned long)rfStats.knownErr);
+      }
       TaskCC1101HWmark = uxTaskGetStackHighWaterMark(NULL);
       // Block until the RF ISR notifies that a packet arrived, or a 25 ms tick
       // to run the periodic work above. On notification, read the FIFO here in
       // task context (moved out of the ISR); the decode block above processes
       // it on the next iteration.
-      if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(25)) > 0)
+      const uint32_t notified = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(25));
+      if (notified > 1)
+        rfStats.coalesced += notified - 1; // more sync words than reads: those packets were not read
+      if (notified > 0)
       {
         if (radioSem)
           xSemaphoreTake(radioSem, portMAX_DELAY);
