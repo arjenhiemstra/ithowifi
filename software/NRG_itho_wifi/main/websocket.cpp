@@ -869,6 +869,8 @@ void handle_ws_message(JsonObject root)
       spiderDiscoveryRequest(true);
     else if (strcmp(action, "cancel") == 0)
       spiderDiscoveryRequest(false);
+    else if (strcmp(action, "gateway") == 0)
+      spiderGatewayBindRequest();
     JsonDocument doc;
     JsonObject o = doc["spiderdiscovery"].to<JsonObject>();
     spiderDiscoveryStatus(o);

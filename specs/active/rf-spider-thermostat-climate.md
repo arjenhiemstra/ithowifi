@@ -56,7 +56,7 @@ Both: touching the display wakes the Spider at once. **Many received Spider fram
 ### Joins
 
 - Heater/relay join (offers `0008`/`3150`/`10E0`/`1FC9`): the heater accepts with `W 1FC9 00 3EF0 <heater>`. The add-on does not answer it.
-- Controller join ("home icon", offers `22C9`/`22F1`/`000E`; seen in ramses_cc #151, not captured on our Spiders): accepted with `W 1FC9 00 01FF <controller>`. The add-on accepts it in learn mode and becomes the Spider's controller.
+- Controller join ("home icon", offers `22C9`/`22F1`/`000E`; seen in ramses_cc #151, not captured on our Spiders): accepted with `W 1FC9 00 01FF <controller>`. The add-on accepts it in learn mode, or in the 3 minute window of the "Bind as gateway" button (Spider offers only), and becomes the Spider's controller. Per the community blueprint the Spider polls this gateway with `RQ 01FF` about every 9 minutes and on a display touch, takes the `RP 01FF` setpoint itself, and forwards it to an AutoTemp with `W 22C9`.
 
 ## Discovery
 
@@ -77,6 +77,7 @@ The Spider wizard on the RF remotes page finds a Spider and its controller:
 - [x] Manual change on the Spider shows up as the new setpoint (next `01FF`/`22C9`).
 - [x] HA `climate` entity (HA integration v0.7.0): current temperature, target temperature, heating action, opt-in per Spider; shows the requested value until confirmed.
 - [ ] Controller join accepted in learn mode and the add-on's `RP 01FF` answers held by a Spider (bind mode).
+- [ ] Gateway bind on a Spider on an AutoTemp: the Spider display follows and the AutoTemp gets the setpoint from the Spider; a dial change on the Spider is kept.
 - [x] Existing `RFTSPIDER` ventilation behaviour unchanged; nothing is sent for slots without the thermostat flag.
 
 ## Architecture Impact

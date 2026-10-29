@@ -683,10 +683,13 @@ const messageHandlers = {
       done_zone: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. Its values can be read; setting the setpoint through a zone controller is not supported yet. Set the Spider back to your normal temperature.',
       timeout: 'Timed out without a result. Start again.',
       cancelled: 'Cancelled.',
-      noslot: 'Spider found, but there is no free RF device slot.'
+      noslot: 'Spider found, but there is no free RF device slot.',
+      gw_wait: 'Put the Spider in pairing mode now (up to 3 minutes)...',
+      gw_timeout: 'No Spider pairing request received. Press Bind as gateway and try again.',
+      done_gateway: 'Done: Spider ' + d.spider + ' is bound to the add-on as its gateway (RF device slot ' + d.slot + '). It takes a new setpoint at its next request, or at once when you touch its display.'
     };
     el.textContent = msg[d.state] !== undefined ? msg[d.state] : d.state;
-    if (d.state === 'done') getSettings('ithoremotes');
+    if ((d.state || '').startsWith('done')) getSettings('ithoremotes');
   },
   spidersetpoint: function (f) {
     var r = (f.spidersetpoint || {}).result;
@@ -1854,8 +1857,8 @@ document.addEventListener('DOMContentLoaded', function () {
       updateStatusTableFromCompactJson(JSON.parse(obj));
       localStorage.removeItem("ithostatus");
     }
-    else if (btnId === 'spider_disc_start' || btnId === 'spider_disc_cancel') {
-      websock_send(JSON.stringify({ spider_discovery: btnId === 'spider_disc_start' ? 'start' : 'cancel' }));
+    else if (btnId === 'spider_disc_start' || btnId === 'spider_disc_cancel' || btnId === 'spider_gw_bind') {
+      websock_send(JSON.stringify({ spider_discovery: btnId === 'spider_disc_start' ? 'start' : btnId === 'spider_gw_bind' ? 'gateway' : 'cancel' }));
     }
     else if (btnId.startsWith('spider_set-')) {
       var spIdx = parseInt(btnId.split('-')[1], 10);
@@ -6291,6 +6294,15 @@ var html_remotessetup = `
       <label for="spider_disc_start">Spider discovery</label>
       <button id="spider_disc_start" class="pure-button">Start</button>&nbsp;<button id="spider_disc_cancel"
         class="pure-button">Cancel</button>&nbsp;<span id="spider_disc_status"></span>
+    </div>
+    <p>Experimental: bind the add-on as the Spider's gateway, the way an Itho gateway or the RAMSES blueprint does.
+      Press 'Bind as gateway' and put the Spider in pairing mode within 3 minutes (see the Spider manual). The Spider
+      then asks the add-on for its setpoint (about every 9 minutes and when you touch its display) and takes the new
+      value itself, also on its display. Its link to the heater or AutoTemp should stay as it is. Only for Spiders that
+      offer this in their pairing message; other thermostats are ignored.</p>
+    <div class="pure-control-group">
+      <label for="spider_gw_bind">Spider gateway</label>
+      <button id="spider_gw_bind" class="pure-button">Bind as gateway</button>
     </div>
     <table id="SpiderTable" class="pure-table pure-table-bordered" style="text-align: center;"></table>
     <p id="spider_set_status"></p>

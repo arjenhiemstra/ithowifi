@@ -2981,13 +2981,13 @@ void IthoCC1101::sendSpiderBindAccept(const uint8_t id[3])
   sendToSpider(id, HEADER_JOIN_REPLY, cmd);
 }
 
-// RP 01FF (answer to the Spider's RQ) or W 01FF (push); setpoint is the commanded one, else the Spider's own
-void IthoCC1101::sendSpiderStatus(const uint8_t id[3], bool reply)
+// RP 01FF (answer to the Spider's RQ) or W 01FF (push); setpoint is the commanded one (useCmd), else the Spider's own
+void IthoCC1101::sendSpiderStatus(const uint8_t id[3], bool reply, bool useCmd)
 {
   const ithoRFDevice *dev = findRFDevice(id);
   if (!dev)
     return;
-  const int32_t sp = dev->setpointCmd != 0xEFFF ? dev->setpointCmd : dev->setpoint;
+  const int32_t sp = useCmd && dev->setpointCmd != 0xEFFF ? dev->setpointCmd : dev->setpoint;
   if (sp == 0xEFFF)
     return; // nothing known yet: do not answer with a made-up setpoint
   uint8_t cmd[3 + spider::STATUS_LEN + 1]{0x01, 0xFF, spider::STATUS_LEN};
