@@ -383,7 +383,13 @@ bool IthoCC1101::receivePacket()
   // Runs in task context (TaskCC1101), triggered by the RF ISR's notification —
   // the FIFO read used to run inside the ISR (up to ~34 ms). The caller is
   // responsible for serializing radio access against concurrent sends.
-  readData(&inMessage[inMessageIdx], MAX_RAW);
+  // The RF interrupt fires on sync-word detect and the packet takes ~34 ms on air, so the status registers read
+  // here still describe the packet being received (diagnostics only).
+  CC1101Packet *pkt = &inMessage[inMessageIdx];
+  pkt->rssi = readRegisterWithSyncProblem(CC1101_RSSI, CC1101_STATUS_REGISTER);
+  pkt->lqi = readRegisterWithSyncProblem(CC1101_LQI, CC1101_STATUS_REGISTER);
+  pkt->freqest = readRegisterWithSyncProblem(CC1101_FREQEST, CC1101_STATUS_REGISTER);
+  readData(pkt, MAX_RAW);
   initReceiveMessage();
   inMessageIdx = 1 - inMessageIdx; // swap buffer so the next receive uses the other one
 
@@ -393,7 +399,11 @@ bool IthoCC1101::receivePacket()
 void IthoCC1101::decodeBufferedPacket()
 {
   // decode from the buffer the ISR is NOT currently writing to
-  messageDecode(&inMessage[1 - inMessageIdx], &inPacket);
+  CC1101Packet *pkt = &inMessage[1 - inMessageIdx];
+  lastRssi = pkt->rssi;
+  lastLqi = pkt->lqi;
+  lastFreqest = pkt->freqest;
+  messageDecode(pkt, &inPacket);
 }
 
 IthoPacket *IthoCC1101::checkForNewPacket()

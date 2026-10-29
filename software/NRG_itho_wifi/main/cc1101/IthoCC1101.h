@@ -10,6 +10,7 @@
 #include "CC1101.h"
 #include "IthoPacket.h"
 #include "CC1101Packet.h"
+#include "RFSignal.h"
 
 #if !defined(MAX_NUM_OF_REMOTES)
 #define MAX_NUM_OF_REMOTES 12
@@ -79,6 +80,7 @@ private:
 
   // receive
   CC1101Packet inMessage[2];
+  uint8_t lastRssi{0}, lastLqi{0}, lastFreqest{0}; // signal status of the packet last decoded
   volatile uint8_t inMessageIdx{0}; // receivePacket fills inMessage[inMessageIdx], task decodes from inMessage[1 - inMessageIdx]
   IthoPacket inPacket;
 
@@ -233,6 +235,10 @@ public:
   }
   // receive
   bool receivePacket(); // read RX fifo
+  // signal diagnostics of the packet last decoded (RF debug log)
+  int lastRssiDbm() const { return rfsignal::rssiDbm(lastRssi); }
+  uint8_t lastLinkQuality() const { return rfsignal::linkQuality(lastLqi); }
+  long lastFreqOffsetHz() const { return rfsignal::freqOffsetHz(lastFreqest); }
   void decodeBufferedPacket(); // decode raw packet buffered by receivePacket
   IthoPacket *checkForNewPacket();
   bool parseMessage(IthoPacket *packetPtr);
