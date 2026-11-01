@@ -93,7 +93,7 @@ sequenceDiagram
 | TaskCC1101 | `main/tasks/task_cc1101.cpp` (create ~line 258) | 5 | 4096 | RF radio task, owns ISR enable/disable |
 | TaskMQTT | `main/tasks/task_mqtt.cpp:40` | 5 | 6144 | MQTT init, topic publish |
 | TaskWeb | `main/tasks/task_web.cpp:50` | 5 | 6144 | Web server/websocket, loops `execWebTasks()` every 25ms |
-| sniffer_task | `main/ithodevice/i2c_sniffer.cpp:208` | 17 (highest overall) | 4096 | Passive I2C bus sniffer, only on sniffer-capable hardware |
+| sniffer_task | `main/ithodevice/i2c_sniffer.cpp:219` | 17 (highest overall) | 4096 | Passive I2C bus sniffer, only on sniffer-capable hardware |
 
 **Synchronization primitives actually used** (task-to-task signaling is polled flags; the one FreeRTOS queue is the I2C sniffer's ISR event queue, `gpio_evt_queue` in `main/ithodevice/i2c_sniffer.cpp`):
 - `SemaphoreHandle_t isrSemaphore` — guards CC1101 RX in ISR `ITHOinterrupt` (`main/tasks/task_cc1101.cpp:34,36`)

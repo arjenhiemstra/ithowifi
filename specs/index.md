@@ -33,6 +33,7 @@ A spec describes *what* is being built and its immediate risk/test/rollback plan
 
 - [boot-phase-gates.md](active/boot-phase-gates.md) — replace the linear boot task chain with FreeRTOS event-group phase gates ([ADR-0010](../docs/adr/ADR-0010-boot-phase-event-group.md))
 - [status-sensor-error-latch.md](active/status-sensor-error-latch.md) — 2401 status sensor errors are judged per poll instead of latching until reboot (#295)
+- [i2c-sniffer-pause-during-slave-receive.md](active/i2c-sniffer-pause-during-slave-receive.md) — the I2C sniffer interrupt stays off while the add-on receives a reply as I2C slave (#295)
 - [rf-spider-thermostat-climate.md](active/rf-spider-thermostat-climate.md): Itho Spider heating thermostat over RF, read/set setpoint and HA climate ([ADR-0011](../docs/adr/ADR-0011-rf-spider-thermostat-role.md))
 
 ## Related

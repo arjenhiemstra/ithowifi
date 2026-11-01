@@ -1,4 +1,5 @@
 #include "i2c_esp32.h"
+#include "i2c_sniffer.h"
 
 // I2C globals now managed by I2CManager (see managers/I2CManager.cpp)
 // Removed: i2c_cmd_queue, master/slave pin globals
@@ -212,6 +213,9 @@ bool i2cSendCmd(uint8_t addr, const uint8_t *cmd, size_t len)
 
 size_t i2cSlaveReceive(uint8_t *i2c_receive_buf)
 {
+  // The sniffer interrupt's busy-wait through the reply can cost the slave receive a byte (#295).
+  i2cSnifferPause();
+
   i2c_config_t conf_slave = {
       .mode = I2C_MODE_SLAVE,
       .sda_io_num = i2cManager.slave_sda_pin,
@@ -247,6 +251,7 @@ size_t i2cSlaveReceive(uint8_t *i2c_receive_buf)
   }
 
   i2cSlaveDeinit();
+  i2cSnifferResume();
 
   if (total_len <= 0)
     return 0;

@@ -20,6 +20,7 @@ static QueueHandle_t gpio_evt_queue;
 // Removed: sniffer pin globals, i2c_safe_guard
 
 #include "managers/I2CManager.h"
+#include "managers/HardwareManager.h"
 
 Ticker i2c_sniffer_timer;
 
@@ -34,6 +35,14 @@ static inline IRAM_ATTR void enable_sda_intr(bool en)
 {
     // gpio_set_intr_type() is not IRAM, i.e. too slow
     GPIO.pin[i2cManager.sniffer_sda_pin].int_type = en ? GPIO_INTR_ANYEDGE : GPIO_INTR_DISABLE;
+}
+
+static volatile bool sda_intr_enabled = false;
+static volatile bool sda_intr_paused = false;
+
+static inline IRAM_ATTR void update_sda_intr()
+{
+    enable_sda_intr(sda_intr_enabled && !sda_intr_paused);
 }
 
 static inline IRAM_ATTR uint32_t read_sda_scl_pins()
@@ -78,7 +87,7 @@ static void IRAM_ATTR gpio_sda_handler(void *arg)
                 }
             }
         } while (tm - tm1 < 14900);
-        enable_sda_intr(true);
+        update_sda_intr();
     }
     last = st;
 }
@@ -100,7 +109,9 @@ static void sniffer_task(void *arg)
                             GPIO_INTR_DISABLE};
     gpio_config(&config);
     gpio_isr_handler_add(i2cManager.sniffer_sda_pin, gpio_sda_handler, (void *)i2cManager.sniffer_sda_pin);
-    enable_sda_intr(!!arg);
+    if (arg)
+        sda_intr_enabled = true;
+    update_sda_intr();
 
     std::string buffer;
 
@@ -210,7 +221,8 @@ void i2cSnifferInit(bool enabled)
 
 void i2cSnifferEnable()
 {
-    enable_sda_intr(true);
+    sda_intr_enabled = true;
+    update_sda_intr();
     auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
     if (sg->i2c_safe_guard_enabled == true && sg->sniffer_enabled == true)
     {
@@ -220,6 +232,7 @@ void i2cSnifferEnable()
 
 void i2cSnifferDisable()
 {
+    sda_intr_enabled = false;
     enable_sda_intr(false);
     vTaskDelay(1);
     enable_sda_intr(false);
@@ -232,6 +245,22 @@ void i2cSnifferUnload()
     sg->i2c_safe_guard_enabled = false;
     sg->sniffer_enabled = false;
     i2cSnifferDisable();
+}
+
+void i2cSnifferPause()
+{
+    if (!hardwareManager.i2c_sniffer_capable)
+        return;
+    sda_intr_paused = true;
+    enable_sda_intr(false);
+}
+
+void i2cSnifferResume()
+{
+    if (!hardwareManager.i2c_sniffer_capable)
+        return;
+    sda_intr_paused = false;
+    update_sda_intr();
 }
 
 void i2cSnifferPullup(bool enable)
