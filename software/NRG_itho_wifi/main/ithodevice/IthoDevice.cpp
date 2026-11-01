@@ -10,6 +10,7 @@
 #include "devices/demandflow.h"
 #include "devices/autotemp.h"
 #include "devices/wpu.h"
+#include "devices/awheatpump.h"
 
 uint8_t ithoDeviceGroup = 0;
 uint8_t ithoDeviceID = 0;
@@ -55,7 +56,8 @@ const struct ithoDeviceType ithoDevices[]{
     {0x00, 0x20, "RF_CO2", nullptr, 0, nullptr, nullptr, 0, nullptr},
     {0x00, 0x2B, "HRU 350", ithoHRU350SettingsMap, sizeof(ithoHRU350SettingsMap) / sizeof(ithoHRU350SettingsMap[0]), ithoHRU350SettingsLabels, ithoHRU350StatusMap, sizeof(ithoHRU350StatusMap) / sizeof(ithoHRU350StatusMap[0]), ithoHRU350StatusLabels},
     {0x00, 0x30, "AutoTemp Basic", ithoAutoTempSettingsMap, sizeof(ithoAutoTempSettingsMap) / sizeof(ithoAutoTempSettingsMap[0]), ithoAutoTempSettingsLabels, ithoAutoTempStatusMap, sizeof(ithoAutoTempStatusMap) / sizeof(ithoAutoTempStatusMap[0]), ithoAutoTempStatusLabels},
-    {0x07, 0x01, "HRU 250-300", ithoHRU250_300SettingsMap, sizeof(ithoHRU250_300SettingsMap) / sizeof(ithoHRU250_300SettingsMap[0]), ithoHRU250_300SettingsLabels, ithoHRU250_300StatusMap, sizeof(ithoHRU250_300StatusMap) / sizeof(ithoHRU250_300StatusMap[0]), ithoHRU250_300StatusLabels}};
+    {0x07, 0x01, "HRU 250-300", ithoHRU250_300SettingsMap, sizeof(ithoHRU250_300SettingsMap) / sizeof(ithoHRU250_300SettingsMap[0]), ithoHRU250_300SettingsLabels, ithoHRU250_300StatusMap, sizeof(ithoHRU250_300StatusMap) / sizeof(ithoHRU250_300StatusMap[0]), ithoHRU250_300StatusLabels},
+    {0x04, 0x08, "AWHeatpump", ithoAWHeatpumpSettingsMap, sizeof(ithoAWHeatpumpSettingsMap) / sizeof(ithoAWHeatpumpSettingsMap[0]), ithoAWHeatpumpSettingsLabels, ithoAWHeatpumpStatusMap, sizeof(ithoAWHeatpumpStatusMap) / sizeof(ithoAWHeatpumpStatusMap[0]), ithoAWHeatpumpStatusLabels}};
 
 const size_t ithoDevicesLength = sizeof(ithoDevices) / sizeof(ithoDevices[0]);
 
