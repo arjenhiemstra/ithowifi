@@ -290,10 +290,12 @@ void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperatur
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("itho_CE30_result", "failed");
+      i2cDebugResult("CE30", "failed");
     }
     return;
   }
+  if (updateweb)
+    i2cDebugResult("CE30", "sent");
 }
 
 void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t checked, bool updateweb)

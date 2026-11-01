@@ -1627,6 +1627,28 @@ document.addEventListener('DOMContentLoaded', function () {
         websock_send(`{"rfdemand":${val.value}, "rfremoteindex":${idx}}`);
       }
     }
+    else if (btnId.startsWith('i2cdebug-')) {
+      const cmd = btnId.split('-')[1];
+      const ask = { identify: 'Send identify (03F0) to the unit?', deaeration: 'Start deaeration (4E34) on the heat pump? Only do this if you know what it does.' }[cmd];
+      if (!ask || confirm(ask)) {
+        $id(cmd === 'faulthistory' ? 'i2c_faulthistory' : 'i2c_result').textContent = 'Processing...';
+        websock_send(JSON.stringify({ i2cdebug: cmd }));
+      }
+    }
+    else if (btnId === 'i2craw_send') {
+      const type = Number($id('i2craw_type').value);
+      if (type === 4 || confirm('Send a write to the unit? This can change its behaviour.')) {
+        $id('i2c_result').textContent = 'Processing...';
+        websock_send(JSON.stringify({
+          i2craw: {
+            dest: parseInt($id('i2craw_dest').value, 16),
+            class: parseInt($id('i2craw_class').value, 16),
+            type: type,
+            data: $id('i2craw_data').value
+          }
+        }));
+      }
+    }
     else if (btnId.startsWith('ithobutton-')) {
       const items = btnId.split('-');
       websock_send(`{"ithobutton":"${items[1]}"}`);
@@ -1694,12 +1716,8 @@ document.addEventListener('DOMContentLoaded', function () {
         value: parseFloat($id('itho_setting_value_set').value)
       }));
     }
-    else if (btnId === 'button4210') {
-      websock_send(JSON.stringify({
-        ithobutton: 4210
-      }));
-    }
     else if (btnId === 'buttonCE30') {
+      $id('i2c_result').textContent = 'Processing...';
       websock_send(JSON.stringify({
         ithobutton: 0xCE30,
         ithotemp: parseFloat($id('itho_ce30_temp').value * 100.),
@@ -1708,6 +1726,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }));
     }
     else if (btnId === 'buttonC000') { //CO2
+      $id('i2c_result').textContent = 'Processing...';
       websock_send(JSON.stringify({
         ithobutton: 0xC000,
         itho_c000_speed1: Number($id('itho_c000_speed1').value),
@@ -1715,6 +1734,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }));
     }
     else if (btnId === 'button9298') { //CO2 value
+      $id('i2c_result').textContent = 'Processing...';
       websock_send(JSON.stringify({
         ithobutton: 0x9298,
         itho_9298_val: Number($id('itho_9298_val').value)
