@@ -19,7 +19,6 @@ SystemConfig::SystemConfig()
   itho_control_interface = 0;
   itho_rf_standalone = 0;
   itho_rf_status_poll = 0;
-  spider_zone_setpoint = 0;
   itho_rf_status_poll_idx = 0;
   itho_rf_co2_status_req = 0;
   itho_rf_co2_keepalive_demand = 0;
@@ -172,11 +171,6 @@ bool SystemConfig::set(JsonObject obj)
   {
     updated = true;
     itho_rf_status_poll = obj["itho_rf_status_poll"];
-  }
-  if (!obj["spider_zone_setpoint"].isNull())
-  {
-    updated = true;
-    spider_zone_setpoint = obj["spider_zone_setpoint"];
   }
   if (!obj["itho_rf_status_poll_idx"].isNull())
   {
@@ -520,7 +514,6 @@ void SystemConfig::get(JsonObject obj) const
     obj["itho_control_interface"] = itho_control_interface;
     obj["itho_rf_standalone"] = itho_rf_standalone;
     obj["itho_rf_status_poll"] = itho_rf_status_poll;
-    obj["spider_zone_setpoint"] = spider_zone_setpoint;
     obj["itho_rf_status_poll_idx"] = itho_rf_status_poll_idx;
     obj["itho_rf_co2_status_req"] = itho_rf_co2_status_req;
     obj["itho_rf_co2_keepalive_demand"] = itho_rf_co2_keepalive_demand;
