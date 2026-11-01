@@ -1,52 +1,16 @@
-inline const uint8_t itho_HRU250_300status1[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 255};
-inline const uint8_t itho_HRU250_300status2_10[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 28, 29, 30, 25, 31, 32, 26, 27, 255};
+#pragma once
 
-inline const struct ithoLabels ithoHRU250_300StatusLabels[]{
-    {"Error number", "error-number"},
-    {"Status", "status"},
-    {"Measured outside temperature (°C)", "measured-outside-temperature_c"},
-    {"Measured temperature of mixed outside air (°C)", "measured-temperature-of-mixed-outside-air_c"},
-    {"The flow of the inflated air (M3/h)", "the-flow-of-the-inflated-air_m3h"},
-    {"Inlet temperature (°C)", "inlet-temperature_c"},
-    {"Temperature of the extracted air (°C)", "temperature-of-the-extracted-air_c"},
-    {"Temperature of the blown out air of the house (°C)", "temperature-of-the-blown-out-air-of-the-house_c"},
-    {"The flow of the blown air (m3/h)", "the-flow-of-the-blown-air_m3h"},
-    {"Relative fanspeed (%)", "relative-fanspeed_perc"},
-    {"Absolute speed of the fan (%)", "absolute-speed-of-the-fan_perc"},
-    {"Hysteresis use in control mode (K)", "hysteresis-use-in-control-mode_k"},
-    {"Timer for how long the house is cooled (hour)", "timer-for-how-long-the-house-is-cooled_h"},
-    {"Timer for how long the house is heated (hour)", "timer-for-how-long-the-house-is-heated_h"},
-    {"The mass flow of the air entering the house (kg/h)", "the-mass-flow-of-the-air-entering-the-house_kgh"},
-    {"The mass flow of the air leaving the house (kg/h)", "the-mass-flow-of-the-air-leaving-the-house_kgh"},
-    {"Percentage that the bypass valve is open (%)", "percentage-that-the-bypass-valve-is-open_perc"},
-    {"The desired inlet temperature (°C)", "the-desired-inlet-temperature_c"},
-    {"Hysteresis of the frost (K)", "hysteresis-of-the-frost_k"},
-    {"Number of steps the frost valve is open (steps)", "number-of-steps-the-frost-valve-is-open_steps"},
-    {"Number of hours of too cold air (hour)", "number-of-hours-of-too-cold-air_h"},
-    {"Temporary speed reduction (rpm)", "temporary-speed-reduction_rpm"},
-    {"Sample timer in frost mode (min)", "sample-timer-in-frost-mode_min"},
-    {"RPM of the motor (rpm)", "rpm-of-the-motor_rpm"},
-    {"Measured waste temperature heated NTC (°C)", "measured-waste-temperature-heated-ntc_c"},
-    {"Busy doing adjustments (-)", "busy-doing-adjustments_"},
-    {"Highest measured RH (%)", "highest-measured-rh_perc"},
-    {"Highest measured CO2 (ppm)", "highest-measured-co2_ppm"},
-    {"Measured waste temperature heated NTC (°C)", "measured-waste-temperature-heated-ntc_c"},
-    {"Measured blend temperature heated NTC (°C)", "measured-blend-temperature-heated-ntc_c"},
-    {"Desired capacity (m3/h)", "desired-capacity_mh"},
-    {"Current consumption of fan (mA)", "current-consumption-of-fan_ma"},
-    {"Desired current consumption of fan (mA)", "desired-current-consumption-of-fan_ma"},
-};
+#include "error_info_labels.h"
 
-// NOTE! settings labels manually aligned, script not working
-inline const uint16_t itho_HRU250_300setting1[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 30, 15, 16, 111, 18, 999};
-inline const uint16_t itho_HRU250_300setting2[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 30, 15, 16, 111, 18, 19, 20, 21, 22, 23, 24, 112, 26, 27, 28, 999};
-inline const uint16_t itho_HRU250_300setting3[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 30, 15, 16, 111, 18, 19, 20, 21, 22, 23, 24, 112, 26, 27, 28, 29, 999};
-inline const uint16_t itho_HRU250_300setting4[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 30, 15, 16, 111, 18, 19, 20, 21, 22, 23, 24, 112, 26, 27, 28, 29, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 999};
-inline const uint16_t itho_HRU250_300setting6[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 30, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 999};
-inline const uint16_t itho_HRU250_300setting7[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 30, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 84, 85, 999};
-inline const uint16_t itho_HRU250_300setting8[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 30, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 999};
-inline const uint16_t itho_HRU250_300setting9[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 30, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 999};
-inline const uint16_t itho_HRU250_300setting10[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 30, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 999};
+inline const uint16_t itho_HRU250_300setting1[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 999};
+inline const uint16_t itho_HRU250_300setting2[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 999};
+inline const uint16_t itho_HRU250_300setting3[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 999};
+inline const uint16_t itho_HRU250_300setting4[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 999};
+inline const uint16_t itho_HRU250_300setting6[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 53, 18, 19, 20, 21, 22, 23, 24, 53, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 999};
+inline const uint16_t itho_HRU250_300setting7[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 53, 18, 19, 20, 21, 22, 23, 24, 53, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 83, 84, 999};
+inline const uint16_t itho_HRU250_300setting8[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 53, 18, 19, 20, 21, 22, 23, 24, 53, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 999};
+inline const uint16_t itho_HRU250_300setting9[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 53, 18, 19, 20, 21, 22, 23, 24, 53, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 999};
+inline const uint16_t itho_HRU250_300setting10[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 53, 18, 19, 20, 21, 22, 23, 24, 53, 26, 27, 28, 29, 110, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 999};
 
 inline const char *ithoHRU250_300SettingsLabels[] = {
     "Min. Speed (rpm)",
@@ -66,7 +30,7 @@ inline const char *ithoHRU250_300SettingsLabels[] = {
     "Setup helper",
     "Speed arrangement",
     "Desired max speed offset (return) (m³/h)",
-    "Reserved",
+    "Frost Control Enabled(1) Disabled(0)",
     "Desired max speed offset(supply) (m³/h)",
     "After ventilation time in phase 1 PIR (s)",
     "After ventilation time in phase 2 PIR (s)",
@@ -74,13 +38,11 @@ inline const char *ithoHRU250_300SettingsLabels[] = {
     "Relative speed fan in phase 2 PIR (%)",
     "Time from phase 1 to phase 2 is passed PIR (s)",
     "RV Increase value (%)",
-    "Reserved",
+    "Slope angle CO2",
     "Adjusting Factor Blend",
     "Adjusting Factor Waste",
     "Enable(1)/Disable(0) Mass balance",
     "FrostValveOpenTimeFirstStartup (h)",
-    "Setup helper",
-    "FrostValveClosedTimeStartup (m)",
     "NightMinVent1person (%)",
     "NightMinVent2persons (%)",
     "NightMinVent3orMorePersons (%)",
@@ -104,6 +66,7 @@ inline const char *ithoHRU250_300SettingsLabels[] = {
     "MaximumOfMinimumSetting (rpm)",
     "MinimumOfMaximumSetting (rpm)",
     "MaximumOfMaximumSetting (rpm)",
+    "Reserved",
     "2ZnominalSupplyFlowLiving (m³/h)",
     "2ZnominalSupplyFlowSleeping (m³/h)",
     "2ZnominalWasteFlow (m³/h)",
@@ -160,9 +123,44 @@ inline const char *ithoHRU250_300SettingsLabels[] = {
     "Offset temperature (K)",
     "P-action bypass valve movement (d#/dT)",
     "Summer Night Boost Increase (%/min)",
-    "Frost Control Enabled(1) Disabled(0)",
-    "Slope angle CO2",
-};
+    "FrostValveClosedTimeStartup (m)"};
+
+inline const uint8_t itho_HRU250_300status1[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 24, 28, 255};
+inline const uint8_t itho_HRU250_300status2_10[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 28, 29, 25, 30, 31, 26, 27, 255};
+
+inline const struct ithoLabels ithoHRU250_300StatusLabels[]{
+    {"Error number", "error-number"},
+    {"Status", "status"},
+    {"Measured outside temperature (°C)", "measured-outside-temperature_c"},
+    {"Measured temperature of mixed outside air (°C)", "measured-temperature-of-mixed-outside-air_c"},
+    {"The flow of the inflated air (M3/h)", "the-flow-of-the-inflated-air_m3h"},
+    {"Inlet temperature (°C)", "inlet-temperature_c"},
+    {"Temperature of the extracted air (°C)", "temperature-of-the-extracted-air_c"},
+    {"Temperature of the blown out air of the house (°C)", "temperature-of-the-blown-out-air-of-the-house_c"},
+    {"The flow of the blown air (m3/h)", "the-flow-of-the-blown-air_m3h"},
+    {"Relative fanspeed (%)", "relative-fanspeed_perc"},
+    {"Absolute speed of the fan (%)", "absolute-speed-of-the-fan_perc"},
+    {"Hysteresis use in control mode (K)", "hysteresis-use-in-control-mode_k"},
+    {"Timer for how long the house is cooled (hour)", "timer-for-how-long-the-house-is-cooled_h"},
+    {"Timer for how long the house is heated (hour)", "timer-for-how-long-the-house-is-heated_h"},
+    {"The mass flow of the air entering the house (kg/h)", "the-mass-flow-of-the-air-entering-the-house_kgh"},
+    {"The mass flow of the air leaving the house (kg/h)", "the-mass-flow-of-the-air-leaving-the-house_kgh"},
+    {"Percentage that the bypass valve is open (%)", "percentage-that-the-bypass-valve-is-open_perc"},
+    {"The desired inlet temperature (°C)", "the-desired-inlet-temperature_c"},
+    {"Hysteresis of the frost (K)", "hysteresis-of-the-frost_k"},
+    {"Number of steps the frost valve is open (steps)", "number-of-steps-the-frost-valve-is-open_steps"},
+    {"Number of hours of too cold air (hour)", "number-of-hours-of-too-cold-air_h"},
+    {"Temporary speed reduction (rpm)", "temporary-speed-reduction_rpm"},
+    {"Sample timer in frost mode (min)", "sample-timer-in-frost-mode_min"},
+    {"RPM of the motor (rpm)", "rpm-of-the-motor_rpm"},
+    {"Measured waste temperature heated NTC (°C)", "measured-waste-temperature-heated-ntc_c"},
+    {"Busy doing adjustments (-)", "busy-doing-adjustments_"},
+    {"Highest measured RH (%)", "highest-measured-rh_perc"},
+    {"Highest measured CO2 (ppm)", "highest-measured-co2_ppm"},
+    {"Measured blend temperature heated NTC (°C)", "measured-blend-temperature-heated-ntc_c"},
+    {"Desired capacity (m3/h)", "desired-capacity_mh"},
+    {"Current consumption of fan (mA)", "current-consumption-of-fan_ma"},
+    {"Desired current consumption of fan (mA)", "desired-current-consumption-of-fan_ma"}};
 
 inline const uint16_t *ithoHRU250_300SettingsMap[] = {nullptr, itho_HRU250_300setting1, itho_HRU250_300setting2, itho_HRU250_300setting3, itho_HRU250_300setting4, nullptr, itho_HRU250_300setting6, itho_HRU250_300setting7, itho_HRU250_300setting8, itho_HRU250_300setting9, itho_HRU250_300setting10};
 inline const uint8_t *ithoHRU250_300StatusMap[] = {nullptr, itho_HRU250_300status1, itho_HRU250_300status2_10, itho_HRU250_300status2_10, itho_HRU250_300status2_10, nullptr, itho_HRU250_300status2_10, itho_HRU250_300status2_10, itho_HRU250_300status2_10, itho_HRU250_300status2_10, itho_HRU250_300status2_10};

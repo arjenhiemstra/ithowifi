@@ -4,7 +4,7 @@
 
 inline const uint16_t itho_CVE14setting1_4[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 999};
 inline const uint16_t itho_CVE14setting5[]{0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 8, 9, 999};
-inline const uint16_t itho_CVE14setting6[]{0, 1, 2, 3, 4, 5, 6, 7, 19, 20, 32, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 8, 9, 999};
+inline const uint16_t itho_CVE14setting6[]{0, 1, 2, 3, 4, 5, 6, 7, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 8, 9, 999};
 
 inline const char *ithoCVE14SettingsLabels[] = {
     "OEM number",
@@ -38,15 +38,15 @@ inline const char *ithoCVE14SettingsLabels[] = {
     "Max. speed change per minute (%)",
     "Expiration time PIR presence (Min)",
     "Cycle time (min)",
-    "Measuring time (min)",
-    "CO2 concentration present (ppm)"};
+    "Measuring time (min)"};
 
-inline const uint8_t itho_CVE14status1_4[]{0, 1, 2, 3, 4, 5, 6, 255};
-inline const uint8_t itho_CVE14status5_6[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 255};
+inline const uint8_t itho_CVE14status1[]{0, 1, 2, 3, 4, 5, 6, 255};
+inline const uint8_t itho_CVE14status2_4[]{1, 0, 2, 3, 4, 5, 6, 255};
+inline const uint8_t itho_CVE14status5_6[]{1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 255};
 
 inline const struct ithoLabels ithoCVE14StatusLabels[]{
-    {"Ventilation level (%)", "ventilation-level_perc"},
     {"Fan setpoint (rpm)", "fan-setpoint_rpm"},
+    {"Ventilation level (%)", "ventilation-level_perc"},
     {"Fan speed (rpm)", "fan-speed_rpm"},
     {"Error", "error"},
     {"Selection", "selection"},
@@ -61,4 +61,4 @@ inline const struct ithoLabels ithoCVE14StatusLabels[]{
     {"Sample timer", "sample-timer"}};
 
 inline const uint16_t *itho14SettingsMap[] = {nullptr, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting5, itho_CVE14setting6};
-inline const uint8_t *itho14StatusMap[] = {nullptr, itho_CVE14status1_4, itho_CVE14status1_4, itho_CVE14status1_4, itho_CVE14status1_4, itho_CVE14status5_6, itho_CVE14status5_6};
+inline const uint8_t *itho14StatusMap[] = {nullptr, itho_CVE14status1, itho_CVE14status2_4, itho_CVE14status2_4, itho_CVE14status2_4, itho_CVE14status5_6, itho_CVE14status5_6};
