@@ -256,6 +256,8 @@ size_t i2cSlaveReceive(uint8_t *i2c_receive_buf)
   if (total_len <= 0)
     return 0;
 
+  i2cSnifferLogReceived(i2c_receive_buf, total_len + 1);
+
   return total_len + 1; // add 1 because i2c_receive_buf[0] = I2C_SLAVE_ADDRESS
 }
 

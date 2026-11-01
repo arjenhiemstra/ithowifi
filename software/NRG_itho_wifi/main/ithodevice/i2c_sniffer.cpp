@@ -10,7 +10,7 @@ typedef enum
 } i2c_state_t;
 
 typedef uint16_t gpdata_t;
-static QueueHandle_t gpio_evt_queue;
+static QueueHandle_t gpio_evt_queue = nullptr;
 
 #define SCL(pin) (1 << pin)
 #define SDA(pin) (1 << pin)
@@ -259,8 +259,25 @@ void i2cSnifferResume()
 {
     if (!hardwareManager.i2c_sniffer_capable)
         return;
+    last = read_sda_scl_pins(); // edges during the pause were not seen
     sda_intr_paused = false;
     update_sda_intr();
+}
+
+// A reply the add-on received during a pause, fed to the sniffer task as if it was sniffed
+void i2cSnifferLogReceived(const uint8_t *buf, size_t len)
+{
+    auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
+    if (!hardwareManager.i2c_sniffer_capable || gpio_evt_queue == nullptr || !sg->sniffer_enabled || len == 0)
+        return;
+    for (size_t i = 0; i < len; i++)
+    {
+        uint32_t ev = buf[i] | ACK | (i == 0 ? START : 0);
+        if (xQueueSend(gpio_evt_queue, &ev, pdMS_TO_TICKS(10)) != pdTRUE)
+            break;
+    }
+    uint32_t stop = STOP;
+    xQueueSend(gpio_evt_queue, &stop, pdMS_TO_TICKS(10));
 }
 
 void i2cSnifferPullup(bool enable)

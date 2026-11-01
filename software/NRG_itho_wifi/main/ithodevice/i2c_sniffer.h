@@ -48,4 +48,5 @@ void i2cSnifferDisable();
 void i2cSnifferUnload();
 void i2cSnifferPause();
 void i2cSnifferResume();
+void i2cSnifferLogReceived(const uint8_t *buf, size_t len);
 void i2cSnifferPullup(bool enable);
