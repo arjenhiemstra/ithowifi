@@ -3393,6 +3393,7 @@ function wizardAbort() {
 function wizardDetectDeviceCategory(devtype) {
   if (!devtype || devtype === 'Unkown device type' || devtype === 'Generic Itho device') return 'other';
   if (devtype === 'Heatpump') return 'wpu';
+  if (devtype === 'AWHeatpump') return 'awhp';
   if (devtype === 'HRU 250-300') return 'hru250_300';
   if (devtype === 'HRU 350') return 'hru350';
   if (devtype === 'HRU ECO-fan') return 'hru_eco';
@@ -3426,11 +3427,11 @@ function applyDeviceDefaults() {
   checkRadio('option-itho_31da', enable31 ? '1' : '0');
   checkRadio('option-itho_31d9', enable31 ? '1' : '0');
 
-  // WPU counters (4210): on for WPU, off for others (always visible in wizard)
+  // WPU counters (4210): on for WPU, off for others (always visible in wizard); the labels are WPU only, so not for awhp
   checkRadio('option-itho_4210', cat === 'wpu' ? '1' : '0');
 
   // Virtual remote and related settings
-  var useVirtual = (cat !== 'hru250_300' && cat !== 'wpu');
+  var useVirtual = (cat !== 'hru250_300' && cat !== 'wpu' && cat !== 'awhp');
   var numvremEl = $id('itho_numvrem');
   if (cat === 'demandflow') {
     if (numvremEl) numvremEl.value = 12;
@@ -3441,7 +3442,7 @@ function applyDeviceDefaults() {
     checkRadio('option-itho_sendjoin', '1');
     checkRadio('option-itho_forcemedium', '1');
   } else {
-    if (numvremEl) numvremEl.value = (cat === 'wpu' ? 0 : 1);
+    if (numvremEl) numvremEl.value = (cat === 'wpu' || cat === 'awhp' ? 0 : 1);
     checkRadio('option-itho_sendjoin', '0');
     checkRadio('option-itho_forcemedium', '0');
   }
