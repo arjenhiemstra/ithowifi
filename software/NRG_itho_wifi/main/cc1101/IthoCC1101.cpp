@@ -563,6 +563,9 @@ bool IthoCC1101::parseMessage(IthoPacket *packetPtr)
   case IthoPacket::Type::ZONESETPOINT:
     handleZoneSetpoint(packetPtr);
     break;
+  case IthoPacket::Type::SYSTEMMODE:
+    handleSystemMode(packetPtr);
+    break;
   case IthoPacket::Type::DEVICEINFO:
     handleDeviceInfo(packetPtr);
     break;
@@ -2788,9 +2791,52 @@ void IthoCC1101::handleZoneSetpoint(IthoPacket *packetPtr)
         remoteStatusChanged = true;
       item.timestamp = now;
       item.setpoint = tempSetpoint;
+      // W 22C9 from a Spider bound to us (gateway): answer with I 22C9 from TaskCC1101, else it repeats the W
+      const bool hasCtl = item.controllerID[0] != 0 || item.controllerID[1] != 0 || item.controllerID[2] != 0;
+      if (item.thermostat && !hasCtl && item.zone == spider::ZONE_NONE && ((packetPtr->header >> 4) & 0x3) == MESSAGE_TYPE_W_MASK)
+      {
+        uint8_t me[3];
+        ownID(item, me);
+        if (packetPtr->deviceId1 == ((uint32_t)me[0] << 16 | (uint32_t)me[1] << 8 | me[2]))
+        {
+          spiderEchoID[0] = byte0;
+          spiderEchoID[1] = byte1;
+          spiderEchoID[2] = byte2;
+          spiderEchoSetpoint = tempSetpoint;
+          spiderEchoPending = true;
+        }
+      }
       return;
     }
   }
+}
+
+void IthoCC1101::handleSystemMode(IthoPacket *packetPtr)
+{
+  /*
+     message length: 8 (W from a Spider to its controller, after each poll and dial change)
+     message opcode: 0x22D0
+     byte[0]    : index
+     byte[1]    : flags (04 and 14 seen in user logs)
+  */
+  if (packetPtr->error > 0 || packetPtr->len < 2 || ((packetPtr->header >> 4) & 0x3) != MESSAGE_TYPE_W_MASK)
+    return;
+  const uint32_t src = packetPtr->deviceId0;
+  const uint8_t id[3]{(uint8_t)(src >> 16), (uint8_t)(src >> 8), (uint8_t)src};
+  const ithoRFDevice *dev = findRFDevice(id);
+  if (!dev || !dev->thermostat || dev->zone != spider::ZONE_NONE)
+    return;
+  const bool hasCtl = dev->controllerID[0] != 0 || dev->controllerID[1] != 0 || dev->controllerID[2] != 0;
+  uint8_t me[3];
+  ownID(*dev, me);
+  if (hasCtl || packetPtr->deviceId1 != ((uint32_t)me[0] << 16 | (uint32_t)me[1] << 8 | me[2]))
+    return; // only a Spider bound to us (gateway)
+  spiderModeID[0] = id[0];
+  spiderModeID[1] = id[1];
+  spiderModeID[2] = id[2];
+  spiderModeIndex = packetPtr->dataDecoded[packetPtr->payloadPos + 0];
+  spiderModeFlags = packetPtr->dataDecoded[packetPtr->payloadPos + 1];
+  spiderModePending = true;
 }
 
 void IthoCC1101::handleSpiderStatus(IthoPacket *packetPtr)
@@ -2947,6 +2993,31 @@ bool IthoCC1101::consumeSpiderReply(uint8_t id[3])
   return true;
 }
 
+bool IthoCC1101::consumeSpiderEcho(uint8_t id[3], int32_t &setpointCenti)
+{
+  if (!spiderEchoPending)
+    return false;
+  spiderEchoPending = false;
+  id[0] = spiderEchoID[0];
+  id[1] = spiderEchoID[1];
+  id[2] = spiderEchoID[2];
+  setpointCenti = spiderEchoSetpoint;
+  return true;
+}
+
+bool IthoCC1101::consumeSpiderModeAck(uint8_t id[3], uint8_t &index, uint8_t &flags)
+{
+  if (!spiderModePending)
+    return false;
+  spiderModePending = false;
+  id[0] = spiderModeID[0];
+  id[1] = spiderModeID[1];
+  id[2] = spiderModeID[2];
+  index = spiderModeIndex;
+  flags = spiderModeFlags;
+  return true;
+}
+
 // Addressed controller -> Spider message: addr0 = our id, addr1 = the Spider
 void IthoCC1101::sendToSpider(const uint8_t id[3], uint8_t header, const uint8_t *command)
 {
@@ -3028,6 +3099,13 @@ void IthoCC1101::sendSpiderZoneEcho(const uint8_t id[3], int32_t setpointCenti)
 {
   uint8_t cmd[3 + spider::ZONE_SETPOINT_ECHO_LEN + 1]{0x22, 0xC9, spider::ZONE_SETPOINT_ECHO_LEN};
   spider::buildZoneSetpointEcho(&cmd[3], setpointCenti);
+  sendToSpider(id, HEADER_RFT_BIDIRECTIONAL, cmd);
+}
+
+void IthoCC1101::sendSpiderModeAck(const uint8_t id[3], uint8_t index, uint8_t flags)
+{
+  uint8_t cmd[3 + spider::SYSTEM_MODE_ACK_LEN + 1]{0x22, 0xD0, spider::SYSTEM_MODE_ACK_LEN};
+  spider::buildSystemModeAck(&cmd[3], index, flags);
   sendToSpider(id, HEADER_RFT_BIDIRECTIONAL, cmd);
 }
 

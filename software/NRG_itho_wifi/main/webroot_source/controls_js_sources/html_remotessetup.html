@@ -51,21 +51,28 @@
   <fieldset>
     <br>
     <legend><br>Itho Spider thermostat:</legend>
-    <p>The add-on can read and set the heating setpoint of an Itho Spider room thermostat, without pairing it.
-      Start discovery and set the Spider to the temperature shown (a random value between 21.5 and 24 &deg;C). The add-on
-      recognises the Spider by that value, finds the heater it controls and adds the Spider as a monitor-only RF device.
-      Your heating may switch on during discovery. After that the setpoint can be changed here, via MQTT/REST or from
-      Home Assistant.</p>
+    <p>The add-on can read and set the heating setpoint of an Itho Spider room thermostat, here, via MQTT/REST or from
+      Home Assistant. There are two ways to link a Spider:</p>
+    <ul>
+      <li><strong>Bind as gateway</strong> (preferred): for a Spider that offers gateway pairing (the house symbol in
+        its pairing menu). The Spider keeps its link to the heater or AutoTemp. It asks the add-on for its setpoint every
+        few minutes and when you touch its display, shows a new value on its display and reports a change on its dial
+        straight away.</li>
+      <li><strong>Discovery</strong>: for a Spider without gateway pairing, or if you do not want to change its pairing.
+        Nothing changes on the Spider: the add-on sends a new setpoint as if it came from the Spider's heater, or for a
+        Spider on an AutoTemp, as the Spider to the AutoTemp. A Spider only listens briefly after it transmits, so a new
+        setpoint can take several minutes to arrive.</li>
+    </ul>
+    <p>Discovery: press Start and set the Spider to the temperature shown (a random value between 21.5 and 24 &deg;C).
+      The add-on recognises the Spider by that value, finds the heater or AutoTemp it is bound to and adds the Spider as
+      a monitor-only RF device. Your heating may switch on during discovery.</p>
     <div class="pure-control-group">
       <label for="spider_disc_start">Spider discovery</label>
       <button id="spider_disc_start" class="pure-button">Start</button>&nbsp;<button id="spider_disc_cancel"
         class="pure-button">Cancel</button>&nbsp;<span id="spider_disc_status"></span>
     </div>
-    <p>Experimental: bind the add-on as the Spider's gateway, the way an Itho gateway or the RAMSES blueprint does.
-      Press 'Bind as gateway' and put the Spider in pairing mode within 3 minutes (see the Spider manual). The Spider
-      then asks the add-on for its setpoint (about every 9 minutes and when you touch its display) and takes the new
-      value itself, also on its display. Its link to the heater or AutoTemp should stay as it is. Only for Spiders that
-      offer this in their pairing message; other thermostats are ignored.</p>
+    <p>Bind as gateway: press the button and within 3 minutes pair the Spider with its gateway (house) symbol, see the
+      Spider manual. Other pairing requests are ignored.</p>
     <div class="pure-control-group">
       <label for="spider_gw_bind">Spider gateway</label>
       <button id="spider_gw_bind" class="pure-button">Bind as gateway</button>

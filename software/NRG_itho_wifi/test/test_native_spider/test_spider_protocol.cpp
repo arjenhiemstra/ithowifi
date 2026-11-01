@@ -151,6 +151,15 @@ void test_zone_setpoint_change()
   TEST_ASSERT_EQUAL(3000, out[1] << 8 | out[2]);
 }
 
+void test_system_mode_ack()
+{
+  // Spider W 22D0 00 14 00 00 10 03 00 20 -> I 22D0 00 14 00 00
+  uint8_t out[spider::SYSTEM_MODE_ACK_LEN];
+  spider::buildSystemModeAck(out, 0x00, 0x14);
+  const uint8_t expect[4] = {0x00, 0x14, 0x00, 0x00};
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 4);
+}
+
 int main(int, char **)
 {
   UNITY_BEGIN();
@@ -164,5 +173,6 @@ int main(int, char **)
   RUN_TEST(test_heating_join_detection);
   RUN_TEST(test_bind_accept);
   RUN_TEST(test_zone_setpoint_change);
+  RUN_TEST(test_system_mode_ack);
   return UNITY_END();
 }

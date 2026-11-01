@@ -85,6 +85,18 @@ inline void buildZoneSetpointEcho(uint8_t out[ZONE_SETPOINT_ECHO_LEN], int32_t c
   out[5] = 0x01;
 }
 
+// I 22D0 answer to the Spider's W 22D0 [index][flags][6 bytes]. Format from an AutoTemp capture
+// (ramses_rf: W 0314001E14030020 -> I 03130000); the AutoTemp sends its own flags, we echo the Spider's (guess).
+constexpr size_t SYSTEM_MODE_ACK_LEN = 4;
+
+inline void buildSystemModeAck(uint8_t out[SYSTEM_MODE_ACK_LEN], uint8_t index, uint8_t flags)
+{
+  out[0] = index;
+  out[1] = flags;
+  out[2] = 0x00;
+  out[3] = 0x00;
+}
+
 // W 22C9 a Spider on a zone controller (AutoTemp) sends on a dial change: [zone][setpoint][setpoint + 1 C][flag].
 // Flag seen as 02 on the first change and 01 after it (user log 2026-10-28), meaning unknown; we send 01.
 constexpr uint8_t ZONE_NONE = 0xFF; // Spider not on a zone controller

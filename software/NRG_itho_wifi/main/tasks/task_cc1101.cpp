@@ -38,6 +38,7 @@ struct SpiderPending
   uint8_t repeatLeft; // extra copies of the W 01FF still to send, 1 s apart
   uint32_t repeatAt;
   uint32_t windowAt; // send at this time (Spider polled its controller, answer not seen), 0 = none
+  uint32_t dialUntil; // gateway: RP carries the dialled setpoint until the Spider's 01FF reports it, or until then; 0 = off
 };
 static SpiderPending spiderPending[MAX_NUM_OF_REMOTES]{};
 constexpr uint32_t SPIDER_PUSH_MS = 15 * 60 * 1000; // relay-bound Spiders only listen at their relay poll (5-10 min idle)
@@ -45,6 +46,7 @@ constexpr uint32_t SPIDER_PUSH_GAP_MS = 30 * 1000; // after plain broadcasts; po
 constexpr uint32_t SPIDER_POLL_MS = 5 * 60 * 1000;
 constexpr uint8_t SPIDER_PUSH_REPEATS = 2;      // copies after the first one, like the spider.yaml blueprint
 constexpr uint32_t SPIDER_REPEAT_MS = 1000;
+constexpr uint32_t SPIDER_DIAL_MS = 10 * 60 * 1000; // the RQ 01FF right after a dial change still has the old setpoint
 constexpr uint8_t SPIDER_ZONE_TRIES = 3; // W 22C9 to a zone controller, 1 s apart, until it echoes the setpoint
 
 static bool spiderConfirmed(const uint8_t sid[3])
@@ -55,6 +57,16 @@ static bool spiderConfirmed(const uint8_t sid[3])
       return item.setpointCmd != 0xEFFF && item.setpoint == item.setpointCmd;
   }
   return false;
+}
+
+static int32_t spiderSetpoint(const uint8_t sid[3])
+{
+  for (const auto &item : rfManager.radio.getRFdevices().device)
+  {
+    if (memcmp(item.destinationID, sid, 3) == 0)
+      return item.setpoint;
+  }
+  return 0xEFFF;
 }
 
 // Spider discovery (ADR-0011): driven by the web UI, run on received frames in this task
@@ -145,8 +157,8 @@ static void spiderDiscoveryFinish()
     remotes.updateRemoteFunction(index, static_cast<uint8_t>(RemoteFunctions::MONITOR));
     remotes.updateRemoteName(index, "Spider");
   }
-  if (spiderDisc.zoneController() && systemConfig.spider_zone_setpoint == 1 && spiderDisc.zoneId() != spider::ZONE_NONE)
-  { // experimental: setpoint sent as the Spider to its zone controller (W 22C9), never as the controller to the Spider
+  if (spiderDisc.zoneController() && spiderDisc.zoneId() != spider::ZONE_NONE)
+  { // setpoint sent as the Spider to its zone controller (W 22C9), never as the controller to the Spider
     remotes.setThermostat(index, true);
     remotes.setThermostatCtl(index, hid);
     remotes.setThermostatZone(index, spiderDisc.zoneId());
@@ -161,7 +173,7 @@ static void spiderDiscoveryFinish()
     return;
   }
   if (spiderDisc.zoneController())
-  { // zone controller (AutoTemp): we cannot pose as it, so read only and nothing is sent
+  { // zone controller (AutoTemp), zone unknown: read only and nothing is sent
     remotes.setThermostat(index, false); // also clears a role from an earlier run
     if (!rfManager.radio.checkRFDevice(sid[0], sid[1], sid[2]))
       rfManager.radio.updateRFDevice(index, sid[0], sid[1], sid[2], RemoteTypes::RFTSPIDER, false);
@@ -295,18 +307,32 @@ static void spiderOnFrame(const IthoPacket *packet)
   SpiderPending &p = spiderPending[idx];
   if (!ctl || idTo32(ctl) == 0)
   { // bound to us (gateway): the Spider polls and gets our RP instead
+    if (type == 2 && packet->opcode == IthoPacket::Type::ZONESETPOINT && packet->deviceId0 == spider)
+    { // W 22C9: setpoint changed on the Spider itself, newer than ours; it becomes the commanded setpoint
+      const int32_t sp = spiderSetpoint(sid);
+      if (sp != 0xEFFF)
+      {
+        remotes.setThermostatSetpoint(idx, sp);
+        rfManager.radio.setThermostatSetpoint(sid, sp);
+      }
+      if (p.push)
+        I_LOG("RFI: Spider %02X:%02X:%02X setpoint changed on the Spider, pending setpoint dropped", sid[0], sid[1], sid[2]);
+      p.push = false;
+      p.repeatLeft = 0;
+      p.dialUntil = millis() + SPIDER_DIAL_MS;
+      if (p.dialUntil == 0)
+        p.dialUntil = 1;
+      return;
+    }
+    if (p.dialUntil != 0 && packet->opcode == IthoPacket::Type::SPIDERSTATUS && packet->deviceId0 == spider &&
+        (spiderConfirmed(sid) || (int32_t)(millis() - p.dialUntil) >= 0))
+      p.dialUntil = 0;
     if (!p.push)
       return;
     if (spiderConfirmed(sid))
     {
       p.push = false;
       p.repeatLeft = 0;
-    }
-    else if (type == 2 && packet->opcode == IthoPacket::Type::ZONESETPOINT && packet->deviceId0 == spider)
-    { // W 22C9: setpoint changed on the Spider itself, newer than ours
-      p.push = false;
-      p.repeatLeft = 0;
-      I_LOG("RFI: Spider %02X:%02X:%02X setpoint changed on the Spider, pending setpoint dropped", sid[0], sid[1], sid[2]);
     }
     else if ((int32_t)(millis() - p.pushUntil) >= 0)
     {
@@ -825,14 +851,36 @@ void TaskCC1101(void *pvParameters)
       }
       uint8_t spiderID[3];
       if (!ithoCheck && rfManager.radio.consumeSpiderReply(spiderID))
-      { // answer the bound Spider's RQ 01FF straight away, single try; our setpoint only while a push is pending,
-        // else the Spider's own, so a change on the Spider itself is not undone
+      { // answer the bound Spider's RQ 01FF straight away, single try; our setpoint while a push is pending or
+        // just after a dial change (its W 22C9), else the Spider's own, so a change on the Spider is not undone
         const int ridx = remotes.remoteIndex(spiderID[0], spiderID[1], spiderID[2]);
-        const bool useCmd = ridx >= 0 && ridx < MAX_NUM_OF_REMOTES && spiderPending[ridx].push &&
-                            (int32_t)(millis() - spiderPending[ridx].pushUntil) < 0;
+        bool useCmd = false;
+        if (ridx >= 0 && ridx < MAX_NUM_OF_REMOTES)
+        {
+          const SpiderPending &p = spiderPending[ridx];
+          useCmd = (p.push && (int32_t)(millis() - p.pushUntil) < 0) || p.dialUntil != 0;
+        }
         rfManager.radio.setSendTries(1);
         disableRF_ISR();
         rfManager.radio.sendSpiderStatus(spiderID, true, useCmd);
+        enableRF_ISR();
+        rfManager.radio.setSendTries(3);
+      }
+      int32_t echoSetpoint = 0;
+      if (!ithoCheck && rfManager.radio.consumeSpiderEcho(spiderID, echoSetpoint))
+      { // acknowledge a setpoint change on a Spider bound to us (W 22C9) like the blueprint, single try
+        rfManager.radio.setSendTries(1);
+        disableRF_ISR();
+        rfManager.radio.sendSpiderZoneEcho(spiderID, echoSetpoint);
+        enableRF_ISR();
+        rfManager.radio.setSendTries(3);
+      }
+      uint8_t modeIndex = 0, modeFlags = 0;
+      if (!ithoCheck && rfManager.radio.consumeSpiderModeAck(spiderID, modeIndex, modeFlags))
+      { // answer the W 22D0 a Spider bound to us sends after each poll and dial change, else it repeats it
+        rfManager.radio.setSendTries(1);
+        disableRF_ISR();
+        rfManager.radio.sendSpiderModeAck(spiderID, modeIndex, modeFlags);
         enableRF_ISR();
         rfManager.radio.setSendTries(3);
       }

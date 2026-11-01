@@ -679,8 +679,8 @@ const messageHandlers = {
       wait_setpoint: 'Set the Spider to ' + d.target + ' \u00B0C now and leave it there. Most Spiders are found within a minute or two, some take up to 15 minutes.',
       wait_heater: 'Spider ' + d.spider + ' found. Listening for its heater (up to 12 minutes)...',
       done: 'Done: Spider ' + d.spider + ' controls heater ' + d.heater + ' (RF device slot ' + d.slot + '). Set the Spider back to your normal temperature, on the Spider or in the table below.',
-      done_zone_set: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. Setting the setpoint goes through the zone controller (experimental). Set the Spider back to your normal temperature.',
-      done_zone: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. Its values can be read; setting the setpoint through a zone controller is not supported yet. Set the Spider back to your normal temperature.',
+      done_zone_set: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. A new setpoint is sent to the zone controller. Set the Spider back to your normal temperature.',
+      done_zone: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. Its values can be read, but its zone is unknown, so the setpoint cannot be set this way; use Bind as gateway if the Spider offers it. Set the Spider back to your normal temperature.',
       timeout: 'Timed out without a result. Start again.',
       cancelled: 'Cancelled.',
       noslot: 'Spider found, but there is no free RF device slot.',
@@ -1306,7 +1306,6 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_control_interface: checkedVal('option-itho_control_interface'),
           itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
           itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
-          spider_zone_setpoint: checkedVal('option-spider_zone_setpoint'),
           itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
@@ -1353,7 +1352,6 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_control_interface: checkedVal('option-itho_control_interface'),
           itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
           itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
-          spider_zone_setpoint: checkedVal('option-spider_zone_setpoint'),
           itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
@@ -5992,13 +5990,6 @@ var html_systemsettings_cc1101 = `
   <input id="option-itho_rf_status_poll-1" type="radio" name="option-itho_rf_status_poll" value="1"> on
   <input id="option-itho_rf_status_poll-0" type="radio" name="option-itho_rf_status_poll" value="0"> off
 </div>
-<legend><br>Itho Spider on a zone controller (experimental):</legend>
-<p>A Spider bound to a zone controller (for example an AutoTemp) is read only by default. When on, the add-on sets a new setpoint by sending it to the zone controller as if it came from the Spider. Untested on most installations: only switch on if you want to test it. Run the Spider wizard again after switching it on.</p>
-<div class="pure-control-group">
-  <label class="pure-radio" for="option-spider_zone_setpoint-1">Setpoint via zone controller</label>
-  <input id="option-spider_zone_setpoint-1" type="radio" name="option-spider_zone_setpoint" value="1"> on
-  <input id="option-spider_zone_setpoint-0" type="radio" name="option-spider_zone_setpoint" value="0"> off
-</div>
 <legend><br>RF CO2 control:</legend>
 <div class="pure-control-group">
   <label class="pure-radio" for="option-itho_control_interface-0">Control interface</label>
@@ -6302,21 +6293,28 @@ var html_remotessetup = `
   <fieldset>
     <br>
     <legend><br>Itho Spider thermostat:</legend>
-    <p>The add-on can read and set the heating setpoint of an Itho Spider room thermostat, without pairing it.
-      Start discovery and set the Spider to the temperature shown (a random value between 21.5 and 24 &deg;C). The add-on
-      recognises the Spider by that value, finds the heater it controls and adds the Spider as a monitor-only RF device.
-      Your heating may switch on during discovery. After that the setpoint can be changed here, via MQTT/REST or from
-      Home Assistant.</p>
+    <p>The add-on can read and set the heating setpoint of an Itho Spider room thermostat, here, via MQTT/REST or from
+      Home Assistant. There are two ways to link a Spider:</p>
+    <ul>
+      <li><strong>Bind as gateway</strong> (preferred): for a Spider that offers gateway pairing (the house symbol in
+        its pairing menu). The Spider keeps its link to the heater or AutoTemp. It asks the add-on for its setpoint every
+        few minutes and when you touch its display, shows a new value on its display and reports a change on its dial
+        straight away.</li>
+      <li><strong>Discovery</strong>: for a Spider without gateway pairing, or if you do not want to change its pairing.
+        Nothing changes on the Spider: the add-on sends a new setpoint as if it came from the Spider's heater, or for a
+        Spider on an AutoTemp, as the Spider to the AutoTemp. A Spider only listens briefly after it transmits, so a new
+        setpoint can take several minutes to arrive.</li>
+    </ul>
+    <p>Discovery: press Start and set the Spider to the temperature shown (a random value between 21.5 and 24 &deg;C).
+      The add-on recognises the Spider by that value, finds the heater or AutoTemp it is bound to and adds the Spider as
+      a monitor-only RF device. Your heating may switch on during discovery.</p>
     <div class="pure-control-group">
       <label for="spider_disc_start">Spider discovery</label>
       <button id="spider_disc_start" class="pure-button">Start</button>&nbsp;<button id="spider_disc_cancel"
         class="pure-button">Cancel</button>&nbsp;<span id="spider_disc_status"></span>
     </div>
-    <p>Experimental: bind the add-on as the Spider's gateway, the way an Itho gateway or the RAMSES blueprint does.
-      Press 'Bind as gateway' and put the Spider in pairing mode within 3 minutes (see the Spider manual). The Spider
-      then asks the add-on for its setpoint (about every 9 minutes and when you touch its display) and takes the new
-      value itself, also on its display. Its link to the heater or AutoTemp should stay as it is. Only for Spiders that
-      offer this in their pairing message; other thermostats are ignored.</p>
+    <p>Bind as gateway: press the button and within 3 minutes pair the Spider with its gateway (house) symbol, see the
+      Spider manual. Other pairing requests are ignored.</p>
     <div class="pure-control-group">
       <label for="spider_gw_bind">Spider gateway</label>
       <button id="spider_gw_bind" class="pure-button">Bind as gateway</button>
