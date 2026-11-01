@@ -110,6 +110,10 @@ private:
   bool spiderEchoPending{false};
   uint8_t spiderEchoID[3]{};
   int32_t spiderEchoSetpoint{0};
+  bool spiderModePending{false};
+  uint8_t spiderModeID[3]{};
+  uint8_t spiderModeIndex{0};
+  uint8_t spiderModeFlags{0};
   ithoRFDevice *findRFDevice(const uint8_t id[3]);
   ithoRFDevice *findZoneDevice(uint32_t ctl, uint8_t zone);
   void ownID(const ithoRFDevice &dev, uint8_t out[3]) const;
@@ -210,9 +214,11 @@ public:
   bool setThermostatSetpoint(const uint8_t id[3], int32_t setpointCmd);
   bool consumeSpiderReply(uint8_t id[3]);
   bool consumeSpiderEcho(uint8_t id[3], int32_t &setpointCenti);
+  bool consumeSpiderModeAck(uint8_t id[3], uint8_t &index, uint8_t &flags);
   void sendSpiderBindAccept(const uint8_t id[3]);
   void sendSpiderStatus(const uint8_t id[3], bool reply, bool useCmd = true);
   void sendSpiderZoneEcho(const uint8_t id[3], int32_t setpointCenti);
+  void sendSpiderModeAck(const uint8_t id[3], uint8_t index, uint8_t flags);
   void sendSpiderRequest(const uint8_t id[3]);
   void sendSpiderZoneSetpoint(const uint8_t id[3]); // W 22C9 as the Spider to its zone controller
   void sendSpiderProbe(const uint8_t id[3], const uint8_t ctl[3]); // RQ 01FF as ctl, Spider not registered
@@ -301,6 +307,7 @@ public:
   void handlePIR(IthoPacket *packetPtr);
   void handleZoneTemp(IthoPacket *packetPtr);
   void handleZoneSetpoint(IthoPacket *packetPtr);
+  void handleSystemMode(IthoPacket *packetPtr);
   void handleDeviceInfo(IthoPacket *packetPtr);
   void handleSpiderStatus(IthoPacket *packetPtr);
   void handleRelayDemand(IthoPacket *packetPtr);
