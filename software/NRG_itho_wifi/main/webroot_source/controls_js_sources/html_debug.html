@@ -101,13 +101,33 @@
                 <button id="i2csniffer_toggle" type="button" class="pure-button pure-button-primary">Toggle</button>
                 <span>Status: </span><span id="i2csniffer_status">unknown</span>
                 <br><br>
-                <legend><br>Low level Itho I2C commands:</legend><br>
-                <button id="ithobutton-type" type="button" class="pure-button pure-button-primary">Query Devicetype</button><br>
-                <span>Result:&nbsp;</span><span id="ithotype"></span><br><br>
-                <button id="ithobutton-statusformat" type="button" class="pure-button pure-button-primary">Query Status
-                    Format</button><br><span>Result:&nbsp;</span><span id="ithostatusformat"></span><br><br>
-                <button id="ithobutton-status" type="button" class="pure-button pure-button-primary">Query
-                    Status</button><br><span>Result:&nbsp;</span><span id="ithostatus"></span><br><br>
+                <legend><br>Low level Itho I2C commands:</legend>
+                <p>Every command below shows its result in the result field. Not every unit answers every command; "no reply" means the unit does not support it.</p>
+                <button id="i2cdebug-type" type="button" class="pure-button pure-button-primary">Query Devicetype</button>&nbsp;<button id="i2cdebug-statusformat" type="button" class="pure-button pure-button-primary">Query Status Format</button>&nbsp;<button id="i2cdebug-status" type="button" class="pure-button pure-button-primary">Query Status</button>&nbsp;<button id="i2cdebug-31DA" type="button" class="pure-button pure-button-primary">Query 31DA</button>&nbsp;<button id="i2cdebug-31D9" type="button" class="pure-button pure-button-primary">Query 31D9</button>&nbsp;<button id="i2cdebug-counters" type="button" class="pure-button pure-button-primary">Query Counters</button><br><br>
+                <button id="i2cdebug-serial" type="button" class="pure-button pure-button-primary">Query serial number</button>&nbsp;<button id="i2cdebug-article" type="button" class="pure-button pure-button-primary">Query article number</button>&nbsp;<button id="i2cdebug-wpufaults" type="button" class="pure-button pure-button-primary">Query heat pump faults</button><br><br>
+                <button id="i2cdebug-filterreset" type="button" class="pure-button pure-button-primary">Filter reset</button>&nbsp;uses virtual remote 0, which must be paired with the Itho unit<br><br>
+                <button id="i2cdebug-identify" type="button" class="pure-button pure-button-primary">Identify</button>&nbsp;<button id="i2cdebug-deaeration" type="button" class="pure-button pure-button-primary">Start deaeration (heat pump)</button><br><br>
+                <button id="buttonC000" type="button" class="pure-button pure-button-primary">Send CO2 speed</button>
+                Speed1: <input id="itho_c000_speed1" type="number" min="0" max="255" size="4" value="0">&nbsp;Speed2:
+                <input id="itho_c000_speed2" type="number" min="0" max="255" size="4" value="0"><br><br>
+                <button id="button9298" type="button" class="pure-button pure-button-primary">Send CO2 value</button>
+                Value: <input id="itho_9298_val" type="number" min="0" max="65535" size="4" value="0"><br><br>
+                <button id="buttonCE30" type="button" class="pure-button pure-button-primary">Send CE30</button>
+                Outside temperature: <input id="itho_ce30_temp" type="number" min="-20" max="50" size="4" value="15">
+                Optional temporary temperature: <input id="itho_ce30_temptemp" type="number" min="-20" max="50" size="4" value="0">
+                Valid until (timestamp): <input id="itho_ce30_timestamp" type="number" min="0" max="2147483647" size="12" value="0"><br><br>
+                <button id="i2craw_send" type="button" class="pure-button pure-button-primary">Send</button>
+                any message (hex), destination: <input id="i2craw_dest" type="text" size="3" value="82">
+                class: <input id="i2craw_class" type="text" size="5" value="2400">
+                type: <select id="i2craw_type">
+                    <option value="4">04 query</option>
+                    <option value="5">05 inform</option>
+                    <option value="6">06 write</option>
+                </select>
+                data: <input id="i2craw_data" type="text" size="30" placeholder="e.g. 01 00 00 03"><br>
+                <span style="color:red">Destination 82 is the Itho unit. A write (type 05/06) can change the unit, only send writes you know.</span><br><br>
+                <span>Result:&nbsp;</span><span id="i2c_result"></span><br><br>
+
                 <button id="button2410" type="button" class="pure-button pure-button-primary">Query 2410</button>setting index: <input
                     id="itho_setting_id" type="number" min="0" max="255" size="6"
                     value="0"><br><span>Result:&nbsp;</span><span id="itho2410"></span><br>
@@ -125,35 +145,6 @@
                     id="itho2410setres"></span><br>
                 <span style="color:red">Warning!!</span><br><br>
 
-                <button id="ithobutton-31DA" type="button" class="pure-button pure-button-primary">Query
-                    31DA</button><br><span>Result:&nbsp;</span>
-                <span id="itho31DA"></span><br><br><button id="ithobutton-31D9"
-                    type="button" class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
-                    id="itho31D9"></span><br><br>
-
-                <button id="ithobutton-10D0" type="button" class="pure-button pure-button-primary">Filter
-                    reset</button><br><span>Filter
-                    reset function uses virtual remote 0, this remote needs to be paired with your Itho unit for this
-                    command
-                    to
-                    work</span><br><br>
-
-                <button id="buttonC000" type="button" class="pure-button pure-button-primary">Send CO2 speed</button>
-                Speed1: <input id="itho_c000_speed1" type="number" min="0" max="255" size="4" value="0">&nbsp;Speed2:
-                <input id="itho_c000_speed2" type="number" min="0" max="255" size="4" value="0"><br><br>
-                <button id="button9298" type="button" class="pure-button pure-button-primary">Send CO2 value</button>
-                Value: <input id="itho_9298_val" type="number" min="0" max="65535" size="4" value="0"><br><br>
-                <button id="button4210" type="button" class="pure-button pure-button-primary">Query
-                    Counters</button><br><span>Result:&nbsp;</span><span id="ithocounters"></span><br><br>
-                <button id="buttonCE30" type="button" class="pure-button pure-button-primary">Send CE30</button>
-                Set outside temperature to: <input id="itho_ce30_temp" type="number" min="-20" max="50" size="4"
-                    value="15"><br>
-                Optional temporary temperature: <input id="itho_ce30_temptemp" type="number" min="-20" max="50" size="4"
-                    value="0">
-                Valid until(timestamp) <input id="itho_ce30_timestamp" type="number" min="0" max="2147483647" size="12"
-                    value="0"><br>
-                <span>Result:&nbsp;</span><span id="itho_ce30_result"></span><br>
-                <br>
                 <span style="color:red">Warning!!<br>
                     4030 is low level "manual control" of your Itho unit.<br>
                     Use with care and use only if you know what you are doing!</span><br>
@@ -168,6 +159,10 @@
                     WPU 5G: Make sure you set the "Max manual operation time" setting on the "Itho settings" page.<br>
                     The Itho unit will remain in manual mode until the timer expires. 0 means unlimited.<br>
                     Warning!!<br></span><br>
+
+                <legend><br>Itho fault history:</legend><br>
+                <button id="i2cdebug-faulthistory" type="button" class="pure-button pure-button-primary">Query fault history</button>&nbsp;the last faults stored in the Itho unit, with texts for the CVE types, HRU 250/300 and DemandFlow<br><br>
+                <span id="i2c_faulthistory" style="white-space:pre-line"></span><br>
             </fieldset><br><br><br>
         </fieldset>
     </form>

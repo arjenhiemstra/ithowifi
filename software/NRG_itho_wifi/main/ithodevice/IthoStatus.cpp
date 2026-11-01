@@ -1,6 +1,7 @@
 #include "IthoDevice.h"
 #include "devices/error_info_labels.h"
 #include "devices/wpu.h"
+#include "i2c_service.h"
 
 #include "globals.h"
 #include "sys_log.h"
@@ -37,7 +38,7 @@ void sendQueryDevicetype(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithotype", "failed");
+      i2cDebugResult("Devicetype", "failed");
     }
 
     return;
@@ -47,7 +48,7 @@ void sendQueryDevicetype(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithotype", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("Devicetype", i2csvc::deviceType(&i2cbuf[6], i2cbuf[5]) + " | " + i2cBufToString(i2cbuf, result));
     }
   }
 
@@ -73,7 +74,7 @@ void sendQueryStatusFormat(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithostatusformat", "failed");
+      i2cDebugResult("Status format", "failed");
     }
     return;
   }
@@ -82,7 +83,7 @@ void sendQueryStatusFormat(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithostatusformat", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("Status format", i2cBufToString(i2cbuf, result));
     }
   }
 
@@ -159,7 +160,7 @@ void sendQueryStatus(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithostatus", "failed");
+      i2cDebugResult("Status", "failed");
     }
     return;
   }
@@ -168,7 +169,7 @@ void sendQueryStatus(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithostatus", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("Status", i2cBufToString(i2cbuf, result));
     }
   }
 
@@ -503,7 +504,7 @@ void sendQuery31DA(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("itho31DA", "failed");
+      i2cDebugResult("31DA", "failed");
     }
     return;
   }
@@ -512,7 +513,7 @@ void sendQuery31DA(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("itho31DA", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("31DA", i2cBufToString(i2cbuf, result));
     }
   }
 
@@ -655,7 +656,7 @@ void sendQuery31D9(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("itho31D9", "failed");
+      i2cDebugResult("31D9", "failed");
     }
     return;
   }
@@ -664,7 +665,7 @@ void sendQuery31D9(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("itho31D9", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("31D9", i2cBufToString(i2cbuf, result));
     }
   }
 
@@ -765,7 +766,7 @@ void sendQueryCounters(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithocounters", "send i2c command failed");
+      i2cDebugResult("Counters", "failed");
     }
     return;
   }
@@ -774,7 +775,7 @@ void sendQueryCounters(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithocounters", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("Counters", i2cBufToString(i2cbuf, result));
     }
   }
 

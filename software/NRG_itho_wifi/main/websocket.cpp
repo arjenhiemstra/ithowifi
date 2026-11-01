@@ -1,5 +1,6 @@
 #include "websocket.h"
 #include "managers/SecureWebCommLite.h"
+#include "ithodevice/i2c_service.h"
 
 static std::unordered_map<uint32_t, std::string> g_wsBuffers;
 static SemaphoreHandle_t g_wsBuffersMutex = xSemaphoreCreateMutex();
@@ -460,32 +461,36 @@ void handle_ws_message(JsonObject root)
       }
       break;
     }
-    case 4210:
-      sendQueryCounters(true);
-      break;
     case 0xCE30:
       if (root["ithotemptemp"].is<int16_t>() &&
           root["ithotemp"].is<int16_t>() &&
           root["ithotimestamp"].is<uint32_t>())
       {
-        setSettingCE30(root["ithotemptemp"].as<int16_t>(),
-                       root["ithotemp"].as<int16_t>(),
-                       root["ithotimestamp"].as<uint32_t>(),
-                       true);
+        const int16_t temptemp = root["ithotemptemp"].as<int16_t>();
+        const int16_t temp = root["ithotemp"].as<int16_t>();
+        const uint32_t until = root["ithotimestamp"].as<uint32_t>();
+        i2cQueueAddCmd([temptemp, temp, until]()
+                       { setSettingCE30(temptemp, temp, until, true); });
       }
       break;
     case 0xC000:
       if (root["itho_c000_speed1"].is<uint8_t>() &&
           root["itho_c000_speed2"].is<uint8_t>())
       {
-        sendCO2speed(root["itho_c000_speed1"].as<uint8_t>(),
-                     root["itho_c000_speed2"].as<uint8_t>());
+        const uint8_t s1 = root["itho_c000_speed1"].as<uint8_t>();
+        const uint8_t s2 = root["itho_c000_speed2"].as<uint8_t>();
+        i2cQueueAddCmd([s1, s2]()
+                       { sendCO2speed(s1, s2);
+                         i2cDebugResult("CO2 speed", "sent"); });
       }
       break;
     case 0x9298:
       if (root["itho_9298_val"].is<uint16_t>())
       {
-        sendCO2value(root["itho_9298_val"].as<uint16_t>());
+        const uint16_t v = root["itho_9298_val"].as<uint16_t>();
+        i2cQueueAddCmd([v]()
+                       { sendCO2value(v);
+                         i2cDebugResult("CO2 value", "sent"); });
       }
       break;
     case 4030:
@@ -501,6 +506,34 @@ void handle_ws_message(JsonObject root)
                        true);
       }
       break;
+    }
+  }
+
+  // ---------- Low level I2C commands (debug page), results via i2cDebugResult ----------
+  if (root["i2cdebug"].is<const char *>())
+  {
+    const std::string cmd = root["i2cdebug"].as<const char *>();
+    i2cQueueAddCmd([cmd]()
+                   { i2cDebugCommand(cmd); });
+  }
+  if (root["i2craw"].is<JsonObject>())
+  {
+    JsonObject raw = root["i2craw"];
+    const uint16_t dest = raw["dest"] | 0;
+    const uint32_t msgClass = raw["class"] | 0x10000;
+    const uint8_t type = raw["type"] | 0;
+    uint8_t buf[i2csvc::MAX_DATA];
+    size_t n = 0;
+    if (dest == 0 || dest > 0xFF || (dest & 1) || msgClass > 0xFFFF || type < i2csvc::TYPE_QUERY || type > i2csvc::TYPE_WRITE ||
+        !i2csvc::parseHex(raw["data"] | "", buf, sizeof(buf), n))
+    {
+      i2cDebugResult("Send", "invalid input");
+    }
+    else
+    {
+      const std::vector<uint8_t> data(buf, buf + n);
+      i2cQueueAddCmd([dest, msgClass, type, data]()
+                     { i2cServiceRaw(dest, msgClass, type, data); });
     }
   }
 
