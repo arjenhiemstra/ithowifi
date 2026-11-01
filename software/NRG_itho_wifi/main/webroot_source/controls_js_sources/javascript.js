@@ -678,7 +678,7 @@ const messageHandlers = {
       wait_setpoint: 'Set the Spider to ' + d.target + ' \u00B0C now and leave it there. Most Spiders are found within a minute or two, some take up to 15 minutes.',
       wait_heater: 'Spider ' + d.spider + ' found. Listening for its heater (up to 12 minutes)...',
       done: 'Done: Spider ' + d.spider + ' controls heater ' + d.heater + ' (RF device slot ' + d.slot + '). Set the Spider back to your normal temperature, on the Spider or in the table below.',
-      done_zone_set: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. A new setpoint is sent to the zone controller. Set the Spider back to your normal temperature.',
+      done_zone_set: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. A new setpoint is sent to the zone controller; if the Spider overrules it, use Bind as gateway instead. Set the Spider back to your normal temperature.',
       done_zone: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. Its values can be read, but its zone is unknown, so the setpoint cannot be set this way; use Bind as gateway if the Spider offers it. Set the Spider back to your normal temperature.',
       timeout: 'Timed out without a result. Start again.',
       cancelled: 'Cancelled.',
