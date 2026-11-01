@@ -679,7 +679,7 @@ const messageHandlers = {
       wait_setpoint: 'Set the Spider to ' + d.target + ' \u00B0C now and leave it there. Most Spiders are found within a minute or two, some take up to 15 minutes.',
       wait_heater: 'Spider ' + d.spider + ' found. Listening for its heater (up to 12 minutes)...',
       done: 'Done: Spider ' + d.spider + ' controls heater ' + d.heater + ' (RF device slot ' + d.slot + '). Set the Spider back to your normal temperature, on the Spider or in the table below.',
-      done_zone_set: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. A new setpoint is sent to the zone controller. Set the Spider back to your normal temperature.',
+      done_zone_set: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. A new setpoint is sent to the zone controller; if the Spider overrules it, use Bind as gateway instead. Set the Spider back to your normal temperature.',
       done_zone: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. Its values can be read, but its zone is unknown, so the setpoint cannot be set this way; use Bind as gateway if the Spider offers it. Set the Spider back to your normal temperature.',
       timeout: 'Timed out without a result. Start again.',
       cancelled: 'Cancelled.',
@@ -6303,22 +6303,25 @@ var html_remotessetup = `
       <li><strong>Discovery</strong>: for a Spider without gateway pairing, or if you do not want to change its pairing.
         Nothing changes on the Spider: the add-on sends a new setpoint as if it came from the Spider's heater, or for a
         Spider on an AutoTemp, as the Spider to the AutoTemp. A Spider only listens briefly after it transmits, so a new
-        setpoint can take several minutes to arrive.</li>
+        setpoint can take several minutes to arrive. In some setups, for example a Spider on an AutoTemp, the Spider
+        sends its own setpoint again and overrules the new one. For those setups Bind as gateway is the only real
+        option.</li>
     </ul>
-    <p>Discovery: press Start and set the Spider to the temperature shown (a random value between 21.5 and 24 &deg;C).
-      The add-on recognises the Spider by that value, finds the heater or AutoTemp it is bound to and adds the Spider as
-      a monitor-only RF device. Your heating may switch on during discovery.</p>
-    <div class="pure-control-group">
-      <label for="spider_disc_start">Spider discovery</label>
-      <button id="spider_disc_start" class="pure-button">Start</button>&nbsp;<button id="spider_disc_cancel"
-        class="pure-button">Cancel</button>&nbsp;<span id="spider_disc_status"></span>
-    </div>
     <p>Bind as gateway: press the button and within 3 minutes pair the Spider with its gateway (house) symbol, see the
       Spider manual. Other pairing requests are ignored.</p>
     <div class="pure-control-group">
       <label for="spider_gw_bind">Spider gateway</label>
       <button id="spider_gw_bind" class="pure-button">Bind as gateway</button>
     </div>
+    <p>Discovery: press Start and set the Spider to the temperature shown (a random value between 21.5 and 24 &deg;C).
+      The add-on recognises the Spider by that value, finds the heater or AutoTemp it is bound to and adds the Spider as
+      a monitor-only RF device. Your heating may switch on during discovery.</p>
+    <div class="pure-control-group">
+      <label for="spider_disc_start">Spider discovery</label>
+      <button id="spider_disc_start" class="pure-button">Start</button>&nbsp;<button id="spider_disc_cancel"
+        class="pure-button">Cancel</button>
+    </div>
+    <p id="spider_disc_status"></p>
     <table id="SpiderTable" class="pure-table pure-table-bordered" style="text-align: center;"></table>
     <p id="spider_set_status"></p>
   </fieldset>
