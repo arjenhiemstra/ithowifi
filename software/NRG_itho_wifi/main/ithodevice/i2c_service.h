@@ -183,7 +183,7 @@ namespace i2csvc
   {
     for (size_t i = 0; t && i < t->count; i++)
       if (t->texts[i].code == code)
-        return t->texts[i].text;
+        return t->texts[i].label < ithoFaultLabelsLength ? ithoFaultLabels[t->texts[i].label] : nullptr;
     return nullptr;
   }
 
