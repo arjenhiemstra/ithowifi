@@ -1,5 +1,6 @@
 #include <Arduino.h> //fix to prevent INADDR_NONE preprocessor issues
 #include <new>
+#include <esp_heap_caps.h>
 #include "notifyClients.h"
 
 
@@ -14,7 +15,7 @@ size_t content_len = 0;
 void notifyClients(const char *message)
 {
   yield();
-  if (ESP.getFreeHeap() < 80000)
+  if (heap_caps_get_free_size(MALLOC_CAP_8BIT) < 20000)
     return; // skip broadcast when heap is low to prevent fragmentation spiral
 
   if (xSemaphoreTake(mutexWSsend, (TickType_t)100 / portTICK_PERIOD_MS) == pdTRUE)
@@ -28,7 +29,7 @@ void notifyClients(const char *message)
 
 void notifyClients(JsonObject obj)
 {
-  if (ESP.getFreeHeap() < 80000)
+  if (heap_caps_get_free_size(MALLOC_CAP_8BIT) < 20000)
   {
     obj.clear();
     return;

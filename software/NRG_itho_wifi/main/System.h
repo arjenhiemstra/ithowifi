@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include "esp_mac.h"
+#include <esp_heap_caps.h>
 
 /**
   System Class.

@@ -454,13 +454,13 @@ void mqttHomeAssistantDiscovery()
   // single allocation can land. Thresholds are loose on purpose — the real
   // safety net is the try/catch around the build below, which catches the
   // case where fragmentation tips us over mid-run. A healthy CVE-Silent
-  // sits around 140 KB free / 43 KB largest block in steady state, so the
+  // sits around 80 KB usable free / 43 KB largest block in steady state, so the
   // floor must stay well under that to avoid locking out healthy devices.
   // Clear the trigger flag here too so a persistently low-heap device
   // doesn't spam the log on every TaskMQTT iteration.
   size_t largestBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
-  size_t totalFree = ESP.getFreeHeap();
-  if (totalFree < 60000 || largestBlock < 20000)
+  size_t totalFree = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  if (totalFree < 30000 || largestBlock < 20000)
   {
     W_LOG("HAD: skipping HA Discovery, heap too tight (largest block %lu, total free %lu)",
           (unsigned long)largestBlock, (unsigned long)totalFree);

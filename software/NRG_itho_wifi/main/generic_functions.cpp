@@ -3,6 +3,7 @@
 #include "tasks/task_cc1101.h"
 #include "cc1101/spider_protocol.h"
 #include <HTTPUpdate.h>
+#include <esp_heap_caps.h>
 
 // MAX_FIRMWARE_HTTPS_RESPONSE_SIZE is normally injected by build_script.py based
 // on the actual firmware.json size + headroom. This fallback only applies if the
@@ -366,6 +367,9 @@ void getDeviceInfoJSON(JsonObject root)
   // (reboot pending), -2=error. The HA discovery val_tpl derives
   // in_progress / update_percentage from this single integer.
   root["ota_progress"] = static_cast<int>(otaUpdateProgress);
+  root["heap_free"] = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  root["heap_min_free"] = heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT);
+  root["heap_max_block"] = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
   root["itho_rf_standalone"] = systemConfig.itho_rf_standalone;
   root["itho_control_interface"] = systemConfig.itho_control_interface;
   root["itho_rf_co2_remote_idx"] = systemConfig.itho_rf_co2_remote_idx;
