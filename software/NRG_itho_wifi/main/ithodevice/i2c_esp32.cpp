@@ -8,10 +8,7 @@ void i2cQueueAddCmd(const std::function<void()> func)
 {
   if (i2cManager.cmd_queue.size() >= I2C_CMD_QUEUE_MAX_SIZE)
   {
-    log_msg input;
-    input.code = SYSLOG_WARNING;
-    input.msg = "Warning: i2c_cmd_queue overflow";
-    syslog_queue.push_back(input);
+    W_LOG("Warning: i2c_cmd_queue overflow");
     return;
   }
   i2cManager.queueAdd(func);
