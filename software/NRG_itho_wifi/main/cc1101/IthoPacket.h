@@ -227,3 +227,12 @@ public:
   uint8_t dataDecoded[MAX_DECODED]{};
   uint8_t length{0};
 };
+
+// Source of a 31D9/31DA status frame: addr0, else addr2. A fan sends its own address in both, so when
+// both are set but differ, one has a bit error that passed the checksum: 0, drop the frame (#406).
+inline uint32_t ithoStatusSourceId(uint32_t deviceId0, uint32_t deviceId2)
+{
+  if (deviceId0 != 0 && deviceId2 != 0 && deviceId0 != deviceId2)
+    return 0;
+  return deviceId0 != 0 ? deviceId0 : deviceId2;
+}
