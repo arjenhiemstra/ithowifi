@@ -2400,19 +2400,9 @@ void IthoCC1101::handleTimer(IthoPacket *packetPtr)
 
 void IthoCC1101::handle31D9(IthoPacket *packetPtr)
 {
-  uint32_t tempID = 0;
-  if (packetPtr->deviceId0 != 0)
-  {
-    tempID = packetPtr->deviceId0;
-  }
-  else if (packetPtr->deviceId2 != 0)
-  {
-    tempID = packetPtr->deviceId2;
-  }
-  else
-  {
+  const uint32_t tempID = ithoStatusSourceId(packetPtr->deviceId0, packetPtr->deviceId2);
+  if (tempID == 0)
     return;
-  }
 
   uint8_t byte0 = tempID >> 16 & 0xFF;
   uint8_t byte1 = tempID >> 8 & 0xFF;
@@ -2445,19 +2435,9 @@ void IthoCC1101::handle31D9(IthoPacket *packetPtr)
 
 void IthoCC1101::handle31DA(IthoPacket *packetPtr)
 {
-  uint32_t tempID = 0;
-  if (packetPtr->deviceId0 != 0)
-  {
-    tempID = packetPtr->deviceId0;
-  }
-  else if (packetPtr->deviceId2 != 0)
-  {
-    tempID = packetPtr->deviceId2;
-  }
-  else
-  {
+  const uint32_t tempID = ithoStatusSourceId(packetPtr->deviceId0, packetPtr->deviceId2);
+  if (tempID == 0)
     return;
-  }
 
   uint8_t byte0 = tempID >> 16 & 0xFF;
   uint8_t byte1 = tempID >> 8 & 0xFF;
