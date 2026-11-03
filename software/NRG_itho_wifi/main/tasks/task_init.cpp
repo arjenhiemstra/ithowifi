@@ -16,11 +16,6 @@ void TaskInit(void *pvParameters)
 
   hardwareInit();
 
-  if (hardwareManager.isSnifferCapable())
-  {
-    i2cSnifferInit(false);
-  }
-
   setPhase(PHASE_HW);
 
   // Boot is complete once TaskWeb comes up (PHASE_WEB). Bounded wait so a stalled
