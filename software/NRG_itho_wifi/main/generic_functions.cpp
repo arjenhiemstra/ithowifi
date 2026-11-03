@@ -1194,7 +1194,8 @@ int compareVersions(const std::string &v1, const std::string &v2)
 
 void checkFirmwareUpdate()
 {
-  WiFiClientSecure *secclient = new WiFiClientSecure;
+  // declared before https: ~HTTPClient() may still call stop() on the client
+  std::unique_ptr<WiFiClientSecure> secclient(new (std::nothrow) WiFiClientSecure);
   if (!secclient)
   {
     E_LOG("SYS: firmware check - failed to allocate WiFiClientSecure");
@@ -1203,11 +1204,11 @@ void checkFirmwareUpdate()
   secclient->setInsecure(); // set secure client without certificate
 
   HTTPClient https;
+  https.setReuse(false); // end() then closes the TLS session
 
   if (!https.begin(*secclient, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
   {
     E_LOG("SYS: firmware check - https.begin() failed");
-    delete secclient;
     return;
   }
 
@@ -1215,29 +1216,22 @@ void checkFirmwareUpdate()
   if (httpCode <= 0)
   {
     E_LOG("SYS: firmware check - GET failed: %s", https.errorToString(httpCode).c_str());
-    https.end();
-    delete secclient;
     return;
   }
   if (httpCode != HTTP_CODE_OK)
   {
     E_LOG("SYS: firmware check - HTTP %d", httpCode);
-    https.end();
-    delete secclient;
     return;
   }
   if (https.getSize() >= MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
   {
     E_LOG("SYS: firmware check - response too large: %d", https.getSize());
-    https.end();
-    delete secclient;
     return;
   }
 
   String payload = https.getString();
   // close the TLS session first, its buffers are the largest allocation here
   https.end();
-  delete secclient;
 
   JsonDocument filter;
   filter["hw_rev"][hardwareManager.hw_revision] = true;
