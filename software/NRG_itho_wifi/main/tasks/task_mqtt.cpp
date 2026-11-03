@@ -231,15 +231,6 @@ void mqttInit()
   }
 }
 
-// Grow the MQTT buffer if needed. Never shrink — repeated realloc
-// cycles between the default and a larger size fragment the heap over
-// thousands of publish cycles per day.
-static void mqttEnsureBufferSize(size_t len)
-{
-  if (mqttClient.getBufferSize() < len)
-    mqttClient.setBufferSize(len);
-}
-
 void mqttSendStatus()
 {
 
@@ -252,7 +243,6 @@ void mqttSendStatus()
 
   size_t len = measureJson(root);
 
-  mqttEnsureBufferSize(len);
   if (mqttClient.beginPublish(ihtostatustopic, len, true))
   {
     serializeJson(root, mqttClient);
@@ -308,14 +298,11 @@ void mqttSendRFStatus()
         xSemaphoreGive(rfStatusMutex);
       }
       size_t len = measureJson(root);
-      if (mqttClient.getBufferSize() < len)
-        mqttClient.setBufferSize(len);
       if (mqttClient.beginPublish(topic, len, true))
       {
         serializeJson(root, mqttClient);
         mqttClient.endPublish();
       }
-      // removed: shrink-back fragments heap over thousands of cycles
     }
 
     if (!rfStatusSources[i].measurements31D9.empty())
@@ -339,14 +326,11 @@ void mqttSendRFStatus()
         xSemaphoreGive(rfStatusMutex);
       }
       size_t len = measureJson(root);
-      if (mqttClient.getBufferSize() < len)
-        mqttClient.setBufferSize(len);
       if (mqttClient.beginPublish(topic, len, true))
       {
         serializeJson(root, mqttClient);
         mqttClient.endPublish();
       }
-      // removed: shrink-back fragments heap over thousands of cycles
     }
   }
 }
