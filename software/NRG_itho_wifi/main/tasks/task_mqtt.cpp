@@ -68,7 +68,7 @@ void TaskMQTT(void *pvParameters)
   vTaskDelete(xTempTask);
 }
 
-void MQTTSendBuffered(JsonDocument doc, const char *topic)
+void MQTTSendBuffered(const JsonDocument &doc, const char *topic)
 {
   mqttClient.beginPublish(topic, measureJson(doc), true);
   BufferingPrint bufferedClient(mqttClient, 32);
