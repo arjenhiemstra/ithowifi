@@ -59,18 +59,23 @@ static void sendJsonResponse(AsyncWebServerRequest *request, JsonDocument &doc, 
                      {
     response->addHeader("Access-Control-Allow-Origin", "*");
     response->setCode(statusCode);
-    serializeJson(doc, *response); });
+    serializeJson(doc, *response); }, measureJson(doc));
 }
 
+// Writes the envelope around data instead of copying data into an envelope document
 static void sendSuccess(AsyncWebServerRequest *request, JsonDocument &data, int statusCode = 200)
 {
-  JsonDocument doc;
-  doc["status"] = "success";
-  doc["data"] = data;
+  static const char prefix[] = "{\"status\":\"success\",\"data\":";
   time_t now;
   time(&now);
-  doc["data"]["timestamp"] = now;
-  sendJsonResponse(request, doc, statusCode);
+  data["timestamp"] = now;
+  sendStreamResponse(request, "application/json", [&data, statusCode](AsyncResponseStream *response)
+                     {
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    response->setCode(statusCode);
+    response->print(prefix);
+    serializeJson(data, *response);
+    response->print('}'); }, sizeof(prefix) - 1 + measureJson(data) + 1);
 }
 
 static void sendFail(AsyncWebServerRequest *request, const char *reason, int statusCode = 400)

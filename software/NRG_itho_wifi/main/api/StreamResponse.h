@@ -10,13 +10,15 @@
 
 // The stream's cbuf throws std::bad_alloc when the heap runs out, which aborts the async_tcp task.
 // Build the response with fill(response) and answer 503 instead.
+// Pass the content length as bufferSize when known: the stream grows by the missing bytes on every
+// write that does not fit (allocate, copy, free), which for JSON means once per character.
 template <typename Fill>
-void sendStreamResponse(AsyncWebServerRequest *request, const char *contentType, Fill fill)
+void sendStreamResponse(AsyncWebServerRequest *request, const char *contentType, Fill fill, size_t bufferSize = RESPONSE_STREAM_BUFFER_SIZE)
 {
   AsyncResponseStream *response = nullptr;
   try
   {
-    response = request->beginResponseStream(contentType);
+    response = request->beginResponseStream(contentType, bufferSize);
     fill(response);
   }
   catch (const std::bad_alloc &)
