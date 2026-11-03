@@ -126,6 +126,7 @@ bool loadConfigFile(const char *location, const char *nvs_backup_key, const char
 
     JsonDocument root;
     DeserializationError error = deserializeJson(root, configFile);
+    configFile.close(); // LittleFS cannot replace a file that is still open, the save below needs that
     if (error)
       return false;
 
@@ -391,7 +392,13 @@ bool loadFileRemotes(const char *location, const char *filename, const char *con
       return false;
     }
 
-    bool success = deserializeRemotes(filename, config_type, configFile, remotes);
+    // Read into memory and close first: LittleFS cannot replace a file that is still open,
+    // and deserializeRemotes saves on a version mismatch
+    std::string conf(size, '\0');
+    conf.resize(configFile.readBytes(&conf[0], size));
+    configFile.close();
+
+    bool success = deserializeRemotes(filename, config_type, conf, remotes);
 
     if (!success)
     {
