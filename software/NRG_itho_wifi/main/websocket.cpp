@@ -361,7 +361,7 @@ void handle_ws_message(JsonObject root)
 
       // Apply fw_check: trigger firmware update check soon when enabled
       if (systemConfig.fw_check)
-        getFWupdateInfo = millis() - 24UL * 60 * 60 * 1000 - 1;
+        scheduleFirmwareCheck(30UL * 1000);
     }
   }
   if (root["logsettings"].is<JsonObject>())

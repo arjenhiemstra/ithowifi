@@ -1,5 +1,6 @@
 #include "api/WebAPIv2Rest.h"
 #include "api/WebAPIv2.h"
+#include "api/StreamResponse.h"
 #include "config/SystemConfig.h"
 #include "globals.h"
 #include "generic_functions.h"
@@ -51,26 +52,14 @@ static bool checkRestAuth(AsyncWebServerRequest *request)
   return checkAuthOnly(request);
 }
 
-// Serialize a JSON response via AsyncResponseStream. If heap is
-// exhausted (e.g. during an OTA download), the cbuf::resize inside
-// the stream throws std::bad_alloc which would crash the async_tcp
-// task and wedge the entire network stack. Catch it and fall back
-// to a minimal 503 plain-text response instead.
+// Serialize a JSON response via AsyncResponseStream (503 when the heap is exhausted, see StreamResponse.h)
 static void sendJsonResponse(AsyncWebServerRequest *request, JsonDocument &doc, int statusCode)
 {
-  try
-  {
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
+  sendStreamResponse(request, "application/json", [&doc, statusCode](AsyncResponseStream *response)
+                     {
     response->addHeader("Access-Control-Allow-Origin", "*");
     response->setCode(statusCode);
-    serializeJson(doc, *response);
-    request->send(response);
-  }
-  catch (const std::bad_alloc &)
-  {
-    E_LOG("API: heap exhausted, returning 503 (free:%d block:%u)", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
-    request->send(503, "text/plain", "Service unavailable (low memory)");
-  }
+    serializeJson(doc, *response); });
 }
 
 static void sendSuccess(AsyncWebServerRequest *request, JsonDocument &data, int statusCode = 200)

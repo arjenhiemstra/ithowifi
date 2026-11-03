@@ -4,6 +4,7 @@
 #include "tasks/boot_phases.h"
 #include "../sys_log.h"
 #include "generic_functions.h"
+#include <esp_heap_caps.h>
 
 #define TASK_SYS_CONTROL_PRIO 6
 // globals
@@ -22,6 +23,13 @@ bool restest = false;
 bool i2c_safe_guard_log = true;
 unsigned long getFWupdateInfo = 0;
 struct firmwareinfo firmwareInfo;
+
+#define FW_CHECK_INTERVAL_MS (24UL * 60 * 60 * 1000)
+#define FW_CHECK_RETRY_MS (10UL * 60 * 1000)
+// Estimate: the TLS handshake takes ~40-45 KB (two 16.7 KB record buffers), keep room for the web server.
+// Byte-addressable heap only: ESP.getFreeHeap() also counts ~60 KB of IRAM that malloc cannot use.
+#define FW_CHECK_MIN_FREE_HEAP 45000
+#define FW_CHECK_MIN_HEAP_BLOCK 17000
 
 // locals
 StaticTask_t xTaskSysControlBuffer;
@@ -412,11 +420,28 @@ void execSystemControlTasks()
     N_LOG("SYS: SHT3x sensor reset: executed");
     jsonSysmessage("i2c_sht_reset", "Done");
   }
-  if (WiFi.status() == WL_CONNECTED && systemConfig.fw_check && (millis() - getFWupdateInfo > 24 * 60 * 60 * 1000)) // 24hr
+  if (WiFi.status() == WL_CONNECTED && systemConfig.fw_check && (millis() - getFWupdateInfo > FW_CHECK_INTERVAL_MS))
   {
     getFWupdateInfo = millis();
-    checkFirmwareUpdate();
+    const bool otaBusy = otaUpdateProgress >= 0 && otaUpdateProgress <= 100;
+    const size_t freeHeap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    const size_t maxBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
+    if (otaBusy || freeHeap < FW_CHECK_MIN_FREE_HEAP || maxBlock < FW_CHECK_MIN_HEAP_BLOCK)
+    {
+      W_LOG("SYS: firmware check postponed, %s (free:%u block:%u)", otaBusy ? "OTA in progress" : "low memory", freeHeap, maxBlock);
+      scheduleFirmwareCheck(FW_CHECK_RETRY_MS);
+    }
+    else
+    {
+      checkFirmwareUpdate();
+    }
   }
+}
+
+// Run the firmware check delayMs from now instead of at the next 24 hour interval
+void scheduleFirmwareCheck(unsigned long delayMs)
+{
+  getFWupdateInfo = millis() - FW_CHECK_INTERVAL_MS + delayMs;
 }
 
 void updateQueue()
