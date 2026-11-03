@@ -168,6 +168,7 @@ void execLogAndConfigTasks()
           reconnect = true;
         }
       }
+      configFile.close(); // LittleFS cannot replace a file that is still open
     }
 
     if (saveWifiConfig("flash"))
