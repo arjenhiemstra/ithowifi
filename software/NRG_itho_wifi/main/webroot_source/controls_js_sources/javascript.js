@@ -2360,6 +2360,8 @@ var remtypes = [
   ["Orcon 15RF", 0x6710, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["Orcon CO2", 0x6711, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
 ];
+// Bi-directional remotes need a join handshake that only exists over RF, not for virtual remotes (#405)
+var remtypesBidirectional = [0x22F5, 0x22F4, 0x12A0, 0x1298, 0x22F2];
 
 var remfuncs = [
   ["Receive", 1],
@@ -2667,6 +2669,7 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
         var wizardHru = isWizard && wizardDeviceCategory === 'hru250_300';
         for (const item of remtypes) {
           if (wizardHru && item[1] !== 0x22F1 && item[1] !== 0x22F3) continue;
+          if (remfunc == 2 && remtypesBidirectional.includes(item[1]) && item[1] != cellValue) continue;
           var option = document.createElement('option');
           option.value = item[1];
           option.text = item[0];
