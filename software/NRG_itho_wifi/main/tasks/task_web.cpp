@@ -2,6 +2,7 @@
 #include "tasks/boot_phases.h"
 #include "api/OpenAPI.h"
 #include "api/WebAPIv2Rest.h"
+#include "api/StreamResponse.h"
 
 #include "webroot/controls_js_gz.h"
 #include "webroot/edit_html_gz.h"
@@ -164,7 +165,7 @@ void webServerInit()
 
   server.on("/general.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    AsyncResponseStream *response = request->beginResponseStream("application/javascript");
+    sendStreamResponse(request, "application/javascript", [](AsyncResponseStream *response) {
     response->addHeader("Server", "Itho WiFi Web Server");
 
     int wizardStep = 0;
@@ -188,13 +189,12 @@ void webServerInit()
     response->print("'; document.addEventListener('DOMContentLoaded', function() { var h = $id('headingindex'); h.textContent = hostname; h.href = 'http://' + hostname + '.local'; var m = $id('main'); m.insertAdjacentHTML('beforeend', ");
     response->print(wizardStep > 0 ? "html_wizard" : "html_index");
     response->print("); execScripts(m); });");
-
-    request->send(response); })
+    }); })
       .setFilter(ON_STA_FILTER);
 
   server.on("/general.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    AsyncResponseStream *response = request->beginResponseStream("application/javascript");
+    sendStreamResponse(request, "application/javascript", [](AsyncResponseStream *response) {
     response->addHeader("Server", "Itho WiFi Web Server");
 
     bool isFirstBoot = (strlen(wifiConfig.ssid) == 0);
@@ -227,8 +227,7 @@ void webServerInit()
     response->print("'; document.addEventListener('DOMContentLoaded', function() { var h = $id('headingindex'); h.textContent = hostname; h.href = 'http://' + hostname + '.local'; var m = $id('main'); m.insertAdjacentHTML('beforeend', ");
     response->print(showWizard ? "html_wizard" : "html_wifisetup");
     response->print("); execScripts(m); });");
-
-    request->send(response); })
+    }); })
       .setFilter(ON_AP_FILTER);
 
   server.on("/favicon.png", HTTP_GET, [](AsyncWebServerRequest *request)

@@ -74,7 +74,7 @@ void TaskConfigAndLog(void *pvParameters)
   SystemConfigLoaded = loadSystemConfig("flash");
   ithoQueue.set_itho_fallback_speed(systemConfig.itho_fallback);
   if (systemConfig.fw_check)
-    getFWupdateInfo = 25 * 60 * 60 * 1000; // trigger firmware update check after boot
+    scheduleFirmwareCheck(2UL * 60 * 1000); // not right at boot, when the web UI is often being loaded
   if (systemConfig.i2cmenu)
     W_LOG("I2C: debug mode is on (halts I2C on errors), turn it off when debugging is done");
   if (systemConfig.i2c_sniffer && hardwareManager.i2c_sniffer_capable)
