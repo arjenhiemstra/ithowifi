@@ -6,7 +6,8 @@ typedef enum
 {
     ACK = 0x100,
     START = 0x200,
-    STOP = 0x400
+    STOP = 0x400,
+    RECEIVED = 0x800 // with START: a reply the add-on received during a pause, not sniffed off the bus
 } i2c_state_t;
 
 typedef uint16_t gpdata_t;
@@ -135,7 +136,7 @@ static void sniffer_task(void *arg)
             if (x & START)
             {
                 i2cSnifferProcessBuf(buffer);
-                buffer += "[";
+                buffer += (x & RECEIVED) ? "rx[" : "[";
             }
             if (x & STOP)
             {
@@ -264,7 +265,7 @@ void i2cSnifferResume()
     update_sda_intr();
 }
 
-// A reply the add-on received during a pause, fed to the sniffer task as if it was sniffed
+// A reply the add-on received during a pause, fed to the sniffer task; logged as rx[..] to tell it from bus traffic
 void i2cSnifferLogReceived(const uint8_t *buf, size_t len)
 {
     auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
@@ -272,7 +273,7 @@ void i2cSnifferLogReceived(const uint8_t *buf, size_t len)
         return;
     for (size_t i = 0; i < len; i++)
     {
-        uint32_t ev = buf[i] | ACK | (i == 0 ? START : 0);
+        uint32_t ev = buf[i] | ACK | (i == 0 ? START | RECEIVED : 0);
         if (xQueueSend(gpio_evt_queue, &ev, pdMS_TO_TICKS(10)) != pdTRUE)
             break;
     }

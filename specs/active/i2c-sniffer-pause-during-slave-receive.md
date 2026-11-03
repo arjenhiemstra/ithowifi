@@ -15,7 +15,7 @@ With the safe guard on, the interrupt is off for 7.5 s after each sensor read an
 
 ## Fix
 
-`i2cSlaveReceive` pauses the sniffer interrupt before it installs the slave driver and resumes it after removing the driver. The interrupt is on only while the sniffer is enabled and not paused, so an enable during a pause (the safe guard's timer, the interrupt re-arming itself after a transaction, the debug toggles) takes effect when the pause ends. Hardware that is not sniffer capable is untouched. On resume the interrupt's last pin state is read again, since edges during the pause were not seen. With the sniffer log on, the received reply is fed to the sniffer task as if it was sniffed, so the log still shows it.
+`i2cSlaveReceive` pauses the sniffer interrupt before it installs the slave driver and resumes it after removing the driver. The interrupt is on only while the sniffer is enabled and not paused, so an enable during a pause (the safe guard's timer, the interrupt re-arming itself after a transaction, the debug toggles) takes effect when the pause ends. Hardware that is not sniffer capable is untouched. On resume the interrupt's last pin state is read again, since edges during the pause were not seen. With the sniffer log on, the received reply is fed to the sniffer task, so the log still shows it. It is logged as `rx[..]` instead of `[..]`, so the add-on's copy can be told apart from bus traffic.
 
 ## Acceptance Criteria
 
