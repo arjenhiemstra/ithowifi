@@ -10,7 +10,4 @@ NetworkManager::NetworkManager()
 
 void NetworkManager::initialize()
 {
-  // Configure secure client to skip CA verification
-  // This is set once during system initialization
-  secureClient.setInsecure();
 }

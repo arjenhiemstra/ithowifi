@@ -68,7 +68,7 @@ void TaskSysControl(void *pvParameters)
 
   waitPhase(PHASE_CONFIG); // needs systemConfig/wifiConfig/logConfig loaded
 
-  networkManager.initialize(); // Initialize network clients (sets secure client to skip CA verification)
+  networkManager.initialize();
 
   delay(2000);
   wifiInit();

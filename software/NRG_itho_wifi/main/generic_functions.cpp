@@ -1234,25 +1234,26 @@ void checkFirmwareUpdate()
     return;
   }
 
-  String payloadString = https.getString().c_str();
-  const char *payload = payloadString.c_str();
+  String payload = https.getString();
+  // close the TLS session first, its buffers are the largest allocation here
+  https.end();
+  delete secclient;
 
+  JsonDocument filter;
+  filter["hw_rev"][hardwareManager.hw_revision] = true;
   JsonDocument root;
-  DeserializationError error = deserializeJson(root, payload);
+  DeserializationError error = deserializeJson(root, payload, DeserializationOption::Filter(filter));
+  payload = String();
   if (error)
   {
     E_LOG("SYS: firmware check - JSON parse error: %s", error.c_str());
-    https.end();
-    delete secclient;
     return;
   }
 
   JsonVariant hwNode = root["hw_rev"][hardwareManager.hw_revision];
   if (hwNode.isNull())
   {
-    E_LOG("SYS: firmware check - no entry for hw_rev %d in firmware.json", hardwareManager.hw_revision);
-    https.end();
-    delete secclient;
+    E_LOG("SYS: firmware check - no entry for hw_rev %s in firmware.json", hardwareManager.hw_revision);
     return;
   }
 
@@ -1265,9 +1266,6 @@ void checkFirmwareUpdate()
   D_LOG("SYS: latest_fw:%s, latest_beta:%s", firmwareInfo.latest_fw, firmwareInfo.latest_beta_fw);
   D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);
   // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful
-
-  https.end();
-  delete secclient;
 }
 
 volatile int otaUpdateProgress = -1; // -1=idle, 0-100=progress, 101=done, -2=error
