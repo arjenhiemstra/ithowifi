@@ -277,7 +277,7 @@ uint16_t serializeRemotes(const char *filename, const IthoRemote &remotes, TDst 
     return 0;
 
   std::string rootName = tempStr.substr(1, static_cast<char>(tempStr.find(".json")));
-  remotes.get(root, rootName.c_str());
+  remotes.get(root, rootName.c_str(), true);
 
   return serializeJson(doc, dst);
 }
@@ -345,7 +345,7 @@ bool deserializeRemotes(const char *filename, const char *config_type, TDst &src
   return true;
 }
 
-// 12 remotes with all live values take about 6.3 KB
+// Saves only hold the config (at most about 2.6 KB); files from before that also hold live values, up to about 6.3 KB
 #define REMOTES_FILE_MAX_SIZE 8192
 
 bool loadRemotesConfig(const char *location)
