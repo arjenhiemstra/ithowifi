@@ -1,4 +1,5 @@
 #include "i2c_sniffer.h"
+#include "mqtt_debug.h"
 
 #define I2C_SAFE_GAURD_TIMER 15 // delay in ms to execute safe guard commands
 
@@ -204,6 +205,7 @@ void i2cSnifferProcessBuf(std::string &buffer)
                 notifyClients(root.as<JsonObject>());
             }
             D_LOG(buffer.c_str());
+            mqttDebugPush(MqttDebugChannel::I2C, buffer.c_str());
         }
     }
 

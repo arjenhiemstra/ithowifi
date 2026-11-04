@@ -6,6 +6,7 @@
 #include "api/MqttAPI.h"
 #include "ithodevice/IthoDevice.h"
 #include "generic_functions.h"
+#include "mqtt_debug.h"
 
 #define TASK_MQTT_PRIO 5
 
@@ -99,6 +100,7 @@ void execMQTTTasks()
     MQTT_conn_state = MQTT_conn_state_new;
     sysStatReq = true;
   }
+  mqttDebugService(systemConfig.mqtt_active && mqttClient.connected());
   if (mqttClient.connected())
   {
     if (sendHomeAssistantDiscovery && HADiscConfigLoaded)
