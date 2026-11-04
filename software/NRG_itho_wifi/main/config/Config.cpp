@@ -345,6 +345,9 @@ bool deserializeRemotes(const char *filename, const char *config_type, TDst &src
   return true;
 }
 
+// 12 remotes with all live values take about 6.3 KB
+#define REMOTES_FILE_MAX_SIZE 8192
+
 bool loadRemotesConfig(const char *location)
 {
   return loadFileRemotes(location, "/remotes.json", "remotesconfig", "useremconfb", remotes);
@@ -359,7 +362,7 @@ bool loadFileRemotes(const char *location, const char *filename, const char *con
 {
   if (strcmp("flash", location) == 0)
   {
-    if (ACTIVE_FS.exists(filename) && !configFileParses(filename, 4000))
+    if (ACTIVE_FS.exists(filename) && !configFileParses(filename, REMOTES_FILE_MAX_SIZE))
       quarantineConfigFile(filename);
     if (!ACTIVE_FS.exists(filename))
     {
@@ -386,7 +389,7 @@ bool loadFileRemotes(const char *location, const char *filename, const char *con
     }
 
     size_t size = configFile.size();
-    if (size > 4000)
+    if (size > REMOTES_FILE_MAX_SIZE)
     {
       E_LOG("SYS: error - %s config file size is too large", config_type);
       return false;
