@@ -12,7 +12,7 @@
 #include "CC1101Packet.h"
 
 #if !defined(MAX_NUM_OF_REMOTES)
-#define MAX_NUM_OF_REMOTES 12
+#define MAX_NUM_OF_REMOTES 20
 #endif
 struct ithoRFDevice
 {
