@@ -1185,6 +1185,14 @@ void TaskCC1101(void *pvParameters)
                 I_LOG("RFI: Auto-tracked Itho device %02X:%02X:%02X as '%s'",
                       *(lastID + 0), *(lastID + 1), *(lastID + 2), src->name);
               }
+              // The joined device only reports its status when asked, standalone mode polls by itself
+              if (systemConfig.itho_rf_standalone != 1 && systemConfig.itho_rf_status_poll == 0 && statusPollRemoteValid(remIdx))
+              {
+                systemConfig.itho_rf_status_poll = 1;
+                systemConfig.itho_rf_status_poll_idx = remIdx;
+                saveSystemConfigflag = true;
+                N_LOG("RFI: RF status request on, using remote %d", remIdx);
+              }
             }
             // Delay the confirm to let the remaining accepts from the target pass
             rf_message.once_ms(300, []()
