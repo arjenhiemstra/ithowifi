@@ -2,6 +2,7 @@
 #include "tasks/boot_phases.h"
 #include "cc1101/spider_protocol.h"
 #include "cc1101/spider_discovery.h"
+#include "mqtt_debug.h"
 
 extern bool updateMQTTRemotesInfo; // task_mqtt.cpp
 
@@ -509,6 +510,7 @@ void RFDebug(IthoPacket *packet)
   D_LOG(debugLog);
 
   logMessagejson(debugLog, RFLOG);
+  mqttDebugPush(MqttDebugChannel::RF, debugLog);
 }
 
 void toggleRemoteLLmode(const char *remotetype)
