@@ -434,7 +434,7 @@ void IthoRemote::Remote::set(JsonObject obj)
   }
 }
 
-void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index, bool human_reaadble) const
+void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index, bool human_reaadble, bool forStorage) const
 {
   obj["index"] = index;
 
@@ -471,17 +471,21 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
   }
   obj["name"] = name;
   obj["remfunc"] = remfunc;
-  obj["remfuncname"] = rem_func_to_name(remfunc);
+  if (!forStorage)
+    obj["remfuncname"] = rem_func_to_name(remfunc);
   obj["remtype"] = remtype;
-  obj["remtypename"] = rem_type_to_name(remtype);
+  if (!forStorage)
+  {
+    obj["remtypename"] = rem_type_to_name(remtype);
 
-  if (capabilities.isNull())
-  {
-    obj["capabilities"] = nullptr;
-  }
-  else
-  {
-    obj["capabilities"] = capabilities;
+    if (capabilities.isNull())
+    {
+      obj["capabilities"] = nullptr;
+    }
+    else
+    {
+      obj["capabilities"] = capabilities;
+    }
   }
   obj["bidirectional"] = bidirectional;
   if (destID[0] != 0 || destID[1] != 0 || destID[2] != 0)
@@ -505,6 +509,8 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
     if (zone != 0xFF)
       obj["zone"] = zone;
   }
+  if (forStorage)
+    return;
   if (last_cmd[0] != '\0')
     obj["last_cmd"] = last_cmd;
   // Wire-format preset list so external consumers know which commands
@@ -548,7 +554,7 @@ bool IthoRemote::set(JsonObject obj, const char *root)
   return true;
 }
 
-void IthoRemote::get(JsonObject obj, const char *root) const
+void IthoRemote::get(JsonObject obj, const char *root, bool forStorage) const
 {
   // Add "remotes" object
   JsonArray rem = obj[root].to<JsonArray>();
@@ -559,7 +565,7 @@ void IthoRemote::get(JsonObject obj, const char *root) const
 
   for (int i = 0; i < maxRemotes; i++)
   {
-    remotes[i].get(rem.add<JsonObject>(), instanceFunc, i, human_readable);
+    remotes[i].get(rem.add<JsonObject>(), instanceFunc, i, human_readable, forStorage);
   }
   obj["remfunc"] = instanceFunc;
   obj["version_of_program"] = config_struct_version;

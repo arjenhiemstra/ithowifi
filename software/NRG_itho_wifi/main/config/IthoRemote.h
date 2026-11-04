@@ -44,7 +44,7 @@ private:
     uint8_t zone{0xFF};           // Spider's zone on a zone controller (AutoTemp, ctlID), 0xFF = none
     JsonDocument capabilities;
     void set(JsonObject);
-    void get(JsonObject, RemoteFunctions instanceFunc, int index, bool human_reaadble = false) const;
+    void get(JsonObject, RemoteFunctions instanceFunc, int index, bool human_reaadble = false, bool forStorage = false) const;
     const char *rem_type_to_name(RemoteTypes type) const;
     const char *rem_func_to_name(RemoteFunctions func) const;
   };
@@ -163,7 +163,8 @@ public:
   bool configLoaded;
   char config_struct_version[4];
   bool set(JsonObject, const char *root);
-  void get(JsonObject obj, const char *root) const;
+  // forStorage: only the config, without live values and fields derived from it
+  void get(JsonObject obj, const char *root, bool forStorage = false) const;
   void reset();
   void getCapabilities(JsonObject obj) const;
   const char *rem_cmd_to_name(uint8_t code);
