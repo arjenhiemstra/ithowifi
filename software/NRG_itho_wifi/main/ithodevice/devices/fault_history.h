@@ -23,7 +23,7 @@ struct ithoFaultTable
   uint8_t count;
 };
 
-inline const char *ithoFaultLabels[]{
+inline const char *const ithoFaultLabels[]{
     "No fault", //0
     "RH sensor", //1
     "CO2 sensor", //2

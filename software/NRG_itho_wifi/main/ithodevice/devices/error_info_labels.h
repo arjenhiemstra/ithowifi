@@ -72,20 +72,20 @@ inline const std::map<uint8_t, const char *> fanHeatErrors = {
     {0XF2, "not available error"},
     {0XFF, "unknown error"}};
 
-inline struct ithoLabels ithoLabelErrors[]{
+inline const struct ithoLabels ithoLabelErrors[]{
     {"Nullptr error", "nullptr-error"},
     {"No label for device error", "no-label-for-device-error"},
     {"Version error newer than latest in firmware", "version-error-newer-than-latest-in-firmware"},
     {"No label for version error", "no-label-for-version-error"},
     {"Label out of bound error", "label-out-of-bound-error"}};
 
-inline struct ithoLabels itho31D9Labels[]{
+inline const struct ithoLabels itho31D9Labels[]{
     {"Speed status", "speed-status"},
     {"Internal fault", "internal-fault"},
     {"Frost cycle", "frost-cycle"},
     {"Filter dirty", "filter-dirty"}};
 
-inline struct ithoLabels itho31DALabels[]{
+inline const struct ithoLabels itho31DALabels[]{
     {"AirQuality (%)", "airquality_perc"},            // 0
     {"AirQbased on", "airq-based-on"},                // 1
     {"CO2level (ppm)", "co2level_ppm"},               // 2

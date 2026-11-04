@@ -15,7 +15,7 @@ inline const uint16_t itho_CVE1Bsetting24[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
 inline const uint16_t itho_CVE1Bsetting25[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 55, 69, 57, 58, 70, 71, 99, 100, 101, 102, 103, 104, 59, 60, 61, 62, 63, 64, 65, 32, 33, 34, 66, 67, 68, 37, 38, 39, 40, 30, 31, 88, 89, 90, 91, 92, 75, 81, 93, 94, 95, 96, 97, 98, 999};
 inline const uint16_t itho_CVE1Bsetting26_27[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 55, 69, 57, 58, 70, 71, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 59, 60, 61, 62, 63, 64, 65, 32, 33, 34, 66, 67, 68, 37, 38, 39, 40, 30, 31, 88, 89, 90, 91, 92, 75, 81, 93, 94, 95, 96, 97, 98, 999};
 
-inline const char *ithoCVE1BSettingsLabels[] = {
+inline const char *const ithoCVE1BSettingsLabels[] = {
     "OEM number",
     "Print version (1 is high performance)",
     "Min setting of potentiometer low (rpm)",
@@ -183,5 +183,5 @@ inline const struct ithoLabels ithoCVE1BStatusLabels[]{
     {"RelativeHumidity", "relativehumidity"},
     {"Temperature", "temperature"}};
 
-inline const uint16_t *itho1BSettingsMap[] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bsetting6, itho_CVE1Bsetting7, itho_CVE1Bsetting8, itho_CVE1Bsetting9, itho_CVE1Bsetting10, itho_CVE1Bsetting11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bsetting17_20, itho_CVE1Bsetting17_20, nullptr, itho_CVE1Bsetting17_20, itho_CVE1Bsetting21, itho_CVE1Bsetting22, nullptr, itho_CVE1Bsetting24, itho_CVE1Bsetting25, itho_CVE1Bsetting26_27, itho_CVE1Bsetting26_27};
-inline const uint8_t *itho1BStatusMap[] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bstatus6, itho_CVE1Bstatus7, itho_CVE1Bstatus8, itho_CVE1Bstatus9_11, itho_CVE1Bstatus9_11, itho_CVE1Bstatus9_11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bstatus17, itho_CVE1Bstatus18, nullptr, itho_CVE1Bstatus20_21, itho_CVE1Bstatus20_21, itho_CVE1Bstatus22, nullptr, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27};
+inline const uint16_t *const itho1BSettingsMap[] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bsetting6, itho_CVE1Bsetting7, itho_CVE1Bsetting8, itho_CVE1Bsetting9, itho_CVE1Bsetting10, itho_CVE1Bsetting11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bsetting17_20, itho_CVE1Bsetting17_20, nullptr, itho_CVE1Bsetting17_20, itho_CVE1Bsetting21, itho_CVE1Bsetting22, nullptr, itho_CVE1Bsetting24, itho_CVE1Bsetting25, itho_CVE1Bsetting26_27, itho_CVE1Bsetting26_27};
+inline const uint8_t *const itho1BStatusMap[] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bstatus6, itho_CVE1Bstatus7, itho_CVE1Bstatus8, itho_CVE1Bstatus9_11, itho_CVE1Bstatus9_11, itho_CVE1Bstatus9_11, nullptr, nullptr, nullptr, nullptr, nullptr, itho_CVE1Bstatus17, itho_CVE1Bstatus18, nullptr, itho_CVE1Bstatus20_21, itho_CVE1Bstatus20_21, itho_CVE1Bstatus22, nullptr, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27, itho_CVE1Bstatus24_27};

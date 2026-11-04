@@ -5,7 +5,7 @@
 inline const uint16_t itho_AWHeatpumpsetting1[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 999};
 inline const uint16_t itho_AWHeatpumpsetting2[]{0, 1, 2, 3, 4, 5, 6, 15, 8, 9, 10, 11, 12, 13, 7, 16, 17, 999};
 
-inline const char *ithoAWHeatpumpSettingsLabels[] = {
+inline const char *const ithoAWHeatpumpSettingsLabels[] = {
     "Electricity price (cent)",
     "Gas price (cent)",
     "Fan setting",
@@ -67,5 +67,5 @@ inline const struct ithoLabels ithoAWHeatpumpStatusLabels[]{
     {"Thermostat zone 1", "thermostat-zone-1"},
     {"Thermostat zone 2", "thermostat-zone-2"}};
 
-inline const uint16_t *ithoAWHeatpumpSettingsMap[] = {nullptr, itho_AWHeatpumpsetting1, itho_AWHeatpumpsetting2};
-inline const uint8_t *ithoAWHeatpumpStatusMap[] = {nullptr, itho_AWHeatpumpstatus1, itho_AWHeatpumpstatus2};
+inline const uint16_t *const ithoAWHeatpumpSettingsMap[] = {nullptr, itho_AWHeatpumpsetting1, itho_AWHeatpumpsetting2};
+inline const uint8_t *const ithoAWHeatpumpStatusMap[] = {nullptr, itho_AWHeatpumpstatus1, itho_AWHeatpumpstatus2};

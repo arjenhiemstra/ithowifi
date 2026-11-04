@@ -6,7 +6,7 @@ inline const uint16_t itho_CVE14setting1_4[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 999};
 inline const uint16_t itho_CVE14setting5[]{0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 8, 9, 999};
 inline const uint16_t itho_CVE14setting6[]{0, 1, 2, 3, 4, 5, 6, 7, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 8, 9, 999};
 
-inline const char *ithoCVE14SettingsLabels[] = {
+inline const char *const ithoCVE14SettingsLabels[] = {
     "OEM number",
     "Print version",
     "Min setting potentiometer low (rpm)",
@@ -60,5 +60,5 @@ inline const struct ithoLabels ithoCVE14StatusLabels[]{
     {"Cycle timer", "cycle-timer"},
     {"Sample timer", "sample-timer"}};
 
-inline const uint16_t *itho14SettingsMap[] = {nullptr, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting5, itho_CVE14setting6};
-inline const uint8_t *itho14StatusMap[] = {nullptr, itho_CVE14status1, itho_CVE14status2_4, itho_CVE14status2_4, itho_CVE14status2_4, itho_CVE14status5_6, itho_CVE14status5_6};
+inline const uint16_t *const itho14SettingsMap[] = {nullptr, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting1_4, itho_CVE14setting5, itho_CVE14setting6};
+inline const uint8_t *const itho14StatusMap[] = {nullptr, itho_CVE14status1, itho_CVE14status2_4, itho_CVE14status2_4, itho_CVE14status2_4, itho_CVE14status5_6, itho_CVE14status5_6};
