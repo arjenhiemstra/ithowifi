@@ -1166,8 +1166,9 @@ void TaskCC1101(void *pvParameters)
                 remotes.getRemoteFunction(remIdx) == RemoteFunctions::SEND)
             {
               systemConfig.itho_control_interface = 1;
+              systemConfig.itho_rf_co2_remote_idx = remIdx;
               saveSystemConfigflag = true;
-              I_LOG("RFI: RF CO2 join successful, control interface set to RF CO2");
+              N_LOG("RFI: RF CO2 join successful, control interface set to RF CO2, using remote %d", remIdx);
             }
             // Auto-track the Itho device as RF status source for 31DA/31D9 data
             if (remotes.getRemoteFunction(remIdx) == RemoteFunctions::SEND)
