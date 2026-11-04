@@ -1,7 +1,7 @@
 #pragma once
 
 #if !defined(MAX_NUM_OF_REMOTES)
-#define MAX_NUM_OF_REMOTES 12
+#define MAX_NUM_OF_REMOTES 20
 #endif
 #define REMOTE_CONFIG_VERSION "002"
 
@@ -104,7 +104,7 @@ public:
     llModeTime = timeVal;
   };
   int copy_id_remote_idx{-1};
-  int setMaxRemotes(unsigned int number) { return (maxRemotes < MAX_NUM_OF_REMOTES + 1) ? (maxRemotes = number) : (maxRemotes = MAX_NUM_OF_REMOTES); };
+  int setMaxRemotes(unsigned int number) { return maxRemotes = (number <= MAX_NUM_OF_REMOTES) ? number : MAX_NUM_OF_REMOTES; };
   int getMaxRemotes() { return maxRemotes; };
   int registerNewRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2, const RemoteTypes remtype);
   int removeRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2);

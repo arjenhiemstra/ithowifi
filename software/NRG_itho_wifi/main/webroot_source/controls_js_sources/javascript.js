@@ -1419,7 +1419,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (sel != null) {
         indices.push(parseInt(sel));
       } else if ($id('wizard-indicators')) {
-        for (var ri = 0; ri < 12; ri++) {
+        for (var ri = 0; ri < 20; ri++) {
           if ($id('func_remote-' + ri)) indices.push(ri);
         }
       }

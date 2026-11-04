@@ -7,7 +7,7 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command)
   // command structure:
   //  [I2C addr ][  I2C command   ][len ][    timestamp         ][fmt ][    remote ID   ][cntr]<  opcode  ><len2><   len2 length command      >[chk2][cntr][chk ]
   //  0x82, 0x60, 0xC1, 0x01, 0x01, 0x09, 0xFF, 0xFF, 0xFF, 0xFF, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
-  if (remoteIndex > virtualRemotes.getMaxRemotes())
+  if (remoteIndex >= virtualRemotes.getMaxRemotes())
     return;
 
   const RemoteTypes remoteType = virtualRemotes.getRemoteType(remoteIndex);

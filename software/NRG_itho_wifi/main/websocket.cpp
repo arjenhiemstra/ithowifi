@@ -144,6 +144,13 @@ void jsonWsSend(const char *rootName)
     // Mask passwords before sending to web UI
     nested["sys_password"] = strlen(systemConfig.sys_password) > 0 ? "********" : "";
     nested["mqtt_password"] = strlen(systemConfig.mqtt_password) > 0 ? "********" : "";
+    // get() caps these for older firmware reading the file
+    if (!nested["itho_numvrem"].isNull())
+      nested["itho_numvrem"] = systemConfig.itho_numvrem;
+    if (!nested["itho_numrfrem"].isNull())
+      nested["itho_numrfrem"] = systemConfig.itho_numrfrem;
+    nested.remove("itho_numvrem_ext");
+    nested.remove("itho_numrfrem_ext");
   }
   else if (strcmp(rootName, "logsettings") == 0)
   {

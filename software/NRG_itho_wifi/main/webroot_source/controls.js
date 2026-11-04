@@ -1420,7 +1420,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (sel != null) {
         indices.push(parseInt(sel));
       } else if ($id('wizard-indicators')) {
-        for (var ri = 0; ri < 12; ri++) {
+        for (var ri = 0; ri < 20; ri++) {
           if ($id('func_remote-' + ri)) indices.push(ri);
         }
       }
@@ -4064,6 +4064,14 @@ var html_debug = `
                 <option value="9">9</option>
                 <option value="10">10</option>
                 <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15">15</option>
+                <option value="16">16</option>
+                <option value="17">17</option>
+                <option value="18">18</option>
+                <option value="19">19</option>
             </select>&nbsp;dest ID override (optional, hex triplet like <code>96,A4,3B</code>):&nbsp;
             <input id="rfstatusreq-destid" type="text" size="10" placeholder="">
             &nbsp;//uses the source ID of the selected RF remote slot, and (if non-empty) the dest ID override as the destination — otherwise the slot's stored destinationID. The Itho only answers when that slot is bi-directional and joined, or when the override targets a real Itho address.
@@ -4327,7 +4335,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td>vremoteindex</td>
             <td>string</td>
-            <td>0-11</td>
+            <td>0-19</td>
             <td>number</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">●</td>
@@ -4643,7 +4651,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td>rfremoteindex</td>
             <td>string</td>
-            <td>0-11</td>
+            <td>0-19</td>
             <td>number</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">●</td>
@@ -5549,7 +5557,7 @@ var html_systemsettings_start = `
     <p>The add-on can present itself as one or more virtual remote(s). A virtual remote emulates a physical remote through software.</p>
     <div class="pure-control-group">
       <label for="itho_numvrem">Number of virtual remotes</label>
-      <input id="itho_numvrem" type="number" min="1" max="12" size="6">
+      <input id="itho_numvrem" type="number" min="1" max="20" size="6">
     </div>
     <p>A virtual remote can be used to force the Itho unit in medium mode before sending a command from the add-on. This
       way the add-on can overrule the current speed settings of the Itho (e.g. due to active input from a built-in
@@ -6278,7 +6286,7 @@ var html_remotessetup = `
     </div>
     <div class="pure-control-group">
       <label for="itho_numrfrem">Number of RF remotes</label>
-      <input id="itho_numrfrem" type="number" min="1" max="12" size="6">
+      <input id="itho_numrfrem" type="number" min="1" max="20" size="6">
     <button id="update_num_rf" onclick="update_rf_setup()" class="pure-button button-secondary">Update</button>
     </div>    
   </fieldset>
@@ -6740,7 +6748,7 @@ var html_wizard = `
         </div>
         <div class="pure-control-group">
           <label for="itho_numvrem">Number of virtual remotes</label>
-          <input id="itho_numvrem" type="number" min="0" max="12" size="6">
+          <input id="itho_numvrem" type="number" min="0" max="20" size="6">
         </div>
         <div class="pure-control-group">
           <label class="pure-radio" for="option-vremotejoin-1">Send join command</label>
@@ -6815,7 +6823,7 @@ var html_wizard = `
       </div>
       <div class="pure-control-group" id="wiz-numrfrem-row">
         <label for="itho_numrfrem">Number of RF remotes</label>
-        <input id="itho_numrfrem" type="number" min="1" max="12" size="6">
+        <input id="itho_numrfrem" type="number" min="1" max="20" size="6">
       </div>
       <div class="pure-control-group" id="wiz-rfremtype-row">
         <label for="wiz-rfremtype">Default remote type</label>
