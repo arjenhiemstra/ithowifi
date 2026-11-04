@@ -234,6 +234,10 @@ If MQTT is configured, the add-on uses the topics below. The *base topic* is con
 - `itho/cmd/response`: the add-on's response to a command.
 - `itho/state`: the add-on publishes a JSON with all status values here.
 - `itho/lwt`: the online/offline status of the add-on (Last Will & Testament).
+- `itho/debug/rf`: while the RF log is on (*RF Debug log level* 1, 2 or 3 on the **Syslog** page) the add-on publishes every RF log line here (not retained).
+- `itho/debug/i2c`: while the I2C sniffer is on (on the **Debug** page) the add-on publishes every sniffer line here (not retained).
+
+There is no separate setting for the debug topics: they follow the RF log and I2C sniffer switches in the web interface and only work while MQTT is connected. If MQTT cannot keep up, lines are dropped (with a warning in the system log). Nothing is buffered while MQTT is not connected.
 
 A working example (Node-RED) that publishes to `itho/cmd` is in the [Node-red automation example](#node-red-automation-example).
 
@@ -388,7 +392,7 @@ Before an emulated RF remote works, it must be joined to the Itho once, just lik
 - **Level 3:** shows all RF packets that are processed (this probably includes a lot of non-Itho-related packets)
 - **Level 0:** turns the debug option off again
 
-The RF log appears on the **Syslog** page once the first RF command has been received.
+The RF log appears on the **Syslog** page once the first RF command has been received. If MQTT is connected, the add-on also publishes the lines to the topic `<base topic>/debug/rf` (see [Using the API](#using-the-api-webapi-and-mqtt)).
 
 ![RF debug log screenshot](images/09-rf-debug-log-screenshot.png)
 

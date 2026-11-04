@@ -234,6 +234,10 @@ Als MQTT is geconfigureerd, gebruikt de add-on onderstaande topics. Het *base to
 - `itho/cmd/response`: het antwoord van de add-on op een commando.
 - `itho/state`: hier publiceert de add-on een JSON met alle statuswaarden.
 - `itho/lwt`: de online/offline status van de add-on (Last Will & Testament).
+- `itho/debug/rf`: zolang de RF-log aan staat (*RF Debug log level* 1, 2 of 3 op de **Syslog** pagina) publiceert de add-on hier elke regel van de RF-log (niet retained).
+- `itho/debug/i2c`: zolang de I2C sniffer aan staat (op de **Debug** pagina) publiceert de add-on hier elke regel van de sniffer (niet retained).
+
+Voor de debug-topics is er geen aparte instelling: ze volgen de schakelaars van de RF-log en de I2C sniffer in de web interface en werken alleen als MQTT verbonden is. Kan MQTT het aantal regels niet bijhouden, dan worden regels overgeslagen (met een waarschuwing in de systeemlog). Terwijl MQTT niet verbonden is, wordt niets bewaard.
 
 Een werkend voorbeeld (Node-RED) dat naar `itho/cmd` publiceert, staat in het [Node-RED automatiseringsvoorbeeld](#node-red-automatiseringsvoorbeeld).
 
@@ -388,7 +392,7 @@ Voordat een geëmuleerde RF-remote werkt, moet deze eenmalig aan de Itho gekoppe
 - **Level 3:** toont alle RF-pakketten die verwerkt worden (hier zitten waarschijnlijk heel veel niet Itho gerelateerde pakketten tussen)
 - **Level 0:** schakelt de debug-optie weer uit
 
-De RF-log verschijnt op de **Syslog** pagina zodra het eerste RF-commando ontvangen is.
+De RF-log verschijnt op de **Syslog** pagina zodra het eerste RF-commando ontvangen is. Als MQTT verbonden is, publiceert de add-on de regels ook op het topic `<base topic>/debug/rf` (zie [De API gebruiken](#de-api-gebruiken-webapi-en-mqtt)).
 
 ![RF debug log screenshot](images/09-rf-debug-log-screenshot.png)
 

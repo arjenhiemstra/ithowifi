@@ -262,7 +262,10 @@ Werkt dit niet (bijv. op Android)? Ga dan naar <a href="http://192.168.4.1">http
 <li><code>itho/cmd/response</code>: het antwoord van de add-on op een commando.</li>
 <li><code>itho/state</code>: hier publiceert de add-on een JSON met alle statuswaarden.</li>
 <li><code>itho/lwt</code>: de online/offline status van de add-on (Last Will &amp; Testament).</li>
+<li><code>itho/debug/rf</code>: zolang de RF-log aan staat (<em>RF Debug log level</em> 1, 2 of 3 op de <strong>Syslog</strong> pagina) publiceert de add-on hier elke regel van de RF-log (niet retained).</li>
+<li><code>itho/debug/i2c</code>: zolang de I2C sniffer aan staat (op de <strong>Debug</strong> pagina) publiceert de add-on hier elke regel van de sniffer (niet retained).</li>
 </ul>
+<p>Voor de debug-topics is er geen aparte instelling: ze volgen de schakelaars van de RF-log en de I2C sniffer in de web interface en werken alleen als MQTT verbonden is. Kan MQTT het aantal regels niet bijhouden, dan worden regels overgeslagen (met een waarschuwing in de systeemlog). Terwijl MQTT niet verbonden is, wordt niets bewaard.</p>
 <p>Een werkend voorbeeld (Node-RED) dat naar <code>itho/cmd</code> publiceert, staat in het <a href="#nl-node-red-automatiseringsvoorbeeld">Node-RED automatiseringsvoorbeeld</a>.</p>
 <hr>
 <h2 id="nl-apparaat-specifieke-informatie">Apparaat-specifieke informatie</h2>
@@ -376,7 +379,7 @@ De meest verkochte afstandsbedieningen van Itho worden ondersteund.</p>
 <li><strong>Level 3:</strong> toont alle RF-pakketten die verwerkt worden (hier zitten waarschijnlijk heel veel niet Itho gerelateerde pakketten tussen)</li>
 <li><strong>Level 0:</strong> schakelt de debug-optie weer uit</li>
 </ul>
-<p>De RF-log verschijnt op de <strong>Syslog</strong> pagina zodra het eerste RF-commando ontvangen is.</p>
+<p>De RF-log verschijnt op de <strong>Syslog</strong> pagina zodra het eerste RF-commando ontvangen is. Als MQTT verbonden is, publiceert de add-on de regels ook op het topic <code>&lt;base topic&gt;/debug/rf</code> (zie <a href="#nl-de-api-gebruiken-webapi-en-mqtt">De API gebruiken</a>).</p>
 <p><img data-img="images/09-rf-debug-log-screenshot.png" alt="RF debug log screenshot"></p>
 <hr>
 <h2 id="nl-firmware-bijwerken">Firmware bijwerken</h2>
@@ -652,7 +655,10 @@ Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http
 <li><code>itho/cmd/response</code>: the add-on&#39;s response to a command.</li>
 <li><code>itho/state</code>: the add-on publishes a JSON with all status values here.</li>
 <li><code>itho/lwt</code>: the online/offline status of the add-on (Last Will &amp; Testament).</li>
+<li><code>itho/debug/rf</code>: while the RF log is on (<em>RF Debug log level</em> 1, 2 or 3 on the <strong>Syslog</strong> page) the add-on publishes every RF log line here (not retained).</li>
+<li><code>itho/debug/i2c</code>: while the I2C sniffer is on (on the <strong>Debug</strong> page) the add-on publishes every sniffer line here (not retained).</li>
 </ul>
+<p>There is no separate setting for the debug topics: they follow the RF log and I2C sniffer switches in the web interface and only work while MQTT is connected. If MQTT cannot keep up, lines are dropped (with a warning in the system log). Nothing is buffered while MQTT is not connected.</p>
 <p>A working example (Node-RED) that publishes to <code>itho/cmd</code> is in the <a href="#en-node-red-automation-example">Node-red automation example</a>.</p>
 <hr>
 <h2 id="en-device-specific-information">Device-specific information</h2>
@@ -766,7 +772,7 @@ The most commonly sold Itho remotes are supported.</p>
 <li><strong>Level 3:</strong> shows all RF packets that are processed (this probably includes a lot of non-Itho-related packets)</li>
 <li><strong>Level 0:</strong> turns the debug option off again</li>
 </ul>
-<p>The RF log appears on the <strong>Syslog</strong> page once the first RF command has been received.</p>
+<p>The RF log appears on the <strong>Syslog</strong> page once the first RF command has been received. If MQTT is connected, the add-on also publishes the lines to the topic <code>&lt;base topic&gt;/debug/rf</code> (see <a href="#en-using-the-api-webapi-and-mqtt">Using the API</a>).</p>
 <p><img data-img="images/09-rf-debug-log-screenshot.png" alt="RF debug log screenshot"></p>
 <hr>
 <h2 id="en-updating-firmware">Updating firmware</h2>
