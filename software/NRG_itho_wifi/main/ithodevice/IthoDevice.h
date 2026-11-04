@@ -31,10 +31,10 @@ struct ithoDeviceType
   uint8_t DG; // device group?
   uint8_t ID;
   const char *name;
-  const uint16_t **settingsMapping;
+  const uint16_t *const *settingsMapping;
   uint16_t versionsMapLen;
-  const char **settingsDescriptions;
-  const uint8_t **statusLabelMapping;
+  const char *const *settingsDescriptions;
+  const uint8_t *const *statusLabelMapping;
   uint8_t statusMapLen;
   const struct ithoLabels *settingsStatusLabels;
 };

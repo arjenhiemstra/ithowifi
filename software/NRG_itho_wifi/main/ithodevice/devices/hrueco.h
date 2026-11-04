@@ -9,7 +9,7 @@ inline const uint16_t itho_HRUecosetting7[]{0, 1, 2, 3, 4, 5, 6, 7, 7, 8, 9, 48,
 inline const uint16_t itho_HRUecosetting8[]{0, 1, 2, 3, 4, 5, 6, 7, 7, 8, 9, 48, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 47, 46, 40, 41, 42, 43, 49, 50, 51, 44, 44, 44, 44, 44, 44, 44, 999};
 inline const uint16_t itho_HRUecosetting10_12[]{0, 1, 2, 3, 4, 5, 6, 7, 7, 8, 9, 48, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 26, 28, 30, 32, 34, 52, 53, 54, 55, 56, 57, 36, 37, 38, 39, 47, 46, 40, 41, 42, 43, 49, 50, 51, 58, 59, 60, 61, 62, 60, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 999};
 
-inline const char *ithoHRUecoSettingsLabels[] = {
+inline const char *const ithoHRUecoSettingsLabels[] = {
     "Percentage set 2 (%)",
     "Temp frost protection (°C)",
     "Frost temp offset (°K)",
@@ -125,5 +125,5 @@ inline const struct ithoLabels ithoHRUecoStatusLabels[]{
     {"Requested speed (%)", "requested-speed_perc"},
     {"Balance (%)", "balance_perc"}};
 
-inline const uint16_t *ithoHRUecoFanSettingsMap[] = {nullptr, nullptr, itho_HRUecosetting3, itho_HRUecosetting3, itho_HRUecosetting4, nullptr, itho_HRUecosetting6, itho_HRUecosetting7, itho_HRUecosetting8, nullptr, itho_HRUecosetting10_12, itho_HRUecosetting10_12, itho_HRUecosetting10_12};
-inline const uint8_t *ithoHRUecoFanStatusMap[] = {nullptr, nullptr, itho_HRUecostatus2_4, itho_HRUecostatus2_4, itho_HRUecostatus2_4, nullptr, itho_HRUecostatus6_7, itho_HRUecostatus6_7, itho_HRUecostatus8, nullptr, itho_HRUecostatus10_12, itho_HRUecostatus10_12, itho_HRUecostatus10_12};
+inline const uint16_t *const ithoHRUecoFanSettingsMap[] = {nullptr, nullptr, itho_HRUecosetting3, itho_HRUecosetting3, itho_HRUecosetting4, nullptr, itho_HRUecosetting6, itho_HRUecosetting7, itho_HRUecosetting8, nullptr, itho_HRUecosetting10_12, itho_HRUecosetting10_12, itho_HRUecosetting10_12};
+inline const uint8_t *const ithoHRUecoFanStatusMap[] = {nullptr, nullptr, itho_HRUecostatus2_4, itho_HRUecostatus2_4, itho_HRUecostatus2_4, nullptr, itho_HRUecostatus6_7, itho_HRUecostatus6_7, itho_HRUecostatus8, nullptr, itho_HRUecostatus10_12, itho_HRUecostatus10_12, itho_HRUecostatus10_12};

@@ -12,7 +12,7 @@ inline const uint16_t itho_HRU200setting25[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1
 inline const uint16_t itho_HRU200setting26[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 63, 64, 74, 65, 66, 72, 73, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 59, 67, 57, 68, 69, 70, 71, 55, 56, 999};
 inline const uint16_t itho_HRU200setting27[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 63, 64, 74, 65, 66, 72, 73, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 59, 67, 57, 68, 69, 70, 71, 95, 96, 97, 98, 99, 55, 56, 999};
 
-inline const char *ithoHRU200SettingsLabels[] = {
+inline const char *const ithoHRU200SettingsLabels[] = {
     "OemNumber",
     "Unit version",
     "MinAdjustMinimumSpeed (rpm)",
@@ -151,5 +151,5 @@ inline const struct ithoLabels ithoHRU200StatusLabels[]{
     {"Position of frost valve (%)", "position-of-frost-valve_perc"},
     {"Max frost vent. speed (rpm)", "max-frost-vent-speed_rpm"}};
 
-inline const uint16_t *ithoHRU200SettingsMap[] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_HRU200setting12_13, itho_HRU200setting12_13, itho_HRU200setting14, itho_HRU200setting15, nullptr, itho_HRU200setting17_18, itho_HRU200setting17_18, itho_HRU200setting19_20, itho_HRU200setting19_20, itho_HRU200setting21, nullptr, nullptr, nullptr, itho_HRU200setting25, itho_HRU200setting26, itho_HRU200setting27};
-inline const uint8_t *ithoHRU200StatusMap[] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_HRU200status12_13, itho_HRU200status12_13, itho_HRU200status14, itho_HRU200status15_17, nullptr, itho_HRU200status15_17, itho_HRU200status18, itho_HRU200status19, itho_HRU200status20_27, itho_HRU200status20_27, nullptr, nullptr, nullptr, itho_HRU200status20_27, itho_HRU200status20_27, itho_HRU200status20_27};
+inline const uint16_t *const ithoHRU200SettingsMap[] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_HRU200setting12_13, itho_HRU200setting12_13, itho_HRU200setting14, itho_HRU200setting15, nullptr, itho_HRU200setting17_18, itho_HRU200setting17_18, itho_HRU200setting19_20, itho_HRU200setting19_20, itho_HRU200setting21, nullptr, nullptr, nullptr, itho_HRU200setting25, itho_HRU200setting26, itho_HRU200setting27};
+inline const uint8_t *const ithoHRU200StatusMap[] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, itho_HRU200status12_13, itho_HRU200status12_13, itho_HRU200status14, itho_HRU200status15_17, nullptr, itho_HRU200status15_17, itho_HRU200status18, itho_HRU200status19, itho_HRU200status20_27, itho_HRU200status20_27, nullptr, nullptr, nullptr, itho_HRU200status20_27, itho_HRU200status20_27, itho_HRU200status20_27};

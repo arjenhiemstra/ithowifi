@@ -13,7 +13,7 @@ inline const uint16_t itho_AutoTempsetting9[]{0, 116, 117, 118, 119, 120, 121, 1
 inline const uint16_t itho_AutoTempsetting10_12[]{0, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 49, 54, 55, 56, 153, 154, 100, 155, 156, 157, 158, 159, 160, 161, 162, 163, 71, 72, 73, 74, 75, 105, 106, 107, 164, 165, 108, 109, 110, 111, 112, 113, 114, 115, 166, 167, 168, 169, 170, 171, 172, 999};
 inline const uint16_t itho_AutoTempsetting13[]{0, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 49, 54, 55, 56, 153, 154, 100, 155, 156, 157, 158, 159, 160, 161, 162, 163, 71, 72, 73, 74, 75, 105, 106, 107, 164, 165, 108, 109, 110, 111, 112, 113, 114, 115, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 999};
 
-inline const char *ithoAutoTempSettingsLabels[] = {
+inline const char *const ithoAutoTempSettingsLabels[] = {
     "Number of steps of valve (step)",
     "Pfactor floor",
     "Pfactor radiator",
@@ -333,5 +333,5 @@ inline const struct ithoLabels ithoAutoTempStatusLabels[]{
     {"Cycle counter (sec)", "cycle-counter_sec"},
     {"Time active zone too cold (sec)", "time-active-zone-too-cold_sec"}};
 
-inline const uint16_t *ithoAutoTempSettingsMap[] = {nullptr, itho_AutoTempsetting1, itho_AutoTempsetting2, itho_AutoTempsetting3_4, itho_AutoTempsetting3_4, itho_AutoTempsetting5, itho_AutoTempsetting6, itho_AutoTempsetting7, itho_AutoTempsetting8, itho_AutoTempsetting9, itho_AutoTempsetting10_12, nullptr, itho_AutoTempsetting10_12, itho_AutoTempsetting13};
-inline const uint8_t *ithoAutoTempStatusMap[] = {nullptr, itho_AutoTempstatus1, itho_AutoTempstatus2_4, itho_AutoTempstatus2_4, itho_AutoTempstatus2_4, itho_AutoTempstatus5, itho_AutoTempstatus6_12, itho_AutoTempstatus6_12, itho_AutoTempstatus6_12, itho_AutoTempstatus6_12, itho_AutoTempstatus6_12, nullptr, itho_AutoTempstatus6_12, itho_AutoTempstatus13};
+inline const uint16_t *const ithoAutoTempSettingsMap[] = {nullptr, itho_AutoTempsetting1, itho_AutoTempsetting2, itho_AutoTempsetting3_4, itho_AutoTempsetting3_4, itho_AutoTempsetting5, itho_AutoTempsetting6, itho_AutoTempsetting7, itho_AutoTempsetting8, itho_AutoTempsetting9, itho_AutoTempsetting10_12, nullptr, itho_AutoTempsetting10_12, itho_AutoTempsetting13};
+inline const uint8_t *const ithoAutoTempStatusMap[] = {nullptr, itho_AutoTempstatus1, itho_AutoTempstatus2_4, itho_AutoTempstatus2_4, itho_AutoTempstatus2_4, itho_AutoTempstatus5, itho_AutoTempstatus6_12, itho_AutoTempstatus6_12, itho_AutoTempstatus6_12, itho_AutoTempstatus6_12, itho_AutoTempstatus6_12, nullptr, itho_AutoTempstatus6_12, itho_AutoTempstatus13};

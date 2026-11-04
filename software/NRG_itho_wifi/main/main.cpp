@@ -12,8 +12,6 @@
 
 // locals
 TaskHandle_t xTaskInitHandle = NULL;
-StaticTask_t xTaskInitBuffer;
-StackType_t xTaskInitStack[STACK_SIZE];
 
 void setup()
 {
@@ -30,25 +28,26 @@ void setup()
   // All boot tasks are created up front; each gates on the boot phases it
   // depends on (ADR-0010). Creation order is not significant — the event group
   // enforces the real dependency order (HW -> CONFIG -> NET, RF off CONFIG).
-  xTaskInitHandle = xTaskCreateStaticPinnedToCore(
+  // Dynamic: TaskInit deletes itself after boot, which only returns the stack to the heap this way
+  xTaskCreatePinnedToCore(
       TaskInit,
       "TaskInit",
       STACK_SIZE,
       (void *)1,
       TASK_MAIN_PRIO,
-      xTaskInitStack,
-      &xTaskInitBuffer,
+      &xTaskInitHandle,
       CONFIG_ARDUINO_RUNNING_CORE);
   startTaskConfigAndLog();
   startTaskSysControl();
   startTaskCC1101();
   startTaskMQTT();
   startTaskWeb();
+
+  // loopTask has nothing to do. Left running it starves the idle task of this core,
+  // and that idle task is what frees the memory of deleted tasks pinned here.
+  vTaskDelete(NULL);
 }
 
 void loop()
 {
-  // put your main code here, to run repeatedly:
-  yield();
-  esp_task_wdt_reset();
 }
