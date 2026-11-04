@@ -321,10 +321,9 @@ void execLogAndConfigTasks()
 void syslogQueueWorker()
 {
 
-  while (!syslog_queue.empty())
+  log_msg input;
+  while (syslogPop(input))
   {
-    log_msg input = syslog_queue.front();
-    syslog_queue.pop_front();
 
     if (flashLogInitReady)
     {

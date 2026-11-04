@@ -21,7 +21,8 @@ extern TaskHandle_t xTaskMQTTHandle;
 extern uint32_t TaskMQTTHWmark;
 extern bool sysStatReq;
 
-#define MQTT_BUFFER_SIZE 5120
+// Publishes are streamed in buffer-sized chunks; only header+topic must fit. Inbound payloads are cut at 1023 (MqttAPI.cpp)
+#define MQTT_BUFFER_SIZE 1536
 
 extern int MQTT_conn_state;
 extern int MQTT_conn_state_new;

@@ -26,9 +26,9 @@ uint8_t System::getMac(uint8_t i) {
   return mac[i];
 }
 
+// Byte-addressable heap only: ESP.getFreeHeap() also counts ~60 KB of IRAM that malloc cannot use
 int System::ramFree() {
-  int a = ESP.getFreeHeap();
-  return a;
+  return heap_caps_get_free_size(MALLOC_CAP_8BIT);
 }
 
 #if defined (ESP8266)
@@ -38,7 +38,7 @@ int System::ramSize() {
 #elif defined (ESP32)
 int System::ramSize() {
   multi_heap_info_t info;
-  heap_caps_get_info(&info, MALLOC_CAP_INTERNAL);
+  heap_caps_get_info(&info, MALLOC_CAP_8BIT);
   return info.total_free_bytes;
 }
 #endif
@@ -55,7 +55,7 @@ bool System::updateFreeMem() {
     result = true;
   }
 #if defined (ESP32)
-  newMem = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
+  newMem = heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT);
 #endif  
   if (newMem < memLow) {
     memLow = newMem;
@@ -77,7 +77,7 @@ uint32_t System::getMaxFreeBlockSize() {
 #if defined (ESP8266)
   memMaxBlock = ESP.getMaxFreeBlockSize();
 #elif defined (ESP32)
-  memMaxBlock = ESP.getMaxAllocHeap();
+  memMaxBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
 #endif  
   return memMaxBlock;
 }

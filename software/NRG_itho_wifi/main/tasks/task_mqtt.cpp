@@ -68,7 +68,7 @@ void TaskMQTT(void *pvParameters)
   vTaskDelete(xTempTask);
 }
 
-void MQTTSendBuffered(JsonDocument doc, const char *topic)
+void MQTTSendBuffered(const JsonDocument &doc, const char *topic)
 {
   mqttClient.beginPublish(topic, measureJson(doc), true);
   BufferingPrint bufferedClient(mqttClient, 32);
@@ -231,15 +231,6 @@ void mqttInit()
   }
 }
 
-// Grow the MQTT buffer if needed. Never shrink — repeated realloc
-// cycles between the default and a larger size fragment the heap over
-// thousands of publish cycles per day.
-static void mqttEnsureBufferSize(size_t len)
-{
-  if (mqttClient.getBufferSize() < len)
-    mqttClient.setBufferSize(len);
-}
-
 void mqttSendStatus()
 {
 
@@ -252,7 +243,6 @@ void mqttSendStatus()
 
   size_t len = measureJson(root);
 
-  mqttEnsureBufferSize(len);
   if (mqttClient.beginPublish(ihtostatustopic, len, true))
   {
     serializeJson(root, mqttClient);
@@ -308,14 +298,11 @@ void mqttSendRFStatus()
         xSemaphoreGive(rfStatusMutex);
       }
       size_t len = measureJson(root);
-      if (mqttClient.getBufferSize() < len)
-        mqttClient.setBufferSize(len);
       if (mqttClient.beginPublish(topic, len, true))
       {
         serializeJson(root, mqttClient);
         mqttClient.endPublish();
       }
-      // removed: shrink-back fragments heap over thousands of cycles
     }
 
     if (!rfStatusSources[i].measurements31D9.empty())
@@ -339,14 +326,11 @@ void mqttSendRFStatus()
         xSemaphoreGive(rfStatusMutex);
       }
       size_t len = measureJson(root);
-      if (mqttClient.getBufferSize() < len)
-        mqttClient.setBufferSize(len);
       if (mqttClient.beginPublish(topic, len, true))
       {
         serializeJson(root, mqttClient);
         mqttClient.endPublish();
       }
-      // removed: shrink-back fragments heap over thousands of cycles
     }
   }
 }
@@ -454,13 +438,13 @@ void mqttHomeAssistantDiscovery()
   // single allocation can land. Thresholds are loose on purpose — the real
   // safety net is the try/catch around the build below, which catches the
   // case where fragmentation tips us over mid-run. A healthy CVE-Silent
-  // sits around 140 KB free / 43 KB largest block in steady state, so the
+  // sits around 80 KB usable free / 43 KB largest block in steady state, so the
   // floor must stay well under that to avoid locking out healthy devices.
   // Clear the trigger flag here too so a persistently low-heap device
   // doesn't spam the log on every TaskMQTT iteration.
   size_t largestBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
-  size_t totalFree = ESP.getFreeHeap();
-  if (totalFree < 60000 || largestBlock < 20000)
+  size_t totalFree = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  if (totalFree < 30000 || largestBlock < 20000)
   {
     W_LOG("HAD: skipping HA Discovery, heap too tight (largest block %lu, total free %lu)",
           (unsigned long)largestBlock, (unsigned long)totalFree);

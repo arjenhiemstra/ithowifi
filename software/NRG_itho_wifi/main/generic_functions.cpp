@@ -3,6 +3,7 @@
 #include "tasks/task_cc1101.h"
 #include "cc1101/spider_protocol.h"
 #include <HTTPUpdate.h>
+#include <esp_heap_caps.h>
 
 // MAX_FIRMWARE_HTTPS_RESPONSE_SIZE is normally injected by build_script.py based
 // on the actual firmware.json size + headroom. This fallback only applies if the
@@ -366,6 +367,9 @@ void getDeviceInfoJSON(JsonObject root)
   // (reboot pending), -2=error. The HA discovery val_tpl derives
   // in_progress / update_percentage from this single integer.
   root["ota_progress"] = static_cast<int>(otaUpdateProgress);
+  root["heap_free"] = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  root["heap_min_free"] = heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT);
+  root["heap_max_block"] = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
   root["itho_rf_standalone"] = systemConfig.itho_rf_standalone;
   root["itho_control_interface"] = systemConfig.itho_control_interface;
   root["itho_rf_co2_remote_idx"] = systemConfig.itho_rf_co2_remote_idx;
@@ -1190,7 +1194,8 @@ int compareVersions(const std::string &v1, const std::string &v2)
 
 void checkFirmwareUpdate()
 {
-  WiFiClientSecure *secclient = new WiFiClientSecure;
+  // declared before https: ~HTTPClient() may still call stop() on the client
+  std::unique_ptr<WiFiClientSecure> secclient(new (std::nothrow) WiFiClientSecure);
   if (!secclient)
   {
     E_LOG("SYS: firmware check - failed to allocate WiFiClientSecure");
@@ -1199,11 +1204,11 @@ void checkFirmwareUpdate()
   secclient->setInsecure(); // set secure client without certificate
 
   HTTPClient https;
+  https.setReuse(false); // end() then closes the TLS session
 
   if (!https.begin(*secclient, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
   {
     E_LOG("SYS: firmware check - https.begin() failed");
-    delete secclient;
     return;
   }
 
@@ -1211,44 +1216,38 @@ void checkFirmwareUpdate()
   if (httpCode <= 0)
   {
     E_LOG("SYS: firmware check - GET failed: %s", https.errorToString(httpCode).c_str());
-    https.end();
-    delete secclient;
     return;
   }
   if (httpCode != HTTP_CODE_OK)
   {
     E_LOG("SYS: firmware check - HTTP %d", httpCode);
-    https.end();
-    delete secclient;
     return;
   }
   if (https.getSize() >= MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
   {
     E_LOG("SYS: firmware check - response too large: %d", https.getSize());
-    https.end();
-    delete secclient;
     return;
   }
 
-  String payloadString = https.getString().c_str();
-  const char *payload = payloadString.c_str();
+  String payload = https.getString();
+  // close the TLS session first, its buffers are the largest allocation here
+  https.end();
 
+  JsonDocument filter;
+  filter["hw_rev"][hardwareManager.hw_revision] = true;
   JsonDocument root;
-  DeserializationError error = deserializeJson(root, payload);
+  DeserializationError error = deserializeJson(root, payload, DeserializationOption::Filter(filter));
+  payload = String();
   if (error)
   {
     E_LOG("SYS: firmware check - JSON parse error: %s", error.c_str());
-    https.end();
-    delete secclient;
     return;
   }
 
   JsonVariant hwNode = root["hw_rev"][hardwareManager.hw_revision];
   if (hwNode.isNull())
   {
-    E_LOG("SYS: firmware check - no entry for hw_rev %d in firmware.json", hardwareManager.hw_revision);
-    https.end();
-    delete secclient;
+    E_LOG("SYS: firmware check - no entry for hw_rev %s in firmware.json", hardwareManager.hw_revision);
     return;
   }
 
@@ -1261,9 +1260,6 @@ void checkFirmwareUpdate()
   D_LOG("SYS: latest_fw:%s, latest_beta:%s", firmwareInfo.latest_fw, firmwareInfo.latest_beta_fw);
   D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);
   // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful
-
-  https.end();
-  delete secclient;
 }
 
 volatile int otaUpdateProgress = -1; // -1=idle, 0-100=progress, 101=done, -2=error
