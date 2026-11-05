@@ -1,5 +1,6 @@
 #include "tasks/task_init.h"
 #include "tasks/boot_phases.h"
+#include <driver/gpio.h>
 
 #define TWDT_TIMEOUT_MS 60000
 
@@ -159,6 +160,9 @@ void hardwareInit()
 {
   // Hardware detection now handled by HardwareManager
   hardwareManager.detect();
+
+  // One service for the sniffer and the RF interrupt. IRAM: both keep running during flash writes.
+  gpio_install_isr_service(ESP_INTR_FLAG_LEVEL3 | ESP_INTR_FLAG_IRAM);
 
   // Initialize I2C sniffer if hardware supports it
   if (hardwareManager.isSnifferCapable())

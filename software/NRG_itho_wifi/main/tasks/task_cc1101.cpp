@@ -389,7 +389,7 @@ volatile bool ithoCheck = false;
 // guard lives entirely in the app around the lib's send/receive entry points.
 SemaphoreHandle_t radioSem = NULL;
 
-IRAM_ATTR void ITHOinterrupt()
+static IRAM_ATTR void ITHOinterrupt(void *)
 {
   // Just wake TaskCC1101; the FIFO read (receivePacket) now runs in task
   // context. It used to run here — up to ~34 ms of SPI inside a level-1 ISR.
@@ -404,14 +404,16 @@ IRAM_ATTR void ITHOinterrupt()
 // whole send and blocks a concurrent receive (and vice versa).
 void disableRF_ISR()
 {
-  detachInterrupt(hardwareManager.itho_irq_pin);
+  gpio_isr_handler_remove(static_cast<gpio_num_t>(hardwareManager.itho_irq_pin));
+  gpio_set_intr_type(static_cast<gpio_num_t>(hardwareManager.itho_irq_pin), GPIO_INTR_DISABLE);
   if (radioSem)
     xSemaphoreTake(radioSem, portMAX_DELAY);
 }
 
 void enableRF_ISR()
 {
-  attachInterrupt(hardwareManager.itho_irq_pin, ITHOinterrupt, RISING);
+  gpio_set_intr_type(static_cast<gpio_num_t>(hardwareManager.itho_irq_pin), GPIO_INTR_POSEDGE);
+  gpio_isr_handler_add(static_cast<gpio_num_t>(hardwareManager.itho_irq_pin), ITHOinterrupt, nullptr);
   // If GDO is already HIGH, a packet arrived while the ISR was disabled and the
   // rising edge was missed. Notify the task to read it (in task context).
   if (digitalRead(hardwareManager.itho_irq_pin) == HIGH && xTaskCC1101Handle)

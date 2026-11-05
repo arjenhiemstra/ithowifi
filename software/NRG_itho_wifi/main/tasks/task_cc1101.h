@@ -43,7 +43,6 @@ extern volatile int8_t bindInitiatorResult;
 
 void startBindInitiatorTimeout();
 void cancelBindInitiatorTimeout();
-void ITHOinterrupt();
 void disableRF_ISR();
 void enableRF_ISR();
 void RFDebug(IthoCommand cmd);
