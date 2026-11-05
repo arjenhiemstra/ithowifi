@@ -106,7 +106,6 @@ static void sniffer_task(void *arg)
     last = SCL(i2cManager.sniffer_scl_pin) | SDA(i2cManager.sniffer_sda_pin);
 
     gpio_evt_queue = xQueueCreate(256, sizeof(uint32_t));
-    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL3);
     gpio_config_t config = {BIT64(i2cManager.sniffer_scl_pin) | BIT64(i2cManager.sniffer_sda_pin), GPIO_MODE_INPUT, GPIO_PULLUP_DISABLE, GPIO_PULLDOWN_DISABLE,
                             GPIO_INTR_DISABLE};
     gpio_config(&config);
