@@ -313,6 +313,9 @@ void webServerInit()
             TaskCC1101Timeout.detach();
             vTaskSuspend(xTaskCC1101Handle);
             esp_task_wdt_delete(xTaskCC1101Handle);
+            // Release the radio again, a send from another task would wait forever. TaskSysControl sends the
+            // RF status request and also does the reboot after the update.
+            enableRF_ISR();
           }
           if (xTaskMQTTHandle != NULL)
           {
