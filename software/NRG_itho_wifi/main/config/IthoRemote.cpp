@@ -417,6 +417,9 @@ void IthoRemote::Remote::set(JsonObject obj)
   {
     copyArray(obj["destid"].as<JsonArray>(), destID);
   }
+  // An empty slot has no target: drop a destid left behind by a removed remote (#410)
+  if (ID[0] == 0 && ID[1] == 0 && ID[2] == 0)
+    memset(destID, 0, sizeof(destID));
   if (!obj["tx_power"].isNull())
   {
     tx_power = obj["tx_power"];
