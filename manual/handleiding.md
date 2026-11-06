@@ -332,7 +332,7 @@ QualityFlow en DemandFlow zijn hetzelfde product: QualityFlow is de combinatie m
 
 **Modellen:** AutoTemp en AutoTemp Basic.
 
-**Aansturing:** via de I2C-verbinding. AutoTemp is een zoneregeling (per kamer), bijvoorbeeld voor vloerverwarming; bediening en uitlezing via de web interface, MQTT en de WebAPI. Een CC1101 RF-module is niet nodig, maar kan worden gebruikt om Spider-thermostaten te bedienen (vanaf firmware 3.3.0).
+**Aansturing:** via de I2C-verbinding. AutoTemp is een zoneregeling (per kamer), bijvoorbeeld voor vloerverwarming; bediening en uitlezing via de web interface, MQTT en de WebAPI. Een CC1101 RF-module is niet nodig, maar kan in de toekomst worden gebruikt om Spider-thermostaten te bedienen (waarschijnlijk vanaf firmware 3.3.0).
 
 **Wat de add-on uitleest (o.a.):** modus, conditie en foutcode, en per ruimte (tot 12 kamers) de gemeten temperatuur, het setpoint en het afgegeven vermogen (% en kW), plus de klepstanden per verdeler/zone.
 
@@ -340,7 +340,7 @@ QualityFlow en DemandFlow zijn hetzelfde product: QualityFlow is de combinatie m
 
 De WPU is een warmtepomp (in de firmware aangeduid als *Heatpump*), geen ventilatie-apparaat. Het heeft veruit de uitgebreidste set uitleesbare waarden.
 
-**Aansturing:** via de I2C-verbinding; uitlezing en instellingen via de web interface, MQTT en de WebAPI. Een CC1101 RF-module is niet nodig, maar kan worden gebruikt om Spider-thermostaten te bedienen (vanaf firmware 3.3.0).
+**Aansturing:** via de I2C-verbinding; uitlezing en instellingen via de web interface, MQTT en de WebAPI. Een CC1101 RF-module is niet nodig, maar kan in de toekomst worden gebruikt om Spider-thermostaten te bedienen (waarschijnlijk vanaf firmware 3.3.0).
 
 **Wat de add-on uitleest (o.a.):** een groot aantal temperaturen (buiten, boiler boven/onder, verdamper, zuig- en persgas, vloeistof, bron aan/af, CV-aanvoer en -retour, °C), CV-druk (bar), het stroomverbruik van compressor en elektrisch element (A), pompsnelheden voor CV, bron en boiler (%), klepstanden, de status van compressor/element/steunverwarming, diverse timers en een foutcode met gedetailleerde foutbytes.
 
