@@ -98,7 +98,7 @@ ul, ol { padding-left: 1.5em; }
 <li><a href="#nl-voorwoord">Voorwoord</a></li>
 <li><a href="#nl-fysieke-installatie-cve-add-on">Fysieke Installatie CVE Add-on</a></li>
 <li><a href="#nl-fysieke-installatie-non-cve-add-on">Fysieke Installatie non-CVE Add-on</a></li>
-<li><a href="#nl-extra-informatie-voor-de-hru250-en-hru300">Extra informatie voor de HRU250 en HRU300</a></li>
+<li><a href="#nl-extra-informatie-voor-de-hru-eco-250-en-hru-eco-300">Extra informatie voor de HRU ECO 250 en HRU ECO 300</a></li>
 <li><a href="#nl-add-on-instellen">Add-on Instellen</a></li>
 <li><a href="#nl-gebruik-webinterface-api">Gebruik (Webinterface, API)</a></li>
 <li><a href="#nl-apparaat-specifieke-informatie">Apparaat-specifieke informatie</a></li>
@@ -116,7 +116,7 @@ ul, ol { padding-left: 1.5em; }
 <hr>
 <h2 id="nl-voorwoord">Voorwoord</h2>
 <p>Bedankt voor de aanschaf van een (of meerdere) add-on modules, veel plezier met het gebruik!</p>
-<p>Een belangrijke waarschuwing vooraf! Verschillende Itho apparaten (in ieder geval de CVE&#39;s en HRU200) zijn niet aanraakveilig als er spanning op staat, ook de laag voltage delen niet. Haal daarom altijd de spanning van het apparaat bij het installeren van een add-on op de printplaat. Zo voorkom je schade aan jezelf en je itho! Indien nodig, bedien de knopjes op de printplaat van de CVE add-on alleen met materiaal dat geen stroom kan geleiden.</p>
+<p>Een belangrijke waarschuwing vooraf! Verschillende Itho apparaten (in ieder geval de CVE&#39;s en HRU ECO 200) zijn niet aanraakveilig als er spanning op staat, ook de laag voltage delen niet. Haal daarom altijd de spanning van het apparaat bij het installeren van een add-on op de printplaat. Zo voorkom je schade aan jezelf en je itho! Indien nodig, bedien de knopjes op de printplaat van de CVE add-on alleen met materiaal dat geen stroom kan geleiden.</p>
 <p>Dit is een beknopte handleiding om je op weg te helpen de add-on fysiek te installeren en te verbinden met je eigen wifi netwerk. Informatie over verdere specifieke installaties is online te vinden.</p>
 <p>Deze handleiding, de plug-ins voor oa. Home Assistant en Homey, de wiki en verdere informatie online zijn een community effort, een verzameling van bijdragen van gebruikers voor gebruikers. Zonder deze bijdragen was oa. dit document er niet geweest. Het wordt zeer gewaardeerd als je aanvullingen, aanpassingen en/of suggesties hebt!</p>
 <p><strong>Bronnen waar verdere informatie te vinden is:</strong></p>
@@ -152,19 +152,19 @@ Zie Installatievoorbeeld, in het rood omcirkeld, waar de 2×4 pin interface zich
 <li>Zoek de COM/Service poort op je Itho device. Dit is aansluiting die lijkt op een netwerkpoort (RJ45 connector). Sluit de add-on met een goede, korte (CAT6a, STP, 25cm) netwerk kabel aan op de COM/Service poort;</li>
 <li>De add-on is geïnstalleerd en zal een access point starten.</li>
 </ol>
-<p><strong>Nb.</strong> Stroom voor de add-on komt via de netwerkkabel vanuit de aangesloten Itho. In uitzonderlijke gevallen lijkt de Itho niet voldoende stroom te kunnen leveren (bepaalde revisies van de HRU300). Hierdoor is de communicatie met de HRU niet altijd stabiel. Sluit in dat geval een USB voeding aan op de add-on. In alle andere gevallen is dit niet nodig.</p>
+<p><strong>Nb.</strong> Stroom voor de add-on komt via de netwerkkabel vanuit de aangesloten Itho. In uitzonderlijke gevallen lijkt de Itho niet voldoende stroom te kunnen leveren (bepaalde revisies van de HRU ECO 300). Hierdoor is de communicatie met de HRU niet altijd stabiel. Sluit in dat geval een USB voeding aan op de add-on. In alle andere gevallen is dit niet nodig.</p>
 <hr>
-<h2 id="nl-extra-informatie-voor-de-hru250-en-hru300">Extra informatie voor de HRU250 en HRU300</h2>
-<p>Om de add-on te kunnen gebruiken met de HRU250 en HRU300 zijn een adapter bordje en PCI-e splitter kabel nodig.</p>
+<h2 id="nl-extra-informatie-voor-de-hru-eco-250-en-hru-eco-300">Extra informatie voor de HRU ECO 250 en HRU ECO 300</h2>
+<p>Om de add-on te kunnen gebruiken met de HRU ECO 250 en HRU ECO 300 zijn een adapter bordje en PCI-e splitter kabel nodig.</p>
 <p>Om deze te installeren:</p>
 <ol>
 <li>Verwijder de PCI-e kabel uit de HMI van de HRU.</li>
 <li>Sluit de PCI-e kabel van de HMI aan op de PCI-e splitterkabel.</li>
-<li>Sluit 1 kant van de splitterkabel aan op de HMI, sluit de overgebleven kant aan op het HRU250/300 adapter bordje.</li>
+<li>Sluit 1 kant van de splitterkabel aan op de HMI, sluit de overgebleven kant aan op het HRU ECO 250/300 adapter bordje.</li>
 <li>Met de netwerkkabel kan het adapter bordje verbonden worden met de add-on.</li>
 </ol>
-<p><img data-img="images/04-hru250-300-adapter-installed.png" alt="HRU250/300 adapter installatie"></p>
-<h3 id="nl-bediening-van-de-hru250-en-hru300">Bediening van de HRU250 en HRU300</h3>
+<p><img data-img="images/04-hru250-300-adapter-installed.png" alt="HRU ECO 250/300 adapter installatie"></p>
+<h3 id="nl-bediening-van-de-hru-eco-250-en-hru-eco-300">Bediening van de HRU ECO 250 en HRU ECO 300</h3>
 <p>Deze modellen zijn iets beperkter in de bediening via de add-on in vergelijking met andere Itho modellen. Om deze HRU te bedienen moet je gebruik maken van de CC1101 RF module op de add-on. De Virtual Remote optie werkt bij deze HRU modellen niet.</p>
 <p>Om gebruik te maken van de RF module moet deze via de web interface van de add-on geactiveerd worden, dat kan onder het menu &quot;System settings&quot;. Na een reboot komt er een menu item bij genaamd &quot;RF Devices&quot;. Hier kan een RF device geconfigureerd worden. Dit RF device moet vervolgens gekoppeld worden aan de HRU. Volg hiervoor dezelfde procedure als waarmee ook fysieke remotes gekoppeld worden.</p>
 <hr>
@@ -191,10 +191,10 @@ Werkt dit niet (bijv. op Android)? Ga dan naar <a href="http://192.168.4.1">http
 <p><strong>Stap 1: WiFi</strong></p>
 <p>Vul de naam (SSID) en het wachtwoord van je eigen WiFi netwerk in. Optioneel kun je een eigen hostname instellen. Klik op Connect en wacht tot de verbinding bevestigd wordt. Noteer het IP-adres dat getoond wordt: dit heb je nodig om de add-on later te bereiken vanuit je eigen netwerk.</p>
 <p><strong>Stap 2: Device</strong></p>
-<p>De wizard detecteert automatisch welk type Itho apparaat is aangesloten (bijv. CVE-Silent, HRU 350, DemandFlow) en stelt de meest voorkomende standaardinstellingen in. Bij apparaten zonder I2C-verbinding (bijv. HRU 400) wordt de optie aangeboden om RF standalone modus te activeren.</p>
+<p>De wizard detecteert automatisch welk type Itho apparaat is aangesloten (bijv. CVE-Silent, HRU 350, DemandFlow) en stelt de meest voorkomende standaardinstellingen in. Bij apparaten zonder I2C-verbinding (bijv. HRU 400 R) wordt de optie aangeboden om RF standalone modus te activeren.</p>
 <p><strong>Stap 3: RF</strong> (wordt overgeslagen als er geen CC1101 RF module aanwezig is)</p>
 <p>Hier configureer je de RF-afstandsbedieningen. Je kunt een afstandsbediening koppelen (join) met de Itho apparaat, of deze stap overslaan en later via het menu &quot;RF Devices&quot; instellen.</p>
-<p>Werk je in RF-standalone modus (een apparaat zonder I2C, bijvoorbeeld de HRU 400)? Dan is dit het moment om een geëmuleerde RFT CO2-remote aan de Itho te koppelen; daarmee stuur je het apparaat vervolgens aan en lees je de status uit.</p>
+<p>Werk je in RF-standalone modus (een apparaat zonder I2C, bijvoorbeeld de HRU 400 R)? Dan is dit het moment om een geëmuleerde RFT CO2-remote aan de Itho te koppelen; daarmee stuur je het apparaat vervolgens aan en lees je de status uit.</p>
 <p><strong>Stap 4: MQTT</strong> (optioneel)</p>
 <p>Vul de gegevens van je MQTT server in als je de add-on wilt koppelen aan Home Assistant, Domoticz of een ander domotica platform via MQTT. Schakel eventueel Home Assistant MQTT Auto Discovery in zodat de add-on automatisch als apparaat in Home Assistant verschijnt.</p>
 <p><strong>Stap 5: HA Discovery</strong> (wordt overgeslagen als MQTT niet is ingeschakeld)</p>
@@ -207,7 +207,7 @@ Werkt dit niet (bijv. op Android)? Ga dan naar <a href="http://192.168.4.1">http
 <p>De Itho unit is nu d.m.v. de web interface (<a href="http://nrg-itho-A1B2.local">http://nrg-itho-A1B2.local</a>, A1B2 vervangen), via MQTT of WebAPI te bedienen.</p>
 <h3 id="nl-itho-bedienen">Itho bedienen</h3>
 <p>Er zijn verschillende mogelijkheden om de Itho te bedienen en de settings aan te passen.</p>
-<p>Voor CVE&#39;s en de HRU 200 zijn er 2 manieren om de snelheid te regelen: remote-commando&#39;s (virtual of RF) en het traploze PWM2I2C-protocol. Voor andere apparaten (bijvoorbeeld de HRU 350) zijn alleen de remote-commando&#39;s (virtual remote en/of RF-remote) beschikbaar. Voor de HRU 250 en HRU 300 werken uitsluitend RF-remote commando&#39;s. Om RF-remote commando&#39;s te versturen moet de CC1101 RF-module aanwezig zijn op de add-on. Virtual-remote commando&#39;s (waarbij de add-on een fysieke remote emuleert) worden via de fysieke I2C-verbinding met de Itho verstuurd.</p>
+<p>Voor CVE&#39;s en de HRU ECO 200 zijn er 2 manieren om de snelheid te regelen: remote-commando&#39;s (virtual of RF) en het traploze PWM2I2C-protocol. Voor andere apparaten (bijvoorbeeld de HRU ECO 350) zijn alleen de remote-commando&#39;s (virtual remote en/of RF-remote) beschikbaar. Voor de HRU ECO 250 en HRU ECO 300 werken uitsluitend RF-remote commando&#39;s. Om RF-remote commando&#39;s te versturen moet de CC1101 RF-module aanwezig zijn op de add-on. Virtual-remote commando&#39;s (waarbij de add-on een fysieke remote emuleert) worden via de fysieke I2C-verbinding met de Itho verstuurd.</p>
 <p>Wat per apparaat precies mogelijk is, staat in het hoofdstuk <a href="#nl-apparaat-specifieke-informatie">Apparaat-specifieke informatie</a>.</p>
 <p>Meer details over de verschillende mogelijkheden en de eventuele beperkingen zijn op de wiki te vinden:</p>
 <p><a href="https://github.com/arjenhiemstra/ithowifi/wiki/Controlling-the-speed-of-a-fan">https://github.com/arjenhiemstra/ithowifi/wiki/Controlling-the-speed-of-a-fan</a></p>
@@ -274,35 +274,121 @@ Werkt dit niet (bijv. op Android)? Ga dan naar <a href="http://192.168.4.1">http
 <blockquote>
 <p><strong>Let op:</strong> welke statuswaarden en instellingen precies beschikbaar zijn, hangt af van het model én de firmwareversie van het Itho-apparaat. De web interface en de API-pagina tonen altijd de actuele, volledige lijst voor jouw apparaat. De waarden hieronder zijn voorbeelden van wat een apparaat zoal rapporteert.</p>
 </blockquote>
-<h3 id="nl-cve-familie-cve-cve-silent-hru-200">CVE-familie (CVE, CVE-Silent, HRU 200)</h3>
-<p><strong>Modellen:</strong> CVE, CVE-Silent en de HRU 200 (in de web interface herkend als <em>CVE-SilentExtPlus</em>). Ook de CVE ECO2 en CVE-SilentExt worden herkend, maar bieden alleen basisstatus.</p>
+<h3 id="nl-ondersteunde-hru-modellen">Ondersteunde HRU-modellen</h3>
+<p>Het artikelnummer staat op het typeplaatje/sticker van je Itho. x is een willekeurig cijfer. Een letter achter het nummer (A, S) telt niet mee.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Artikelnummer</th>
+<th>Add-on</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>HRU ECO 150E / 150P</td>
+<td>03-0001x</td>
+<td>CVE add-on</td>
+</tr>
+<tr>
+<td>HRU ECO 200E / 200P</td>
+<td>03-0040x</td>
+<td>CVE add-on</td>
+</tr>
+<tr>
+<td>HRU ECO 250R / 250P</td>
+<td>03-0021x</td>
+<td>non-CVE set (met adapter en RF-module)</td>
+</tr>
+<tr>
+<td>HRU ECO 300R / 300P</td>
+<td>03-0030x, 03-00500, 03-00501</td>
+<td>non-CVE set (met adapter en RF-module)</td>
+</tr>
+<tr>
+<td>HRU ECO 300 DUO Zone</td>
+<td>03-00502</td>
+<td>non-CVE set (met adapter en RF-module)</td>
+</tr>
+<tr>
+<td>HRU ECO 350 LR / LP / HR / HP</td>
+<td>03-00389, 03-0039x</td>
+<td>non-CVE add-on</td>
+</tr>
+<tr>
+<td>HRU 300V</td>
+<td>03-00851</td>
+<td>non-CVE add-on + RF-module</td>
+</tr>
+<tr>
+<td>HRU 375V</td>
+<td>03-00853</td>
+<td>non-CVE add-on + RF-module</td>
+</tr>
+<tr>
+<td>HRU 400 R</td>
+<td>03-00584</td>
+<td>non-CVE add-on + RF-module</td>
+</tr>
+<tr>
+<td>HRU ECO LE / HE / LP / HP BAL</td>
+<td>545-426x, 545-427x</td>
+<td>non-CVE add-on</td>
+</tr>
+<tr>
+<td>HRU 3 (3)</td>
+<td>545-421x t/m 545-425x</td>
+<td>non-CVE add-on</td>
+</tr>
+<tr>
+<td>HRU 3 (2)</td>
+<td>545-41xx, 542-0005</td>
+<td>non-CVE add-on</td>
+</tr>
+<tr>
+<td>HRU 3 (1)</td>
+<td>545-40xx</td>
+<td>Niet ondersteund</td>
+</tr>
+<tr>
+<td>HRU 2</td>
+<td>540-7003 t/m 540-7009, 540-7010, 540-702x</td>
+<td>Niet ondersteund</td>
+</tr>
+<tr>
+<td>HRU 1</td>
+<td>540-7001, 540-7002</td>
+<td>Niet ondersteund</td>
+</tr>
+</tbody></table>
+<h3 id="nl-cve-familie-cve-cve-silent-hru-eco-200">CVE-familie (CVE, CVE-Silent, HRU ECO 200)</h3>
+<p><strong>Modellen:</strong> CVE, CVE-Silent en de HRU ECO 200 (in de web interface herkend als <em>CVE-SilentExtPlus</em>). Ook de CVE ECO2 en CVE-SilentExt worden herkend, maar bieden alleen basisstatus.</p>
 <p><strong>Aansturing:</strong> deze units communiceren via de fysieke I2C-verbinding op de basisprint. De snelheid kan op twee manieren geregeld worden:</p>
 <ul>
 <li><strong>Remote-commando&#39;s</strong>: een <em>virtual remote</em> die de add-on emuleert, of een fysieke/RF-remote (RF vereist de CC1101-module).</li>
-<li><strong>PWM2I2C</strong>: een traploos protocol voor staploze regeling (0-100%). Dit is alleen beschikbaar op de CVE&#39;s en de HRU 200, niet op de andere apparaten.</li>
+<li><strong>PWM2I2C</strong>: een traploos protocol voor staploze regeling (0-100%). Dit is alleen beschikbaar op de CVE&#39;s en de HRU ECO 200, niet op de andere apparaten.</li>
 </ul>
 <p>Standaard staat de add-on in PWM2I2C-modus; de remote-modus kun je instellen via <em>System settings</em>.</p>
 <blockquote>
 <p><strong>Let op (modellen met ingebouwde CO2-sensor):</strong> bij CVE-S Optima Inside-modellen met een ingebouwde CO2-sensor werkt PWM2I2C niet: de PWM2I2C-commando&#39;s worden overruled door de interne CO2-sensor. Gebruik bij deze modellen virtual remote-aansturing.</p>
 </blockquote>
 <p><strong>Wat de add-on uitleest (o.a.):</strong> ventilatieniveau/-setpoint (%), gevraagd en actueel toerental (rpm), gekozen stand, foutcode, opstartteller, bedrijfsuren, <strong>CO2-waarde (ppm)</strong>, klepstand en aanwezigheidstimer. Nieuwere CVE&#39;s hebben een ingebouwde vochtsensor; zie het hoofdstuk <a href="#nl-temperatuurvochtsensor">Temperatuur/Vochtsensor</a>.</p>
-<p>De <strong>CVE-Silent</strong> meldt aanvullend onder meer de hoogst gemeten CO2 (ppm) en RH (%), de interne luchtvochtigheid (%) en temperatuur (°C) en afwezigheidstimers. De <strong>HRU 200</strong> heeft de meest uitgebreide set van de familie, met daarnaast onder meer filtergebruik (uren), buiten- en afblaastemperatuur, gemiddelde uitblaastemperatuur, bypassmodus en -stand, en de maximale CO2-/RH-niveaus.</p>
+<p>De <strong>CVE-Silent</strong> meldt aanvullend onder meer de hoogst gemeten CO2 (ppm) en RH (%), de interne luchtvochtigheid (%) en temperatuur (°C) en afwezigheidstimers. De <strong>HRU ECO 200</strong> heeft de meest uitgebreide set van de familie, met daarnaast onder meer filtergebruik (uren), buiten- en afblaastemperatuur, gemiddelde uitblaastemperatuur, bypassmodus en -stand, en de maximale CO2-/RH-niveaus.</p>
 <blockquote>
 <p><strong>Let op (RF bij CVE&#39;s):</strong> bij de CVE&#39;s zitten de antennes van de add-on en de unit dicht bij elkaar. Dit kan bij RF-aansturing (zoals een geëmuleerde RFT CO2-remote) tot communicatieproblemen leiden. Gebruik bij de CVE&#39;s daarom bij voorkeur de I2C-aansturing (virtual remote of PWM2I2C).</p>
 </blockquote>
-<h3 id="nl-hru-warmteterugwinning-via-i2c-hru-350-hru-eco-fan">HRU warmteterugwinning via I2C (HRU 350, HRU ECO-fan)</h3>
-<p><strong>Modellen:</strong> HRU 350 en HRU ECO-fan.</p>
+<h3 id="nl-hru-warmteterugwinning-via-i2c-hru-eco-350-hru-eco-bal-hru-3">HRU warmteterugwinning via I2C (HRU ECO 350, HRU ECO BAL, HRU 3)</h3>
+<p><strong>Modellen:</strong> HRU ECO 350 LR / LP / HR / HP, HRU ECO LE / HE / LP / HP BAL (in de web interface: <em>HRU ECO-fan</em>), HRU 3 (3) en HRU 3 (2).</p>
 <p><strong>Aansturing:</strong> via de I2C-verbinding, met remote-commando&#39;s (virtual remote of RF). Het traploze PWM2I2C-protocol is bij deze modellen <strong>niet</strong> beschikbaar: alleen de remote-standen/commando&#39;s.</p>
-<p><strong>Wat de add-on uitleest (o.a.):</strong> gevraagde ventilatiestand (%), balans (%), toevoer- en afvoerventilator (zowel gevraagd als actueel toerental), toevoer-, afvoer-, ruimte- en buitentemperatuur (°C), klep- en bypassstand, vorst- en boilertimers, filterteller, globale foutcode, actuele modus, hoogst gemeten CO2 (ppm) en RH (%), luchtkwaliteit (%) en de resterende override-timer. De HRU ECO-fan rapporteert een vergelijkbare set rond toevoer/afvoer, temperaturen, bypass en filtergebruik.</p>
+<p><strong>Wat de add-on uitleest (o.a.):</strong> gevraagde ventilatiestand (%), balans (%), toevoer- en afvoerventilator (zowel gevraagd als actueel toerental), toevoer-, afvoer-, ruimte- en buitentemperatuur (°C), klep- en bypassstand, vorst- en boilertimers, filterteller, globale foutcode, actuele modus, hoogst gemeten CO2 (ppm) en RH (%), luchtkwaliteit (%) en de resterende override-timer. De HRU ECO BAL rapporteert een vergelijkbare set rond toevoer/afvoer, temperaturen, bypass en filtergebruik.</p>
 <blockquote>
 <p><strong>DuoZone:</strong> HRU-units met twee zones (DuoZone) worden herkend; de zonegegevens verschijnen op de RF Status-pagina van de web interface (en via <code>GET /api/v2/rfstatus</code>).</p>
 </blockquote>
-<h3 id="nl-hru-250-hru-300">HRU 250 / HRU 300</h3>
+<h3 id="nl-hru-eco-250-hru-eco-300-hru-eco-300-duo-zone">HRU ECO 250 / HRU ECO 300 / HRU ECO 300 DUO Zone</h3>
 <p><strong>Aansturing:</strong> deze modellen worden <strong>uitsluitend via RF (CC1101)</strong> aangestuurd en uitgelezen; de Virtual Remote-optie werkt hier niet. Er moet daarvoor een RF-remote vanaf de add-on gekoppeld worden.</p>
-<p><strong>Speciale hardware:</strong> een adapterbordje en een PCI-e splitterkabel zijn nodig. De fysieke installatie hiervan staat in het hoofdstuk <a href="#nl-extra-informatie-voor-de-hru250-en-hru300">Extra informatie voor de HRU250 en HRU300</a>. Bij sommige revisies van de HRU 300 kan de unit te weinig stroom leveren; sluit in dat geval een USB-voeding aan op de add-on.</p>
+<p><strong>Speciale hardware:</strong> een adapterbordje en een PCI-e splitterkabel zijn nodig. De fysieke installatie hiervan staat in het hoofdstuk <a href="#nl-extra-informatie-voor-de-hru-eco-250-en-hru-eco-300">Extra informatie voor de HRU ECO 250 en HRU ECO 300</a>. Bij sommige revisies van de HRU ECO 300 kan de unit te weinig stroom leveren; sluit in dat geval een USB-voeding aan op de add-on.</p>
 <p><strong>Wat de add-on uitleest (o.a.):</strong> buiten- en gemengde-luchttemperatuur (°C), toevoer- en afvoerdebiet (m³/h), inlaat-, afvoer- en uitgeblazen-luchttemperatuur (°C), relatieve en absolute ventilatorsnelheid (%), de massflow in- en uitgaand (kg/h), bypassstand (%), gewenste inlaattemperatuur, uitgebreide vorstgegevens, motortoerental (rpm), de hoogst gemeten RH/CO2 en het stroomverbruik van de ventilator (mA).</p>
-<h3 id="nl-apparaten-zonder-i2c-rf-standalone-bijv-hru-400">Apparaten zonder I2C: RF-standalone (bijv. HRU 400)</h3>
-<p>Sommige units (bijvoorbeeld de HRU 400) hebben geen voor de add-on bruikbare I2C-verbinding. Hiervoor is de <strong>RF-standalone modus</strong>: de add-on slaat I2C volledig over en werkt alleen via RF (CC1101).</p>
+<h3 id="nl-apparaten-zonder-i2c-rf-standalone-bijv-hru-400-r">Apparaten zonder I2C: RF-standalone (bijv. HRU 400 R)</h3>
+<p>Sommige units (bijvoorbeeld de HRU 400 R) hebben geen voor de add-on bruikbare I2C-verbinding. Hiervoor is de <strong>RF-standalone modus</strong>: de add-on slaat I2C volledig over en werkt alleen via RF (CC1101).</p>
 <ul>
 <li><strong>Activeren:</strong> de Setup Wizard biedt dit aan bij apparaten zonder I2C; later kan het ook via <em>System settings</em>.</li>
 <li>Vanaf de add-on kan een RFT CO2-remote geëmuleerd worden. Nadat deze aan de HRU is gekoppeld, kan de HRU hiermee traploos aangestuurd worden van 0-100% in stapjes van een half procent.</li>
@@ -348,9 +434,9 @@ Werkt dit niet (bijv. op Android)? Ga dan naar <a href="http://192.168.4.1">http
 <hr>
 <h2 id="nl-virtual-remote">Virtual Remote</h2>
 <p>De add-on kan zich voordoen als een of meer <strong>virtuele remotes</strong>. Een virtuele remote emuleert een fysieke afstandsbediening volledig in software en stuurt de Itho rechtstreeks aan via de <strong>I2C-verbinding</strong> (de bedrade verbinding op de basisprint). Hiervoor is dus géén CC1101 RF-module nodig.</p>
-<p><strong>Welke apparaten?</strong> Virtuele remotes werken bij de via I2C aangesloten ventilatie-apparaten, zoals de CVE-familie, de HRU 350 en de HRU ECO. De meeste fan-apparaten hebben baat bij minstens één virtuele remote voor de bediening. Ze werken <strong>niet</strong> bij de HRU 250, HRU 300 en HRU 400; die worden uitsluitend via RF aangestuurd (zie <a href="#nl-rf-module">RF-Module</a>).</p>
+<p><strong>Welke apparaten?</strong> Virtuele remotes werken bij de via I2C aangesloten ventilatie-apparaten, zoals de CVE-familie, de HRU ECO 350, de HRU ECO BAL en de HRU 3. De meeste fan-apparaten hebben baat bij minstens één virtuele remote voor de bediening. Ze werken <strong>niet</strong> bij de HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V en HRU 400 R; die worden uitsluitend via RF aangestuurd (zie <a href="#nl-rf-module">RF-Module</a>).</p>
 <p><strong>Koppelen.</strong> Net als een fysieke remote moet ook een virtuele remote eerst aan de Itho gekoppeld (joined) worden. De add-on kan hiervoor automatisch een join-commando sturen (optie <em>Send join command</em>, bij de eerstvolgende keer inschakelen).</p>
-<p><strong>Verschil met een geëmuleerde RF-remote.</strong> Een <em>virtuele remote</em> communiceert via de bedrade <strong>I2C-verbinding</strong> met de Itho; een <em>geëmuleerde RF-remote</em> communiceert <strong>draadloos via de CC1101-module</strong> (868 MHz), net als een fysieke afstandsbediening. Gebruik een virtuele remote bij apparaten met een I2C-verbinding, en een geëmuleerde RF-remote bij apparaten die alleen via RF werken (HRU 250/300/400) of om draadloze sensoren (zoals RFT CO2) te emuleren.</p>
+<p><strong>Verschil met een geëmuleerde RF-remote.</strong> Een <em>virtuele remote</em> communiceert via de bedrade <strong>I2C-verbinding</strong> met de Itho; een <em>geëmuleerde RF-remote</em> communiceert <strong>draadloos via de CC1101-module</strong> (868 MHz), net als een fysieke afstandsbediening. Gebruik een virtuele remote bij apparaten met een I2C-verbinding, en een geëmuleerde RF-remote bij apparaten die alleen via RF werken (HRU ECO 250/300/400) of om draadloze sensoren (zoals RFT CO2) te emuleren.</p>
 <hr>
 <h2 id="nl-rf-module">RF-Module</h2>
 <p>Voor RF-functionaliteit is een CC1101-module op de add-on nodig.</p>
@@ -358,7 +444,7 @@ Werkt dit niet (bijv. op Android)? Ga dan naar <a href="http://192.168.4.1">http
 De meest verkochte afstandsbedieningen van Itho worden ondersteund.</p>
 <p><strong>Een bestaande remote overzetten naar de add-on.</strong> Een bestaande fysieke afstandsbediening kan overgezet worden naar de add-on, zodat de add-on de RF-commando&#39;s van die remote ontvangt en vertaalt naar de Itho. De remote wordt daarbij van de Itho ontkoppeld en aan de add-on gekoppeld, volgens onderstaande procedure.</p>
 <blockquote>
-<p><strong>Let op:</strong> de keuze voor het afhandelen van RF commando&#39;s van bestaande remotes via de add-on is niet beschikbaar voor de HRU 250, HRU 300 en HRU 400. Het monitoren van RF communicatie is wel mogelijk. Laat daarom bestaande RF remotes gekoppeld aan de Itho en koppel de add-on als extra remote aan je HRU.</p>
+<p><strong>Let op:</strong> de keuze voor het afhandelen van RF commando&#39;s van bestaande remotes via de add-on is niet beschikbaar voor de HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V en HRU 400 R. Het monitoren van RF communicatie is wel mogelijk. Laat daarom bestaande RF remotes gekoppeld aan de Itho en koppel de add-on als extra remote aan je HRU.</p>
 </blockquote>
 <ol>
 <li>Ontkoppel de afstandsbediening van de Itho door binnen 2 minuten nadat je de Itho unit aan hebt gezet een leave commando te versturen. Op de meeste afstandsbedieningen doe je dat door alle 4 de knoppen tegelijkertijd in te drukken. Bij nieuwere afstandsbedieningen, zoals de RFT AUTO-N, werkt dat niet: druk daar 2 diagonaal geplaatste knoppen 3 tot 8 seconden tegelijkertijd in. Zie bij twijfel de handleiding van je afstandsbediening;</li>
@@ -370,7 +456,7 @@ De meest verkochte afstandsbedieningen van Itho worden ondersteund.</p>
 <li>Als het goed is komt nu je remote ID op de eerste vrije positie te staan (zie plaatje hieronder), mocht na meerdere pogingen nog niet slagen, dan kan het zijn dat de remote (nog) niet wordt ondersteund. Neem dan contact op met support.</li>
 </ol>
 <p><img data-img="images/08-rf-remotes-setup-screenshot.png" alt="RF Remotes setup screenshot"></p>
-<p><strong>De add-on als geëmuleerde RF-remote.</strong> De add-on kan zich ook voordoen als een geëmuleerde RF-remote: via de CC1101-module gedraagt de add-on zich draadloos als een Itho-afstandsbediening. Met de <em>Remote function</em> op <strong>Send</strong> verstuurt de add-on draadloos snelheids- en timercommando&#39;s naar de Itho. Dit wordt gebruikt bij apparaten zonder bruikbare I2C-verbinding (zoals de HRU 250, HRU 300 en HRU 400) en om bijvoorbeeld een RFT CO2-sensor te emuleren.</p>
+<p><strong>De add-on als geëmuleerde RF-remote.</strong> De add-on kan zich ook voordoen als een geëmuleerde RF-remote: via de CC1101-module gedraagt de add-on zich draadloos als een Itho-afstandsbediening. Met de <em>Remote function</em> op <strong>Send</strong> verstuurt de add-on draadloos snelheids- en timercommando&#39;s naar de Itho. Dit wordt gebruikt bij apparaten zonder bruikbare I2C-verbinding (zoals de HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V en HRU 400 R) en om bijvoorbeeld een RFT CO2-sensor te emuleren.</p>
 <p>Voordat een geëmuleerde RF-remote werkt, moet deze eenmalig aan de Itho gekoppeld (joined) worden, net als een fysieke remote. Zet de Itho daarvoor in zijn koppel-/learn-modus (zie handleiding van je Itho) en start het koppelen met de blauwe join-knop bij de betreffende remote op de <strong>RF devices</strong>-pagina. Daarna is de add-on te gebruiken zoals een echte fysieke remote.</p>
 <p><strong>Opmerking:</strong> Er is een debug optie om RF-commando&#39;s zichtbaar te maken in de web interface. Stel hiervoor op de <strong>Syslog</strong> pagina, bij <em>RF Debug log level</em>, één van de volgende niveaus in:</p>
 <ul>
@@ -491,7 +577,7 @@ Afhankelijk van de productiedatum van de Itho box, kan de print er iets anders u
 <li><a href="#en-foreword">Foreword</a></li>
 <li><a href="#en-physical-installation-cve-add-on">Physical Installation CVE Add-on</a></li>
 <li><a href="#en-physical-installation-non-cve-add-on">Physical Installation non-CVE Add-on</a></li>
-<li><a href="#en-additional-information-for-the-hru250-and-hru300">Additional information for the HRU250 and HRU300</a></li>
+<li><a href="#en-additional-information-for-the-hru-eco-250-and-hru-eco-300">Additional information for the HRU ECO 250 and HRU ECO 300</a></li>
 <li><a href="#en-configuring-the-add-on">Configuring the Add-on</a></li>
 <li><a href="#en-usage-web-interface-api">Usage (Web interface, API)</a></li>
 <li><a href="#en-device-specific-information">Device-specific information</a></li>
@@ -509,7 +595,7 @@ Afhankelijk van de productiedatum van de Itho box, kan de print er iets anders u
 <hr>
 <h2 id="en-foreword">Foreword</h2>
 <p>Thank you for purchasing one (or more) add-on modules; enjoy using it!</p>
-<p>An important warning first! Several Itho devices (at least the CVE&#39;s and the HRU200) are not touch-safe when powered, including the low-voltage parts. Therefore, always disconnect power from the device when installing an add-on on the circuit board. This prevents harm to yourself and to your Itho! If needed, operate the buttons on the CVE add-on circuit board only with a non-conductive material.</p>
+<p>An important warning first! Several Itho devices (at least the CVE&#39;s and the HRU ECO 200) are not touch-safe when powered, including the low-voltage parts. Therefore, always disconnect power from the device when installing an add-on on the circuit board. This prevents harm to yourself and to your Itho! If needed, operate the buttons on the CVE add-on circuit board only with a non-conductive material.</p>
 <p>This is a concise manual to help you physically install the add-on and connect it to your own WiFi network. Information about further specific installations can be found online.</p>
 <p>This manual, the plug-ins for e.g. Home Assistant and Homey, the wiki and further information online are a community effort: a collection of contributions from users for users. Without these contributions this document, among other things, would not exist. Additions, changes and/or suggestions are highly appreciated!</p>
 <p><strong>Sources where further information can be found:</strong></p>
@@ -545,19 +631,19 @@ See Installation example, circled in red, for where the 2×4 pin interface is lo
 <li>Find the COM/Service port on your Itho device. This is a connection that looks like a network port (RJ45 connector). Connect the add-on to the COM/Service port with a good, short (CAT6a, STP, 25cm) network cable;</li>
 <li>The add-on is installed and will start an access point.</li>
 </ol>
-<p><strong>Note.</strong> Power for the add-on comes through the network cable from the connected Itho. In exceptional cases the Itho appears unable to supply enough power (certain revisions of the HRU300). As a result, communication with the HRU is not always stable. In that case, connect a USB power supply to the add-on. In all other cases this is not necessary.</p>
+<p><strong>Note.</strong> Power for the add-on comes through the network cable from the connected Itho. In exceptional cases the Itho appears unable to supply enough power (certain revisions of the HRU ECO 300). As a result, communication with the HRU is not always stable. In that case, connect a USB power supply to the add-on. In all other cases this is not necessary.</p>
 <hr>
-<h2 id="en-additional-information-for-the-hru250-and-hru300">Additional information for the HRU250 and HRU300</h2>
-<p>To use the add-on with the HRU250 and HRU300, an adapter board and a PCI-e splitter cable are required.</p>
+<h2 id="en-additional-information-for-the-hru-eco-250-and-hru-eco-300">Additional information for the HRU ECO 250 and HRU ECO 300</h2>
+<p>To use the add-on with the HRU ECO 250 and HRU ECO 300, an adapter board and a PCI-e splitter cable are required.</p>
 <p>To install these:</p>
 <ol>
 <li>Remove the PCI-e cable from the HRU&#39;s HMI.</li>
 <li>Connect the PCI-e cable of the HMI to the PCI-e splitter cable.</li>
-<li>Connect one end of the splitter cable to the HMI, and the remaining end to the HRU250/300 adapter board.</li>
+<li>Connect one end of the splitter cable to the HMI, and the remaining end to the HRU ECO 250/300 adapter board.</li>
 <li>The adapter board can be connected to the add-on with the network cable.</li>
 </ol>
-<p><img data-img="images/04-hru250-300-adapter-installed.png" alt="HRU250/300 adapter installation"></p>
-<h3 id="en-controlling-the-hru250-and-hru300">Controlling the HRU250 and HRU300</h3>
+<p><img data-img="images/04-hru250-300-adapter-installed.png" alt="HRU ECO 250/300 adapter installation"></p>
+<h3 id="en-controlling-the-hru-eco-250-and-hru-eco-300">Controlling the HRU ECO 250 and HRU ECO 300</h3>
 <p>These models are somewhat more limited in control via the add-on compared to other Itho models. To control this HRU you must use the CC1101 RF module on the add-on. The Virtual Remote option does not work on these HRU models.</p>
 <p>To use the RF module it must be activated via the add-on&#39;s web interface, under the &quot;System settings&quot; menu. After a reboot, an additional menu item named &quot;RF Devices&quot; appears. Here an RF device can be configured. This RF device must then be paired with the HRU. Follow the same procedure used to pair physical remotes.</p>
 <hr>
@@ -584,10 +670,10 @@ Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http
 <p><strong>Step 1: WiFi</strong></p>
 <p>Enter the name (SSID) and password of your own WiFi network. Optionally you can set a custom hostname. Click Connect and wait until the connection is confirmed. Note the IP address that is shown: you need it to reach the add-on later from your own network.</p>
 <p><strong>Step 2: Device</strong></p>
-<p>The wizard automatically detects which type of Itho device is connected (e.g. CVE-Silent, HRU 350, DemandFlow) and applies the most common default settings. For devices without an I2C connection (e.g. the HRU 400), the option to activate RF standalone mode is offered.</p>
+<p>The wizard automatically detects which type of Itho device is connected (e.g. CVE-Silent, HRU 350, DemandFlow) and applies the most common default settings. For devices without an I2C connection (e.g. the HRU 400 R), the option to activate RF standalone mode is offered.</p>
 <p><strong>Step 3: RF</strong> (skipped if no CC1101 RF module is present)</p>
 <p>Here you configure the RF remotes. You can pair (join) a remote with the Itho device, or skip this step and set it up later via the &quot;RF Devices&quot; menu.</p>
-<p>Working in RF-standalone mode (a device without I2C, for example the HRU 400)? Then this is the moment to pair an emulated RFT CO2 remote with the Itho; you then use it to control the device and read out its status.</p>
+<p>Working in RF-standalone mode (a device without I2C, for example the HRU 400 R)? Then this is the moment to pair an emulated RFT CO2 remote with the Itho; you then use it to control the device and read out its status.</p>
 <p><strong>Step 4: MQTT</strong> (optional)</p>
 <p>Enter the details of your MQTT server if you want to connect the add-on to Home Assistant, Domoticz or another home automation platform via MQTT. Optionally enable Home Assistant MQTT Auto Discovery so the add-on automatically appears as a device in Home Assistant.</p>
 <p><strong>Step 5: HA Discovery</strong> (skipped if MQTT is not enabled)</p>
@@ -600,7 +686,7 @@ Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http
 <p>The Itho unit can now be controlled via the web interface (<a href="http://nrg-itho-A1B2.local">http://nrg-itho-A1B2.local</a>, replace A1B2), via MQTT or the WebAPI.</p>
 <h3 id="en-controlling-the-itho">Controlling the Itho</h3>
 <p>There are several ways to control the Itho and change its settings.</p>
-<p>For CVE&#39;s and the HRU 200 there are 2 ways to control the speed: remote commands (virtual or RF) and the stepless PWM2I2C protocol. For other devices (for example the HRU 350) only the remote commands (virtual remote and/or RF remote) are available. For the HRU 250 and HRU 300 only RF remote commands work. To send RF remote commands the CC1101 RF module must be present on the add-on. Virtual remote commands (where the add-on emulates a physical remote) are sent via the physical I2C connection with the Itho.</p>
+<p>For CVE&#39;s and the HRU ECO 200 there are 2 ways to control the speed: remote commands (virtual or RF) and the stepless PWM2I2C protocol. For other devices (for example the HRU ECO 350) only the remote commands (virtual remote and/or RF remote) are available. For the HRU ECO 250 and HRU ECO 300 only RF remote commands work. To send RF remote commands the CC1101 RF module must be present on the add-on. Virtual remote commands (where the add-on emulates a physical remote) are sent via the physical I2C connection with the Itho.</p>
 <p>What is exactly possible per device is described in the <a href="#en-device-specific-information">Device-specific information</a> chapter.</p>
 <p>More details about the various options and any limitations can be found on the wiki:</p>
 <p><a href="https://github.com/arjenhiemstra/ithowifi/wiki/Controlling-the-speed-of-a-fan">https://github.com/arjenhiemstra/ithowifi/wiki/Controlling-the-speed-of-a-fan</a></p>
@@ -667,35 +753,121 @@ Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http
 <blockquote>
 <p><strong>Note:</strong> which status values and settings are exactly available depends on the model and the firmware version of the Itho device. The web interface and the API page always show the current, complete list for your device. The values below are examples of what a device typically reports.</p>
 </blockquote>
-<h3 id="en-cve-family-cve-cve-silent-hru-200">CVE family (CVE, CVE-Silent, HRU 200)</h3>
-<p><strong>Models:</strong> CVE, CVE-Silent and the HRU 200 (recognized in the web interface as <em>CVE-SilentExtPlus</em>). The CVE ECO2 and CVE-SilentExt are also recognized, but only provide basic status.</p>
+<h3 id="en-supported-hru-models">Supported HRU models</h3>
+<p>The article number is on the nameplate/sticker of your Itho. x is any digit. A letter after the number (A, S) does not count.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Article number</th>
+<th>Add-on</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>HRU ECO 150E / 150P</td>
+<td>03-0001x</td>
+<td>CVE add-on</td>
+</tr>
+<tr>
+<td>HRU ECO 200E / 200P</td>
+<td>03-0040x</td>
+<td>CVE add-on</td>
+</tr>
+<tr>
+<td>HRU ECO 250R / 250P</td>
+<td>03-0021x</td>
+<td>non-CVE set (with adapter and RF module)</td>
+</tr>
+<tr>
+<td>HRU ECO 300R / 300P</td>
+<td>03-0030x, 03-00500, 03-00501</td>
+<td>non-CVE set (with adapter and RF module)</td>
+</tr>
+<tr>
+<td>HRU ECO 300 DUO Zone</td>
+<td>03-00502</td>
+<td>non-CVE set (with adapter and RF module)</td>
+</tr>
+<tr>
+<td>HRU ECO 350 LR / LP / HR / HP</td>
+<td>03-00389, 03-0039x</td>
+<td>non-CVE add-on</td>
+</tr>
+<tr>
+<td>HRU 300V</td>
+<td>03-00851</td>
+<td>non-CVE add-on + RF module</td>
+</tr>
+<tr>
+<td>HRU 375V</td>
+<td>03-00853</td>
+<td>non-CVE add-on + RF module</td>
+</tr>
+<tr>
+<td>HRU 400 R</td>
+<td>03-00584</td>
+<td>non-CVE add-on + RF module</td>
+</tr>
+<tr>
+<td>HRU ECO LE / HE / LP / HP BAL</td>
+<td>545-426x, 545-427x</td>
+<td>non-CVE add-on</td>
+</tr>
+<tr>
+<td>HRU 3 (3)</td>
+<td>545-421x to 545-425x</td>
+<td>non-CVE add-on</td>
+</tr>
+<tr>
+<td>HRU 3 (2)</td>
+<td>545-41xx, 542-0005</td>
+<td>non-CVE add-on</td>
+</tr>
+<tr>
+<td>HRU 3 (1)</td>
+<td>545-40xx</td>
+<td>Not supported</td>
+</tr>
+<tr>
+<td>HRU 2</td>
+<td>540-7003 to 540-7009, 540-7010, 540-702x</td>
+<td>Not supported</td>
+</tr>
+<tr>
+<td>HRU 1</td>
+<td>540-7001, 540-7002</td>
+<td>Not supported</td>
+</tr>
+</tbody></table>
+<h3 id="en-cve-family-cve-cve-silent-hru-eco-200">CVE family (CVE, CVE-Silent, HRU ECO 200)</h3>
+<p><strong>Models:</strong> CVE, CVE-Silent and the HRU ECO 200 (recognized in the web interface as <em>CVE-SilentExtPlus</em>). The CVE ECO2 and CVE-SilentExt are also recognized, but only provide basic status.</p>
 <p><strong>Control:</strong> these units communicate via the physical I2C connection on the main board. The speed can be controlled in two ways:</p>
 <ul>
 <li><strong>Remote commands</strong>: a <em>virtual remote</em> emulated by the add-on, or a physical/RF remote (RF requires the CC1101 module).</li>
-<li><strong>PWM2I2C</strong>: a stepless protocol for continuous control (0-100%). This is only available on the CVE&#39;s and the HRU 200, not on the other devices.</li>
+<li><strong>PWM2I2C</strong>: a stepless protocol for continuous control (0-100%). This is only available on the CVE&#39;s and the HRU ECO 200, not on the other devices.</li>
 </ul>
 <p>By default the add-on is in PWM2I2C mode; the remote mode can be set via <em>System settings</em>.</p>
 <blockquote>
 <p><strong>Note (models with a built-in CO2 sensor):</strong> on CVE-S Optima Inside models with a built-in CO2 sensor, PWM2I2C does not work: the PWM2I2C commands are overruled by the internal CO2 sensor. Use virtual remote control on these models.</p>
 </blockquote>
 <p><strong>What the add-on reads out (among others):</strong> ventilation level/setpoint (%), requested and actual speed (rpm), selected mode, error code, startup counter, operating hours, <strong>CO2 value (ppm)</strong>, valve position and presence timer. Newer CVE&#39;s have a built-in humidity sensor; see the <a href="#en-temperaturehumidity-sensor">Temperature/Humidity sensor</a> chapter.</p>
-<p>The <strong>CVE-Silent</strong> additionally reports, among other things, the highest measured CO2 (ppm) and RH (%), the internal humidity (%) and temperature (°C), and absence timers. The <strong>HRU 200</strong> has the most extensive set of the family, additionally including filter usage (hours), outside and exhaust temperature, average outlet temperature, bypass mode and position, and the maximum CO2/RH levels.</p>
+<p>The <strong>CVE-Silent</strong> additionally reports, among other things, the highest measured CO2 (ppm) and RH (%), the internal humidity (%) and temperature (°C), and absence timers. The <strong>HRU ECO 200</strong> has the most extensive set of the family, additionally including filter usage (hours), outside and exhaust temperature, average outlet temperature, bypass mode and position, and the maximum CO2/RH levels.</p>
 <blockquote>
 <p><strong>Note (RF with CVE&#39;s):</strong> on the CVE&#39;s the antennas of the add-on and the unit are close together. This can cause communication problems with RF control (such as an emulated RFT CO2 remote). On the CVE&#39;s, therefore, preferably use I2C control (virtual remote or PWM2I2C).</p>
 </blockquote>
-<h3 id="en-hru-heat-recovery-via-i2c-hru-350-hru-eco-fan">HRU heat recovery via I2C (HRU 350, HRU ECO-fan)</h3>
-<p><strong>Models:</strong> HRU 350 and HRU ECO-fan.</p>
+<h3 id="en-hru-heat-recovery-via-i2c-hru-eco-350-hru-eco-bal-hru-3">HRU heat recovery via I2C (HRU ECO 350, HRU ECO BAL, HRU 3)</h3>
+<p><strong>Models:</strong> HRU ECO 350 LR / LP / HR / HP, HRU ECO LE / HE / LP / HP BAL (in the web interface: <em>HRU ECO-fan</em>), HRU 3 (3) and HRU 3 (2).</p>
 <p><strong>Control:</strong> via the I2C connection, with remote commands (virtual remote or RF). The stepless PWM2I2C protocol is <strong>not</strong> available on these models: only the remote modes/commands.</p>
-<p><strong>What the add-on reads out (among others):</strong> requested ventilation level (%), balance (%), supply and exhaust fan (both requested and actual speed), supply, exhaust, room and outside temperature (°C), valve and bypass position, frost and boiler timers, filter counter, global fault code, current mode, highest measured CO2 (ppm) and RH (%), air quality (%) and the remaining override timer. The HRU ECO-fan reports a comparable set around supply/exhaust, temperatures, bypass and filter usage.</p>
+<p><strong>What the add-on reads out (among others):</strong> requested ventilation level (%), balance (%), supply and exhaust fan (both requested and actual speed), supply, exhaust, room and outside temperature (°C), valve and bypass position, frost and boiler timers, filter counter, global fault code, current mode, highest measured CO2 (ppm) and RH (%), air quality (%) and the remaining override timer. The HRU ECO BAL reports a comparable set around supply/exhaust, temperatures, bypass and filter usage.</p>
 <blockquote>
 <p><strong>DuoZone:</strong> HRU units with two zones (DuoZone) are recognized; the zone data appears on the RF Status page of the web interface (and via <code>GET /api/v2/rfstatus</code>).</p>
 </blockquote>
-<h3 id="en-hru-250-hru-300">HRU 250 / HRU 300</h3>
+<h3 id="en-hru-eco-250-hru-eco-300-hru-eco-300-duo-zone">HRU ECO 250 / HRU ECO 300 / HRU ECO 300 DUO Zone</h3>
 <p><strong>Control:</strong> these models are controlled and read out <strong>exclusively via RF (CC1101)</strong>; the Virtual Remote option does not work here. An RF remote must therefore be paired from the add-on.</p>
-<p><strong>Special hardware:</strong> an adapter board and a PCI-e splitter cable are required. The physical installation is described in the <a href="#en-additional-information-for-the-hru250-and-hru300">Additional information for the HRU250 and HRU300</a> chapter. On some revisions of the HRU 300 the unit may supply too little power; in that case, connect a USB power supply to the add-on.</p>
+<p><strong>Special hardware:</strong> an adapter board and a PCI-e splitter cable are required. The physical installation is described in the <a href="#en-additional-information-for-the-hru-eco-250-and-hru-eco-300">Additional information for the HRU ECO 250 and HRU ECO 300</a> chapter. On some revisions of the HRU ECO 300 the unit may supply too little power; in that case, connect a USB power supply to the add-on.</p>
 <p><strong>What the add-on reads out (among others):</strong> outside and mixed-air temperature (°C), supply and exhaust airflow (m³/h), inlet, exhaust and blown-out air temperature (°C), relative and absolute fan speed (%), the inbound and outbound mass flow (kg/h), bypass position (%), desired inlet temperature, extensive frost data, motor speed (rpm), the highest measured RH/CO2 and the fan&#39;s current consumption (mA).</p>
-<h3 id="en-devices-without-i2c-rf-standalone-eg-hru-400">Devices without I2C: RF standalone (e.g. HRU 400)</h3>
-<p>Some units (for example the HRU 400) have no I2C connection usable by the add-on. For these there is <strong>RF standalone mode</strong>: the add-on skips I2C entirely and works only via RF (CC1101).</p>
+<h3 id="en-devices-without-i2c-rf-standalone-eg-hru-400-r">Devices without I2C: RF standalone (e.g. HRU 400 R)</h3>
+<p>Some units (for example the HRU 400 R) have no I2C connection usable by the add-on. For these there is <strong>RF standalone mode</strong>: the add-on skips I2C entirely and works only via RF (CC1101).</p>
 <ul>
 <li><strong>Activating:</strong> the Setup Wizard offers this for devices without I2C; later it can also be done via <em>System settings</em>.</li>
 <li>The add-on can emulate an RFT CO2 remote. After it is paired with the HRU, the HRU can be controlled steplessly from 0-100% in steps of half a percent.</li>
@@ -741,9 +913,9 @@ Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http
 <hr>
 <h2 id="en-virtual-remote">Virtual Remote</h2>
 <p>The add-on can present itself as one or more <strong>virtual remotes</strong>. A virtual remote emulates a physical remote entirely in software and controls the Itho directly over the <strong>I2C connection</strong> (the wired connection on the main board), so no CC1101 RF module is required.</p>
-<p><strong>Which devices?</strong> Virtual remotes work with the I2C-connected ventilation devices, such as the CVE family, the HRU 350 and the HRU ECO. Most fan devices benefit from at least one virtual remote for control. They do <strong>not</strong> work with the HRU 250, HRU 300 and HRU 400, which are controlled exclusively via RF (see <a href="#en-rf-module">RF Module</a>).</p>
+<p><strong>Which devices?</strong> Virtual remotes work with the I2C-connected ventilation devices, such as the CVE family, the HRU ECO 350, the HRU ECO BAL and the HRU 3. Most fan devices benefit from at least one virtual remote for control. They do <strong>not</strong> work with the HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V and HRU 400 R, which are controlled exclusively via RF (see <a href="#en-rf-module">RF Module</a>).</p>
 <p><strong>Pairing.</strong> Like a physical remote, a virtual remote must first be joined to the Itho. The add-on can send a join command automatically (the <em>Send join command</em> option, on the next power-on).</p>
-<p><strong>Difference from an emulated RF remote.</strong> A <em>virtual remote</em> communicates with the Itho over the wired <strong>I2C connection</strong>; an <em>emulated RF remote</em> communicates <strong>wirelessly via the CC1101 module</strong> (868 MHz), just like a physical remote. Use a virtual remote for devices with an I2C connection, and an emulated RF remote for devices that only work via RF (HRU 250/300/400) or to emulate wireless sensors (such as RFT CO2).</p>
+<p><strong>Difference from an emulated RF remote.</strong> A <em>virtual remote</em> communicates with the Itho over the wired <strong>I2C connection</strong>; an <em>emulated RF remote</em> communicates <strong>wirelessly via the CC1101 module</strong> (868 MHz), just like a physical remote. Use a virtual remote for devices with an I2C connection, and an emulated RF remote for devices that only work via RF (HRU ECO 250/300/400) or to emulate wireless sensors (such as RFT CO2).</p>
 <hr>
 <h2 id="en-rf-module">RF Module</h2>
 <p>RF functionality requires a CC1101 module on the add-on.</p>
@@ -751,7 +923,7 @@ Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http
 The most commonly sold Itho remotes are supported.</p>
 <p><strong>Moving an existing remote to the add-on.</strong> An existing physical remote can be moved to the add-on, so the add-on receives that remote&#39;s RF commands and translates them to the Itho. The remote is unpaired from the Itho and paired with the add-on, following the procedure below.</p>
 <blockquote>
-<p><strong>Note:</strong> handling the RF commands of existing remotes via the add-on is not available for the HRU 250, HRU 300 and HRU 400. Monitoring RF communication is possible, however. Therefore, leave existing RF remotes paired with the Itho and pair the add-on as an additional remote with your HRU.</p>
+<p><strong>Note:</strong> handling the RF commands of existing remotes via the add-on is not available for the HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V and HRU 400 R. Monitoring RF communication is possible, however. Therefore, leave existing RF remotes paired with the Itho and pair the add-on as an additional remote with your HRU.</p>
 </blockquote>
 <ol>
 <li>Unpair the remote from the Itho by sending a leave command within the first 2 minutes after powering on the Itho unit. On most remotes you do this by pressing all 4 buttons simultaneously. On newer remotes, such as the RFT AUTO-N, that does not work: press 2 diagonally placed buttons simultaneously for 3 to 8 seconds instead. If in doubt, check the manual of your remote;</li>
@@ -763,7 +935,7 @@ The most commonly sold Itho remotes are supported.</p>
 <li>If all goes well, your remote ID now appears in the first free position (see the image below). If it still does not succeed after several attempts, the remote may not (yet) be supported. In that case, contact support.</li>
 </ol>
 <p><img data-img="images/08-rf-remotes-setup-screenshot.png" alt="RF Remotes setup screenshot"></p>
-<p><strong>The add-on as an emulated RF remote.</strong> The add-on can also present itself as an emulated RF remote: via the CC1101 module it behaves wirelessly like an Itho remote. With the <em>Remote function</em> set to <strong>Send</strong>, the add-on sends speed and timer commands to the Itho over the air. This is used for devices without a usable I2C connection (such as the HRU 250, HRU 300 and HRU 400) and to emulate, for example, an RFT CO2 sensor.</p>
+<p><strong>The add-on as an emulated RF remote.</strong> The add-on can also present itself as an emulated RF remote: via the CC1101 module it behaves wirelessly like an Itho remote. With the <em>Remote function</em> set to <strong>Send</strong>, the add-on sends speed and timer commands to the Itho over the air. This is used for devices without a usable I2C connection (such as the HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V and HRU 400 R) and to emulate, for example, an RFT CO2 sensor.</p>
 <p>Before an emulated RF remote works, it must be joined to the Itho once, just like a physical remote. Put the Itho in its pairing/learn mode (see your Itho&#39;s manual) and start the join with the blue join button next to the relevant remote on the <strong>RF devices</strong> page. After that, the add-on can be used like a real physical remote.</p>
 <p><strong>Note:</strong> There is a debug option to make RF commands visible in the web interface. Set one of the following levels on the <strong>Syslog</strong> page, under <em>RF Debug log level</em>:</p>
 <ul>
