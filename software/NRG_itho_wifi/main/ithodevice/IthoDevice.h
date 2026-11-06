@@ -113,6 +113,7 @@ struct rfStatusSource
   uint8_t lastZone31DA{0};
   uint8_t lastZone31D9{0};
   uint8_t zoneMeasurements31DA{0}; // zone of measurements31DA, set with it under rfStatusMutex (#383)
+  uint8_t zoneMeasurements31D9{0}; // same for measurements31D9
   bool active{false};
   bool tracked{false};
   char name[32]{};

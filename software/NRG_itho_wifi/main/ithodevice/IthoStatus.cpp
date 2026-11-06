@@ -472,6 +472,7 @@ void parseRF31D9(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
     return;
 
   src->measurements31D9.clear();
+  src->zoneMeasurements31D9 = zoneId;
 
   const int labelLen = 4;
   const char *labels[labelLen];
