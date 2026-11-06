@@ -316,6 +316,7 @@ void mqttSendRFStatus()
       JsonObject root = doc.to<JsonObject>();
       if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
+        root["zone"] = rfStatusSources[i].lastZone31D9; // DuoZone: same zone id as in the 31DA message (#383)
         for (const auto &m : rfStatusSources[i].measurements31D9)
         {
           if (m.type == ithoDeviceMeasurements::is_int)
