@@ -16,4 +16,7 @@ class CC1101Packet
 public:
 	uint8_t length = 0;
 	uint8_t data[MAX_RAW]{};
+	uint8_t rssi = 0; // raw CC1101 RSSI / LQI / FREQEST status registers, latched as the packet is read (see RFSignal.h)
+	uint8_t lqi = 0;
+	uint8_t freqest = 0;
 };
