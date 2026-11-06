@@ -18,7 +18,7 @@ or in my Tindie store:
 -   No hardware changes needed to the Itho unit, no warranty void
 -   Control fan speed through the web interface, REST API v2, MQTT, or Home Assistant
 -   Send remote commands via virtual remotes (I2C) or RF remotes (CC1101 wireless)
--   RF standalone mode for devices without I2C connection (e.g. HRU 400)
+-   RF standalone mode for devices without I2C connection (e.g. HRU 400 R)
 -   OTA firmware updates directly from the web interface
 -   Easily integrate in any home automation system through MQTT or REST API
 -   Companion integrations available:
@@ -33,21 +33,45 @@ or in my Tindie store:
 -   CVE ECO 2 (also sold by 'Heatrae Sadia' in the UK)
 -   CVE ECO RFT (SE/SP, HE/HP)
 -   CVE-S ECO / PAK / Optima / CO2
--   HRU 200 ECO (also sold as 'Elektrodesign EHR 140 Akor BP' and 'Heatrae Sadia Advance Plus')
+-   HRU ECO 150E / 150P
+-   HRU ECO 200E / 200P (also sold as 'Elektrodesign EHR 140 Akor BP' and 'Heatrae Sadia Advance Plus')
 
 ### NON-CVE models (IthiWiFi NON-CVE add-on - I2C):
--   HRU ECO fan
--   HRU 150 / 200 / 250 / 300 / 350
+-   HRU ECO 350 LR / LP / HR / HP
+-   HRU ECO LE / HE / LP / HP BAL
+-   HRU 3 (3) and HRU 3 (2)
+-   HRU ECO 250R / 250P, HRU ECO 300R / 300P and HRU ECO 300 DUO Zone (with adapter board, PCI-e splitter cable and CC1101)
 -   DemandFlow / QualityFlow
 -   WPU 4G / 5G (heat pump)
 -   AutoTemp
 
 ### RF standalone mode (IthiWiFi NON-CVE add-on wuth CC1101):
--   HRU 400
+-   HRU 300V, HRU 375V and HRU 400 R
 -   Most Itho devices controllable via RF (CC1101 module required)
 -   Status data received wirelessly via 31DA/31D9 RF messages
 
-####   Note about CVE and HRU200 firmware:
+### HRU models by article number:
+Check the article number on the nameplate/sticker of your Itho. x is any digit. A letter after the number (A, S) does not count.
+
+| Model | Article number | Add-on |
+|---|---|---|
+| HRU ECO 150E / 150P | 03-0001x | CVE add-on |
+| HRU ECO 200E / 200P | 03-0040x | CVE add-on |
+| HRU ECO 250R / 250P | 03-0021x | non-CVE set (with adapter and RF module) |
+| HRU ECO 300R / 300P | 03-0030x, 03-00500, 03-00501 | non-CVE set (with adapter and RF module) |
+| HRU ECO 300 DUO Zone | 03-00502 | non-CVE set (with adapter and RF module) |
+| HRU ECO 350 LR / LP / HR / HP | 03-00389, 03-0039x | non-CVE add-on |
+| HRU 300V | 03-00851 | non-CVE add-on + RF module |
+| HRU 375V | 03-00853 | non-CVE add-on + RF module |
+| HRU 400 R | 03-00584 | non-CVE add-on + RF module |
+| HRU ECO LE / HE / LP / HP BAL | 545-426x, 545-427x | non-CVE add-on |
+| HRU 3 (3) | 545-421x to 545-425x | non-CVE add-on |
+| HRU 3 (2) | 545-41xx, 542-0005 | non-CVE add-on |
+| HRU 3 (1) | 545-40xx | Not supported |
+| HRU 2 | 540-7003 to 540-7009, 540-7010, 540-702x | Not supported |
+| HRU 1 | 540-7001, 540-7002 | Not supported |
+
+####   Note about CVE and HRU ECO 200 firmware:
 The CVE add-on controls the Itho unit in standard or medium mode setting only. If you leave the Itho in low or high setting, it won't accept I2C commands from the add-on (Itho designed behaviour). Adding a CC1101 RF module and/or using the virtual remote function can circumvent this issue. The virtual remote function can also be used to force medium mode before sending commands.
 
 ## APIs
