@@ -332,7 +332,7 @@ QualityFlow and DemandFlow are the same product: QualityFlow is the combination 
 
 **Models:** AutoTemp and AutoTemp Basic.
 
-**Control:** via the I2C connection. AutoTemp is a zone control system (per room), for example for underfloor heating; control and read-out via the web interface, MQTT and the WebAPI. A CC1101 RF module is not needed, but can be used to control Spider thermostats.
+**Control:** via the I2C connection. AutoTemp is a zone control system (per room), for example for underfloor heating; control and read-out via the web interface, MQTT and the WebAPI. A CC1101 RF module is not needed, but can be used to control Spider thermostats (from firmware 3.3.0).
 
 **What the add-on reads out (among others):** mode, condition and error code, and per room (up to 12 rooms) the measured temperature, the setpoint and the delivered power (% and kW), plus the valve positions per manifold/zone.
 
@@ -340,7 +340,7 @@ QualityFlow and DemandFlow are the same product: QualityFlow is the combination 
 
 The WPU is a heat pump (referred to in the firmware as *Heatpump*), not a ventilation device. It has by far the most extensive set of readable values.
 
-**Control:** via the I2C connection; read-out and settings via the web interface, MQTT and the WebAPI. A CC1101 RF module is not needed, but can be used to control Spider thermostats.
+**Control:** via the I2C connection; read-out and settings via the web interface, MQTT and the WebAPI. A CC1101 RF module is not needed, but can be used to control Spider thermostats (from firmware 3.3.0).
 
 **What the add-on reads out (among others):** a large number of temperatures (outside, boiler top/bottom, evaporator, suction and compressed gas, liquid, source in/out, CV supply and return, °C), CV pressure (bar), the current consumption of the compressor and the electric element (A), pump speeds for CV, source and boiler (%), valve positions, the status of compressor/element/trickle heating, various timers and an error code with detailed error bytes.
 

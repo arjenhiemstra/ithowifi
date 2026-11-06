@@ -401,11 +401,11 @@ Werkt dit niet (bijv. op Android)? Ga dan naar <a href="http://192.168.4.1">http
 <p><strong>Wat de add-on uitleest (o.a.):</strong> bedrijfsstatus en -modus, relatieve vochtigheid per badkamer (%), afvoerventilator (%), CO2 in het plenum (ppm) plus de berekende CO2 per ruimte (keuken, toilet, woonkamer, slaapkamers, enzovoort), de berekende klep-/flapstanden en het berekende luchtdebiet per ruimte (m³/h), en de foutcode.</p>
 <h3 id="nl-autotemp">AutoTemp</h3>
 <p><strong>Modellen:</strong> AutoTemp en AutoTemp Basic.</p>
-<p><strong>Aansturing:</strong> via de I2C-verbinding. AutoTemp is een zoneregeling (per kamer), bijvoorbeeld voor vloerverwarming; bediening en uitlezing via de web interface, MQTT en de WebAPI. Een CC1101 RF-module is niet nodig, maar kan worden gebruikt om Spider-thermostaten te bedienen.</p>
+<p><strong>Aansturing:</strong> via de I2C-verbinding. AutoTemp is een zoneregeling (per kamer), bijvoorbeeld voor vloerverwarming; bediening en uitlezing via de web interface, MQTT en de WebAPI. Een CC1101 RF-module is niet nodig, maar kan worden gebruikt om Spider-thermostaten te bedienen (vanaf firmware 3.3.0).</p>
 <p><strong>Wat de add-on uitleest (o.a.):</strong> modus, conditie en foutcode, en per ruimte (tot 12 kamers) de gemeten temperatuur, het setpoint en het afgegeven vermogen (% en kW), plus de klepstanden per verdeler/zone.</p>
 <h3 id="nl-wpu-warmtepomp">WPU (warmtepomp)</h3>
 <p>De WPU is een warmtepomp (in de firmware aangeduid als <em>Heatpump</em>), geen ventilatie-apparaat. Het heeft veruit de uitgebreidste set uitleesbare waarden.</p>
-<p><strong>Aansturing:</strong> via de I2C-verbinding; uitlezing en instellingen via de web interface, MQTT en de WebAPI. Een CC1101 RF-module is niet nodig, maar kan worden gebruikt om Spider-thermostaten te bedienen.</p>
+<p><strong>Aansturing:</strong> via de I2C-verbinding; uitlezing en instellingen via de web interface, MQTT en de WebAPI. Een CC1101 RF-module is niet nodig, maar kan worden gebruikt om Spider-thermostaten te bedienen (vanaf firmware 3.3.0).</p>
 <p><strong>Wat de add-on uitleest (o.a.):</strong> een groot aantal temperaturen (buiten, boiler boven/onder, verdamper, zuig- en persgas, vloeistof, bron aan/af, CV-aanvoer en -retour, °C), CV-druk (bar), het stroomverbruik van compressor en elektrisch element (A), pompsnelheden voor CV, bron en boiler (%), klepstanden, de status van compressor/element/steunverwarming, diverse timers en een foutcode met gedetailleerde foutbytes.</p>
 <blockquote>
 <p>De foutbytes worden als ruwe waarden getoond; een vertaaltabel naar omschrijvingen zit niet in de add-on. Raadpleeg voor de betekenis de documentatie van Itho.</p>
@@ -881,11 +881,11 @@ Doesn&#39;t work (e.g. on Android)? Then go to <a href="http://192.168.4.1">http
 <p><strong>What the add-on reads out (among others):</strong> operating status and mode, relative humidity per bathroom (%), exhaust fan (%), CO2 in the plenum (ppm) plus the calculated CO2 per room (kitchen, toilet, living room, bedrooms, etc.), the calculated valve/flap positions and the calculated airflow per room (m³/h), and the error code.</p>
 <h3 id="en-autotemp">AutoTemp</h3>
 <p><strong>Models:</strong> AutoTemp and AutoTemp Basic.</p>
-<p><strong>Control:</strong> via the I2C connection. AutoTemp is a zone control system (per room), for example for underfloor heating; control and read-out via the web interface, MQTT and the WebAPI. A CC1101 RF module is not needed, but can be used to control Spider thermostats.</p>
+<p><strong>Control:</strong> via the I2C connection. AutoTemp is a zone control system (per room), for example for underfloor heating; control and read-out via the web interface, MQTT and the WebAPI. A CC1101 RF module is not needed, but can be used to control Spider thermostats (from firmware 3.3.0).</p>
 <p><strong>What the add-on reads out (among others):</strong> mode, condition and error code, and per room (up to 12 rooms) the measured temperature, the setpoint and the delivered power (% and kW), plus the valve positions per manifold/zone.</p>
 <h3 id="en-wpu-heat-pump">WPU (heat pump)</h3>
 <p>The WPU is a heat pump (referred to in the firmware as <em>Heatpump</em>), not a ventilation device. It has by far the most extensive set of readable values.</p>
-<p><strong>Control:</strong> via the I2C connection; read-out and settings via the web interface, MQTT and the WebAPI. A CC1101 RF module is not needed, but can be used to control Spider thermostats.</p>
+<p><strong>Control:</strong> via the I2C connection; read-out and settings via the web interface, MQTT and the WebAPI. A CC1101 RF module is not needed, but can be used to control Spider thermostats (from firmware 3.3.0).</p>
 <p><strong>What the add-on reads out (among others):</strong> a large number of temperatures (outside, boiler top/bottom, evaporator, suction and compressed gas, liquid, source in/out, CV supply and return, °C), CV pressure (bar), the current consumption of the compressor and the electric element (A), pump speeds for CV, source and boiler (%), valve positions, the status of compressor/element/trickle heating, various timers and an error code with detailed error bytes.</p>
 <blockquote>
 <p>The error bytes are shown as raw values; a translation table to descriptions is not included in the add-on. Consult the Itho documentation for their meaning.</p>
