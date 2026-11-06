@@ -373,12 +373,20 @@ void execSystemControlTasks()
     scan.once_ms(10, wifiScan);
   }
 
-  // If the status format is not retrieved correctly during boot but lost during runtime; resend the query.
-  if ((ithoStatus.empty() && systemConfig.itho_2401 == 1) && millis() - lastIthoStatusFormatCheck > 60000 && ithoStatusFormateSuccessful)
+  // If the status format was not retrieved at boot, or is lost during runtime; resend the query every 60 s until it works.
+  if ((ithoStatus.empty() && systemConfig.itho_2401 == 1) && millis() - lastIthoStatusFormatCheck > 60000)
   {
     lastIthoStatusFormatCheck = millis();
     sendQueryStatusFormat(false);
-    E_LOG("I2C: error - StatusFormat lost. Resend query result: %s", ithoStatus.size() ? "success" : "failed");
+    if (ithoStatus.size())
+    {
+      ithoStatusFormateSuccessful = true;
+      I_LOG("I2C: StatusFormat retrieved by retry, items:%lu", static_cast<unsigned long>(ithoStatus.size()));
+    }
+    else
+    {
+      E_LOG("I2C: error - StatusFormat empty. Resend query result: failed");
+    }
   }
 
   if (!(currentItho_fwversion() > 0) && millis() - lastVersionCheck > 60000)
