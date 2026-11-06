@@ -172,6 +172,7 @@ int IthoRemote::removeRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2)
   remotes[index].thermostat = false;
   remotes[index].setpointCmd = 0xEFFF;
   memset(remotes[index].ctlID, 0, 3);
+  memset(remotes[index].destID, 0, 3);
   remotes[index].zone = 0xFF;
 
   return 1;
@@ -214,6 +215,7 @@ int IthoRemote::removeRemote(const uint8_t index)
   remotes[index].thermostat = false;
   remotes[index].setpointCmd = 0xEFFF;
   memset(remotes[index].ctlID, 0, 3);
+  memset(remotes[index].destID, 0, 3);
   remotes[index].zone = 0xFF;
 
   return 1;
