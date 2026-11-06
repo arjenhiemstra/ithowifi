@@ -296,7 +296,7 @@ The **CVE-Silent** additionally reports, among other things, the highest measure
 
 **Models:** HRU ECO 350 LR / LP / HR / HP, HRU ECO LE / HE / LP / HP BAL (in the web interface: *HRU ECO-fan*), HRU 3 (3) and HRU 3 (2).
 
-**Control:** via the I2C connection, with remote commands (virtual remote or RF). The stepless PWM2I2C protocol is **not** available on these models: only the remote modes/commands.
+**Control:** via the I2C connection, with remote commands (virtual remote or RF). The stepless PWM2I2C protocol is **not** available on these models: only the remote modes/commands. With a CC1101 RF module you can emulate an RFT CO2 remote and control the HRU stepless in 0.5% increments.
 
 **What the add-on reads out (among others):** requested ventilation level (%), balance (%), supply and exhaust fan (both requested and actual speed), supply, exhaust, room and outside temperature (°C), valve and bypass position, frost and boiler timers, filter counter, global fault code, current mode, highest measured CO2 (ppm) and RH (%), air quality (%) and the remaining override timer. The HRU ECO BAL reports a comparable set around supply/exhaust, temperatures, bypass and filter usage.
 
@@ -320,9 +320,11 @@ Some units (for example the HRU 400 R) have no I2C connection usable by the add-
 
 This mode requires a CC1101 RF module.
 
-### DemandFlow
+### DemandFlow / QualityFlow
 
-**Control:** via the I2C connection. DemandFlow is a demand-driven ventilation system with multiple rooms; control and read-out go via the web interface, MQTT and the WebAPI.
+QualityFlow and DemandFlow are the same product: QualityFlow is the combination with an HRU, DemandFlow the combination with a CVE.
+
+**Control:** via the I2C connection. DemandFlow is a demand-driven ventilation system with multiple rooms; control and read-out go via the web interface, MQTT and the WebAPI. A CC1101 RF module is not needed.
 
 **What the add-on reads out (among others):** operating status and mode, relative humidity per bathroom (%), exhaust fan (%), CO2 in the plenum (ppm) plus the calculated CO2 per room (kitchen, toilet, living room, bedrooms, etc.), the calculated valve/flap positions and the calculated airflow per room (m³/h), and the error code.
 
@@ -330,7 +332,7 @@ This mode requires a CC1101 RF module.
 
 **Models:** AutoTemp and AutoTemp Basic.
 
-**Control:** via the I2C connection. AutoTemp is a zone control system (per room), for example for underfloor heating; control and read-out via the web interface, MQTT and the WebAPI.
+**Control:** via the I2C connection. AutoTemp is a zone control system (per room), for example for underfloor heating; control and read-out via the web interface, MQTT and the WebAPI. A CC1101 RF module is not needed, but can be used to control Spider thermostats.
 
 **What the add-on reads out (among others):** mode, condition and error code, and per room (up to 12 rooms) the measured temperature, the setpoint and the delivered power (% and kW), plus the valve positions per manifold/zone.
 
@@ -338,7 +340,7 @@ This mode requires a CC1101 RF module.
 
 The WPU is a heat pump (referred to in the firmware as *Heatpump*), not a ventilation device. It has by far the most extensive set of readable values.
 
-**Control:** via the I2C connection; read-out and settings via the web interface, MQTT and the WebAPI.
+**Control:** via the I2C connection; read-out and settings via the web interface, MQTT and the WebAPI. A CC1101 RF module is not needed, but can be used to control Spider thermostats.
 
 **What the add-on reads out (among others):** a large number of temperatures (outside, boiler top/bottom, evaporator, suction and compressed gas, liquid, source in/out, CV supply and return, °C), CV pressure (bar), the current consumption of the compressor and the electric element (A), pump speeds for CV, source and boiler (%), valve positions, the status of compressor/element/trickle heating, various timers and an error code with detailed error bytes.
 
