@@ -370,6 +370,7 @@ void webServerInit()
         return request->requestAuthentication();
     }
     logMessagejson("Reset requested. Device will reboot in a few seconds...", WEBINTERFACE);
+    request->send(200, "text/plain", "Reset requested. Device will reboot in a few seconds...");
     delay(200);
     shouldReboot = true; });
 

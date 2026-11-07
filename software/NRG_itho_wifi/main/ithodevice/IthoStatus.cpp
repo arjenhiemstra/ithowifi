@@ -96,7 +96,7 @@ void sendQueryStatusFormat(bool updateweb)
   const uint8_t endPos = i2cbuf[5];
   if (endPos == 0)
   {
-    W_LOG("I2C: QueryStatusFormat reply has 0 entries, keeping previous status");
+    D_LOG("I2C: QueryStatusFormat reply has 0 entries, keeping previous status");
     return;
   }
 

@@ -46,6 +46,7 @@ unsigned long query4210tim = 0;
 unsigned long mqttUpdatetim = 0;
 unsigned long lastVersionCheck = 0;
 unsigned long lastIthoStatusFormatCheck = 0;
+bool ithoStatusFormatRetryLogged = false;
 
 void startTaskSysControl()
 {
@@ -373,12 +374,22 @@ void execSystemControlTasks()
     scan.once_ms(10, wifiScan);
   }
 
-  // If the status format is not retrieved correctly during boot but lost during runtime; resend the query.
-  if ((ithoStatus.empty() && systemConfig.itho_2401 == 1) && millis() - lastIthoStatusFormatCheck > 60000 && ithoStatusFormateSuccessful)
+  // If the status format was not retrieved at boot, or is lost during runtime; resend the query every 60 s until it works.
+  // Needs a known device, the query cannot succeed without one (RF standalone, no Itho connected).
+  if ((ithoStatus.empty() && systemConfig.itho_2401 == 1) && currentItho_fwversion() > 0 && millis() - lastIthoStatusFormatCheck > 60000)
   {
     lastIthoStatusFormatCheck = millis();
     sendQueryStatusFormat(false);
-    E_LOG("I2C: error - StatusFormat lost. Resend query result: %s", ithoStatus.size() ? "success" : "failed");
+    if (ithoStatus.size())
+    {
+      ithoStatusFormatRetryLogged = false;
+      N_LOG("I2C: StatusFormat retrieved by retry, items:%lu", static_cast<unsigned long>(ithoStatus.size()));
+    }
+    else if (!ithoStatusFormatRetryLogged)
+    {
+      ithoStatusFormatRetryLogged = true;
+      E_LOG("I2C: error - StatusFormat empty, retrying every 60 s");
+    }
   }
 
   if (!(currentItho_fwversion() > 0) && millis() - lastVersionCheck > 60000)
