@@ -873,6 +873,12 @@ void handle_ws_message(JsonObject root)
         {
           rfManager.radio.updateSourceID(id0, id1, id2, idx);
         }
+        else
+        {
+          // A slot that is no longer Send must not keep the sourceID from an earlier Send save:
+          // handleBind() matches a binding accept on sourceID and would store a destid on it.
+          rfManager.radio.updateSourceID(0, 0, 0, idx);
+        }
         // updateRFDevice() resets destinationID to the slot's own ID. Re-apply
         // the persisted destinationID if one is stored, so a joined or
         // explicitly-configured slot doesn't lose its addressing every time
