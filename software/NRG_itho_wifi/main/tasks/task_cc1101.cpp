@@ -50,6 +50,79 @@ constexpr uint32_t SPIDER_REPEAT_MS = 1000;
 constexpr uint32_t SPIDER_DIAL_MS = 10 * 60 * 1000; // the RQ 01FF right after a dial change still has the old setpoint
 constexpr uint8_t SPIDER_ZONE_TRIES = 3; // W 22C9 to a zone controller, 1 s apart, until it echoes the setpoint
 
+// Pre-RAMSES "message1" debug requests from the API, run in this task: 1 receive on, 2 receive off, 3 send
+static volatile uint8_t legacyCmd = 0;
+static uint8_t legacyTxBuf[64];
+static uint8_t legacyTxLen = 0;
+static uint8_t legacyTxRepeats = 1;
+
+bool legacyRFRequest(uint8_t cmd, const uint8_t *data, uint8_t len, uint8_t repeats)
+{
+  if (legacyCmd != 0 || len > sizeof(legacyTxBuf))
+    return false;
+  if (cmd == 3)
+  {
+    memcpy(legacyTxBuf, data, len);
+    legacyTxLen = len;
+  }
+  legacyTxRepeats = repeats;
+  legacyCmd = cmd;
+  return true;
+}
+
+// Log every burst above the noise floor for `seconds` (cmd 4, seconds in repeats), any protocol
+static void legacyRssiScan(uint8_t seconds)
+{
+  const uint32_t t0 = millis();
+  int32_t sum = 0;
+  uint16_t n = 0;
+  int16_t thr = 0;
+  bool in = false;
+  uint32_t bStart = 0, lastAbove = 0;
+  int16_t bPeak = -200;
+  uint16_t bursts = 0;
+  int16_t rMin = 200, rMax = -200;
+  N_LOG("RF1 scan start, marcstate 0x%02X", rfManager.radio.marcState());
+  while (millis() - t0 < seconds * 1000UL)
+  {
+    const int16_t r = rfManager.radio.rssiDbm();
+    const uint32_t now = millis();
+    if (r < rMin)
+      rMin = r;
+    if (r > rMax)
+      rMax = r;
+    if (n < 200)
+    {
+      sum += r;
+      if (++n == 200)
+        thr = sum / 200 + 12;
+    }
+    else if (r > thr)
+    {
+      if (!in)
+      {
+        in = true;
+        bStart = now;
+        bPeak = r;
+      }
+      if (r > bPeak)
+        bPeak = r;
+      lastAbove = now;
+    }
+    else if (in && now - lastAbove > 2)
+    {
+      in = false;
+      if (bursts < 60)
+        N_LOG("RF1 burst +%lu ms len %lu ms peak %d dBm", bStart - t0, lastAbove - bStart + 1, bPeak);
+      bursts++;
+    }
+    delayMicroseconds(500);
+    if ((now & 15) == 0)
+      vTaskDelay(1);
+  }
+  N_LOG("RF1 scan %us: noise %d dBm, threshold %d dBm, min %d max %d, bursts %u, marcstate 0x%02X", seconds, (int)(sum / 200), thr, rMin, rMax, bursts, rfManager.radio.marcState());
+}
+
 static bool spiderConfirmed(const uint8_t sid[3])
 {
   for (const auto &item : rfManager.radio.getRFdevices().device)
@@ -805,6 +878,31 @@ void TaskCC1101(void *pvParameters)
 
       TaskCC1101Timeout.once_ms(3000, []()
                                 { W_LOG("SYS: warning - CC1101 Task timed out!"); });
+
+      if (legacyCmd != 0)
+      {
+        disableRF_ISR();
+        if (legacyCmd == 3)
+          rfManager.radio.sendLegacyRaw(legacyTxBuf, legacyTxLen, legacyTxRepeats);
+        else if (legacyCmd == 4)
+          legacyRssiScan(legacyTxRepeats);
+        else
+          rfManager.radio.setLegacyRx(legacyCmd == 1);
+        enableRF_ISR();
+        N_LOG("RF1: %s", legacyCmd == 3 ? "frame sent" : (legacyCmd == 1 ? "legacy receive on" : "legacy receive off"));
+        legacyCmd = 0;
+      }
+      if (rfManager.radio.legacyReady)
+      {
+        rfManager.radio.legacyReady = false;
+        char line[16 + 4 * IthoCC1101::LEGACY_RX_LEN]{};
+        int n = snprintf(line, sizeof(line), "RF1 rssi:%u", rfManager.radio.legacyRssi);
+        for (uint8_t i = 0; i < rfManager.radio.legacyIn.length && n < (int)sizeof(line); i++)
+          n += snprintf(line + n, sizeof(line) - n, " %u", rfManager.radio.legacyIn.data[i]);
+        N_LOG("%s", line);
+        logMessagejson(line, RFLOG);
+        mqttDebugPush(MqttDebugChannel::RF, line);
+      }
 
       if (spiderDiscCmd != 0)
       {

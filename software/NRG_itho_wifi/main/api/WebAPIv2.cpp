@@ -915,6 +915,54 @@ ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonD
     response["result"] = "rf debug level3 set";
     return ApiResponse::status::SUCCESS;
   }
+  else if (strcmp(value, "legacyrx_on") == 0 || strcmp(value, "legacyrx_off") == 0)
+  {
+    const bool on = strcmp(value, "legacyrx_on") == 0;
+    if (!legacyRFRequest(on ? 1 : 2, nullptr, 0, 0))
+    {
+      response["code"] = 409;
+      response["failreason"] = "previous legacy RF request still pending";
+      return ApiResponse::status::FAIL;
+    }
+    response["result"] = on ? "legacy RF receive on" : "legacy RF receive off";
+    return ApiResponse::status::SUCCESS;
+  }
+  else if (strcmp(value, "rssiscan") == 0)
+  {
+    const int seconds = params["repeats"] | 20; // repeats carries the scan duration
+    if (seconds < 1 || seconds > 60 || !legacyRFRequest(4, nullptr, 0, seconds))
+    {
+      response["code"] = 400;
+      response["failreason"] = "repeats (seconds) 1-60, or a previous request is still pending";
+      return ApiResponse::status::FAIL;
+    }
+    response["result"] = "rssi scan started";
+    return ApiResponse::status::SUCCESS;
+  }
+  else if (strcmp(value, "legacytx") == 0)
+  {
+    // data: hex bytes like AA,AA,AA,AD,... sent as-is at the legacy modem settings
+    const char *data = params["data"] | "";
+    std::vector<int> bytes = parseHexString(data);
+    const int repeats = params["repeats"] | 1;
+    if (bytes.empty() || bytes.size() > 64 || repeats < 1 || repeats > 10)
+    {
+      response["code"] = 400;
+      response["failreason"] = "data: 1-64 hex bytes like AA,AA,AD; repeats: 1-10";
+      return ApiResponse::status::FAIL;
+    }
+    uint8_t buf[64];
+    for (size_t i = 0; i < bytes.size(); i++)
+      buf[i] = static_cast<uint8_t>(bytes[i]);
+    if (!legacyRFRequest(3, buf, bytes.size(), repeats))
+    {
+      response["code"] = 409;
+      response["failreason"] = "previous legacy RF request still pending";
+      return ApiResponse::status::FAIL;
+    }
+    response["result"] = "legacy RF frame queued";
+    return ApiResponse::status::SUCCESS;
+  }
   else if (strcmp(value, "reboot") == 0)
   {
     if (systemConfig.api_reboot == 0)
@@ -930,7 +978,7 @@ ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonD
   }
 
   response["code"] = 400;
-  response["failreason"] = "invalid debug value, options: level0, level1, level2, level3, reboot";
+  response["failreason"] = "invalid debug value, options: level0, level1, level2, level3, legacyrx_on, legacyrx_off, legacytx, reboot";
   return ApiResponse::status::FAIL;
 }
 

@@ -140,6 +140,10 @@ private:
   void initSendMessage(uint8_t len);
   void finishTransfer();
 
+  bool legacyRx{false};
+  void setLegacyModem();
+  void initReceiveLegacy();
+
   // parse received message
   bool checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]);
 
@@ -249,6 +253,27 @@ public:
   int lastRssiDbm() const { return rfsignal::rssiDbm(lastRssi); }
   uint8_t lastLinkQuality() const { return rfsignal::linkQuality(lastLqi); }
   long lastFreqOffsetHz() const { return rfsignal::freqOffsetHz(lastFreqest); }
+
+  // Pre-RAMSES "message1" capture and test transmit (debug)
+  static constexpr uint8_t LEGACY_RX_LEN = 24;
+  volatile bool legacyReady{false};
+  uint8_t legacyRssi{0};
+  CC1101Packet legacyIn;
+  void setLegacyRx(bool on)
+  {
+    legacyRx = on;
+    initReceive();
+  }
+  void sendLegacyRaw(const uint8_t *data, uint8_t len, uint8_t repeats);
+  uint8_t marcState()
+  {
+    return readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER) & CC1101_BITS_MARCSTATE;
+  }
+  int16_t rssiDbm()
+  {
+    const uint8_t raw = readRegister(CC1101_RSSI, CC1101_STATUS_REGISTER);
+    return (raw >= 128 ? (int16_t)raw - 256 : raw) / 2 - 74;
+  }
   void decodeBufferedPacket(); // decode raw packet buffered by receivePacket
   IthoPacket *checkForNewPacket();
   bool parseMessage(IthoPacket *packetPtr);

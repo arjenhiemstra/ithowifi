@@ -825,6 +825,8 @@ static void handlePostDebug(AsyncWebServerRequest *request, JsonVariant &json)
 
   JsonDocument params;
   params["debug"] = body["action"];
+  params["data"] = body["data"];
+  params["repeats"] = body["repeats"];
 
   JsonDocument responseDoc;
   auto status = processDebugCommands(params.as<JsonObject>(), responseDoc);

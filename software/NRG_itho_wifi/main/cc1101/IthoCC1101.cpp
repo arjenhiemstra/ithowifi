@@ -344,7 +344,50 @@ void IthoCC1101::initReceive()
   while ((readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) != CC1101_MARCSTATE_RX)
     yield();
 
-  initReceiveMessage();
+  if (legacyRx)
+    initReceiveLegacy();
+  else
+    initReceiveMessage();
+}
+
+// Pre-RAMSES Itho RF ("message1"): 8 kbaud chips, 25.4 kHz deviation, frame starts 170,170,170,173
+void IthoCC1101::setLegacyModem()
+{
+  writeRegister(CC1101_MDMCFG4, 0x68); // 8.0 kbaud, 270 kHz RX bandwidth (812 kHz drowns in noise)
+  writeRegister(CC1101_MDMCFG3, 0x43);
+  writeRegister(CC1101_DEVIATN, 0x40); // 25.4 kHz
+}
+
+void IthoCC1101::initReceiveLegacy()
+{
+  writeCommand(CC1101_SIDLE);
+  setLegacyModem();
+  writeRegister(CC1101_PKTLEN, LEGACY_RX_LEN); // the bytes after the 170,173 sync
+  writeRegister(CC1101_PKTCTRL0, 0x00);        // fixed length
+  writeRegister(CC1101_PKTCTRL1, 0x00);
+  writeRegister(CC1101_SYNC1, 170);
+  writeRegister(CC1101_SYNC0, 173);
+  writeRegister(CC1101_MDMCFG2, 0x02); // 2-FSK, 16/16 sync bits
+  writeCommand(CC1101_SFRX);
+  writeCommand(CC1101_SRX);
+}
+
+void IthoCC1101::sendLegacyRaw(const uint8_t *data, uint8_t len, uint8_t repeats)
+{
+  CC1101Packet packet;
+  packet.length = len;
+  memcpy(packet.data, data, len);
+  for (uint8_t i = 0; i < repeats; i++)
+  {
+    initSendMessage(len);
+    writeCommand(CC1101_SIDLE);
+    setLegacyModem();
+    sendData(&packet);
+    finishTransfer();
+    if (i < repeats - 1)
+      delay(55); // gap between repeats of a real remote
+  }
+  initReceive();
 }
 
 void IthoCC1101::initReceiveMessage()
@@ -383,6 +426,13 @@ bool IthoCC1101::receivePacket()
   // Runs in task context (TaskCC1101), triggered by the RF ISR's notification —
   // the FIFO read used to run inside the ISR (up to ~34 ms). The caller is
   // responsible for serializing radio access against concurrent sends.
+  if (legacyRx)
+  {
+    legacyRssi = ReadRSSI();
+    readData(&legacyIn, LEGACY_RX_LEN); // leaves the radio in RX with the legacy settings
+    legacyReady = true;
+    return false;
+  }
   // The RF interrupt fires on sync-word detect and the packet takes ~34 ms on air, so the status registers read
   // here still describe the packet being received (diagnostics only).
   CC1101Packet *pkt = &inMessage[inMessageIdx];
