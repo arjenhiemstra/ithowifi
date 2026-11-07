@@ -2360,7 +2360,7 @@ var remtypes = [
   ["RFT Spider", 0x22F2, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["Orcon 15RF", 0x6710, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["Orcon CO2", 0x6711, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
-  ["RFT (old protocol)", 0x6720, ['low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
+  ["RF (old protocol)", 0x6720, ['low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
 ];
 // Bi-directional remotes need a join handshake that only exists over RF, not for virtual remotes (#405)
 var remtypesBidirectional = [0x22F5, 0x22F4, 0x12A0, 0x1298, 0x22F2];

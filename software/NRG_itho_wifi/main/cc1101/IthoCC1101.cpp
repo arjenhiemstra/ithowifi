@@ -769,7 +769,7 @@ void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
     sourceId[2] = ithoRF.device[remote_index].sourceID[2];
   }
 
-  if (ithoRF.device[remote_index].remType == RemoteTypes::RFTLEGACY)
+  if (ithoRF.device[remote_index].remType == RemoteTypes::RFLEGACY)
   {
     sendLegacyCommand(remote_index, sourceId, command);
     return;
