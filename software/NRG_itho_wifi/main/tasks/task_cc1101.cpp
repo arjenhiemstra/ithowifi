@@ -82,9 +82,13 @@ static void legacyRssiScan(uint8_t seconds)
   int16_t bPeak = -200;
   uint16_t bursts = 0;
   int16_t rMin = 200, rMax = -200;
+  uint32_t k = 0;
   N_LOG("RF1 scan start, marcstate 0x%02X", rfManager.radio.marcState());
   while (millis() - t0 < seconds * 1000UL)
   {
+    // a frame that matches the sync word ends RX (fixed length), nothing reads it during the scan
+    if ((++k & 31) == 0 && rfManager.radio.marcState() != CC1101_MARCSTATE_RX)
+      rfManager.radio.restartRx();
     const int16_t r = rfManager.radio.rssiDbm();
     const uint32_t now = millis();
     if (r < rMin)
@@ -883,7 +887,7 @@ void TaskCC1101(void *pvParameters)
       {
         disableRF_ISR();
         if (legacyCmd == 3)
-          rfManager.radio.sendLegacyRaw(legacyTxBuf, legacyTxLen, legacyTxRepeats);
+          rfManager.radio.sendLegacyRaw(legacyTxBuf, legacyTxBuf, legacyTxLen, legacyTxRepeats);
         else if (legacyCmd == 4)
           legacyRssiScan(legacyTxRepeats);
         else

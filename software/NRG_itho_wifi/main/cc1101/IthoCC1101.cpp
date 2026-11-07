@@ -5,6 +5,7 @@
 #include "IthoCC1101.h"
 #include "IthoPacket.h"
 #include "spider_protocol.h"
+#include "legacy_protocol.h"
 #include "sys_log.h" // Spider bind/TX logging
 #include <string>
 
@@ -372,13 +373,13 @@ void IthoCC1101::initReceiveLegacy()
   writeCommand(CC1101_SRX);
 }
 
-void IthoCC1101::sendLegacyRaw(const uint8_t *data, uint8_t len, uint8_t repeats)
+void IthoCC1101::sendLegacyRaw(const uint8_t *first, const uint8_t *rest, uint8_t len, uint8_t repeats)
 {
   CC1101Packet packet;
   packet.length = len;
-  memcpy(packet.data, data, len);
   for (uint8_t i = 0; i < repeats; i++)
   {
+    memcpy(packet.data, i == 0 ? first : rest, len);
     initSendMessage(len);
     writeCommand(CC1101_SIDLE);
     setLegacyModem();
@@ -388,6 +389,53 @@ void IthoCC1101::sendLegacyRaw(const uint8_t *data, uint8_t len, uint8_t repeats
       delay(55); // gap between repeats of a real remote
   }
   initReceive();
+}
+
+void IthoCC1101::sendLegacyCommand(uint8_t remote_index, const uint8_t sourceId[3], IthoCommand command)
+{
+  uint16_t cmd;
+  switch (command)
+  {
+  case IthoLow:
+    cmd = legacy::CMD_LOW;
+    break;
+  case IthoMedium:
+    cmd = legacy::CMD_MEDIUM;
+    break;
+  case IthoHigh:
+    cmd = legacy::CMD_HIGH;
+    break;
+  case IthoTimer1:
+    cmd = legacy::CMD_TIMER1;
+    break;
+  case IthoTimer2:
+    cmd = legacy::CMD_TIMER2;
+    break;
+  case IthoTimer3:
+    cmd = legacy::CMD_TIMER3;
+    break;
+  case IthoJoin:
+    cmd = legacy::CMD_JOIN;
+    break;
+  case IthoLeave:
+    cmd = legacy::CMD_LEAVE;
+    break;
+  default:
+    return; // the old protocol has no away, auto or cook
+  }
+  // the protocol has 15 ID bits: fold the 3-byte remote ID into them
+  const uint32_t v = (sourceId[0] << 16) | (sourceId[1] << 8) | sourceId[2];
+  uint16_t id = (v ^ (v >> 15)) & 0x7FFF;
+  const uint8_t *src = ithoRF.device[remote_index].sourceID;
+  if (src[0] == 0 && src[1] == 0 && src[2] == 0)
+    id ^= remote_index << 10; // module ID: keep slots apart
+
+  uint8_t first[legacy::FRAME_LEN];
+  uint8_t rest[legacy::FRAME_LEN];
+  legacy::buildFrame(id, cmd, ithoRF.device[remote_index].legacyPrev, first);
+  legacy::buildFrame(id, cmd, legacy::prevCode(cmd), rest);
+  sendLegacyRaw(first, rest, legacy::FRAME_LEN, legacy::REPEATS);
+  ithoRF.device[remote_index].legacyPrev = legacy::prevCode(cmd);
 }
 
 void IthoCC1101::initReceiveMessage()
@@ -719,6 +767,12 @@ void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
     sourceId[0] = ithoRF.device[remote_index].sourceID[0];
     sourceId[1] = ithoRF.device[remote_index].sourceID[1];
     sourceId[2] = ithoRF.device[remote_index].sourceID[2];
+  }
+
+  if (ithoRF.device[remote_index].remType == RemoteTypes::RFTLEGACY)
+  {
+    sendLegacyCommand(remote_index, sourceId, command);
+    return;
   }
 
   message.deviceid0[0] = sourceId[0];

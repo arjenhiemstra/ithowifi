@@ -69,7 +69,8 @@ const IthoRemote::remote_type_char IthoRemote::remote_type_table[]{
     {RFTPIR, "RFT PIR"},
     {RFTSPIDER, "RFT Spider"},
     {ORCON15LF01, "Orcon 15RF"},
-    {ORCONCO2, "Orcon CO2"}};
+    {ORCONCO2, "Orcon CO2"},
+    {RFTLEGACY, "RFT (old protocol)"}};
 
 const char *IthoRemote::remote_type_unknown_msg = "Type unknown error";
 

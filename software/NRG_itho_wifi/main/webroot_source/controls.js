@@ -2359,10 +2359,13 @@ var remtypes = [
   ["RFT PIR", 0x2E10, ['motion_on', 'motion_off', 'join', 'leave']],
   ["RFT Spider", 0x22F2, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["Orcon 15RF", 0x6710, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
-  ["Orcon CO2", 0x6711, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
+  ["Orcon CO2", 0x6711, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["RFT (old protocol)", 0x6720, ['low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
 ];
 // Bi-directional remotes need a join handshake that only exists over RF, not for virtual remotes (#405)
 var remtypesBidirectional = [0x22F5, 0x22F4, 0x12A0, 0x1298, 0x22F2];
+// RF-only types, not offered for virtual remotes: the bi-directional ones and the old (pre-RAMSES) protocol
+var remtypesRfOnly = remtypesBidirectional.concat([0x6720]);
 
 var remfuncs = [
   ["Receive", 1],
@@ -2670,7 +2673,7 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
         var wizardHru = isWizard && wizardDeviceCategory === 'hru250_300';
         for (const item of remtypes) {
           if (wizardHru && item[1] !== 0x22F1 && item[1] !== 0x22F3) continue;
-          if (remfunc == 2 && remtypesBidirectional.includes(item[1]) && item[1] != cellValue) continue;
+          if (remfunc == 2 && remtypesRfOnly.includes(item[1]) && item[1] != cellValue) continue;
           var option = document.createElement('option');
           option.value = item[1];
           option.text = item[0];

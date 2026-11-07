@@ -629,8 +629,12 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   }
   else if (strcmp(command, "join") == 0)
   {
-    rfManager.radio.setBindInitiatorActive(true, remote_index);
-    startBindInitiatorTimeout();
+    // the old (pre-RAMSES) protocol has no binding accept to wait for
+    if (remotes.getRemoteType(remote_index) != RemoteTypes::RFTLEGACY)
+    {
+      rfManager.radio.setBindInitiatorActive(true, remote_index);
+      startBindInitiatorTimeout();
+    }
     rfManager.radio.setSendTries(1);
     rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoJoin);
     rfManager.radio.setSendTries(3);

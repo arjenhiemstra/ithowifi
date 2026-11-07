@@ -25,6 +25,7 @@ struct ithoRFDevice
   time_t timestamp{};
   uint8_t counter{};
   bool bidirectional{false};
+  uint8_t legacyPrev{85};       // pre-RAMSES: type of the last frame sent, goes in the next frame
   int32_t co2{0xEFFF};
   int32_t temp{0xEFFF};
   int32_t setpoint{0xEFFF};
@@ -264,7 +265,14 @@ public:
     legacyRx = on;
     initReceive();
   }
-  void sendLegacyRaw(const uint8_t *data, uint8_t len, uint8_t repeats);
+  // first repeat and the later ones can differ (previous-frame byte)
+  void sendLegacyRaw(const uint8_t *first, const uint8_t *rest, uint8_t len, uint8_t repeats);
+  void restartRx()
+  {
+    writeCommand(CC1101_SIDLE);
+    writeCommand(CC1101_SFRX);
+    writeCommand(CC1101_SRX);
+  }
   uint8_t marcState()
   {
     return readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER) & CC1101_BITS_MARCSTATE;
@@ -307,6 +315,7 @@ public:
   // send
   const uint8_t *getRemoteCmd(const RemoteTypes type, const IthoCommand command);
   void sendRFCommand(uint8_t remote_index, IthoCommand command);
+  void sendLegacyCommand(uint8_t remote_index, const uint8_t sourceId[3], IthoCommand command);
   int8_t sendJoinReply(uint8_t remote_index);
   void sendBindConfirm(uint8_t remote_index);
   void send1060();
