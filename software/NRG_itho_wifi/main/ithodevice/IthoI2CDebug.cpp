@@ -21,6 +21,8 @@ static size_t serviceSend(uint8_t dest, uint16_t msgClass, uint8_t type, const u
   if (!n)
     return 0;
   sent = i2cBufToString(frame, n);
+
+  I2CBusLock lock; // the frame and its reply are one transaction
   if (!i2cSendBytes(frame, n, I2C_CMD_OTHER))
     return 0;
   return i2cSlaveReceive(rx);

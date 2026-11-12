@@ -58,6 +58,18 @@ struct cmd_queue_data
 
 void i2cQueueAddCmd(const std::function<void()> func);
 
+// The bus is used from more than one task: the I2C queue in TaskSysControl, the web and API
+// handlers, MQTT and the RF task. Hold this for one transaction, a command and the reply that
+// follows belong together. Recursive, a holder can call the functions below.
+class I2CBusLock
+{
+public:
+  I2CBusLock();
+  ~I2CBusLock();
+  I2CBusLock(const I2CBusLock &) = delete;
+  I2CBusLock &operator=(const I2CBusLock &) = delete;
+};
+
 void i2cMasterSetPins(gpio_num_t sda, gpio_num_t scl);
 void i2cSlaveSetPins(gpio_num_t sda, gpio_num_t scl);
 esp_err_t i2cMasterInit();

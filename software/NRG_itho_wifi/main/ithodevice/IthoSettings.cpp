@@ -342,6 +342,7 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
   command[23] = index;
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
+  I2CBusLock lock; // the query and its reply are one transaction
   if (!i2cSendBytes(command, sizeof(command), I2C_CMD_QUERY_2410))
   {
     if (updateweb)
@@ -527,6 +528,7 @@ bool setSetting2410(uint8_t index, int32_t value, bool updateweb)
 
   jsonSysmessage("itho2410set", i2cBufToString(command, sizeof(command)).c_str());
 
+  I2CBusLock lock; // the command and its reply are one transaction
   if (!i2cSendBytes(command, sizeof(command), I2C_CMD_SET_2410))
   {
     if (updateweb)
