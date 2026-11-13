@@ -409,6 +409,10 @@ The most commonly sold Itho remotes are supported.
 
 Before an emulated RF remote works, it must be joined to the Itho once, just like a physical remote. Put the Itho in its pairing/learn mode (see your Itho's manual) and start the join with the blue join button next to the relevant remote on the **RF devices** page. After that, the add-on can be used like a real physical remote.
 
+**Older Itho units (old RF protocol).** Older Itho units that only know the RF protocol from before RAMSES (tested on an old CVE ECO 2) do not respond to the regular emulated RF remotes. For these, use a remote of type **RF (old protocol)** on the **RF devices** page, with the *Remote function* set to **Send**. Such a remote can only send: low, medium, high, timer 1, 2 and 3, join and leave. The Itho sends nothing back, so the add-on shows no status for this unit. This type is not available for virtual remotes.
+
+To pair: disconnect power from the Itho and switch it back on. Then, within 2 minutes, first send a leave and then a join with the buttons next to the relevant remote on the **RF devices** page. If the Itho does not respond, see *Capturing the old RF protocol* below.
+
 **Note:** There is a debug option to make RF commands visible in the web interface. Set one of the following levels on the **Syslog** page, under *RF Debug log level*:
 
 - **Level 1:** shows all recognized Itho remote commands incl. remote ID
@@ -418,7 +422,18 @@ Before an emulated RF remote works, it must be joined to the Itho once, just lik
 
 The RF log appears on the **Syslog** page once the first RF command has been received. If MQTT is connected, the add-on also publishes the lines to the topic `<base topic>/debug/rf` (see [Using the API](#using-the-api-webapi-and-mqtt)).
 
+Each line of a received RF packet also shows the signal strength (`rssi`, in dBm), the link quality (`lqi`) and the frequency offset (`foff`). While the RF log is on, a line `RFS:` with the receive counters since the last restart also appears every minute. With the setting *RF status in syslog (flash)* that line is also written to the system log. This setting is off by default, because a line every minute wears the flash memory.
+
 ![RF debug log screenshot](images/09-rf-debug-log-screenshot.png)
+
+**Capturing the old RF protocol.** If an older Itho does not respond to a remote of type RF (old protocol), the **Syslog** page shows under *Old Itho RF protocol capture* what the add-on receives:
+
+- **Receive**: the add-on only listens to the old protocol. Normal RF receive is off meanwhile; after 30 minutes the add-on switches back by itself.
+- **Receive (loose)**: use this when *Receive* shows nothing while you press a button on a remote.
+- **Off**: stops the capture and switches back to normal RF receive.
+- **Signal scan (20 s)**: logs every RF burst for 20 seconds, of any protocol.
+
+Each received frame appears as a line `RF1 rx`, with the decoded content and the raw bytes. Each frame that a remote of type RF (old protocol) sends appears the same way as a line `RF1 tx`. These lines go to the RF log and the system log, and when MQTT is connected also to `<base topic>/debug/rf`.
 
 ---
 

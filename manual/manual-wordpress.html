@@ -432,6 +432,8 @@ De meest verkochte afstandsbedieningen van Itho worden ondersteund.</p>
 <p><img src="https://www.nrgwatch.nl/wp-content/uploads/08-rf-remotes-setup-screenshot.png" alt="RF Remotes setup screenshot"></p>
 <p><strong>De add-on als geëmuleerde RF-remote.</strong> De add-on kan zich ook voordoen als een geëmuleerde RF-remote: via de CC1101-module gedraagt de add-on zich draadloos als een Itho-afstandsbediening. Met de <em>Remote function</em> op <strong>Send</strong> verstuurt de add-on draadloos snelheids- en timercommando&#39;s naar de Itho. Dit wordt gebruikt bij apparaten zonder bruikbare I2C-verbinding (zoals de HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V en HRU 400 R) en om bijvoorbeeld een RFT CO2-sensor te emuleren.</p>
 <p>Voordat een geëmuleerde RF-remote werkt, moet deze eenmalig aan de Itho gekoppeld (joined) worden, net als een fysieke remote. Zet de Itho daarvoor in zijn koppel-/learn-modus (zie handleiding van je Itho) en start het koppelen met de blauwe join-knop bij de betreffende remote op de <strong>RF devices</strong>-pagina. Daarna is de add-on te gebruiken zoals een echte fysieke remote.</p>
+<p><strong>Oudere Itho units (oud RF-protocol).</strong> Oudere Itho units die alleen het RF-protocol van vóór RAMSES kennen (getest op een oude CVE ECO 2), reageren niet op de gewone geëmuleerde RF-remotes. Gebruik daarvoor op de <strong>RF devices</strong>-pagina een remote van het type <strong>RF (old protocol)</strong> met de <em>Remote function</em> op <strong>Send</strong>. Zo&#39;n remote kan alleen versturen: low, medium, high, timer 1, 2 en 3, join en leave. De Itho stuurt niets terug, dus de add-on toont voor deze unit geen status. Dit type is niet beschikbaar voor virtuele remotes.</p>
+<p>Koppelen gaat zo: haal de spanning van de Itho en zet hem weer aan. Stuur daarna binnen 2 minuten eerst een leave en dan een join met de knoppen bij de betreffende remote op de <strong>RF devices</strong>-pagina. Reageert de Itho niet, kijk dan bij <em>Opname van het oude RF-protocol</em> hieronder.</p>
 <p><strong>Opmerking:</strong> Er is een debug optie om RF-commando&#39;s zichtbaar te maken in de web interface. Stel hiervoor op de <strong>Syslog</strong> pagina, bij <em>RF Debug log level</em>, één van de volgende niveaus in:</p>
 <ul>
 <li><strong>Level 1:</strong> toont alle herkende Itho remote commando&#39;s incl. remote ID</li>
@@ -440,7 +442,16 @@ De meest verkochte afstandsbedieningen van Itho worden ondersteund.</p>
 <li><strong>Level 0:</strong> schakelt de debug-optie weer uit</li>
 </ul>
 <p>De RF-log verschijnt op de <strong>Syslog</strong> pagina zodra het eerste RF-commando ontvangen is. Als MQTT verbonden is, publiceert de add-on de regels ook op het topic <code>&lt;base topic&gt;/debug/rf</code> (zie <a href="#nl-de-api-gebruiken-webapi-en-mqtt">De API gebruiken</a>).</p>
-<p><img src="https://www.nrgwatch.nl/wp-content/uploads/09-rf-debug-log-screenshot.png" alt="RF debug log screenshot"></p></section><section class="im-chapter" id="nl-firmware-bijwerken"><h2>Firmware bijwerken</h2>
+<p>Elke regel van een ontvangen RF-pakket toont ook de signaalsterkte (<code>rssi</code>, in dBm), de linkkwaliteit (<code>lqi</code>) en de frequentieafwijking (<code>foff</code>). Zolang de RF-log aan staat, verschijnt daarnaast elke minuut een regel <code>RFS:</code> met de ontvangsttellers sinds de laatste herstart. Met de instelling <em>RF status in syslog (flash)</em> schrijf je die regel ook naar de systeemlog. Die instelling staat standaard uit, omdat een regel per minuut het flashgeheugen slijt.</p>
+<p><img src="https://www.nrgwatch.nl/wp-content/uploads/09-rf-debug-log-screenshot.png" alt="RF debug log screenshot"></p>
+<p><strong>Opname van het oude RF-protocol.</strong> Reageert een oudere Itho niet op een remote van het type RF (old protocol), dan zie je op de <strong>Syslog</strong> pagina onder <em>Old Itho RF protocol capture</em> wat de add-on ontvangt:</p>
+<ul>
+<li><strong>Receive</strong>: de add-on luistert alleen nog naar het oude protocol. De gewone RF-ontvangst staat zolang uit; na 30 minuten schakelt de add-on vanzelf terug.</li>
+<li><strong>Receive (loose)</strong>: gebruik dit als <em>Receive</em> niets laat zien terwijl je op een remote drukt.</li>
+<li><strong>Off</strong>: zet de opname uit en schakelt terug naar de gewone RF-ontvangst.</li>
+<li><strong>Signal scan (20 s)</strong>: logt 20 seconden lang elke RF-uitzending, van elk protocol.</li>
+</ul>
+<p>Elk ontvangen frame verschijnt als een regel <code>RF1 rx</code>, met de gedecodeerde inhoud en de ruwe bytes. Elk frame dat een remote van het type RF (old protocol) verstuurt, verschijnt op dezelfde manier als een regel <code>RF1 tx</code>. Deze regels komen in de RF-log en de systeemlog, en als MQTT verbonden is ook op <code>&lt;base topic&gt;/debug/rf</code>.</p></section><section class="im-chapter" id="nl-firmware-bijwerken"><h2>Firmware bijwerken</h2>
 <p>De firmware van de add-on werk je eenvoudig bij via de web interface.</p>
 <ol>
 <li>Open de web interface en ga naar het menu <strong>Update</strong>.</li>
@@ -858,6 +869,8 @@ The most commonly sold Itho remotes are supported.</p>
 <p><img src="https://www.nrgwatch.nl/wp-content/uploads/08-rf-remotes-setup-screenshot.png" alt="RF Remotes setup screenshot"></p>
 <p><strong>The add-on as an emulated RF remote.</strong> The add-on can also present itself as an emulated RF remote: via the CC1101 module it behaves wirelessly like an Itho remote. With the <em>Remote function</em> set to <strong>Send</strong>, the add-on sends speed and timer commands to the Itho over the air. This is used for devices without a usable I2C connection (such as the HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V and HRU 400 R) and to emulate, for example, an RFT CO2 sensor.</p>
 <p>Before an emulated RF remote works, it must be joined to the Itho once, just like a physical remote. Put the Itho in its pairing/learn mode (see your Itho&#39;s manual) and start the join with the blue join button next to the relevant remote on the <strong>RF devices</strong> page. After that, the add-on can be used like a real physical remote.</p>
+<p><strong>Older Itho units (old RF protocol).</strong> Older Itho units that only know the RF protocol from before RAMSES (tested on an old CVE ECO 2) do not respond to the regular emulated RF remotes. For these, use a remote of type <strong>RF (old protocol)</strong> on the <strong>RF devices</strong> page, with the <em>Remote function</em> set to <strong>Send</strong>. Such a remote can only send: low, medium, high, timer 1, 2 and 3, join and leave. The Itho sends nothing back, so the add-on shows no status for this unit. This type is not available for virtual remotes.</p>
+<p>To pair: disconnect power from the Itho and switch it back on. Then, within 2 minutes, first send a leave and then a join with the buttons next to the relevant remote on the <strong>RF devices</strong> page. If the Itho does not respond, see <em>Capturing the old RF protocol</em> below.</p>
 <p><strong>Note:</strong> There is a debug option to make RF commands visible in the web interface. Set one of the following levels on the <strong>Syslog</strong> page, under <em>RF Debug log level</em>:</p>
 <ul>
 <li><strong>Level 1:</strong> shows all recognized Itho remote commands incl. remote ID</li>
@@ -866,7 +879,16 @@ The most commonly sold Itho remotes are supported.</p>
 <li><strong>Level 0:</strong> turns the debug option off again</li>
 </ul>
 <p>The RF log appears on the <strong>Syslog</strong> page once the first RF command has been received. If MQTT is connected, the add-on also publishes the lines to the topic <code>&lt;base topic&gt;/debug/rf</code> (see <a href="#en-using-the-api-webapi-and-mqtt">Using the API</a>).</p>
-<p><img src="https://www.nrgwatch.nl/wp-content/uploads/09-rf-debug-log-screenshot.png" alt="RF debug log screenshot"></p></section><section class="im-chapter" id="en-updating-firmware"><h2>Updating firmware</h2>
+<p>Each line of a received RF packet also shows the signal strength (<code>rssi</code>, in dBm), the link quality (<code>lqi</code>) and the frequency offset (<code>foff</code>). While the RF log is on, a line <code>RFS:</code> with the receive counters since the last restart also appears every minute. With the setting <em>RF status in syslog (flash)</em> that line is also written to the system log. This setting is off by default, because a line every minute wears the flash memory.</p>
+<p><img src="https://www.nrgwatch.nl/wp-content/uploads/09-rf-debug-log-screenshot.png" alt="RF debug log screenshot"></p>
+<p><strong>Capturing the old RF protocol.</strong> If an older Itho does not respond to a remote of type RF (old protocol), the <strong>Syslog</strong> page shows under <em>Old Itho RF protocol capture</em> what the add-on receives:</p>
+<ul>
+<li><strong>Receive</strong>: the add-on only listens to the old protocol. Normal RF receive is off meanwhile; after 30 minutes the add-on switches back by itself.</li>
+<li><strong>Receive (loose)</strong>: use this when <em>Receive</em> shows nothing while you press a button on a remote.</li>
+<li><strong>Off</strong>: stops the capture and switches back to normal RF receive.</li>
+<li><strong>Signal scan (20 s)</strong>: logs every RF burst for 20 seconds, of any protocol.</li>
+</ul>
+<p>Each received frame appears as a line <code>RF1 rx</code>, with the decoded content and the raw bytes. Each frame that a remote of type RF (old protocol) sends appears the same way as a line <code>RF1 tx</code>. These lines go to the RF log and the system log, and when MQTT is connected also to <code>&lt;base topic&gt;/debug/rf</code>.</p></section><section class="im-chapter" id="en-updating-firmware"><h2>Updating firmware</h2>
 <p>You can easily update the add-on&#39;s firmware via the web interface.</p>
 <ol>
 <li>Open the web interface and go to the <strong>Update</strong> menu.</li>

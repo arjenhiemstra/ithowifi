@@ -409,6 +409,10 @@ De meest verkochte afstandsbedieningen van Itho worden ondersteund.
 
 Voordat een geëmuleerde RF-remote werkt, moet deze eenmalig aan de Itho gekoppeld (joined) worden, net als een fysieke remote. Zet de Itho daarvoor in zijn koppel-/learn-modus (zie handleiding van je Itho) en start het koppelen met de blauwe join-knop bij de betreffende remote op de **RF devices**-pagina. Daarna is de add-on te gebruiken zoals een echte fysieke remote.
 
+**Oudere Itho units (oud RF-protocol).** Oudere Itho units die alleen het RF-protocol van vóór RAMSES kennen (getest op een oude CVE ECO 2), reageren niet op de gewone geëmuleerde RF-remotes. Gebruik daarvoor op de **RF devices**-pagina een remote van het type **RF (old protocol)** met de *Remote function* op **Send**. Zo'n remote kan alleen versturen: low, medium, high, timer 1, 2 en 3, join en leave. De Itho stuurt niets terug, dus de add-on toont voor deze unit geen status. Dit type is niet beschikbaar voor virtuele remotes.
+
+Koppelen gaat zo: haal de spanning van de Itho en zet hem weer aan. Stuur daarna binnen 2 minuten eerst een leave en dan een join met de knoppen bij de betreffende remote op de **RF devices**-pagina. Reageert de Itho niet, kijk dan bij *Opname van het oude RF-protocol* hieronder.
+
 **Opmerking:** Er is een debug optie om RF-commando's zichtbaar te maken in de web interface. Stel hiervoor op de **Syslog** pagina, bij *RF Debug log level*, één van de volgende niveaus in:
 
 - **Level 1:** toont alle herkende Itho remote commando's incl. remote ID
@@ -418,7 +422,18 @@ Voordat een geëmuleerde RF-remote werkt, moet deze eenmalig aan de Itho gekoppe
 
 De RF-log verschijnt op de **Syslog** pagina zodra het eerste RF-commando ontvangen is. Als MQTT verbonden is, publiceert de add-on de regels ook op het topic `<base topic>/debug/rf` (zie [De API gebruiken](#de-api-gebruiken-webapi-en-mqtt)).
 
+Elke regel van een ontvangen RF-pakket toont ook de signaalsterkte (`rssi`, in dBm), de linkkwaliteit (`lqi`) en de frequentieafwijking (`foff`). Zolang de RF-log aan staat, verschijnt daarnaast elke minuut een regel `RFS:` met de ontvangsttellers sinds de laatste herstart. Met de instelling *RF status in syslog (flash)* schrijf je die regel ook naar de systeemlog. Die instelling staat standaard uit, omdat een regel per minuut het flashgeheugen slijt.
+
 ![RF debug log screenshot](images/09-rf-debug-log-screenshot.png)
+
+**Opname van het oude RF-protocol.** Reageert een oudere Itho niet op een remote van het type RF (old protocol), dan zie je op de **Syslog** pagina onder *Old Itho RF protocol capture* wat de add-on ontvangt:
+
+- **Receive**: de add-on luistert alleen nog naar het oude protocol. De gewone RF-ontvangst staat zolang uit; na 30 minuten schakelt de add-on vanzelf terug.
+- **Receive (loose)**: gebruik dit als *Receive* niets laat zien terwijl je op een remote drukt.
+- **Off**: zet de opname uit en schakelt terug naar de gewone RF-ontvangst.
+- **Signal scan (20 s)**: logt 20 seconden lang elke RF-uitzending, van elk protocol.
+
+Elk ontvangen frame verschijnt als een regel `RF1 rx`, met de gedecodeerde inhoud en de ruwe bytes. Elk frame dat een remote van het type RF (old protocol) verstuurt, verschijnt op dezelfde manier als een regel `RF1 tx`. Deze regels komen in de RF-log en de systeemlog, en als MQTT verbonden is ook op `<base topic>/debug/rf`.
 
 ---
 
