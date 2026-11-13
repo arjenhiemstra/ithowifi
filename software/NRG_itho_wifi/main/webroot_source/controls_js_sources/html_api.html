@@ -177,8 +177,9 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
             <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key=remote name, value is
                     JSON with all received capabilities of the remote. Depending on make and model this can be the last
                     command, temperature, humidity, battery and/or CO2 levels. An Itho Spider thermostat also reports
-                    setpoint, setpoint_cool, setpoint_cmd, demand (%), schedule and manual. Return type present on MQTT
-                    "Remotes info topic".</em></td>
+                    setpoint, setpoint_cool, setpoint_cmd, demand (%), schedule and manual. A joined RF sensor that sends
+                    its own ventilation demand (31E0, e.g. RFT-RV or RFT-CO2) also reports vent_demand (0-200),
+                    vent_demand_zone and vent_demand_flags. Return type present on MQTT "Remotes info topic".</em></td>
         </tr>
         <tr>
             <td>get</td>
