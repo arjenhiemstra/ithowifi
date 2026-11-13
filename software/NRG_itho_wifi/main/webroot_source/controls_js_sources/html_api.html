@@ -489,7 +489,8 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with measurement data from monitored RF sources
                     (31DA/31D9 messages). Use the optional <b>name</b> parameter to get data from a specific
-                    source (e.g. <b>get=rfstatus&amp;name=Bathroom</b>).
+                    source (e.g. <b>get=rfstatus&amp;name=Bathroom</b>), or the optional <b>id</b> parameter to select it by
+                    RF id, which also works when two sources share a name (e.g. <b>get=rfstatus&amp;id=96:A4:3B</b>).
                     Monitored sources also publish to MQTT topics:
                     [base_topic]/rfstatus/[name]/31DA and [base_topic]/rfstatus/[name]/31D9.
                     Requires a CC1101 RF module.</em></td>

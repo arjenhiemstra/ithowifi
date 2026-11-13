@@ -360,7 +360,10 @@ def build_openapi_spec():
     doc["paths"]["/api/v2/vremotes"] = rest_get("Get virtual remotes info")
     doc["paths"]["/api/v2/rfstatus"] = rest_get(
         "Get RF device status",
-        parameters=[param("name", "Filter by source name", "string")],
+        parameters=[
+            param("name", "Filter by source name", "string"),
+            param("id", "Filter by source RF id (AA:BB:CC), wins over name", "string"),
+        ],
     )
     doc["paths"]["/api/v2/ota"] = rest_get(
         "Get firmware version info and OTA update progress"

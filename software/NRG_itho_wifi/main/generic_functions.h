@@ -27,6 +27,8 @@ inline uint8_t itho_init_status = 0;
 const char *hostName();
 uint8_t getIthoStatusJSON(JsonObject root);
 uint8_t getRFStatusJSON(JsonObject root, int sourceIndex = -1, bool trackedOnly = false);
+// rfstatus filter: id is "AA:BB:CC" (case-insensitive) and wins over name; nullptr = no filter
+bool rfStatusSourceMatches(int index, const char *name, const char *id);
 void getRFStatusConfigJSON(JsonObject root, int sourceIndex = -1);
 bool ithoStatusReady();
 void getRemotesInfoJSON(JsonObject root);

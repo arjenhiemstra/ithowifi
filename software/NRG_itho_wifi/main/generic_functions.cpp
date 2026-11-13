@@ -184,6 +184,18 @@ uint8_t getIthoStatusJSON(JsonObject root)
   return index;
 }
 
+bool rfStatusSourceMatches(int index, const char *name, const char *id)
+{
+  if (id)
+  {
+    char idStr[10];
+    snprintf(idStr, sizeof(idStr), "%02X:%02X:%02X",
+             rfStatusSources[index].id[0], rfStatusSources[index].id[1], rfStatusSources[index].id[2]);
+    return strcasecmp(idStr, id) == 0;
+  }
+  return name == nullptr || strcmp(rfStatusSources[index].name, name) == 0;
+}
+
 uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
 {
   uint8_t count = 0;
