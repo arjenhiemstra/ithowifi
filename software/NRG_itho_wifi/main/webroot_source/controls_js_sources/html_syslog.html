@@ -84,6 +84,17 @@
                 onchange='radio("rfstats_log", 0)' value="0"> off
         </div>
         <br>
+        <div class="pure-control-group">
+            <label>Old Itho RF protocol capture</label>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'rx'}))">Receive</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'loose'}))">Receive (loose)</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'off'}))">Off</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'scan'}))">Signal scan (20 s)</button>
+        </div>
+        <p>For older Itho units that only know the pre-RAMSES protocol. While receive is on, the add-on hears only that protocol (normal RF receive is off, for max 30 minutes).
+            Every frame received, and every frame an old protocol remote of the add-on sends, is shown in the RF log and written to the system log.
+            Use "loose" when "Receive" shows nothing while a remote is pressed. The signal scan logs every RF burst for 20 seconds, of any protocol.</p>
+        <br>
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">
             <label class="pure-radio" for="option-syslog_active-1">Syslog Active</label>

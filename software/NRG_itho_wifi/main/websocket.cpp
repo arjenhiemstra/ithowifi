@@ -420,6 +420,18 @@ void handle_ws_message(JsonObject root)
     }
   }
 
+  // old (pre-RAMSES) Itho RF capture from the system log page
+  if (root["legacyrf"].is<const char *>())
+  {
+    const char *act = root["legacyrf"].as<const char *>();
+    const uint8_t cmd = strcmp(act, "rx") == 0 ? 1 : strcmp(act, "loose") == 0 ? 5
+                                                  : strcmp(act, "off") == 0     ? 2
+                                                  : strcmp(act, "scan") == 0    ? 4
+                                                                                : 0;
+    if (cmd == 0 || !legacyRFRequest(cmd, nullptr, 0, 20)) // 20: scan seconds
+      logMessagejson("Old protocol RF: busy or unknown action", WEBINTERFACE);
+  }
+
   // ---------- "ithobutton": can be a string or an integer ----------
   if (root["ithobutton"].is<const char *>())
   {

@@ -45,6 +45,7 @@ void startBindInitiatorTimeout();
 void cancelBindInitiatorTimeout();
 void disableRF_ISR();
 void enableRF_ISR();
+bool legacyRFRequest(uint8_t cmd, const uint8_t *data, uint8_t len, uint8_t repeats);
 void RFDebug(IthoCommand cmd);
 void toggleRemoteLLmode(const char *remotetype);
 void setllModeTimer();

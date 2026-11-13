@@ -50,6 +50,158 @@ constexpr uint32_t SPIDER_REPEAT_MS = 1000;
 constexpr uint32_t SPIDER_DIAL_MS = 10 * 60 * 1000; // the RQ 01FF right after a dial change still has the old setpoint
 constexpr uint8_t SPIDER_ZONE_TRIES = 3; // W 22C9 to a zone controller, 1 s apart, until it echoes the setpoint
 
+// Pre-RAMSES "message1" debug requests from the API, run in this task: 1 receive on, 2 receive off, 3 send,
+// 4 RSSI scan, 5 loose receive on
+static volatile uint8_t legacyCmd = 0;
+static uint8_t legacyTxBuf[64];
+static uint8_t legacyTxLen = 0;
+static uint8_t legacyTxRepeats = 1;
+constexpr uint32_t LEGACY_RX_MAX_MS = 30 * 60 * 1000; // legacy receive stops RAMSES receive: switch it off again
+static uint32_t legacyRxSince = 0;
+
+// RF debug view, MQTT debug and the system log: captures must survive a page reload
+static void legacyLog(const char *fmt, ...)
+{
+  char line[200];
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(line, sizeof(line), fmt, args);
+  va_end(args);
+  N_LOG("%s", line);
+  logMessagejson(line, RFLOG);
+  mqttDebugPush(MqttDebugChannel::RF, line);
+}
+
+static int appendHex(char *out, size_t size, int n, const uint8_t *buf, size_t len)
+{
+  for (size_t i = 0; i < len && n >= 0 && n < (int)size; i++)
+    n += snprintf(out + n, size - n, " %02X", buf[i]);
+  return n;
+}
+
+// "low id:271F crc:ok prev:85" style summary of a decoded frame
+static int appendDecoded(char *out, size_t size, int n, const legacy::Decoded &d)
+{
+  if (!d.manchesterOk)
+    return n + snprintf(out + n, size - n, " undecoded (no Manchester pair at chip %u)", d.badChip);
+  n += snprintf(out + n, size - n, " %s cmd:%04X id:%04X type:%u", legacy::cmdName(d.cmd), d.cmd, d.id, d.type);
+  if (d.header != 0x5D)
+    n += snprintf(out + n, size - n, " hdr:%02X", d.header);
+  if (d.crc == d.crcCalc)
+    n += snprintf(out + n, size - n, " crc:ok");
+  else
+    n += snprintf(out + n, size - n, " crc:%02X(expected %02X)", d.crc, d.crcCalc);
+  if (!d.footerOk)
+    n += snprintf(out + n, size - n, " footer:unexpected");
+  if (d.hasPrev)
+    n += snprintf(out + n, size - n, " prev:%u", d.prev);
+  return n;
+}
+
+static void legacyLogRx()
+{
+  const CC1101Packet &p = rfManager.radio.legacyIn;
+  const bool loose = rfManager.radio.legacyRxMode() == 2;
+  char line[200];
+  int n = snprintf(line, sizeof(line), "RF1 rx %ddBm", rfsignal::rssiDbm(rfManager.radio.legacyRssi));
+  int start = 0;
+  if (loose)
+  {
+    start = legacy::findFrameStart(p.data, p.length);
+    if (start < 0)
+      n += snprintf(line + n, sizeof(line) - n, " no 170,173 after the preamble");
+  }
+  if (start >= 0 && n < (int)sizeof(line))
+    n = appendDecoded(line, sizeof(line), n, legacy::decodeFrame(p.data, p.length, start));
+  if (n < (int)sizeof(line))
+    n += snprintf(line + n, sizeof(line) - n, " |");
+  appendHex(line, sizeof(line), n, p.data, p.length);
+  legacyLog("%s", line);
+}
+
+static void legacyLogTx(const char *what, const uint8_t *frame, size_t len)
+{
+  char line[200];
+  int n = snprintf(line, sizeof(line), "RF1 tx %s", what);
+  if (len >= legacy::FRAME_LEN)
+    n = appendDecoded(line, sizeof(line), n, legacy::decodeFrame(frame + 4, len - 4, 0));
+  if (n < (int)sizeof(line))
+    n += snprintf(line + n, sizeof(line) - n, " |");
+  appendHex(line, sizeof(line), n, frame, len);
+  legacyLog("%s", line);
+}
+
+bool legacyRFRequest(uint8_t cmd, const uint8_t *data, uint8_t len, uint8_t repeats)
+{
+  if (legacyCmd != 0 || len > sizeof(legacyTxBuf))
+    return false;
+  if (cmd == 3)
+  {
+    memcpy(legacyTxBuf, data, len);
+    legacyTxLen = len;
+  }
+  legacyTxRepeats = repeats;
+  legacyCmd = cmd;
+  return true;
+}
+
+// Log every burst above the noise floor for `seconds` (cmd 4, seconds in repeats), any protocol
+static void legacyRssiScan(uint8_t seconds)
+{
+  const uint32_t t0 = millis();
+  int32_t sum = 0;
+  uint16_t n = 0;
+  int16_t thr = 0;
+  bool in = false;
+  uint32_t bStart = 0, lastAbove = 0;
+  int16_t bPeak = -200;
+  uint16_t bursts = 0;
+  int16_t rMin = 200, rMax = -200;
+  uint32_t k = 0;
+  legacyLog("RF1 scan start (%us), marcstate 0x%02X", seconds, rfManager.radio.marcState());
+  while (millis() - t0 < seconds * 1000UL)
+  {
+    // a frame that matches the sync word ends RX (fixed length), nothing reads it during the scan
+    if ((++k & 31) == 0 && rfManager.radio.marcState() != CC1101_MARCSTATE_RX)
+      rfManager.radio.restartRx();
+    const int16_t r = rfManager.radio.rssiDbm();
+    const uint32_t now = millis();
+    if (r < rMin)
+      rMin = r;
+    if (r > rMax)
+      rMax = r;
+    if (n < 200)
+    {
+      sum += r;
+      if (++n == 200)
+        thr = sum / 200 + 12;
+    }
+    else if (r > thr)
+    {
+      if (!in)
+      {
+        in = true;
+        bStart = now;
+        bPeak = r;
+      }
+      if (r > bPeak)
+        bPeak = r;
+      lastAbove = now;
+    }
+    else if (in && now - lastAbove > 2)
+    {
+      in = false;
+      if (bursts < 60)
+        legacyLog("RF1 burst +%lu ms len %lu ms peak %d dBm", bStart - t0, lastAbove - bStart + 1, bPeak);
+      bursts++;
+    }
+    delayMicroseconds(500);
+    if ((now & 15) == 0)
+      vTaskDelay(1);
+  }
+  legacyLog("RF1 scan %us: noise %d dBm, threshold %d dBm, min %d max %d, bursts %u, marcstate 0x%02X", seconds, (int)(sum / 200), thr, rMin, rMax, bursts, rfManager.radio.marcState());
+}
+
 static bool spiderConfirmed(const uint8_t sid[3])
 {
   for (const auto &item : rfManager.radio.getRFdevices().device)
@@ -805,6 +957,43 @@ void TaskCC1101(void *pvParameters)
 
       TaskCC1101Timeout.once_ms(3000, []()
                                 { W_LOG("SYS: warning - CC1101 Task timed out!"); });
+
+      if (rfManager.radio.legacyRxMode() != 0 && millis() - legacyRxSince > LEGACY_RX_MAX_MS && legacyCmd == 0)
+        legacyCmd = 2; // timed out, back to RAMSES receive
+      if (legacyCmd != 0)
+      {
+        const uint8_t cmd = legacyCmd;
+        disableRF_ISR();
+        if (cmd == 3)
+          rfManager.radio.sendLegacyRaw(legacyTxBuf, legacyTxBuf, legacyTxLen, legacyTxRepeats);
+        else if (cmd == 4)
+          legacyRssiScan(legacyTxRepeats);
+        else
+          rfManager.radio.setLegacyRx(cmd == 1 ? 1 : (cmd == 5 ? 2 : 0));
+        enableRF_ISR();
+        if (cmd == 3)
+          legacyLogTx("raw", legacyTxBuf, legacyTxLen);
+        else if (cmd == 1 || cmd == 5)
+        {
+          legacyRxSince = millis();
+          legacyLog("RF1: old protocol receive on%s, RAMSES receive off for max 30 min", cmd == 5 ? " (loose)" : "");
+        }
+        else if (cmd == 2)
+          legacyLog("RF1: old protocol receive off");
+        legacyCmd = 0;
+      }
+      if (rfManager.radio.legacyReady)
+      {
+        rfManager.radio.legacyReady = false;
+        legacyLogRx();
+      }
+      if (rfManager.radio.legacyTxPending)
+      {
+        rfManager.radio.legacyTxPending = false;
+        char what[16];
+        snprintf(what, sizeof(what), "remote %u", rfManager.radio.legacyTxRemote);
+        legacyLogTx(what, rfManager.radio.legacyTxFrame, legacy::FRAME_LEN);
+      }
 
       if (spiderDiscCmd != 0)
       {

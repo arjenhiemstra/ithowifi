@@ -11,6 +11,7 @@
 #include "IthoPacket.h"
 #include "CC1101Packet.h"
 #include "RFSignal.h"
+#include "legacy_protocol.h"
 
 #if !defined(MAX_NUM_OF_REMOTES)
 #define MAX_NUM_OF_REMOTES 20
@@ -25,6 +26,7 @@ struct ithoRFDevice
   time_t timestamp{};
   uint8_t counter{};
   bool bidirectional{false};
+  uint8_t legacyPrev{85};       // pre-RAMSES: type of the last frame sent, goes in the next frame
   int32_t co2{0xEFFF};
   int32_t temp{0xEFFF};
   int32_t setpoint{0xEFFF};
@@ -140,6 +142,10 @@ private:
   void initSendMessage(uint8_t len);
   void finishTransfer();
 
+  uint8_t legacyRx{0}; // 0 off, 1 sync 170,173, 2 loose: sync on the preamble only
+  void setLegacyModem();
+  void initReceiveLegacy();
+
   // parse received message
   bool checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]);
 
@@ -249,6 +255,39 @@ public:
   int lastRssiDbm() const { return rfsignal::rssiDbm(lastRssi); }
   uint8_t lastLinkQuality() const { return rfsignal::linkQuality(lastLqi); }
   long lastFreqOffsetHz() const { return rfsignal::freqOffsetHz(lastFreqest); }
+
+  // Pre-RAMSES "message1" capture and test transmit (debug)
+  static constexpr uint8_t LEGACY_RX_LEN = 24;
+  static constexpr uint8_t LEGACY_RX_LEN_LOOSE = 32;
+  volatile bool legacyReady{false};
+  uint8_t legacyRssi{0}; // raw RSSI register, see rfsignal::rssiDbm()
+  CC1101Packet legacyIn;
+  void setLegacyRx(uint8_t mode)
+  {
+    legacyRx = mode;
+    initReceive();
+  }
+  uint8_t legacyRxMode() const { return legacyRx; }
+  // last frame sent by an old-protocol remote, for the RF log
+  volatile bool legacyTxPending{false};
+  uint8_t legacyTxRemote{0};
+  uint8_t legacyTxFrame[legacy::FRAME_LEN]{};
+  // first repeat and the later ones can differ (previous-frame byte)
+  void sendLegacyRaw(const uint8_t *first, const uint8_t *rest, uint8_t len, uint8_t repeats);
+  void restartRx()
+  {
+    writeCommand(CC1101_SIDLE);
+    writeCommand(CC1101_SFRX);
+    writeCommand(CC1101_SRX);
+  }
+  uint8_t marcState()
+  {
+    return readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER) & CC1101_BITS_MARCSTATE;
+  }
+  int16_t rssiDbm()
+  {
+    return rfsignal::rssiDbm(readRegister(CC1101_RSSI, CC1101_STATUS_REGISTER));
+  }
   void decodeBufferedPacket(); // decode raw packet buffered by receivePacket
   IthoPacket *checkForNewPacket();
   bool parseMessage(IthoPacket *packetPtr);
@@ -270,7 +309,6 @@ public:
     return ((uint32_t)cc_freq[2] << 16) | ((uint32_t)cc_freq[1] << 8) | ((uint32_t)cc_freq[0] << 0);
   }
 
-  uint8_t ReadRSSI();
   uint8_t getChipVersion();
   uint8_t getDetectAttempt() const { return detectAttempt; } // 0 plain, 1 after reset, 2 at 1 MHz SPI, 3 not found
   // bool checkID(const uint8_t *id);
@@ -282,6 +320,7 @@ public:
   // send
   const uint8_t *getRemoteCmd(const RemoteTypes type, const IthoCommand command);
   void sendRFCommand(uint8_t remote_index, IthoCommand command);
+  void sendLegacyCommand(uint8_t remote_index, const uint8_t sourceId[3], IthoCommand command);
   int8_t sendJoinReply(uint8_t remote_index);
   void sendBindConfirm(uint8_t remote_index);
   void send1060();

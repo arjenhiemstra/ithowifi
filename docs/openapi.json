@@ -1109,14 +1109,27 @@
         "properties": {
           "action": {
             "type": "string",
-            "description": "Action name",
+            "description": "Action name. legacyrx_on/legacyrx_loose/legacyrx_off: old (pre-RAMSES) Itho RF capture, max 30 min; rssiscan: log RF bursts; legacytx: send raw old protocol bytes",
             "enum": [
               "reboot",
               "level0",
               "level1",
               "level2",
-              "level3"
+              "level3",
+              "legacyrx_on",
+              "legacyrx_loose",
+              "legacyrx_off",
+              "rssiscan",
+              "legacytx"
             ]
+          },
+          "data": {
+            "type": "string",
+            "description": "legacytx: hex bytes like AA,AA,AA,AD,..."
+          },
+          "repeats": {
+            "type": "integer",
+            "description": "legacytx: repeats (1-10); rssiscan: seconds (1-60)"
           }
         }
       },
