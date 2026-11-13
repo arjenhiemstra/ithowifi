@@ -258,7 +258,7 @@ public:
   // Pre-RAMSES "message1" capture and test transmit (debug)
   static constexpr uint8_t LEGACY_RX_LEN = 24;
   volatile bool legacyReady{false};
-  uint8_t legacyRssi{0};
+  uint8_t legacyRssi{0}; // raw RSSI register, see rfsignal::rssiDbm()
   CC1101Packet legacyIn;
   void setLegacyRx(bool on)
   {
@@ -279,8 +279,7 @@ public:
   }
   int16_t rssiDbm()
   {
-    const uint8_t raw = readRegister(CC1101_RSSI, CC1101_STATUS_REGISTER);
-    return (raw >= 128 ? (int16_t)raw - 256 : raw) / 2 - 74;
+    return rfsignal::rssiDbm(readRegister(CC1101_RSSI, CC1101_STATUS_REGISTER));
   }
   void decodeBufferedPacket(); // decode raw packet buffered by receivePacket
   IthoPacket *checkForNewPacket();
@@ -303,7 +302,6 @@ public:
     return ((uint32_t)cc_freq[2] << 16) | ((uint32_t)cc_freq[1] << 8) | ((uint32_t)cc_freq[0] << 0);
   }
 
-  uint8_t ReadRSSI();
   uint8_t getChipVersion();
   uint8_t getDetectAttempt() const { return detectAttempt; } // 0 plain, 1 after reset, 2 at 1 MHz SPI, 3 not found
   // bool checkID(const uint8_t *id);

@@ -900,7 +900,7 @@ void TaskCC1101(void *pvParameters)
       {
         rfManager.radio.legacyReady = false;
         char line[16 + 4 * IthoCC1101::LEGACY_RX_LEN]{};
-        int n = snprintf(line, sizeof(line), "RF1 rssi:%u", rfManager.radio.legacyRssi);
+        int n = snprintf(line, sizeof(line), "RF1 rssi:%ddBm", rfsignal::rssiDbm(rfManager.radio.legacyRssi));
         for (uint8_t i = 0; i < rfManager.radio.legacyIn.length && n < (int)sizeof(line); i++)
           n += snprintf(line + n, sizeof(line) - n, " %u", rfManager.radio.legacyIn.data[i]);
         N_LOG("%s", line);

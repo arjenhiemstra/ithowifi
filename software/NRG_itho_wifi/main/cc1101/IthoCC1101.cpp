@@ -476,7 +476,7 @@ bool IthoCC1101::receivePacket()
   // responsible for serializing radio access against concurrent sends.
   if (legacyRx)
   {
-    legacyRssi = ReadRSSI();
+    legacyRssi = readRegisterWithSyncProblem(CC1101_RSSI, CC1101_STATUS_REGISTER);
     readData(&legacyIn, LEGACY_RX_LEN); // leaves the radio in RX with the legacy settings
     legacyReady = true;
     return false;
@@ -1638,27 +1638,6 @@ void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *packetPtr)
       }
     }
   }
-}
-
-uint8_t IthoCC1101::ReadRSSI()
-{
-  uint8_t rssi = 0;
-  uint8_t value = 0;
-
-  rssi = (readRegister(CC1101_RSSI, CC1101_STATUS_REGISTER));
-
-  if (rssi >= 128)
-  {
-    value = 255 - rssi;
-    value /= 2;
-    value += 74;
-  }
-  else
-  {
-    value = rssi / 2;
-    value += 74;
-  }
-  return (value);
 }
 
 uint8_t IthoCC1101::getChipVersion()
