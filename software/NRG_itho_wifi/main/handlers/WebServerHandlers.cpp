@@ -27,8 +27,18 @@ void MDNSinit()
   // set default instance
   mdns_instance_name_set(inst_name);
 
+  // TXT records let Home Assistant zeroconf discovery identify the add-on;
+  // hwid matches add-on_hwid in /api/v2/deviceinfo
+  char hwid[18]{};
+  strlcpy(hwid, WiFi.macAddress().c_str(), sizeof(hwid));
+  mdns_txt_item_t http_txt[] = {
+      {"vendor", "nrgwatch"},
+      {"hwid", hwid},
+      {"fw", fw_version},
+  };
+
   // add our services
-  mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0);
+  mdns_service_add(NULL, "_http", "_tcp", 80, http_txt, sizeof(http_txt) / sizeof(http_txt[0]));
   mdns_service_add(NULL, "_websocket", "_tcp", 8000, NULL, 0);
 
   mdns_service_instance_name_set("_http", "_tcp", inst_name);
