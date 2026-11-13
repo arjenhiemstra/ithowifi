@@ -501,6 +501,35 @@ void mqttHomeAssistantDiscovery()
   }
 }
 
+// Settings the current MQTT session was set up with. PubSubClient::connect() is a no-op
+// while connected, so a changed server, port, login or topic needs a disconnect first.
+static uint32_t mqttSessionSettings = 0;
+static char mqttSessionLwt[140]{};
+
+static uint32_t mqttSettingsHash()
+{
+  uint32_t h = 2166136261u; // FNV-1a
+  auto add = [&h](const char *s)
+  {
+    for (; *s; s++)
+    {
+      h ^= (uint8_t)*s;
+      h *= 16777619u;
+    }
+    h ^= 0xFF; // field separator
+    h *= 16777619u;
+  };
+  char port[8];
+  snprintf(port, sizeof(port), "%d", systemConfig.mqtt_port);
+  add(systemConfig.mqtt_serverName);
+  add(port);
+  add(systemConfig.mqtt_username);
+  add(systemConfig.mqtt_password);
+  add(systemConfig.mqtt_base_topic);
+  add(systemConfig.mqtt_domoticz_active ? systemConfig.mqtt_domoticzout_topic : "");
+  return h;
+}
+
 bool setupMQTTClient()
 {
   char cmdtopic[140]{};
@@ -513,6 +542,14 @@ bool setupMQTTClient()
     if (strcmp(systemConfig.mqtt_serverName, "") != 0)
     {
       int connectResult;
+      const uint32_t settings = mqttSettingsHash();
+      const bool changed = mqttClient.connected() && settings != mqttSessionSettings;
+      if (changed)
+      {
+        N_LOG("API: mqtt settings changed, reconnecting");
+        mqttClient.publish(mqttSessionLwt, "offline", true);
+        mqttClient.disconnect();
+      }
 
       mqttClient.setServer(systemConfig.mqtt_serverName, systemConfig.mqtt_port);
       mqttClient.setCallback(mqttCallback);
@@ -540,6 +577,10 @@ bool setupMQTTClient()
           mqttClient.subscribe(systemConfig.mqtt_domoticzout_topic);
         }
         mqttClient.publish(lwttopic, "online", true);
+        mqttSessionSettings = settings;
+        strlcpy(mqttSessionLwt, lwttopic, sizeof(mqttSessionLwt));
+        if (changed)
+          sendHomeAssistantDiscovery = true; // possibly a new broker or base topic
 
         return true;
       }
