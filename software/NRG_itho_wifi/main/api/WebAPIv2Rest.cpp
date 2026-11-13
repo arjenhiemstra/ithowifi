@@ -277,7 +277,7 @@ static void handleGetVRemotes(AsyncWebServerRequest *request)
   sendSuccess(request, data);
 }
 
-// GET /api/v2/rfstatus?name=X (optional filter)
+// GET /api/v2/rfstatus?id=AA:BB:CC or ?name=X (optional filter, id wins)
 static void handleGetRFStatus(AsyncWebServerRequest *request)
 {
   if (!checkRestAuth(request))
@@ -285,14 +285,15 @@ static void handleGetRFStatus(AsyncWebServerRequest *request)
 
   JsonDocument data;
 
-  if (request->hasParam("name"))
+  if (request->hasParam("id") || request->hasParam("name"))
   {
-    const char *nameFilter = request->getParam("name")->value().c_str();
+    const char *idFilter = request->hasParam("id") ? request->getParam("id")->value().c_str() : nullptr;
+    const char *nameFilter = request->hasParam("name") ? request->getParam("name")->value().c_str() : nullptr;
     for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
     {
       if (!rfStatusSources[i].active || !rfStatusSources[i].tracked)
         continue;
-      if (strcmp(rfStatusSources[i].name, nameFilter) != 0)
+      if (!rfStatusSourceMatches(i, nameFilter, idFilter))
         continue;
 
       JsonObject obj = data["rfstatus"].to<JsonObject>();

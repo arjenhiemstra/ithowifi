@@ -338,6 +338,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Filter by source RF id (AA:BB:CC), wins over name",
+            "schema": {
+              "type": "string"
+            }
           }
         ]
       }

@@ -57,14 +57,15 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDoc
   else if (strcmp(value, "rfstatus") == 0)
   {
     const char *nameFilter = params["name"] | nullptr;
-    if (nameFilter)
+    const char *idFilter = params["id"] | nullptr;
+    if (nameFilter || idFilter)
     {
-      // Find specific tracked source by name
+      // Find specific tracked source by id (wins) or name
       for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
       {
         if (!rfStatusSources[i].active || !rfStatusSources[i].tracked)
           continue;
-        if (strcmp(rfStatusSources[i].name, nameFilter) != 0)
+        if (!rfStatusSourceMatches(i, nameFilter, idFilter))
           continue;
         JsonObject obj = response["rfstatus"].to<JsonObject>();
         char idStr[10];
