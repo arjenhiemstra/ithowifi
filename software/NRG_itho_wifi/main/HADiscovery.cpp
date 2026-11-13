@@ -505,27 +505,27 @@ void addHADiscoveryRemoteFan(JsonObject components, JsonObject compactJson, cons
                  cmdKey, idxKey, idx);
         componentJson["pr_mode_cmd_tpl"] = cmdTemplate;
 
-        // State template (only if state topic available)
-        if (hasStateTopic)
-        {
-            char valTpl[512]{};
-            snprintf(valTpl, sizeof(valTpl),
-                     "{%%- set cmd = value_json['%s']['lastcmdmsg'] | default('', true) -%%}"
-                     "{%%- if cmd.startswith('Itho') -%%}"
-                     "{%%- set c = cmd[4:] -%%}"
-                     "{%%- if c == 'Timer1' -%%}Timer 10min"
-                     "{%%- elif c == 'Timer2' -%%}Timer 20min"
-                     "{%%- elif c == 'Timer3' -%%}Timer 30min"
-                     "{%%- elif c.startswith('Cook') -%%}Cook {{ c[4:] }}min"
-                     "{%%- else -%%}{{ c }}"
-                     "{%%- endif -%%}"
-                     "{%%- else -%%}unknown{%%- endif -%%}",
-                     remoteName);
-            componentJson["pr_mode_val_tpl"] = valTpl;
-        }
-
         // Add preset modes based on remote type
         const char *presetsStr = HADiscConfig::getPresetsForType(remoteType);
+
+        // State template (only if state topic available). A last command that is not one of the
+        // preset modes (IthoUnknown, join, leave, ...) maps to None, HA's "no preset", instead of
+        // a value HA rejects with a warning on every remotesinfo update.
+        if (hasStateTopic)
+        {
+            char valTpl[640]{};
+            snprintf(valTpl, sizeof(valTpl),
+                     "{%%- set cmd = value_json['%s']['lastcmdmsg'] | default('', true) -%%}"
+                     "{%%- set c = cmd[4:] if cmd.startswith('Itho') else '' -%%}"
+                     "{%%- if c == 'Timer1' -%%}{%%- set m = 'Timer 10min' -%%}"
+                     "{%%- elif c == 'Timer2' -%%}{%%- set m = 'Timer 20min' -%%}"
+                     "{%%- elif c == 'Timer3' -%%}{%%- set m = 'Timer 30min' -%%}"
+                     "{%%- elif c.startswith('Cook') -%%}{%%- set m = 'Cook ' ~ c[4:] ~ 'min' -%%}"
+                     "{%%- else -%%}{%%- set m = c -%%}{%%- endif -%%}"
+                     "{{ m if m in '%s'.split(',') else 'None' }}",
+                     remoteName, presetsStr ? presetsStr : "");
+            componentJson["pr_mode_val_tpl"] = valTpl;
+        }
         if (presetsStr && strlen(presetsStr) > 0)
         {
             JsonArray modes = componentJson["pr_modes"].to<JsonArray>();
