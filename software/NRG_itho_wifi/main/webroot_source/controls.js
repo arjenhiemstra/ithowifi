@@ -1373,6 +1373,7 @@ document.addEventListener('DOMContentLoaded', function () {
           esplog_active: checkedVal('option-esplog_active'),
           webserial_active: checkedVal('option-webserial_active'),
           rfloglevel: $val('rfloglevel'),
+          rfstats_log: checkedVal('option-rfstats_log'),
           logserver: $val('logserver'),
           logport: $val('logport'),
           logref: $val('logref')
@@ -4731,7 +4732,8 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with measurement data from monitored RF sources
                     (31DA/31D9 messages). Use the optional <b>name</b> parameter to get data from a specific
-                    source (e.g. <b>get=rfstatus&amp;name=Bathroom</b>).
+                    source (e.g. <b>get=rfstatus&amp;name=Bathroom</b>), or the optional <b>id</b> parameter to select it by
+                    RF id, which also works when two sources share a name (e.g. <b>get=rfstatus&amp;id=96:A4:3B</b>).
                     Monitored sources also publish to MQTT topics:
                     [base_topic]/rfstatus/[name]/31DA and [base_topic]/rfstatus/[name]/31D9.
                     Requires a CC1101 RF module.</em></td>
@@ -7047,6 +7049,25 @@ var html_syslog = `
         <p>- Level1 will show only known Itho commands from all devices</p>
         <p>- Level2 will show all received RF messages from devices joined to the add-on</p>
         <p>- Level3 will show all received RF messages from all devices</p>
+        <p>While RF debug logging is on, an RF status (RFS) line with receive counters is shown every minute.</p>
+        <div class="pure-control-group">
+            <label class="pure-radio" for="option-rfstats_log-1">RF status in syslog (flash)</label>
+            <input id="option-rfstats_log-1" type="radio" name="option-rfstats_log"
+                onchange='radio("rfstats_log", 1)' value="1"> on
+            <input id="option-rfstats_log-0" type="radio" name="option-rfstats_log"
+                onchange='radio("rfstats_log", 0)' value="0"> off
+        </div>
+        <br>
+        <div class="pure-control-group">
+            <label>Old Itho RF protocol capture</label>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'rx'}))">Receive</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'loose'}))">Receive (loose)</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'off'}))">Off</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'scan'}))">Signal scan (20 s)</button>
+        </div>
+        <p>For older Itho units that only know the pre-RAMSES protocol. While receive is on, the add-on hears only that protocol (normal RF receive is off, for max 30 minutes).
+            Every frame received, and every frame an old protocol remote of the add-on sends, is shown in the RF log and written to the system log.
+            Use "loose" when "Receive" shows nothing while a remote is pressed. The signal scan logs every RF burst for 20 seconds, of any protocol.</p>
         <br>
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">
