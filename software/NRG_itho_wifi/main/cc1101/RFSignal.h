@@ -27,7 +27,7 @@ namespace rfsignal
   // Link quality estimate (lower = better); bit 7 is CRC_OK, which this firmware does not use.
   inline uint8_t linkQuality(uint8_t raw) { return raw & 0x7F; }
 
-  // Cumulative receive counters since boot, logged as one "RFSTAT" line per minute when RF logging is on.
+  // Cumulative receive counters since boot, logged as one "RFS" line per minute when RF logging is on.
   struct Counters
   {
     uint32_t sync = 0;      // sync words detected (RF interrupts)

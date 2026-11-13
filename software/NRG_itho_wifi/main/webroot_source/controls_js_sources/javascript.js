@@ -1374,6 +1374,7 @@ document.addEventListener('DOMContentLoaded', function () {
           esplog_active: checkedVal('option-esplog_active'),
           webserial_active: checkedVal('option-webserial_active'),
           rfloglevel: $val('rfloglevel'),
+          rfstats_log: checkedVal('option-rfstats_log'),
           logserver: $val('logserver'),
           logport: $val('logport'),
           logref: $val('logref')

@@ -1,5 +1,5 @@
 // Native unit tests for the RF signal diagnostics helpers (main/cc1101/RFSignal.h):
-// CC1101 RSSI / FREQEST / LQI conversions per the datasheet and the RFSTAT receive counters.
+// CC1101 RSSI / FREQEST / LQI conversions per the datasheet and the RFS receive counters.
 
 #include <unity.h>
 #include <cstdint>

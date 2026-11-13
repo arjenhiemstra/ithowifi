@@ -353,7 +353,7 @@ Ticker rf_message;
 Ticker bindInitiatorTimeout;
 
 volatile bool ithoCheck = false;
-// RF receive counters since boot ("RFSTAT" log line every minute while RF logging is on). sync is counted in the ISR.
+// RF receive counters since boot ("RFS" line every minute while RF logging is on). sync is counted in the ISR.
 volatile uint32_t rfSyncCount = 0;
 rfsignal::Counters rfStats;
 unsigned long rfStatsLastLog = 0;
@@ -1403,10 +1403,15 @@ void TaskCC1101(void *pvParameters)
       {
         rfStatsLastLog = millis();
         rfStats.sync = rfSyncCount;
-        N_LOG("RFSTAT: sync:%lu decoded:%lu coalesced:%lu hdrerr:%lu chkerr:%lu known:%lu knownerr:%lu",
-              (unsigned long)rfStats.sync, (unsigned long)rfStats.decoded, (unsigned long)rfStats.coalesced,
-              (unsigned long)rfStats.hdrErr, (unsigned long)rfStats.chkErr, (unsigned long)rfStats.known,
-              (unsigned long)rfStats.knownErr);
+        char line[160];
+        snprintf(line, sizeof(line), "RFS: sync:%lu decoded:%lu coalesced:%lu hdrerr:%lu chkerr:%lu known:%lu knownerr:%lu",
+                 (unsigned long)rfStats.sync, (unsigned long)rfStats.decoded, (unsigned long)rfStats.coalesced,
+                 (unsigned long)rfStats.hdrErr, (unsigned long)rfStats.chkErr, (unsigned long)rfStats.known,
+                 (unsigned long)rfStats.knownErr);
+        logMessagejson(line, RFLOG);
+        // system log (flash, syslog, webserial) only on request: one line a minute wears the flash
+        if (logConfig.rfstats_log)
+          N_LOG("%s", line);
       }
       TaskCC1101HWmark = uxTaskGetStackHighWaterMark(NULL);
       // Block until the RF ISR notifies that a packet arrived, or a 25 ms tick
