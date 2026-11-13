@@ -436,7 +436,7 @@ void addHADiscoveryRFSensors(JsonObject components, JsonObject compactJson, cons
                 // Convert lastcmdmsg to human-readable: IthoLow->Low, IthoTimer1->Timer 10min, etc.
                 char lastcmdTpl[512]{};
                 snprintf(lastcmdTpl, sizeof(lastcmdTpl),
-                         "{%%- set cmd = value_json['%s']['lastcmdmsg'] | default('', true) -%%}"
+                         "{%%- set cmd = (value_json['%s'] | default({}))['lastcmdmsg'] | default('', true) -%%}"
                          "{%%- if cmd.startswith('Itho') -%%}"
                          "{%%- set c = cmd[4:] -%%}"
                          "{%%- if c == 'Timer1' -%%}Timer 10min"
@@ -515,7 +515,7 @@ void addHADiscoveryRemoteFan(JsonObject components, JsonObject compactJson, cons
         {
             char valTpl[640]{};
             snprintf(valTpl, sizeof(valTpl),
-                     "{%%- set cmd = value_json['%s']['lastcmdmsg'] | default('', true) -%%}"
+                     "{%%- set cmd = (value_json['%s'] | default({}))['lastcmdmsg'] | default('', true) -%%}"
                      "{%%- set c = cmd[4:] if cmd.startswith('Itho') else '' -%%}"
                      "{%%- if c == 'Timer1' -%%}{%%- set m = 'Timer 10min' -%%}"
                      "{%%- elif c == 'Timer2' -%%}{%%- set m = 'Timer 20min' -%%}"
