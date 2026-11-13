@@ -1637,6 +1637,12 @@ void TaskCC1101(void *pvParameters)
             {
               remotes.addCapabilities(remIndex, "demand", item.demand / 2);
             }
+            if (item.ventDemand != 0xFF)
+            {
+              remotes.addCapabilities(remIndex, "vent_demand", item.ventDemand);
+              remotes.addCapabilities(remIndex, "vent_demand_zone", item.ventZone);
+              remotes.addCapabilities(remIndex, "vent_demand_flags", item.ventFlags);
+            }
             if (item.spiderFlags != 0xEF)
             {
               remotes.addCapabilities(remIndex, "schedule", (item.spiderFlags & spider::FLAG_SCHEDULE) ? 1 : 0);

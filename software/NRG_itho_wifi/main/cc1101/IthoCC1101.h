@@ -33,6 +33,9 @@ struct ithoRFDevice
   int32_t setpointCool{0xEFFF}; // Spider 01FF second setpoint
   uint8_t spiderFlags{0xEF};    // Spider 01FF byte 5
   uint8_t demand{0xFF};         // Spider 0008 relay/heat demand, 0-200 (0.5 %)
+  uint8_t ventDemand{0xFF};     // 31E0 demand sent by a joined RF sensor, 0-200 (0.5 %), 0xFF = none
+  uint8_t ventZone{0xFF};       // 31E0 zone
+  uint8_t ventFlags{0xFF};      // 31E0 flags
   bool thermostat{false};       // Spider heating side bound to us: answer its RQ 01FF
   int32_t setpointCmd{0xEFFF};  // commanded heating setpoint (0.01 C), 0xEFFF = echo the Spider's own
   uint8_t controllerID[3]{};    // Spider's heater/gateway: W 01FF is sent as this id; 0 = our own id

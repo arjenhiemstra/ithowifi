@@ -1957,6 +1957,9 @@ bool IthoCC1101::updateRFDevice(uint8_t remote_index, uint8_t byte0, uint8_t byt
   ithoRF.device[remote_index].setpointCool = 0xEFFF;
   ithoRF.device[remote_index].spiderFlags = 0xEF;
   ithoRF.device[remote_index].demand = 0xFF;
+  ithoRF.device[remote_index].ventDemand = 0xFF;
+  ithoRF.device[remote_index].ventZone = 0xFF;
+  ithoRF.device[remote_index].ventFlags = 0xFF;
   ithoRF.device[remote_index].thermostat = false;
   ithoRF.device[remote_index].setpointCmd = 0xEFFF;
   memset(ithoRF.device[remote_index].controllerID, 0, 3);
@@ -2010,6 +2013,9 @@ bool IthoCC1101::removeRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2)
       item.setpointCool = 0xEFFF;
       item.spiderFlags = 0xEF;
       item.demand = 0xFF;
+      item.ventDemand = 0xFF;
+      item.ventZone = 0xFF;
+      item.ventFlags = 0xFF;
       item.thermostat = false;
       item.setpointCmd = 0xEFFF;
       memset(item.controllerID, 0, 3);
@@ -2045,6 +2051,9 @@ bool IthoCC1101::removeRFDevice(uint8_t remote_index)
   ithoRF.device[remote_index].setpointCool = 0xEFFF;
   ithoRF.device[remote_index].spiderFlags = 0xEF;
   ithoRF.device[remote_index].demand = 0xFF;
+  ithoRF.device[remote_index].ventDemand = 0xFF;
+  ithoRF.device[remote_index].ventZone = 0xFF;
+  ithoRF.device[remote_index].ventFlags = 0xFF;
   ithoRF.device[remote_index].thermostat = false;
   ithoRF.device[remote_index].setpointCmd = 0xEFFF;
   memset(ithoRF.device[remote_index].controllerID, 0, 3);
@@ -2571,6 +2580,17 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
 
 void IthoCC1101::handleRemotestatus(IthoPacket *packetPtr)
 {
+  /*
+     message length: 4
+     message opcode: 0x31E0
+     byte[0]    : zone
+     byte[1]    : unknown (0x00)
+     byte[2]    : ventilation demand, 0-200 (0.5 %)
+     byte[3]    : flags
+
+  */
+  if (packetPtr->error > 0)
+    return;
   uint32_t tempID = 0;
   if (packetPtr->deviceId0 != 0)
     tempID = packetPtr->deviceId0;
@@ -2595,6 +2615,20 @@ void IthoCC1101::handleRemotestatus(IthoPacket *packetPtr)
     {
       // store last command
       // item.timestamp = now;
+      if (packetPtr->len == 4)
+      {
+        const uint8_t v = packetPtr->dataDecoded[packetPtr->payloadPos + 2];
+        if (v <= 200)
+        {
+          const uint8_t z = packetPtr->dataDecoded[packetPtr->payloadPos + 0];
+          const uint8_t f = packetPtr->dataDecoded[packetPtr->payloadPos + 3];
+          if (v != item.ventDemand || z != item.ventZone || f != item.ventFlags)
+            remoteStatusChanged = true;
+          item.ventDemand = v;
+          item.ventZone = z;
+          item.ventFlags = f;
+        }
+      }
       return;
     }
   }
