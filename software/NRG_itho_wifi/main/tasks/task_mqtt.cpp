@@ -492,6 +492,17 @@ void mqttHomeAssistantDiscovery()
     // First publish empty payload to remove all previously discovered entities
     mqttClient.publish(devicetopic, "", true);
 
+    // Firmware up to 2.8.0 used one discovery topic per entity; clear those retained configs
+    static const char *const legacyTopics[] = {"/fan/%s/config", "/sensor/%s/temp/config", "/sensor/%s/hum/config"};
+    for (const char *fmt : legacyTopics)
+    {
+      char path[100]{};
+      char legacytopic[240]{};
+      snprintf(path, sizeof(path), fmt, hostName());
+      snprintf(legacytopic, sizeof(legacytopic), "%s%s", systemConfig.mqtt_ha_topic, path);
+      mqttClient.publish(legacytopic, "", true);
+    }
+
     MQTTSendBuffered(outputDoc, devicetopic);
   }
   catch (const std::bad_alloc &e)
