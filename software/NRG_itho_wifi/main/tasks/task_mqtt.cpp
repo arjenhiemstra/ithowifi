@@ -69,13 +69,35 @@ void TaskMQTT(void *pvParameters)
   vTaskDelete(xTempTask);
 }
 
+// Publish a JSON document as one message. PubSubClient drops its buffer on a short
+// write but leaves the socket open, so the broker would read the following packets
+// as payload of this message. On any failure close the socket: the next loop
+// reconnects on a clean stream (#415).
+bool MQTTPublishJson(const JsonDocument &doc, const char *topic)
+{
+  const size_t len = measureJson(doc);
+  if (!mqttClient.beginPublish(topic, len, true))
+  {
+    if (mqttClient.connected())
+    {
+      E_LOG("MQTT: publish start failed, closing connection");
+      networkManager.standardClient.stop();
+    }
+    return false;
+  }
+  const size_t written = serializeJson(doc, mqttClient);
+  if (!mqttClient.endPublish() || written != len)
+  {
+    E_LOG("MQTT: publish write failed, closing connection");
+    networkManager.standardClient.stop();
+    return false;
+  }
+  return true;
+}
+
 void MQTTSendBuffered(const JsonDocument &doc, const char *topic)
 {
-  mqttClient.beginPublish(topic, measureJson(doc), true);
-  BufferingPrint bufferedClient(mqttClient, 32);
-  serializeJson(doc, bufferedClient);
-  bufferedClient.flush();
-  mqttClient.endPublish();
+  MQTTPublishJson(doc, topic);
 }
 
 void execMQTTTasks()
@@ -243,14 +265,8 @@ void mqttSendStatus()
   JsonObject root = doc.to<JsonObject>();
   getIthoStatusJSON(root);
 
-  size_t len = measureJson(root);
-
-  if (mqttClient.beginPublish(ihtostatustopic, len, true))
-  {
-    serializeJson(root, mqttClient);
-    if (!mqttClient.endPublish())
-      E_LOG("API: Failed to send payload (itho status)");
-  }
+  if (!MQTTPublishJson(doc, ihtostatustopic))
+    E_LOG("API: Failed to send payload (itho status)");
   if (doc.overflowed())
   {
     E_LOG("API: JsonDocument overflowed (itho status)");
@@ -299,12 +315,7 @@ void mqttSendRFStatus()
         }
         xSemaphoreGive(rfStatusMutex);
       }
-      size_t len = measureJson(root);
-      if (mqttClient.beginPublish(topic, len, true))
-      {
-        serializeJson(root, mqttClient);
-        mqttClient.endPublish();
-      }
+      MQTTPublishJson(doc, topic);
     }
 
     if (!rfStatusSources[i].measurements31D9.empty())
@@ -328,12 +339,7 @@ void mqttSendRFStatus()
         }
         xSemaphoreGive(rfStatusMutex);
       }
-      size_t len = measureJson(root);
-      if (mqttClient.beginPublish(topic, len, true))
-      {
-        serializeJson(root, mqttClient);
-        mqttClient.endPublish();
-      }
+      MQTTPublishJson(doc, topic);
     }
   }
 }
