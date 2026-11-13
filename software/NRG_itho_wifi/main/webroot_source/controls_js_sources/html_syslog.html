@@ -75,6 +75,14 @@
         <p>- Level1 will show only known Itho commands from all devices</p>
         <p>- Level2 will show all received RF messages from devices joined to the add-on</p>
         <p>- Level3 will show all received RF messages from all devices</p>
+        <p>While RF debug logging is on, an RF status (RFS) line with receive counters is shown every minute.</p>
+        <div class="pure-control-group">
+            <label class="pure-radio" for="option-rfstats_log-1">RF status in syslog (flash)</label>
+            <input id="option-rfstats_log-1" type="radio" name="option-rfstats_log"
+                onchange='radio("rfstats_log", 1)' value="1"> on
+            <input id="option-rfstats_log-0" type="radio" name="option-rfstats_log"
+                onchange='radio("rfstats_log", 0)' value="0"> off
+        </div>
         <br>
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">
