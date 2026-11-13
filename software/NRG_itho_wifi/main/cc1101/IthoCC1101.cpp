@@ -363,11 +363,13 @@ void IthoCC1101::initReceiveLegacy()
 {
   writeCommand(CC1101_SIDLE);
   setLegacyModem();
-  writeRegister(CC1101_PKTLEN, LEGACY_RX_LEN); // the bytes after the 170,173 sync
-  writeRegister(CC1101_PKTCTRL0, 0x00);        // fixed length
+  // loose: sync on 170,170 of the preamble and keep more bytes, for remotes with another sync or header
+  const bool loose = legacyRx == 2;
+  writeRegister(CC1101_PKTLEN, loose ? LEGACY_RX_LEN_LOOSE : LEGACY_RX_LEN); // the bytes after the sync
+  writeRegister(CC1101_PKTCTRL0, 0x00);                                       // fixed length
   writeRegister(CC1101_PKTCTRL1, 0x00);
   writeRegister(CC1101_SYNC1, 170);
-  writeRegister(CC1101_SYNC0, 173);
+  writeRegister(CC1101_SYNC0, loose ? 170 : 173);
   writeRegister(CC1101_MDMCFG2, 0x02); // 2-FSK, 16/16 sync bits
   writeCommand(CC1101_SFRX);
   writeCommand(CC1101_SRX);
@@ -436,6 +438,9 @@ void IthoCC1101::sendLegacyCommand(uint8_t remote_index, const uint8_t sourceId[
   legacy::buildFrame(id, cmd, legacy::prevCode(cmd), rest);
   sendLegacyRaw(first, rest, legacy::FRAME_LEN, legacy::REPEATS);
   ithoRF.device[remote_index].legacyPrev = legacy::prevCode(cmd);
+  memcpy(legacyTxFrame, first, sizeof(legacyTxFrame));
+  legacyTxRemote = remote_index;
+  legacyTxPending = true;
 }
 
 void IthoCC1101::initReceiveMessage()
@@ -477,7 +482,7 @@ bool IthoCC1101::receivePacket()
   if (legacyRx)
   {
     legacyRssi = readRegisterWithSyncProblem(CC1101_RSSI, CC1101_STATUS_REGISTER);
-    readData(&legacyIn, LEGACY_RX_LEN); // leaves the radio in RX with the legacy settings
+    readData(&legacyIn, legacyRx == 2 ? LEGACY_RX_LEN_LOOSE : LEGACY_RX_LEN); // leaves the radio in RX with the legacy settings
     legacyReady = true;
     return false;
   }

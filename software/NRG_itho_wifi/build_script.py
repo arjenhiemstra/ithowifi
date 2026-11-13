@@ -553,9 +553,11 @@ def build_openapi_spec():
         "properties": {
             "action": {
                 "type": "string",
-                "description": "Action name",
-                "enum": ["reboot", "level0", "level1", "level2", "level3"],
-            }
+                "description": "Action name. legacyrx_on/legacyrx_loose/legacyrx_off: old (pre-RAMSES) Itho RF capture, max 30 min; rssiscan: log RF bursts; legacytx: send raw old protocol bytes",
+                "enum": ["reboot", "level0", "level1", "level2", "level3", "legacyrx_on", "legacyrx_loose", "legacyrx_off", "rssiscan", "legacytx"],
+            },
+            "data": prop("string", "legacytx: hex bytes like AA,AA,AA,AD,..."),
+            "repeats": prop("integer", "legacytx: repeats (1-10); rssiscan: seconds (1-60)"),
         },
     }
 

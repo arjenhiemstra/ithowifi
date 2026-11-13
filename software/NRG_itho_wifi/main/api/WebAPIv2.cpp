@@ -915,16 +915,16 @@ ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonD
     response["result"] = "rf debug level3 set";
     return ApiResponse::status::SUCCESS;
   }
-  else if (strcmp(value, "legacyrx_on") == 0 || strcmp(value, "legacyrx_off") == 0)
+  else if (strcmp(value, "legacyrx_on") == 0 || strcmp(value, "legacyrx_loose") == 0 || strcmp(value, "legacyrx_off") == 0)
   {
-    const bool on = strcmp(value, "legacyrx_on") == 0;
-    if (!legacyRFRequest(on ? 1 : 2, nullptr, 0, 0))
+    const uint8_t cmd = strcmp(value, "legacyrx_on") == 0 ? 1 : (strcmp(value, "legacyrx_loose") == 0 ? 5 : 2);
+    if (!legacyRFRequest(cmd, nullptr, 0, 0))
     {
       response["code"] = 409;
       response["failreason"] = "previous legacy RF request still pending";
       return ApiResponse::status::FAIL;
     }
-    response["result"] = on ? "legacy RF receive on" : "legacy RF receive off";
+    response["result"] = cmd == 2 ? "legacy RF receive off" : (cmd == 5 ? "legacy RF loose receive on" : "legacy RF receive on");
     return ApiResponse::status::SUCCESS;
   }
   else if (strcmp(value, "rssiscan") == 0)
@@ -978,7 +978,7 @@ ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonD
   }
 
   response["code"] = 400;
-  response["failreason"] = "invalid debug value, options: level0, level1, level2, level3, legacyrx_on, legacyrx_off, legacytx, reboot";
+  response["failreason"] = "invalid debug value, options: level0, level1, level2, level3, legacyrx_on, legacyrx_loose, legacyrx_off, legacytx, rssiscan, reboot";
   return ApiResponse::status::FAIL;
 }
 

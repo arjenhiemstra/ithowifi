@@ -92,4 +92,112 @@ inline void buildFrame(uint16_t id, uint16_t cmd, uint8_t prev, uint8_t out[FRAM
   putByte(prev, 7);
 }
 
+// ---- Decoding received frames (debug log) ----
+
+constexpr uint16_t CMD_FULL = 0xEFF5; // seen in captures, not sent by the add-on
+
+inline const char *cmdName(uint16_t cmd)
+{
+  switch (cmd)
+  {
+  case CMD_LOW:
+    return "low";
+  case CMD_MEDIUM:
+    return "medium";
+  case CMD_HIGH:
+    return "high";
+  case CMD_FULL:
+    return "full";
+  case CMD_TIMER1:
+    return "timer1";
+  case CMD_TIMER2:
+    return "timer2";
+  case CMD_TIMER3:
+    return "timer3";
+  case CMD_JOIN:
+    return "join";
+  case CMD_LEAVE:
+    return "leave";
+  default:
+    return "unknown";
+  }
+}
+
+inline uint8_t chipAt(const uint8_t *buf, size_t chip)
+{
+  return (buf[chip >> 3] >> (7 - (chip & 7))) & 1;
+}
+
+// n (<= 32) chips from `chip` as a number, MSB first
+inline uint32_t chipsAt(const uint8_t *buf, size_t chip, uint8_t n)
+{
+  uint32_t v = 0;
+  for (uint8_t i = 0; i < n; i++)
+    v = (v << 1) | chipAt(buf, chip + i);
+  return v;
+}
+
+struct Decoded
+{
+  bool manchesterOk{false}; // 48 valid Manchester bits
+  uint16_t badChip{0};      // first chip pair that is not 10 or 01 (manchesterOk false)
+  uint8_t header{0};
+  uint16_t id{0};
+  uint8_t type{0}; // 1 command, 0 join/leave
+  uint16_t cmd{0};
+  uint8_t crc{0};
+  uint8_t crcCalc{0};
+  bool footerOk{false}; // 170,171 after the CRC
+  bool hasPrev{false};
+  uint8_t prev{0}; // type of the frame sent before this one
+};
+
+// `start` is the chip right after the 170,173 sync (the sync's padding chip, Manchester data follows)
+inline Decoded decodeFrame(const uint8_t *buf, size_t len, size_t start)
+{
+  Decoded d;
+  const size_t chips = len * 8;
+  uint64_t all = 0;
+  size_t c = start + 1;
+  for (int i = 0; i < 48; i++, c += 2)
+  {
+    if (c + 1 >= chips || chipAt(buf, c) == chipAt(buf, c + 1))
+    {
+      d.badChip = c;
+      return d;
+    }
+    all = (all << 1) | chipAt(buf, c);
+  }
+  d.manchesterOk = true;
+  const uint64_t data = all >> 8;
+  d.header = data >> 32;
+  d.id = (data >> 17) & 0x7FFF;
+  d.type = (data >> 16) & 1;
+  d.cmd = data & 0xFFFF;
+  d.crc = all & 0xFF;
+  d.crcCalc = crc(data);
+  // footer: 170 from its 2nd chip (the 1st is the CRC's last), 171, then the previous frame type
+  if (c + 15 <= chips)
+    d.footerOk = chipsAt(buf, c, 7) == (170 & 0x7F) && chipsAt(buf, c + 7, 8) == 171;
+  if (c + 23 <= chips)
+  {
+    d.hasPrev = true;
+    d.prev = chipsAt(buf, c + 15, 8);
+  }
+  return d;
+}
+
+// Loose capture (sync on the preamble only): find the end of 170,...,170,173. Returns the chip after
+// it, or -1. The preamble alternates 1010..., 173 is 10101101: its "11" breaks the alternation.
+inline int findFrameStart(const uint8_t *buf, size_t len)
+{
+  const size_t chips = len * 8;
+  for (size_t c = 1; c + 3 < chips; c++)
+  {
+    if (chipAt(buf, c) == chipAt(buf, c - 1))
+      return (chipAt(buf, c) == 1 && chipsAt(buf, c + 1, 2) == 0x1) ? static_cast<int>(c + 3) : -1;
+  }
+  return -1;
+}
+
 } // namespace legacy
