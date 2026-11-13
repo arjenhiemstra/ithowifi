@@ -541,7 +541,7 @@ ApiResponse::api_response_status_t processSetRFremote(JsonObject params, JsonDoc
 
   response["idx"] = idx;
 
-  if (idx > remotes.getRemoteCount() - 1)
+  if (idx >= remotes.getMaxRemotes())
   {
     response["failreason"] = "remote index number higher than configured number of remotes";
     return ApiResponse::status::FAIL;
@@ -631,7 +631,7 @@ ApiResponse::api_response_status_t processRFremoteCommands(JsonObject params, Js
 
   response["idx"] = idx;
 
-  if (idx > remotes.getRemoteCount() - 1)
+  if (idx >= remotes.getMaxRemotes())
   {
     response["failreason"] = "remote index number higher than configured number of remotes";
     return ApiResponse::status::FAIL;
@@ -778,7 +778,7 @@ ApiResponse::api_response_status_t processVremoteCommands(JsonObject params, Jso
         return ApiResponse::status::FAIL;
       }
     }
-    if (index > virtualRemotes.getRemoteCount() - 1)
+    if (index >= virtualRemotes.getMaxRemotes())
     {
       response["failreason"] = "remote index number higher than configured number of remotes";
       return ApiResponse::status::FAIL;

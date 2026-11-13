@@ -570,6 +570,24 @@ bool ithoExecCommand(const char *command, cmdOrigin origin)
   return true;
 }
 
+// After a leave a send remote must stop addressing the device it joined: the device keeps obeying frames
+// addressed to it from a remote that left. Undo what the bind accept set up (task_cc1101.cpp), except the
+// RF CO2 control interface, which may have been chosen by the user.
+static void forgetJoinedDevice(uint8_t remote_index)
+{
+  // the slot's own id as destination is the state of a remote that never joined (see updateRFDevice)
+  const uint8_t *src = rfManager.radio.getRFdevices().device[remote_index].sourceID;
+  rfManager.radio.updateDestinationID(src[0], src[1], src[2], remote_index);
+  remotes.updateRemoteDestID(remote_index, 0, 0, 0);
+  saveRemotesflag = true;
+  if (systemConfig.itho_rf_status_poll == 1 && systemConfig.itho_rf_status_poll_idx == remote_index)
+  {
+    systemConfig.itho_rf_status_poll = 0;
+    saveSystemConfigflag = true;
+    N_LOG("RFI: RF status request off, remote %d left", remote_index);
+  }
+}
+
 bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin origin)
 {
   bool res = true;
@@ -638,6 +656,8 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   else if (strcmp(command, "leave") == 0)
   {
     rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoLeave);
+    if (isSendRemote)
+      forgetJoinedDevice(remote_index);
   }
   else if (strcmp(command, "motion_on") == 0)
   {
