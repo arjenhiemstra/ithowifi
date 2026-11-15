@@ -411,7 +411,9 @@ Before an emulated RF remote works, it must be joined to the Itho once, just lik
 
 **Older Itho units (old RF protocol).** Older Itho units that only know the RF protocol from before RAMSES (tested on an old CVE ECO 2) do not respond to the regular emulated RF remotes. For these, use a remote of type **RF (old protocol)** on the **RF devices** page, with the *Remote function* set to **Send**. Such a remote can only send: low, medium, high, timer 1, 2 and 3, join and leave. The Itho sends nothing back, so the add-on shows no status for this unit. This type is not available for virtual remotes.
 
-To pair: disconnect power from the Itho and switch it back on. Then, within 2 minutes, first send a leave and then a join with the buttons next to the relevant remote on the **RF devices** page. If the Itho does not respond, see *Capturing the old RF protocol* below.
+This feature is only in the beta firmware for now (from 3.3.0-beta10). Update the add-on to the latest beta on the **Update** page first.
+
+To pair: disconnect power from the Itho and switch it back on. Then, within 2 minutes, press the blue **join** button behind the relevant remote on the **RF devices** page. If the Itho does not respond, see *Capturing the old RF protocol* below.
 
 **Note:** There is a debug option to make RF commands visible in the web interface. Set one of the following levels on the **Syslog** page, under *RF Debug log level*:
 

@@ -411,7 +411,9 @@ Voordat een geëmuleerde RF-remote werkt, moet deze eenmalig aan de Itho gekoppe
 
 **Oudere Itho units (oud RF-protocol).** Oudere Itho units die alleen het RF-protocol van vóór RAMSES kennen (getest op een oude CVE ECO 2), reageren niet op de gewone geëmuleerde RF-remotes. Gebruik daarvoor op de **RF devices**-pagina een remote van het type **RF (old protocol)** met de *Remote function* op **Send**. Zo'n remote kan alleen versturen: low, medium, high, timer 1, 2 en 3, join en leave. De Itho stuurt niets terug, dus de add-on toont voor deze unit geen status. Dit type is niet beschikbaar voor virtuele remotes.
 
-Koppelen gaat zo: haal de spanning van de Itho en zet hem weer aan. Stuur daarna binnen 2 minuten eerst een leave en dan een join met de knoppen bij de betreffende remote op de **RF devices**-pagina. Reageert de Itho niet, kijk dan bij *Opname van het oude RF-protocol* hieronder.
+Deze functie zit nog alleen in de beta firmware (vanaf 3.3.0-beta10). Update de add-on daarom eerst naar de laatste beta via de **Update**-pagina.
+
+Koppelen gaat zo: haal de spanning van de Itho en zet hem weer aan. Druk daarna binnen 2 minuten op de blauwe **join**-knop achter de betreffende remote op de **RF devices**-pagina. Reageert de Itho niet, kijk dan bij *Opname van het oude RF-protocol* hieronder.
 
 **Opmerking:** Er is een debug optie om RF-commando's zichtbaar te maken in de web interface. Stel hiervoor op de **Syslog** pagina, bij *RF Debug log level*, één van de volgende niveaus in:
 
