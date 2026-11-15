@@ -725,6 +725,12 @@ void handle_ws_message(JsonObject root)
       bindInitiatorResult = 0; // reset before join
     ithoExecRFCommand(root["remote"].as<uint8_t>(), cmd, WEB);
   }
+  // Single top-level "command" (a vremote/remote command must not also run as a plain command)
+  else if (root["command"].is<const char *>())
+  {
+    ithoExecCommand(root["command"].as<const char *>(), WEB);
+    sysStatReq = true;
+  }
   // Poll bind initiator result
   if (!root["get_bind_result"].isNull())
   {
@@ -733,12 +739,6 @@ void handle_ws_message(JsonObject root)
     char buf[64]{};
     serializeJson(doc, buf, sizeof(buf));
     notifyClients(buf);
-  }
-  // Single top-level "command"
-  else if (root["command"].is<const char *>())
-  {
-    ithoExecCommand(root["command"].as<const char *>(), WEB);
-    sysStatReq = true;
   }
   // RF CO2 value command
   if (!root["rfco2"].isNull())
