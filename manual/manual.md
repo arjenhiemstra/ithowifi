@@ -186,7 +186,7 @@ The add-on can easily be connected to home automation software. For Home Assista
 Overview of home automation platform integrations:
 
 - **Home Assistant:**
-  - [ithowifi-ha-integration](https://github.com/arjenhiemstra/ithowifi-ha-integration): easy setup via HACS (REST API)
+  - [ithowifi-ha-integration](https://github.com/arjenhiemstra/ithowifi-ha-integration): easy setup via the Marketplace (Home Assistant 2026.11 or newer) or HACS (REST API)
   - [haithowifi](https://github.com/jasperslits/haithowifi): extensive community plugin based on the MQTT API (requires an MQTT broker)
   - MQTT Auto Discovery: part of the add-on firmware (requires an MQTT broker)
 - **Homey:** The [Itho Daalderop app](https://homey.app/en-nl/app/nl.monkeysoft.nrgwatch/Itho-Daalderop/) in the Homey app store (REST API)
