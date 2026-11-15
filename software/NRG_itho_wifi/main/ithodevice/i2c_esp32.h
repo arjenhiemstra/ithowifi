@@ -60,6 +60,20 @@ void i2cQueueAddCmd(const std::function<void()> func);
 
 void i2cMasterSetPins(gpio_num_t sda, gpio_num_t scl);
 void i2cSlaveSetPins(gpio_num_t sda, gpio_num_t scl);
+// I2C_NUM_0 is shared by master and slave mode, so only one task at a time may use the bus.
+// Recursive, so a query can hold it across its send and its reply receive.
+class I2cBusLock
+{
+public:
+  I2cBusLock();
+  ~I2cBusLock();
+  I2cBusLock(const I2cBusLock &) = delete;
+  I2cBusLock &operator=(const I2cBusLock &) = delete;
+  bool locked() const { return locked_; }
+
+private:
+  bool locked_;
+};
 esp_err_t i2cMasterInit();
 void i2cMasterDeinit();
 esp_err_t i2cMasterSend(const char *buf, uint32_t len, int log_entry_idx);

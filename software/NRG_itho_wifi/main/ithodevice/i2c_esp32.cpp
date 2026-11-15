@@ -4,6 +4,21 @@
 // I2C globals now managed by I2CManager (see managers/I2CManager.cpp)
 // Removed: i2c_cmd_queue, master/slave pin globals
 
+static SemaphoreHandle_t i2cBusMutex = xSemaphoreCreateRecursiveMutex();
+constexpr TickType_t I2C_BUS_LOCK_TIMEOUT = pdMS_TO_TICKS(3000);
+
+I2cBusLock::I2cBusLock() : locked_(false)
+{
+  if (i2cBusMutex != nullptr)
+    locked_ = xSemaphoreTakeRecursive(i2cBusMutex, I2C_BUS_LOCK_TIMEOUT) == pdTRUE;
+}
+
+I2cBusLock::~I2cBusLock()
+{
+  if (locked_)
+    xSemaphoreGiveRecursive(i2cBusMutex);
+}
+
 void i2cQueueAddCmd(const std::function<void()> func)
 {
   if (i2cManager.cmd_queue.size() >= I2C_CMD_QUEUE_MAX_SIZE)
@@ -62,6 +77,7 @@ void i2cMasterDeinit()
 
 esp_err_t i2cMasterSend(const char *buf, uint32_t len, int log_entry_idx)
 {
+  I2cBusLock busLock;
   esp_err_t rc = i2cMasterInit(log_entry_idx);
 
   if (rc != ESP_OK)
@@ -83,6 +99,7 @@ esp_err_t i2cMasterSend(const char *buf, uint32_t len, int log_entry_idx)
 
 esp_err_t i2cMasterSendCommand(uint8_t addr, const uint8_t *cmd, uint32_t len, int log_entry_idx)
 {
+  I2cBusLock busLock;
 
   esp_err_t rc = i2cMasterInit(log_entry_idx);
 
@@ -113,6 +130,7 @@ esp_err_t i2cMasterReadSlave(uint8_t addr, uint8_t *data_rd, size_t size, i2c_cm
     return ESP_FAIL;
   }
 
+  I2cBusLock busLock;
   int log_entry_idx = i2cLogger.i2cLogStart(origin);
 
   esp_err_t rc = i2cMasterInit(log_entry_idx);
@@ -210,6 +228,7 @@ bool i2cSendCmd(uint8_t addr, const uint8_t *cmd, size_t len)
 
 size_t i2cSlaveReceive(uint8_t *i2c_receive_buf)
 {
+  I2cBusLock busLock;
   // The sniffer interrupt's busy-wait through the reply can cost the slave receive a byte (#295).
   i2cSnifferPause();
 

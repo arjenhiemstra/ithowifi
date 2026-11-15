@@ -148,6 +148,7 @@ size_t sendI2cQuery(uint8_t *i2c_command, size_t i2c_command_length, uint8_t *re
     return 0;
   if (receive_buffer == nullptr)
     return 0;
+  I2cBusLock busLock; // hold the bus from send to reply, the slave receive shares I2C_NUM_0 with the master
   if (!i2cSendBytes(i2c_command, i2c_command_length, origin))
     return 0;
 
