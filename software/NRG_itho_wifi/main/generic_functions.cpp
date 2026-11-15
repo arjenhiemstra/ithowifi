@@ -660,7 +660,8 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   else if (strcmp(command, "join") == 0)
   {
     // the old (pre-RAMSES) protocol has no binding accept to wait for
-    if (remotes.getRemoteType(remote_index) != RemoteTypes::RFLEGACY)
+    const RemoteTypes type = remotes.getRemoteType(remote_index);
+    if (type != RemoteTypes::RFLEGACY && type != RemoteTypes::RFLEGACY2)
     {
       rfManager.radio.setBindInitiatorActive(true, remote_index);
       startBindInitiatorTimeout();

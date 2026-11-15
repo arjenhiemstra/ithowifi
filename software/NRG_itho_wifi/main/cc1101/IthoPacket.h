@@ -59,7 +59,8 @@ enum RemoteTypes : uint16_t
   RFTSPIDER = 0x22F2,
   ORCON15LF01 = 0x6710,
   ORCONCO2 = 0x6711,
-  RFLEGACY = 0x6720 // pre-RAMSES Itho RF (legacy_protocol.h), send only
+  RFLEGACY = 0x6720, // pre-RAMSES Itho RF (legacy_protocol.h), send only
+  RFLEGACY2 = 0x6721 // same, command codes of variant 2 remotes
 };
 
 #define F_MASK 0x03

@@ -432,10 +432,11 @@ void IthoCC1101::sendLegacyCommand(uint8_t remote_index, const uint8_t sourceId[
   if (src[0] == 0 && src[1] == 0 && src[2] == 0)
     id ^= remote_index << 10; // module ID: keep slots apart
 
+  const bool variant2 = ithoRF.device[remote_index].remType == RemoteTypes::RFLEGACY2;
   uint8_t first[legacy::FRAME_LEN];
   uint8_t rest[legacy::FRAME_LEN];
-  legacy::buildFrame(id, cmd, ithoRF.device[remote_index].legacyPrev, first);
-  legacy::buildFrame(id, cmd, legacy::prevCode(cmd), rest);
+  legacy::buildFrame(id, cmd, ithoRF.device[remote_index].legacyPrev, first, variant2);
+  legacy::buildFrame(id, cmd, legacy::prevCode(cmd), rest, variant2);
   sendLegacyRaw(first, rest, legacy::FRAME_LEN, legacy::REPEATS);
   ithoRF.device[remote_index].legacyPrev = legacy::prevCode(cmd);
   memcpy(legacyTxFrame, first, sizeof(legacyTxFrame));
@@ -774,7 +775,7 @@ void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
     sourceId[2] = ithoRF.device[remote_index].sourceID[2];
   }
 
-  if (ithoRF.device[remote_index].remType == RemoteTypes::RFLEGACY)
+  if (ithoRF.device[remote_index].remType == RemoteTypes::RFLEGACY || ithoRF.device[remote_index].remType == RemoteTypes::RFLEGACY2)
   {
     sendLegacyCommand(remote_index, sourceId, command);
     return;

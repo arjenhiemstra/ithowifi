@@ -137,6 +137,45 @@ void test_decode_reports_errors()
   TEST_ASSERT_EQUAL_UINT16(95, d.badChip);
 }
 
+void test_variant2_remote()
+{
+  // remote 6564 (captured 2026-11-14): every command code has its lowest bit flipped
+  const uint8_t low[] = {170, 170, 170, 173, 0x33, 0x53, 0x52, 0xCC, 0xD2, 0xCB, 0x54, 0xD5, 0x55, 0x52, 0xAB, 0x54, 170, 171, 85};
+  const uint8_t medium[] = {170, 170, 170, 173, 0x33, 0x53, 0x52, 0xCC, 0xD2, 0xCB, 0x54, 0xD5, 0x55, 0x4B, 0x2D, 0x34, 170, 171, 85};
+  const uint8_t high[] = {170, 170, 170, 173, 0x33, 0x53, 0x52, 0xCC, 0xD2, 0xCB, 0x54, 0xD5, 0x55, 0x33, 0x33, 0x34, 170, 171, 85};
+  uint8_t frame[legacy::FRAME_LEN];
+  legacy::buildFrame(0x6564, legacy::CMD_LOW, legacy::PREV_COMMAND, frame, true);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(low, frame, legacy::FRAME_LEN);
+  legacy::buildFrame(0x6564, legacy::CMD_MEDIUM, legacy::PREV_COMMAND, frame, true);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(medium, frame, legacy::FRAME_LEN);
+  legacy::buildFrame(0x6564, legacy::CMD_HIGH, legacy::PREV_COMMAND, frame, true);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(high, frame, legacy::FRAME_LEN);
+  // join 01FF and leave 03FC, type bit 0 (captured 2026-11-15, later repeats)
+  const uint8_t join[] = {170, 170, 170, 173, 0x33, 0x53, 0x52, 0xCC, 0xD2, 0xCA, 0xAA, 0xAB, 0x55, 0x55, 0x32, 0xB4, 170, 171, 77};
+  const uint8_t leave[] = {170, 170, 170, 173, 0x33, 0x53, 0x52, 0xCC, 0xD2, 0xCA, 0xAA, 0xAD, 0x55, 0x52, 0xD3, 0x54, 170, 171, 82};
+  legacy::buildFrame(0x6564, legacy::CMD_JOIN, legacy::PREV_JOIN, frame, true);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(join, frame, legacy::FRAME_LEN);
+  legacy::buildFrame(0x6564, legacy::CMD_LEAVE, legacy::PREV_LEAVE, frame, true);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(leave, frame, legacy::FRAME_LEN);
+}
+
+void test_cmd_label()
+{
+  char buf[32];
+  legacy::cmdLabel(0xEFFD, buf, sizeof(buf));
+  TEST_ASSERT_EQUAL_STRING("low", buf);
+  legacy::cmdLabel(0xEFFC, buf, sizeof(buf));
+  TEST_ASSERT_EQUAL_STRING("low(v2)", buf);
+  legacy::cmdLabel(0xDDEB, buf, sizeof(buf));
+  TEST_ASSERT_EQUAL_STRING("timer1(v2)", buf);
+  legacy::cmdLabel(0x01FF, buf, sizeof(buf));
+  TEST_ASSERT_EQUAL_STRING("join(v2)", buf);
+  legacy::cmdLabel(0xEFF5, buf, sizeof(buf));
+  TEST_ASSERT_EQUAL_STRING("full|high(v2)", buf);
+  legacy::cmdLabel(0x1234, buf, sizeof(buf));
+  TEST_ASSERT_EQUAL_STRING("unknown", buf);
+}
+
 // Loose mode syncs on 170,170 somewhere in the preamble, so the buffer starts in it at an even chip
 static void shiftChips(const uint8_t *in, size_t inLen, size_t fromChip, uint8_t *out, size_t outLen)
 {
@@ -178,5 +217,7 @@ int main(int, char **)
   RUN_TEST(test_decode_round_trip);
   RUN_TEST(test_decode_reports_errors);
   RUN_TEST(test_find_frame_start_in_loose_capture);
+  RUN_TEST(test_variant2_remote);
+  RUN_TEST(test_cmd_label);
   return UNITY_END();
 }

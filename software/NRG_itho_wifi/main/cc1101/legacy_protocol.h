@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <initializer_list>
 
@@ -25,6 +26,9 @@ constexpr uint16_t CMD_TIMER2 = 0xDDD7;
 constexpr uint16_t CMD_TIMER3 = 0xDDC3;
 constexpr uint16_t CMD_JOIN = 0x01FE;
 constexpr uint16_t CMD_LEAVE = 0x03FD;
+
+// Some remotes send every command with the lowest bit flipped (low EFFC, timer1 DDEB): variant 2
+constexpr uint16_t VARIANT2_XOR = 0x0001;
 
 // Last byte: type of the frame sent before this one
 constexpr uint8_t PREV_COMMAND = 85;
@@ -57,11 +61,11 @@ inline uint8_t crc(uint64_t data40)
 
 // 170,170,170,173, then from the 33rd chip Manchester data (1 = 10, 0 = 01): header 0x5D, 15-bit id,
 // type bit (1 command, 0 join/leave), 16-bit command, CRC. Then 170,171 (its first chip is the CRC's
-// last) and the previous frame type.
-inline void buildFrame(uint16_t id, uint16_t cmd, uint8_t prev, uint8_t out[FRAME_LEN])
+// last) and the previous frame type. `cmd` is a variant 1 code, `variant2` flips its lowest bit.
+inline void buildFrame(uint16_t id, uint16_t cmd, uint8_t prev, uint8_t out[FRAME_LEN], bool variant2 = false)
 {
   const uint64_t data = (0x5DULL << 32) | (static_cast<uint64_t>(id & 0x7FFF) << 17) |
-                        (static_cast<uint64_t>(isJoinLeave(cmd) ? 0 : 1) << 16) | cmd;
+                        (static_cast<uint64_t>(isJoinLeave(cmd) ? 0 : 1) << 16) | (cmd ^ (variant2 ? VARIANT2_XOR : 0));
   const uint64_t all = (data << 8) | crc(data);
 
   memset(out, 0, FRAME_LEN);
@@ -121,6 +125,23 @@ inline const char *cmdName(uint16_t cmd)
   default:
     return "unknown";
   }
+}
+
+inline bool isKnown(uint16_t cmd)
+{
+  return strcmp(cmdName(cmd), "unknown") != 0;
+}
+
+// Name in both variants: "low", "low(v2)", or "full|high(v2)" (EFF4/EFF5 exist in both)
+inline void cmdLabel(uint16_t cmd, char *buf, size_t size)
+{
+  const bool v1 = isKnown(cmd), v2 = isKnown(cmd ^ VARIANT2_XOR);
+  if (v1 && v2)
+    snprintf(buf, size, "%s|%s(v2)", cmdName(cmd), cmdName(cmd ^ VARIANT2_XOR));
+  else if (v2)
+    snprintf(buf, size, "%s(v2)", cmdName(cmd ^ VARIANT2_XOR));
+  else
+    snprintf(buf, size, "%s", cmdName(cmd));
 }
 
 inline uint8_t chipAt(const uint8_t *buf, size_t chip)

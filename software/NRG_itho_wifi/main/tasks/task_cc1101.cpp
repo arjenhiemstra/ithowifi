@@ -84,7 +84,9 @@ static int appendDecoded(char *out, size_t size, int n, const legacy::Decoded &d
 {
   if (!d.manchesterOk)
     return n + snprintf(out + n, size - n, " undecoded (no Manchester pair at chip %u)", d.badChip);
-  n += snprintf(out + n, size - n, " %s cmd:%04X id:%04X type:%u", legacy::cmdName(d.cmd), d.cmd, d.id, d.type);
+  char name[32];
+  legacy::cmdLabel(d.cmd, name, sizeof(name));
+  n += snprintf(out + n, size - n, " %s cmd:%04X id:%04X type:%u", name, d.cmd, d.id, d.type);
   if (d.header != 0x5D)
     n += snprintf(out + n, size - n, " hdr:%02X", d.header);
   if (d.crc == d.crcCalc)

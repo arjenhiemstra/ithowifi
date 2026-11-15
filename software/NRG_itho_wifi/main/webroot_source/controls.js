@@ -2361,12 +2361,13 @@ var remtypes = [
   ["RFT Spider", 0x22F2, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["Orcon 15RF", 0x6710, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["Orcon CO2", 0x6711, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
-  ["RF (old protocol)", 0x6720, ['low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
+  ["RF (old protocol)", 0x6720, ['low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["RF (old protocol, variant 2)", 0x6721, ['low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
 ];
 // Bi-directional remotes need a join handshake that only exists over RF, not for virtual remotes (#405)
 var remtypesBidirectional = [0x22F5, 0x22F4, 0x12A0, 0x1298, 0x22F2];
 // RF-only types, not offered for virtual remotes: the bi-directional ones and the old (pre-RAMSES) protocol
-var remtypesRfOnly = remtypesBidirectional.concat([0x6720]);
+var remtypesRfOnly = remtypesBidirectional.concat([0x6720, 0x6721]);
 
 var remfuncs = [
   ["Receive", 1],
@@ -4420,8 +4421,9 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
             <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key=remote name, value is
                     JSON with all received capabilities of the remote. Depending on make and model this can be the last
                     command, temperature, humidity, battery and/or CO2 levels. An Itho Spider thermostat also reports
-                    setpoint, setpoint_cool, setpoint_cmd, demand (%), schedule and manual. Return type present on MQTT
-                    "Remotes info topic".</em></td>
+                    setpoint, setpoint_cool, setpoint_cmd, demand (%), schedule and manual. A joined RF sensor that sends
+                    its own ventilation demand (31E0, e.g. RFT-RV or RFT-CO2) also reports vent_demand (0-200),
+                    vent_demand_zone and vent_demand_flags. Return type present on MQTT "Remotes info topic".</em></td>
         </tr>
         <tr>
             <td>get</td>
