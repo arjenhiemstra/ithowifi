@@ -285,9 +285,8 @@ void IthoCC1101::initReceive()
 
   writeCommand(CC1101_SCAL);
 
-  // wait for calibration to finish
-  while ((readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) != CC1101_MARCSTATE_IDLE)
-    yield();
+  // wait for calibration to finish (bounded: a chip that does not answer must not hang the task)
+  waitMarcState(CC1101_MARCSTATE_IDLE, 0xFF, CAL_WAIT_MS);
 
   writeRegister(CC1101_FSCAL2, 0x00);
   writeRegister(CC1101_MCSM0, 0x18); // no auto calibrate
@@ -329,8 +328,7 @@ void IthoCC1101::initReceive()
   writeCommand(CC1101_SCAL);
 
   // wait for calibration to finish
-  while ((readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) != CC1101_MARCSTATE_IDLE)
-    yield();
+  waitMarcState(CC1101_MARCSTATE_IDLE, 0xFF, CAL_WAIT_MS);
 
   writeRegister(CC1101_MCSM0, 0x18); // no auto calibrate
 
@@ -342,8 +340,7 @@ void IthoCC1101::initReceive()
 
   writeCommand(CC1101_SRX);
 
-  while ((readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) != CC1101_MARCSTATE_RX)
-    yield();
+  waitMarcState(CC1101_MARCSTATE_RX, 0xFF, CAL_WAIT_MS);
 
   if (legacyRx)
     initReceiveLegacy();
@@ -467,12 +464,18 @@ void IthoCC1101::initReceiveMessage()
 
   writeCommand(CC1101_SRX); // switch to RX state
 
-  // Check that the RX state has been entered
-  while (((marcState = readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) & CC1101_BITS_MARCSTATE) != CC1101_MARCSTATE_RX)
+  // Check that the RX state has been entered. This ran after every packet and every send as an unbounded loop:
+  // a chip that stopped answering hung TaskCC1101 for good (CC1101 Task timed out, RF dead). Now two bounded tries.
+  for (uint8_t attempt = 0; attempt < 2; attempt++)
   {
-    if (marcState == CC1101_MARCSTATE_RXFIFO_OVERFLOW) // RX_OVERFLOW
-      writeCommand(CC1101_SFRX);                       // flush RX buffer
+    marcState = waitMarcState(CC1101_MARCSTATE_RX, CC1101_MARCSTATE_RXFIFO_OVERFLOW, RX_WAIT_MS);
+    if (marcState == CC1101_MARCSTATE_RX)
+      return;
+    writeCommand(CC1101_SIDLE);
+    writeCommand(CC1101_SFRX); // also the way out of RXFIFO_OVERFLOW
+    writeCommand(CC1101_SRX);
   }
+  rxArmFailed = true; // the task's periodic RX check retries and logs
 }
 
 bool IthoCC1101::receivePacket()

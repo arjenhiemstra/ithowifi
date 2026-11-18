@@ -199,7 +199,10 @@ static void legacyRssiScan(uint8_t seconds)
     }
     delayMicroseconds(500);
     if ((now & 15) == 0)
+    {
       vTaskDelay(1);
+      esp_task_wdt_reset(); // the scan runs up to 60 s inside the task loop
+    }
   }
   legacyLog("RF1 scan %us: noise %d dBm, threshold %d dBm, min %d max %d, bursts %u, marcstate 0x%02X", seconds, (int)(sum / 200), thr, rMin, rMax, bursts, rfManager.radio.marcState());
 }
@@ -546,6 +549,60 @@ unsigned long rfStatsLastLog = 0;
 // semaphore. The CC1101 lib itself stays free of any RTOS dependency; this
 // guard lives entirely in the app around the lib's send/receive entry points.
 SemaphoreHandle_t radioSem = NULL;
+
+// Receive watchdog: the chip must be in RX whenever nothing is being sent or read. A lost RF interrupt leaves
+// it in IDLE or RXFIFO_OVERFLOW for good (receive silently dead), a hung SPI wait used to hang the task itself.
+constexpr uint32_t RX_CHECK_MS = 1000;
+constexpr uint32_t RX_WARN_INTERVAL_MS = 10 * 60 * 1000; // one warning per 10 min, the RFS line has the counters
+static uint32_t rxCheckAt = 0;
+static uint32_t rxLastActivity = 0; // last packet read from the chip
+static bool rxCheckStrike = false;  // not in RX at the previous check
+static uint32_t rxRestarts = 0;
+static uint32_t rxWarnAt = 0;
+static uint32_t chipTimeoutsSeen = 0;
+
+// Runs in the task loop with nothing else touching the radio. Two checks 1 s apart without a packet read in
+// between: a packet in progress or waiting to be read never looks like that.
+static void rxWatchdog()
+{
+  const uint32_t now = millis();
+  if ((int32_t)(now - rxCheckAt) < 0)
+    return;
+  rxCheckAt = now + RX_CHECK_MS;
+
+  const uint32_t timeouts = rfManager.radio.waitTimeouts();
+  if (timeouts != chipTimeoutsSeen)
+  {
+    chipTimeoutsSeen = timeouts;
+    if ((int32_t)(now - rxWarnAt) >= 0)
+    {
+      rxWarnAt = now + RX_WARN_INTERVAL_MS;
+      W_LOG("RF: CC1101 did not answer in time (%lu x, state 0x%02X), send or receive aborted", (unsigned long)timeouts, rfManager.radio.lastWaitState());
+    }
+  }
+
+  // the radio semaphore keeps sends from other tasks out; the RF interrupt only notifies and can stay on
+  if (radioSem)
+    xSemaphoreTake(radioSem, portMAX_DELAY);
+  const uint8_t state = rfManager.radio.marcState();
+  const bool armFailed = rfManager.radio.rxArmFailed;
+  const bool stuck = state != CC1101_MARCSTATE_RX && (int32_t)(now - rxLastActivity) > (int32_t)RX_CHECK_MS;
+  const bool restart = armFailed || (stuck && rxCheckStrike);
+  if (restart)
+  {
+    rfManager.radio.rxArmFailed = false;
+    rfManager.radio.restartRx();
+    rxRestarts++;
+  }
+  if (radioSem)
+    xSemaphoreGive(radioSem);
+  rxCheckStrike = stuck && !restart;
+  if (restart && (int32_t)(now - rxWarnAt) >= 0)
+  {
+    rxWarnAt = now + RX_WARN_INTERVAL_MS;
+    W_LOG("RF: receive restarted, CC1101 was in state 0x%02X (%lu x since boot)", state, (unsigned long)rxRestarts);
+  }
+}
 
 static IRAM_ATTR void ITHOinterrupt(void *)
 {
@@ -951,7 +1008,13 @@ void TaskCC1101(void *pvParameters)
     setPhase(PHASE_RF); // RF module initialised (reached only when a CC1101 is present)
     
     D_LOG("SYS: TaskCC1101 started");
-    
+
+    // Under the task watchdog like the other tasks (dropped in the 2.5.0 refactor): a hang now ends in a
+    // TASK_WDT_RESET with a coredump instead of a dead RF receive. The OTA handler removes the task again.
+    esp_task_wdt_add(NULL);
+    rxCheckAt = millis() + RX_CHECK_MS;
+    rxLastActivity = millis();
+
     for (;;)
     {
       yield();
@@ -959,6 +1022,9 @@ void TaskCC1101(void *pvParameters)
 
       TaskCC1101Timeout.once_ms(3000, []()
                                 { W_LOG("SYS: warning - CC1101 Task timed out!"); });
+
+      if (!ithoCheck)
+        rxWatchdog();
 
       if (rfManager.radio.legacyRxMode() != 0 && millis() - legacyRxSince > LEGACY_RX_MAX_MS && legacyCmd == 0)
         legacyCmd = 2; // timed out, back to RAMSES receive
@@ -1662,10 +1728,10 @@ void TaskCC1101(void *pvParameters)
         rfStatsLastLog = millis();
         rfStats.sync = rfSyncCount;
         char line[160];
-        snprintf(line, sizeof(line), "RFS: sync:%lu decoded:%lu coalesced:%lu hdrerr:%lu chkerr:%lu known:%lu knownerr:%lu",
+        snprintf(line, sizeof(line), "RFS: sync:%lu decoded:%lu coalesced:%lu hdrerr:%lu chkerr:%lu known:%lu knownerr:%lu rxrestart:%lu chiptimeout:%lu",
                  (unsigned long)rfStats.sync, (unsigned long)rfStats.decoded, (unsigned long)rfStats.coalesced,
                  (unsigned long)rfStats.hdrErr, (unsigned long)rfStats.chkErr, (unsigned long)rfStats.known,
-                 (unsigned long)rfStats.knownErr);
+                 (unsigned long)rfStats.knownErr, (unsigned long)rxRestarts, (unsigned long)rfManager.radio.waitTimeouts());
         logMessagejson(line, RFLOG);
         // system log (flash, syslog, webserial) only on request: one line a minute wears the flash
         if (logConfig.rfstats_log)
@@ -1686,6 +1752,7 @@ void TaskCC1101(void *pvParameters)
         ithoCheck = rfManager.radio.receivePacket();
         if (radioSem)
           xSemaphoreGive(radioSem);
+        rxLastActivity = millis();
       }
     }
   } // if (systemConfig.itho_rf_support)

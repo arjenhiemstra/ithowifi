@@ -186,6 +186,13 @@ public:
 	void sendData(CC1101Packet *packet);
 	size_t readData(CC1101Packet *packet, size_t len);
 
+	// Every wait on the chip is bounded: a chip that stops answering (SPI glitch, brownout) must not hang the
+	// caller. The counters tell the app how often a wait gave up and in which MARCSTATE.
+	uint32_t waitTimeouts() const { return waitTimeoutCount; }
+	uint8_t lastWaitState() const { return waitTimeoutState; }
+	// poll MARCSTATE until it is state1 or state2 (0xFF = unused), yielding; returns the last state read
+	uint8_t waitMarcState(uint8_t state1, uint8_t state2, uint32_t timeoutMs);
+
 private:
 	CC1101(const CC1101 &c);
 	CC1101 &operator=(const CC1101 &c);
@@ -201,5 +208,9 @@ protected:
 
 	void reset();
 	void setSpiClock(uint32_t hz);
+
+	static constexpr uint32_t TX_WAIT_MS = 250; // a 255 byte packet at 38.4 kbaud takes 53 ms
+	uint32_t waitTimeoutCount{0};
+	uint8_t waitTimeoutState{0};
 
 }; // CC1101
