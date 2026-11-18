@@ -283,6 +283,12 @@ public:
     writeCommand(CC1101_SFRX);
     writeCommand(CC1101_SRX);
   }
+  // bounded waits on the chip (see CC1101::waitMarcState)
+  static constexpr uint32_t CAL_WAIT_MS = 100; // calibration takes about 0.7 ms
+  static constexpr uint32_t RX_WAIT_MS = 50;   // IDLE to RX takes less than 1 ms
+  bool rxArmFailed{false};                     // initReceiveMessage could not get the chip into RX
+  using CC1101::lastWaitState;
+  using CC1101::waitTimeouts;
   uint8_t marcState()
   {
     return readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER) & CC1101_BITS_MARCSTATE;
