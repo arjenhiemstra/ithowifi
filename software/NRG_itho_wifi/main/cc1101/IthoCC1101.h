@@ -110,6 +110,7 @@ private:
 
   static RFStatusCallback_t rf31DACallback;
   static RFStatusCallback_t rf31D9Callback;
+  static RFStatusCallback_t rfKwhCallback; // RP 2401 from a kWh meter (device type 29)
   ithoRFDevices ithoRF;
   bool remoteStatusChanged{false}; // set by handlers whose data should be published right away
   bool spiderReplyPending{false};
@@ -365,9 +366,11 @@ public:
   void handleDeviceInfo(IthoPacket *packetPtr);
   void handleSpiderStatus(IthoPacket *packetPtr);
   void handleRelayDemand(IthoPacket *packetPtr);
+  void handleKwhMeter(IthoPacket *packetPtr);
   const char *rem_cmd_to_name(IthoCommand code);
 
   static void setRF31DACallback(RFStatusCallback_t cb) { rf31DACallback = cb; }
   static void setRF31D9Callback(RFStatusCallback_t cb) { rf31D9Callback = cb; }
+  static void setRFKwhCallback(RFStatusCallback_t cb) { rfKwhCallback = cb; }
 
 }; // IthoCC1101

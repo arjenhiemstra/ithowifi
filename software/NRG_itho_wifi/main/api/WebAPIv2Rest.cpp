@@ -7,6 +7,7 @@
 #include "IthoQueue.h"
 #include "config/IthoRemote.h"
 #include "ithodevice/IthoDevice.h"
+#include "ithodevice/RFKwhMeters.h"
 
 #include <ESPAsyncWebServer.h>
 #include <new>
@@ -339,6 +340,16 @@ static void handleGetRFStatus(AsyncWebServerRequest *request)
 }
 
 // GET /api/v2/settings?index=N
+// GET /api/v2/kwhmeters: RF kWh meters heard since boot, keyed by id (hex bytes)
+static void handleGetKwhMeters(AsyncWebServerRequest *request)
+{
+  if (!checkRestAuth(request))
+    return;
+  JsonDocument data;
+  getRFKwhMetersJSON(data["kwhmeters"].to<JsonObject>());
+  sendSuccess(request, data);
+}
+
 static void handleGetSettings(AsyncWebServerRequest *request)
 {
   if (!checkRestAuth(request))
@@ -927,6 +938,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/remotes", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/vremotes", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/rfstatus", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/kwhmeters", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/settings", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/command", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/vremote", HTTP_OPTIONS, handleOptions);
@@ -949,6 +961,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/remotes", HTTP_GET, handleGetRemotes);
   server.on("/api/v2/vremotes", HTTP_GET, handleGetVRemotes);
   server.on("/api/v2/rfstatus", HTTP_GET, handleGetRFStatus);
+  server.on("/api/v2/kwhmeters", HTTP_GET, handleGetKwhMeters);
   server.on("/api/v2/settings", HTTP_GET, handleGetSettings);
 
   // POST/PUT endpoints use query parameters from the JSON body

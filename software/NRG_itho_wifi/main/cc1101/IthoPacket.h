@@ -199,7 +199,8 @@ public:
     SYSTEMMODE = 0x22D0,
     DEVICEINFO = 0x10E0,
     SPIDERSTATUS = 0x01FF,
-    RELAYDEMAND = 0x0008
+    RELAYDEMAND = 0x0008,
+    KWHMETER = 0x2401 // RF kWh meter counters, see rf_kwh_meter.h
   };
 
   RemoteTypes remType;

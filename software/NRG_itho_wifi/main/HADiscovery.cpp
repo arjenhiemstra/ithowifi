@@ -4,6 +4,7 @@
 // #include <cctype>
 
 #include "ithodevice/IthoDevice.h"
+#include "ithodevice/RFKwhMeters.h"
 #include "notifyClients.h"
 #include "sys_log.h"
 #include "generic_functions.h"
@@ -453,6 +454,41 @@ void addHADiscoveryRFSensors(JsonObject components, JsonObject compactJson, cons
     }
 }
 
+// Energy sensors for the RF kWh meters heard since boot (<base>/kwhmeter/<id>). A counter that is still
+// zero gets no entity: single-phase meters only fill the first one.
+void addHADiscoveryKwhMeters(JsonObject components, const char *deviceName, const char *mqttBaseTopic)
+{
+    if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+        return;
+    for (int i = 0; i < rfkwh::MAX_METERS; i++)
+    {
+        const rfkwh::Meter &m = rfKwhMeters.at(i);
+        if (!m.used)
+            continue;
+        char rid[12], topicId[12], topic[180];
+        rfkwh::formatId(m.id, rid, sizeof(rid));
+        rfkwh::formatTopicId(m.id, topicId, sizeof(topicId));
+        snprintf(topic, sizeof(topic), "%s/kwhmeter/%s", mqttBaseTopic, topicId);
+        for (int c = 0; c < rfkwh::COUNTERS; c++)
+        {
+            if (c > 0 && m.reading.wh[c] == 0)
+                continue;
+            const char ch = static_cast<char>('1' + c);
+            std::string uniqueId = normalizeUniqueId(std::string(deviceName) + "_kwh_" + topicId + "_e" + ch);
+            JsonObject componentJson = components[uniqueId].to<JsonObject>();
+            componentJson["p"] = "sensor";
+            componentJson["uniq_id"] = uniqueId;
+            componentJson["name"] = (std::string("kWh meter ") + rid + " E" + ch).c_str();
+            componentJson["stat_t"] = topic;
+            componentJson["val_tpl"] = (std::string("{{ value_json.e") + ch + "_kwh }}").c_str();
+            componentJson["unit_of_meas"] = "kWh";
+            componentJson["dev_cla"] = "energy";
+            componentJson["stat_cla"] = "total_increasing";
+        }
+    }
+    xSemaphoreGive(rfStatusMutex);
+}
+
 // Generic helper for creating fan entities from remote device arrays (RF or virtual)
 // arrayKey: "rf" or "vr" (key in compactJson)
 // cmdKey: "rfremotecmd" or "vremotecmd" (MQTT command key)
@@ -694,4 +730,7 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
     // Add virtual remote fans
     addHADiscoveryRemoteFan(components, compactJson, devIds, systemConfig.mqtt_base_topic,
                             "vr", "vremotecmd", "vremoteindex", "vr", false);
+
+    // RF kWh meters heard since boot
+    addHADiscoveryKwhMeters(components, devIds, systemConfig.mqtt_base_topic);
 }

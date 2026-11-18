@@ -6,11 +6,13 @@
 #include "IthoPacket.h"
 #include "spider_protocol.h"
 #include "legacy_protocol.h"
+#include "rf_kwh_meter.h"
 #include "sys_log.h" // Spider bind/TX logging
 #include <string>
 
 RFStatusCallback_t IthoCC1101::rf31DACallback = nullptr;
 RFStatusCallback_t IthoCC1101::rf31D9Callback = nullptr;
+RFStatusCallback_t IthoCC1101::rfKwhCallback = nullptr;
 #include <Arduino.h>
 #include <SPI.h>
 
@@ -691,6 +693,9 @@ bool IthoCC1101::parseMessage(IthoPacket *packetPtr)
     break;
   case IthoPacket::Type::RELAYDEMAND:
     handleRelayDemand(packetPtr);
+    break;
+  case IthoPacket::Type::KWHMETER:
+    handleKwhMeter(packetPtr);
     break;
     // default:
     //   return false;
@@ -2580,6 +2585,24 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
       return;
     }
   }
+}
+
+// RP 2401 pushed by a kWh meter (device type 29) to its bound WPU; the add-on only listens. Other 2401 traffic
+// (fans and the WPU itself use the opcode too) is left alone by the type check.
+void IthoCC1101::handleKwhMeter(IthoPacket *packetPtr)
+{
+  const uint8_t verb = (packetPtr->header >> 4) & 0x3; // 0 RQ, 1 I, 2 W, 3 RP
+  if (verb != 3 && verb != 1)
+    return;
+  if (packetPtr->deviceId0 == 0 || packetPtr->len != rfkwh::PAYLOAD_LEN)
+    return;
+  const uint8_t byte0 = packetPtr->deviceId0 >> 16 & 0xFF;
+  const uint8_t byte1 = packetPtr->deviceId0 >> 8 & 0xFF;
+  const uint8_t byte2 = packetPtr->deviceId0 & 0xFF;
+  if (!rfkwh::isMeterId(byte0))
+    return;
+  if (rfKwhCallback)
+    rfKwhCallback(&packetPtr->dataDecoded[packetPtr->payloadPos], packetPtr->len, byte0, byte1, byte2);
 }
 
 void IthoCC1101::handleRemotestatus(IthoPacket *packetPtr)

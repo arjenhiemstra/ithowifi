@@ -35,6 +35,7 @@ A spec describes *what* is being built and its immediate risk/test/rollback plan
 - [status-sensor-error-latch.md](active/status-sensor-error-latch.md) — 2401 status sensor errors are judged per poll instead of latching until reboot (#295)
 - [i2c-sniffer-pause-during-slave-receive.md](active/i2c-sniffer-pause-during-slave-receive.md) — the I2C sniffer interrupt stays off while the add-on receives a reply as I2C slave (#295)
 - [rf-spider-thermostat-climate.md](active/rf-spider-thermostat-climate.md): Itho Spider heating thermostat over RF, read/set setpoint and HA climate ([ADR-0011](../docs/adr/ADR-0011-rf-spider-thermostat-role.md))
+- [rf-kwh-meter.md](active/rf-kwh-meter.md): Klimaatgarant RF kWh meters (type 29, RP 2401) listened for by the add-on, MQTT, HA energy sensors and REST
 
 ## Related
 

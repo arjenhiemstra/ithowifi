@@ -350,6 +350,27 @@
         ]
       }
     },
+    "/api/v2/kwhmeters": {
+      "get": {
+        "summary": "Get RF kWh meters (Itho/Klimaatgarant, RAMSES type 29) heard since boot",
+        "description": "Keyed by RF id as hex bytes (A7,FC,4D): e1_kwh, e2_kwh, e3_kwh, lastseen (epoch), frames. Needs the RF module; meters push about once an hour.",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/ota": {
       "get": {
         "summary": "Get firmware version info and OTA update progress",

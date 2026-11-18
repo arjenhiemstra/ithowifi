@@ -5,6 +5,7 @@
 #include <new>
 #include "api/MqttAPI.h"
 #include "ithodevice/IthoDevice.h"
+#include "ithodevice/RFKwhMeters.h"
 #include "generic_functions.h"
 #include "mqtt_debug.h"
 
@@ -21,6 +22,7 @@ StackType_t xTaskMQTTStack[STACK_SIZE_MEDIUM];
 bool sendHomeAssistantDiscovery = false;
 bool updateIthoMQTT = false;
 bool updateMQTTRFStatus = false;
+bool updateMQTTKwhMeters = false;
 bool updateMQTTRemotesInfo = false;
 
 Ticker TaskMQTTTimeout;
@@ -192,6 +194,12 @@ void execMQTTTasks()
       if (mqttClient.connected())
         mqttSendRFStatus();
     }
+    if (updateMQTTKwhMeters)
+    {
+      updateMQTTKwhMeters = false;
+      if (mqttClient.connected())
+        mqttSendKwhMeters();
+    }
     if (updateMQTTRemotesInfo)
     {
       updateMQTTRemotesInfo = false;
@@ -270,6 +278,31 @@ void mqttSendStatus()
   if (doc.overflowed())
   {
     E_LOG("API: JsonDocument overflowed (itho status)");
+  }
+}
+
+// One retained topic per meter: <base>/kwhmeter/A7_FC_4D. Meters push about once an hour.
+void mqttSendKwhMeters()
+{
+  for (int i = 0; i < rfkwh::MAX_METERS; i++)
+  {
+    JsonDocument doc;
+    char topicId[12];
+    if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+      return;
+    const rfkwh::Meter &m = rfKwhMeters.at(i);
+    const bool used = m.used;
+    if (used)
+    {
+      rfkwh::formatTopicId(m.id, topicId, sizeof(topicId));
+      getRFKwhMeterJSON(m, doc.to<JsonObject>());
+    }
+    xSemaphoreGive(rfStatusMutex);
+    if (!used)
+      continue;
+    char topic[180];
+    snprintf(topic, sizeof(topic), "%s/kwhmeter/%s", systemConfig.mqtt_base_topic, topicId);
+    MQTTPublishJson(doc, topic);
   }
 }
 

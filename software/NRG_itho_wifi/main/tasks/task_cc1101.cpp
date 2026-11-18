@@ -2,6 +2,7 @@
 #include "tasks/boot_phases.h"
 #include "cc1101/spider_protocol.h"
 #include "cc1101/spider_discovery.h"
+#include "ithodevice/RFKwhMeters.h"
 #include "mqtt_debug.h"
 
 extern bool updateMQTTRemotesInfo; // task_mqtt.cpp
@@ -929,6 +930,7 @@ void TaskCC1101(void *pvParameters)
     rfManager.radio.init();
     IthoCC1101::setRF31DACallback(parseRF31DA);
     IthoCC1101::setRF31D9Callback(parseRF31D9);
+    IthoCC1101::setRFKwhCallback(parseRFKwhMeter);
     if (systemConfig.module_rf_id[0] == 0 && systemConfig.module_rf_id[1] == 0 && systemConfig.module_rf_id[2] == 0)
     {
       systemConfig.module_rf_id[0] = sys.getMac(3);
