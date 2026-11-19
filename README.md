@@ -48,7 +48,7 @@ or in my Tindie store:
 -   HRU 300V, HRU 375V and HRU 400 R
 -   Most Itho devices controllable via RF (CC1101 module required)
 -   Status data received wirelessly via 31DA/31D9 RF messages
--   Older Itho units that only know the RF protocol from before RAMSES (tested on a CVE ECO 2): send only, with a remote of type "RF (old protocol)"
+-   Older Itho units that only know the RF protocol from before RAMSES (tested on a CVE ECO 2): send only, with a remote of type "RF (old protocol)" or "RF (old protocol, variant 2)" for remotes with the other command codes
 
 ### HRU models by article number:
 Check the article number on the nameplate/sticker of your Itho. x is any digit. A letter after the number (A, S) does not count.

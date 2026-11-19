@@ -415,6 +415,8 @@ This feature is only in the beta firmware for now (from 3.3.0-beta10). Update th
 
 To pair: disconnect power from the Itho and switch it back on. Then, within 2 minutes, press the blue **join** button behind the relevant remote on the **RF devices** page. If the Itho does not respond, see *Capturing the old RF protocol* below.
 
+Some old remotes use slightly different command codes. If the Itho responds to its own remote after a join but not to the add-on, try a remote of type **RF (old protocol, variant 2)** (from 3.3.0-beta11). Pairing works the same way.
+
 **Note:** There is a debug option to make RF commands visible in the web interface. Set one of the following levels on the **Syslog** page, under *RF Debug log level*:
 
 - **Level 1:** shows all recognized Itho remote commands incl. remote ID

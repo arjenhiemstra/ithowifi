@@ -415,6 +415,8 @@ Deze functie zit nog alleen in de beta firmware (vanaf 3.3.0-beta10). Update de 
 
 Koppelen gaat zo: haal de spanning van de Itho en zet hem weer aan. Druk daarna binnen 2 minuten op de blauwe **join**-knop achter de betreffende remote op de **RF devices**-pagina. Reageert de Itho niet, kijk dan bij *Opname van het oude RF-protocol* hieronder.
 
+Sommige oude afstandsbedieningen gebruiken net andere commandocodes. Reageert de Itho na een join wel op de eigen afstandsbediening maar niet op de add-on, probeer dan een remote van het type **RF (old protocol, variant 2)** (vanaf 3.3.0-beta11). Hoe de unit is gekoppeld is verder gelijk.
+
 **Opmerking:** Er is een debug optie om RF-commando's zichtbaar te maken in de web interface. Stel hiervoor op de **Syslog** pagina, bij *RF Debug log level*, één van de volgende niveaus in:
 
 - **Level 1:** toont alle herkende Itho remote commando's incl. remote ID
