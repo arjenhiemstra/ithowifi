@@ -378,13 +378,7 @@ static void handleGetSettings(AsyncWebServerRequest *request)
   }
 
   resultPtr2410 = nullptr;
-  auto timeoutmillis = millis() + 3000;
   resultPtr2410 = sendQuery2410(idx, false);
-
-  while (resultPtr2410 == nullptr && millis() < timeoutmillis)
-  {
-    // wait for result
-  }
 
   ithoSettings *setting = &ithoSettingsArray[idx];
   double cur = 0.0, min = 0.0, max = 0.0;

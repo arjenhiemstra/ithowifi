@@ -187,11 +187,6 @@ void processSettingResult(const uint8_t index, const bool loop)
   root["Index"] = index;
   root["Description"] = settingsPtr->settingsDescriptions[static_cast<int>(*(*(settingsPtr->settingsMapping + version) + index))];
 
-  auto timeoutmillis = millis() + 3000; // 1 sec. + 2 sec. for potential i2c queue pause on CVE devices
-  while (resultPtr2410 == nullptr && millis() < timeoutmillis)
-  {
-    // wait for result
-  }
   root["update"] = true;
   root["loop"] = loop;
   if (resultPtr2410 != nullptr && ithoSettingsArray != nullptr)
@@ -233,11 +228,10 @@ void updateSetting(const uint8_t index, const int32_t value, bool webupdate)
   { // if settings loaded from browser cache, first retrieve the current value of the setting
     i2cQueueAddCmd([index]()
                       { getSetting(index, true, false, false); });
+    const unsigned long timeout_ms = 2000; // 2 seconds
+    const unsigned long start_time = millis();
     while (true) // wait for the setting to be retrieved or timeout after 2 sec
     {
-      unsigned long timeout_ms = 2000; // 2 seconds
-      unsigned long start_time = millis();
-
       if (millis() - start_time > timeout_ms)
       {
         break;
@@ -342,6 +336,7 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
   command[23] = index;
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
+  I2CBusLock lock; // the query and its reply are one transaction
   if (!i2cSendBytes(command, sizeof(command), I2C_CMD_QUERY_2410))
   {
     if (updateweb)
@@ -527,6 +522,7 @@ bool setSetting2410(uint8_t index, int32_t value, bool updateweb)
 
   jsonSysmessage("itho2410set", i2cBufToString(command, sizeof(command)).c_str());
 
+  I2CBusLock lock; // the command and its reply are one transaction
   if (!i2cSendBytes(command, sizeof(command), I2C_CMD_SET_2410))
   {
     if (updateweb)

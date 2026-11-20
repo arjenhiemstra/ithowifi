@@ -148,6 +148,8 @@ size_t sendI2cQuery(uint8_t *i2c_command, size_t i2c_command_length, uint8_t *re
     return 0;
   if (receive_buffer == nullptr)
     return 0;
+
+  I2CBusLock lock; // the command and its reply are one transaction
   if (!i2cSendBytes(i2c_command, i2c_command_length, origin))
     return 0;
 

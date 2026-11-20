@@ -54,6 +54,7 @@ bool SHTI2cSensor::readFromI2c(uint8_t i2cAddress,
                                uint8_t dataLength,
                                uint8_t duration)
 {
+  I2CBusLock lock; // the measure command and the readout are one transaction
 
   if (!i2cSendCmd(i2cAddress, i2cCommand, commandLength, I2C_CMD_TEMP_READ_CMD))
   {

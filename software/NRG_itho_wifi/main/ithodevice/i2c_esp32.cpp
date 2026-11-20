@@ -1,6 +1,20 @@
 #include "i2c_esp32.h"
 #include "i2c_sniffer.h"
 
+#include <freertos/semphr.h>
+
+static SemaphoreHandle_t i2cBusMutex = xSemaphoreCreateRecursiveMutex();
+
+I2CBusLock::I2CBusLock()
+{
+  xSemaphoreTakeRecursive(i2cBusMutex, portMAX_DELAY);
+}
+
+I2CBusLock::~I2CBusLock()
+{
+  xSemaphoreGiveRecursive(i2cBusMutex);
+}
+
 // I2C globals now managed by I2CManager (see managers/I2CManager.cpp)
 // Removed: i2c_cmd_queue, master/slave pin globals
 
@@ -107,6 +121,7 @@ esp_err_t i2cMasterSendCommand(uint8_t addr, const uint8_t *cmd, uint32_t len, i
 
 esp_err_t i2cMasterReadSlave(uint8_t addr, uint8_t *data_rd, size_t size, i2c_cmdref_t origin)
 {
+  I2CBusLock lock;
 
   if (ithoInitResult == -2)
   {
@@ -150,6 +165,7 @@ esp_err_t i2cMasterReadSlave(uint8_t addr, uint8_t *data_rd, size_t size)
 
 bool i2cSendBytes(const uint8_t *buf, size_t len, i2c_cmdref_t origin)
 {
+  I2CBusLock lock;
   if (ithoInitResult == -2)
   {
     return false;
@@ -180,6 +196,7 @@ bool i2cSendBytes(const uint8_t *buf, size_t len)
 
 bool i2cSendCmd(uint8_t addr, const uint8_t *cmd, size_t len, i2c_cmdref_t origin)
 {
+  I2CBusLock lock;
   if (ithoInitResult == -2)
   {
     return false;
@@ -210,6 +227,7 @@ bool i2cSendCmd(uint8_t addr, const uint8_t *cmd, size_t len)
 
 size_t i2cSlaveReceive(uint8_t *i2c_receive_buf)
 {
+  I2CBusLock lock;
   // The sniffer interrupt's busy-wait through the reply can cost the slave receive a byte (#295).
   i2cSnifferPause();
 
@@ -454,6 +472,7 @@ int i2cClearBus()
 
 void triggerShtSensorReset()
 {
+  I2CBusLock lock;
 
   /*
   from: Sensirion_Humidity_Sensors_SHT3x_Datasheet_digital.pdf
