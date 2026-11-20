@@ -9,6 +9,8 @@ constexpr uint32_t TASK_CONFIGLOG_TIMEOUT_MS  = 15000;
 
 // Reconnect intervals (ms)
 constexpr unsigned long WIFI_RECONNECT_INTERVAL_MS = 60000;
+constexpr unsigned long WIFI_CONNECT_SETTLE_MS     =  2000;
+constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS    = 30000;
 constexpr unsigned long MQTT_RECONNECT_INTERVAL_MS =  5000;
 
 // I2C init timing (ms)

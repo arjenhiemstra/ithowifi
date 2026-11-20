@@ -7,6 +7,17 @@ bool wifiSTAconnected = false;
 bool wifiSTAconnecting = false;
 unsigned long APmodeTimeout = 0;
 
+// Non-blocking reconnect (startWiFiReconnect / pollWiFiReconnect)
+enum class ReconnectStep : uint8_t
+{
+  NONE,
+  SETTLE,
+  CONNECTING
+};
+static ReconnectStep reconnectStep = ReconnectStep::NONE;
+static unsigned long reconnectStepStart = 0;
+static unsigned long reconnectLedUpdate = 0;
+
 void wifiInit()
 {
   WifiConfigLoaded = loadWifiConfig("flash");
@@ -277,9 +288,8 @@ void setupWiFigeneric()
   D_LOG("NET: esp_wifi_set_ps: %s", esp_err_to_name(wifi_set_ps));
 }
 
-bool connectWiFiSTA(bool restore)
+static void prepareWiFiSTA()
 {
-  wifiSTAconnecting = true;
   // Switch from defualt WIFI_FAST_SCAN ScanMethod to WIFI_ALL_CHANNEL_SCAN. Also set sortMethod to WIFI_CONNECT_AP_BY_SIGNAL just to be sure.
   // WIFI_FAST_SCAN will connect to the first SSID match found causing connection issues when multiple AP active with the same SSID name
   WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
@@ -289,15 +299,22 @@ bool connectWiFiSTA(bool restore)
   {
     setStaticIpConfig();
   }
+}
 
-  delay(2000);
+bool connectWiFiSTA(bool restore)
+{
+  reconnectStep = ReconnectStep::NONE; // this connect takes over from a reconnect that is still running
+  wifiSTAconnecting = true;
+  prepareWiFiSTA();
+
+  delay(WIFI_CONNECT_SETTLE_MS);
 
   // wifiModeAP = false;
   D_LOG("NET: Connecting to wireless network...");
 
   WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
 
-  auto timeoutmillis = millis() + 30000;
+  auto timeoutmillis = millis() + WIFI_CONNECT_TIMEOUT_MS;
   wl_status_t status = WiFi.status();
 
   while (millis() < timeoutmillis)
@@ -330,6 +347,61 @@ bool connectWiFiSTA(bool restore)
   wifiSTAconnecting = false;
   wifiSTAshouldConnect = true;
   return false;
+}
+
+// Same steps and timing as connectWiFiSTA(), spread over calls of pollWiFiReconnect()
+// so the task that reconnects keeps running in the meantime.
+void startWiFiReconnect()
+{
+  wifiSTAconnecting = true;
+  prepareWiFiSTA();
+  reconnectStep = ReconnectStep::SETTLE;
+  reconnectStepStart = millis();
+}
+
+WiFiReconnectState pollWiFiReconnect()
+{
+  if (reconnectStep == ReconnectStep::NONE)
+    return WiFiReconnectState::IDLE;
+
+  if (reconnectStep == ReconnectStep::SETTLE)
+  {
+    if (millis() - reconnectStepStart < WIFI_CONNECT_SETTLE_MS)
+      return WiFiReconnectState::BUSY;
+
+    D_LOG("NET: Connecting to wireless network...");
+    WiFi.begin(wifiConfig.ssid, wifiConfig.passwd);
+    reconnectStep = ReconnectStep::CONNECTING;
+    reconnectStepStart = millis();
+    return WiFiReconnectState::BUSY;
+  }
+
+  wl_status_t status = WiFi.status();
+  if (status == WL_CONNECTED)
+  {
+    digitalWrite(hardwareManager.wifi_led_pin, LOW);
+    reconnectStep = ReconnectStep::NONE;
+    wifiSTAconnecting = false;
+    return WiFiReconnectState::CONNECTED;
+  }
+
+  if (millis() - reconnectStepStart < WIFI_CONNECT_TIMEOUT_MS)
+  {
+    if (millis() - reconnectLedUpdate >= 100)
+    {
+      reconnectLedUpdate = millis();
+      digitalWrite(hardwareManager.wifi_led_pin, digitalRead(hardwareManager.wifi_led_pin) == LOW ? HIGH : LOW);
+    }
+    return WiFiReconnectState::BUSY;
+  }
+
+  digitalWrite(hardwareManager.wifi_led_pin, HIGH);
+
+  E_LOG("NET: error - could not connect to wifi - %s", wifiConfig.wl_status_to_name(status));
+  reconnectStep = ReconnectStep::NONE;
+  wifiSTAconnecting = false;
+  wifiSTAshouldConnect = true;
+  return WiFiReconnectState::FAILED;
 }
 
 void setStaticIpConfig()

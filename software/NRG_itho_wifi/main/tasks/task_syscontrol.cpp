@@ -349,17 +349,22 @@ void execSystemControlTasks()
     {
       I_LOG("NET: attempt to reconnect WiFi");
       lastWIFIReconnectAttempt = millis();
-      // Attempt to reconnect
-      if (connectWiFiSTA())
-      {
-        I_LOG("NET: WiFi reconnect successful");
-        lastWIFIReconnectAttempt = 0;
-      }
-      else
-      {
-        E_LOG("NET: error - WiFi reconnect failed!");
-      }
+      // Attempt to reconnect, the result is picked up below. Not connectWiFiSTA():
+      // that waits up to 32 s, and this loop also runs the I2C queue and the fan speed updates.
+      startWiFiReconnect();
     }
+  }
+  switch (pollWiFiReconnect())
+  {
+  case WiFiReconnectState::CONNECTED:
+    I_LOG("NET: WiFi reconnect successful");
+    lastWIFIReconnectAttempt = 0;
+    break;
+  case WiFiReconnectState::FAILED:
+    E_LOG("NET: error - WiFi reconnect failed!");
+    break;
+  default:
+    break;
   }
   if (WiFi.status() == WL_CONNECTED && wifiSTAshouldConnect)
   {
@@ -368,7 +373,7 @@ void execSystemControlTasks()
       digitalWrite(hardwareManager.wifi_led_pin, LOW);
     }
   }
-  if (runscan)
+  if (runscan && !wifiSTAconnecting) // a scan would break off a reconnect that is still running
   {
     runscan = false;
     scan.once_ms(10, wifiScan);
