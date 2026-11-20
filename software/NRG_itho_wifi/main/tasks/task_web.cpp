@@ -107,6 +107,37 @@ void execWebTasks()
   }
 }
 
+// The web assets are built into the firmware and only change with it. The browser keeps them,
+// asks on each page load whether its copy is still current and gets a 304 without the content when it is.
+// The ETag is the CRC32 of the content, which gzip stores in the last 8 bytes of the file.
+static void sendWebAsset(AsyncWebServerRequest *request, const char *contentType, const uint8_t *data, size_t len)
+{
+  char etag[11]{};
+  if (len >= 8)
+    snprintf(etag, sizeof(etag), "\"%02x%02x%02x%02x\"", data[len - 5], data[len - 6], data[len - 7], data[len - 8]);
+
+  const AsyncWebHeader *clientEtag = request->getHeader("If-None-Match");
+  const bool notModified = etag[0] != '\0' && clientEtag != nullptr && clientEtag->value() == etag;
+
+  AsyncWebServerResponse *response;
+  if (notModified)
+  {
+    response = request->beginResponse(304);
+  }
+  else
+  {
+    response = request->beginResponse(200, contentType, data, len, nullptr);
+    response->addHeader("Content-Encoding", "gzip");
+  }
+  response->addHeader("Server", "Itho WiFi Web Server");
+  if (etag[0] != '\0')
+  {
+    response->addHeader("ETag", etag);
+    response->addHeader("Cache-Control", "no-cache");
+  }
+  request->send(response);
+}
+
 void webServerInit()
 {
   // upload a file to /upload
@@ -150,18 +181,11 @@ void webServerInit()
 
   // css_code
   server.on("/pure-min.css", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/css", pure_min_css_gz, pure_min_css_gz_len, nullptr);
-    response->addHeader("Content-Encoding", "gzip");
-    request->send(response); });
+            { sendWebAsset(request, "text/css", pure_min_css_gz, pure_min_css_gz_len); });
 
   // javascript files
   server.on("/controls.js", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/javascript", controls_js_gz, controls_js_gz_len, nullptr);
-    response->addHeader("Server", "Itho WiFi Web Server");
-    response->addHeader("Content-Encoding", "gzip");
-    request->send(response); });
+            { sendWebAsset(request, "application/javascript", controls_js_gz, controls_js_gz_len); });
 
   server.on("/general.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
@@ -231,10 +255,7 @@ void webServerInit()
       .setFilter(ON_AP_FILTER);
 
   server.on("/favicon.png", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    AsyncWebServerResponse *response = request->beginResponse(200, "image/png", favicon_png_gz, favicon_png_gz_len, nullptr);
-    response->addHeader("Content-Encoding", "gzip");
-    request->send(response); });
+            { sendWebAsset(request, "image/png", favicon_png_gz, favicon_png_gz_len); });
 
   // HTML pages
   server.rewrite("/", "/index.html");
