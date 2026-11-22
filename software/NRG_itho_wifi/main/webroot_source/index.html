@@ -44,6 +44,12 @@
                 <div id="memory_box"></div>
             </div>
         </div>
+        <div id="servicetool_banner" class="hidden"
+            style="margin:0 auto;max-width:768px;padding:.6em 1em;background:#fff3cd;border:1px solid #e0a800;border-radius:4px;">
+            <span id="servicetool_banner_text"></span>
+            <button class="pure-button" style="margin-left:1em;padding:.2em .8em;"
+                onclick="websock_send(JSON.stringify({servicetool_end:true}))">End session</button>
+        </div>
         <div id="main">
         </div>
     </div>

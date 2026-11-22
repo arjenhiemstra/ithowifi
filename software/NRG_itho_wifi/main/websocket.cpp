@@ -1,4 +1,5 @@
 #include "websocket.h"
+#include "managers/ServicetoolBridge.h"
 #include "managers/SecureWebCommLite.h"
 #include "ithodevice/i2c_service.h"
 
@@ -270,6 +271,14 @@ void handle_ws_message(JsonObject root)
   if (root["sysstat"].is<bool>() && root["sysstat"].as<bool>())
   {
     sysStatReq = true;
+  }
+  if (root["servicetool_end"].is<bool>() && root["servicetool_end"].as<bool>())
+  {
+    if (servicetoolSessionActive)
+    {
+      N_LOG("ST: end of servicetool session requested from web interface");
+      servicetoolEndRequested = true;
+    }
   }
   if (root["remtype"].is<bool>() && root["remtype"].as<bool>())
   {

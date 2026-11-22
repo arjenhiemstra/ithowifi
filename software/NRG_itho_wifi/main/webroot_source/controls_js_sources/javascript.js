@@ -901,6 +901,7 @@ const messageHandlers = {
   systemstat: function (f) {
     var x = f.systemstat;
     uuid = x.uuid;
+    updateServicetoolBanner(x.servicetool);
     if ('sensor_temp' in x) {
       var stEl = $id('sensor_temp');
       if (stEl) stEl.innerHTML = `Temperature: ${round(x.sensor_temp, 1)}&#8451;`;
@@ -1335,7 +1336,12 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_2401: checkedVal('option-itho_2401'),
           itho_4210: checkedVal('option-itho_4210'),
           i2c_safe_guard: checkedVal('option-i2c_safe_guard'),
-          i2c_sniffer: checkedVal('option-i2c_sniffer')
+          i2c_sniffer: checkedVal('option-i2c_sniffer'),
+          servicetool_bridge: checkedVal('option-servicetool_bridge'),
+          servicetool_port: $val('servicetool_port'),
+          servicetool_timeout: $val('servicetool_timeout'),
+          servicetool_allow_ip: $val('servicetool_allow_ip'),
+          servicetool_ha_unavail: checkedVal('option-servicetool_ha_unavail')
         }
       };
       if (Object.keys(sys_secure_credentials).length > 0) {
@@ -1922,6 +1928,24 @@ function resetTimer() {
 function removeID(id) {
   var el = $id(id);
   if (el) el.remove();
+}
+
+// Banner shown on every page while an Itho servicetool session is active.
+function updateServicetoolBanner(st) {
+  var banner = $id('servicetool_banner');
+  if (!banner) return;
+  if (!st || st.state !== 'active') {
+    banner.classList.add('hidden');
+    return;
+  }
+  var since = '';
+  if (st.since && st.since > 1000000000) {
+    since = ' since ' + new Date(st.since * 1000).toLocaleTimeString();
+  }
+  $id('servicetool_banner_text').textContent =
+    'Servicetool session active from ' + (st.client || '?') + since +
+    ' \u2014 I2C polling paused, commands blocked.';
+  banner.classList.remove('hidden');
 }
 
 function processElements(x) {

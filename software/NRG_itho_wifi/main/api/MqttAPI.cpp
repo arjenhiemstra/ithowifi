@@ -1,6 +1,7 @@
 #include "api/MqttAPI.h"
 #include "tasks/task_mqtt.h"
 #include "generic_functions.h"
+#include "managers/ServicetoolBridge.h"
 
 static void mqttSendResponse(const char *status, const char *command, const char *message)
 {
@@ -40,6 +41,40 @@ void mqttCallback(const char *topic, const byte *payload, unsigned int length)
 
   char c_topic[140]{};
   snprintf(c_topic, sizeof(c_topic), "%s%s", systemConfig.mqtt_base_topic, "/cmd");
+
+  // While the Itho servicetool owns the bus, Itho control commands (I2C and
+  // RF) are refused. Module firmware updates ("update", "update_url") stay
+  // available, same as the REST API.
+  if (servicetoolSessionActive &&
+      (strcmp(topic, c_topic) == 0 || strcmp(topic, systemConfig.mqtt_domoticzout_topic) == 0))
+  {
+    bool moduleOnly = false;
+    if (strcmp(topic, c_topic) == 0)
+    {
+      JsonDocument probe;
+      if (!deserializeJson(probe, s_payload) && probe.is<JsonObject>() && probe.size() > 0)
+      {
+        moduleOnly = true;
+        for (JsonPair kv : probe.as<JsonObject>())
+        {
+          if (strcmp(kv.key().c_str(), "update") != 0 && strcmp(kv.key().c_str(), "update_url") != 0)
+          {
+            moduleOnly = false;
+            break;
+          }
+        }
+      }
+    }
+    if (!moduleOnly)
+    {
+      if (strcmp(topic, c_topic) == 0 && length > 0)
+      {
+        mqttSendResponse("fail", "servicetool", "servicetool session active - commands blocked");
+        mqttClient.publish(c_topic, "", true); // don't replay it after the session
+      }
+      return;
+    }
+  }
 
   if (strcmp(topic, c_topic) == 0)
   {

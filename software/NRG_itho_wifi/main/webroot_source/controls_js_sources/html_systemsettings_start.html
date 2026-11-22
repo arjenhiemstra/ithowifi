@@ -187,6 +187,45 @@
       <input id="option-4210-1" type="radio" name="option-itho_4210" value="1"> on
       <input id="option-4210-0" type="radio" name="option-itho_4210" value="0"> off
     </div>
+    <legend><br>Servicetool bridge:</legend>
+    <p>Lets the official Itho Daalderop servicetool connect through this module, emulating the Itho interface cable
+      over TCP. On Windows, map a virtual COM port (e.g. HW VSP3 or Tibbo VSP) in <b>raw TCP client</b> mode to this
+      module's IP address and the port below, then select that COM port in the servicetool.</p>
+    <p>While a servicetool is connected, I2C status polling is paused and all other commands (web, API, MQTT, Home
+      Assistant) are refused. Firmware/bootloader frames are always blocked. The raw TCP port has no password:
+      enable it only when needed and preferably restrict it to one client IP.</p>
+    <p style="background:#fff3cd;border:1px solid #e0a800;border-radius:4px;padding:.5em .8em;">
+      <b>Warning:</b><br>
+      &bull; <b>Turn NVT / Telnet (RFC2217) mode OFF</b> in the virtual serial port driver (HW VSP3: tab
+      <i>Settings</i>, &quot;NVT Enable&quot; unchecked). With NVT on, data bytes 0xFF are altered and the
+      servicetool fails with &quot;Data niet goed opgehaald&quot;.<br>
+      &bull; <b>Never use this bridge to update firmware</b> of the heat pump or any other Itho device. A firmware
+      update that is interrupted over WiFi can brick the device. Use the official Itho interface cable for
+      firmware updates.</p>
+    <div class="pure-control-group">
+      <label for="option-servicetool_bridge" class="pure-radio">Servicetool bridge</label>
+      <input id="option-servicetool_bridge-1" type="radio" name="option-servicetool_bridge" value="1"> on
+      <input id="option-servicetool_bridge-0" type="radio" name="option-servicetool_bridge" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label for="servicetool_port">TCP port</label>
+      <input id="servicetool_port" type="number" min="1" max="65535" size="6">
+    </div>
+    <div class="pure-control-group">
+      <label for="servicetool_timeout">Inactivity timeout (min)</label>
+      <input id="servicetool_timeout" type="number" min="0" max="1440" size="6">
+      <span class="pure-form-message-inline">0 = never</span>
+    </div>
+    <div class="pure-control-group">
+      <label for="servicetool_allow_ip">Allowed client IP</label>
+      <input id="servicetool_allow_ip" type="text" maxlength="15" placeholder="any">
+      <span class="pure-form-message-inline">empty = any</span>
+    </div>
+    <div class="pure-control-group">
+      <label for="option-servicetool_ha_unavail" class="pure-radio">HA sensors unavailable during session</label>
+      <input id="option-servicetool_ha_unavail-1" type="radio" name="option-servicetool_ha_unavail" value="1"> on
+      <input id="option-servicetool_ha_unavail-0" type="radio" name="option-servicetool_ha_unavail" value="0"> off
+    </div>
     <legend><br>I2C safe guard:</legend>
     <p>The I2C safe guard is a protection mechanism ONLY for CVE fans with built-in humidity sensor (models with light
       grey

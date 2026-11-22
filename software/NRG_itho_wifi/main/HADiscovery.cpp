@@ -8,6 +8,7 @@
 #include "sys_log.h"
 #include "generic_functions.h"
 #include "config/HADiscConfig.h"
+#include "managers/ServicetoolBridge.h"
 
 // Function to normalize the unique ID
 std::string normalizeUniqueId(const std::string &input)
@@ -556,6 +557,52 @@ void addHADiscoveryRemoteFan(JsonObject components, JsonObject compactJson, cons
     }
 }
 
+// Servicetool bridge: a binary_sensor showing whether a session is active and
+// a diagnostic sensor with the connected client's IP.
+static void addHADiscoveryServicetool(JsonObject components, const char *name)
+{
+    char sttopic[160]{};
+    servicetoolMqttTopic(sttopic, sizeof(sttopic));
+
+    std::string uniqueId = normalizeUniqueId(std::string(name) + "_servicetool_session");
+    JsonObject session = components[uniqueId].to<JsonObject>();
+    session["name"] = "Servicetool session";
+    session["p"] = "binary_sensor";
+    session["uniq_id"] = uniqueId;
+    session["stat_t"] = sttopic;
+    session["val_tpl"] = "{{ value_json.state }}";
+    session["pl_on"] = "active";
+    session["pl_off"] = "inactive";
+    session["dev_cla"] = "running";
+    session["ent_cat"] = "diagnostic";
+    session["ic"] = "mdi:tools";
+    session["json_attr_t"] = sttopic;
+
+    uniqueId = normalizeUniqueId(std::string(name) + "_servicetool_client");
+    JsonObject client = components[uniqueId].to<JsonObject>();
+    client["name"] = "Servicetool client";
+    client["p"] = "sensor";
+    client["uniq_id"] = uniqueId;
+    client["stat_t"] = sttopic;
+    client["val_tpl"] = "{{ value_json.client | default('none') }}";
+    client["ent_cat"] = "diagnostic";
+    client["ic"] = "mdi:laptop";
+}
+
+// Optional: make a component unavailable while a servicetool session runs
+// (its values are stale then). Requires per-component availability, see the
+// end of generateHADiscoveryJson.
+static void addServicetoolAvailability(JsonObject componentJson, const char *lwttopic, const char *sttopic)
+{
+    JsonArray avty = componentJson["avty"].to<JsonArray>();
+    JsonObject lwt = avty.add<JsonObject>();
+    lwt["t"] = lwttopic;
+    JsonObject st = avty.add<JsonObject>();
+    st["t"] = sttopic;
+    st["val_tpl"] = "{{ 'online' if value_json.state == 'inactive' else 'offline' }}";
+    componentJson["avty_mode"] = "all";
+}
+
 void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
 {
     JsonDocument statusitemsdoc;
@@ -569,8 +616,15 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
 
     const char *deviceName = compactJson["d"]; // Retrieve device name from compact JSON
 
+    char sttopic[160]{};
+    servicetoolMqttTopic(sttopic, sizeof(sttopic));
+    const bool stAvailability = systemConfig.servicetool_ha_unavail == 1;
+
     // generic status topics, can be overiden per component
-    outputJson["avty_t"] = lwttopic;
+    // (with servicetool availability enabled, availability is set per
+    // component instead: HA rejects a shared avty_t combined with avty)
+    if (!stAvailability)
+        outputJson["avty_t"] = lwttopic;
     outputJson["stat_t"] = ihtostatustopic; // state_topic
 
     // Static device information
@@ -638,6 +692,8 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
             {
                 componentJson["stat_cla"] = stateClass; // Use "sc" from compact JSON
             }
+            if (stAvailability)
+                addServicetoolAvailability(componentJson, lwttopic, sttopic);
         }
     }
     else if (compactJson["sscnt"].isNull() || compactJson["sscnt"] == 0)
@@ -659,6 +715,8 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
                 componentJson["p"] = "sensor";
                 componentJson["uniq_id"] = uniqueId;
                 componentJson["val_tpl"] = ("{{ value_json['" + keyStr + "'] }}");
+                if (stAvailability)
+                    addServicetoolAvailability(componentJson, lwttopic, sttopic);
             }
             idx++;
         }
@@ -694,4 +752,20 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
     // Add virtual remote fans
     addHADiscoveryRemoteFan(components, compactJson, devIds, systemConfig.mqtt_base_topic,
                             "vr", "vremotecmd", "vremoteindex", "vr", false);
+
+    // Servicetool bridge session state
+    if (systemConfig.servicetool_bridge == 1)
+        addHADiscoveryServicetool(components, devIds);
+
+    // Per-component availability: everything without its own list keeps the
+    // plain LWT availability.
+    if (stAvailability)
+    {
+        for (JsonPair kv : components)
+        {
+            JsonObject c = kv.value().as<JsonObject>();
+            if (c["avty"].isNull() && c["avty_t"].isNull())
+                c["avty_t"] = lwttopic;
+        }
+    }
 }
