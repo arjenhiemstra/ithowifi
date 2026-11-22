@@ -2,8 +2,8 @@
    Servicetool bridge - wire protocol helpers (header-only, no Arduino deps)
    Part of NRG itho wifi firmware
 
-   Emulates the serial framing of the Itho Daalderop "interface cable"
-   (Interf.kabel in ID_Servicetool):
+   Emulates the serial framing of the Itho Daalderop "interface cable", as
+   seen on its serial line:
      - frames:  DLE STX <raw I2C frame, every 0x10 doubled> DLE ETX
      - ping:    DLE SYN  (10 16), answered with the same two bytes
      - ACK/NAK: DLE ACK / DLE NAK (10 06 / 10 15), parsed but not required
@@ -85,8 +85,8 @@ namespace servicetool
 
   // Firmware / bootloader traffic is refused by default: an interrupted
   // flash over WiFi can brick a board.
-  //   0x4035..0x4038  RF-plus firmware update blocks (RfPlusUpdater)
-  //   0x4F35..0x4F38  APS / Argus bootloader (APSbootLoader, ArgusBootLoader)
+  //   0x4035..0x4038  RF-plus firmware update
+  //   0x4F35..0x4F38  bootloader / firmware update
   inline bool classBlocked(uint16_t msgClass)
   {
     return (msgClass >= 0x4035 && msgClass <= 0x4038) ||
@@ -94,7 +94,7 @@ namespace servicetool
   }
 
   // How long to wait for the first byte of a reply, based on the message
-  // type of the request only. The servicetool itself waits 200..2000 ms.
+  // type of the request only. The servicetool only waits a limited time.
   // The bridge aborts the wait as soon as the servicetool sends its next
   // frame, so a generous window does not delay anything.
   //   0 query->broadcast, 4 query->source  : a reply is expected
@@ -109,7 +109,7 @@ namespace servicetool
     {
     case 0:
     case 4:
-      return 2000; // = longest ResponseTijd the servicetool uses
+      return 2000;
     case 6:
       return 1000;
     default:

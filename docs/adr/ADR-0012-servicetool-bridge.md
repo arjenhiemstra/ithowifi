@@ -4,9 +4,9 @@ Status: Proposed
 
 ## Context
 
-The official Itho servicetool talks to Itho devices through a dealer-only serial interface cable. The add-on already sits on the same I2C bus, as `0x80` — the address the servicetool uses as source. The cable protocol (`Interf.kabel` in the decompiled `ID_Servicetool`) is a thin wrapper: raw I2C frames in `DLE STX … DLE ETX` with DLE stuffing, plus a `DLE SYN` ping that must be echoed within 1 s. Exposing that over TCP lets the servicetool run against the add-on via any virtual COM port.
+The official Itho servicetool talks to Itho devices through a dealer-only serial interface cable. The add-on already sits on the same I2C bus, as `0x80` — the address the servicetool uses as source. The cable's serial protocol is a thin wrapper: raw I2C frames in `DLE STX … DLE ETX` with DLE stuffing, plus a `DLE SYN` ping that must be echoed within 1 s. Exposing that over TCP lets the servicetool run against the add-on via any virtual COM port.
 
-Constraints: the add-on's own I2C traffic (status polling, API/MQTT commands) would interleave with the servicetool's request/reply pairs; the ESP32 uses one I2C peripheral for master and slave (it only listens in a window after sending); the servicetool falls back to RF mode when a ping is late.
+Constraints: the add-on's own I2C traffic (status polling, API/MQTT commands) would interleave with the servicetool's request/reply pairs; the ESP32 uses one I2C peripheral for master and slave (it only listens in a window after sending); the servicetool stops working when a ping is answered late.
 
 ## Decision
 
@@ -24,9 +24,8 @@ Constraints: the add-on's own I2C traffic (status polling, API/MQTT commands) wo
 
 ## Alternatives Considered
 
-- **Emulate the USB (CP2112 HID) interface**: needs USB-device hardware or a replacement `SLABHIDtoSMBus.dll`, plus emulation of the GenHMI slave-buffer polling — more work, no benefit.
+- **Emulate the servicetool's USB interface**: needs USB-device hardware on the add-on side — more work, no benefit over a virtual COM port.
 - **MQTT as transport** with a PC-side bridge: more moving parts, higher latency than raw TCP.
-- **Patching the servicetool** to use TCP directly: fragile across releases, and modified binaries can't be distributed.
 - **Blocking only at the API layer**: misses internal paths (virtual remotes, timers, sensor reads); the driver-level guard is the reliable choke point.
 - **Always listening via the second I2C peripheral** (sniffer pins): closes the listening gap but needs hardware-specific work; possible follow-up.
 

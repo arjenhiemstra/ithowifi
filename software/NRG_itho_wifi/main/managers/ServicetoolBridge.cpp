@@ -96,7 +96,7 @@ namespace
     time_t lastActivity{0};  // last byte received from the servicetool (epoch)
     uint32_t framesTx{0};    // frames put on the bus
     uint32_t framesRx{0};    // reply frames forwarded to the servicetool
-    uint32_t framesRejected{0}; // malformed, RF-stick or blocked frames
+    uint32_t framesRejected{0}; // malformed, non-I2C or blocked frames
   };
 
   SessionInfo info;
@@ -212,7 +212,7 @@ namespace
   void configureClientSocket(int fd)
   {
     // small frames must go out immediately (no Nagle delay), the servicetool
-    // waits only 200..2000 ms for a reply
+    // only waits a limited time for a reply
     int yes = 1;
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
 
@@ -306,12 +306,11 @@ namespace
   {
     if (!servicetool::frameValid(frame, len))
     {
-      // 3-byte frames are interface commands for the RF service stick
-      // ([len, 0, cmd], e.g. 00 00 00 = connect). The servicetool only sends
-      // them when it decided we are not a cable (ping answered too late).
+      // Short non-I2C frames (e.g. 00 00 00) are not meant for the bus. In
+      // practice they appear when a ping was answered too late.
       countRejected();
       if (len == 3)
-        W_LOG("ST: ignored RF-stick command 0x%02X - servicetool fell back to RF mode (late ping?)", frame[2]);
+        W_LOG("ST: ignored 3-byte interface command 0x%02X (late ping?)", frame[2]);
       else
         W_LOG("ST: rejected malformed frame from servicetool (len:%u)", static_cast<unsigned>(len));
       return false;
@@ -474,8 +473,8 @@ namespace
       {
       case DleDecoder::Event::Ping:
       {
-        // must be echoed within 1 s, otherwise the servicetool assumes the
-        // RF service stick and parses every following reply as RF packet
+        // must be answered quickly (within about 1 s), otherwise the
+        // servicetool does not recognise the interface or stops working
         const uint8_t pong[2] = {servicetool::DLE, servicetool::SYN};
         if (!sendAll(c.fd, pong, sizeof(pong)))
           return false;
@@ -513,7 +512,7 @@ namespace
   // answered immediately even while an I2C request is in flight. Frames are
   // executed one at a time; a new frame aborts the wait for the previous
   // reply. Without this, unanswered queries pile up, replies get later and
-  // later, pings time out and the servicetool falls back to RF mode.
+  // later, pings time out and the servicetool stops working.
   void serveClient(int clientFd)
   {
     ClientState c;

@@ -8,7 +8,7 @@ Related ADR(s): [ADR-0012](../../docs/adr/ADR-0012-servicetool-bridge.md)
 
 Lets the official Itho Daalderop servicetool (Windows) talk to the Itho through the add-on, without the dealer-only Itho interface cable. The add-on emulates the serial framing of that cable on a raw TCP socket; on Windows a virtual COM port (e.g. HW VSP3 in raw TCP client mode) maps a COM port to `<add-on-ip>:<port>`. While a servicetool is connected (a *session*) the bus belongs to the servicetool: the add-on pauses its own I2C polling and refuses Itho control commands from all other interfaces. Off by default.
 
-Wire format (from the decompiled servicetool, `I2C_Protocol.ZendPacket` / `comm_DataReceived`, `Interf.kabel`): raw I2C frame wrapped in `DLE STX … DLE ETX` with every `0x10` doubled; ping `DLE SYN` (`10 16`) must be echoed within 1 s, otherwise the servicetool assumes the RF service stick and parses all further replies as RF packets. Implemented header-only in `managers/ServicetoolProtocol.h`.
+Wire format (as used on the interface cable's serial line): raw I2C frame wrapped in `DLE STX … DLE ETX` with every `0x10` doubled; ping `DLE SYN` (`10 16`) must be answered within about 1 s, otherwise the servicetool does not recognise the interface or stops working. Implemented header-only in `managers/ServicetoolProtocol.h`.
 
 ## Acceptance Criteria
 

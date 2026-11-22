@@ -1,6 +1,6 @@
 // Native unit tests for the servicetool bridge wire protocol
-// (main/managers/ServicetoolProtocol.h). Reference frames come from the
-// decompiled ID_Servicetool (I2C_Protocol.ZendPacket / comm_DataReceived).
+// (main/managers/ServicetoolProtocol.h), using example frames in the format
+// of the Itho interface cable.
 
 #include <unity.h>
 #include <vector>
@@ -10,8 +10,8 @@
 
 using namespace servicetool;
 
-// Bank-0 fault-settings write for fault 16 (manual operation), as built by
-// the servicetool: 82 80 C0 30 06 0B 00 00 10 29 00 0A 00 00 01 01 00 B8
+// Example 0x4030 write frame that contains a 0x10 data byte:
+// 82 80 C0 30 06 0B 00 00 10 29 00 0A 00 00 01 01 00 B8
 static const uint8_t kFrame4030[] = {0x82, 0x80, 0xC0, 0x30, 0x06, 0x0B, 0x00, 0x00, 0x10, 0x29,
                                      0x00, 0x0A, 0x00, 0x00, 0x01, 0x01, 0x00, 0xB8};
 // Same frame on the serial line (note the doubled 0x10)
@@ -165,8 +165,8 @@ void test_reply_window()
   TEST_ASSERT_EQUAL_UINT32(1000, replyWindowMs(kFrame4030)); // type 6 change
   const uint8_t report[] = {0x00, 0x3E, 0xCE, 0x30, 0x05, 0x00, 0x00};
   TEST_ASSERT_EQUAL_UINT32(50, replyWindowMs(report));       // type 5, no reply
-  // servicetool's first node identification: query to the general call
-  // address 0x00 (Get_regelaar(0)) - must wait for the Itho's answer
+  // node identification query to the general call address 0x00 (seen at
+  // servicetool start-up) - must wait for the Itho's answer
   const uint8_t bcastQuery[] = {0x00, 0x80, 0x90, 0xE0, 0x04, 0x00, 0x0C};
   TEST_ASSERT_EQUAL_UINT32(2000, replyWindowMs(bcastQuery));
 }
