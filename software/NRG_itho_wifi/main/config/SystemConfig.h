@@ -75,6 +75,11 @@ public:
   uint16_t itho_rf_co2_keepalive_freq;
   uint8_t itho_rf_co2_default_demand;
   uint16_t itho_rf_co2_default_co2;
+  uint8_t servicetool_bridge;        // 1 = TCP bridge for the Itho servicetool enabled
+  uint16_t servicetool_port;         // TCP port of the bridge
+  uint16_t servicetool_timeout;      // minutes without traffic before a session is closed (0 = never)
+  uint8_t servicetool_ha_unavail;    // 1 = mark Itho status sensors unavailable in HA during a session
+  char servicetool_allow_ip[16];     // only accept this client IP ("" = any)
   JsonDocument api_settings_activated;
   mutable bool rfInitOK;
   uint8_t nonQ_cmd_clearsQ;

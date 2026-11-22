@@ -5,6 +5,7 @@
 #include "../sys_log.h"
 #include "generic_functions.h"
 #include <esp_heap_caps.h>
+#include "managers/ServicetoolBridge.h"
 
 #define TASK_SYS_CONTROL_PRIO 6
 // globals
@@ -130,6 +131,15 @@ void execSystemControlTasks()
 
   i2cManager.processQueue();
 
+  // Servicetool session ended: refresh the Itho status right away so MQTT /
+  // Home Assistant get fresh values instead of waiting a full interval.
+  if (servicetoolResumePolling)
+  {
+    servicetoolResumePolling = false;
+    query2401tim = 0;
+    query4210tim = 0;
+  }
+
   if (systemConfig.itho_rf_standalone == 1)
   {
     // RF standalone mode: skip I2C, mark init done
@@ -213,7 +223,10 @@ void execSystemControlTasks()
     }
   }
 
-  if (systemConfig.itho_rf_standalone != 1)
+  // During a servicetool session the bus belongs to the servicetool: no init,
+  // polling, join or speed updates. Pending speed changes from the Itho queue
+  // are applied after the session.
+  if (systemConfig.itho_rf_standalone != 1 && !servicetoolSessionActive)
   {
     if (!i2c_init_functions_done)
     {
@@ -381,7 +394,7 @@ void execSystemControlTasks()
 
   // If the status format was not retrieved at boot, or is lost during runtime; resend the query every 60 s until it works.
   // Needs a known device, the query cannot succeed without one (RF standalone, no Itho connected).
-  if ((ithoStatus.empty() && systemConfig.itho_2401 == 1) && currentItho_fwversion() > 0 && millis() - lastIthoStatusFormatCheck > 60000)
+  if (!servicetoolSessionActive && (ithoStatus.empty() && systemConfig.itho_2401 == 1) && currentItho_fwversion() > 0 && millis() - lastIthoStatusFormatCheck > 60000)
   {
     lastIthoStatusFormatCheck = millis();
     sendQueryStatusFormat(false);
@@ -397,7 +410,7 @@ void execSystemControlTasks()
     }
   }
 
-  if (!(currentItho_fwversion() > 0) && millis() - lastVersionCheck > 60000)
+  if (!servicetoolSessionActive && !(currentItho_fwversion() > 0) && millis() - lastVersionCheck > 60000)
   {
     lastVersionCheck = millis();
     i2cQueueAddCmd([]()
@@ -412,7 +425,7 @@ void execSystemControlTasks()
       updateMQTTihtoStatus = true;
     }
   }
-  if (systemConfig.syssht30 == 1)
+  if (systemConfig.syssht30 == 1 && !servicetoolSessionActive)
   {
     if (millis() - SHT3x_readout >= systemConfig.itho_updatefreq * 1000UL && (SHT3x_original || SHT3x_alternative))
     {
@@ -425,7 +438,7 @@ void execSystemControlTasks()
       }
     }
   }
-  if (reset_sht_sensor && (!SHT3x_alternative && !SHT3x_original))
+  if (reset_sht_sensor && (!SHT3x_alternative && !SHT3x_original) && !servicetoolSessionActive)
   {
     reset_sht_sensor = false;
     triggerShtSensorReset();

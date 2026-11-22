@@ -128,6 +128,17 @@ bool I2CManager::queueEmpty() const
   return cmd_queue.empty();
 }
 
+size_t I2CManager::queueSize() const
+{
+  if (queueMutex != NULL && xSemaphoreTake(queueMutex, portMAX_DELAY) == pdTRUE)
+  {
+    size_t n = cmd_queue.size();
+    xSemaphoreGive(queueMutex);
+    return n;
+  }
+  return cmd_queue.size();
+}
+
 void I2CManager::setMasterPins(gpio_num_t sda, gpio_num_t scl)
 {
   master_sda_pin = sda;
