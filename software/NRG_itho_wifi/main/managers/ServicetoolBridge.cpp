@@ -46,51 +46,85 @@
 
 using servicetool::DleDecoder;
 
+// ---------------------------------------------------------------------------
+// tuning
+// ---------------------------------------------------------------------------
+
+// Low priority: the task only shuffles bytes; the time-critical I2C work runs
+// in TaskSysControl via the I2C queue.
 #define TASK_SERVICETOOL_PRIO 3
-#define SERVICETOOL_OWN_ADDRESS (I2C_SLAVE_ADDRESS << 1) // 0x80, our address on the Itho bus
-#define SERVICETOOL_QUEUE_EXTRA_WAIT_MS 2500 // time a frame may wait in the I2C queue
+// 8-bit form of our own I2C slave address (0x40 << 1 = 0x80). Prepended to
+// replies that arrive in the same receive window as a previous reply, because
+// the slave peripheral strips the address byte.
+#define SERVICETOOL_OWN_ADDRESS (I2C_SLAVE_ADDRESS << 1)
+// Extra time a frame may spend waiting in the I2C queue on top of its reply
+// window before the bridge gives up on it.
+#define SERVICETOOL_QUEUE_EXTRA_WAIT_MS 2500
+// Republish the session state on MQTT this often during a session, so
+// last_activity stays current in Home Assistant.
 #define SERVICETOOL_MQTT_REFRESH_MS 60000UL
+// Log only the first N commands refused during a session (then a summary).
 #define SERVICETOOL_BLOCK_LOG_LIMIT 5
+// Maximum frames from the servicetool waiting for the bus; the oldest is
+// dropped beyond this (the servicetool has long given up on it by then).
 #define SERVICETOOL_MAX_PENDING 16
 
 // ---------------------------------------------------------------------------
-// shared state
+// shared flags (declared in ServicetoolBridge.h)
 // ---------------------------------------------------------------------------
 
+// Set/cleared by TaskServicetool. Read by the I2C driver guard,
+// TaskSysControl (polling pause) and the APIs (command refusal).
 volatile bool servicetoolSessionActive = false;
-volatile bool servicetoolMqttUpdate = true; // publish "inactive" after boot/connect
+// Set by TaskServicetool when the session state changed; cleared by the MQTT
+// task after publishing. Starts true so "inactive" is published after boot.
+volatile bool servicetoolMqttUpdate = true;
+// Set by TaskServicetool when a session ends; cleared by TaskSysControl after
+// scheduling an immediate status refresh.
 volatile bool servicetoolResumePolling = false;
+// Set by the web UI ("End session"); cleared by TaskServicetool.
 volatile bool servicetoolEndRequested = false;
 
 namespace
 {
+  // Information about the current session, for MQTT / REST / web UI.
+  // Written by TaskServicetool, read by other tasks -> guarded by infoMutex.
   struct SessionInfo
   {
-    char client[16]{};
-    time_t since{0};
-    time_t lastActivity{0};
-    uint32_t framesTx{0};
-    uint32_t framesRx{0};
-    uint32_t framesRejected{0};
+    char client[16]{};       // IPv4 address of the servicetool PC
+    time_t since{0};         // session start (epoch)
+    time_t lastActivity{0};  // last byte received from the servicetool (epoch)
+    uint32_t framesTx{0};    // frames put on the bus
+    uint32_t framesRx{0};    // reply frames forwarded to the servicetool
+    uint32_t framesRejected{0}; // malformed, non-I2C or blocked frames
   };
 
   SessionInfo info;
   SemaphoreHandle_t infoMutex = nullptr;
+  // Number of I2C calls refused by the driver guard in this session. Written
+  // from TaskSysControl and other tasks, hence separate from SessionInfo.
   volatile uint32_t blockedCount = 0;
 
   TaskHandle_t taskHandle = nullptr;
 
+  // One servicetool frame on its way over the bus.
+  //
+  // Lifetime: shared (std::shared_ptr) between the bridge task, which waits
+  // for it, and the lambda on the I2C queue, which executes it in
+  // TaskSysControl. Whichever finishes last frees it, so the bridge can stop
+  // waiting (timeout, disconnect) without the queued lambda touching freed
+  // memory.
   struct BridgeRequest
   {
-    uint8_t tx[servicetool::MAX_FRAME]{};
+    uint8_t tx[servicetool::MAX_FRAME]{}; // frame from the servicetool
     size_t txLen{0};
-    uint8_t rx[I2C_SLAVE_RX_BUF_LEN]{};
+    uint8_t rx[I2C_SLAVE_RX_BUF_LEN]{};   // whatever arrived as I2C slave
     size_t rxLen{0};
-    bool sent{false};
-    uint32_t windowMs{50};
-    unsigned long queuedAt{0};
-    volatile bool abort{false};
-    SemaphoreHandle_t done{nullptr};
+    bool sent{false};                     // master write was ACKed
+    uint32_t windowMs{50};                // wait for the first reply byte
+    unsigned long queuedAt{0};            // millis() when queued
+    volatile bool abort{false};           // stop waiting for the reply
+    SemaphoreHandle_t done{nullptr};      // given by the I2C task when finished
 
     BridgeRequest() { done = xSemaphoreCreateBinary(); }
     ~BridgeRequest()
@@ -99,6 +133,10 @@ namespace
         vSemaphoreDelete(done);
     }
   };
+
+  // -------------------------------------------------------------------------
+  // small helpers
+  // -------------------------------------------------------------------------
 
   time_t nowEpoch()
   {
@@ -118,6 +156,10 @@ namespace
       xSemaphoreGive(infoMutex);
   }
 
+  // -------------------------------------------------------------------------
+  // socket helpers (only used by TaskServicetool)
+  // -------------------------------------------------------------------------
+
   void closeFd(int &fd)
   {
     if (fd >= 0)
@@ -128,6 +170,7 @@ namespace
     }
   }
 
+  // send() until everything is written. False if the connection broke.
   bool sendAll(int fd, const uint8_t *buf, size_t len)
   {
     size_t off = 0;
@@ -141,6 +184,8 @@ namespace
     return true;
   }
 
+  // TCP listen socket on all interfaces; one pending connection is enough
+  // (only one servicetool can be served at a time). Returns -1 on failure.
   int openListenSocket(uint16_t port)
   {
     int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -166,6 +211,8 @@ namespace
 
   void configureClientSocket(int fd)
   {
+    // small frames must go out immediately (no Nagle delay), the servicetool
+    // only waits a limited time for a reply
     int yes = 1;
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
 
@@ -176,6 +223,7 @@ namespace
     setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(intvl));
     setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(cnt));
 
+    // never block forever on a send to a stalled client
     struct timeval tv;
     tv.tv_sec = 2;
     tv.tv_usec = 0;
@@ -194,6 +242,12 @@ namespace
     return select(fd + 1, &rfds, nullptr, nullptr, &tv);
   }
 
+  // -------------------------------------------------------------------------
+  // session bookkeeping
+  // -------------------------------------------------------------------------
+
+  // A client connected: the bus now belongs to the servicetool. Setting
+  // servicetoolSessionActive pauses polling and arms the command guards.
   void startSession(const char *client)
   {
     lockInfo();
@@ -210,6 +264,8 @@ namespace
     N_LOG("ST: servicetool session started from %s - I2C polling paused, commands blocked", client);
   }
 
+  // The client is gone: give the bus back and ask TaskSysControl for an
+  // immediate status refresh so HA/MQTT get fresh values.
   void endSession(const char *reason)
   {
     if (!servicetoolSessionActive)
@@ -240,6 +296,10 @@ namespace
     info.framesRejected++;
     unlockInfo();
   }
+
+  // -------------------------------------------------------------------------
+  // frame handling
+  // -------------------------------------------------------------------------
 
   // Check a frame from the servicetool before it goes on the bus.
   bool acceptFrame(const uint8_t *frame, size_t len)
@@ -340,79 +400,150 @@ namespace
     return ok;
   }
 
+  // -------------------------------------------------------------------------
+  // client loop
+  // -------------------------------------------------------------------------
+
+  // State of one connected client, owned by serveClient().
+  struct ClientState
+  {
+    int fd;
+    DleDecoder decoder;                            // bytes -> pings / frames
+    std::deque<std::vector<uint8_t>> pending;      // frames waiting for the bus
+    std::shared_ptr<BridgeRequest> inflight;       // frame on the bus right now
+    unsigned long lastActivityMs{millis()};        // for the inactivity timeout
+    unsigned long lastMqttRefreshMs{millis()};
+  };
+
+  // Reason to end the session now, or nullptr to keep going.
+  const char *sessionEndReason(ClientState &c)
+  {
+    if (servicetoolEndRequested)
+    {
+      servicetoolEndRequested = false;
+      return "ended from web interface";
+    }
+    if (systemConfig.servicetool_bridge != 1)
+      return "bridge disabled";
+    uint32_t timeoutMs = static_cast<uint32_t>(systemConfig.servicetool_timeout) * 60000UL;
+    if (timeoutMs > 0 && millis() - c.lastActivityMs > timeoutMs)
+      return "inactivity timeout";
+    return nullptr;
+  }
+
+  // If the frame on the bus has finished, forward its reply; if the I2C queue
+  // never got to it, give up on it. False if the connection broke.
+  bool collectFinishedRequest(ClientState &c)
+  {
+    if (!c.inflight)
+      return true;
+
+    if (xSemaphoreTake(c.inflight->done, 0) == pdTRUE)
+    {
+      bool ok = finishRequest(c.fd, c.inflight);
+      c.inflight.reset();
+      return ok;
+    }
+    if (millis() - c.inflight->queuedAt > c.inflight->windowMs + SERVICETOOL_QUEUE_EXTRA_WAIT_MS)
+    {
+      W_LOG("ST: I2C queue did not execute frame in time, skipped");
+      c.inflight->abort = true;
+      c.inflight.reset(); // the queued lambda keeps its own reference
+    }
+    return true;
+  }
+
+  // Put the next waiting frame on the bus (one at a time).
+  void startNextRequest(ClientState &c)
+  {
+    while (!c.inflight && !c.pending.empty())
+    {
+      c.inflight = dispatchFrame(c.pending.front());
+      c.pending.pop_front();
+    }
+  }
+
+  // Feed received bytes to the decoder: answer pings straight away, queue
+  // frames. False if the connection broke.
+  bool handleClientBytes(ClientState &c, const uint8_t *buf, int n)
+  {
+    for (int i = 0; i < n; i++)
+    {
+      switch (c.decoder.feed(buf[i]))
+      {
+      case DleDecoder::Event::Ping:
+      {
+        // must be answered quickly (within about 1 s), otherwise the
+        // servicetool does not recognise the interface or stops working
+        const uint8_t pong[2] = {servicetool::DLE, servicetool::SYN};
+        if (!sendAll(c.fd, pong, sizeof(pong)))
+          return false;
+        break;
+      }
+      case DleDecoder::Event::Frame:
+        if (acceptFrame(c.decoder.data(), c.decoder.size()))
+        {
+          // a new frame means the servicetool stopped waiting for the
+          // previous reply: free the bus instead of waiting it out
+          if (c.inflight)
+            c.inflight->abort = true;
+          if (c.pending.size() >= SERVICETOOL_MAX_PENDING)
+          {
+            W_LOG("ST: too many pending frames, oldest dropped");
+            c.pending.pop_front();
+          }
+          c.pending.emplace_back(c.decoder.data(), c.decoder.data() + c.decoder.size());
+        }
+        break;
+      case DleDecoder::Event::Overflow:
+        countRejected();
+        W_LOG("ST: frame from servicetool too long, dropped");
+        break;
+      default:
+        break; // ACK/NAK/noise: not needed
+      }
+    }
+    return true;
+  }
+
   // Serve one connected client until it disconnects or the session ends.
   //
-  // Event loop: the socket is read continuously, so pings are answered
-  // immediately even while an I2C request is in flight. Frames are executed
-  // one at a time; a new frame from the servicetool means it stopped waiting
-  // for the previous reply, so the in-flight receive is aborted to free the
-  // bus straight away (otherwise unanswered queries pile up, replies get
-  // later and later, and pings time out -> the servicetool stops working).
+  // Non-blocking event loop: the socket is read continuously, so pings are
+  // answered immediately even while an I2C request is in flight. Frames are
+  // executed one at a time; a new frame aborts the wait for the previous
+  // reply. Without this, unanswered queries pile up, replies get later and
+  // later, pings time out and the servicetool stops working.
   void serveClient(int clientFd)
   {
-    DleDecoder decoder;
+    ClientState c;
+    c.fd = clientFd;
     uint8_t buf[256];
-    std::deque<std::vector<uint8_t>> pending;
-    std::shared_ptr<BridgeRequest> inflight;
-    unsigned long lastActivityMs = millis();
-    unsigned long lastMqttRefresh = millis();
     const char *reason = "client disconnected";
 
     for (;;)
     {
-      if (servicetoolEndRequested)
+      if (const char *r = sessionEndReason(c))
       {
-        servicetoolEndRequested = false;
-        reason = "ended from web interface";
+        reason = r;
         break;
       }
-      if (systemConfig.servicetool_bridge != 1)
+      if (millis() - c.lastMqttRefreshMs > SERVICETOOL_MQTT_REFRESH_MS)
       {
-        reason = "bridge disabled";
-        break;
-      }
-      uint32_t timeoutMs = static_cast<uint32_t>(systemConfig.servicetool_timeout) * 60000UL;
-      if (timeoutMs > 0 && millis() - lastActivityMs > timeoutMs)
-      {
-        reason = "inactivity timeout";
-        break;
-      }
-      if (millis() - lastMqttRefresh > SERVICETOOL_MQTT_REFRESH_MS)
-      {
-        lastMqttRefresh = millis();
+        c.lastMqttRefreshMs = millis();
         servicetoolMqttUpdate = true;
       }
 
-      // 1. finished request -> forward reply
-      if (inflight)
+      // 1. reply of the frame on the bus -> servicetool
+      if (!collectFinishedRequest(c))
       {
-        if (xSemaphoreTake(inflight->done, 0) == pdTRUE)
-        {
-          bool ok = finishRequest(clientFd, inflight);
-          inflight.reset();
-          if (!ok)
-          {
-            reason = "send to client failed";
-            break;
-          }
-        }
-        else if (millis() - inflight->queuedAt > inflight->windowMs + SERVICETOOL_QUEUE_EXTRA_WAIT_MS)
-        {
-          W_LOG("ST: I2C queue did not execute frame in time, skipped");
-          inflight->abort = true;
-          inflight.reset(); // the queued lambda keeps its own reference
-        }
+        reason = "send to client failed";
+        break;
       }
+      // 2. next waiting frame -> bus
+      startNextRequest(c);
 
-      // 2. next frame -> I2C queue
-      while (!inflight && !pending.empty())
-      {
-        inflight = dispatchFrame(pending.front());
-        pending.pop_front();
-      }
-
-      // 3. read from the servicetool
-      int r = waitReadable(clientFd, (inflight || !pending.empty()) ? 10 : 200);
+      // 3. read from the servicetool; poll fast while frames are in progress
+      int r = waitReadable(c.fd, (c.inflight || !c.pending.empty()) ? 10 : 200);
       if (r < 0)
       {
         reason = "socket error";
@@ -421,9 +552,9 @@ namespace
       if (r == 0)
         continue;
 
-      int n = recv(clientFd, buf, sizeof(buf), 0);
+      int n = recv(c.fd, buf, sizeof(buf), 0);
       if (n == 0)
-        break; // orderly close
+        break; // orderly close by the client
       if (n < 0)
       {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -432,72 +563,68 @@ namespace
         break;
       }
 
-      lastActivityMs = millis();
+      c.lastActivityMs = millis();
       touchActivity();
 
-      bool alive = true;
-      for (int i = 0; i < n && alive; i++)
-      {
-        switch (decoder.feed(buf[i]))
-        {
-        case DleDecoder::Event::Ping:
-        {
-          const uint8_t pong[2] = {servicetool::DLE, servicetool::SYN};
-          alive = sendAll(clientFd, pong, sizeof(pong));
-          break;
-        }
-        case DleDecoder::Event::Frame:
-          if (acceptFrame(decoder.data(), decoder.size()))
-          {
-            if (inflight)
-              inflight->abort = true; // servicetool moved on
-            if (pending.size() >= SERVICETOOL_MAX_PENDING)
-            {
-              W_LOG("ST: too many pending frames, oldest dropped");
-              pending.pop_front();
-            }
-            pending.emplace_back(decoder.data(), decoder.data() + decoder.size());
-          }
-          break;
-        case DleDecoder::Event::Overflow:
-          countRejected();
-          W_LOG("ST: frame from servicetool too long, dropped");
-          break;
-        default:
-          break;
-        }
-      }
-      if (!alive)
+      if (!handleClientBytes(c, buf, n))
       {
         reason = "send to client failed";
         break;
       }
     }
-    if (inflight)
-      inflight->abort = true;
+    if (c.inflight)
+      c.inflight->abort = true; // don't keep the bus busy for a gone client
     endSession(reason);
   }
 
+  // -------------------------------------------------------------------------
+  // listener task
+  // -------------------------------------------------------------------------
+
+  // HA discovery content depends on these settings: resend it when they change.
+  void resendDiscoveryOnSettingChange()
+  {
+    static uint8_t lastHaUnavail = systemConfig.servicetool_ha_unavail;
+    static uint8_t lastEnabled = systemConfig.servicetool_bridge;
+    if (systemConfig.servicetool_ha_unavail != lastHaUnavail || systemConfig.servicetool_bridge != lastEnabled)
+    {
+      lastHaUnavail = systemConfig.servicetool_ha_unavail;
+      lastEnabled = systemConfig.servicetool_bridge;
+      sendHomeAssistantDiscovery = true;
+      servicetoolMqttUpdate = true;
+    }
+  }
+
+  // Whether a connection from this client may start a session.
+  bool clientAllowed(const char *ip)
+  {
+    if (systemConfig.servicetool_allow_ip[0] != '\0' && strcmp(systemConfig.servicetool_allow_ip, ip) != 0)
+    {
+      W_LOG("ST: refused servicetool connection from %s (not the allowed IP)", ip);
+      return false;
+    }
+    if (systemConfig.itho_rf_standalone == 1)
+    {
+      W_LOG("ST: refused servicetool connection - RF standalone mode has no I2C connection");
+      return false;
+    }
+    return true;
+  }
+
+  // Listens while the bridge is enabled and serves one client at a time.
+  // Reacts to setting changes (enable/disable, port) within about a second.
   void TaskServicetool(void * /*pvParameters*/)
   {
-    int listenFd = -1;
-    uint16_t listenPort = 0;
     waitPhase(PHASE_CONFIG | PHASE_NET); // needs loaded config and the network
 
-    uint8_t lastHaUnavail = systemConfig.servicetool_ha_unavail;
-    uint8_t lastEnabled = systemConfig.servicetool_bridge;
+    int listenFd = -1;
+    uint16_t listenPort = 0;
 
     for (;;)
     {
-      // HA discovery contents depend on these settings: resend on change
-      if (systemConfig.servicetool_ha_unavail != lastHaUnavail || systemConfig.servicetool_bridge != lastEnabled)
-      {
-        lastHaUnavail = systemConfig.servicetool_ha_unavail;
-        lastEnabled = systemConfig.servicetool_bridge;
-        sendHomeAssistantDiscovery = true;
-        servicetoolMqttUpdate = true;
-      }
+      resendDiscoveryOnSettingChange();
 
+      // bridge off: close the listen socket and idle
       if (systemConfig.servicetool_bridge != 1 || systemConfig.servicetool_port == 0)
       {
         if (listenFd >= 0)
@@ -510,6 +637,7 @@ namespace
         continue;
       }
 
+      // (re)open the listen socket when needed, e.g. after a port change
       if (listenFd < 0 || listenPort != systemConfig.servicetool_port)
       {
         closeFd(listenFd);
@@ -526,6 +654,7 @@ namespace
 
       servicetoolEndRequested = false; // only meaningful during a session
 
+      // wait (bounded, so setting changes are noticed) for a connection
       int r = waitReadable(listenFd, 500);
       if (r <= 0)
       {
@@ -542,20 +671,13 @@ namespace
 
       char ip[16]{};
       inet_ntoa_r(peer.sin_addr, ip, sizeof(ip));
-
-      if (systemConfig.servicetool_allow_ip[0] != '\0' && strcmp(systemConfig.servicetool_allow_ip, ip) != 0)
+      if (!clientAllowed(ip))
       {
-        W_LOG("ST: refused servicetool connection from %s (not the allowed IP)", ip);
-        closeFd(clientFd);
-        continue;
-      }
-      if (systemConfig.itho_rf_standalone == 1)
-      {
-        W_LOG("ST: refused servicetool connection - RF standalone mode has no I2C connection");
         closeFd(clientFd);
         continue;
       }
 
+      // serve this client until it leaves; others wait in the listen backlog
       configureClientSocket(clientFd);
       startSession(ip);
       serveClient(clientFd);
@@ -569,6 +691,8 @@ namespace
 // public API
 // ---------------------------------------------------------------------------
 
+// Created in boot() together with the other tasks; the task itself waits for
+// PHASE_CONFIG | PHASE_NET before doing anything.
 void startTaskServicetoolBridge()
 {
   if (taskHandle != nullptr)
@@ -586,6 +710,7 @@ void startTaskServicetoolBridge()
       CONFIG_ARDUINO_RUNNING_CORE);
 }
 
+// Called by the I2C driver guard (any task) for every refused call.
 void servicetoolNoteBlocked(i2c_cmdref_t origin)
 {
   uint32_t n = ++blockedCount;

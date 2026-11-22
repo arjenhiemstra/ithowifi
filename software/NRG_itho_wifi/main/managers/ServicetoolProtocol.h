@@ -12,6 +12,20 @@
      [0] destination  [1] source  [2..3] msg class (BE)  [4] msg type
      [5] data length  [6..] data  [last] checksum (two's complement of sum)
 
+   Example - device type query from the servicetool (0x80) to the Itho (0x82),
+   msg class 0x10E0 with the 0x8000 bit the servicetool always sets, type 4
+   (query), no data:
+
+     raw frame:   82 80 90 E0 04 00 8A
+     on the wire: 10 02 82 80 90 E0 04 00 8A 10 03
+
+   A 0x10 inside the frame is sent twice (10 10) so it can't be mistaken for
+   the start of a DLE control sequence. The checksum is computed over the
+   unstuffed frame.
+
+   Msg types: 0 query->broadcast, 1 report->broadcast, 2 change->broadcast,
+              4 query->source, 5 report->source, 6 change->source
+
    Kept free of Arduino/ESP-IDF includes so it can be unit tested natively
    (see test/test_native_servicetool).
 */
