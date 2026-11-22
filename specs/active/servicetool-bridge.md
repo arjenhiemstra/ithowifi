@@ -1,6 +1,6 @@
 # Feature Spec: Servicetool bridge (Itho interface cable over TCP)
 
-Status: Active
+Status: Active, on the long-lived branch `debug/servicetool-bridge` (not merged into develop; rebase on develop when needed)
 Owner: WouterJN
 Related ADR(s): [ADR-0012](../../docs/adr/ADR-0012-servicetool-bridge.md)
 
