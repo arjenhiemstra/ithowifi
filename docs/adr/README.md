@@ -17,6 +17,7 @@ ADRs record durable architectural decisions — not implementation details. Use 
 | [0009](ADR-0009-dual-tier-testing-strategy.md) | Dual-tier testing strategy | Accepted |
 | [0010](ADR-0010-boot-phase-event-group.md) | Boot sequencing: event-group phase gates (amends 0004) | Accepted |
 | [0011](ADR-0011-rf-spider-thermostat-role.md) | RF thermostat role for the Itho Spider | Accepted |
+| [0012](ADR-0012-servicetool-bridge.md) | Servicetool bridge: interface-cable emulation with exclusive bus sessions | Proposed |
 
 ## When an ADR is required
 
