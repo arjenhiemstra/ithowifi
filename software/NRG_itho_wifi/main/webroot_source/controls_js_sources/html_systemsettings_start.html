@@ -191,14 +191,17 @@
     <p>Lets the official Itho Daalderop servicetool connect through this module, emulating the Itho interface cable
       over TCP. On Windows, map a virtual COM port (e.g. HW VSP3 or Tibbo VSP) in <b>raw TCP client</b> mode to this
       module's IP address and the port below, then select that COM port in the servicetool.</p>
-    <p>While a servicetool is connected, I2C status polling is paused and all other commands (web, API, MQTT, Home
-      Assistant) are refused. Firmware/bootloader frames are always blocked. The raw TCP port has no password:
-      enable it only when needed and preferably restrict it to one client IP.</p>
+    <p><b>Make sure NVT / Telnet (RFC2217) is switched OFF</b> in the virtual serial port software. Some software has
+      it <b>on by default</b> (in HW VSP3: tab <i>Settings</i>, &quot;NVT Enable&quot;). With NVT on, the servicetool
+      finds the interface but then fails with &quot;Data niet goed opgehaald&quot;.</p>
+    <p>While a servicetool is connected, I2C status polling is paused and Itho control commands (I2C and RF) from the
+      web interface, the APIs, MQTT and Home Assistant are refused; status, OTA and reboot keep working.
+      Firmware/bootloader frames are always blocked. The raw TCP port has no password: enable it only when needed and
+      preferably restrict it to one client IP.</p>
     <p style="background:#fff3cd;border:1px solid #e0a800;border-radius:4px;padding:.5em .8em;">
       <b>Warning:</b><br>
-      &bull; <b>Turn NVT / Telnet (RFC2217) mode OFF</b> in the virtual serial port driver (HW VSP3: tab
-      <i>Settings</i>, &quot;NVT Enable&quot; unchecked). With NVT on, data bytes 0xFF are altered and the
-      servicetool fails with &quot;Data niet goed opgehaald&quot;.<br>
+      &bull; <b>NVT / Telnet (RFC2217) must be OFF</b> in the virtual serial port software &mdash; check it, some
+      software enables it by default. With NVT on, data bytes 0xFF are altered and the servicetool fails.<br>
       &bull; <b>Never use this bridge to update firmware</b> of the heat pump or any other Itho device. A firmware
       update that is interrupted over WiFi can brick the device. Use the official Itho interface cable for
       firmware updates.</p>
