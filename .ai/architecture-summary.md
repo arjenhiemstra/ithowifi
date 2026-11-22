@@ -17,6 +17,7 @@ Each task starts the next, then enters its own loop. Single core. Cross-task sig
 | TaskMQTT | `main/tasks/task_mqtt.cpp` | 5 |
 | TaskWeb | `main/tasks/task_web.cpp` | 5 |
 | sniffer_task | `main/ithodevice/i2c_sniffer.cpp` | 17 |
+| TaskServicetool | `main/managers/ServicetoolBridge.cpp` | 3 (idle unless the servicetool bridge is enabled, [ADR-0012](../docs/adr/ADR-0012-servicetool-bridge.md)) |
 
 ## Managers (`main/managers/`) — global singleton instances, not classes to re-instantiate
 

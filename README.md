@@ -89,6 +89,16 @@ Firmware can be updated directly from the web interface:
 -   Click Install — the device downloads and flashes the firmware automatically
 -   Manual upload via file is also supported
 
+## Itho servicetool bridge (experimental)
+
+The add-on can emulate the Itho interface cable over TCP, so the official Itho Daalderop servicetool can connect through it:
+-   Enable it under System settings → Servicetool bridge (off by default, TCP port 2323)
+-   On Windows, create a virtual COM port in **raw TCP client** mode (e.g. HW VSP3) pointing to `<add-on-ip>:2323` and select that COM port in the servicetool
+-   **NVT / Telnet (RFC2217) must be off** in the virtual serial driver, otherwise the servicetool reports "Data niet goed opgehaald"
+-   While the servicetool is connected, status polling is paused and Itho control commands from the web UI, APIs and Home Assistant are refused
+-   **Never use it for firmware updates** — an update interrupted over WiFi can brick the device. Firmware/bootloader messages are blocked; use the official interface cable for updates
+-   The TCP port has no password: only enable it when needed and preferably restrict it to one client IP
+
 ## Hardware:
 
 A sample hardware design (KiCad) is included, this module can be plugged on the Itho main PCB directly without extra components.
