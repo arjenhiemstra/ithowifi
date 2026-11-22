@@ -275,7 +275,30 @@ namespace i2csvc
       "wrong thermostat connected"};
   constexpr size_t WPU_FAULT_COUNT = sizeof(wpuFaultText) / sizeof(wpuFaultText[0]);
 
-  inline std::string faultList(const std::vector<uint8_t> &codes)
+  // wpuFaultText follows the numbering of list version 21 and newer. Older list versions
+  // swap codes 4 and 6 (discharge and evaporator sensor); all other codes are the same.
+  // listVersion 0 = unknown, treated as newest.
+  inline uint8_t wpuFaultCanonical(uint8_t code, uint8_t listVersion)
+  {
+    if (listVersion != 0 && listVersion < 21)
+    {
+      if (code == 4)
+        return 6;
+      if (code == 6)
+        return 4;
+    }
+    return code;
+  }
+
+  // Text of a heat pump fault code, nullptr if unknown
+  inline const char *wpuFaultName(uint8_t code, uint8_t listVersion = 0)
+  {
+    const uint8_t c = wpuFaultCanonical(code, listVersion);
+    return c < WPU_FAULT_COUNT ? wpuFaultText[c] : nullptr;
+  }
+
+  // "16 (manual operation active), 99" or "none"
+  inline std::string faultList(const std::vector<uint8_t> &codes, uint8_t listVersion = 0)
   {
     if (codes.empty())
       return "none";
@@ -285,8 +308,25 @@ namespace i2csvc
       if (!s.empty())
         s += ", ";
       s += std::to_string(c);
-      if (c < WPU_FAULT_COUNT)
-        s += std::string(" (") + wpuFaultText[c] + ")";
+      const char *text = wpuFaultName(c, listVersion);
+      if (text)
+        s += std::string(" (") + text + ")";
+    }
+    return s;
+  }
+
+  // Texts only, for a status sensor: "manual operation active, fault 99" or "no fault"
+  inline std::string wpuFaultSummary(const std::vector<uint8_t> &active, uint8_t listVersion = 0)
+  {
+    if (active.empty())
+      return "no fault";
+    std::string s;
+    for (uint8_t c : active)
+    {
+      if (!s.empty())
+        s += ", ";
+      const char *text = wpuFaultName(c, listVersion);
+      s += text ? std::string(text) : "fault " + std::to_string(c);
     }
     return s;
   }

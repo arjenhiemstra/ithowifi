@@ -220,6 +220,7 @@ There are two variants:
   - `POST /api/v2/command`: send a command (for example a ventilation level)
   - `POST /api/v2/vremote` and `POST /api/v2/rfremote/command`, `/co2`, `/demand`, `/config`: virtual and RF remote commands
   - `POST /api/v2/wpu/outside_temp` and `/api/v2/wpu/manual_control`: WPU-specific
+  - `GET /api/v2/wpu/faults`: WPU active and reported faults with texts (also on MQTT `<base>/wpufaults` and as Home Assistant entities "Fault" and "Current fault")
 - **Legacy API (v1)**: a simple read-only API in query style via `/api.html`, for example:
   - `http://<add-on>/api.html?get=ithostatus`
   - `http://<add-on>/api.html?get=currentspeed` (other values: `lastcmd`, `queue`, `remotesinfo`)

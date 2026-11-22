@@ -73,7 +73,7 @@ static void serviceCommand(const char *what, uint16_t msgClass, uint8_t type, co
     {
       std::vector<uint8_t> active, reported;
       if (i2csvc::faultFlags(r.payload, r.len, active, reported))
-        decoded = "active: " + i2csvc::faultList(active) + "; reported, no longer active: " + i2csvc::faultList(reported);
+        decoded = "active: " + i2csvc::faultList(active, itho_fwversion) + "; reported, no longer active: " + i2csvc::faultList(reported, itho_fwversion);
     }
   }
   i2cDebugResult(what, (decoded.empty() ? "" : decoded + " | ") + describeReply(rx, n));
