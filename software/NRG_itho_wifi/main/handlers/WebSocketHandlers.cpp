@@ -1,4 +1,5 @@
 #include "tasks/task_web.h"
+#include "managers/ServicetoolBridge.h"
 
 void wifiStat()
 {
@@ -30,6 +31,7 @@ void jsonSystemstat()
   systemstat["fan_demand"] = ithoFanDemand;
   systemstat["ota_progress"] = otaUpdateProgress;
   systemstat["uuid"] = uuid;
+  servicetoolGetStatusJSON(systemstat["servicetool"].to<JsonObject>(), false);
 
   notifyClients(root.as<JsonObject>());
 }

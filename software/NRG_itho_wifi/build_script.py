@@ -358,6 +358,10 @@ def build_openapi_spec():
     doc["paths"]["/api/v2/lastcmd"] = rest_get("Get last executed command")
     doc["paths"]["/api/v2/remotes"] = rest_get("Get RF remotes configuration")
     doc["paths"]["/api/v2/vremotes"] = rest_get("Get virtual remotes info")
+    doc["paths"]["/api/v2/servicetool"] = rest_get(
+        "Servicetool bridge session state (state, client, since, last_activity, frame counters). "
+        "While a session is active, Itho control commands on all APIs return 409."
+    )
     doc["paths"]["/api/v2/rfstatus"] = rest_get(
         "Get RF device status",
         parameters=[

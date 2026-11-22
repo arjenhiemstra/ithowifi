@@ -312,6 +312,26 @@
         }
       }
     },
+    "/api/v2/servicetool": {
+      "get": {
+        "summary": "Servicetool bridge session state (state, client, since, last_activity, frame counters). While a session is active, Itho control commands on all APIs return 409.",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/rfstatus": {
       "get": {
         "summary": "Get RF device status",

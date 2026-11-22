@@ -7,6 +7,7 @@
 #include "ithodevice/IthoDevice.h"
 #include "generic_functions.h"
 #include "mqtt_debug.h"
+#include "managers/ServicetoolBridge.h"
 
 #define TASK_MQTT_PRIO 5
 
@@ -95,6 +96,20 @@ bool MQTTPublishJson(const JsonDocument &doc, const char *topic)
   return true;
 }
 
+// Publish the servicetool session state (retained) on <base>/servicetool.
+// Also used by HA discovery for the session binary_sensor and, optionally,
+// as a second availability topic for the Itho status sensors.
+static void mqttPublishServicetool()
+{
+  char topic[160]{};
+  servicetoolMqttTopic(topic, sizeof(topic));
+
+  JsonDocument doc;
+  servicetoolGetStatusJSON(doc.to<JsonObject>(), true);
+  MQTTPublishJson(doc, topic);
+}
+
+
 void MQTTSendBuffered(const JsonDocument &doc, const char *topic)
 {
   MQTTPublishJson(doc, topic);
@@ -134,6 +149,11 @@ void execMQTTTasks()
       updateIthoMQTT = false;
       updateState(ithoCurrentVal);
       mqttPublishLastcmd();
+    }
+    if (servicetoolMqttUpdate)
+    {
+      servicetoolMqttUpdate = false;
+      mqttPublishServicetool();
     }
     // if (updateMQTTmodeStatus)
     // {
@@ -592,6 +612,7 @@ bool setupMQTTClient()
         strlcpy(mqttSessionLwt, lwttopic, sizeof(mqttSessionLwt));
         if (changed)
           sendHomeAssistantDiscovery = true; // possibly a new broker or base topic
+        servicetoolMqttUpdate = true; // (re)publish session state after every connect
 
         return true;
       }

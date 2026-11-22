@@ -1,4 +1,5 @@
 #include "api/WebAPIv1.h"
+#include "managers/ServicetoolBridge.h"
 #include "api/StreamResponse.h"
 #include "tasks/task_web.h"
 
@@ -42,6 +43,21 @@ void handleAPIv1(AsyncWebServerRequest *request)
     {
       request->send(200, "text/html", "AUTHENTICATION FAILED");
       return;
+    }
+  }
+
+  // During a servicetool session every legacy-API command controls the Itho;
+  // only "get" queries (and the credentials) are allowed.
+  if (servicetoolSessionActive)
+  {
+    for (int i = 0; i < params; i++)
+    {
+      const char *name = request->getParam(i)->name().c_str();
+      if (strcmp(name, "get") != 0 && strcmp(name, "username") != 0 && strcmp(name, "password") != 0)
+      {
+        request->send(409, "text/html", "SERVICETOOL SESSION ACTIVE - COMMANDS BLOCKED");
+        return;
+      }
     }
   }
 

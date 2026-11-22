@@ -7,6 +7,7 @@
 #include "IthoQueue.h"
 #include "config/IthoRemote.h"
 #include "ithodevice/IthoDevice.h"
+#include "managers/ServicetoolBridge.h"
 
 #include <ESPAsyncWebServer.h>
 #include <new>
@@ -14,6 +15,11 @@
 #include <ArduinoJson.h>
 
 // --- Helpers ---
+// Refuse Itho control commands (I2C and RF) while the Itho servicetool owns
+// the bus. Module functions (status, OTA, debug/reboot, RF remote config)
+// stay available. Returns true when the request was answered with 409.
+static bool checkServicetoolBusy(AsyncWebServerRequest *request);
+
 
 // Gate REST requests during active OTA download. The HTTPS TLS session
 // consumes ~30-40KB of heap; concurrent JSON serialization can trigger
@@ -100,7 +106,25 @@ static void sendError(AsyncWebServerRequest *request, const char *message, int s
   sendJsonResponse(request, doc, statusCode);
 }
 
+static bool checkServicetoolBusy(AsyncWebServerRequest *request)
+{
+  if (!servicetoolSessionActive)
+    return false;
+  sendFail(request, "servicetool session active - commands blocked", 409);
+  return true;
+}
+
 // --- GET endpoints ---
+
+// GET /api/v2/servicetool
+static void handleGetServicetool(AsyncWebServerRequest *request)
+{
+  if (!checkAuthOnly(request))
+    return;
+  JsonDocument data;
+  servicetoolGetStatusJSON(data["servicetool"].to<JsonObject>(), true);
+  sendSuccess(request, data);
+}
 
 // GET /api/v2/speed
 static void handleGetSpeed(AsyncWebServerRequest *request)
@@ -343,6 +367,8 @@ static void handleGetSettings(AsyncWebServerRequest *request)
 {
   if (!checkRestAuth(request))
     return;
+  if (checkServicetoolBusy(request))
+    return;
 
   if (!request->hasParam("index"))
   {
@@ -411,6 +437,8 @@ static void handleGetSettings(AsyncWebServerRequest *request)
 static void handlePostCommand(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (!checkRestAuth(request))
+    return;
+  if (checkServicetoolBusy(request))
     return;
 
   JsonObject body = json.as<JsonObject>();
@@ -558,6 +586,8 @@ static void handlePostVRemote(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (!checkRestAuth(request))
     return;
+  if (checkServicetoolBusy(request))
+    return;
 
   JsonObject body = json.as<JsonObject>();
 
@@ -591,6 +621,8 @@ static void handlePostRFRemote(AsyncWebServerRequest *request, JsonVariant &json
 {
   if (!checkRestAuth(request))
     return;
+  if (checkServicetoolBusy(request))
+    return;
 
   JsonObject body = json.as<JsonObject>();
   JsonDocument params;
@@ -619,6 +651,8 @@ static void handlePostRFRemote(AsyncWebServerRequest *request, JsonVariant &json
 static void handlePostRFCO2(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (!checkRestAuth(request))
+    return;
+  if (checkServicetoolBusy(request))
     return;
 
   JsonObject body = json.as<JsonObject>();
@@ -656,6 +690,8 @@ static void handlePostRFCO2(AsyncWebServerRequest *request, JsonVariant &json)
 static void handlePostRFDemand(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (!checkRestAuth(request))
+    return;
+  if (checkServicetoolBusy(request))
     return;
 
   JsonObject body = json.as<JsonObject>();
@@ -695,6 +731,8 @@ static void handlePostRFDemand(AsyncWebServerRequest *request, JsonVariant &json
 static void handlePostRFSetpoint(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (!checkRestAuth(request))
+    return;
+  if (checkServicetoolBusy(request))
     return;
 
   JsonObject body = json.as<JsonObject>();
@@ -753,6 +791,8 @@ static void handlePostRFConfig(AsyncWebServerRequest *request, JsonVariant &json
 static void handlePutSettings(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (!checkRestAuth(request))
+    return;
+  if (checkServicetoolBusy(request))
     return;
 
   JsonObject body = json.as<JsonObject>();
@@ -838,6 +878,8 @@ static void handlePostOutsideTemp(AsyncWebServerRequest *request, JsonVariant &j
 {
   if (!checkRestAuth(request))
     return;
+  if (checkServicetoolBusy(request))
+    return;
 
   JsonObject body = json.as<JsonObject>();
   if (body["temp"].isNull())
@@ -872,6 +914,8 @@ static void handlePostOutsideTemp(AsyncWebServerRequest *request, JsonVariant &j
 static void handlePostManualControl(AsyncWebServerRequest *request, JsonVariant &json)
 {
   if (!checkRestAuth(request))
+    return;
+  if (checkServicetoolBusy(request))
     return;
 
   JsonObject body = json.as<JsonObject>();
@@ -914,6 +958,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
 {
   // CORS preflight for all /api/v2/ endpoints
   server.on("/api/v2/speed", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/servicetool", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/ithostatus", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/deviceinfo", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/queue", HTTP_OPTIONS, handleOptions);
@@ -935,6 +980,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
 
   // GET endpoints
   server.on("/api/v2/speed", HTTP_GET, handleGetSpeed);
+  server.on("/api/v2/servicetool", HTTP_GET, handleGetServicetool);
   server.on("/api/v2/ithostatus", HTTP_GET, handleGetStatus);
   server.on("/api/v2/deviceinfo", HTTP_GET, handleGetDevice);
   server.on("/api/v2/ota", HTTP_GET, handleGetOTA);
