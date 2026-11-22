@@ -272,6 +272,8 @@ void handle_ws_message(JsonObject root)
   {
     sysStatReq = true;
   }
+  // "End session" button in the servicetool banner: TaskServicetool closes
+  // the connection on its next loop iteration
   if (root["servicetool_end"].is<bool>() && root["servicetool_end"].as<bool>())
   {
     if (servicetoolSessionActive)

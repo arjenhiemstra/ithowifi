@@ -31,6 +31,7 @@ void jsonSystemstat()
   systemstat["fan_demand"] = ithoFanDemand;
   systemstat["ota_progress"] = otaUpdateProgress;
   systemstat["uuid"] = uuid;
+  // servicetool session state, used by the web UI for the session banner
   servicetoolGetStatusJSON(systemstat["servicetool"].to<JsonObject>(), false);
 
   notifyClients(root.as<JsonObject>());
