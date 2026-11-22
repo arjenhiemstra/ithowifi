@@ -85,6 +85,12 @@ bool i2cSendCmd(uint8_t addr, const uint8_t *cmd, size_t len, i2c_cmdref_t origi
 bool i2cSendCmd(uint8_t addr, const uint8_t *cmd, size_t len);
 
 size_t i2cSlaveReceive(uint8_t *i2c_receive_buf);
+// Variant with a configurable wait for the first byte of the reply (the
+// default variant waits 50 ms). Following chunks still end after 50 ms silence.
+size_t i2cSlaveReceive(uint8_t *i2c_receive_buf, uint32_t first_byte_timeout_ms);
+// Same, but the wait for the first byte stops early when *abort becomes true
+// (checked every 20 ms). Used by the servicetool bridge.
+size_t i2cSlaveReceive(uint8_t *i2c_receive_buf, uint32_t first_byte_timeout_ms, volatile bool *abort);
 void i2cSlaveDeinit();
 bool checkI2Cbus(int log_entry_idx);
 int i2cClearBus();

@@ -63,6 +63,11 @@ public:
   bool queueEmpty() const;
 
   /**
+   * @brief Number of queued commands (thread-safe)
+   */
+  size_t queueSize() const;
+
+  /**
    * @brief Set I2C master pins
    */
   void setMasterPins(gpio_num_t sda, gpio_num_t scl);

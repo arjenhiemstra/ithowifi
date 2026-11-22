@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "managers/ServicetoolBridge.h"
 #include "globals.h"
 #include "tasks/boot_phases.h"
 #include "tasks/task_init.h"
@@ -42,6 +43,7 @@ void setup()
   startTaskCC1101();
   startTaskMQTT();
   startTaskWeb();
+  startTaskServicetoolBridge(); // gates on CONFIG + NET; listens only when enabled
 
   // loopTask has nothing to do. Left running it starves the idle task of this core,
   // and that idle task is what frees the memory of deleted tasks pinned here.

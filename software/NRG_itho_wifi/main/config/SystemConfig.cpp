@@ -27,6 +27,11 @@ SystemConfig::SystemConfig()
   itho_rf_co2_keepalive_freq = 300;
   itho_rf_co2_default_demand = 50;
   itho_rf_co2_default_co2 = 500;
+  servicetool_bridge = 0;
+  servicetool_port = 2323;
+  servicetool_timeout = 5;
+  servicetool_ha_unavail = 0;
+  strlcpy(servicetool_allow_ip, "", sizeof(servicetool_allow_ip));
   syssht30 = 0;
   mqtt_active = 0;
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
@@ -211,6 +216,33 @@ bool SystemConfig::set(JsonObject obj)
   {
     updated = true;
     itho_rf_co2_default_co2 = obj["itho_rf_co2_default_co2"];
+  }
+  if (!obj["servicetool_bridge"].isNull())
+  {
+    updated = true;
+    servicetool_bridge = obj["servicetool_bridge"];
+  }
+  if (!obj["servicetool_port"].isNull())
+  {
+    updated = true;
+    uint16_t port = obj["servicetool_port"];
+    if (port > 0)
+      servicetool_port = port;
+  }
+  if (!obj["servicetool_timeout"].isNull())
+  {
+    updated = true;
+    servicetool_timeout = obj["servicetool_timeout"];
+  }
+  if (!obj["servicetool_ha_unavail"].isNull())
+  {
+    updated = true;
+    servicetool_ha_unavail = obj["servicetool_ha_unavail"];
+  }
+  if (!obj["servicetool_allow_ip"].isNull())
+  {
+    updated = true;
+    strlcpy(servicetool_allow_ip, obj["servicetool_allow_ip"] | "", sizeof(servicetool_allow_ip));
   }
   if (!obj["api_settings_activated"].isNull())
   {
@@ -539,6 +571,11 @@ void SystemConfig::get(JsonObject obj) const
     obj["itho_rf_co2_keepalive_freq"] = itho_rf_co2_keepalive_freq;
     obj["itho_rf_co2_default_demand"] = itho_rf_co2_default_demand;
     obj["itho_rf_co2_default_co2"] = itho_rf_co2_default_co2;
+    obj["servicetool_bridge"] = servicetool_bridge;
+    obj["servicetool_port"] = servicetool_port;
+    obj["servicetool_timeout"] = servicetool_timeout;
+    obj["servicetool_ha_unavail"] = servicetool_ha_unavail;
+    obj["servicetool_allow_ip"] = servicetool_allow_ip;
     obj["api_settings_activated"].set(api_settings_activated.as<JsonArrayConst>());
   }
   if (complete || get_mqtt_settings)

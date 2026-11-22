@@ -1,5 +1,6 @@
 #include "i2c_esp32.h"
 #include "i2c_sniffer.h"
+#include "managers/ServicetoolBridge.h"
 
 #include <freertos/semphr.h>
 
@@ -13,6 +14,19 @@ I2CBusLock::I2CBusLock()
 I2CBusLock::~I2CBusLock()
 {
   xSemaphoreGiveRecursive(i2cBusMutex);
+}
+
+// During a servicetool session only the bridge may use the bus; everything
+// else (polling, API/MQTT/web commands, sensor reads) is refused here as a
+// catch-all, so nothing can interleave with the servicetool's traffic.
+static bool servicetoolBlocks(i2c_cmdref_t origin)
+{
+  if (servicetoolSessionActive && origin != I2C_CMD_SERVICETOOL)
+  {
+    servicetoolNoteBlocked(origin);
+    return true;
+  }
+  return false;
 }
 
 // I2C globals now managed by I2CManager (see managers/I2CManager.cpp)
@@ -127,6 +141,10 @@ esp_err_t i2cMasterReadSlave(uint8_t addr, uint8_t *data_rd, size_t size, i2c_cm
   {
     return ESP_FAIL;
   }
+  if (servicetoolBlocks(origin))
+  {
+    return ESP_FAIL;
+  }
 
   int log_entry_idx = i2cLogger.i2cLogStart(origin);
 
@@ -170,6 +188,10 @@ bool i2cSendBytes(const uint8_t *buf, size_t len, i2c_cmdref_t origin)
   {
     return false;
   }
+  if (servicetoolBlocks(origin))
+  {
+    return false;
+  }
 
   int log_entry_idx = i2cLogger.i2cLogStart(origin);
 
@@ -201,6 +223,10 @@ bool i2cSendCmd(uint8_t addr, const uint8_t *cmd, size_t len, i2c_cmdref_t origi
   {
     return false;
   }
+  if (servicetoolBlocks(origin))
+  {
+    return false;
+  }
 
   int log_entry_idx = i2cLogger.i2cLogStart(origin);
 
@@ -226,6 +252,16 @@ bool i2cSendCmd(uint8_t addr, const uint8_t *cmd, size_t len)
 }
 
 size_t i2cSlaveReceive(uint8_t *i2c_receive_buf)
+{
+  return i2cSlaveReceive(i2c_receive_buf, 50);
+}
+
+size_t i2cSlaveReceive(uint8_t *i2c_receive_buf, uint32_t first_byte_timeout_ms)
+{
+  return i2cSlaveReceive(i2c_receive_buf, first_byte_timeout_ms, nullptr);
+}
+
+size_t i2cSlaveReceive(uint8_t *i2c_receive_buf, uint32_t first_byte_timeout_ms, volatile bool *abort)
 {
   I2CBusLock lock;
   // The sniffer interrupt's busy-wait through the reply can cost the slave receive a byte (#295).
@@ -255,7 +291,36 @@ size_t i2cSlaveReceive(uint8_t *i2c_receive_buf)
   // (e.g., HRU 300). Some devices may send responses across multiple I2C transactions
   // or with delays between bytes.
   int total_len = 0;
-  while (total_len < I2C_SLAVE_RX_BUF_LEN - 1)
+
+  // Wait for the first byte. Without an abort flag this is a single read
+  // (original behaviour); with one, wait in 20 ms slices so the caller can
+  // cut the wait short.
+  if (abort == nullptr)
+  {
+    int len = i2c_slave_read_buffer(I2C_SLAVE_NUM, &i2c_receive_buf[1], I2C_SLAVE_RX_BUF_LEN - 1,
+                                     first_byte_timeout_ms / portTICK_PERIOD_MS);
+    if (len > 0)
+      total_len = len;
+  }
+  else
+  {
+    uint32_t waited = 0;
+    while (waited < first_byte_timeout_ms && !*abort)
+    {
+      uint32_t slice = first_byte_timeout_ms - waited < 20 ? first_byte_timeout_ms - waited : 20;
+      int len = i2c_slave_read_buffer(I2C_SLAVE_NUM, &i2c_receive_buf[1], I2C_SLAVE_RX_BUF_LEN - 1,
+                                       slice / portTICK_PERIOD_MS);
+      if (len > 0)
+      {
+        total_len = len;
+        break;
+      }
+      waited += slice;
+    }
+  }
+
+  // Following chunks: stop after 50 ms of silence
+  while (total_len > 0 && total_len < I2C_SLAVE_RX_BUF_LEN - 1)
   {
     int len = i2c_slave_read_buffer(I2C_SLAVE_NUM, &i2c_receive_buf[1 + total_len],
                                      I2C_SLAVE_RX_BUF_LEN - 1 - total_len,
