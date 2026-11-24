@@ -14,7 +14,7 @@ The add-on polls the meters the user configured. The feature is switched on with
 
 - [x] Ids are accepted as hex bytes (`77,FC,4D`, also `:` or no separator) and in ramses notation (`29:261197`); stored and shown as hex bytes
 - [x] Up to 8 meters with a name each; interval 10 to 3600 s; the add-on sends one `RQ 2401` per meter per interval, round robin, as itself (own id), one frame (no repeats: the reply would be lost)
-- [x] `RP 2401` of 13 bytes from a type 29 device is decoded; other 2401 traffic (WPU, fans) is ignored
+- [x] `RP 2401` of 13 bytes from a type 29 device is decoded; a device of another type counts only when its id is configured (the large inverter meter answers as type 37); other 2401 traffic (WPU, fans) is ignored
 - [x] `GET /api/v2/kwhmeters`: `enabled`, `interval`, `kwhmeters` keyed by id with `id`, `name`, `e1_kwh`..`e3_kwh`, `lastseen`, `frames`, `configured`; configured meters without a reply yet are listed with zero counters
 - [x] MQTT: retained `<base>/kwhmeter/77_FC_4D` with the same fields after every reply, configured meters only
 - [x] HA discovery: energy sensors (`total_increasing`, kWh) per configured meter that answered, named after the meter name (fallback "kWh meter <id>"); a counter that is still zero gets none; the list is republished when the configuration changes

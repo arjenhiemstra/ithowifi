@@ -2601,8 +2601,8 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
   }
 }
 
-// RP 2401 pushed by a kWh meter (device type 29) to its bound WPU; the add-on only listens. Other 2401 traffic
-// (fans and the WPU itself use the opcode too) is left alone by the type check.
+// RP 2401 of a kWh meter (reply to our poll or push to its WPU). The 13 byte length separates it from other
+// 2401 traffic; the callback decides by device type and configured ids.
 void IthoCC1101::handleKwhMeter(IthoPacket *packetPtr)
 {
   const uint8_t verb = (packetPtr->header >> 4) & 0x3; // 0 RQ, 1 I, 2 W, 3 RP
@@ -2613,8 +2613,6 @@ void IthoCC1101::handleKwhMeter(IthoPacket *packetPtr)
   const uint8_t byte0 = packetPtr->deviceId0 >> 16 & 0xFF;
   const uint8_t byte1 = packetPtr->deviceId0 >> 8 & 0xFF;
   const uint8_t byte2 = packetPtr->deviceId0 & 0xFF;
-  if (!rfkwh::isMeterId(byte0))
-    return;
   if (rfKwhCallback)
     rfKwhCallback(&packetPtr->dataDecoded[packetPtr->payloadPos], packetPtr->len, byte0, byte1, byte2);
 }

@@ -17,13 +17,17 @@ void parseRFKwhMeter(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_
 {
   if (systemConfig.itho_rf_kwh != 1)
     return;
+  const uint8_t id[3] = {srcId0, srcId1, srcId2};
+  // type 29 meters are taken as they come; another device type counts only when the user configured its id
+  // (the large inverter meter answers as type 37)
+  if (!rfkwh::isMeterId(srcId0) && kwhMeterConfig.find(id) < 0)
+    return;
   rfkwh::Reading r;
   if (!rfkwh::decode2401(payload, len, r))
     return;
 
   time_t now;
   time(&now);
-  const uint8_t id[3] = {srcId0, srcId1, srcId2};
 
   if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
     return; // a reader is busy, the next poll comes soon enough
