@@ -1,0 +1,126 @@
+<div class="header">
+  <h1>kWh meters</h1>
+</div>
+<p>RF kWh meters (Itho/Klimaatgarant) are read over RF on request. Enter the id printed on the meter (six hex characters, e.g. 77FC4D), give it a name and save. The add-on then polls every meter once per interval and publishes the counters on the WebAPI (<code>/api/v2/kwhmeters</code>), MQTT (<code>kwhmeter/&lt;id&gt;</code>) and HA discovery.</p>
+<div id="kwh_disabled" class="hidden"><p style="color:red;">kWh meter polling is switched off. Enable it on the RF settings page first.</p></div>
+<form class="pure-form pure-form-aligned" onsubmit="return false;">
+  <fieldset>
+    <div class="pure-control-group">
+      <label for="kwh_interval">Poll interval (seconds)</label>
+      <input type="number" id="kwh_interval" min="10" max="3600" value="60" style="width:100px;">
+      <span style="margin-left:1em;font-size:0.9em;color:#666;">Every meter is asked once per interval (10 to 3600 s).</span>
+    </div>
+    <table id="kwh_table" class="pure-table pure-table-bordered" style="margin-top:1em;">
+      <thead><tr><th>Id</th><th>Name</th><th>E1 (kWh)</th><th>E2 (kWh)</th><th>E3 (kWh)</th><th>Last reply</th><th></th></tr></thead>
+      <tbody id="kwh_rows"></tbody>
+    </table>
+    <div class="pure-controls" style="margin-top:1em;">
+      <button id="kwh_add" type="button" class="pure-button">Add meter</button>
+      <button id="kwh_save" type="button" class="pure-button pure-button-primary">Save</button>
+      <span id="kwh_warn" style="color:red; margin-left:10px;"></span>
+    </div>
+  </fieldset>
+</form>
+<div id="kwh_heard_block" class="hidden">
+  <p>Meters heard on RF that are not in the list (neighbours' meters show up here too):</p>
+  <table id="kwh_heard" class="pure-table pure-table-bordered"><tbody></tbody></table>
+</div>
+<script>
+  var kwhMax = 8;
+  var kwhReadings = {};
+  function kwhNormId(s) {
+    // "77,FC,4D", "77:FC:4D", "77FC4D" or ramses style "29:261197" / "261197" (type 29 meters)
+    s = (s || '').trim().toUpperCase();
+    var m = s.match(/^(?:29:)?(\d{1,6})$/);
+    if (m && !/^[0-9A-F]{6}$/.test(s)) {
+      var n = (29 << 18) + parseInt(m[1], 10);
+      return [n >> 16 & 255, n >> 8 & 255, n & 255].map(function (b) { return ('0' + b.toString(16).toUpperCase()).slice(-2); }).join(',');
+    }
+    var h = s.replace(/[^0-9A-F]/g, '');
+    if (!/^[0-9A-F]{6}$/.test(h)) return null;
+    return h.slice(0, 2) + ',' + h.slice(2, 4) + ',' + h.slice(4, 6);
+  }
+  function kwhRow(id, name) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td><input type="text" class="kwh-id" maxlength="12" placeholder="77FC4D" style="width:110px;"></td>' +
+      '<td><input type="text" class="kwh-name" maxlength="31" placeholder="e.g. Heat pump" style="width:160px;"></td>' +
+      '<td class="kwh-e1">-</td><td class="kwh-e2">-</td><td class="kwh-e3">-</td><td class="kwh-seen">-</td>' +
+      '<td><button type="button" class="pure-button kwh-del">Remove</button></td>';
+    tr.querySelector('.kwh-id').value = (id || '').replace(/,/g, '');
+    tr.querySelector('.kwh-name').value = name || '';
+    tr.querySelector('.kwh-del').addEventListener('click', function () { tr.remove(); });
+    $id('kwh_rows').appendChild(tr);
+    kwhFillRow(tr);
+  }
+  function kwhFillRow(tr) {
+    var r = kwhReadings[kwhNormId(tr.querySelector('.kwh-id').value)];
+    tr.querySelector('.kwh-e1').textContent = r ? r.e1_kwh.toFixed(3) : '-';
+    tr.querySelector('.kwh-e2').textContent = r ? r.e2_kwh.toFixed(3) : '-';
+    tr.querySelector('.kwh-e3').textContent = r ? r.e3_kwh.toFixed(3) : '-';
+    tr.querySelector('.kwh-seen').textContent = r && r.lastseen > 0 ? new Date(r.lastseen * 1000).toLocaleString() : '-';
+  }
+  function kwhCollect() {
+    var meters = [], seen = {}, warn = '';
+    document.querySelectorAll('#kwh_rows tr').forEach(function (tr) {
+      var raw = tr.querySelector('.kwh-id').value.trim();
+      if (raw === '') return;
+      var id = kwhNormId(raw);
+      if (!id) { warn = 'Invalid id "' + raw + '": use the six hex characters printed on the meter, like 77FC4D.'; return; }
+      if (seen[id]) return;
+      seen[id] = true;
+      meters.push({ id: id, name: tr.querySelector('.kwh-name').value.trim() });
+    });
+    if (!warn && meters.length > kwhMax) warn = 'At most ' + kwhMax + ' meters.';
+    return { meters: meters, warn: warn };
+  }
+  $id('kwh_add').addEventListener('click', function () {
+    if (document.querySelectorAll('#kwh_rows tr').length >= kwhMax) { $id('kwh_warn').textContent = 'At most ' + kwhMax + ' meters.'; return; }
+    kwhRow('', '');
+  });
+  $id('kwh_save').addEventListener('click', function () {
+    var c = kwhCollect();
+    $id('kwh_warn').textContent = c.warn;
+    if (c.warn) return;
+    websock_send(JSON.stringify({ kwhsettings: { interval: parseInt($id('kwh_interval').value, 10) || 60, meters: c.meters } }));
+  });
+  function kwhAddHeard(btn) {
+    if (document.querySelectorAll('#kwh_rows tr').length >= kwhMax) { $id('kwh_warn').textContent = 'At most ' + kwhMax + ' meters.'; return; }
+    kwhRow(btn.getAttribute('data-id'), '');
+  }
+  var kwhEditing = false;
+  function kwhRender(x) {
+    kwhMax = x.max || 8;
+    $id('kwh_disabled').classList.toggle('hidden', x.enabled == 1);
+    kwhReadings = {};
+    (x.heard || []).forEach(function (h) { kwhReadings[h.id] = h; });
+    var rows = $id('kwh_rows');
+    var active = document.activeElement;
+    var typing = active && rows.contains(active);
+    if (!typing && !kwhEditing) {
+      rows.innerHTML = '';
+      (x.meters || []).forEach(function (m) { kwhRow(m.id, m.name); });
+      $id('kwh_interval').value = x.interval;
+    } else {
+      rows.querySelectorAll('tr').forEach(kwhFillRow);
+    }
+    var ids = {};
+    (x.meters || []).forEach(function (m) { ids[m.id] = true; });
+    var heard = (x.heard || []).filter(function (h) { return !ids[h.id]; });
+    $id('kwh_heard_block').classList.toggle('hidden', heard.length === 0);
+    var hb = $id('kwh_heard').querySelector('tbody');
+    hb.innerHTML = '';
+    heard.forEach(function (h) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + h.id.replace(/,/g, '') + '</td><td>' + h.e1_kwh.toFixed(3) + ' kWh</td><td>' + new Date(h.lastseen * 1000).toLocaleString() + '</td><td><button type="button" class="pure-button" data-id="' + h.id + '" onclick="kwhAddHeard(this)">Add</button></td>';
+      hb.appendChild(tr);
+    });
+  }
+  $id('kwh_rows').addEventListener('input', function () { kwhEditing = true; });
+  $id('kwh_add').addEventListener('click', function () { kwhEditing = true; });
+  $id('kwh_save').addEventListener('click', function () { kwhEditing = false; });
+  function repeatKwh() {
+    getSettings('kwhsettings');
+    kwh_to = setTimeout(repeatKwh, 10000);
+  }
+  repeatKwh();
+</script>

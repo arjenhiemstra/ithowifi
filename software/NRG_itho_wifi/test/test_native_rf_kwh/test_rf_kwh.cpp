@@ -12,9 +12,9 @@ using namespace rfkwh;
 void setUp() {}
 void tearDown() {}
 
-// A7,FC,4D = 29:261197 in ramses_rf (heat pump meter, three counters), A7,FB,A8 = 29:261032 (ventilation unit, one counter)
-static const uint8_t ID_WP[3] = {0xA7, 0xFC, 0x4D};
-static const uint8_t ID_WTW[3] = {0xA7, 0xFB, 0xA8};
+// 77,FC,4D = 29:261197 in ramses_rf (heat pump meter, three counters), 77,FB,A8 = 29:261032 (ventilation unit, one counter)
+static const uint8_t ID_WP[3] = {0x77, 0xFC, 0x4D};
+static const uint8_t ID_WTW[3] = {0x77, 0xFB, 0xA8};
 static const uint8_t ID_WPU[3] = {0x83, 0x91, 0x5D}; // 20:233821, not a meter
 
 // RP 29:261197 -> 20:233821 2401 013 000064E57400431DBD004BD1B0
@@ -52,6 +52,30 @@ void test_decode_rejects_bad_input()
   TEST_ASSERT_FALSE(decode2401(bad, 13, r));
 }
 
+void test_parse_id(void)
+{
+  uint8_t id[3];
+  TEST_ASSERT_TRUE(rfkwh::parseId("77,FC,4D", id));
+  TEST_ASSERT_EQUAL_HEX8(0x77, id[0]);
+  TEST_ASSERT_EQUAL_HEX8(0xFC, id[1]);
+  TEST_ASSERT_EQUAL_HEX8(0x4D, id[2]);
+  TEST_ASSERT_TRUE(rfkwh::parseId("77:fc:4d", id));
+  TEST_ASSERT_EQUAL_HEX8(0x4D, id[2]);
+  TEST_ASSERT_TRUE(rfkwh::parseId("77FC4D", id));
+  TEST_ASSERT_EQUAL_HEX8(0xFC, id[1]);
+  TEST_ASSERT_TRUE(rfkwh::parseId("29:261197", id)); // ramses notation of the same meter
+  TEST_ASSERT_EQUAL_HEX8(0x77, id[0]);
+  TEST_ASSERT_EQUAL_HEX8(0xFC, id[1]);
+  TEST_ASSERT_EQUAL_HEX8(0x4D, id[2]);
+  TEST_ASSERT_TRUE(rfkwh::parseId("29:261032", id));
+  TEST_ASSERT_EQUAL_HEX8(0xA8, id[2]);
+  TEST_ASSERT_FALSE(rfkwh::parseId("77,FC", id));
+  TEST_ASSERT_FALSE(rfkwh::parseId("77,FC,4D,00", id));
+  TEST_ASSERT_FALSE(rfkwh::parseId("zz,FC,4D", id));
+  TEST_ASSERT_FALSE(rfkwh::parseId("", id));
+  TEST_ASSERT_FALSE(rfkwh::parseId(nullptr, id));
+}
+
 void test_id_helpers()
 {
   TEST_ASSERT_TRUE(isMeterId(ID_WP[0]));
@@ -59,9 +83,9 @@ void test_id_helpers()
   TEST_ASSERT_FALSE(isMeterId(ID_WPU[0]));
   char s[12];
   formatId(ID_WP, s, sizeof(s));
-  TEST_ASSERT_EQUAL_STRING("A7,FC,4D", s);
+  TEST_ASSERT_EQUAL_STRING("77,FC,4D", s);
   formatTopicId(ID_WTW, s, sizeof(s));
-  TEST_ASSERT_EQUAL_STRING("A7_FB_A8", s);
+  TEST_ASSERT_EQUAL_STRING("77_FB_A8", s);
   const uint8_t low[3] = {0xA4, 0x0A, 0x01}; // leading zeros kept
   formatId(low, s, sizeof(s));
   TEST_ASSERT_EQUAL_STRING("A4,0A,01", s);
@@ -130,6 +154,7 @@ int main(int, char **)
   RUN_TEST(test_decode_three_counters);
   RUN_TEST(test_decode_single_counter);
   RUN_TEST(test_decode_rejects_bad_input);
+  RUN_TEST(test_parse_id);
   RUN_TEST(test_id_helpers);
   RUN_TEST(test_store_update_and_new);
   RUN_TEST(test_store_full);

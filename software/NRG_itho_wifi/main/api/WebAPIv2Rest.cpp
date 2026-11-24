@@ -8,6 +8,7 @@
 #include "config/IthoRemote.h"
 #include "ithodevice/IthoDevice.h"
 #include "ithodevice/RFKwhMeters.h"
+#include "config/KwhMeterConfig.h"
 
 #include <ESPAsyncWebServer.h>
 #include <new>
@@ -340,12 +341,14 @@ static void handleGetRFStatus(AsyncWebServerRequest *request)
 }
 
 // GET /api/v2/settings?index=N
-// GET /api/v2/kwhmeters: RF kWh meters heard since boot, keyed by id (hex bytes)
+// GET /api/v2/kwhmeters: RF kWh meters (configured and heard), keyed by id (hex bytes), plus the poll settings
 static void handleGetKwhMeters(AsyncWebServerRequest *request)
 {
   if (!checkRestAuth(request))
     return;
   JsonDocument data;
+  data["enabled"] = systemConfig.itho_rf_kwh;
+  data["interval"] = kwhMeterConfig.interval;
   getRFKwhMetersJSON(data["kwhmeters"].to<JsonObject>());
   sendSuccess(request, data);
 }
@@ -839,6 +842,9 @@ static void handlePostDebug(AsyncWebServerRequest *request, JsonVariant &json)
   params["debug"] = body["action"];
   params["data"] = body["data"];
   params["repeats"] = body["repeats"];
+  params["dest"] = body["dest"];
+  params["opcode"] = body["opcode"];
+  params["src"] = body["src"];
 
   JsonDocument responseDoc;
   auto status = processDebugCommands(params.as<JsonObject>(), responseDoc);

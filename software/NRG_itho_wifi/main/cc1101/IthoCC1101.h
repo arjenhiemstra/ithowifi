@@ -338,6 +338,7 @@ public:
   void send12A0(uint8_t remote_index, uint8_t humidity, int16_t temperature, int16_t dewpoint);
   void send31E0(uint8_t remote_index, uint8_t zone = 0, uint8_t demand = 0, uint8_t flags = 0);
   void sendRQ31DA(uint8_t remote_index);
+  void sendRQ(const uint8_t src[3], const uint8_t dest[3], const uint8_t *command); // src nullptr = own id; command = opcode(2), len, payload
   void sendRQ31D9(uint8_t remote_index);
   void send10E0();
   void send2E10(uint8_t remote_index, IthoCommand command);

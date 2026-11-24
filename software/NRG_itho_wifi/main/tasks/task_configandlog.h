@@ -18,6 +18,7 @@
 #include "config/Config.h"
 #include "config/LogConfig.h"
 #include "config/HADiscConfig.h"
+#include "config/KwhMeterConfig.h"
 #include "esp32_repartition.h"
 
 // #include "LittleFS.h"
@@ -30,6 +31,7 @@ extern uint32_t TaskConfigAndLogHWmark;
 extern volatile bool saveRemotesflag;
 extern volatile bool saveVremotesflag;
 extern volatile bool saveRFTrackedConfigflag;
+extern volatile bool saveKwhMeterConfigflag;
 extern bool chkpartition;
 extern int chk_partition_res;
 extern bool formatFileSystem;

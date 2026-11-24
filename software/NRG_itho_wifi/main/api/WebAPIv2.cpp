@@ -964,6 +964,40 @@ ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonD
     response["result"] = "legacy RF frame queued";
     return ApiResponse::status::SUCCESS;
   }
+  else if (strcmp(value, "rfrq") == 0)
+  {
+    // dest: "A7,FC,4D"; opcode: "2401"; data: payload hex bytes (optional, default 00); repeats 1-5
+    std::vector<int> dest = parseHexString(params["dest"] | "");
+    std::vector<int> op = parseHexString(params["opcode"] | "");
+    std::vector<int> payload = parseHexString(params["data"] | "00");
+    std::vector<int> src = parseHexString(params["src"] | "21,42,63"); // default: the add-on's own id
+    const int repeats = params["repeats"] | 1;
+    if (src.size() != 3 || dest.size() != 3 || op.size() != 2 || payload.empty() || payload.size() > 48 || repeats < 1 || repeats > 5)
+    {
+      response["code"] = 400;
+      response["failreason"] = "src, dest: 3 hex bytes; opcode: 2 hex bytes; data: 1-48 hex bytes; repeats: 1-5";
+      return ApiResponse::status::FAIL;
+    }
+    uint8_t buf[64];
+    uint8_t n = 0;
+    for (int b : src)
+      buf[n++] = static_cast<uint8_t>(b);
+    for (int b : dest)
+      buf[n++] = static_cast<uint8_t>(b);
+    for (int b : op)
+      buf[n++] = static_cast<uint8_t>(b);
+    buf[n++] = static_cast<uint8_t>(payload.size());
+    for (int b : payload)
+      buf[n++] = static_cast<uint8_t>(b);
+    if (!legacyRFRequest(6, buf, n, repeats))
+    {
+      response["code"] = 409;
+      response["failreason"] = "previous RF request still pending";
+      return ApiResponse::status::FAIL;
+    }
+    response["result"] = "RQ queued";
+    return ApiResponse::status::SUCCESS;
+  }
   else if (strcmp(value, "reboot") == 0)
   {
     if (systemConfig.api_reboot == 0)

@@ -6,6 +6,7 @@
 #include "api/MqttAPI.h"
 #include "ithodevice/IthoDevice.h"
 #include "ithodevice/RFKwhMeters.h"
+#include "config/KwhMeterConfig.h"
 #include "generic_functions.h"
 #include "mqtt_debug.h"
 
@@ -281,9 +282,11 @@ void mqttSendStatus()
   }
 }
 
-// One retained topic per meter: <base>/kwhmeter/A7_FC_4D. Meters push about once an hour.
+// One retained topic per configured meter: <base>/kwhmeter/77_FC_4D, after every poll reply.
 void mqttSendKwhMeters()
 {
+  if (systemConfig.itho_rf_kwh != 1)
+    return;
   for (int i = 0; i < rfkwh::MAX_METERS; i++)
   {
     JsonDocument doc;
@@ -291,7 +294,7 @@ void mqttSendKwhMeters()
     if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
       return;
     const rfkwh::Meter &m = rfKwhMeters.at(i);
-    const bool used = m.used;
+    const bool used = m.used && kwhMeterConfig.find(m.id) >= 0;
     if (used)
     {
       rfkwh::formatTopicId(m.id, topicId, sizeof(topicId));

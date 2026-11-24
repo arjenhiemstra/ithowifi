@@ -4,6 +4,7 @@
 #include "tasks/boot_phases.h"
 #include "../sys_log.h"
 #include "generic_functions.h"
+#include "ithodevice/RFKwhMeters.h"
 #include <esp_heap_caps.h>
 
 #define TASK_SYS_CONTROL_PRIO 6
@@ -211,6 +212,7 @@ void execSystemControlTasks()
       if (idx >= 0)
         sendRFStatusRequest(static_cast<uint8_t>(idx));
     }
+    pollRFKwhMeters();
   }
 
   if (systemConfig.itho_rf_standalone != 1)

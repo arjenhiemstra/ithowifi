@@ -11,6 +11,7 @@ uint32_t TaskConfigAndLogHWmark = 0;
 volatile bool saveRemotesflag = false;
 volatile bool saveVremotesflag = false;
 volatile bool saveRFTrackedConfigflag = false;
+volatile bool saveKwhMeterConfigflag = false;
 bool chkpartition = false;
 int chk_partition_res = -1;
 bool formatFileSystem = false;
@@ -84,6 +85,7 @@ void TaskConfigAndLog(void *pvParameters)
   HADiscConfigLoaded = loadHADiscConfig("flash");
 
   loadRFTrackedSources();
+  loadKwhMeterConfig("flash");
 
   setPhase(PHASE_CONFIG); // filesystem mounted + config loaded + logging up
   syslogQueueWorker();
@@ -217,6 +219,14 @@ void execLogAndConfigTasks()
       logMessagejson("RF tracked sources saved", WEBINTERFACE);
     else
       logMessagejson("Failed saving RF tracked sources", WEBINTERFACE);
+  }
+  if (saveKwhMeterConfigflag)
+  {
+    saveKwhMeterConfigflag = false;
+    if (saveKwhMeterConfig("flash"))
+      logMessagejson("kWh meter settings saved", WEBINTERFACE);
+    else
+      logMessagejson("Failed saving kWh meter settings: Unable to write config file", WEBINTERFACE);
   }
   if (resetWifiConfigflag)
   {

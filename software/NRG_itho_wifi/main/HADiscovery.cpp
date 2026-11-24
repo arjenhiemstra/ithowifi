@@ -5,6 +5,7 @@
 
 #include "ithodevice/IthoDevice.h"
 #include "ithodevice/RFKwhMeters.h"
+#include "config/KwhMeterConfig.h"
 #include "notifyClients.h"
 #include "sys_log.h"
 #include "generic_functions.h"
@@ -454,17 +455,20 @@ void addHADiscoveryRFSensors(JsonObject components, JsonObject compactJson, cons
     }
 }
 
-// Energy sensors for the RF kWh meters heard since boot (<base>/kwhmeter/<id>). A counter that is still
-// zero gets no entity: single-phase meters only fill the first one.
+// Energy sensors for the configured RF kWh meters that answered at least once (<base>/kwhmeter/<id>).
+// A counter that is still zero gets no entity: single-phase meters only fill the first one.
 void addHADiscoveryKwhMeters(JsonObject components, const char *deviceName, const char *mqttBaseTopic)
 {
+    if (systemConfig.itho_rf_kwh != 1)
+        return;
     if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
         return;
     for (int i = 0; i < rfkwh::MAX_METERS; i++)
     {
         const rfkwh::Meter &m = rfKwhMeters.at(i);
-        if (!m.used)
+        if (!m.used || kwhMeterConfig.find(m.id) < 0)
             continue;
+        const char *mname = kwhMeterConfig.nameOf(m.id);
         char rid[12], topicId[12], topic[180];
         rfkwh::formatId(m.id, rid, sizeof(rid));
         rfkwh::formatTopicId(m.id, topicId, sizeof(topicId));
@@ -478,7 +482,7 @@ void addHADiscoveryKwhMeters(JsonObject components, const char *deviceName, cons
             JsonObject componentJson = components[uniqueId].to<JsonObject>();
             componentJson["p"] = "sensor";
             componentJson["uniq_id"] = uniqueId;
-            componentJson["name"] = (std::string("kWh meter ") + rid + " E" + ch).c_str();
+            componentJson["name"] = (std::string(mname[0] ? mname : std::string("kWh meter ") + rid) + " E" + ch).c_str();
             componentJson["stat_t"] = topic;
             componentJson["val_tpl"] = (std::string("{{ value_json.e") + ch + "_kwh }}").c_str();
             componentJson["unit_of_meas"] = "kWh";

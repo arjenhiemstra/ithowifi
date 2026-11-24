@@ -1,6 +1,8 @@
 #include "websocket.h"
 #include "managers/SecureWebCommLite.h"
 #include "ithodevice/i2c_service.h"
+#include "ithodevice/RFKwhMeters.h"
+#include "config/KwhMeterConfig.h"
 
 static std::unordered_map<uint32_t, std::string> g_wsBuffers;
 static SemaphoreHandle_t g_wsBuffersMutex = xSemaphoreCreateMutex();
@@ -239,6 +241,11 @@ void jsonWsSend(const char *rootName)
   {
     JsonObject nested = root[rootName].to<JsonObject>();
     getRFStatusConfigJSON(nested, rfSelectedSourceForParsing);
+  }
+  else if (strcmp(rootName, "kwhsettings") == 0)
+  {
+    JsonObject nested = root[rootName].to<JsonObject>();
+    getRFKwhSettingsJSON(nested);
   }
   else if (strcmp(rootName, "chkpart") == 0)
   {
@@ -604,6 +611,21 @@ void handle_ws_message(JsonObject root)
   {
     rfSelectedSourceForParsing = root["source"].is<int>() ? root["source"].as<int>() : -1;
     jsonWsSend("rfstatusconfig");
+  }
+  if (root["kwhsettings"].is<bool>() && root["kwhsettings"].as<bool>())
+  {
+    jsonWsSend("kwhsettings");
+  }
+  if (root["kwhsettings"].is<JsonObject>())
+  {
+    if (kwhMeterConfig.set(root["kwhsettings"].as<JsonObject>()))
+    {
+      saveKwhMeterConfigflag = true;
+      if (systemConfig.mqtt_ha_active)
+        sendHomeAssistantDiscovery = true; // names or meter list changed
+      updateMQTTKwhMeters = true;
+    }
+    jsonWsSend("kwhsettings");
   }
   if (root["rftrack"].is<JsonObject>())
   {

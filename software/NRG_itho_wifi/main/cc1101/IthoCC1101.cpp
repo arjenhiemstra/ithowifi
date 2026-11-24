@@ -1103,6 +1103,20 @@ void IthoCC1101::sendRQ31DA(uint8_t remote_index)
   sendRFMessage(&message);
 }
 
+void IthoCC1101::sendRQ(const uint8_t src[3], const uint8_t dest[3], const uint8_t *command)
+{
+  RFmessage message;
+  message.header = HEADER_RQ_BIDIRECTIONAL;
+  memcpy(message.deviceid0, src != nullptr ? src : defaultID, 3);
+  memcpy(message.deviceid1, dest, 3);
+  message.command = command;
+  // one frame only: the reply comes within tens of ms and would be lost during the repeats
+  const uint8_t tries = sendTries;
+  sendTries = 1;
+  sendRFMessage(&message);
+  sendTries = tries;
+}
+
 void IthoCC1101::sendRQ31D9(uint8_t remote_index)
 {
   if (remote_index > MAX_NUM_OF_REMOTES - 1)

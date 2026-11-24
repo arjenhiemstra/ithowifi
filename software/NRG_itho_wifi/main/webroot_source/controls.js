@@ -15,6 +15,7 @@ var ithostatus_to;
 var hastatus_to;
 var remotesRefreshInterval;
 var rfstatus_to;
+var kwh_to;
 var saved_status_count = 0;
 var current_status_count = 0;
 var cachedRemotes = null; // last seen `ithoremotes` payload, used to populate the RF CO2 dropdown on the system settings page
@@ -601,6 +602,7 @@ const messageHandlers = {
       }
       var rfsm = $id('rfsettingsmenu');
       if (rfsm) rfsm.classList.toggle('hidden', !(typeof hw_revision !== 'undefined' && (hw_revision == "2" || hw_revision.startsWith('NON-CVE '))));
+      var km = $id('kwhmenu'); if (km) km.classList.toggle('hidden', !(x.itho_rf_support == 1 && x.rfInitOK == true && x.itho_rf_kwh == 1));
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
         $id('remotemenu').classList.remove('hidden');
         $id('rfstatusmenu').classList.remove('hidden');
@@ -818,6 +820,9 @@ const messageHandlers = {
       }
     }
     if (typeof updateTrackCheckbox === 'function') updateTrackCheckbox();
+  },
+  kwhsettings: function (f) {
+    if (typeof kwhRender === 'function' && $id('kwh_rows')) kwhRender(f.kwhsettings);
   },
   hadiscsettings: function (f) {
     var el = $id('ithostatusrdy');
@@ -1307,6 +1312,7 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
           itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
           itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
+          itho_rf_kwh: checkedVal('option-itho_rf_kwh'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
           itho_rf_co2_keepalive_demand: checkedVal('option-itho_rf_co2_keepalive_demand'),
@@ -1353,6 +1359,7 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
           itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
           itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
+          itho_rf_kwh: checkedVal('option-itho_rf_kwh'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
           itho_rf_co2_keepalive_demand: checkedVal('option-itho_rf_co2_keepalive_demand'),
@@ -2199,6 +2206,7 @@ function update_page(page) {
   clearTimeout(ithostatus_to);
   clearTimeout(hastatus_to);
   clearTimeout(rfstatus_to);
+  clearTimeout(kwh_to);
   if (remotesRefreshInterval) { clearInterval(remotesRefreshInterval); remotesRefreshInterval = null; }
   var main = $id('main');
   main.innerHTML = '';
@@ -2222,6 +2230,7 @@ function update_page(page) {
   if (page == 'status') { main.insertAdjacentHTML('beforeend', html_ithostatus); }
   if (page == 'remotes') { main.insertAdjacentHTML('beforeend', html_remotessetup); }
   if (page == 'rfstatus') { main.insertAdjacentHTML('beforeend', html_rfstatus); }
+  if (page == 'kwhmeters') { main.insertAdjacentHTML('beforeend', html_kwhmeters); }
   if (page == 'vremotes') { main.insertAdjacentHTML('beforeend', html_vremotessetup); }
   if (page == 'mqtt') { main.insertAdjacentHTML('beforeend', html_mqttsetup); }
   if (page == 'api') { main.insertAdjacentHTML('beforeend', html_api); }
@@ -5031,6 +5040,136 @@ var html_wifisetup = `
 </script>
 `;
 
+var html_kwhmeters = `
+<div class="header">
+  <h1>kWh meters</h1>
+</div>
+<p>RF kWh meters (Itho/Klimaatgarant) are read over RF on request. Enter the id printed on the meter (six hex characters, e.g. 77FC4D), give it a name and save. The add-on then polls every meter once per interval and publishes the counters on the WebAPI (<code>/api/v2/kwhmeters</code>), MQTT (<code>kwhmeter/&lt;id&gt;</code>) and HA discovery.</p>
+<div id="kwh_disabled" class="hidden"><p style="color:red;">kWh meter polling is switched off. Enable it on the RF settings page first.</p></div>
+<form class="pure-form pure-form-aligned" onsubmit="return false;">
+  <fieldset>
+    <div class="pure-control-group">
+      <label for="kwh_interval">Poll interval (seconds)</label>
+      <input type="number" id="kwh_interval" min="10" max="3600" value="60" style="width:100px;">
+      <span style="margin-left:1em;font-size:0.9em;color:#666;">Every meter is asked once per interval (10 to 3600 s).</span>
+    </div>
+    <table id="kwh_table" class="pure-table pure-table-bordered" style="margin-top:1em;">
+      <thead><tr><th>Id</th><th>Name</th><th>E1 (kWh)</th><th>E2 (kWh)</th><th>E3 (kWh)</th><th>Last reply</th><th></th></tr></thead>
+      <tbody id="kwh_rows"></tbody>
+    </table>
+    <div class="pure-controls" style="margin-top:1em;">
+      <button id="kwh_add" type="button" class="pure-button">Add meter</button>
+      <button id="kwh_save" type="button" class="pure-button pure-button-primary">Save</button>
+      <span id="kwh_warn" style="color:red; margin-left:10px;"></span>
+    </div>
+  </fieldset>
+</form>
+<div id="kwh_heard_block" class="hidden">
+  <p>Meters heard on RF that are not in the list (neighbours' meters show up here too):</p>
+  <table id="kwh_heard" class="pure-table pure-table-bordered"><tbody></tbody></table>
+</div>
+<script>
+  var kwhMax = 8;
+  var kwhReadings = {};
+  function kwhNormId(s) {
+    // "77,FC,4D", "77:FC:4D", "77FC4D" or ramses style "29:261197" / "261197" (type 29 meters)
+    s = (s || '').trim().toUpperCase();
+    var m = s.match(/^(?:29:)?(\d{1,6})$/);
+    if (m && !/^[0-9A-F]{6}$/.test(s)) {
+      var n = (29 << 18) + parseInt(m[1], 10);
+      return [n >> 16 & 255, n >> 8 & 255, n & 255].map(function (b) { return ('0' + b.toString(16).toUpperCase()).slice(-2); }).join(',');
+    }
+    var h = s.replace(/[^0-9A-F]/g, '');
+    if (!/^[0-9A-F]{6}$/.test(h)) return null;
+    return h.slice(0, 2) + ',' + h.slice(2, 4) + ',' + h.slice(4, 6);
+  }
+  function kwhRow(id, name) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td><input type="text" class="kwh-id" maxlength="12" placeholder="77FC4D" style="width:110px;"></td>' +
+      '<td><input type="text" class="kwh-name" maxlength="31" placeholder="e.g. Heat pump" style="width:160px;"></td>' +
+      '<td class="kwh-e1">-</td><td class="kwh-e2">-</td><td class="kwh-e3">-</td><td class="kwh-seen">-</td>' +
+      '<td><button type="button" class="pure-button kwh-del">Remove</button></td>';
+    tr.querySelector('.kwh-id').value = (id || '').replace(/,/g, '');
+    tr.querySelector('.kwh-name').value = name || '';
+    tr.querySelector('.kwh-del').addEventListener('click', function () { tr.remove(); });
+    $id('kwh_rows').appendChild(tr);
+    kwhFillRow(tr);
+  }
+  function kwhFillRow(tr) {
+    var r = kwhReadings[kwhNormId(tr.querySelector('.kwh-id').value)];
+    tr.querySelector('.kwh-e1').textContent = r ? r.e1_kwh.toFixed(3) : '-';
+    tr.querySelector('.kwh-e2').textContent = r ? r.e2_kwh.toFixed(3) : '-';
+    tr.querySelector('.kwh-e3').textContent = r ? r.e3_kwh.toFixed(3) : '-';
+    tr.querySelector('.kwh-seen').textContent = r && r.lastseen > 0 ? new Date(r.lastseen * 1000).toLocaleString() : '-';
+  }
+  function kwhCollect() {
+    var meters = [], seen = {}, warn = '';
+    document.querySelectorAll('#kwh_rows tr').forEach(function (tr) {
+      var raw = tr.querySelector('.kwh-id').value.trim();
+      if (raw === '') return;
+      var id = kwhNormId(raw);
+      if (!id) { warn = 'Invalid id "' + raw + '": use the six hex characters printed on the meter, like 77FC4D.'; return; }
+      if (seen[id]) return;
+      seen[id] = true;
+      meters.push({ id: id, name: tr.querySelector('.kwh-name').value.trim() });
+    });
+    if (!warn && meters.length > kwhMax) warn = 'At most ' + kwhMax + ' meters.';
+    return { meters: meters, warn: warn };
+  }
+  $id('kwh_add').addEventListener('click', function () {
+    if (document.querySelectorAll('#kwh_rows tr').length >= kwhMax) { $id('kwh_warn').textContent = 'At most ' + kwhMax + ' meters.'; return; }
+    kwhRow('', '');
+  });
+  $id('kwh_save').addEventListener('click', function () {
+    var c = kwhCollect();
+    $id('kwh_warn').textContent = c.warn;
+    if (c.warn) return;
+    websock_send(JSON.stringify({ kwhsettings: { interval: parseInt($id('kwh_interval').value, 10) || 60, meters: c.meters } }));
+  });
+  function kwhAddHeard(btn) {
+    if (document.querySelectorAll('#kwh_rows tr').length >= kwhMax) { $id('kwh_warn').textContent = 'At most ' + kwhMax + ' meters.'; return; }
+    kwhRow(btn.getAttribute('data-id'), '');
+  }
+  var kwhEditing = false;
+  function kwhRender(x) {
+    kwhMax = x.max || 8;
+    $id('kwh_disabled').classList.toggle('hidden', x.enabled == 1);
+    kwhReadings = {};
+    (x.heard || []).forEach(function (h) { kwhReadings[h.id] = h; });
+    var rows = $id('kwh_rows');
+    var active = document.activeElement;
+    var typing = active && rows.contains(active);
+    if (!typing && !kwhEditing) {
+      rows.innerHTML = '';
+      (x.meters || []).forEach(function (m) { kwhRow(m.id, m.name); });
+      $id('kwh_interval').value = x.interval;
+    } else {
+      rows.querySelectorAll('tr').forEach(kwhFillRow);
+    }
+    var ids = {};
+    (x.meters || []).forEach(function (m) { ids[m.id] = true; });
+    var heard = (x.heard || []).filter(function (h) { return !ids[h.id]; });
+    $id('kwh_heard_block').classList.toggle('hidden', heard.length === 0);
+    var hb = $id('kwh_heard').querySelector('tbody');
+    hb.innerHTML = '';
+    heard.forEach(function (h) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + h.id.replace(/,/g, '') + '</td><td>' + h.e1_kwh.toFixed(3) + ' kWh</td><td>' + new Date(h.lastseen * 1000).toLocaleString() + '</td><td><button type="button" class="pure-button" data-id="' + h.id + '" onclick="kwhAddHeard(this)">Add</button></td>';
+      hb.appendChild(tr);
+    });
+  }
+  $id('kwh_rows').addEventListener('input', function () { kwhEditing = true; });
+  $id('kwh_add').addEventListener('click', function () { kwhEditing = true; });
+  $id('kwh_save').addEventListener('click', function () { kwhEditing = false; });
+  function repeatKwh() {
+    getSettings('kwhsettings');
+    kwh_to = setTimeout(repeatKwh, 10000);
+  }
+  repeatKwh();
+</script>
+
+`;
+
 var html_rfstatus = `
 <div class="header">
   <h1>RF status</h1>
@@ -6007,6 +6146,13 @@ var html_systemsettings_cc1101 = `
   <label class="pure-radio" for="option-itho_rf_status_poll-1">RF status request</label>
   <input id="option-itho_rf_status_poll-1" type="radio" name="option-itho_rf_status_poll" value="1"> on
   <input id="option-itho_rf_status_poll-0" type="radio" name="option-itho_rf_status_poll" value="0"> off
+</div>
+<legend><br>RF kWh meters:</legend>
+<p>Read Itho/Klimaatgarant RF kWh meters on request (RQ 2401). The meters, their names and the poll interval are set on the kWh meters page that appears in the menu when this is on.</p>
+<div class="pure-control-group">
+  <label class="pure-radio" for="option-itho_rf_kwh-1">kWh meter polling</label>
+  <input id="option-itho_rf_kwh-1" type="radio" name="option-itho_rf_kwh" value="1"> on
+  <input id="option-itho_rf_kwh-0" type="radio" name="option-itho_rf_kwh" value="0"> off
 </div>
 <legend><br>RF CO2 control:</legend>
 <div class="pure-control-group">

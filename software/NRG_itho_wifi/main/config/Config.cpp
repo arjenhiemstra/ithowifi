@@ -1,4 +1,5 @@
 #include "config/Config.h"
+#include "config/KwhMeterConfig.h"
 
 // Write via <file>.tmp + rename: a reset during the write leaves the old file intact instead of an empty one
 template <typename TWrite>
@@ -231,6 +232,21 @@ bool saveHADiscConfig(const char *location)
   return saveConfigFile(location, "/hadisc.json", 8192, "hadiscconfig", haDiscConfig);
 }
 
+bool loadKwhMeterConfig(const char *location)
+{
+  return loadConfigFile(location, "usekwhmconfb", "/kwhmeters.json", 2048, "kwhmeterconfig", kwhMeterConfig);
+}
+
+bool saveKwhMeterConfig(const char *location)
+{
+  return saveConfigFile(location, "/kwhmeters.json", 2048, "kwhmeterconfig", kwhMeterConfig);
+}
+
+bool resetKwhMeterConfig()
+{
+  return resetConfigFile("/kwhmeters.json");
+}
+
 bool resetHADiscConfig()
 {
   bool res = resetConfigFile("/hadisc.json");
@@ -260,6 +276,7 @@ bool resetSystemConfigs()
   res = resetConfigFile("/config.json");
   res = resetConfigFile("/syslog.json");
   res = resetConfigFile("/hadisc.json");
+  res = resetConfigFile("/kwhmeters.json");
   res = resetConfigFile("/remotes.json");
   res = resetConfigFile("/vremotes.json");
   return res;

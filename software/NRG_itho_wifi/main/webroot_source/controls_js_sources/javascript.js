@@ -14,6 +14,7 @@ var ithostatus_to;
 var hastatus_to;
 var remotesRefreshInterval;
 var rfstatus_to;
+var kwh_to;
 var saved_status_count = 0;
 var current_status_count = 0;
 var cachedRemotes = null; // last seen `ithoremotes` payload, used to populate the RF CO2 dropdown on the system settings page
@@ -600,6 +601,7 @@ const messageHandlers = {
       }
       var rfsm = $id('rfsettingsmenu');
       if (rfsm) rfsm.classList.toggle('hidden', !(typeof hw_revision !== 'undefined' && (hw_revision == "2" || hw_revision.startsWith('NON-CVE '))));
+      var km = $id('kwhmenu'); if (km) km.classList.toggle('hidden', !(x.itho_rf_support == 1 && x.rfInitOK == true && x.itho_rf_kwh == 1));
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
         $id('remotemenu').classList.remove('hidden');
         $id('rfstatusmenu').classList.remove('hidden');
@@ -817,6 +819,9 @@ const messageHandlers = {
       }
     }
     if (typeof updateTrackCheckbox === 'function') updateTrackCheckbox();
+  },
+  kwhsettings: function (f) {
+    if (typeof kwhRender === 'function' && $id('kwh_rows')) kwhRender(f.kwhsettings);
   },
   hadiscsettings: function (f) {
     var el = $id('ithostatusrdy');
@@ -1306,6 +1311,7 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
           itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
           itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
+          itho_rf_kwh: checkedVal('option-itho_rf_kwh'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
           itho_rf_co2_keepalive_demand: checkedVal('option-itho_rf_co2_keepalive_demand'),
@@ -1352,6 +1358,7 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
           itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
           itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
+          itho_rf_kwh: checkedVal('option-itho_rf_kwh'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
           itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
           itho_rf_co2_keepalive_demand: checkedVal('option-itho_rf_co2_keepalive_demand'),
@@ -2198,6 +2205,7 @@ function update_page(page) {
   clearTimeout(ithostatus_to);
   clearTimeout(hastatus_to);
   clearTimeout(rfstatus_to);
+  clearTimeout(kwh_to);
   if (remotesRefreshInterval) { clearInterval(remotesRefreshInterval); remotesRefreshInterval = null; }
   var main = $id('main');
   main.innerHTML = '';
@@ -2221,6 +2229,7 @@ function update_page(page) {
   if (page == 'status') { main.insertAdjacentHTML('beforeend', html_ithostatus); }
   if (page == 'remotes') { main.insertAdjacentHTML('beforeend', html_remotessetup); }
   if (page == 'rfstatus') { main.insertAdjacentHTML('beforeend', html_rfstatus); }
+  if (page == 'kwhmeters') { main.insertAdjacentHTML('beforeend', html_kwhmeters); }
   if (page == 'vremotes') { main.insertAdjacentHTML('beforeend', html_vremotessetup); }
   if (page == 'mqtt') { main.insertAdjacentHTML('beforeend', html_mqttsetup); }
   if (page == 'api') { main.insertAdjacentHTML('beforeend', html_api); }

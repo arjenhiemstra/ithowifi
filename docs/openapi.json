@@ -352,8 +352,8 @@
     },
     "/api/v2/kwhmeters": {
       "get": {
-        "summary": "Get RF kWh meters (Itho/Klimaatgarant, RAMSES type 29) heard since boot",
-        "description": "Keyed by RF id as hex bytes (A7,FC,4D): e1_kwh, e2_kwh, e3_kwh, lastseen (epoch), frames. Needs the RF module; meters push about once an hour.",
+        "summary": "Get RF kWh meters (Itho/Klimaatgarant, RAMSES type 29) with their poll settings",
+        "description": "enabled (RF settings: kWh meter polling), interval (seconds), kwhmeters keyed by RF id as hex bytes (77,FC,4D): id, name, e1_kwh, e2_kwh, e3_kwh, lastseen (epoch), frames, configured. Configured meters are polled over RF (RQ 2401) once per interval; meters merely heard are listed with configured=false. Needs the RF module.",
         "tags": [
           "REST API v2"
         ],

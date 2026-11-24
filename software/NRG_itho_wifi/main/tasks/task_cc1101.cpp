@@ -138,7 +138,7 @@ bool legacyRFRequest(uint8_t cmd, const uint8_t *data, uint8_t len, uint8_t repe
 {
   if (legacyCmd != 0 || len > sizeof(legacyTxBuf))
     return false;
-  if (cmd == 3)
+  if (cmd == 3 || cmd == 6)
   {
     memcpy(legacyTxBuf, data, len);
     legacyTxLen = len;
@@ -1036,6 +1036,11 @@ void TaskCC1101(void *pvParameters)
         disableRF_ISR();
         if (cmd == 3)
           rfManager.radio.sendLegacyRaw(legacyTxBuf, legacyTxBuf, legacyTxLen, legacyTxRepeats);
+        else if (cmd == 6) // buf: src id(3), dest id(3), opcode(2), len, payload
+        {
+          for (uint8_t r = 0; r < legacyTxRepeats; r++)
+            rfManager.radio.sendRQ(legacyTxBuf, legacyTxBuf + 3, legacyTxBuf + 6);
+        }
         else if (cmd == 4)
           legacyRssiScan(legacyTxRepeats);
         else
@@ -1043,6 +1048,8 @@ void TaskCC1101(void *pvParameters)
         enableRF_ISR();
         if (cmd == 3)
           legacyLogTx("raw", legacyTxBuf, legacyTxLen);
+        else if (cmd == 6)
+          legacyLogTx("RQ", legacyTxBuf, legacyTxLen);
         else if (cmd == 1 || cmd == 5)
         {
           legacyRxSince = millis();

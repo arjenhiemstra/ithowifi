@@ -67,6 +67,7 @@ public:
   uint8_t itho_control_interface;
   uint8_t itho_rf_standalone;
   uint8_t itho_rf_status_poll;
+  uint8_t itho_rf_kwh; // poll RF kWh meters (list in /kwhmeters.json)
   uint8_t itho_rf_status_poll_idx;
   uint8_t itho_rf_co2_status_req;
   uint8_t itho_rf_co2_keepalive_demand;
