@@ -255,7 +255,7 @@ void mqttInit()
   {
     if (!setupMQTTClient())
     {
-      E_LOG("API: mqtt connection failed, System config: %d", systemConfig.mqtt_active);
+      E_LOG("API: mqtt connection failed, state %d (4 bad credentials, 5 not authorised, -2 no connection), System config: %d", mqttClient.state(), systemConfig.mqtt_active);
     }
     else
     {
