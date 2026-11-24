@@ -181,6 +181,23 @@ void test_autotemp_spider_found_from_w22c9()
   TEST_ASSERT_EQUAL_HEX8(0x06, d.zoneId());
 }
 
+void test_autotemp_zone_from_minute_polls()
+{
+  // An AutoTemp room thermostat polls RQ 0008 / RQ 22C9 [zone] every minute (capture 2026-11-24); a dial
+  // change broadcast as I 22C9 by the thermostat itself then still yields the zone.
+  Discovery d;
+  static const uint8_t rq03[1] = {0x03};
+  d.feed(Frame{spider::MSG_RQ, SPIDER_AT, AUTOTEMP, 0, 0x0008, rq03, 1});
+  d.feed(Frame{spider::MSG_RQ, SPIDER_AT, AUTOTEMP, 0, 0x22C9, rq03, 1});
+  d.start(2200);
+  static const uint8_t sp22[6] = {0x00, 0x08, 0x98, 0x7F, 0xFF, 0x01};
+  TEST_ASSERT_TRUE(d.feed(Frame{spider::MSG_I, SPIDER_AT, 0, SPIDER_AT, 0x22C9, sp22, 6}));
+  TEST_ASSERT_TRUE(d.state() == Discovery::State::Done);
+  TEST_ASSERT_EQUAL_HEX32(AUTOTEMP, d.heater());
+  TEST_ASSERT_TRUE(d.zoneController());
+  TEST_ASSERT_EQUAL_HEX8(0x03, d.zoneId());
+}
+
 void test_autotemp_echo_is_not_the_spider()
 {
   Discovery d;
@@ -229,6 +246,7 @@ int main(int, char **)
   RUN_TEST(test_probe_limit_and_no_demand);
   RUN_TEST(test_pairs_ignore_other_traffic);
   RUN_TEST(test_autotemp_spider_found_from_w22c9);
+  RUN_TEST(test_autotemp_zone_from_minute_polls);
   RUN_TEST(test_autotemp_echo_is_not_the_spider);
   RUN_TEST(test_polled_controller_is_not_zone);
   RUN_TEST(test_idle_and_restart);

@@ -3089,6 +3089,16 @@ bool IthoCC1101::setThermostat(const uint8_t id[3], bool on, int32_t setpointCmd
   return true;
 }
 
+bool IthoCC1101::setThermostatZoneFmt(const uint8_t id[3], const uint8_t *payload, uint8_t len)
+{
+  ithoRFDevice *dev = findRFDevice(id);
+  if (!dev || payload == nullptr || len < 3 || len > spider::ZONE_W_MAX)
+    return false;
+  memcpy(dev->zoneW, payload, len);
+  dev->zoneWLen = len;
+  return true;
+}
+
 bool IthoCC1101::setThermostatSetpoint(const uint8_t id[3], int32_t setpointCmd)
 {
   ithoRFDevice *dev = findRFDevice(id);
@@ -3200,8 +3210,8 @@ void IthoCC1101::sendSpiderZoneSetpoint(const uint8_t id[3])
   const ithoRFDevice *dev = findRFDevice(id);
   if (!dev || dev->zone == spider::ZONE_NONE || dev->setpointCmd == 0xEFFF)
     return;
-  uint8_t cmd[3 + spider::ZONE_SETPOINT_ECHO_LEN + 1]{0x22, 0xC9, spider::ZONE_SETPOINT_ECHO_LEN};
-  spider::buildZoneSetpointChange(&cmd[3], dev->zone, dev->setpointCmd);
+  uint8_t cmd[3 + spider::ZONE_W_MAX + 1]{0x22, 0xC9, 0};
+  cmd[2] = static_cast<uint8_t>(spider::buildZoneSetpointChangeFrom(dev->zoneW, dev->zoneWLen, dev->zone, dev->setpointCmd, &cmd[3]));
   sendToSpiderAs(id, dev->controllerID, HEADER_JOIN_REPLY, cmd);
 }
 

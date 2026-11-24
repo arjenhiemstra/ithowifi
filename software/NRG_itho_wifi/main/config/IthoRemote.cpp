@@ -439,6 +439,19 @@ void IthoRemote::Remote::set(JsonObject obj)
   {
     zone = obj["zone"];
   }
+  if (obj["zonefmt"].is<JsonArray>())
+  {
+    JsonArray a = obj["zonefmt"].as<JsonArray>();
+    zoneWLen = 0;
+    for (JsonVariant v : a)
+    {
+      if (zoneWLen >= sizeof(zoneW))
+        break;
+      zoneW[zoneWLen++] = v.as<uint8_t>();
+    }
+    if (zoneWLen < 3)
+      zoneWLen = 0;
+  }
 }
 
 void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index, bool human_reaadble, bool forStorage) const
@@ -515,6 +528,12 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
     }
     if (zone != 0xFF)
       obj["zone"] = zone;
+    if (zoneWLen >= 3)
+    {
+      JsonArray f = obj["zonefmt"].to<JsonArray>();
+      for (uint8_t i = 0; i < zoneWLen; i++)
+        f.add(zoneW[i]);
+    }
   }
   if (forStorage)
     return;

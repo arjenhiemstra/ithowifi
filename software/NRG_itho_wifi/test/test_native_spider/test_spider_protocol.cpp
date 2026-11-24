@@ -134,6 +134,25 @@ void test_bind_accept()
   TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 6);
 }
 
+void test_zone_setpoint_change_from_template()
+{
+  uint8_t out[spider::ZONE_W_MAX];
+  // AutoTemp room thermostat (capture 2026-11-24): W 22C9 007 0607087FFF0101 -> 21.5 C keeps the tail
+  const uint8_t at[7] = {0x06, 0x07, 0x08, 0x7F, 0xFF, 0x01, 0x01};
+  TEST_ASSERT_EQUAL_size_t(7, spider::buildZoneSetpointChangeFrom(at, 7, 0x06, 2150, out));
+  const uint8_t expectAt[7] = {0x06, 0x08, 0x66, 0x7F, 0xFF, 0x01, 0x01};
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(expectAt, out, 7);
+  // Spider form: the second setpoint follows the first
+  const uint8_t sp[6] = {0x06, 0x07, 0xD0, 0x08, 0x34, 0x02};
+  TEST_ASSERT_EQUAL_size_t(6, spider::buildZoneSetpointChangeFrom(sp, 6, 0x03, 2200, out));
+  const uint8_t expectSp[6] = {0x03, 0x08, 0x98, 0x08, 0xFC, 0x02};
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(expectSp, out, 6);
+  // no template: the Spider default
+  TEST_ASSERT_EQUAL_size_t(6, spider::buildZoneSetpointChangeFrom(nullptr, 0, 0x06, 2200, out));
+  const uint8_t expectDef[6] = {0x06, 0x08, 0x98, 0x08, 0xFC, 0x01};
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(expectDef, out, 6);
+}
+
 void test_zone_setpoint_change()
 {
   // W 22C9 from a user log: 22.0 C in zone 06 -> 06 0898 08FC 01
@@ -173,6 +192,7 @@ int main(int, char **)
   RUN_TEST(test_heating_join_detection);
   RUN_TEST(test_bind_accept);
   RUN_TEST(test_zone_setpoint_change);
+  RUN_TEST(test_zone_setpoint_change_from_template);
   RUN_TEST(test_system_mode_ack);
   return UNITY_END();
 }

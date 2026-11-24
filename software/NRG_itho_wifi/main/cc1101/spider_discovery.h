@@ -119,6 +119,8 @@ public:
       heater_ = ctl != 0 ? ctl : controllerOf(spider_);
       if (f.opcode == 0x22C9 && f.msgType == MSG_W)
         zoneId_ = f.payload[0];
+      else if (const Pair *pr = findPair(spider_))
+        zoneId_ = pr->zoneId; // seen in its minute polls (RQ 22C9 / RQ 0008)
       state_ = heater_ != 0 ? State::Done : State::WaitHeater;
       if (state_ == State::Done)
         zone_ = isZonePair(spider_, heater_);
@@ -129,6 +131,9 @@ public:
       if (heater_ == 0)
         return false;
       zone_ = isZonePair(spider_, heater_);
+      if (zoneId_ == 0xFF)
+        if (const Pair *pr = findPair(spider_))
+          zoneId_ = pr->zoneId;
       state_ = State::Done;
       return true;
     default:
@@ -163,7 +168,8 @@ private:
   {
     uint32_t spider;
     uint32_t ctl;
-    bool zone; // learned only from zone controller traffic (W 22C9, RQ 0008, I 30C9)
+    bool zone; // learned only from zone controller traffic (W 22C9, RQ 22C9, RQ 0008, I 30C9)
+    uint8_t zoneId; // first payload byte of W/RQ 22C9 and RQ 0008, 0xFF until seen
   };
 
   const Pair *findPair(uint32_t spider) const
@@ -215,12 +221,15 @@ private:
   {
     uint32_t s = 0, c = 0;
     bool zone = false;
-    if (f.addr0 != 0 && f.addr1 != 0 && ((f.msgType == MSG_W && f.opcode == 0x22C9) || (f.msgType == MSG_RQ && f.opcode == 0x0008) ||
-                                         (f.msgType == MSG_I && f.opcode == 0x30C9)))
+    uint8_t zoneId = 0xFF;
+    if (f.addr0 != 0 && f.addr1 != 0 && ((f.msgType == MSG_W && f.opcode == 0x22C9) || (f.msgType == MSG_RQ && f.opcode == 0x22C9) ||
+                                         (f.msgType == MSG_RQ && f.opcode == 0x0008) || (f.msgType == MSG_I && f.opcode == 0x30C9)))
     {
       s = f.addr0;
       c = f.addr1;
       zone = true;
+      if (f.opcode != 0x30C9 && f.payload != nullptr && f.len >= 1)
+        zoneId = f.payload[0];
     }
     else if (f.msgType == MSG_RQ && (f.opcode == 0x3EF0 || f.opcode == 0x3EF1 || (f.opcode == 0x01FF && f.len >= 26)))
     { // a 1-byte RQ 01FF is a controller asking the Spider, not the Spider asking
@@ -244,17 +253,21 @@ private:
       {
         if (zone && !pair_[i].zone && pair_[i].ctl == c)
           return; // a polled controller stays one we can pose as
+        if (pair_[i].ctl != c)
+          pair_[i].zoneId = 0xFF;
         pair_[i].ctl = c;
         pair_[i].zone = zone;
+        if (zoneId != 0xFF)
+          pair_[i].zoneId = zoneId;
         return;
       }
     if (nPair_ < MAX_PAIRS)
-      pair_[nPair_++] = Pair{s, c, zone};
+      pair_[nPair_++] = Pair{s, c, zone, zoneId};
     else
     {
       for (size_t i = 1; i < MAX_PAIRS; i++)
         pair_[i - 1] = pair_[i];
-      pair_[MAX_PAIRS - 1] = Pair{s, c, zone};
+      pair_[MAX_PAIRS - 1] = Pair{s, c, zone, zoneId};
     }
   }
 

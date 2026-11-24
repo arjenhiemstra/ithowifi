@@ -500,7 +500,26 @@ static void spiderOnFrame(const IthoPacket *packet)
     return;
   }
   if (remotes.getThermostatZone(idx) != spider::ZONE_NONE)
-    return; // zone controller: we send to the controller (repeat loop), never to the Spider
+  { // zone controller: we send to the controller (repeat loop), never to the Spider
+    if (type == 2 && packet->opcode == IthoPacket::Type::ZONESETPOINT && packet->deviceId0 == spider && packet->deviceId1 == idTo32(ctl))
+    { // setpoint changed on the thermostat itself: keep its frame form for our own W, and its setpoint wins
+      const uint8_t *pl = &packet->dataDecoded[packet->payloadPos];
+      if (remotes.setThermostatZoneFmt(idx, pl, packet->len))
+        saveRemotesflag = true;
+      rfManager.radio.setThermostatZoneFmt(sid, pl, packet->len);
+      const int32_t sp = spiderSetpoint(sid);
+      if (sp != 0xEFFF)
+      {
+        remotes.setThermostatSetpoint(idx, sp);
+        rfManager.radio.setThermostatSetpoint(sid, sp);
+      }
+      if (p.repeatLeft > 0)
+        I_LOG("RFI: Spider %02X:%02X:%02X setpoint changed on the thermostat, pending setpoint dropped", sid[0], sid[1], sid[2]);
+      p.repeatLeft = 0;
+      p.push = false;
+    }
+    return;
+  }
   if ((p.push || p.repeatLeft > 0) && spiderConfirmed(sid))
   {
     p.push = false; // Spider reports the commanded setpoint
@@ -979,6 +998,9 @@ void TaskCC1101(void *pvParameters)
       if (remotes.isThermostat(index))
       {
         rfManager.radio.setThermostat(id, true, remotes.getThermostatSetpoint(index), remotes.getThermostatCtl(index), remotes.getThermostatZone(index));
+        uint8_t fmtLen = 0;
+        if (const uint8_t *fmt = remotes.getThermostatZoneFmt(index, fmtLen))
+          rfManager.radio.setThermostatZoneFmt(id, fmt, fmtLen);
         remotes.addCapabilities(index, "thermostat", 1); // listed right away, not only after the first RF frame
       }
     }

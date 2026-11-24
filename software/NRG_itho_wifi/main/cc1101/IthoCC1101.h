@@ -40,6 +40,8 @@ struct ithoRFDevice
   int32_t setpointCmd{0xEFFF};  // commanded heating setpoint (0.01 C), 0xEFFF = echo the Spider's own
   uint8_t controllerID[3]{};    // Spider's heater/gateway: W 01FF is sent as this id; 0 = our own id
   uint8_t zone{0xFF};           // Spider on a zone controller (controllerID): its zone, 0xFF = none
+  uint8_t zoneW[8]{};           // the thermostat's own last W 22C9 payload, repeated with a new setpoint
+  uint8_t zoneWLen{0};
   int32_t hum{0xEFFF};
   uint8_t pir{0xEF};
   int32_t dewpoint{0xEFFF};
@@ -223,6 +225,7 @@ public:
   // Itho Spider heating thermostat role (ADR-0011); devices are looked up by id, not slot index
   bool setThermostat(const uint8_t id[3], bool on, int32_t setpointCmd, const uint8_t ctl[3] = nullptr, uint8_t zone = 0xFF);
   bool setThermostatSetpoint(const uint8_t id[3], int32_t setpointCmd);
+  bool setThermostatZoneFmt(const uint8_t id[3], const uint8_t *payload, uint8_t len); // the thermostat's W 22C9 form
   bool consumeSpiderReply(uint8_t id[3]);
   bool consumeSpiderEcho(uint8_t id[3], int32_t &setpointCenti);
   bool consumeSpiderModeAck(uint8_t id[3], uint8_t &index, uint8_t &flags);

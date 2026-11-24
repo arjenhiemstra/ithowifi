@@ -113,6 +113,34 @@ inline void buildZoneSetpointChange(uint8_t out[ZONE_SETPOINT_ECHO_LEN], uint8_t
   out[5] = 0x01;
 }
 
+// Zone thermostats differ in what follows the setpoint: a Spider sends [zone][sp][sp + 1 C][01] (6 bytes), an
+// AutoTemp room thermostat [zone][sp][7F FF][01][01] (7 bytes, capture 2026-11-24). The add-on repeats the
+// thermostat's own last W 22C9 with the new setpoint; without one it falls back to the Spider form.
+constexpr size_t ZONE_W_MAX = 8;
+
+inline size_t buildZoneSetpointChangeFrom(const uint8_t *tpl, size_t tplLen, uint8_t zone, int32_t centi, uint8_t out[ZONE_W_MAX])
+{
+  if (tpl == nullptr || tplLen < 3 || tplLen > ZONE_W_MAX)
+  {
+    buildZoneSetpointChange(out, zone, centi);
+    return ZONE_SETPOINT_ECHO_LEN;
+  }
+  const uint16_t v = static_cast<uint16_t>(clampSetpoint(centi));
+  for (size_t i = 0; i < tplLen; i++)
+    out[i] = tpl[i];
+  const uint16_t old = static_cast<uint16_t>(tpl[1]) << 8 | tpl[2];
+  out[0] = zone;
+  out[1] = v >> 8;
+  out[2] = v & 0xFF;
+  if (tplLen >= 5 && (static_cast<uint16_t>(tpl[3]) << 8 | tpl[4]) == static_cast<uint16_t>(old + 100))
+  { // Spider form: second setpoint follows the first
+    const uint16_t v2 = static_cast<uint16_t>(v + 100);
+    out[3] = v2 >> 8;
+    out[4] = v2 & 0xFF;
+  }
+  return tplLen;
+}
+
 // 1FC9 offer entries are [domain][code BE16][device id].
 constexpr size_t BIND_ENTRY_LEN = 6;
 

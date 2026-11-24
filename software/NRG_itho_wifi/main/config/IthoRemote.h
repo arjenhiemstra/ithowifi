@@ -42,6 +42,8 @@ private:
     int32_t setpointCmd{0xEFFF}; // last commanded heating setpoint, 0.01 C, RAM only; 0xEFFF = none
     uint8_t ctlID[3]{0, 0, 0};    // Spider's heater/gateway learned by discovery; 0 = bound to us
     uint8_t zone{0xFF};           // Spider's zone on a zone controller (AutoTemp, ctlID), 0xFF = none
+    uint8_t zoneW[8]{};           // the thermostat's own W 22C9 payload form (stored as "zonefmt")
+    uint8_t zoneWLen{0};
     JsonDocument capabilities;
     void set(JsonObject);
     void get(JsonObject, RemoteFunctions instanceFunc, int index, bool human_reaadble = false, bool forStorage = false) const;
@@ -139,6 +141,21 @@ public:
   const uint8_t *getThermostatCtl(const int index) const { return (index >= 0 && index < maxRemotes) ? remotes[index].ctlID : nullptr; };
   void setThermostatZone(const uint8_t index, uint8_t zone) { if (index < maxRemotes) remotes[index].zone = zone; };
   uint8_t getThermostatZone(const int index) const { return (index >= 0 && index < maxRemotes) ? remotes[index].zone : 0xFF; };
+  bool setThermostatZoneFmt(const uint8_t index, const uint8_t *p, uint8_t len)
+  {
+    if (index >= maxRemotes || p == nullptr || len < 3 || len > sizeof(remotes[index].zoneW))
+      return false;
+    if (remotes[index].zoneWLen == len && memcmp(remotes[index].zoneW, p, len) == 0)
+      return false; // unchanged, nothing to save
+    memcpy(remotes[index].zoneW, p, len);
+    remotes[index].zoneWLen = len;
+    return true;
+  };
+  const uint8_t *getThermostatZoneFmt(const int index, uint8_t &len) const
+  {
+    len = (index >= 0 && index < maxRemotes) ? remotes[index].zoneWLen : 0;
+    return len ? remotes[index].zoneW : nullptr;
+  };
   void setThermostatSetpoint(const uint8_t index, int32_t centi) { if (index < maxRemotes) remotes[index].setpointCmd = centi; };
   int32_t getThermostatSetpoint(const int index) const { return (index >= 0 && index < maxRemotes) ? remotes[index].setpointCmd : 0xEFFF; };
   void updateRemoteFunction(const uint8_t index, const uint8_t remfunc);
