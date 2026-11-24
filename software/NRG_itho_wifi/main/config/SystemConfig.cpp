@@ -572,6 +572,7 @@ void SystemConfig::get(JsonObject obj) const
     get_rf_settings = false;
     obj["itho_rf_support"] = itho_rf_support;
     obj["rfInitOK"] = rfInitOK;
+    obj["itho_rf_kwh"] = itho_rf_kwh;
     JsonArray id = obj["module_rf_id"].to<JsonArray>();
     for (uint8_t y = 0; y < 3; y++)
     {

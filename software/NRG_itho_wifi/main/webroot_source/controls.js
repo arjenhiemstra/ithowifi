@@ -602,7 +602,8 @@ const messageHandlers = {
       }
       var rfsm = $id('rfsettingsmenu');
       if (rfsm) rfsm.classList.toggle('hidden', !(typeof hw_revision !== 'undefined' && (hw_revision == "2" || hw_revision.startsWith('NON-CVE '))));
-      var km = $id('kwhmenu'); if (km) km.classList.toggle('hidden', !(x.itho_rf_support == 1 && x.rfInitOK == true && x.itho_rf_kwh == 1));
+      var km = $id('kwhmenu');
+      if (km && 'itho_rf_kwh' in x) km.classList.toggle('hidden', !(x.itho_rf_support == 1 && x.rfInitOK == true && x.itho_rf_kwh == 1));
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
         $id('remotemenu').classList.remove('hidden');
         $id('rfstatusmenu').classList.remove('hidden');
