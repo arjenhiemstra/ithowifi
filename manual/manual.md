@@ -21,8 +21,9 @@
 - [Physical Installation CVE Add-on](#physical-installation-cve-add-on)
 - [Physical Installation non-CVE Add-on](#physical-installation-non-cve-add-on)
 - [Additional information for the HRU ECO 250 and HRU ECO 300](#additional-information-for-the-hru-eco-250-and-hru-eco-300)
-- [Configuring the Add-on](#configuring-the-add-on)
-- [Usage (Web interface, API)](#usage-web-interface-api)
+- [Connecting the add-on to wifi](#connecting-the-add-on-to-wifi)
+- [Controlling the Itho](#controlling-the-itho)
+- [Connecting to home automation](#connecting-to-home-automation)
 - [Device-specific information](#device-specific-information)
 - [Temperature/Humidity sensor](#temperaturehumidity-sensor)
 - [Virtual Remote](#virtual-remote)
@@ -111,11 +112,11 @@ To use the RF module it must be activated via the add-on's web interface, under 
 
 ---
 
-## Configuring the Add-on
+## Connecting the add-on to wifi
 
-Below is a numbered list of steps to make the basic settings of the add-on.
+Below are the steps to connect the add-on to your wifi network and make the basic settings.
 
-### Configuring the add-on: *Connecting to the add-on*
+### Connecting to the add-on
 
 1. After connecting, the add-on automatically starts a WiFi access point. The WiFi status LED then blinks once per second (see Hardware revisions).
 
@@ -129,7 +130,7 @@ Below is a numbered list of steps to make the basic settings of the add-on.
    `http://nrg-itho-XXXX.local` (replace XXXX with the 4 characters from the network name)
    Doesn't work (e.g. on Android)? Then go to <http://192.168.4.1>
 
-### Configuring the add-on: *Setup Wizard*
+### Setup Wizard
 
 From firmware version 3.0 onward, a Setup Wizard automatically starts and guides you through the configuration in a number of steps:
 
@@ -139,13 +140,13 @@ Enter the name (SSID) and password of your own WiFi network. Optionally you can 
 
 **Step 2: Device**
 
-The wizard automatically detects which type of Itho device is connected (e.g. CVE-Silent, HRU 350, DemandFlow) and applies the most common default settings. For devices without an I2C connection (e.g. the HRU 400 R), the option to activate RF standalone mode is offered.
+The wizard automatically detects which type of Itho device is connected (e.g. CVE-Silent, HRU 350, DemandFlow) and applies the most common default settings. For devices without an I2C connection (e.g. the HRU 400), the option to activate RF standalone mode is offered.
 
 **Step 3: RF** (skipped if no CC1101 RF module is present)
 
 Here you configure the RF remotes. You can pair (join) a remote with the Itho device, or skip this step and set it up later via the "RF Devices" menu.
 
-Working in RF-standalone mode (a device without I2C, for example the HRU 400 R)? Then this is the moment to pair an emulated RFT CO2 remote with the Itho; you then use it to control the device and read out its status.
+Working in RF-standalone mode (a device without I2C, for example the HRU 400)? Then this is the moment to pair an emulated RFT CO2 remote with the Itho; you then use it to control the device and read out its status.
 
 **Step 4: MQTT** (optional)
 
@@ -155,7 +156,7 @@ Enter the details of your MQTT server if you want to connect the add-on to Home 
 
 Configure which sensors and status information are made available to Home Assistant via HA Auto Discovery.
 
-### Configuring the add-on: *After the wizard*
+### After the wizard
 
 Reconnect your phone/computer to your own WiFi network and open the browser at the IP address from the wizard.
 
@@ -163,11 +164,9 @@ All settings can also be changed afterwards via the web interface. The wizard do
 
 ---
 
-## Usage (Web interface, API)
+## Controlling the Itho
 
-The Itho unit can now be controlled via the web interface (<http://nrg-itho-A1B2.local>, replace A1B2), via MQTT or the WebAPI.
-
-### Controlling the Itho
+The Itho can now be controlled via the add-on's web interface (<http://nrg-itho-A1B2.local>, replace A1B2), via a home automation integration (see [Connecting to home automation](#connecting-to-home-automation)) or directly via the API.
 
 There are several ways to control the Itho and change its settings.
 
@@ -179,21 +178,44 @@ More details about the various options and any limitations can be found on the w
 
 <https://github.com/arjenhiemstra/ithowifi/wiki/Controlling-the-speed-of-a-fan>
 
-### Connecting to home automation software
+### Common issues
 
-The add-on can easily be connected to home automation software. For Home Assistant, Homey and Homebridge, among others, this is easy with a plugin or app. Another option is integration using the REST API and/or MQTT API. The details are described under the *Using the API* heading below.
+- **The add-on reports "success", but the Itho does not react to a virtual remote.** The Itho does not know the virtual remote (any more). Pair again: power the Itho off and on and press the blue join button behind that remote on the **Virtual remotes** page within 2 minutes. Or take over the ID of your physical remote: select the virtual remote, click **Copy ID** and press the join combination on your physical remote within the countdown. The Itho already knows that ID, so no pairing is needed.
+- **Some modes work from the physical remote, but not from the add-on.** This happens when the physical remote has put the Itho in a mode other than auto or medium. Create a virtual remote that sends an auto or medium command for every command, see <https://github.com/arjenhiemstra/ithowifi/wiki/Controlling-the-speed-of-a-fan#help-a-speed-command-does-not-work>.
+- **A speed percentage does not work, or the speed command returns an error.** The stepless PWM2I2C protocol only exists on the CVE's and the HRU ECO 200. On other devices use the remote commands (low, medium, high, timers), or an emulated RFT CO2 remote via RF for stepless control (see [RF Module](#rf-module)).
+- **RF control of a CVE is unreliable.** On the CVE's the antennas of the add-on and the unit are close together. Control a CVE via I2C instead: with a virtual remote or PWM2I2C.
+- **The Itho shows a sensor error (red LEDs) after you emulated an RFT CO2 remote.** The Itho expects a message from its CO2 sensor regularly. Switch on the keep-alive under *RF CO2 control* on the **System settings** page (from firmware 3.3.0, currently beta).
+- **Does my physical remote lose its pairing when I pair the add-on?** No. An Itho remembers multiple remotes, the physical remote keeps working next to the add-on.
+- **An old Itho (for example a CVE ECO 2 with a 9-pin connector) does not react to anything.** It only knows the old RF protocol, see *Older Itho units* in the [RF Module](#rf-module) chapter.
 
-Overview of home automation platform integrations:
+---
 
-- **Home Assistant:**
-  - [ithowifi-ha-integration](https://github.com/arjenhiemstra/ithowifi-ha-integration): easy setup via the Marketplace (Home Assistant 2026.11 or newer) or HACS (REST API)
-  - [haithowifi](https://github.com/jasperslits/haithowifi): extensive community plugin based on the MQTT API (requires an MQTT broker)
-  - MQTT Auto Discovery: part of the add-on firmware (requires an MQTT broker)
-- **Homey:** The [Itho Daalderop app](https://homey.app/en-nl/app/nl.monkeysoft.nrgwatch/Itho-Daalderop/) in the Homey app store (REST API)
-- **Homebridge (Apple HomeKit):** The community plugin [Homebridge Itho Daalderop HUE](https://github.com/SanderBaron/homebridge-itho-daalderop-HUE) brings your CVE to Apple HomeKit. It talks to the add-on via the WebAPI or MQTT (MQTT recommended for instant updates) and optionally integrates with Philips Hue.
-- **Domoticz and other platforms:** Integration is done via the REST API and/or MQTT API.
+## Connecting to home automation
 
-Documentation of the API options is available in the add-on's web interface, among other places.
+The add-on is easy to connect to home automation software. For Home Assistant and Homey there is a ready-made integration; other platforms connect via MQTT or the REST API.
+
+### Home Assistant
+
+The recommended integration is the [ithowifi-ha-integration](https://github.com/arjenhiemstra/ithowifi-ha-integration), NRG.Watch's own integration. It uses the REST API, so no MQTT broker is needed, and gives you among other things:
+
+- automatic discovery of add-ons on your network
+- a fan entity with speed control, preset modes (low, medium, high, auto, autonight, away) and timer buttons
+- sensors matching your device: temperatures, humidity, fan speeds, CO2, bypass, filter, error codes and more
+- per-remote sensors (for example an RFT CO2) and Itho Spider thermostats as climate entities
+
+Installing on Home Assistant 2026.11 or newer: go to **Settings** > **Marketplace**, choose **Add from link**, enter `arjenhiemstra/ithowifi-ha-integration` and click **Add**, then **Install**. On older Home Assistant versions, install the integration through HACS as a custom repository. After that Home Assistant finds the add-on by itself: it appears under **Settings** > **Devices & services** as a discovered device. If it is not found, add it with its IP address.
+
+Alternatives for Home Assistant: the community plugin [haithowifi](https://github.com/jasperslits/haithowifi) based on the MQTT API, and MQTT Auto Discovery from the add-on itself. Both need an MQTT broker (see *MQTT* below).
+
+### Homey
+
+For Homey there is the [Itho Daalderop app](https://homey.app/en-nl/app/nl.monkeysoft.nrgwatch/Itho-Daalderop/) by Monkeysoft in the Homey app store. The app uses the REST API: install the app, add the add-on as a device and control your Itho from Homey and your flows.
+
+### Other platforms
+
+- **Homebridge (Apple HomeKit):** the community plugin [Homebridge Itho Daalderop HUE](https://github.com/SanderBaron/homebridge-itho-daalderop-HUE) brings your CVE to Apple HomeKit. It talks to the add-on via the WebAPI or MQTT (MQTT recommended for instant updates) and optionally integrates with Philips Hue.
+- **Domoticz and other platforms:** connect via MQTT or the REST API.
+- **Your own scripts and automations:** use the API, see *Using the API* below. The API documentation is also available in the add-on's web interface.
 
 ### MQTT
 
@@ -265,7 +287,7 @@ The article number is on the nameplate/sticker of your Itho. x is any digit. A l
 | HRU ECO 350 LR / LP / HR / HP | 03-00389, 03-0039x | non-CVE add-on |
 | HRU 300V | 03-00851 | non-CVE add-on + RF module |
 | HRU 375V | 03-00853 | non-CVE add-on + RF module |
-| HRU 400 R | 03-00584 | non-CVE add-on + RF module |
+| HRU 400 | 03-00584, 03-00632 | non-CVE add-on + RF module |
 | HRU ECO LE / HE / LP / HP BAL | 545-426x, 545-427x | non-CVE add-on |
 | HRU 3 (3) | 545-421x to 545-425x | non-CVE add-on |
 | HRU 3 (2) | 545-41xx, 542-0005 | non-CVE add-on |
@@ -310,9 +332,9 @@ The **CVE-Silent** additionally reports, among other things, the highest measure
 
 **What the add-on reads out (among others):** outside and mixed-air temperature (°C), supply and exhaust airflow (m³/h), inlet, exhaust and blown-out air temperature (°C), relative and absolute fan speed (%), the inbound and outbound mass flow (kg/h), bypass position (%), desired inlet temperature, extensive frost data, motor speed (rpm), the highest measured RH/CO2 and the fan's current consumption (mA).
 
-### Devices without I2C: RF standalone (e.g. HRU 400 R)
+### Devices without I2C: RF standalone (e.g. HRU 400)
 
-Some units (for example the HRU 400 R) have no I2C connection usable by the add-on. For these there is **RF standalone mode**: the add-on skips I2C entirely and works only via RF (CC1101).
+Some units (for example the HRU 400) have no I2C connection usable by the add-on. For these there is **RF standalone mode**: the add-on skips I2C entirely and works only via RF (CC1101).
 
 - **Activating:** the Setup Wizard offers this for devices without I2C; later it can also be done via *System settings*.
 - The add-on can emulate an RFT CO2 remote. After it is paired with the HRU, the HRU can be controlled steplessly from 0-100% in steps of half a percent.
@@ -376,7 +398,7 @@ Here you can find an example of a tweaker who did this successfully:
 
 The add-on can present itself as one or more **virtual remotes**. A virtual remote emulates a physical remote entirely in software and controls the Itho directly over the **I2C connection** (the wired connection on the main board), so no CC1101 RF module is required.
 
-**Which devices?** Virtual remotes work with the I2C-connected ventilation devices, such as the CVE family, the HRU ECO 350, the HRU ECO BAL and the HRU 3. Most fan devices benefit from at least one virtual remote for control. They do **not** work with the HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V and HRU 400 R, which are controlled exclusively via RF (see [RF Module](#rf-module)).
+**Which devices?** Virtual remotes work with the I2C-connected ventilation devices, such as the CVE family, the HRU ECO 350, the HRU ECO BAL and the HRU 3. Most fan devices benefit from at least one virtual remote for control. They do **not** work with the HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V and HRU 400, which are controlled exclusively via RF (see [RF Module](#rf-module)).
 
 **Pairing.** Like a physical remote, a virtual remote must first be joined to the Itho. The add-on can send a join command automatically (the *Send join command* option, on the next power-on).
 
@@ -393,7 +415,7 @@ The most commonly sold Itho remotes are supported.
 
 **Moving an existing remote to the add-on.** An existing physical remote can be moved to the add-on, so the add-on receives that remote's RF commands and translates them to the Itho. The remote is unpaired from the Itho and paired with the add-on, following the procedure below.
 
-> **Note:** handling the RF commands of existing remotes via the add-on is not available for the HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V and HRU 400 R. Monitoring RF communication is possible, however. Therefore, leave existing RF remotes paired with the Itho and pair the add-on as an additional remote with your HRU.
+> **Note:** handling the RF commands of existing remotes via the add-on is not available for the HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V and HRU 400. Monitoring RF communication is possible, however. Therefore, leave existing RF remotes paired with the Itho and pair the add-on as an additional remote with your HRU.
 
 1. Unpair the remote from the Itho by sending a leave command within the first 2 minutes after powering on the Itho unit. On most remotes you do this by pressing all 4 buttons simultaneously. On newer remotes, such as the RFT AUTO-N, that does not work: press 2 diagonally placed buttons simultaneously for 3 to 8 seconds instead. If in doubt, check the manual of your remote;
 2. If you have not already done so, configure the add-on module further and (last) activate the RF module under the "System settings" menu;
@@ -405,7 +427,7 @@ The most commonly sold Itho remotes are supported.
 
 ![RF Remotes setup screenshot](images/08-rf-remotes-setup-screenshot.png)
 
-**The add-on as an emulated RF remote.** The add-on can also present itself as an emulated RF remote: via the CC1101 module it behaves wirelessly like an Itho remote. With the *Remote function* set to **Send**, the add-on sends speed and timer commands to the Itho over the air. This is used for devices without a usable I2C connection (such as the HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V and HRU 400 R) and to emulate, for example, an RFT CO2 sensor.
+**The add-on as an emulated RF remote.** The add-on can also present itself as an emulated RF remote: via the CC1101 module it behaves wirelessly like an Itho remote. With the *Remote function* set to **Send**, the add-on sends speed and timer commands to the Itho over the air. This is used for devices without a usable I2C connection (such as the HRU ECO 250, HRU ECO 300, HRU 300V, HRU 375V and HRU 400) and to emulate, for example, an RFT CO2 sensor.
 
 Before an emulated RF remote works, it must be joined to the Itho once, just like a physical remote. Put the Itho in its pairing/learn mode (see your Itho's manual) and start the join with the blue join button next to the relevant remote on the **RF devices** page. After that, the add-on can be used like a real physical remote.
 
