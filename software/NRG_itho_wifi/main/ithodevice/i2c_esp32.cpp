@@ -1,4 +1,19 @@
 #include "i2c_esp32.h"
+#include "i2c_sniffer.h"
+
+#include <freertos/semphr.h>
+
+static SemaphoreHandle_t i2cBusMutex = xSemaphoreCreateRecursiveMutex();
+
+I2CBusLock::I2CBusLock()
+{
+  xSemaphoreTakeRecursive(i2cBusMutex, portMAX_DELAY);
+}
+
+I2CBusLock::~I2CBusLock()
+{
+  xSemaphoreGiveRecursive(i2cBusMutex);
+}
 
 // I2C globals now managed by I2CManager (see managers/I2CManager.cpp)
 // Removed: i2c_cmd_queue, master/slave pin globals
@@ -7,10 +22,7 @@ void i2cQueueAddCmd(const std::function<void()> func)
 {
   if (i2cManager.cmd_queue.size() >= I2C_CMD_QUEUE_MAX_SIZE)
   {
-    log_msg input;
-    input.code = SYSLOG_WARNING;
-    input.msg = "Warning: i2c_cmd_queue overflow";
-    syslog_queue.push_back(input);
+    W_LOG("Warning: i2c_cmd_queue overflow");
     return;
   }
   i2cManager.queueAdd(func);
@@ -29,11 +41,10 @@ void i2cSlaveSetPins(gpio_num_t sda, gpio_num_t scl)
 esp_err_t i2cMasterInit(int log_entry_idx)
 {
 
-  esp_err_t result;
-
   if (!checkI2Cbus(log_entry_idx))
-    result = ESP_FAIL;
+    return ESP_FAIL; // bus stuck and could not be cleared, checkI2Cbus logged it
 
+  esp_err_t result;
   i2c_config_t conf = {
       .mode = I2C_MODE_MASTER,
       .sda_io_num = i2cManager.master_sda_pin,
@@ -109,6 +120,7 @@ esp_err_t i2cMasterSendCommand(uint8_t addr, const uint8_t *cmd, uint32_t len, i
 
 esp_err_t i2cMasterReadSlave(uint8_t addr, uint8_t *data_rd, size_t size, i2c_cmdref_t origin)
 {
+  I2CBusLock lock;
 
   if (ithoInitResult == -2)
   {
@@ -152,6 +164,7 @@ esp_err_t i2cMasterReadSlave(uint8_t addr, uint8_t *data_rd, size_t size)
 
 bool i2cSendBytes(const uint8_t *buf, size_t len, i2c_cmdref_t origin)
 {
+  I2CBusLock lock;
   if (ithoInitResult == -2)
   {
     return false;
@@ -182,6 +195,7 @@ bool i2cSendBytes(const uint8_t *buf, size_t len)
 
 bool i2cSendCmd(uint8_t addr, const uint8_t *cmd, size_t len, i2c_cmdref_t origin)
 {
+  I2CBusLock lock;
   if (ithoInitResult == -2)
   {
     return false;
@@ -212,6 +226,10 @@ bool i2cSendCmd(uint8_t addr, const uint8_t *cmd, size_t len)
 
 size_t i2cSlaveReceive(uint8_t *i2c_receive_buf)
 {
+  I2CBusLock lock;
+  // The sniffer interrupt's busy-wait through the reply can cost the slave receive a byte (#295).
+  i2cSnifferPause();
+
   i2c_config_t conf_slave = {
       .mode = I2C_MODE_SLAVE,
       .sda_io_num = i2cManager.slave_sda_pin,
@@ -247,9 +265,12 @@ size_t i2cSlaveReceive(uint8_t *i2c_receive_buf)
   }
 
   i2cSlaveDeinit();
+  i2cSnifferResume();
 
   if (total_len <= 0)
     return 0;
+
+  i2cSnifferLogReceived(i2c_receive_buf, total_len + 1);
 
   return total_len + 1; // add 1 because i2c_receive_buf[0] = I2C_SLAVE_ADDRESS
 }
@@ -450,6 +471,7 @@ int i2cClearBus()
 
 void triggerShtSensorReset()
 {
+  I2CBusLock lock;
 
   /*
   from: Sensirion_Humidity_Sensors_SHT3x_Datasheet_digital.pdf

@@ -4,8 +4,8 @@
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version)
 {
 
-  const struct ihtoDeviceType *ithoDevicesptr = ithoDevices;
-  const struct ihtoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
+  const struct ithoDeviceType *ithoDevicesptr = ithoDevices;
+  const struct ithoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
   while (ithoDevicesptr < ithoDevicesendPtr)
   {
     if (ithoDevicesptr->DG == deviceGroup && ithoDevicesptr->ID == deviceID)
@@ -57,7 +57,7 @@ const char *getSpeedLabel()
   return "no_speed_label_for_this_device_error";
 }
 
-const char *getStatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr)
+const char *getStatusLabel(const uint8_t i, const struct ithoDeviceType *statusPtr)
 {
   const uint8_t deviceGroup = currentIthoDeviceGroup();
   const uint8_t deviceID = currentIthoDeviceID();
@@ -148,6 +148,8 @@ size_t sendI2cQuery(uint8_t *i2c_command, size_t i2c_command_length, uint8_t *re
     return 0;
   if (receive_buffer == nullptr)
     return 0;
+
+  I2CBusLock lock; // the command and its reply are one transaction
   if (!i2cSendBytes(i2c_command, i2c_command_length, origin))
     return 0;
 
@@ -192,21 +194,6 @@ bool checkI2cReply(const uint8_t *buf, size_t buflen, const uint16_t opcode)
 
   return ((buf[2] << 8 | buf[3]) & 0x3FFF) == (opcode & 0x3FFF);
 }
-int castToSignedInt(int val, int length)
-{
-  switch (length)
-  {
-  case 4:
-    return static_cast<int32_t>(val);
-  case 2:
-    return static_cast<int16_t>(val);
-  case 1:
-    return static_cast<int8_t>(val);
-  default:
-    return 0;
-  }
-}
-
 int64_t castRawBytesToInt(int32_t *valptr, int length, bool is_signed)
 // valptr is a pointer to 4 rawbytes, which are casted to the
 //  correct value and returned as int32.

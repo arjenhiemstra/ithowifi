@@ -43,11 +43,15 @@ extern volatile int8_t bindInitiatorResult;
 
 void startBindInitiatorTimeout();
 void cancelBindInitiatorTimeout();
-void ITHOinterrupt();
 void disableRF_ISR();
 void enableRF_ISR();
+bool legacyRFRequest(uint8_t cmd, const uint8_t *data, uint8_t len, uint8_t repeats);
 void RFDebug(IthoCommand cmd);
 void toggleRemoteLLmode(const char *remotetype);
 void setllModeTimer();
+void requestSpiderPush(const uint8_t id[3]);
+void spiderDiscoveryRequest(bool start);
+void spiderGatewayBindRequest();
+void spiderDiscoveryStatus(JsonObject obj);
 void startTaskCC1101();
 void TaskCC1101(void *pvParameters);

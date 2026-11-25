@@ -16,8 +16,8 @@ std::vector<retryItem> retryList;
 int getSettingsLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version)
 {
 
-  const struct ihtoDeviceType *ithoDevicesptr = ithoDevices;
-  const struct ihtoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
+  const struct ithoDeviceType *ithoDevicesptr = ithoDevices;
+  const struct ithoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
   while (ithoDevicesptr < ithoDevicesendPtr)
   {
     if (ithoDevicesptr->DG == deviceGroup && ithoDevicesptr->ID == deviceID)
@@ -60,7 +60,7 @@ const char *getSettingLabel(const uint8_t index)
 
   int settingsLen = getSettingsLength(deviceGroup, deviceID, version);
 
-  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+  const struct ithoDeviceType *settingsPtr = ithoDeviceptr;
 
   if (settingsPtr == nullptr)
   {
@@ -135,7 +135,7 @@ void getSetting(const uint8_t index, const bool updateState, const bool updatewe
     return;
   }
 
-  // const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+  // const struct ithoDeviceType *settingsPtr = ithoDeviceptr;
 
   JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
@@ -179,7 +179,7 @@ void processSettingResult(const uint8_t index, const bool loop)
 
   const uint8_t version = currentItho_fwversion();
 
-  const struct ihtoDeviceType *settingsPtr = ithoDeviceptr;
+  const struct ithoDeviceType *settingsPtr = ithoDeviceptr;
 
   JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
@@ -290,10 +290,12 @@ void setSettingCE30(uint16_t temporary_temperature, uint16_t fallback_temperatur
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("itho_CE30_result", "failed");
+      i2cDebugResult("CE30", "failed");
     }
     return;
   }
+  if (updateweb)
+    i2cDebugResult("CE30", "sent");
 }
 
 void setSetting4030(uint16_t index, uint8_t datatype, uint16_t value, uint8_t checked, bool updateweb)
@@ -340,6 +342,7 @@ int32_t *sendQuery2410(uint8_t index, bool updateweb)
   command[23] = index;
   command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
 
+  I2CBusLock lock; // the query and its reply are one transaction
   if (!i2cSendBytes(command, sizeof(command), I2C_CMD_QUERY_2410))
   {
     if (updateweb)
@@ -525,6 +528,7 @@ bool setSetting2410(uint8_t index, int32_t value, bool updateweb)
 
   jsonSysmessage("itho2410set", i2cBufToString(command, sizeof(command)).c_str());
 
+  I2CBusLock lock; // the command and its reply are one transaction
   if (!i2cSendBytes(command, sizeof(command), I2C_CMD_SET_2410))
   {
     if (updateweb)

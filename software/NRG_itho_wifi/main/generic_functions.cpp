@@ -1,7 +1,9 @@
 #include "generic_functions.h"
 #include "config/HADiscConfig.h"
 #include "tasks/task_cc1101.h"
+#include "cc1101/spider_protocol.h"
 #include <HTTPUpdate.h>
+#include <esp_heap_caps.h>
 
 // MAX_FIRMWARE_HTTPS_RESPONSE_SIZE is normally injected by build_script.py based
 // on the actual firmware.json size + headroom. This fallback only applies if the
@@ -37,15 +39,20 @@ const char *getCurrentFanInfo()
   {
     if (!rfStatusSources[i].active || !rfStatusSources[i].tracked)
       continue;
+    if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+      continue;
     for (const auto &m : rfStatusSources[i].measurements31DA)
     {
       if (m.type == ithoDeviceMeasurements::is_string &&
           (strcmp(m.name, "FanInfo") == 0 || strcmp(m.name, "fan-info") == 0) &&
           m.value.stringval != nullptr)
       {
-        return m.value.stringval;
+        const char *v = m.value.stringval;
+        xSemaphoreGive(rfStatusMutex);
+        return v;
       }
     }
+    xSemaphoreGive(rfStatusMutex);
   }
   return nullptr;
 }
@@ -133,7 +140,13 @@ uint8_t getIthoStatusJSON(JsonObject root)
   {
     for (const auto &ithoStat : ithoStatus)
     {
-      if (ithoStat.type == ithoDeviceStatus::is_byte)
+      if (ithoStat.name == nullptr)
+        continue;
+      if (ithoStat.error)
+      {
+        root[ithoStat.name] = ithoStat.error;
+      }
+      else if (ithoStat.type == ithoDeviceStatus::is_byte)
       {
         root[ithoStat.name] = ithoStat.value.byteval;
       }
@@ -144,10 +157,6 @@ uint8_t getIthoStatusJSON(JsonObject root)
       else if (ithoStat.type == ithoDeviceStatus::is_float)
       {
         root[ithoStat.name] = round(ithoStat.value.floatval, 2);
-      }
-      else if (ithoStat.type == ithoDeviceStatus::is_string)
-      {
-        root[ithoStat.name] = ithoStat.value.stringval;
       }
       index++;
     }
@@ -173,6 +182,18 @@ uint8_t getIthoStatusJSON(JsonObject root)
   }
   xSemaphoreGive(ithoStatusMutex);
   return index;
+}
+
+bool rfStatusSourceMatches(int index, const char *name, const char *id)
+{
+  if (id)
+  {
+    char idStr[10];
+    snprintf(idStr, sizeof(idStr), "%02X:%02X:%02X",
+             rfStatusSources[index].id[0], rfStatusSources[index].id[1], rfStatusSources[index].id[2]);
+    return strcasecmp(idStr, id) == 0;
+  }
+  return name == nullptr || strcmp(rfStatusSources[index].name, name) == 0;
 }
 
 uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
@@ -203,25 +224,32 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
       src["zone31DA"] = rfStatusSources[i].lastZone31DA;
       src["zone31D9"] = rfStatusSources[i].lastZone31D9;
       JsonObject data = src["data"].to<JsonObject>();
-      for (const auto &m : rfStatusSources[i].measurements31D9)
+      // Hold rfStatusMutex only for the traversal. The stored keys/values
+      // (m.name, m.value.stringval) point to static label/error strings, not
+      // into the vector, so the JSON stays valid after the lock is released.
+      if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          data[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          data[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          data[m.name] = m.value.stringval;
-        count++;
-      }
-      for (const auto &m : rfStatusSources[i].measurements31DA)
-      {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          data[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          data[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          data[m.name] = m.value.stringval;
-        count++;
+        for (const auto &m : rfStatusSources[i].measurements31D9)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            data[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            data[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            data[m.name] = m.value.stringval;
+          count++;
+        }
+        for (const auto &m : rfStatusSources[i].measurements31DA)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            data[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            data[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            data[m.name] = m.value.stringval;
+          count++;
+        }
+        xSemaphoreGive(rfStatusMutex);
       }
     }
   }
@@ -249,26 +277,30 @@ uint8_t getRFStatusJSON(JsonObject root, int sourceIndex, bool trackedOnly)
       root["zone31D9"] = rfStatusSources[idx].lastZone31D9;
       JsonObject data = root["data"].to<JsonObject>();
 
-      for (const auto &m : rfStatusSources[idx].measurements31D9)
+      if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          data[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          data[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          data[m.name] = m.value.stringval;
-        count++;
-      }
+        for (const auto &m : rfStatusSources[idx].measurements31D9)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            data[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            data[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            data[m.name] = m.value.stringval;
+          count++;
+        }
 
-      for (const auto &m : rfStatusSources[idx].measurements31DA)
-      {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          data[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          data[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          data[m.name] = m.value.stringval;
-        count++;
+        for (const auto &m : rfStatusSources[idx].measurements31DA)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            data[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            data[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            data[m.name] = m.value.stringval;
+          count++;
+        }
+        xSemaphoreGive(rfStatusMutex);
       }
     }
   }
@@ -347,8 +379,12 @@ void getDeviceInfoJSON(JsonObject root)
   // (reboot pending), -2=error. The HA discovery val_tpl derives
   // in_progress / update_percentage from this single integer.
   root["ota_progress"] = static_cast<int>(otaUpdateProgress);
+  root["heap_free"] = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  root["heap_min_free"] = heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT);
+  root["heap_max_block"] = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
   root["itho_rf_standalone"] = systemConfig.itho_rf_standalone;
   root["itho_control_interface"] = systemConfig.itho_control_interface;
+  root["itho_rf_co2_remote_idx"] = systemConfig.itho_rf_co2_remote_idx;
   if (systemConfig.fw_check)
   {
     root["add-on_fwupdate_available"] = firmwareInfo.fw_update_available == 1 ? "true" : "false";
@@ -546,6 +582,24 @@ bool ithoExecCommand(const char *command, cmdOrigin origin)
   return true;
 }
 
+// After a leave a send remote must stop addressing the device it joined: the device keeps obeying frames
+// addressed to it from a remote that left. Undo what the bind accept set up (task_cc1101.cpp), except the
+// RF CO2 control interface, which may have been chosen by the user.
+static void forgetJoinedDevice(uint8_t remote_index)
+{
+  // the slot's own id as destination is the state of a remote that never joined (see updateRFDevice)
+  const uint8_t *src = rfManager.radio.getRFdevices().device[remote_index].sourceID;
+  rfManager.radio.updateDestinationID(src[0], src[1], src[2], remote_index);
+  remotes.updateRemoteDestID(remote_index, 0, 0, 0);
+  saveRemotesflag = true;
+  if (systemConfig.itho_rf_status_poll == 1 && systemConfig.itho_rf_status_poll_idx == remote_index)
+  {
+    systemConfig.itho_rf_status_poll = 0;
+    saveSystemConfigflag = true;
+    N_LOG("RFI: RF status request off, remote %d left", remote_index);
+  }
+}
+
 bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin origin)
 {
   bool res = true;
@@ -605,8 +659,13 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   }
   else if (strcmp(command, "join") == 0)
   {
-    rfManager.radio.setBindInitiatorActive(true, remote_index);
-    startBindInitiatorTimeout();
+    // the old (pre-RAMSES) protocol has no binding accept to wait for
+    const RemoteTypes type = remotes.getRemoteType(remote_index);
+    if (type != RemoteTypes::RFLEGACY && type != RemoteTypes::RFLEGACY2)
+    {
+      rfManager.radio.setBindInitiatorActive(true, remote_index);
+      startBindInitiatorTimeout();
+    }
     rfManager.radio.setSendTries(1);
     rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoJoin);
     rfManager.radio.setSendTries(3);
@@ -614,6 +673,8 @@ bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin orig
   else if (strcmp(command, "leave") == 0)
   {
     rfManager.radio.sendRFCommand(remote_index, IthoCommand::IthoLeave);
+    if (isSendRemote)
+      forgetJoinedDevice(remote_index);
   }
   else if (strcmp(command, "motion_on") == 0)
   {
@@ -650,9 +711,9 @@ bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
   if (remote_index >= remotes.getMaxRemotes())
     return false;
 
-  if (remotes.getRemoteType(remote_index) != RemoteTypes::RFTCO2)
+  if (remotes.getRemoteType(remote_index) != RemoteTypes::RFTCO2 && remotes.getRemoteType(remote_index) != RemoteTypes::ORCONCO2)
   {
-    E_LOG("SYS: rfco2 failed - remote %d is not RFT CO2 type", remote_index);
+    E_LOG("SYS: rfco2 failed - remote %d is not RFT CO2 / Orcon CO2 type", remote_index);
     return false;
   }
 
@@ -660,15 +721,19 @@ bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
 
   rfManager.radio.setTxPowerLevel(remotes.getRemoteTxPower(remote_index));
   bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
-  if (bidirectional)
+  // Orcon CO2 sends a single 1298 frame like the real sensor, regardless of the bidir flag.
+  bool singleSend = bidirectional || remotes.getRemoteType(remote_index) == RemoteTypes::ORCONCO2;
+  if (singleSend)
     rfManager.radio.setSendTries(1);
 
   disableRF_ISR();
   rfManager.radio.send1298(remote_index, co2level);
   enableRF_ISR();
 
+  ithoLastSentCO2level = co2level;
+
   rfManager.radio.setTxPowerLevel(0xC0);
-  if (bidirectional)
+  if (singleSend)
     rfManager.radio.setSendTries(3);
 
   char buf[32]{};
@@ -678,15 +743,32 @@ bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin)
   return true;
 }
 
+const char *ithoSetSpiderSetpoint(int remote_index, float celsius)
+{
+  if (remote_index < 0 || remote_index >= remotes.getMaxRemotes() || remotes.isEmptySlot(remote_index))
+    return "invalid remote index";
+  if (!remotes.isThermostat(remote_index))
+    return "remote is not a bound Spider thermostat";
+  if (!(celsius >= 0.0f && celsius <= 50.0f))
+    return "setpoint out of range";
+  const int32_t centi = spider::clampSetpoint(static_cast<int32_t>(celsius * 100.0f + 0.5f));
+  uint8_t id[3]{};
+  remotes.getRemoteIDbyIndex(remote_index, &id[0]);
+  remotes.setThermostatSetpoint(remote_index, centi);
+  rfManager.radio.setThermostatSetpoint(id, centi);
+  requestSpiderPush(id); // delivered by TaskCC1101 at the Spider's next wake-up
+  return nullptr; // not persisted: only relevant until the Spider confirms it
+}
+
 bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOrigin origin)
 {
   if (remote_index >= remotes.getMaxRemotes())
     return false;
 
   RemoteTypes rtype = remotes.getRemoteType(remote_index);
-  if (rtype != RemoteTypes::RFTCO2 && rtype != RemoteTypes::RFTRV)
+  if (rtype != RemoteTypes::RFTCO2 && rtype != RemoteTypes::RFTRV && rtype != RemoteTypes::ORCONCO2)
   {
-    E_LOG("SYS: rfdemand failed - remote %d is not RFT CO2 or RFT RV type", remote_index);
+    E_LOG("SYS: rfdemand failed - remote %d is not RFT CO2 / RFT RV / Orcon CO2 type", remote_index);
     return false;
   }
 
@@ -697,7 +779,9 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
 
   rfManager.radio.setTxPowerLevel(remotes.getRemoteTxPower(remote_index));
   bool bidirectional = rfManager.radio.getRFDeviceBidirectional(remote_index);
-  if (bidirectional)
+  // Orcon CO2 sends a single 31E0 frame like the real sensor, regardless of the bidir flag.
+  bool singleSend = bidirectional || rtype == RemoteTypes::ORCONCO2;
+  if (singleSend)
     rfManager.radio.setSendTries(1);
 
   disableRF_ISR();
@@ -707,7 +791,7 @@ bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOri
   ithoFanDemand = demand;
 
   rfManager.radio.setTxPowerLevel(0xC0);
-  if (bidirectional)
+  if (singleSend)
     rfManager.radio.setSendTries(3);
 
   char buf[40]{};
@@ -730,6 +814,39 @@ int findFirstBidirectionalSendRemote()
     return i;
   }
   return -1;
+}
+
+// Used by task_syscontrol's RF CO2 periodic poll: a configured slot index is
+// only safe to send from if it's still non-empty, a SEND remote, and an
+// RFTCO2 type. A user could change the joined remote out from under the
+// stored idx — we silently skip rather than push a bogus frame.
+bool rfco2RemoteValid(uint8_t idx)
+{
+  if (idx >= remotes.getMaxRemotes())
+    return false;
+  if (remotes.isEmptySlot(idx))
+    return false;
+  if (remotes.getRemoteFunction(idx) != RemoteFunctions::SEND)
+    return false;
+  if (remotes.getRemoteType(idx) != RemoteTypes::RFTCO2 && remotes.getRemoteType(idx) != RemoteTypes::ORCONCO2)
+    return false;
+  return true;
+}
+
+// Validity check for the user-selected RF status-poll remote (task_syscontrol's
+// periodic 31DA/31D9 poll). Type-agnostic sibling of rfco2RemoteValid: the slot
+// just has to be a non-empty, bi-directional SEND remote (e.g. an RFT Spider).
+bool statusPollRemoteValid(uint8_t idx)
+{
+  if (idx >= remotes.getMaxRemotes())
+    return false;
+  if (remotes.isEmptySlot(idx))
+    return false;
+  if (remotes.getRemoteFunction(idx) != RemoteFunctions::SEND)
+    return false;
+  if (!remotes.getRemoteBidirectional(idx)) // the remote config, which the radio slot is filled from
+    return false;
+  return true;
 }
 
 // Single shared implementation behind the three public wrappers below.
@@ -924,8 +1041,8 @@ void logLastCommand(const char *command, cmdOrigin origin)
 void logLastCommand(const char *command, const char *source)
 {
 
-  strlcpy(lastCmd.source, source, sizeof(lastCmd.source));
-  strlcpy(lastCmd.command, command, sizeof(lastCmd.command));
+  strlcpy(lastCmd.source, source ? source : "", sizeof(lastCmd.source));
+  strlcpy(lastCmd.command, command ? command : "", sizeof(lastCmd.command));
 
   if (time(nullptr))
   {
@@ -1114,7 +1231,8 @@ int compareVersions(const std::string &v1, const std::string &v2)
 
 void checkFirmwareUpdate()
 {
-  WiFiClientSecure *secclient = new WiFiClientSecure;
+  // declared before https: ~HTTPClient() may still call stop() on the client
+  std::unique_ptr<WiFiClientSecure> secclient(new (std::nothrow) WiFiClientSecure);
   if (!secclient)
   {
     E_LOG("SYS: firmware check - failed to allocate WiFiClientSecure");
@@ -1123,11 +1241,11 @@ void checkFirmwareUpdate()
   secclient->setInsecure(); // set secure client without certificate
 
   HTTPClient https;
+  https.setReuse(false); // end() then closes the TLS session
 
   if (!https.begin(*secclient, "https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json"))
   {
     E_LOG("SYS: firmware check - https.begin() failed");
-    delete secclient;
     return;
   }
 
@@ -1135,44 +1253,38 @@ void checkFirmwareUpdate()
   if (httpCode <= 0)
   {
     E_LOG("SYS: firmware check - GET failed: %s", https.errorToString(httpCode).c_str());
-    https.end();
-    delete secclient;
     return;
   }
   if (httpCode != HTTP_CODE_OK)
   {
     E_LOG("SYS: firmware check - HTTP %d", httpCode);
-    https.end();
-    delete secclient;
     return;
   }
   if (https.getSize() >= MAX_FIRMWARE_HTTPS_RESPONSE_SIZE)
   {
     E_LOG("SYS: firmware check - response too large: %d", https.getSize());
-    https.end();
-    delete secclient;
     return;
   }
 
-  String payloadString = https.getString().c_str();
-  const char *payload = payloadString.c_str();
+  String payload = https.getString();
+  // close the TLS session first, its buffers are the largest allocation here
+  https.end();
 
+  JsonDocument filter;
+  filter["hw_rev"][hardwareManager.hw_revision] = true;
   JsonDocument root;
-  DeserializationError error = deserializeJson(root, payload);
+  DeserializationError error = deserializeJson(root, payload, DeserializationOption::Filter(filter));
+  payload = String();
   if (error)
   {
     E_LOG("SYS: firmware check - JSON parse error: %s", error.c_str());
-    https.end();
-    delete secclient;
     return;
   }
 
   JsonVariant hwNode = root["hw_rev"][hardwareManager.hw_revision];
   if (hwNode.isNull())
   {
-    E_LOG("SYS: firmware check - no entry for hw_rev %d in firmware.json", hardwareManager.hw_revision);
-    https.end();
-    delete secclient;
+    E_LOG("SYS: firmware check - no entry for hw_rev %s in firmware.json", hardwareManager.hw_revision);
     return;
   }
 
@@ -1185,9 +1297,6 @@ void checkFirmwareUpdate()
   D_LOG("SYS: latest_fw:%s, latest_beta:%s", firmwareInfo.latest_fw, firmwareInfo.latest_beta_fw);
   D_LOG("SYS: fw_update_available:%d", firmwareInfo.fw_update_available);
   // 1: newer version available online, 0: no new version available, -1: current version is newer than online version, -99: compare unsuccessful
-
-  https.end();
-  delete secclient;
 }
 
 volatile int otaUpdateProgress = -1; // -1=idle, 0-100=progress, 101=done, -2=error

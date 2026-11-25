@@ -57,7 +57,10 @@ enum RemoteTypes : uint16_t
   RFTCO2 = 0x1298,
   RFTPIR = 0x2E10,
   RFTSPIDER = 0x22F2,
-  ORCON15LF01 = 0x6710
+  ORCON15LF01 = 0x6710,
+  ORCONCO2 = 0x6711,
+  RFLEGACY = 0x6720, // pre-RAMSES Itho RF (legacy_protocol.h), send only
+  RFLEGACY2 = 0x6721 // same, command codes of variant 2 remotes
 };
 
 #define F_MASK 0x03
@@ -170,6 +173,11 @@ const uint8_t orconMessageFilterCleanCommandBytes[] = {0x10, 0xD0, 0x02, 0x00, 0
 const uint8_t orconMessageJoinCommandBytes[] = {0x1F, 0xC9, 0x18, 0x00, 0x22, 0xF1, 0x00, 0x00, 0x00, 0x00, 0x22, 0xF3, 0x00, 0x00, 0x00, 0x67, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00};
 const uint8_t orconMessageBatteryStatusCommandBytes[] = {0x10, 0x60, 0x03, 0x00, 0xFF, 0x01};
 
+// Orcon CO2 sensor-remote join: binds vent-demand (31E0) + CO2 level (1298), like an
+// Itho RFT CO2, but with the Orcon 0x67 device class on the 10E0 group (join structure
+// mirrors the verified 15RF join). HYPOTHESIS - verify against a real Orcon CO2 device.
+const uint8_t orconCO2MessageJoinCommandBytes[] = {0x1F, 0xC9, 0x18, 0x00, 0x31, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x12, 0x98, 0x00, 0x00, 0x00, 0x67, 0x10, 0xE0, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xC9, 0x00, 0x00, 0x00};
+
 class IthoPacket
 {
 public:
@@ -188,7 +196,10 @@ public:
     BATTERY = 0x1060,
     ZONETEMP = 0x30C9,
     ZONESETPOINT = 0x22C9,
-    DEVICEINFO = 0x10E0
+    SYSTEMMODE = 0x22D0,
+    DEVICEINFO = 0x10E0,
+    SPIDERSTATUS = 0x01FF,
+    RELAYDEMAND = 0x0008
   };
 
   RemoteTypes remType;
@@ -213,7 +224,17 @@ public:
   uint8_t error{0};
 
   uint8_t payloadPos{0};
+  bool spiderHeatingJoin{false}; // 1FC9 offer is an Itho Spider controller (22C9) join
 
   uint8_t dataDecoded[MAX_DECODED]{};
   uint8_t length{0};
 };
+
+// Source of a 31D9/31DA status frame: addr0, else addr2. A fan sends its own address in both, so when
+// both are set but differ, one has a bit error that passed the checksum: 0, drop the frame (#406).
+inline uint32_t ithoStatusSourceId(uint32_t deviceId0, uint32_t deviceId2)
+{
+  if (deviceId0 != 0 && deviceId2 != 0 && deviceId0 != deviceId2)
+    return 0;
+  return deviceId0 != 0 ? deviceId0 : deviceId2;
+}

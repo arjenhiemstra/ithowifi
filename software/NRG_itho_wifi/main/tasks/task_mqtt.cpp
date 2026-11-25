@@ -1,10 +1,12 @@
 #include "tasks/task_mqtt.h"
+#include "tasks/boot_phases.h"
 #include <StreamUtils.h>
 #include <esp_heap_caps.h>
 #include <new>
 #include "api/MqttAPI.h"
 #include "ithodevice/IthoDevice.h"
 #include "generic_functions.h"
+#include "mqtt_debug.h"
 
 #define TASK_MQTT_PRIO 5
 
@@ -19,6 +21,7 @@ StackType_t xTaskMQTTStack[STACK_SIZE_MEDIUM];
 bool sendHomeAssistantDiscovery = false;
 bool updateIthoMQTT = false;
 bool updateMQTTRFStatus = false;
+bool updateMQTTRemotesInfo = false;
 
 Ticker TaskMQTTTimeout;
 
@@ -41,9 +44,9 @@ void TaskMQTT(void *pvParameters)
 {
   configASSERT((uint32_t)pvParameters == 1UL);
 
-  mqttInit();
+  waitPhase(PHASE_CONFIG | PHASE_NET); // mqttClient binds networkManager.standardClient (NET)
 
-  startTaskWeb();
+  mqttInit();
 
   esp_task_wdt_add(NULL);
 
@@ -66,13 +69,35 @@ void TaskMQTT(void *pvParameters)
   vTaskDelete(xTempTask);
 }
 
-void MQTTSendBuffered(JsonDocument doc, const char *topic)
+// Publish a JSON document as one message. PubSubClient drops its buffer on a short
+// write but leaves the socket open, so the broker would read the following packets
+// as payload of this message. On any failure close the socket: the next loop
+// reconnects on a clean stream (#415).
+bool MQTTPublishJson(const JsonDocument &doc, const char *topic)
 {
-  mqttClient.beginPublish(topic, measureJson(doc), true);
-  BufferingPrint bufferedClient(mqttClient, 32);
-  serializeJson(doc, bufferedClient);
-  bufferedClient.flush();
-  mqttClient.endPublish();
+  const size_t len = measureJson(doc);
+  if (!mqttClient.beginPublish(topic, len, true))
+  {
+    if (mqttClient.connected())
+    {
+      E_LOG("MQTT: publish start failed, closing connection");
+      networkManager.standardClient.stop();
+    }
+    return false;
+  }
+  const size_t written = serializeJson(doc, mqttClient);
+  if (!mqttClient.endPublish() || written != len)
+  {
+    E_LOG("MQTT: publish write failed, closing connection");
+    networkManager.standardClient.stop();
+    return false;
+  }
+  return true;
+}
+
+void MQTTSendBuffered(const JsonDocument &doc, const char *topic)
+{
+  MQTTPublishJson(doc, topic);
 }
 
 void execMQTTTasks()
@@ -97,6 +122,7 @@ void execMQTTTasks()
     MQTT_conn_state = MQTT_conn_state_new;
     sysStatReq = true;
   }
+  mqttDebugService(systemConfig.mqtt_active && mqttClient.connected());
   if (mqttClient.connected())
   {
     if (sendHomeAssistantDiscovery && HADiscConfigLoaded)
@@ -166,6 +192,12 @@ void execMQTTTasks()
       if (mqttClient.connected())
         mqttSendRFStatus();
     }
+    if (updateMQTTRemotesInfo)
+    {
+      updateMQTTRemotesInfo = false;
+      if (mqttClient.connected())
+        mqttSendRemotesInfo();
+    }
 
     // OTA progress republish. The periodic deviceinfo publish only fires on
     // the status tick (~60 s), too slow for HA's update entity progress bar
@@ -223,15 +255,6 @@ void mqttInit()
   }
 }
 
-// Grow the MQTT buffer if needed. Never shrink — repeated realloc
-// cycles between the default and a larger size fragment the heap over
-// thousands of publish cycles per day.
-static void mqttEnsureBufferSize(size_t len)
-{
-  if (mqttClient.getBufferSize() < len)
-    mqttClient.setBufferSize(len);
-}
-
 void mqttSendStatus()
 {
 
@@ -242,15 +265,8 @@ void mqttSendStatus()
   JsonObject root = doc.to<JsonObject>();
   getIthoStatusJSON(root);
 
-  size_t len = measureJson(root);
-
-  mqttEnsureBufferSize(len);
-  if (mqttClient.beginPublish(ihtostatustopic, len, true))
-  {
-    serializeJson(root, mqttClient);
-    if (!mqttClient.endPublish())
-      E_LOG("API: Failed to send payload (itho status)");
-  }
+  if (!MQTTPublishJson(doc, ihtostatustopic))
+    E_LOG("API: Failed to send payload (itho status)");
   if (doc.overflowed())
   {
     E_LOG("API: JsonDocument overflowed (itho status)");
@@ -283,24 +299,23 @@ void mqttSendRFStatus()
 
       JsonDocument doc;
       JsonObject root = doc.to<JsonObject>();
-      for (const auto &m : rfStatusSources[i].measurements31DA)
+      // Lock only while reading the vector into the doc; the doc keeps static
+      // string pointers + copied values, so publish can happen unlocked.
+      if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          root[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          root[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          root[m.name] = m.value.stringval;
+        root["zone"] = rfStatusSources[i].zoneMeasurements31DA; // DuoZone: one 31DA per zone (#383)
+        for (const auto &m : rfStatusSources[i].measurements31DA)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            root[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            root[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            root[m.name] = m.value.stringval;
+        }
+        xSemaphoreGive(rfStatusMutex);
       }
-      size_t len = measureJson(root);
-      if (mqttClient.getBufferSize() < len)
-        mqttClient.setBufferSize(len);
-      if (mqttClient.beginPublish(topic, len, true))
-      {
-        serializeJson(root, mqttClient);
-        mqttClient.endPublish();
-      }
-      // removed: shrink-back fragments heap over thousands of cycles
+      MQTTPublishJson(doc, topic);
     }
 
     if (!rfStatusSources[i].measurements31D9.empty())
@@ -310,24 +325,21 @@ void mqttSendRFStatus()
 
       JsonDocument doc;
       JsonObject root = doc.to<JsonObject>();
-      for (const auto &m : rfStatusSources[i].measurements31D9)
+      if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          root[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          root[m.name] = round(m.value.floatval, 2);
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          root[m.name] = m.value.stringval;
+        root["zone"] = rfStatusSources[i].zoneMeasurements31D9; // DuoZone: same zone id as in the 31DA message (#383)
+        for (const auto &m : rfStatusSources[i].measurements31D9)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            root[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            root[m.name] = round(m.value.floatval, 2);
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            root[m.name] = m.value.stringval;
+        }
+        xSemaphoreGive(rfStatusMutex);
       }
-      size_t len = measureJson(root);
-      if (mqttClient.getBufferSize() < len)
-        mqttClient.setBufferSize(len);
-      if (mqttClient.beginPublish(topic, len, true))
-      {
-        serializeJson(root, mqttClient);
-        mqttClient.endPublish();
-      }
-      // removed: shrink-back fragments heap over thousands of cycles
+      MQTTPublishJson(doc, topic);
     }
   }
 }
@@ -435,13 +447,13 @@ void mqttHomeAssistantDiscovery()
   // single allocation can land. Thresholds are loose on purpose — the real
   // safety net is the try/catch around the build below, which catches the
   // case where fragmentation tips us over mid-run. A healthy CVE-Silent
-  // sits around 140 KB free / 43 KB largest block in steady state, so the
+  // sits around 80 KB usable free / 43 KB largest block in steady state, so the
   // floor must stay well under that to avoid locking out healthy devices.
   // Clear the trigger flag here too so a persistently low-heap device
   // doesn't spam the log on every TaskMQTT iteration.
   size_t largestBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
-  size_t totalFree = ESP.getFreeHeap();
-  if (totalFree < 60000 || largestBlock < 20000)
+  size_t totalFree = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  if (totalFree < 30000 || largestBlock < 20000)
   {
     W_LOG("HAD: skipping HA Discovery, heap too tight (largest block %lu, total free %lu)",
           (unsigned long)largestBlock, (unsigned long)totalFree);
@@ -480,6 +492,17 @@ void mqttHomeAssistantDiscovery()
     // First publish empty payload to remove all previously discovered entities
     mqttClient.publish(devicetopic, "", true);
 
+    // Firmware up to 2.8.0 used one discovery topic per entity; clear those retained configs
+    static const char *const legacyTopics[] = {"/fan/%s/config", "/sensor/%s/temp/config", "/sensor/%s/hum/config"};
+    for (const char *fmt : legacyTopics)
+    {
+      char path[100]{};
+      char legacytopic[240]{};
+      snprintf(path, sizeof(path), fmt, hostName());
+      snprintf(legacytopic, sizeof(legacytopic), "%s%s", systemConfig.mqtt_ha_topic, path);
+      mqttClient.publish(legacytopic, "", true);
+    }
+
     MQTTSendBuffered(outputDoc, devicetopic);
   }
   catch (const std::bad_alloc &e)
@@ -487,6 +510,35 @@ void mqttHomeAssistantDiscovery()
     E_LOG("HAD: out of memory during HA Discovery (largest free block now %lu), skipping",
           (unsigned long)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
   }
+}
+
+// Settings the current MQTT session was set up with. PubSubClient::connect() is a no-op
+// while connected, so a changed server, port, login or topic needs a disconnect first.
+static uint32_t mqttSessionSettings = 0;
+static char mqttSessionLwt[140]{};
+
+static uint32_t mqttSettingsHash()
+{
+  uint32_t h = 2166136261u; // FNV-1a
+  auto add = [&h](const char *s)
+  {
+    for (; *s; s++)
+    {
+      h ^= (uint8_t)*s;
+      h *= 16777619u;
+    }
+    h ^= 0xFF; // field separator
+    h *= 16777619u;
+  };
+  char port[8];
+  snprintf(port, sizeof(port), "%d", systemConfig.mqtt_port);
+  add(systemConfig.mqtt_serverName);
+  add(port);
+  add(systemConfig.mqtt_username);
+  add(systemConfig.mqtt_password);
+  add(systemConfig.mqtt_base_topic);
+  add(systemConfig.mqtt_domoticz_active ? systemConfig.mqtt_domoticzout_topic : "");
+  return h;
 }
 
 bool setupMQTTClient()
@@ -501,6 +553,14 @@ bool setupMQTTClient()
     if (strcmp(systemConfig.mqtt_serverName, "") != 0)
     {
       int connectResult;
+      const uint32_t settings = mqttSettingsHash();
+      const bool changed = mqttClient.connected() && settings != mqttSessionSettings;
+      if (changed)
+      {
+        N_LOG("API: mqtt settings changed, reconnecting");
+        mqttClient.publish(mqttSessionLwt, "offline", true);
+        mqttClient.disconnect();
+      }
 
       mqttClient.setServer(systemConfig.mqtt_serverName, systemConfig.mqtt_port);
       mqttClient.setCallback(mqttCallback);
@@ -528,6 +588,10 @@ bool setupMQTTClient()
           mqttClient.subscribe(systemConfig.mqtt_domoticzout_topic);
         }
         mqttClient.publish(lwttopic, "online", true);
+        mqttSessionSettings = settings;
+        strlcpy(mqttSessionLwt, lwttopic, sizeof(mqttSessionLwt));
+        if (changed)
+          sendHomeAssistantDiscovery = true; // possibly a new broker or base topic
 
         return true;
       }

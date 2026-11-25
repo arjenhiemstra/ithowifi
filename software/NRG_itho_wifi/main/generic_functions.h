@@ -27,6 +27,8 @@ inline uint8_t itho_init_status = 0;
 const char *hostName();
 uint8_t getIthoStatusJSON(JsonObject root);
 uint8_t getRFStatusJSON(JsonObject root, int sourceIndex = -1, bool trackedOnly = false);
+// rfstatus filter: id is "AA:BB:CC" (case-insensitive) and wins over name; nullptr = no filter
+bool rfStatusSourceMatches(int index, const char *name, const char *id);
 void getRFStatusConfigJSON(JsonObject root, int sourceIndex = -1);
 bool ithoStatusReady();
 void getRemotesInfoJSON(JsonObject root);
@@ -38,12 +40,23 @@ bool ithoExecCommand(const char *command, cmdOrigin origin);
 bool ithoExecRFCommand(uint8_t remote_index, const char *command, cmdOrigin origin);
 bool ithoSendRFCO2(uint8_t remote_index, uint16_t co2level, cmdOrigin origin);
 bool ithoSendRFDemand(uint8_t remote_index, uint8_t demand, uint8_t zone, cmdOrigin origin);
+// Set the heating setpoint (in C) of a bound Itho Spider thermostat slot. Returns nullptr on success, else the reason.
+const char *ithoSetSpiderSetpoint(int remote_index, float celsius);
 // Index of the first bi-directional Send remote in the configured slots,
 // or -1 if none qualifies. Bi-directional Send remotes are the only
 // remote-slot kind that holds a valid sourceID + destinationID pair joined
 // to the Itho unit, so they're the only ones from which a 31DA/31D9 RF
 // status request can be expected to elicit an answer.
 int findFirstBidirectionalSendRemote();
+// True if `idx` currently points at a non-empty, SEND-function, RFTCO2-type
+// remote slot — i.e. one from which the RF CO2 periodic poll in task_syscontrol
+// can safely send. False on out-of-range, empty, wrong function, or wrong type.
+bool rfco2RemoteValid(uint8_t idx);
+// True if `idx` points at a non-empty, SEND-function, bi-directional remote slot
+// (any type, e.g. an RFT Spider) — i.e. one the user can select for the periodic
+// 31DA/31D9 RF status poll in task_syscontrol. False on out-of-range, empty,
+// wrong function, or non-bidirectional.
+bool statusPollRemoteValid(uint8_t idx);
 // Send a 31DA + 31D9 status request over RF, addressed from the given
 // remote slot's sourceID to its destinationID. The unit answers when
 // the slot is bi-directional and joined; non-bidirectional slots are a

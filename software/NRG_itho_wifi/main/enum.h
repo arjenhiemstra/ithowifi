@@ -6,5 +6,6 @@ enum cmdOrigin
     HTMLAPI,
     MQTTAPI,
     REMOTE,
-    WEB
+    WEB,
+    KEEPALIVE
 };

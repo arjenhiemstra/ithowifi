@@ -10,10 +10,11 @@
 #include "CC1101.h"
 #include "IthoPacket.h"
 #include "CC1101Packet.h"
-#include "sys_log.h"
+#include "RFSignal.h"
+#include "legacy_protocol.h"
 
 #if !defined(MAX_NUM_OF_REMOTES)
-#define MAX_NUM_OF_REMOTES 12
+#define MAX_NUM_OF_REMOTES 20
 #endif
 struct ithoRFDevice
 {
@@ -25,9 +26,20 @@ struct ithoRFDevice
   time_t timestamp{};
   uint8_t counter{};
   bool bidirectional{false};
+  uint8_t legacyPrev{85};       // pre-RAMSES: type of the last frame sent, goes in the next frame
   int32_t co2{0xEFFF};
   int32_t temp{0xEFFF};
   int32_t setpoint{0xEFFF};
+  int32_t setpointCool{0xEFFF}; // Spider 01FF second setpoint
+  uint8_t spiderFlags{0xEF};    // Spider 01FF byte 5
+  uint8_t demand{0xFF};         // Spider 0008 relay/heat demand, 0-200 (0.5 %)
+  uint8_t ventDemand{0xFF};     // 31E0 demand sent by a joined RF sensor, 0-200 (0.5 %), 0xFF = none
+  uint8_t ventZone{0xFF};       // 31E0 zone
+  uint8_t ventFlags{0xFF};      // 31E0 flags
+  bool thermostat{false};       // Spider heating side bound to us: answer its RQ 01FF
+  int32_t setpointCmd{0xEFFF};  // commanded heating setpoint (0.01 C), 0xEFFF = echo the Spider's own
+  uint8_t controllerID[3]{};    // Spider's heater/gateway: W 01FF is sent as this id; 0 = our own id
+  uint8_t zone{0xFF};           // Spider on a zone controller (controllerID): its zone, 0xFF = none
   int32_t hum{0xEFFF};
   uint8_t pir{0xEF};
   int32_t dewpoint{0xEFFF};
@@ -69,10 +81,12 @@ class IthoCC1101 : protected CC1101
 {
 private:
   uint8_t chipVersion{};
+  uint8_t detectAttempt{};
 
   // receive
   CC1101Packet inMessage[2];
-  volatile uint8_t inMessageIdx{0}; // ISR writes to inMessage[inMessageIdx], task decodes from inMessage[1 - inMessageIdx]
+  uint8_t lastRssi{0}, lastLqi{0}, lastFreqest{0}; // signal status of the packet last decoded
+  volatile uint8_t inMessageIdx{0}; // receivePacket fills inMessage[inMessageIdx], task decodes from inMessage[1 - inMessageIdx]
   IthoPacket inPacket;
 
   // send
@@ -97,6 +111,21 @@ private:
   static RFStatusCallback_t rf31DACallback;
   static RFStatusCallback_t rf31D9Callback;
   ithoRFDevices ithoRF;
+  bool remoteStatusChanged{false}; // set by handlers whose data should be published right away
+  bool spiderReplyPending{false};
+  uint8_t spiderReplyID[3]{};
+  bool spiderEchoPending{false};
+  uint8_t spiderEchoID[3]{};
+  int32_t spiderEchoSetpoint{0};
+  bool spiderModePending{false};
+  uint8_t spiderModeID[3]{};
+  uint8_t spiderModeIndex{0};
+  uint8_t spiderModeFlags{0};
+  ithoRFDevice *findRFDevice(const uint8_t id[3]);
+  ithoRFDevice *findZoneDevice(uint32_t ctl, uint8_t zone);
+  void ownID(const ithoRFDevice &dev, uint8_t out[3]) const;
+  void sendToSpider(const uint8_t id[3], uint8_t header, const uint8_t *command);
+  void sendToSpiderAs(const uint8_t from[3], const uint8_t id[3], uint8_t header, const uint8_t *command);
 
   typedef struct
   {
@@ -115,6 +144,10 @@ private:
   // init CC1101 for sending
   void initSendMessage(uint8_t len);
   void finishTransfer();
+
+  uint8_t legacyRx{0}; // 0 off, 1 sync 170,173, 2 loose: sync on the preamble only
+  void setLegacyModem();
+  void initReceiveLegacy();
 
   // parse received message
   bool checkIthoCommand(IthoPacket *itho, const uint8_t commandBytes[]);
@@ -187,6 +220,25 @@ public:
   {
     return ithoRF;
   }
+  // Itho Spider heating thermostat role (ADR-0011); devices are looked up by id, not slot index
+  bool setThermostat(const uint8_t id[3], bool on, int32_t setpointCmd, const uint8_t ctl[3] = nullptr, uint8_t zone = 0xFF);
+  bool setThermostatSetpoint(const uint8_t id[3], int32_t setpointCmd);
+  bool consumeSpiderReply(uint8_t id[3]);
+  bool consumeSpiderEcho(uint8_t id[3], int32_t &setpointCenti);
+  bool consumeSpiderModeAck(uint8_t id[3], uint8_t &index, uint8_t &flags);
+  void sendSpiderBindAccept(const uint8_t id[3]);
+  void sendSpiderStatus(const uint8_t id[3], bool reply, bool useCmd = true);
+  void sendSpiderZoneEcho(const uint8_t id[3], int32_t setpointCenti);
+  void sendSpiderModeAck(const uint8_t id[3], uint8_t index, uint8_t flags);
+  void sendSpiderRequest(const uint8_t id[3]);
+  void sendSpiderZoneSetpoint(const uint8_t id[3]); // W 22C9 as the Spider to its zone controller
+  void sendSpiderProbe(const uint8_t id[3], const uint8_t ctl[3]); // RQ 01FF as ctl, Spider not registered
+  bool consumeRemoteStatusChanged()
+  {
+    bool c = remoteStatusChanged;
+    remoteStatusChanged = false;
+    return c;
+  }
   void setBindInitiatorActive(bool active, uint8_t remIndex = 0)
   {
     bindInitiatorActive = active;
@@ -202,6 +254,49 @@ public:
   }
   // receive
   bool receivePacket(); // read RX fifo
+  // signal diagnostics of the packet last decoded (RF debug log)
+  int lastRssiDbm() const { return rfsignal::rssiDbm(lastRssi); }
+  uint8_t lastLinkQuality() const { return rfsignal::linkQuality(lastLqi); }
+  long lastFreqOffsetHz() const { return rfsignal::freqOffsetHz(lastFreqest); }
+
+  // Pre-RAMSES "message1" capture and test transmit (debug)
+  static constexpr uint8_t LEGACY_RX_LEN = 24;
+  static constexpr uint8_t LEGACY_RX_LEN_LOOSE = 32;
+  volatile bool legacyReady{false};
+  uint8_t legacyRssi{0}; // raw RSSI register, see rfsignal::rssiDbm()
+  CC1101Packet legacyIn;
+  void setLegacyRx(uint8_t mode)
+  {
+    legacyRx = mode;
+    initReceive();
+  }
+  uint8_t legacyRxMode() const { return legacyRx; }
+  // last frame sent by an old-protocol remote, for the RF log
+  volatile bool legacyTxPending{false};
+  uint8_t legacyTxRemote{0};
+  uint8_t legacyTxFrame[legacy::FRAME_LEN]{};
+  // first repeat and the later ones can differ (previous-frame byte)
+  void sendLegacyRaw(const uint8_t *first, const uint8_t *rest, uint8_t len, uint8_t repeats);
+  void restartRx()
+  {
+    writeCommand(CC1101_SIDLE);
+    writeCommand(CC1101_SFRX);
+    writeCommand(CC1101_SRX);
+  }
+  // bounded waits on the chip (see CC1101::waitMarcState)
+  static constexpr uint32_t CAL_WAIT_MS = 100; // calibration takes about 0.7 ms
+  static constexpr uint32_t RX_WAIT_MS = 50;   // IDLE to RX takes less than 1 ms
+  bool rxArmFailed{false};                     // initReceiveMessage could not get the chip into RX
+  using CC1101::lastWaitState;
+  using CC1101::waitTimeouts;
+  uint8_t marcState()
+  {
+    return readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER) & CC1101_BITS_MARCSTATE;
+  }
+  int16_t rssiDbm()
+  {
+    return rfsignal::rssiDbm(readRegister(CC1101_RSSI, CC1101_STATUS_REGISTER));
+  }
   void decodeBufferedPacket(); // decode raw packet buffered by receivePacket
   IthoPacket *checkForNewPacket();
   bool parseMessage(IthoPacket *packetPtr);
@@ -223,8 +318,8 @@ public:
     return ((uint32_t)cc_freq[2] << 16) | ((uint32_t)cc_freq[1] << 8) | ((uint32_t)cc_freq[0] << 0);
   }
 
-  uint8_t ReadRSSI();
   uint8_t getChipVersion();
+  uint8_t getDetectAttempt() const { return detectAttempt; } // 0 plain, 1 after reset, 2 at 1 MHz SPI, 3 not found
   // bool checkID(const uint8_t *id);
   uint8_t *getLastID(IthoPacket *packetPtr);
   String getLastIDstr(IthoPacket *packetPtr, bool ashex);
@@ -234,6 +329,7 @@ public:
   // send
   const uint8_t *getRemoteCmd(const RemoteTypes type, const IthoCommand command);
   void sendRFCommand(uint8_t remote_index, IthoCommand command);
+  void sendLegacyCommand(uint8_t remote_index, const uint8_t sourceId[3], IthoCommand command);
   int8_t sendJoinReply(uint8_t remote_index);
   void sendBindConfirm(uint8_t remote_index);
   void send1060();
@@ -248,6 +344,8 @@ public:
   void send31D9(uint8_t *command);
   void send31DA(uint8_t faninfo = 0, uint8_t timer_remaining = 0);
   void send31DA(uint8_t *command);
+  void send31DATo(uint8_t *command, const uint8_t to[3], bool reply); // addressed: RP (reply) or I (acknowledge)
+  bool isOwnID(uint32_t id) const { return id == ((uint32_t)defaultID[0] << 16 | (uint32_t)defaultID[1] << 8 | defaultID[2]); }
   void sendRFMessage(RFmessage *message);
   void sendCommand(IthoCommand command);
 
@@ -263,7 +361,10 @@ public:
   void handlePIR(IthoPacket *packetPtr);
   void handleZoneTemp(IthoPacket *packetPtr);
   void handleZoneSetpoint(IthoPacket *packetPtr);
+  void handleSystemMode(IthoPacket *packetPtr);
   void handleDeviceInfo(IthoPacket *packetPtr);
+  void handleSpiderStatus(IthoPacket *packetPtr);
+  void handleRelayDemand(IthoPacket *packetPtr);
   const char *rem_cmd_to_name(IthoCommand code);
 
   static void setRF31DACallback(RFStatusCallback_t cb) { rf31DACallback = cb; }

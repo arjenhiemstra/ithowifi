@@ -1,0 +1,16 @@
+---
+description: ESP32/embedded constraints for firmware source under software/NRG_itho_wifi/main/
+globs: software/NRG_itho_wifi/main/**/*.{cpp,h}
+alwaysApply: false
+---
+
+# Embedded Constraints
+
+- Build target is `-Os` (size-optimized) on ESP32 — avoid large static buffers, heavyweight templates, or unnecessary heap allocation. This is a flash/RAM-constrained device, not a server.
+- Code in `ITHOinterrupt` (`main/tasks/task_cc1101.cpp`, `IRAM_ATTR`) runs in interrupt context: no blocking calls, no heap allocation, no `Serial.print`/logging, keep it minimal.
+- Tasks are created with static stacks (`xTaskCreateStaticPinnedToCore`) at fixed sizes (4096–6144 bytes) — don't add deep recursion or large stack-local buffers inside a task loop without checking its stack size in `docs/architecture/repository-map.md`.
+- All current tasks are pinned to a single core (`CONFIG_ARDUINO_RUNNING_CORE`) — don't assume multi-core parallelism.
+- Cross-task/ISR shared state needs explicit synchronization (mutex/semaphore) only where genuinely required — the codebase's default is polled flags for simple state, real primitives (`isrSemaphore`, `mutexJSONLog`, `mutexWSsend`, `I2CManager::queueMutex`) only where the existing code already needed them. Follow that judgment, don't add locks defensively everywhere.
+- Framework is dual `arduino, espidf` (`platformio.ini`) — both APIs are available; match whichever the surrounding file already uses.
+
+Full task/manager reference: `.ai/context-map.md`, `docs/architecture/repository-map.md`.

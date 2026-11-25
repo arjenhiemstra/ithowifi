@@ -22,7 +22,7 @@
 <div id="rflog_outer" class="hidden">
     <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
     <div id="rflog"
-        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+        style="padding:10px;background-color:black;height:40vh;min-height:6em;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa;resize:both">
     </div>
     <div style="padding-top:5px;">
         <a href="#" class="pure-button" onclick="$id('rflog').innerHTML=''">Clear</a>
@@ -46,7 +46,7 @@
             </select>
         </div>
         <div class="pure-control-group">
-            <label for="option-esplog_active" class="pure-radio">Include ESP-IDF error log</label>
+            <label class="pure-radio" for="option-esplog_active-1">Include ESP-IDF error log</label>
             <input id="option-esplog_active-1" type="radio" name="option-esplog_active"
                 onchange='radio("esplog_active", 1)' value="1"> on
             <input id="option-esplog_active-0" type="radio" name="option-esplog_active"
@@ -54,7 +54,7 @@
         </div>
         <br>
         <div class="pure-control-group">
-            <label for="option-webserial_active" class="pure-radio">Webserial active (reboot needed)</label>
+            <label class="pure-radio" for="option-webserial_active-1">Webserial active (reboot needed)</label>
             <input id="option-webserial_active-1" type="radio" name="option-webserial_active"
                 onchange='radio("webserial_active", 1)' value="1"> on
             <input id="option-webserial_active-0" type="radio" name="option-webserial_active"
@@ -75,10 +75,29 @@
         <p>- Level1 will show only known Itho commands from all devices</p>
         <p>- Level2 will show all received RF messages from devices joined to the add-on</p>
         <p>- Level3 will show all received RF messages from all devices</p>
+        <p>While RF debug logging is on, an RF status (RFS) line with receive counters is shown every minute.</p>
+        <div class="pure-control-group">
+            <label class="pure-radio" for="option-rfstats_log-1">RF status in syslog (flash)</label>
+            <input id="option-rfstats_log-1" type="radio" name="option-rfstats_log"
+                onchange='radio("rfstats_log", 1)' value="1"> on
+            <input id="option-rfstats_log-0" type="radio" name="option-rfstats_log"
+                onchange='radio("rfstats_log", 0)' value="0"> off
+        </div>
+        <br>
+        <div class="pure-control-group">
+            <label>Old Itho RF protocol capture</label>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'rx'}))">Receive</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'loose'}))">Receive (loose)</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'off'}))">Off</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'scan'}))">Signal scan (20 s)</button>
+        </div>
+        <p>For older Itho units that only know the pre-RAMSES protocol. While receive is on, the add-on hears only that protocol (normal RF receive is off, for max 30 minutes).
+            Every frame received, and every frame an old protocol remote of the add-on sends, is shown in the RF log and written to the system log.
+            Use "loose" when "Receive" shows nothing while a remote is pressed. The signal scan logs every RF burst for 20 seconds, of any protocol.</p>
         <br>
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">
-            <label for="option-syslog_active" class="pure-radio">Syslog Active</label>
+            <label class="pure-radio" for="option-syslog_active-1">Syslog Active</label>
             <input id="option-syslog_active-1" type="radio" name="option-syslog_active"
                 onchange='radio("syslog_active", 1)' value="1"> on
             <input id="option-syslog_active-0" type="radio" name="option-syslog_active"

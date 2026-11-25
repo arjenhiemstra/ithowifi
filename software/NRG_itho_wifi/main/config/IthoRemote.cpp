@@ -68,7 +68,10 @@ const IthoRemote::remote_type_char IthoRemote::remote_type_table[]{
     {RFTCO2, "RFT CO2"},
     {RFTPIR, "RFT PIR"},
     {RFTSPIDER, "RFT Spider"},
-    {ORCON15LF01, "Orcon 15lf01"}};
+    {ORCON15LF01, "Orcon 15RF"},
+    {ORCONCO2, "Orcon CO2"},
+    {RFLEGACY, "RF (old protocol)"},
+    {RFLEGACY2, "RF (old protocol, variant 2)"}};
 
 const char *IthoRemote::remote_type_unknown_msg = "Type unknown error";
 
@@ -168,6 +171,11 @@ int IthoRemote::removeRemote(uint8_t byte0, uint8_t byte1, uint8_t byte2)
   remotes[index].remfunc = RemoteFunctions::UNSETFUNC;
   remotes[index].capabilities = nullptr;
   remotes[index].bidirectional = false;
+  remotes[index].thermostat = false;
+  remotes[index].setpointCmd = 0xEFFF;
+  memset(remotes[index].ctlID, 0, 3);
+  memset(remotes[index].destID, 0, 3);
+  remotes[index].zone = 0xFF;
 
   return 1;
 }
@@ -206,6 +214,11 @@ int IthoRemote::removeRemote(const uint8_t index)
   }
   remotes[index].capabilities = nullptr;
   remotes[index].bidirectional = false;
+  remotes[index].thermostat = false;
+  remotes[index].setpointCmd = 0xEFFF;
+  memset(remotes[index].ctlID, 0, 3);
+  memset(remotes[index].destID, 0, 3);
+  remotes[index].zone = 0xFF;
 
   return 1;
 }
@@ -286,7 +299,7 @@ const char *IthoRemote::ithoCommandToShortName(uint8_t code)
 
 void IthoRemote::addCapabilities(uint8_t remoteIndex, const char *name, int32_t value)
 {
-  if (strcmp(name, "temp") == 0 || strcmp(name, "dewpoint") == 0 || strcmp(name, "setpoint") == 0)
+  if (strcmp(name, "temp") == 0 || strcmp(name, "dewpoint") == 0 || strcmp(name, "setpoint") == 0 || strcmp(name, "setpoint_cool") == 0 || strcmp(name, "setpoint_cmd") == 0)
   {
     remotes[remoteIndex].capabilities[name] = static_cast<int>((value / 100.0) * 10 + 0.5) / 10.0;
   }
@@ -334,6 +347,8 @@ void IthoRemote::getRemoteIDbyIndex(const int index, uint8_t *id)
 
 const char *IthoRemote::getRemoteNamebyIndex(const int index)
 {
+  if (index < 0 || index >= maxRemotes)
+    return nullptr;
   return remotes[index].name;
 }
 
@@ -394,17 +409,39 @@ void IthoRemote::Remote::set(JsonObject obj)
   {
     bidirectional = obj["bidirectional"];
   }
+  // Orcon 15RF / CO2 emulated as SEND remotes are bidirectional: address the fan
+  // directly (addr0+addr1) and transmit once, matching the real remotes.
+  if ((remtype == RemoteTypes::ORCON15LF01 || remtype == RemoteTypes::ORCONCO2) && remfunc == RemoteFunctions::SEND)
+  {
+    bidirectional = true;
+  }
   if (!obj["destid"].isNull())
   {
     copyArray(obj["destid"].as<JsonArray>(), destID);
   }
+  // An empty slot has no target: drop a destid left behind by a removed remote (#410)
+  if (ID[0] == 0 && ID[1] == 0 && ID[2] == 0)
+    memset(destID, 0, sizeof(destID));
   if (!obj["tx_power"].isNull())
   {
     tx_power = obj["tx_power"];
   }
+  // Optional thermostat keys (absent in older configs: feature off)
+  if (!obj["thermostat"].isNull())
+  {
+    thermostat = obj["thermostat"];
+  }
+  if (obj["ctlid"].is<JsonArray>())
+  {
+    copyArray(obj["ctlid"].as<JsonArray>(), ctlID);
+  }
+  if (!obj["zone"].isNull())
+  {
+    zone = obj["zone"];
+  }
 }
 
-void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index, bool human_reaadble) const
+void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int index, bool human_reaadble, bool forStorage) const
 {
   obj["index"] = index;
 
@@ -441,17 +478,21 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
   }
   obj["name"] = name;
   obj["remfunc"] = remfunc;
-  obj["remfuncname"] = rem_func_to_name(remfunc);
+  if (!forStorage)
+    obj["remfuncname"] = rem_func_to_name(remfunc);
   obj["remtype"] = remtype;
-  obj["remtypename"] = rem_type_to_name(remtype);
+  if (!forStorage)
+  {
+    obj["remtypename"] = rem_type_to_name(remtype);
 
-  if (capabilities.isNull())
-  {
-    obj["capabilities"] = nullptr;
-  }
-  else
-  {
-    obj["capabilities"] = capabilities;
+    if (capabilities.isNull())
+    {
+      obj["capabilities"] = nullptr;
+    }
+    else
+    {
+      obj["capabilities"] = capabilities;
+    }
   }
   obj["bidirectional"] = bidirectional;
   if (destID[0] != 0 || destID[1] != 0 || destID[2] != 0)
@@ -463,6 +504,20 @@ void IthoRemote::Remote::get(JsonObject obj, RemoteFunctions instanceFunc, int i
     }
   }
   obj["tx_power"] = tx_power;
+  if (thermostat)
+  {
+    obj["thermostat"] = true;
+    if (ctlID[0] != 0 || ctlID[1] != 0 || ctlID[2] != 0)
+    {
+      JsonArray c = obj["ctlid"].to<JsonArray>();
+      for (int i = 0; i < 3; i++)
+        c.add(ctlID[i]);
+    }
+    if (zone != 0xFF)
+      obj["zone"] = zone;
+  }
+  if (forStorage)
+    return;
   if (last_cmd[0] != '\0')
     obj["last_cmd"] = last_cmd;
   // Wire-format preset list so external consumers know which commands
@@ -506,7 +561,7 @@ bool IthoRemote::set(JsonObject obj, const char *root)
   return true;
 }
 
-void IthoRemote::get(JsonObject obj, const char *root) const
+void IthoRemote::get(JsonObject obj, const char *root, bool forStorage) const
 {
   // Add "remotes" object
   JsonArray rem = obj[root].to<JsonArray>();
@@ -517,7 +572,7 @@ void IthoRemote::get(JsonObject obj, const char *root) const
 
   for (int i = 0; i < maxRemotes; i++)
   {
-    remotes[i].get(rem.add<JsonObject>(), instanceFunc, i, human_readable);
+    remotes[i].get(rem.add<JsonObject>(), instanceFunc, i, human_readable, forStorage);
   }
   obj["remfunc"] = instanceFunc;
   obj["version_of_program"] = config_struct_version;

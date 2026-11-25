@@ -33,7 +33,7 @@
     </div>
     <div class="pure-control-group">
       <label for="itho_numrfrem">Number of RF remotes</label>
-      <input id="itho_numrfrem" type="number" min="1" max="12" size="6">
+      <input id="itho_numrfrem" type="number" min="1" max="20" size="6">
     <button id="update_num_rf" onclick="update_rf_setup()" class="pure-button button-secondary">Update</button>
     </div>    
   </fieldset>
@@ -47,6 +47,41 @@
       <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote"
         class="pure-button">Remove</button>
     </div>
+  </fieldset>
+  <fieldset>
+    <br>
+    <legend><br>Itho Spider thermostat:</legend>
+    <p>The add-on can read and set the heating setpoint of an Itho Spider room thermostat, here, via MQTT/REST or from
+      Home Assistant. There are two ways to link a Spider:</p>
+    <ul>
+      <li><strong>Bind as gateway</strong> (preferred): for a Spider that offers gateway pairing (the house symbol in
+        its pairing menu). The Spider keeps its link to the heater or AutoTemp. It asks the add-on for its setpoint every
+        few minutes and when you touch its display, shows a new value on its display and reports a change on its dial
+        straight away.</li>
+      <li><strong>Discovery</strong>: for a Spider without gateway pairing, or if you do not want to change its pairing.
+        Nothing changes on the Spider: the add-on sends a new setpoint as if it came from the Spider's heater, or for a
+        Spider on an AutoTemp, as the Spider to the AutoTemp. A Spider only listens briefly after it transmits, so a new
+        setpoint can take several minutes to arrive. In some setups, for example a Spider on an AutoTemp, the Spider
+        sends its own setpoint again and overrules the new one. For those setups Bind as gateway is the only real
+        option.</li>
+    </ul>
+    <p>Bind as gateway: press the button and within 3 minutes pair the Spider with its gateway (house) symbol, see the
+      Spider manual. Other pairing requests are ignored.</p>
+    <div class="pure-control-group">
+      <label for="spider_gw_bind">Spider gateway</label>
+      <button id="spider_gw_bind" class="pure-button">Bind as gateway</button>
+    </div>
+    <p>Discovery: press Start and set the Spider to the temperature shown (a random value between 21.5 and 24 &deg;C).
+      The add-on recognises the Spider by that value, finds the heater or AutoTemp it is bound to and adds the Spider as
+      a monitor-only RF device. Your heating may switch on during discovery.</p>
+    <div class="pure-control-group">
+      <label for="spider_disc_start">Spider discovery</label>
+      <button id="spider_disc_start" class="pure-button">Start</button>&nbsp;<button id="spider_disc_cancel"
+        class="pure-button">Cancel</button>
+    </div>
+    <p id="spider_disc_status"></p>
+    <table id="SpiderTable" class="pure-table pure-table-bordered" style="text-align: center;"></table>
+    <p id="spider_set_status"></p>
   </fieldset>
 </form>
 <script>

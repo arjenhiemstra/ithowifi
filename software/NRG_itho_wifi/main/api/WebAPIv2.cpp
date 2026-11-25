@@ -57,14 +57,15 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDoc
   else if (strcmp(value, "rfstatus") == 0)
   {
     const char *nameFilter = params["name"] | nullptr;
-    if (nameFilter)
+    const char *idFilter = params["id"] | nullptr;
+    if (nameFilter || idFilter)
     {
-      // Find specific tracked source by name
+      // Find specific tracked source by id (wins) or name
       for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
       {
         if (!rfStatusSources[i].active || !rfStatusSources[i].tracked)
           continue;
-        if (strcmp(rfStatusSources[i].name, nameFilter) != 0)
+        if (!rfStatusSourceMatches(i, nameFilter, idFilter))
           continue;
         JsonObject obj = response["rfstatus"].to<JsonObject>();
         char idStr[10];
@@ -74,23 +75,27 @@ ApiResponse::api_response_status_t processGetCommands(JsonObject params, JsonDoc
         obj["name"] = rfStatusSources[i].name;
         obj["lastSeen"] = static_cast<int32_t>(rfStatusSources[i].lastSeen);
         JsonObject data = obj["data"].to<JsonObject>();
-        for (const auto &m : rfStatusSources[i].measurements31D9)
+        if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
         {
-          if (m.type == ithoDeviceMeasurements::is_int)
-            data[m.name] = m.value.intval;
-          else if (m.type == ithoDeviceMeasurements::is_float)
-            data[m.name] = m.value.floatval;
-          else if (m.type == ithoDeviceMeasurements::is_string)
-            data[m.name] = m.value.stringval;
-        }
-        for (const auto &m : rfStatusSources[i].measurements31DA)
-        {
-          if (m.type == ithoDeviceMeasurements::is_int)
-            data[m.name] = m.value.intval;
-          else if (m.type == ithoDeviceMeasurements::is_float)
-            data[m.name] = m.value.floatval;
-          else if (m.type == ithoDeviceMeasurements::is_string)
-            data[m.name] = m.value.stringval;
+          for (const auto &m : rfStatusSources[i].measurements31D9)
+          {
+            if (m.type == ithoDeviceMeasurements::is_int)
+              data[m.name] = m.value.intval;
+            else if (m.type == ithoDeviceMeasurements::is_float)
+              data[m.name] = m.value.floatval;
+            else if (m.type == ithoDeviceMeasurements::is_string)
+              data[m.name] = m.value.stringval;
+          }
+          for (const auto &m : rfStatusSources[i].measurements31DA)
+          {
+            if (m.type == ithoDeviceMeasurements::is_int)
+              data[m.name] = m.value.intval;
+            else if (m.type == ithoDeviceMeasurements::is_float)
+              data[m.name] = m.value.floatval;
+            else if (m.type == ithoDeviceMeasurements::is_string)
+              data[m.name] = m.value.stringval;
+          }
+          xSemaphoreGive(rfStatusMutex);
         }
         response.add(obj);
         return ApiResponse::status::SUCCESS;
@@ -344,6 +349,7 @@ ApiResponse::api_response_status_t processSetsettingCommands(JsonObject params, 
   if (resultPtr2410 == nullptr)
   {
     response["message"] = "The I2C command failed";
+    response["code"] = 503; // temporary, the client can retry (#390)
     return ApiResponse::status::ERROR;
   }
 
@@ -536,7 +542,7 @@ ApiResponse::api_response_status_t processSetRFremote(JsonObject params, JsonDoc
 
   response["idx"] = idx;
 
-  if (idx > remotes.getRemoteCount() - 1)
+  if (idx >= remotes.getMaxRemotes())
   {
     response["failreason"] = "remote index number higher than configured number of remotes";
     return ApiResponse::status::FAIL;
@@ -626,7 +632,7 @@ ApiResponse::api_response_status_t processRFremoteCommands(JsonObject params, Js
 
   response["idx"] = idx;
 
-  if (idx > remotes.getRemoteCount() - 1)
+  if (idx >= remotes.getMaxRemotes())
   {
     response["failreason"] = "remote index number higher than configured number of remotes";
     return ApiResponse::status::FAIL;
@@ -773,7 +779,7 @@ ApiResponse::api_response_status_t processVremoteCommands(JsonObject params, Jso
         return ApiResponse::status::FAIL;
       }
     }
-    if (index > virtualRemotes.getRemoteCount() - 1)
+    if (index >= virtualRemotes.getMaxRemotes())
     {
       response["failreason"] = "remote index number higher than configured number of remotes";
       return ApiResponse::status::FAIL;
@@ -910,6 +916,54 @@ ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonD
     response["result"] = "rf debug level3 set";
     return ApiResponse::status::SUCCESS;
   }
+  else if (strcmp(value, "legacyrx_on") == 0 || strcmp(value, "legacyrx_loose") == 0 || strcmp(value, "legacyrx_off") == 0)
+  {
+    const uint8_t cmd = strcmp(value, "legacyrx_on") == 0 ? 1 : (strcmp(value, "legacyrx_loose") == 0 ? 5 : 2);
+    if (!legacyRFRequest(cmd, nullptr, 0, 0))
+    {
+      response["code"] = 409;
+      response["failreason"] = "previous legacy RF request still pending";
+      return ApiResponse::status::FAIL;
+    }
+    response["result"] = cmd == 2 ? "legacy RF receive off" : (cmd == 5 ? "legacy RF loose receive on" : "legacy RF receive on");
+    return ApiResponse::status::SUCCESS;
+  }
+  else if (strcmp(value, "rssiscan") == 0)
+  {
+    const int seconds = params["repeats"] | 20; // repeats carries the scan duration
+    if (seconds < 1 || seconds > 60 || !legacyRFRequest(4, nullptr, 0, seconds))
+    {
+      response["code"] = 400;
+      response["failreason"] = "repeats (seconds) 1-60, or a previous request is still pending";
+      return ApiResponse::status::FAIL;
+    }
+    response["result"] = "rssi scan started";
+    return ApiResponse::status::SUCCESS;
+  }
+  else if (strcmp(value, "legacytx") == 0)
+  {
+    // data: hex bytes like AA,AA,AA,AD,... sent as-is at the legacy modem settings
+    const char *data = params["data"] | "";
+    std::vector<int> bytes = parseHexString(data);
+    const int repeats = params["repeats"] | 1;
+    if (bytes.empty() || bytes.size() > 64 || repeats < 1 || repeats > 10)
+    {
+      response["code"] = 400;
+      response["failreason"] = "data: 1-64 hex bytes like AA,AA,AD; repeats: 1-10";
+      return ApiResponse::status::FAIL;
+    }
+    uint8_t buf[64];
+    for (size_t i = 0; i < bytes.size(); i++)
+      buf[i] = static_cast<uint8_t>(bytes[i]);
+    if (!legacyRFRequest(3, buf, bytes.size(), repeats))
+    {
+      response["code"] = 409;
+      response["failreason"] = "previous legacy RF request still pending";
+      return ApiResponse::status::FAIL;
+    }
+    response["result"] = "legacy RF frame queued";
+    return ApiResponse::status::SUCCESS;
+  }
   else if (strcmp(value, "reboot") == 0)
   {
     if (systemConfig.api_reboot == 0)
@@ -925,7 +979,7 @@ ApiResponse::api_response_status_t processDebugCommands(JsonObject params, JsonD
   }
 
   response["code"] = 400;
-  response["failreason"] = "invalid debug value, options: level0, level1, level2, level3, reboot";
+  response["failreason"] = "invalid debug value, options: level0, level1, level2, level3, legacyrx_on, legacyrx_loose, legacyrx_off, legacytx, rssiscan, reboot";
   return ApiResponse::status::FAIL;
 }
 

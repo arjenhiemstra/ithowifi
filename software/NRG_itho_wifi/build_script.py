@@ -1,5 +1,5 @@
 Import("env")
-import gzip, os, glob, shutil, json, filecmp
+import gzip, os, glob, shutil, json, filecmp, subprocess
 
 from SCons.Script import (
     ARGUMENTS,
@@ -112,6 +112,42 @@ def pop_first_line(file):
         outfile.write(data)
 
 
+def find_terser():
+    # Prefer the locally installed terser (webroot_source/node_modules), then
+    # fall back to one on PATH. Returns None if terser isn't available.
+    local = os.path.join(WEBROOT_SRC_DIR, "node_modules", ".bin", "terser")
+    for cand in (local + ".cmd", local):  # .cmd first for Windows
+        if os.path.exists(cand):
+            return cand
+    return shutil.which("terser")
+
+
+def minify_controls_js(path):
+    # Minify the combined JS in place: compress + mangle LOCALS only. Top-level
+    # mangling is intentionally left off because ~50 inline HTML event handlers
+    # (onclick/onchange=...) call global functions by name; renaming those would
+    # break the UI. If terser isn't installed the unminified file is shipped so
+    # the firmware build still succeeds ('npm install' in webroot_source enables
+    # minification).
+    terser = find_terser()
+    if not terser:
+        print("\tterser not found - shipping unminified JS (run 'npm install' in webroot_source to enable minification)")
+        return
+    before = os.path.getsize(path)
+    tmp_out = path + ".min"
+    try:
+        subprocess.run([terser, path, "-c", "-m", "-o", tmp_out], check=True)
+        os.replace(tmp_out, path)
+    except (subprocess.CalledProcessError, OSError) as err:
+        print("\tterser failed (%s) - shipping unminified JS" % err)
+        if os.path.exists(tmp_out):
+            os.remove(tmp_out)
+        return
+    after = os.path.getsize(path)
+    print("\tminified JS: %d -> %d bytes (%.1f%% smaller before gzip)"
+          % (before, after, 100.0 * (before - after) / before if before else 0.0))
+
+
 def make_c_header(inName, outName):
     if inName == "controls.js":
         inFileBytes = pop_first_line(os.path.join(WEBROOT_SRC_DIR, "controls.js"))
@@ -155,6 +191,7 @@ def build_webui(*args, **kwargs):
     concat_controls_js()
     print("### Compressing webroot sources into gzipped header files...")
     pop_first_line(os.path.join(WEBROOT_SRC_DIR, "controls.js"))
+    minify_controls_js(os.path.join(WEBROOT_SRC_DIR, "controls_temp.js"))
     make_c_header("controls_temp.js", "controls_js_gz")
     os.remove(os.path.join(WEBROOT_SRC_DIR, "controls_temp.js"))
     make_c_header("index.html", "index_html_gz")
@@ -323,7 +360,10 @@ def build_openapi_spec():
     doc["paths"]["/api/v2/vremotes"] = rest_get("Get virtual remotes info")
     doc["paths"]["/api/v2/rfstatus"] = rest_get(
         "Get RF device status",
-        parameters=[param("name", "Filter by source name", "string")],
+        parameters=[
+            param("name", "Filter by source name", "string"),
+            param("id", "Filter by source RF id (AA:BB:CC), wins over name", "string"),
+        ],
     )
     doc["paths"]["/api/v2/ota"] = rest_get(
         "Get firmware version info and OTA update progress"
@@ -332,6 +372,9 @@ def build_openapi_spec():
         "Read Itho setting by index",
         parameters=[param("index", "Setting index", "integer", 0, 255)],
     )
+    doc["paths"]["/api/v2/settings"]["get"]["responses"]["503"] = {
+        "description": "JSend error: the I2C read failed, retry later"
+    }
 
     # --- REST API v2 POST endpoints ---
     def add_post(path, summary, schema_ref):
@@ -342,6 +385,7 @@ def build_openapi_spec():
     add_post("/api/v2/rfremote/command", "Send RF remote command", "#/components/schemas/RFRemoteRequest")
     add_post("/api/v2/rfremote/co2", "Send CO2 ppm via RF", "#/components/schemas/RFCO2Request")
     add_post("/api/v2/rfremote/demand", "Send ventilation demand via RF", "#/components/schemas/RFDemandRequest")
+    add_post("/api/v2/rfremote/setpoint", "Set heating setpoint of a discovered Itho Spider thermostat", "#/components/schemas/RFSetpointRequest")
     add_post("/api/v2/rfremote/config", "Configure RF remote", "#/components/schemas/RFConfigRequest")
     add_post("/api/v2/debug", "Debug actions (reboot, RF debug level)", "#/components/schemas/DebugRequest")
     add_post("/api/v2/ota", "Trigger firmware OTA update", "#/components/schemas/OtaInstallRequest")
@@ -364,6 +408,7 @@ def build_openapi_spec():
             "200": {"description": "JSend success"},
             "400": {"description": "JSend fail"},
             "403": {"description": "Settings API disabled"},
+            "503": {"description": "JSend error: the I2C command failed, retry later"},
         },
     }
 
@@ -410,6 +455,7 @@ def build_openapi_spec():
             "rfco2": prop("integer", "CO2 ppm"),
             "rfdemand": prop("integer", "Ventilation demand 0-200"),
             "rfzone": prop("integer", "Zone for rfdemand"),
+            "rfsetpoint": prop("number", "Spider heating setpoint in C (use with rfremoteindex)"),
             "dtype": prop("string", "Domoticz device type"),
         },
     }
@@ -481,6 +527,16 @@ def build_openapi_spec():
         },
     }
 
+    schemas["RFSetpointRequest"] = {
+        "type": "object",
+        "description": "Set the heating setpoint of a discovered Itho Spider thermostat (index = its RF device slot). Delivered at the Spider's next listen window; confirmed when capability setpoint equals setpoint_cmd",
+        "required": ["index", "setpoint"],
+        "properties": {
+            "index": prop("integer", "RF remote index of the Spider", 0, 11),
+            "setpoint": prop("number", "Heating setpoint in C, clamped to 5-30 in 0.5 steps", 5, 30),
+        },
+    }
+
     schemas["RFConfigRequest"] = {
         "type": "object",
         "description": "Configure RF remote settings",
@@ -500,9 +556,11 @@ def build_openapi_spec():
         "properties": {
             "action": {
                 "type": "string",
-                "description": "Action name",
-                "enum": ["reboot", "level0", "level1", "level2", "level3"],
-            }
+                "description": "Action name. legacyrx_on/legacyrx_loose/legacyrx_off: old (pre-RAMSES) Itho RF capture, max 30 min; rssiscan: log RF bursts; legacytx: send raw old protocol bytes",
+                "enum": ["reboot", "level0", "level1", "level2", "level3", "legacyrx_on", "legacyrx_loose", "legacyrx_off", "rssiscan", "legacytx"],
+            },
+            "data": prop("string", "legacytx: hex bytes like AA,AA,AA,AD,..."),
+            "repeats": prop("integer", "legacytx: repeats (1-10); rssiscan: seconds (1-60)"),
         },
     }
 

@@ -19,6 +19,7 @@ public:
     char logref[64];
     uint8_t webserial_active;
     uint8_t rfloglevel;
+    uint8_t rfstats_log; // RFS receive counters also to the system log (flash)
     char config_struct_version[4];
 
     mutable bool configLoaded;

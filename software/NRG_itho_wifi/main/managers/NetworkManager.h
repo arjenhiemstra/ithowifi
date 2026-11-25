@@ -2,19 +2,16 @@
 
 #include <WiFi.h>
 #include <WiFiClient.h>
-#include <WiFiClientSecure.h>
 
 class NetworkManager
 {
 public:
-  // Network clients
-  WiFiClientSecure secureClient;
+  // Network clients (TLS clients are created per use, a global one holds ~2 KB)
   WiFiClient standardClient;
 
   NetworkManager();
 
   void initialize();
-  WiFiClientSecure &getSecureClient() { return secureClient; }
   WiFiClient &getStandardClient() { return standardClient; }
 };
 

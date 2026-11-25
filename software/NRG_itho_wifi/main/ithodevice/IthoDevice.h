@@ -22,23 +22,24 @@
 #include "IthoQueue.h"
 #include "enum.h"
 #include "tasks/task_syscontrol.h"
+#include "IthoStatusField.h"
 
 struct ithoLabels;
 
-struct ihtoDeviceType
+struct ithoDeviceType
 {
   uint8_t DG; // device group?
   uint8_t ID;
   const char *name;
-  const uint16_t **settingsMapping;
+  const uint16_t *const *settingsMapping;
   uint16_t versionsMapLen;
-  const char **settingsDescriptions;
-  const uint8_t **statusLabelMapping;
+  const char *const *settingsDescriptions;
+  const uint8_t *const *statusLabelMapping;
   uint8_t statusMapLen;
   const struct ithoLabels *settingsStatusLabels;
 };
 
-extern const struct ihtoDeviceType ithoDevices[];
+extern const struct ithoDeviceType ithoDevices[];
 extern const size_t ithoDevicesLength;
 
 // globals
@@ -50,7 +51,8 @@ extern int16_t ithoSettingsLength;
 extern int16_t ithoStatusLabelLength;
 extern volatile uint16_t ithoCurrentVal;
 extern volatile uint8_t ithoFanDemand; // last demand value from 31DA response (0-200)
-extern const struct ihtoDeviceType *ithoDeviceptr;
+extern volatile uint16_t ithoLastSentCO2level; // last CO2 level (ppm) actually sent via ithoSendRFCO2, 0 = never sent
+extern const struct ithoDeviceType *ithoDeviceptr;
 
 // extern bool get2410;
 // extern bool set2410;
@@ -63,30 +65,6 @@ extern bool i2c_31d9_done;
 extern bool itho_internal_hum_temp;
 extern float ithoHum;
 extern float ithoTemp;
-
-struct ithoDeviceStatus
-{
-  const char *name;
-  enum : uint8_t
-  {
-    is_byte,
-    is_int,
-    is_float,
-    is_string
-  } type;
-  uint8_t length;
-  union
-  {
-    byte byteval;
-    int32_t intval;
-    float floatval;
-    const char *stringval;
-  } value;
-  uint32_t divider;
-  uint8_t updated;
-  bool is_signed;
-  ithoDeviceStatus() : updated(0) {};
-};
 
 struct ithoDeviceMeasurements
 {
@@ -111,6 +89,11 @@ extern std::vector<ithoDeviceMeasurements> ithoMeasurements;
 extern std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 extern std::vector<ithoDeviceMeasurements> ithoCounters;
 extern SemaphoreHandle_t ithoStatusMutex;
+// Separate mutex for the per-RF-source measurement vectors
+// (rfStatusSource::measurements31DA/31D9). Kept distinct from
+// ithoStatusMutex so RF-frame parsing (CC1101 task) and I2C status
+// serialization don't block each other.
+extern SemaphoreHandle_t rfStatusMutex;
 
 #define MAX_RF_STATUS_SOURCES 20
 
@@ -129,6 +112,8 @@ struct rfStatusSource
   // at. Proper per-zone storage is a follow-up.
   uint8_t lastZone31DA{0};
   uint8_t lastZone31D9{0};
+  uint8_t zoneMeasurements31DA{0}; // zone of measurements31DA, set with it under rfStatusMutex (#383)
+  uint8_t zoneMeasurements31D9{0}; // same for measurements31D9
   bool active{false};
   bool tracked{false};
   char name[32]{};
@@ -157,10 +142,10 @@ struct ithoSettings
     is_float,
     is_unknown
   } type{is_unknown};
-  bool is_signed;
+  bool is_signed{false};
   int32_t value{0};
   uint8_t length{0};
-  uint32_t divider;
+  uint32_t divider{1};
 };
 
 extern ithoSettings *ithoSettingsArray;
@@ -178,9 +163,9 @@ void getSetting(const uint8_t i, const bool updateState, const bool updateweb, c
 void processSettingResult(const uint8_t index, const bool loop);
 const char *getSpeedLabel();
 int getStatusLabelLength(const uint8_t deviceGroup, const uint8_t deviceID, const uint8_t version);
-const char *getStatusLabel(const uint8_t i, const struct ihtoDeviceType *statusPtr);
+const char *getStatusLabel(const uint8_t i, const struct ithoDeviceType *statusPtr);
 void updateSetting(const uint8_t i, const int32_t value, bool webupdate);
-const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID);
+const struct ithoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID);
 
 uint8_t checksum(const uint8_t *buf, size_t buflen);
 void sendI2CPWMinit();
@@ -203,6 +188,9 @@ bool decodeQuery2410(int32_t *, ithoSettings *, double *, double *, double *);
 bool setSetting2410(uint8_t index, int32_t value, bool updateweb);
 // void setSetting2410(bool updateweb);
 void sendQueryCounters(bool updateweb);
+void i2cDebugResult(const char *what, const std::string &text);
+void i2cDebugCommand(const std::string &cmd);
+void i2cServiceRaw(uint8_t dest, uint16_t msgClass, uint8_t type, const std::vector<uint8_t> &data);
 void parseRF31DA(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t srcId1, uint8_t srcId2);
 void parseRF31D9(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t srcId1, uint8_t srcId2);
 bool saveRFTrackedSources();
@@ -213,7 +201,6 @@ size_t sendI2cQuery(uint8_t *i2c_command, size_t i2c_command_length, uint8_t *re
 int quickPow10(int n);
 std::string i2cBufToString(const uint8_t *data, size_t len);
 bool checkI2cReply(const uint8_t *buf, size_t buflen, const uint16_t opcode);
-int castToSignedInt(int val, int length);
 int64_t castRawBytesToInt(int32_t *valptr, int length, bool is_signed);
 uint32_t getDividerFromDatatype(int8_t datatype);
 uint8_t getLengthFromDatatype(int8_t datatype);

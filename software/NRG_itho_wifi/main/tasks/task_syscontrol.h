@@ -49,6 +49,7 @@ extern firmwareinfo firmwareInfo;
 void startTaskSysControl();
 void TaskSysControl(void *pvParameters);
 void execSystemControlTasks();
+void scheduleFirmwareCheck(unsigned long delayMs);
 void updateQueue();
 bool writeIthoVal(uint16_t value, volatile uint16_t *ithoCurrentVal, bool *updateIthoMQTT);
 void ithoI2CCommand(uint8_t remoteIndex, const char *command, cmdOrigin origin);

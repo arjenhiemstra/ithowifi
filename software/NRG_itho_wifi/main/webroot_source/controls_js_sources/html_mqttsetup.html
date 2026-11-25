@@ -11,12 +11,12 @@
 <form class="pure-form pure-form-aligned">
   <fieldset>
     <div class="pure-control-group">
-      <label>MQTT Status</label>
+      <label for="mqtt_conn">MQTT Status</label>
       <button id="mqtt_conn" class="pure-button" style="pointer-events:none;">Unknown</button>
     </div>
     <br>
     <div class="pure-control-group">
-      <label for="option-mqtt_active" class="pure-radio">MQTT Active</label>
+      <label class="pure-radio" for="option-mqtt_active-1">MQTT Active</label>
       <input id="option-mqtt_active-1" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 1)'
         value="1"> on
       <input id="option-mqtt_active-0" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 0)'
@@ -49,7 +49,7 @@
     </div>
     <br>
     <div class="pure-control-group">
-      <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
+      <label class="pure-radio" for="option-mqtt_ha_active-1">Home Assistant MQTT Discovery</label>
       <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active"
         onchange='radio("mqtt_ha_active", 1)' value="1"> on
       <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active"
@@ -61,7 +61,7 @@
     </div>
     <br>
     <div class="pure-control-group">
-      <label for="option-mqtt_domoticz_active" class="pure-radio">Domoticz MQTT</label>
+      <label class="pure-radio" for="option-mqtt_domoticz_active-1">Domoticz MQTT</label>
       <input id="option-mqtt_domoticz_active-1" type="radio" name="option-mqtt_domoticz_active"
         onchange='radio("mqtt_domoticz_active", 1)' value="1"> on
       <input id="option-mqtt_domoticz_active-0" type="radio" name="option-mqtt_domoticz_active"

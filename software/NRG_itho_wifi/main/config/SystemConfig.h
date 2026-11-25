@@ -47,6 +47,7 @@ public:
   uint8_t itho_numvrem;
   uint8_t itho_numrfrem;
   uint8_t itho_sendjoin;
+  uint8_t itho_sendjoin_idx;
   uint8_t itho_pwm2i2c;
   uint8_t itho_31da;
   uint8_t itho_31d9;
@@ -65,6 +66,15 @@ public:
   uint8_t itho_rf_co2_join;
   uint8_t itho_control_interface;
   uint8_t itho_rf_standalone;
+  uint8_t itho_rf_status_poll;
+  uint8_t itho_rf_status_poll_idx;
+  uint8_t itho_rf_co2_status_req;
+  uint8_t itho_rf_co2_keepalive_demand;
+  uint8_t itho_rf_co2_keepalive_co2;
+  uint8_t itho_rf_co2_remote_idx;
+  uint16_t itho_rf_co2_keepalive_freq;
+  uint8_t itho_rf_co2_default_demand;
+  uint16_t itho_rf_co2_default_co2;
   JsonDocument api_settings_activated;
   mutable bool rfInitOK;
   uint8_t nonQ_cmd_clearsQ;

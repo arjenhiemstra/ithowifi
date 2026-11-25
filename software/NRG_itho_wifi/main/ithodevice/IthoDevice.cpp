@@ -10,6 +10,7 @@
 #include "devices/demandflow.h"
 #include "devices/autotemp.h"
 #include "devices/wpu.h"
+#include "devices/awheatpump.h"
 
 uint8_t ithoDeviceGroup = 0;
 uint8_t ithoDeviceID = 0;
@@ -17,7 +18,8 @@ uint8_t itho_hwversion = 0;
 uint8_t itho_fwversion = 0;
 volatile uint16_t ithoCurrentVal = 0;
 volatile uint8_t ithoFanDemand = 0;
-const struct ihtoDeviceType *ithoDeviceptr = nullptr;
+volatile uint16_t ithoLastSentCO2level = 0;
+const struct ithoDeviceType *ithoDeviceptr = nullptr;
 int16_t ithoSettingsLength = 0;
 int16_t ithoStatusLabelLength = 0;
 
@@ -28,9 +30,10 @@ const std::map<cmdOrigin, const char *> cmdOriginMap = {
     {cmdOrigin::MQTTAPI, "MQTT API"},
     {cmdOrigin::REMOTE, "remote"},
     {cmdOrigin::WEB, "web interface"},
+    {cmdOrigin::KEEPALIVE, "RF keep-alive"},
     {cmdOrigin::UNKNOWN, "unknown"}};
 
-const struct ihtoDeviceType ithoDevices[]{
+const struct ithoDeviceType ithoDevices[]{
     {0x00, 0x01, "Air curtain", nullptr, 0, nullptr, nullptr, 0, nullptr},
     {0x00, 0x03, "HRU ECO-fan", ithoHRUecoFanSettingsMap, sizeof(ithoHRUecoFanSettingsMap) / sizeof(ithoHRUecoFanSettingsMap[0]), ithoHRUecoSettingsLabels, ithoHRUecoFanStatusMap, sizeof(ithoHRUecoFanStatusMap) / sizeof(ithoHRUecoFanStatusMap[0]), ithoHRUecoStatusLabels},
     {0x00, 0x04, "CVE ECO2", nullptr, 0, nullptr, nullptr, 0, nullptr},
@@ -53,7 +56,8 @@ const struct ihtoDeviceType ithoDevices[]{
     {0x00, 0x20, "RF_CO2", nullptr, 0, nullptr, nullptr, 0, nullptr},
     {0x00, 0x2B, "HRU 350", ithoHRU350SettingsMap, sizeof(ithoHRU350SettingsMap) / sizeof(ithoHRU350SettingsMap[0]), ithoHRU350SettingsLabels, ithoHRU350StatusMap, sizeof(ithoHRU350StatusMap) / sizeof(ithoHRU350StatusMap[0]), ithoHRU350StatusLabels},
     {0x00, 0x30, "AutoTemp Basic", ithoAutoTempSettingsMap, sizeof(ithoAutoTempSettingsMap) / sizeof(ithoAutoTempSettingsMap[0]), ithoAutoTempSettingsLabels, ithoAutoTempStatusMap, sizeof(ithoAutoTempStatusMap) / sizeof(ithoAutoTempStatusMap[0]), ithoAutoTempStatusLabels},
-    {0x07, 0x01, "HRU 250-300", ithoHRU250_300SettingsMap, sizeof(ithoHRU250_300SettingsMap) / sizeof(ithoHRU250_300SettingsMap[0]), ithoHRU250_300SettingsLabels, ithoHRU250_300StatusMap, sizeof(ithoHRU250_300StatusMap) / sizeof(ithoHRU250_300StatusMap[0]), ithoHRU250_300StatusLabels}};
+    {0x07, 0x01, "HRU 250-300", ithoHRU250_300SettingsMap, sizeof(ithoHRU250_300SettingsMap) / sizeof(ithoHRU250_300SettingsMap[0]), ithoHRU250_300SettingsLabels, ithoHRU250_300StatusMap, sizeof(ithoHRU250_300StatusMap) / sizeof(ithoHRU250_300StatusMap[0]), ithoHRU250_300StatusLabels},
+    {0x04, 0x08, "AWHeatpump", ithoAWHeatpumpSettingsMap, sizeof(ithoAWHeatpumpSettingsMap) / sizeof(ithoAWHeatpumpSettingsMap[0]), ithoAWHeatpumpSettingsLabels, ithoAWHeatpumpStatusMap, sizeof(ithoAWHeatpumpStatusMap) / sizeof(ithoAWHeatpumpStatusMap[0]), ithoAWHeatpumpStatusLabels}};
 
 const size_t ithoDevicesLength = sizeof(ithoDevices) / sizeof(ithoDevices[0]);
 
@@ -66,26 +70,26 @@ int16_t currentIthoStatusLabelLength() { return ithoStatusLabelLength; }
 
 const char *getIthoType()
 {
-  static char ithoDeviceType[32] = "Unkown device type";
+  static char deviceTypeName[32] = "Unkown device type";
 
-  const struct ihtoDeviceType *ithoDevicesptr = ithoDevices;
-  const struct ihtoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
+  const struct ithoDeviceType *ithoDevicesptr = ithoDevices;
+  const struct ithoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
   while (ithoDevicesptr < ithoDevicesendPtr)
   {
     if (ithoDevicesptr->DG == ithoDeviceGroup && ithoDevicesptr->ID == currentIthoDeviceID())
     {
-      strlcpy(ithoDeviceType, ithoDevicesptr->name, sizeof(ithoDeviceType));
+      strlcpy(deviceTypeName, ithoDevicesptr->name, sizeof(deviceTypeName));
     }
     ithoDevicesptr++;
   }
-  return ithoDeviceType;
+  return deviceTypeName;
 }
 
-const struct ihtoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID)
+const struct ithoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID)
 {
 
-  const struct ihtoDeviceType *ithoDevicesptr = ithoDevices;
-  const struct ihtoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
+  const struct ithoDeviceType *ithoDevicesptr = ithoDevices;
+  const struct ithoDeviceType *ithoDevicesendPtr = ithoDevices + ithoDevicesLength;
   while (ithoDevicesptr < ithoDevicesendPtr)
   {
     if (ithoDevicesptr->DG == deviceGroup && ithoDevicesptr->ID == deviceID)

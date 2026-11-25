@@ -27,6 +27,8 @@ const char* HADiscConfig::getAvailableSensorsForType(uint16_t remoteType)
     case DEMANDFLOW:
     case RFTSPIDER:
     case ORCON15LF01:
+    case RFLEGACY:
+    case RFLEGACY2:
     default:
         return "lastcmd";
     }
@@ -63,6 +65,9 @@ const char* HADiscConfig::getPresetsForType(uint16_t remoteType)
         return "Low,Medium,High,Auto,AutoNight,Timer 10min,Timer 20min,Timer 30min";
     case ORCON15LF01:
         return "Away,Auto,Low,Medium,High,Timer 10min,Timer 20min,Timer 30min";
+    case RFLEGACY:
+    case RFLEGACY2:
+        return "Low,Medium,High,Timer 10min,Timer 20min,Timer 30min";
     case RFTPIR:
         return ""; // PIR doesn't have fan presets, it's motion-triggered
     default:
@@ -95,6 +100,9 @@ const char* HADiscConfig::getWirePresetsForType(uint16_t remoteType)
         return "low,medium,high,auto,autonight,timer1,timer2,timer3";
     case ORCON15LF01:
         return "away,auto,low,medium,high,timer1,timer2,timer3";
+    case RFLEGACY:
+    case RFLEGACY2:
+        return "low,medium,high,timer1,timer2,timer3";
     case RFTPIR:
         return "";
     default:

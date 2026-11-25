@@ -17,6 +17,7 @@ var remotesRefreshInterval;
 var rfstatus_to;
 var saved_status_count = 0;
 var current_status_count = 0;
+var cachedRemotes = null; // last seen `ithoremotes` payload, used to populate the RF CO2 dropdown on the system settings page
 localStorage.setItem("statustimer", 0);
 var settingIndex = -1;
 
@@ -595,6 +596,11 @@ const messageHandlers = {
       if ("itho_control_interface" in x) {
         localStorage.setItem("itho_control_interface", x.itho_control_interface);
       }
+      if ("itho_rf_co2_remote_idx" in x) {
+        localStorage.setItem("itho_rf_co2_remote_idx", x.itho_rf_co2_remote_idx);
+      }
+      var rfsm = $id('rfsettingsmenu');
+      if (rfsm) rfsm.classList.toggle('hidden', !(typeof hw_revision !== 'undefined' && (hw_revision == "2" || hw_revision.startsWith('NON-CVE '))));
       if (x.itho_rf_support == 1 && x.rfInitOK == true) {
         $id('remotemenu').classList.remove('hidden');
         $id('rfstatusmenu').classList.remove('hidden');
@@ -609,6 +615,12 @@ const messageHandlers = {
     else $id('hadiscmenu').classList.add('hidden');
     if ("i2cmenu" in x) {
       $id('i2cmenu').classList.toggle('hidden', x.i2cmenu != 1);
+      var i2cds = $id('i2cdebug_status');
+      if (i2cds) i2cds.textContent = x.i2cmenu == 1 ? "on" : "off";
+    }
+    if ("i2c_sniffer" in x) {
+      var i2css = $id('i2csniffer_status');
+      if (i2css) i2css.textContent = x.i2c_sniffer == 1 ? "on" : "off";
     }
     if ("itho_rf_standalone" in x) {
       var standalone = x.itho_rf_standalone == 1;
@@ -617,8 +629,80 @@ const messageHandlers = {
       var sm = $id('statusmenu'); if (sm) sm.classList.toggle('hidden', standalone);
       var i2m = $id('i2cmenu'); if (i2m && standalone) i2m.classList.add('hidden');
     }
+    var rfco2Section = $id('rfco2_periodic_section');
+    if (rfco2Section) {
+      if (x.itho_control_interface == 1) {
+        rfco2Section.classList.remove('hidden');
+        // The dropdown's option list is built async from the ithoremotes
+        // payload, so processElements above can't pre-select the persisted
+        // idx — its target option doesn't exist yet. Stash the desired idx
+        // on the element so populateRfco2RemoteDropdown can apply it once
+        // the options exist.
+        if ("itho_rf_co2_remote_idx" in x) {
+          var sel = $id('itho_rf_co2_remote_idx');
+          if (sel) sel.dataset.desiredIdx = String(x.itho_rf_co2_remote_idx);
+        }
+        if (cachedRemotes) populateRfco2RemoteDropdown();
+        else getSettings('ithoremotes');
+      } else {
+        rfco2Section.classList.add('hidden');
+      }
+    }
+    var sjSel = $id('itho_sendjoin_idx');
+    if (sjSel && "itho_numvrem" in x) {
+      var sjNum = $id('itho_numvrem');
+      var fillSendJoin = function (idx) {
+        var n = Math.max(1, parseInt(sjNum && sjNum.value ? sjNum.value : x.itho_numvrem) || 1);
+        sjSel.innerHTML = '';
+        for (var i = 0; i < n; i++) sjSel.insertAdjacentHTML('beforeend', '<option value="' + i + '">' + i + '</option>');
+        sjSel.value = String(idx < n ? idx : 0);
+      };
+      fillSendJoin(parseInt(x.itho_sendjoin_idx) || 0);
+      if (sjNum) sjNum.oninput = function () { fillSendJoin(parseInt(sjSel.value) || 0); };
+    }
+    // RF status-poll remote dropdown (always visible). Same async pattern as
+    // the CO2 dropdown: stash the persisted idx so populate can select it once
+    // the ithoremotes payload has built the option list.
+    var spSel = $id('itho_rf_status_poll_idx');
+    if (spSel) {
+      if ("itho_rf_status_poll_idx" in x) spSel.dataset.desiredIdx = String(x.itho_rf_status_poll_idx);
+      if (cachedRemotes) populateStatusPollRemoteDropdown();
+      else getSettings('ithoremotes');
+    }
+  },
+  spiderdiscovery: function (f) {
+    var el = $id('spider_disc_status');
+    if (!el) return;
+    var d = f.spiderdiscovery || {};
+    var msg = {
+      idle: '',
+      wait_setpoint: 'Set the Spider to ' + d.target + ' \u00B0C now and leave it there. Most Spiders are found within a minute or two, some take up to 15 minutes.',
+      wait_heater: 'Spider ' + d.spider + ' found. Listening for its heater (up to 12 minutes)...',
+      done: 'Done: Spider ' + d.spider + ' controls heater ' + d.heater + ' (RF device slot ' + d.slot + '). Set the Spider back to your normal temperature, on the Spider or in the table below.',
+      done_zone_set: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. A new setpoint is sent to the zone controller; if the Spider overrules it, use Bind as gateway instead. Set the Spider back to your normal temperature.',
+      done_zone: 'Done: Spider ' + d.spider + ' is bound to zone controller ' + d.heater + ' (for example an AutoTemp) and was added as RF device slot ' + d.slot + '. Its values can be read, but its zone is unknown, so the setpoint cannot be set this way; use Bind as gateway if the Spider offers it. Set the Spider back to your normal temperature.',
+      timeout: 'Timed out without a result. Start again.',
+      cancelled: 'Cancelled.',
+      noslot: 'Spider found, but there is no free RF device slot.',
+      gw_wait: 'Put the Spider in pairing mode now (up to 3 minutes)...',
+      gw_timeout: 'No Spider pairing request received. Press Bind as gateway and try again.',
+      done_gateway: 'Done: Spider ' + d.spider + ' is bound to the add-on as its gateway (RF device slot ' + d.slot + '). It takes a new setpoint at its next request, or at once when you touch its display.'
+    };
+    el.textContent = msg[d.state] !== undefined ? msg[d.state] : d.state;
+    if ((d.state || '').startsWith('done')) getSettings('ithoremotes');
+  },
+  spidersetpoint: function (f) {
+    var r = (f.spidersetpoint || {}).result;
+    if (r && r !== 'ok') alert('Setpoint not sent: ' + r);
   },
   remotes: function (f) {
+    // Cache + drive the RF CO2 dropdown regardless of which page we're on:
+    // a `getSettings('ithoremotes')` triggered by the system settings page
+    // must still populate the dropdown even though there's no RemotesTable.
+    cachedRemotes = f.remotes;
+    updateSpiderTable(f.remotes);
+    if ($id('itho_rf_co2_remote_idx')) populateRfco2RemoteDropdown();
+    if ($id('itho_rf_status_poll_idx')) populateStatusPollRemoteDropdown();
     var tbl = $id('RemotesTable');
     if (!tbl) return;
     if (tbl.querySelector('tbody tr') && !remotesRefreshNeeded) {
@@ -902,7 +986,7 @@ const messageHandlers = {
     if (copyEl) {
       if (x.copy_id > 0) {
         copyEl.className = "pure-button button-success";
-        copyEl.textContent = `Press join. Time remaining: ${x.copy_id}`;
+        copyEl.textContent = `Press join on the physical remote. Time remaining: ${x.copy_id}`;
       }
       else {
         copyEl.className = "pure-button";
@@ -1215,12 +1299,22 @@ document.addEventListener('DOMContentLoaded', function () {
           api_normalize: checkedVal('option-api_normalize'),
           api_settings: checkedVal('option-api_settings'),
           api_reboot: checkedVal('option-api_reboot'),
+          fw_check: checkedVal('option-fw_check'),
           api_settings_activated: JSON.parse($val('api_settings_activated')),
           syssht30: checkedVal('option-syssht30'),
           itho_rf_support: checkedVal('option-itho_rf_support'),
           itho_control_interface: checkedVal('option-itho_control_interface'),
           itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
+          itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
+          itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
           itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
+          itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
+          itho_rf_co2_keepalive_demand: checkedVal('option-itho_rf_co2_keepalive_demand'),
+          itho_rf_co2_keepalive_co2: checkedVal('option-itho_rf_co2_keepalive_co2'),
+          itho_rf_co2_remote_idx: $val('itho_rf_co2_remote_idx'),
+          itho_rf_co2_keepalive_freq: $val('itho_rf_co2_keepalive_freq'),
+          itho_rf_co2_default_demand: $val('itho_rf_co2_default_demand'),
+          itho_rf_co2_default_co2: $val('itho_rf_co2_default_co2'),
           itho_fallback: $val('itho_fallback'),
           itho_low: $val('itho_low'),
           itho_medium: $val('itho_medium'),
@@ -1233,6 +1327,7 @@ document.addEventListener('DOMContentLoaded', function () {
           itho_numvrem: $val('itho_numvrem'),
           //itho_numrfrem: $id('itho_numrfrem').value,
           itho_sendjoin: checkedVal('option-itho_sendjoin'),
+          itho_sendjoin_idx: $val('itho_sendjoin_idx'),
           itho_forcemedium: checkedVal('option-itho_forcemedium'),
           itho_vremoteapi: checkedVal('option-itho_vremoteapi'),
           itho_pwm2i2c: checkedVal('option-itho_pwm2i2c'),
@@ -1250,6 +1345,26 @@ document.addEventListener('DOMContentLoaded', function () {
       websock_send(JSON.stringify(sysMsg));
       update_page('system');
     }
+    else if (btnId === 'rfsumbit') {
+      websock_send(JSON.stringify({
+        systemsettings: {
+          itho_rf_support: checkedVal('option-itho_rf_support'),
+          itho_control_interface: checkedVal('option-itho_control_interface'),
+          itho_rf_standalone: checkedVal('option-itho_rf_standalone'),
+          itho_rf_status_poll: checkedVal('option-itho_rf_status_poll'),
+          itho_rf_status_poll_idx: $val('itho_rf_status_poll_idx'),
+          itho_rf_co2_join: checkedVal('option-itho_rf_co2_join'),
+          itho_rf_co2_status_req: checkedVal('option-itho_rf_co2_status_req'),
+          itho_rf_co2_keepalive_demand: checkedVal('option-itho_rf_co2_keepalive_demand'),
+          itho_rf_co2_keepalive_co2: checkedVal('option-itho_rf_co2_keepalive_co2'),
+          itho_rf_co2_remote_idx: $val('itho_rf_co2_remote_idx'),
+          itho_rf_co2_keepalive_freq: $val('itho_rf_co2_keepalive_freq'),
+          itho_rf_co2_default_demand: $val('itho_rf_co2_default_demand'),
+          itho_rf_co2_default_co2: $val('itho_rf_co2_default_co2')
+        }
+      }));
+      update_page('rfsettings');
+    }
     else if (btnId === 'syslogsubmit') {
       websock_send(JSON.stringify({
         logsettings: {
@@ -1258,6 +1373,7 @@ document.addEventListener('DOMContentLoaded', function () {
           esplog_active: checkedVal('option-esplog_active'),
           webserial_active: checkedVal('option-webserial_active'),
           rfloglevel: $val('rfloglevel'),
+          rfstats_log: checkedVal('option-rfstats_log'),
           logserver: $val('logserver'),
           logport: $val('logport'),
           logref: $val('logref')
@@ -1297,15 +1413,15 @@ document.addEventListener('DOMContentLoaded', function () {
       update_page('mqtt');
     }
     else if (btnId === 'itho_llm') {
-      // Auto-save remote config before entering learn/leave mode
-      // Try selected remote first, then save all visible remotes (wizard mode)
+      // Auto-save remote config before entering learn/leave mode: the selected remote, or in the
+      // wizard all remotes with visible dropdowns. On the RF devices page without a selection nothing
+      // is saved (a join registers the remote itself), so the config is not saved once per row.
       var sel = checkedVal('optionsRemotes');
       var indices = [];
       if (sel != null) {
         indices.push(parseInt(sel));
-      } else {
-        // No radio selected (wizard mode) — save all remotes that have visible dropdowns
-        for (var ri = 0; ri < 12; ri++) {
+      } else if ($id('wizard-indicators')) {
+        for (var ri = 0; ri < 20; ri++) {
           if ($id('func_remote-' + ri)) indices.push(ri);
         }
       }
@@ -1511,6 +1627,28 @@ document.addEventListener('DOMContentLoaded', function () {
         websock_send(`{"rfdemand":${val.value}, "rfremoteindex":${idx}}`);
       }
     }
+    else if (btnId.startsWith('i2cdebug-')) {
+      const cmd = btnId.split('-')[1];
+      const ask = { identify: 'Send identify (03F0) to the unit?', deaeration: 'Start deaeration (4E34) on the heat pump? Only do this if you know what it does.' }[cmd];
+      if (!ask || confirm(ask)) {
+        $id(cmd === 'faulthistory' ? 'i2c_faulthistory' : 'i2c_result').textContent = 'Processing...';
+        websock_send(JSON.stringify({ i2cdebug: cmd }));
+      }
+    }
+    else if (btnId === 'i2craw_send') {
+      const type = Number($id('i2craw_type').value);
+      if (type === 4 || confirm('Send a write to the unit? This can change its behaviour.')) {
+        $id('i2c_result').textContent = 'Processing...';
+        websock_send(JSON.stringify({
+          i2craw: {
+            dest: parseInt($id('i2craw_dest').value, 16),
+            class: parseInt($id('i2craw_class').value, 16),
+            type: type,
+            data: $id('i2craw_data').value
+          }
+        }));
+      }
+    }
     else if (btnId.startsWith('ithobutton-')) {
       const items = btnId.split('-');
       websock_send(`{"ithobutton":"${items[1]}"}`);
@@ -1578,12 +1716,8 @@ document.addEventListener('DOMContentLoaded', function () {
         value: parseFloat($id('itho_setting_value_set').value)
       }));
     }
-    else if (btnId === 'button4210') {
-      websock_send(JSON.stringify({
-        ithobutton: 4210
-      }));
-    }
     else if (btnId === 'buttonCE30') {
+      $id('i2c_result').textContent = 'Processing...';
       websock_send(JSON.stringify({
         ithobutton: 0xCE30,
         ithotemp: parseFloat($id('itho_ce30_temp').value * 100.),
@@ -1592,6 +1726,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }));
     }
     else if (btnId === 'buttonC000') { //CO2
+      $id('i2c_result').textContent = 'Processing...';
       websock_send(JSON.stringify({
         ithobutton: 0xC000,
         itho_c000_speed1: Number($id('itho_c000_speed1').value),
@@ -1599,6 +1734,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }));
     }
     else if (btnId === 'button9298') { //CO2 value
+      $id('i2c_result').textContent = 'Processing...';
       websock_send(JSON.stringify({
         ithobutton: 0x9298,
         itho_9298_val: Number($id('itho_9298_val').value)
@@ -1739,6 +1875,20 @@ document.addEventListener('DOMContentLoaded', function () {
       let obj = localStorage.getItem("ithostatus");
       updateStatusTableFromCompactJson(JSON.parse(obj));
       localStorage.removeItem("ithostatus");
+    }
+    else if (btnId === 'spider_disc_start' || btnId === 'spider_disc_cancel' || btnId === 'spider_gw_bind') {
+      websock_send(JSON.stringify({ spider_discovery: btnId === 'spider_disc_start' ? 'start' : btnId === 'spider_gw_bind' ? 'gateway' : 'cancel' }));
+    }
+    else if (btnId.startsWith('spider_set-')) {
+      var spIdx = parseInt(btnId.split('-')[1], 10);
+      var spVal = parseFloat($val('spider_sp-' + spIdx));
+      if (isNaN(spVal)) alert('Please enter a setpoint.');
+      else {
+        websock_send(JSON.stringify({ spider_setpoint: { index: spIdx, setpoint: spVal } }));
+        var spSt = $id('spider_set_status');
+        if (spSt) spSt.textContent = spVal + ' \u00B0C sent. The Spider picks it up the next time it listens (usually within a few minutes, up to about 10 for a Spider with a relay); the table shows it until then.';
+        setTimeout(function () { getSettings('ithoremotes'); }, 1000);
+      }
     }
     else if (btnId === 'save_update_had') {
       var jsonvar = generateCompactJson();
@@ -1915,6 +2065,88 @@ function getSettings(pagevalue) {
   }
 }
 
+// Fills the RF CO2 send-remote <select> on the system settings page with the
+// non-empty SEND/RFTCO2 slots from cachedRemotes. Called on every fresh
+// `remotes` payload (so a slot configured elsewhere shows up here without a
+// manual reload) and after the systemsettings handler restores the saved
+// `itho_rf_co2_remote_idx`. If no eligible remote exists, leaves a single
+// disabled-looking option so the user understands why nothing's selectable.
+// Live show/hide on the system settings page when the user flips the
+// "Control interface" radio. The systemsettings handler does the same on
+// page render — this just keeps the section in sync while the user is
+// still on the page.
+function toggleRfco2PeriodicSection(controlInterface) {
+  var sec = $id('rfco2_periodic_section');
+  if (!sec) return;
+  if (controlInterface == 1) {
+    sec.classList.remove('hidden');
+    if (cachedRemotes) populateRfco2RemoteDropdown();
+    else getSettings('ithoremotes');
+  } else {
+    sec.classList.add('hidden');
+  }
+}
+
+function populateRfco2RemoteDropdown() {
+  var sel = $id('itho_rf_co2_remote_idx');
+  if (!sel) return;
+  // Prefer the desired idx stashed by the systemsettings handler (the
+  // persisted value, which the option list didn't exist for at the time).
+  // Fall back to the current selection so a live edit isn't clobbered.
+  var desired = sel.dataset.desiredIdx || sel.value;
+  var eligible = (cachedRemotes || []).filter(function (r) {
+    return r && r.remfuncname === 'send' && (r.remtypename === 'RFT CO2' || r.remtypename === 'Orcon CO2');
+  });
+  sel.innerHTML = '';
+  if (eligible.length === 0) {
+    var opt = document.createElement('option');
+    opt.value = '0';
+    opt.textContent = 'No RFT CO2 / Orcon CO2 send remote configured';
+    sel.appendChild(opt);
+    return;
+  }
+  eligible.forEach(function (r) {
+    var opt = document.createElement('option');
+    opt.value = r.index;
+    opt.textContent = 'Slot ' + r.index + ' — ' + (r.name || 'unnamed');
+    sel.appendChild(opt);
+  });
+  if (desired !== '' && sel.querySelector('option[value="' + desired + '"]')) {
+    sel.value = desired;
+  }
+}
+
+// Fills the RF status-poll send-remote <select> with the non-empty, bi-directional
+// SEND slots from cachedRemotes (any type — RFT Spider, RFT CO2, RFT RV, ...), so
+// the user can pick which remote drives the periodic 31DA/31D9 poll. Mirrors
+// populateRfco2RemoteDropdown; the remote type is shown so bidirectional slots are
+// easy to tell apart.
+function populateStatusPollRemoteDropdown() {
+  var sel = $id('itho_rf_status_poll_idx');
+  if (!sel) return;
+  var desired = sel.dataset.desiredIdx || sel.value;
+  var eligible = (cachedRemotes || []).filter(function (r) {
+    return r && r.remfuncname === 'send' && r.bidirectional;
+  });
+  sel.innerHTML = '';
+  if (eligible.length === 0) {
+    var opt = document.createElement('option');
+    opt.value = '0';
+    opt.textContent = 'No bi-directional send remote configured';
+    sel.appendChild(opt);
+    return;
+  }
+  eligible.forEach(function (r) {
+    var opt = document.createElement('option');
+    opt.value = r.index;
+    opt.textContent = 'Slot ' + r.index + ' — ' + (r.name || 'unnamed') + ' (' + (r.remtypename || '') + ')';
+    sel.appendChild(opt);
+  });
+  if (desired !== '' && sel.querySelector('option[value="' + desired + '"]')) {
+    sel.value = desired;
+  }
+}
+
 //
 // Reboot script
 //
@@ -1977,8 +2209,14 @@ function update_page(page) {
   if (page == 'system') {
     main.insertAdjacentHTML('beforeend', html_systemsettings_start);
     var sf = $id('sys_fieldset');
-    if (hw_revision == "2" || hw_revision.startsWith('NON-CVE ')) { sf.insertAdjacentHTML('beforeend', html_systemsettings_cc1101); }
     sf.insertAdjacentHTML('beforeend', html_systemsettings_end);
+  }
+  if (page == 'rfsettings') {
+    main.insertAdjacentHTML('beforeend', '<div class="header"><h1>RF settings</h1></div><p>Configuration of the CC1101 RF module and RF control.</p><form class="pure-form pure-form-aligned"><fieldset id="rf_fieldset"></fieldset></form>');
+    var rff = $id('rf_fieldset');
+    rff.insertAdjacentHTML('beforeend', html_systemsettings_cc1101);
+    rff.insertAdjacentHTML('beforeend', '<div class="pure-controls"><button id="rfsumbit" class="pure-button pure-button-primary">Save</button></div>');
+    getSettings('syssetup');
   }
   if (page == 'itho') { main.insertAdjacentHTML('beforeend', html_ithosettings); }
   if (page == 'status') { main.insertAdjacentHTML('beforeend', html_ithostatus); }
@@ -2120,8 +2358,16 @@ var remtypes = [
   ["RFT RV", 0x12A0, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT CO2", 0x1298, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
   ["RFT PIR", 0x2E10, ['motion_on', 'motion_off', 'join', 'leave']],
-  ["RFT Spider", 0x22F2, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
+  ["RFT Spider", 0x22F2, ['auto', 'autonight', 'low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["Orcon 15RF", 0x6710, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["Orcon CO2", 0x6711, ['away', 'low', 'medium', 'high', 'auto', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["RF (old protocol)", 0x6720, ['low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']],
+  ["RF (old protocol, variant 2)", 0x6721, ['low', 'medium', 'high', 'timer1', 'timer2', 'timer3', 'join', 'leave']]
 ];
+// Bi-directional remotes need a join handshake that only exists over RF, not for virtual remotes (#405)
+var remtypesBidirectional = [0x22F5, 0x22F4, 0x12A0, 0x1298, 0x22F2];
+// RF-only types, not offered for virtual remotes: the bi-directional ones and the old (pre-RAMSES) protocol
+var remtypesRfOnly = remtypesBidirectional.concat([0x6720, 0x6721]);
 
 var remfuncs = [
   ["Receive", 1],
@@ -2200,27 +2446,6 @@ function buildHtmlTablePlain(table, jsonVar) {
 }
 
 
-function generateRemoteID(index) {
-  var rfIdEl = $id('module_rf_id_str');
-  if (!rfIdEl || !rfIdEl.value) return 'empty slot';
-  var parts = rfIdEl.value.split(',');
-  if (parts.length < 3) return 'empty slot';
-  var b0 = parseInt(parts[0], 16);
-  var b1 = parseInt(parts[1], 16);
-  var b2 = (parseInt(parts[2], 16) + index) & 0xFF;
-  // Check for collisions with existing remotes
-  for (var attempt = 0; attempt < 255; attempt++) {
-    var candidate = b0.toString(16).toUpperCase() + ',' + b1.toString(16).toUpperCase() + ',' + ((b2 + attempt) & 0xFF).toString(16).toUpperCase();
-    var collision = false;
-    for (var j = 0; j < remotesCount; j++) {
-      var el = $id('id_remote-' + j);
-      if (el && el.value === candidate) { collision = true; break; }
-    }
-    if (!collision) return candidate;
-  }
-  return 'empty slot';
-}
-
 function formatCapabilities(JSONObj) {
   var str = '';
   if (JSONObj != null) {
@@ -2234,6 +2459,37 @@ function formatCapabilities(JSONObj) {
   return str;
 }
 
+// Itho Spider thermostats (remotes with the thermostat capability): current values + setpoint input.
+// Rows are created once and then only their value cells are updated, so typing is not interrupted.
+function updateSpiderTable(rems) {
+  var tbl = $id('SpiderTable');
+  if (!tbl) return;
+  var list = (rems || []).filter(function (r) { return r && r.capabilities && r.capabilities.thermostat; });
+  if (list.length === 0) { tbl.innerHTML = ''; return; }
+  if (!tbl.querySelector('thead')) {
+    tbl.innerHTML = '<thead><tr><th>Slot</th><th>Name</th><th>Room temp</th><th>Setpoint</th><th>Heat demand</th><th>New setpoint</th></tr></thead><tbody></tbody>';
+  }
+  var body = tbl.querySelector('tbody');
+  var deg = ' \u00B0C';
+  list.forEach(function (r) {
+    var c = r.capabilities, i = r.index, row = $id('spider_row-' + i);
+    if (!row) {
+      row = document.createElement('tr');
+      row.id = 'spider_row-' + i;
+      row.innerHTML = '<td>' + i + '</td><td></td><td></td><td></td><td></td>' +
+        '<td><input id="spider_sp-' + i + '" type="number" min="5" max="30" step="0.5" style="width:5em"> ' +
+        '<button id="spider_set-' + i + '" class="pure-button">Set</button></td>';
+      body.appendChild(row);
+    }
+    row.cells[1].textContent = r.name || '';
+    row.cells[2].textContent = c.temp != null ? c.temp + deg : '-';
+    var sp = c.setpoint != null ? c.setpoint + deg : '-';
+    if (c.setpoint_cmd != null && c.setpoint_cmd !== c.setpoint) sp += ' \u2192 ' + c.setpoint_cmd + deg + ' (waiting for the Spider)';
+    row.cells[3].textContent = sp;
+    row.cells[4].textContent = c.demand != null ? c.demand + ' %' : '-';
+  });
+}
+
 function updateRemoteCapabilities(jsonVar) {
   for (const remote of jsonVar) {
     var i = remote["index"] || 0;
@@ -2242,6 +2498,44 @@ function updateRemoteCapabilities(jsonVar) {
       capsCell.innerHTML = formatCapabilities(remote["capabilities"]);
     }
   }
+}
+
+// Pick a unique source ID for a new SEND remote. Uses the module RF ID's first
+// two bytes as the base and searches the third byte for a value that isn't the
+// module ID itself and isn't already used by another remote shown on this page,
+// so a second/third send remote can't reuse an earlier one. The search starts
+// past the address range reserved just above the module ID, keeping generated
+// send IDs in their own recognizable range. Returns the ID as "B0,B1,B2" (hex),
+// or "empty slot" if the module RF ID field isn't available.
+function generateSendRemoteID() {
+  var rfIdEl = $id('module_rf_id_str');
+  if (!rfIdEl || !rfIdEl.value) return 'empty slot';
+  var parts = rfIdEl.value.split(',');
+  if (parts.length < 3) return 'empty slot';
+  var b0 = parseInt(parts[0], 16) & 0xFF;
+  var b1 = parseInt(parts[1], 16) & 0xFF;
+  var moduleB2 = parseInt(parts[2], 16) & 0xFF;
+  var RESERVED = 12; // address slots reserved just above the module ID
+  var hx = hexByte;
+  var inUse = function (cand) {
+    for (var j = 0; j < remotesCount; j++) {
+      var el = $id('id_remote-' + j);
+      if (el && el.value.toUpperCase() === cand) return true;
+    }
+    return false;
+  };
+  for (var probe = 0; probe < 256; probe++) {
+    var b2 = (moduleB2 + 1 + RESERVED + probe) & 0xFF;
+    if (b2 === moduleB2) continue;
+    var candidate = hx(b0) + ',' + hx(b1) + ',' + hx(b2);
+    if (!inUse(candidate)) return candidate;
+  }
+  return 'empty slot';
+}
+
+// RF ID byte as two hex digits: 07, not 7
+function hexByte(n) {
+  return n.toString(16).toUpperCase().padStart(2, '0');
 }
 
 function buildHtmlTableRemotes(table, remfunc, jsonVar) {
@@ -2316,8 +2610,8 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
       else if (key === "id") {
         var cellValue = value.toString();
         if (cellValue == null) cellValue = '';
-        cellValue = `${value[0].toString(16).toUpperCase()},${value[1].toString(16).toUpperCase()},${value[2].toString(16).toUpperCase()}`;
-        if (cellValue == "0,0,0") cellValue = "empty slot";
+        cellValue = `${hexByte(value[0])},${hexByte(value[1])},${hexByte(value[2])}`;
+        if (cellValue == "00,00,00") cellValue = "empty slot";
         var idval = `id_remote-${i}`;
         var td = document.createElement('td');
         td.innerHTML = `<input type='text' id='${idval}' value='${cellValue}' data-saved-id='${cellValue}'${isWizard ? '' : " readonly=''"} />`;
@@ -2342,15 +2636,15 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
             var idEl = $id('id_remote-' + i);
             if (!idEl) return;
             if (this.value == 5) {
-              // Send mode: use module RF ID (the add-on's own ID for transmitting)
-              var rfIdEl = $id('module_rf_id_str');
-              if (rfIdEl && rfIdEl.value) {
-                idEl.value = rfIdEl.value;
-              } else {
-                idEl.value = generateRemoteID(i);
-              }
+              // Send mode: restore this remote's own saved ID so toggling the
+              // function away and back doesn't lose it (issue #376). A brand-new
+              // remote has no saved ID, so generate a fresh unique one. Never
+              // reuse the module RF ID here — every send remote needs its own ID.
+              var saved = idEl.dataset.savedId;
+              idEl.value = (saved && saved !== 'empty slot' && saved !== '0,0,0' && saved !== '') ? saved : generateSendRemoteID();
             } else {
-              // Receive/Monitor: save current ID and show empty
+              // Receive/Monitor: remember the current ID so switching back to Send
+              // restores it, then show empty.
               if (idEl.value !== 'empty slot' && idEl.value !== '0,0,0' && idEl.value !== '') {
                 idEl.dataset.savedId = idEl.value;
               }
@@ -2381,6 +2675,7 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
         var wizardHru = isWizard && wizardDeviceCategory === 'hru250_300';
         for (const item of remtypes) {
           if (wizardHru && item[1] !== 0x22F1 && item[1] !== 0x22F3) continue;
+          if (remfunc == 2 && remtypesRfOnly.includes(item[1]) && item[1] != cellValue) continue;
           var option = document.createElement('option');
           option.value = item[1];
           option.text = item[0];
@@ -2399,15 +2694,15 @@ function buildHtmlTableRemotes(table, remfunc, jsonVar) {
           var td = document.createElement('td');
           if (remfunction == 2 || remfunction == 5) {
             addRemoteButtons(td, remfunc, remtype, i, false);
-            if (remfunction == 5 && remtype == 0x1298) {
+            if (remfunction == 5 && (remtype == 0x1298 || remtype == 0x6711)) {
               td.insertAdjacentHTML('beforeend', `<br><input type="number" id="co2val-${i}" min="0" max="10000" placeholder="CO2 ppm" style="width:90px;margin-top:4px;"> <button id="button_sendco2-${i}" class="pure-button">Send CO2</button>`);
-              td.insertAdjacentHTML('beforeend', `<br><label style="font-size:0.85em;">Demand: <span id="demandlabel-${i}">0</span>/200</label><input type="range" id="demandval-${i}" min="0" max="200" value="0" style="width:150px;" oninput="$id('demandlabel-'+${i}).textContent=this.value" onchange="websock_send(JSON.stringify({rfdemand:parseInt(this.value),rfremoteindex:${i}}))">`);
+              td.insertAdjacentHTML('beforeend', `<br><span style="font-size:0.85em;">Demand: <span id="demandlabel-${i}">0</span>/200</span><input type="range" id="demandval-${i}" min="0" max="200" value="0" style="width:150px;" oninput="$id('demandlabel-'+${i}).textContent=this.value" onchange="websock_send(JSON.stringify({rfdemand:parseInt(this.value),rfremoteindex:${i}}))">`);
 
             }
             if (remfunction == 5) {
               var curPower = remote["tx_power"] || 192;
               td.insertAdjacentHTML('beforeend',
-                `<br><label style="font-size:0.85em;">TX Power: </label>` +
+                `<br><span style="font-size:0.85em;">TX Power: </span>` +
                 `<select id="txpower-${i}" style="font-size:0.85em;">` +
                 `<option value="3"${curPower==3?' selected':''}>-30 dBm (min)</option>` +
                 `<option value="38"${curPower==38?' selected':''}>-15 dBm</option>` +
@@ -2596,6 +2891,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     includeCheckbox.type = 'checkbox';
     includeCheckbox.checked = false;
     includeCheckbox.dataset.field = 'include';
+    includeCheckbox.id = includeCheckbox.name = 'hadisc-include-' + index;
     var includeTd = document.createElement('td');
     includeTd.appendChild(includeCheckbox);
     row.appendChild(includeTd);
@@ -2613,6 +2909,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     nameInput.value = cleanName;
     nameInput.placeholder = 'Name';
     nameInput.dataset.field = 'name';
+    nameInput.id = nameInput.name = 'hadisc-name-' + index;
     var nameTd = document.createElement('td');
     nameTd.appendChild(nameInput);
     row.appendChild(nameTd);
@@ -2623,6 +2920,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     deviceClassInput.className = 'advanced hidden';
     deviceClassInput.placeholder = 'Device Class';
     deviceClassInput.dataset.field = 'dc';
+    deviceClassInput.id = deviceClassInput.name = 'hadisc-dc-' + index;
     var dcTd = document.createElement('td');
     dcTd.className = 'advanced hidden';
     dcTd.appendChild(deviceClassInput);
@@ -2634,6 +2932,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     stateClassInput.className = 'advanced hidden';
     stateClassInput.placeholder = 'State Class';
     stateClassInput.dataset.field = 'sc';
+    stateClassInput.id = stateClassInput.name = 'hadisc-sc-' + index;
     var scTd = document.createElement('td');
     scTd.className = 'advanced hidden';
     scTd.appendChild(stateClassInput);
@@ -2647,6 +2946,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     valueTemplateInput.value = `{{ value_json['${key}'] }}`;
     valueTemplateInput.dataset.default = `{{ value_json['${key}'] }}`;
     valueTemplateInput.dataset.field = 'vt';
+    valueTemplateInput.id = valueTemplateInput.name = 'hadisc-vt-' + index;
     var vtTd = document.createElement('td');
     vtTd.className = 'advanced hidden';
     vtTd.appendChild(valueTemplateInput);
@@ -2659,6 +2959,7 @@ function buildHtmlHADiscTable(ithostatusinfo) {
     unitInput.placeholder = 'Unit of Measurement';
     unitInput.value = unitMatch ? unitMatch[1] : '';
     unitInput.dataset.field = 'um';
+    unitInput.id = unitInput.name = 'hadisc-um-' + index;
     var umTd = document.createElement('td');
     umTd.className = 'advanced hidden';
     umTd.appendChild(unitInput);
@@ -3099,6 +3400,7 @@ function wizardAbort() {
 function wizardDetectDeviceCategory(devtype) {
   if (!devtype || devtype === 'Unkown device type' || devtype === 'Generic Itho device') return 'other';
   if (devtype === 'Heatpump') return 'wpu';
+  if (devtype === 'AWHeatpump') return 'awhp';
   if (devtype === 'HRU 250-300') return 'hru250_300';
   if (devtype === 'HRU 350') return 'hru350';
   if (devtype === 'HRU ECO-fan') return 'hru_eco';
@@ -3132,11 +3434,11 @@ function applyDeviceDefaults() {
   checkRadio('option-itho_31da', enable31 ? '1' : '0');
   checkRadio('option-itho_31d9', enable31 ? '1' : '0');
 
-  // WPU counters (4210): on for WPU, off for others (always visible in wizard)
+  // WPU counters (4210): on for WPU, off for others (always visible in wizard); the labels are WPU only, so not for awhp
   checkRadio('option-itho_4210', cat === 'wpu' ? '1' : '0');
 
   // Virtual remote and related settings
-  var useVirtual = (cat !== 'hru250_300' && cat !== 'wpu');
+  var useVirtual = (cat !== 'hru250_300' && cat !== 'wpu' && cat !== 'awhp');
   var numvremEl = $id('itho_numvrem');
   if (cat === 'demandflow') {
     if (numvremEl) numvremEl.value = 12;
@@ -3147,7 +3449,7 @@ function applyDeviceDefaults() {
     checkRadio('option-itho_sendjoin', '1');
     checkRadio('option-itho_forcemedium', '1');
   } else {
-    if (numvremEl) numvremEl.value = (cat === 'wpu' ? 0 : 1);
+    if (numvremEl) numvremEl.value = (cat === 'wpu' || cat === 'awhp' ? 0 : 1);
     checkRadio('option-itho_sendjoin', '0');
     checkRadio('option-itho_forcemedium', '0');
   }
@@ -3728,6 +4030,7 @@ var html_debug = `
       <option value="HRU 350">HRU 350</option>
       <option value="HRU ECO-fan">HRU ECO-fan</option>
       <option value="Heatpump">Heatpump (WPU)</option>
+      <option value="AWHeatpump">AWHeatpump (Air to Water Heatpump)</option>
     </select><br><br>
     <button id="button-wizardreactivate" type="button" class="pure-button pure-button-primary">Reactivate wizard</button>
 
@@ -3766,6 +4069,14 @@ var html_debug = `
                 <option value="9">9</option>
                 <option value="10">10</option>
                 <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15">15</option>
+                <option value="16">16</option>
+                <option value="17">17</option>
+                <option value="18">18</option>
+                <option value="19">19</option>
             </select>&nbsp;dest ID override (optional, hex triplet like <code>96,A4,3B</code>):&nbsp;
             <input id="rfstatusreq-destid" type="text" size="10" placeholder="">
             &nbsp;//uses the source ID of the selected RF remote slot, and (if non-empty) the dest ID override as the destination — otherwise the slot's stored destinationID. The Itho only answers when that slot is bi-directional and joined, or when the override targets a real Itho address.
@@ -3775,23 +4086,43 @@ var html_debug = `
                 <p>Only use this feature (briefly) for debugging issues. This option enables an extra menu where more I2C options and logging is available. <br>Enabling the
                     I2C
                     debug menu will also halt I2C bus activity in case of errors to be able to save logging!</p>
-                <button id="button-i2cdebugon" type="button" class="pure-button pure-button-primary">Debug on</button>
-                <button id="button-i2cdebugoff" type="button" class="pure-button pure-button-primary">Debug off</button>
+                <button id="i2cdebug_toggle" type="button" class="pure-button pure-button-primary">Toggle</button>
+                <span>Status: </span><span id="i2cdebug_status">unknown</span>
                 <br>
                 <legend><br>I2C sniffer:</legend>
                 <p>Only use this feature (briefly) for debugging issues. The I2C sniffer works only on sniffer capable devices (non-CVE; all versions, CVE; as of hw rev.
                     2.5). <br>See system log for confirmation.<br>
-                    Sniffer output is available through syslog. (reboot needed)</p>
-                <button id="button-i2csnifferon" type="button" class="pure-button pure-button-primary">Sniffer on</button>
-                <button id="button-i2csnifferoff" type="button" class="pure-button pure-button-primary">Sniffer off</button>
+                    Sniffer output is available through syslog.</p>
+                <button id="i2csniffer_toggle" type="button" class="pure-button pure-button-primary">Toggle</button>
+                <span>Status: </span><span id="i2csniffer_status">unknown</span>
                 <br><br>
-                <legend><br>Low level Itho I2C commands:</legend><br>
-                <button id="ithobutton-type" type="button" class="pure-button pure-button-primary">Query Devicetype</button><br>
-                <span>Result:&nbsp;</span><span id="ithotype"></span><br><br>
-                <button id="ithobutton-statusformat" type="button" class="pure-button pure-button-primary">Query Status
-                    Format</button><br><span>Result:&nbsp;</span><span id="ithostatusformat"></span><br><br>
-                <button id="ithobutton-status" type="button" class="pure-button pure-button-primary">Query
-                    Status</button><br><span>Result:&nbsp;</span><span id="ithostatus"></span><br><br>
+                <legend><br>Low level Itho I2C commands:</legend>
+                <p>Every command below shows its result in the result field. Not every unit answers every command; "no reply" means the unit does not support it.</p>
+                <button id="i2cdebug-type" type="button" class="pure-button pure-button-primary">Query Devicetype</button>&nbsp;<button id="i2cdebug-statusformat" type="button" class="pure-button pure-button-primary">Query Status Format</button>&nbsp;<button id="i2cdebug-status" type="button" class="pure-button pure-button-primary">Query Status</button>&nbsp;<button id="i2cdebug-31DA" type="button" class="pure-button pure-button-primary">Query 31DA</button>&nbsp;<button id="i2cdebug-31D9" type="button" class="pure-button pure-button-primary">Query 31D9</button>&nbsp;<button id="i2cdebug-counters" type="button" class="pure-button pure-button-primary">Query Counters</button><br><br>
+                <button id="i2cdebug-serial" type="button" class="pure-button pure-button-primary">Query serial number</button>&nbsp;<button id="i2cdebug-article" type="button" class="pure-button pure-button-primary">Query article number</button>&nbsp;<button id="i2cdebug-wpufaults" type="button" class="pure-button pure-button-primary">Query heat pump faults</button><br><br>
+                <button id="i2cdebug-filterreset" type="button" class="pure-button pure-button-primary">Filter reset</button>&nbsp;uses virtual remote 0, which must be paired with the Itho unit<br><br>
+                <button id="i2cdebug-identify" type="button" class="pure-button pure-button-primary">Identify</button>&nbsp;<button id="i2cdebug-deaeration" type="button" class="pure-button pure-button-primary">Start deaeration (heat pump)</button><br><br>
+                <button id="buttonC000" type="button" class="pure-button pure-button-primary">Send CO2 speed</button>
+                Speed1: <input id="itho_c000_speed1" type="number" min="0" max="255" size="4" value="0">&nbsp;Speed2:
+                <input id="itho_c000_speed2" type="number" min="0" max="255" size="4" value="0"><br><br>
+                <button id="button9298" type="button" class="pure-button pure-button-primary">Send CO2 value</button>
+                Value: <input id="itho_9298_val" type="number" min="0" max="65535" size="4" value="0"><br><br>
+                <button id="buttonCE30" type="button" class="pure-button pure-button-primary">Send CE30</button>
+                Outside temperature: <input id="itho_ce30_temp" type="number" min="-20" max="50" size="4" value="15">
+                Optional temporary temperature: <input id="itho_ce30_temptemp" type="number" min="-20" max="50" size="4" value="0">
+                Valid until (timestamp): <input id="itho_ce30_timestamp" type="number" min="0" max="2147483647" size="12" value="0"><br><br>
+                <button id="i2craw_send" type="button" class="pure-button pure-button-primary">Send</button>
+                any message (hex), destination: <input id="i2craw_dest" type="text" size="3" value="82">
+                class: <input id="i2craw_class" type="text" size="5" value="2400">
+                type: <select id="i2craw_type">
+                    <option value="4">04 query</option>
+                    <option value="5">05 inform</option>
+                    <option value="6">06 write</option>
+                </select>
+                data: <input id="i2craw_data" type="text" size="30" placeholder="e.g. 01 00 00 03"><br>
+                <span style="color:red">Destination 82 is the Itho unit. A write (type 05/06) can change the unit, only send writes you know.</span><br><br>
+                <span>Result:&nbsp;</span><span id="i2c_result"></span><br><br>
+
                 <button id="button2410" type="button" class="pure-button pure-button-primary">Query 2410</button>setting index: <input
                     id="itho_setting_id" type="number" min="0" max="255" size="6"
                     value="0"><br><span>Result:&nbsp;</span><span id="itho2410"></span><br>
@@ -3809,35 +4140,6 @@ var html_debug = `
                     id="itho2410setres"></span><br>
                 <span style="color:red">Warning!!</span><br><br>
 
-                <button id="ithobutton-31DA" type="button" class="pure-button pure-button-primary">Query
-                    31DA</button><br><span>Result:&nbsp;</span>
-                <span id="itho31DA"></span><br><br><button id="ithobutton-31D9"
-                    type="button" class="pure-button pure-button-primary">Query 31D9</button><br><span>Result:&nbsp;</span><span
-                    id="itho31D9"></span><br><br>
-
-                <button id="ithobutton-10D0" type="button" class="pure-button pure-button-primary">Filter
-                    reset</button><br><span>Filter
-                    reset function uses virtual remote 0, this remote needs to be paired with your Itho unit for this
-                    command
-                    to
-                    work</span><br><br>
-
-                <button id="buttonC000" type="button" class="pure-button pure-button-primary">Send CO2 speed</button>
-                Speed1: <input id="itho_c000_speed1" type="number" min="0" max="255" size="4" value="0">&nbsp;Speed2:
-                <input id="itho_c000_speed2" type="number" min="0" max="255" size="4" value="0"><br><br>
-                <button id="button9298" type="button" class="pure-button pure-button-primary">Send CO2 value</button>
-                Value: <input id="itho_9298_val" type="number" min="0" max="65535" size="4" value="0"><br><br>
-                <button id="button4210" type="button" class="pure-button pure-button-primary">Query
-                    Counters</button><br><span>Result:&nbsp;</span><span id="ithocounters"></span><br><br>
-                <button id="buttonCE30" type="button" class="pure-button pure-button-primary">Send CE30</button>
-                Set outside temperature to: <input id="itho_ce30_temp" type="number" min="-20" max="50" size="4"
-                    value="15"><br>
-                Optional temporary temperature: <input id="itho_ce30_temptemp" type="number" min="-20" max="50" size="4"
-                    value="0">
-                Valid until(timestamp) <input id="itho_ce30_timestamp" type="number" min="0" max="2147483647" size="12"
-                    value="0"><br>
-                <span>Result:&nbsp;</span><span id="itho_ce30_result"></span><br>
-                <br>
                 <span style="color:red">Warning!!<br>
                     4030 is low level "manual control" of your Itho unit.<br>
                     Use with care and use only if you know what you are doing!</span><br>
@@ -3852,6 +4154,10 @@ var html_debug = `
                     WPU 5G: Make sure you set the "Max manual operation time" setting on the "Itho settings" page.<br>
                     The Itho unit will remain in manual mode until the timer expires. 0 means unlimited.<br>
                     Warning!!<br></span><br>
+
+                <legend><br>Itho fault history:</legend><br>
+                <button id="i2cdebug-faulthistory" type="button" class="pure-button pure-button-primary">Query fault history</button>&nbsp;the last faults stored in the Itho unit, with texts for the CVE types, HRU 250/300 and DemandFlow<br><br>
+                <span id="i2c_faulthistory" style="white-space:pre-line"></span><br>
             </fieldset><br><br><br>
         </fieldset>
     </form>
@@ -3872,6 +4178,13 @@ var html_debug = `
     $id("jsdebug").addEventListener('click', function () {
         debug = !debug;
         $id("jsdebug_status").textContent = debug ? "on" : "off";
+    });
+    getSettings('syssetup'); // fills the I2C debug and sniffer status
+    $id("i2cdebug_toggle").addEventListener('click', function () {
+        websock_send(JSON.stringify({ button: $id("i2cdebug_status").textContent === "on" ? "i2cdebugoff" : "i2cdebugon" }));
+    });
+    $id("i2csniffer_toggle").addEventListener('click', function () {
+        websock_send(JSON.stringify({ button: $id("i2csniffer_status").textContent === "on" ? "i2csnifferoff" : "i2csnifferon" }));
     });
 </script>
 `;
@@ -3958,6 +4271,7 @@ Examples:<br>
 <code>POST /api/v2/command</code> with body <code>{"speed":150,"timer":15}</code><br>
 <code>PUT /api/v2/settings</code> with body <code>{"index":4,"value":10}</code><br>
 <code>POST /api/v2/rfco2</code> with body <code>{"co2":800,"index":2}</code><br>
+<code>POST /api/v2/rfremote/setpoint</code> with body <code>{"index":0,"setpoint":20.5}</code> (Itho Spider thermostat)<br>
 <br>
 <strong>Legacy WebAPI v1</strong><br><br>
 A simple legacy WebAPI is available at: <a href='api.html' target='_blank'>api.html</a><br>
@@ -4026,7 +4340,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td>vremoteindex</td>
             <td>string</td>
-            <td>0-11</td>
+            <td>0-19</td>
             <td>number</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">●</td>
@@ -4106,8 +4420,10 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with all configured remotes where key=remote name, value is
                     JSON with all received capabilities of the remote. Depending on make and model this can be the last
-                    command, temperature, humidity, battery and/or CO2 levels. Return type present on MQTT "Remotes info
-                    topic".</em></td>
+                    command, temperature, humidity, battery and/or CO2 levels. An Itho Spider thermostat also reports
+                    setpoint, setpoint_cool, setpoint_cmd, demand (%), schedule and manual. A joined RF sensor that sends
+                    its own ventilation demand (31E0, e.g. RFT-RV or RFT-CO2) also reports vent_demand (0-200),
+                    vent_demand_zone and vent_demand_flags. Return type present on MQTT "Remotes info topic".</em></td>
         </tr>
         <tr>
             <td>get</td>
@@ -4341,7 +4657,7 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td>rfremoteindex</td>
             <td>string</td>
-            <td>0-11</td>
+            <td>0-19</td>
             <td>number</td>
             <td style="text-align:center">●</td>
             <td style="text-align:center">●</td>
@@ -4393,6 +4709,21 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
                     Only needed for multi-zone setups.</em></td>
         </tr>
         <tr>
+            <td>rfsetpoint</td>
+            <td>number</td>
+            <td>5-30</td>
+            <td>string</td>
+            <td style="text-align:center">●</td>
+            <td style="text-align:center">◌</td>
+        </tr>
+        <tr>
+            <td colspan="6">Comments:<br><em>Sets the heating setpoint (in &deg;C, 0.5 steps) of an Itho Spider thermostat.
+                    The Spider must first be found with Spider discovery on the "RF devices" page; use rfremoteindex to
+                    select it. The Spider only listens shortly after it transmits, so the setpoint is delivered at its next
+                    listen window (seconds to about 10 minutes). It is confirmed when the remote's capability "setpoint"
+                    equals "setpoint_cmd".</em></td>
+        </tr>
+        <tr>
             <td>get</td>
             <td>string</td>
             <td>rfstatus</td>
@@ -4403,7 +4734,8 @@ Commands are sent as JSON to the MQTT command topic. The MQTT API supports mostl
         <tr>
             <td colspan="6">Comments:<br><em>Returns JSON with measurement data from monitored RF sources
                     (31DA/31D9 messages). Use the optional <b>name</b> parameter to get data from a specific
-                    source (e.g. <b>get=rfstatus&amp;name=Bathroom</b>).
+                    source (e.g. <b>get=rfstatus&amp;name=Bathroom</b>), or the optional <b>id</b> parameter to select it by
+                    RF id, which also works when two sources share a name (e.g. <b>get=rfstatus&amp;id=96:A4:3B</b>).
                     Monitored sources also publish to MQTT topics:
                     [base_topic]/rfstatus/[name]/31DA and [base_topic]/rfstatus/[name]/31D9.
                     Requires a CC1101 RF module.</em></td>
@@ -4504,8 +4836,8 @@ var html_wifisetup = `
           <span id="passwd-msg" style="color: red;"></span>
         </div>
         <div class="pure-control-group">
-          <label>Show Password</label>
-          <input type="checkbox" onclick="togglePwd()">
+          <label for="wifi-showpwd">Show Password</label>
+          <input id="wifi-showpwd" type="checkbox" onclick="togglePwd()">
         </div>
         <div class="pure-controls">
           <button id="wifisubmit" class="pure-button pure-button-primary">Save</button>&nbsp;&nbsp;
@@ -4514,7 +4846,7 @@ var html_wifisetup = `
         <div id="rebootscript"></div>
         <br>
         <div class="pure-control-group">
-          <label class="pure-radio">Use DHCP</label>
+          <label class="pure-radio" for="option-dhcp-on">Use DHCP</label>
           <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
           <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off"> off
         </div>
@@ -4662,6 +4994,10 @@ var html_wifisetup = `
           <td>WiFi IP:</td>
           <td><span name="wifiip">unknown</span></td>
         </tr>
+        <tr>
+          <td>WiFi security:</td>
+          <td><span name="wifiauth">unknown</span></td>
+        </tr>
       </tbody>
     </table>
     <br><br><br><br>
@@ -4712,7 +5048,7 @@ var html_rfstatus = `
       <legend><br>Monitor persistently and publish to API:</legend>
       <p>Enabling monitor will track this device and publish received data on the WebAPI and MQTT API.</p>
       <div class="pure-control-group">
-        <label for="option-rftrack" class="pure-radio">Monitor</label>
+        <label class="pure-radio" for="option-rftrack-on">Monitor</label>
         <input id="option-rftrack-on" type="radio" name="option-rftrack" value="on"> on
         <input id="option-rftrack-off" type="radio" name="option-rftrack" value="off"> off
       </div>
@@ -4827,13 +5163,13 @@ var html_update = `
 <span style="color: #333">Current system firmware:</span>
 <hr style="border-top: 1px solid #eee">
 <div class="pure-control-group">
-  <label>Current firmware version:</label>
-  <label id="firmware_ver">unknown</label>
+  <span>Current firmware version:</span>
+  <span id="firmware_ver">unknown</span>
 </div>
 <br>
 <div class="pure-control-group">
-  <label for="hardware_rev">Hardware revision:</label>
-  <label id="hardware_rev">unknown</label>
+  <span>Hardware revision:</span>
+  <span id="hardware_rev">unknown</span>
 </div>
 <br><br>
 <span style="color: #333">Available firmwares:</span>
@@ -5132,36 +5468,42 @@ var html_systemsettings_start = `
       <span id="password-msg" style="color: red;"></span>
     </div>
     <div class="pure-control-group">
-      <label for="option-syssec_web" class="pure-radio">Web interface authentication</label>
+      <label class="pure-radio" for="option-syssec_web-1">Web interface authentication</label>
       <input id="option-syssec_web-1" type="radio" name="option-syssec_web" value="1"> on
       <input id="option-syssec_web-0" type="radio" name="option-syssec_web" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-syssec_api" class="pure-radio">API authentication</label>
+      <label class="pure-radio" for="option-syssec_api-1">API authentication</label>
       <input id="option-syssec_api-1" type="radio" name="option-syssec_api" value="1"> on
       <input id="option-syssec_api-0" type="radio" name="option-syssec_api" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-syssec_edit" class="pure-radio">File editor authentication</label>
+      <label class="pure-radio" for="option-syssec_edit-1">File editor authentication</label>
       <input id="option-syssec_edit-1" type="radio" name="option-syssec_edit" value="1"> on
       <input id="option-syssec_edit-0" type="radio" name="option-syssec_edit" value="0"> off
+    </div>
+    <div class="pure-control-group">
+      <label class="pure-radio" for="option-fw_check-1"
+        title="Periodically checks GitHub for a newer firmware version. Turn off if the add-on has no internet access, to avoid repeated failed-connection log entries.">Automatic firmware update check</label>
+      <input id="option-fw_check-1" type="radio" name="option-fw_check" value="1"> on
+      <input id="option-fw_check-0" type="radio" name="option-fw_check" value="0"> off
     </div>
     <legend><br>API settings:</legend>
     <p>Have API keys on the WebAPI, MQTT API and Itho status page normalized (all lowercase, no spaces or special
       characters).</p>
     <div class="pure-control-group">
-      <label for="option-api_normalize" class="pure-radio">Normalize keys</label>
+      <label class="pure-radio" for="option-api_normalize-1">Normalize keys</label>
       <input id="option-api_normalize-1" type="radio" name="option-api_normalize" value="1"> on
       <input id="option-api_normalize-0" type="radio" name="option-api_normalize" value="0"> off
     </div>
     <p>Enable the WebAPI for updating your device's settings.</p>
     <div class="pure-control-group">
-      <label for="option-api_settings" class="pure-radio">Enable update settings API</label>
+      <label class="pure-radio" for="option-api_settings-1">Enable update settings API</label>
       <input id="option-api_settings-1" type="radio" name="option-api_settings" value="1"> on
       <input id="option-api_settings-0" type="radio" name="option-api_settings" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-api_reboot" class="pure-radio">Enable reboot via API</label>
+      <label class="pure-radio" for="option-api_reboot-1">Enable reboot via API</label>
       <input id="option-api_reboot-1" type="radio" name="option-api_reboot" value="1"> on
       <input id="option-api_reboot-0" type="radio" name="option-api_reboot" value="0"> off
     </div>
@@ -5222,26 +5564,31 @@ var html_systemsettings_start = `
     <p>The add-on can present itself as one or more virtual remote(s). A virtual remote emulates a physical remote through software.</p>
     <div class="pure-control-group">
       <label for="itho_numvrem">Number of virtual remotes</label>
-      <input id="itho_numvrem" type="number" min="1" max="12" size="6">
+      <input id="itho_numvrem" type="number" min="1" max="20" size="6">
     </div>
     <p>A virtual remote can be used to force the Itho unit in medium mode before sending a command from the add-on. This
       way the add-on can overrule the current speed settings of the Itho (e.g. due to active input from a built-in
       humidity sensor or another remote)</p>
     <p>API key "command" (e.g. low, high) can be translated to matching virtual remote commands with 'Map API key "command" to virtual remote' option for non-CVE devices. The 0-255 speed control does not work for these devices, the timer
       settings do work as expected.</p>
-    <p>The following virtual remote settings work on the first (index=0) virtual remote configured.</p>
+    <p>'Send join command' sends a join from the selected virtual remote when the add-on starts, once ('next power on' switches itself off after that). The Itho unit only accepts a join shortly after it gets power (usually within 2 minutes), so power cycle the Itho unit; the add-on restarts with it. A restart of only the add-on uses up the join while the unit does not accept it.</p>
     <div class="pure-control-group">
-      <label for="option-vremotejoin" class="pure-radio">Send join command</label>
+      <label class="pure-radio" for="option-vremotejoin-1">Send join command</label>
       <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1"> next power on
       <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-vremotemedium" class="pure-radio">Force medium/auto mode</label>
+      <label for="itho_sendjoin_idx">Join from virtual remote</label>
+      <select id="itho_sendjoin_idx"><option value="0">0</option></select>
+    </div>
+    <p>The following settings work on virtual remote 0.</p>
+    <div class="pure-control-group">
+      <label class="pure-radio" for="option-vremotemedium-1">Force medium/auto mode</label>
       <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1"> on
       <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-vremoteapi" class="pure-radio">Map API key "command" to virtual remote 0</label>
+      <label class="pure-radio" for="option-vremoteapi-1">Map API key "command" to virtual remote 0</label>
       <input id="option-vremoteapi-1" type="radio" name="option-itho_vremoteapi" value="1"> on
       <input id="option-vremoteapi-0" type="radio" name="option-itho_vremoteapi" value="0"> off
     </div>
@@ -5252,7 +5599,7 @@ var html_systemsettings_start = `
       humidity changes) and to access an alternative or a retrofitted SHT30 sensor.</p>
     <br>
     <div class="pure-control-group">
-      <label for="option-syssht30" class="pure-radio">Additional sensor support</label>
+      <label class="pure-radio" for="option-syssht30-1">Additional sensor support</label>
       <input id="option-syssht30-1" type="radio" name="option-syssht30" value="1"> on
       <input id="option-syssht30-0" type="radio" name="option-syssht30" value="0"> off
     </div>
@@ -5261,27 +5608,27 @@ var html_systemsettings_start = `
       commands. <br>Disabling PWM2I2C will also change the main page user interface to use the Virtual Remote.</p>
     <br>
     <div class="pure-control-group">
-      <label for="option-pwm2i2c" class="pure-radio">CVE fan control (PWM2I2C)</label>
+      <label class="pure-radio" for="option-pwm2i2c-1">CVE fan control (PWM2I2C)</label>
       <input id="option-pwm2i2c-1" type="radio" name="option-itho_pwm2i2c" value="1"> on
       <input id="option-pwm2i2c-0" type="radio" name="option-itho_pwm2i2c" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-31da" class="pure-radio">Ventilation status (31DA)</label>
+      <label class="pure-radio" for="option-31da-1">Ventilation status (31DA)</label>
       <input id="option-31da-1" type="radio" name="option-itho_31da" value="1"> on
       <input id="option-31da-0" type="radio" name="option-itho_31da" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-31d9" class="pure-radio">Fan system status (31D9)</label>
+      <label class="pure-radio" for="option-31d9-1">Fan system status (31D9)</label>
       <input id="option-31d9-1" type="radio" name="option-itho_31d9" value="1"> on
       <input id="option-31d9-0" type="radio" name="option-itho_31d9" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-2401" class="pure-radio">System status (2401)</label>
+      <label class="pure-radio" for="option-2401-1">System status (2401)</label>
       <input id="option-2401-1" type="radio" name="option-itho_2401" value="1"> on
       <input id="option-2401-0" type="radio" name="option-itho_2401" value="0"> off
     </div>
     <div class="pure-control-group">
-      <label for="option-4210" class="pure-radio">WPU counters (4210)</label>
+      <label class="pure-radio" for="option-4210-1">WPU counters (4210)</label>
       <input id="option-4210-1" type="radio" name="option-itho_4210" value="1"> on
       <input id="option-4210-0" type="radio" name="option-itho_4210" value="0"> off
     </div>
@@ -5293,7 +5640,7 @@ var html_systemsettings_start = `
       sniffer, reboot needed)
     </p>
     <div class="pure-control-group">
-      <label for="option-i2c_safe_guard" class="pure-radio">I2C safe guard</label>
+      <label class="pure-radio" for="option-i2c_safe_guard-2">I2C safe guard</label>
       <input id="option-i2c_safe_guard-2" type="radio" name="option-i2c_safe_guard" value="2"> auto
       <input id="option-i2c_safe_guard-1" type="radio" name="option-i2c_safe_guard" value="1"> on
       <input id="option-i2c_safe_guard-0" type="radio" name="option-i2c_safe_guard" value="0"> off
@@ -5484,12 +5831,12 @@ var html_mqttsetup = `
 <form class="pure-form pure-form-aligned">
   <fieldset>
     <div class="pure-control-group">
-      <label>MQTT Status</label>
+      <label for="mqtt_conn">MQTT Status</label>
       <button id="mqtt_conn" class="pure-button" style="pointer-events:none;">Unknown</button>
     </div>
     <br>
     <div class="pure-control-group">
-      <label for="option-mqtt_active" class="pure-radio">MQTT Active</label>
+      <label class="pure-radio" for="option-mqtt_active-1">MQTT Active</label>
       <input id="option-mqtt_active-1" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 1)'
         value="1"> on
       <input id="option-mqtt_active-0" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 0)'
@@ -5522,7 +5869,7 @@ var html_mqttsetup = `
     </div>
     <br>
     <div class="pure-control-group">
-      <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
+      <label class="pure-radio" for="option-mqtt_ha_active-1">Home Assistant MQTT Discovery</label>
       <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active"
         onchange='radio("mqtt_ha_active", 1)' value="1"> on
       <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active"
@@ -5534,7 +5881,7 @@ var html_mqttsetup = `
     </div>
     <br>
     <div class="pure-control-group">
-      <label for="option-mqtt_domoticz_active" class="pure-radio">Domoticz MQTT</label>
+      <label class="pure-radio" for="option-mqtt_domoticz_active-1">Domoticz MQTT</label>
       <input id="option-mqtt_domoticz_active-1" type="radio" name="option-mqtt_domoticz_active"
         onchange='radio("mqtt_domoticz_active", 1)' value="1"> on
       <input id="option-mqtt_domoticz_active-0" type="radio" name="option-mqtt_domoticz_active"
@@ -5637,7 +5984,7 @@ var html_systemsettings_cc1101 = `
 <legend><br>Autodetect CC1101 RF module (reboot needed):</legend>
 <p>Activate the CC1101 RF module. If autodetect fails, this setting will be automatically switched off again.</p>
 <div class="pure-control-group">
-  <label for="option-itho_remotes" class="pure-radio">Itho RF remote support</label>
+  <label class="pure-radio" for="option-itho_remotes-1">Itho RF remote support</label>
   <input id="option-itho_remotes-1" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 1)'
     value="1"> on
   <input id="option-itho_remotes-0" type="radio" name="option-itho_rf_support" onchange='radio("itho_remotes", 0)'
@@ -5646,20 +5993,68 @@ var html_systemsettings_cc1101 = `
 <legend><br>RF standalone mode (no I2C connection):</legend>
 <p>Enable when the add-on has no I2C connection to the Itho unit (e.g. HRU 400). All I2C functions and virtual remotes are disabled. Control is via RF only.</p>
 <div class="pure-control-group">
-  <label for="option-itho_rf_standalone" class="pure-radio">RF standalone</label>
+  <label class="pure-radio" for="option-itho_rf_standalone-1">RF standalone</label>
   <input id="option-itho_rf_standalone-1" type="radio" name="option-itho_rf_standalone" value="1"> on
   <input id="option-itho_rf_standalone-0" type="radio" name="option-itho_rf_standalone" value="0"> off
 </div>
-<legend><br>RF CO2 control:</legend>
+<legend><br>Periodic RF status request:</legend>
+<p>Periodically request 31DA/31D9 status over RF from a bi-directional <strong>send</strong> remote joined to the unit (e.g. an RFT Spider). Select the remote below, then switch it on. Uses the Itho status update frequency and works in both RF standalone and I2C+RF setups. Leave off when RF standalone mode or RF CO2 control's periodic status request is already enabled (those poll automatically).</p>
 <div class="pure-control-group">
-  <label for="option-itho_control_interface" class="pure-radio">Control interface</label>
-  <input id="option-itho_control_interface-0" type="radio" name="option-itho_control_interface" value="0"> Virtual remote (I2C)
-  <input id="option-itho_control_interface-1" type="radio" name="option-itho_control_interface" value="1"> RF CO2 (demand slider)
+  <label for="itho_rf_status_poll_idx" class="pure-input-1-3">Status poll send remote</label>
+  <select id="itho_rf_status_poll_idx"><option value="0">No bi-directional send remote configured</option></select>
 </div>
 <div class="pure-control-group">
-  <label for="option-itho_rf_co2_join" class="pure-radio">Send RF CO2 join</label>
+  <label class="pure-radio" for="option-itho_rf_status_poll-1">RF status request</label>
+  <input id="option-itho_rf_status_poll-1" type="radio" name="option-itho_rf_status_poll" value="1"> on
+  <input id="option-itho_rf_status_poll-0" type="radio" name="option-itho_rf_status_poll" value="0"> off
+</div>
+<legend><br>RF CO2 control:</legend>
+<div class="pure-control-group">
+  <label class="pure-radio" for="option-itho_control_interface-0">Control interface</label>
+  <input id="option-itho_control_interface-0" type="radio" name="option-itho_control_interface" value="0" onclick="toggleRfco2PeriodicSection(0)"> Virtual remote (I2C)
+  <input id="option-itho_control_interface-1" type="radio" name="option-itho_control_interface" value="1" onclick="toggleRfco2PeriodicSection(1)"> RF CO2 (demand slider)
+</div>
+<div class="pure-control-group">
+  <label class="pure-radio" for="option-itho_rf_co2_join-1">Send RF CO2 join</label>
   <input id="option-itho_rf_co2_join-1" type="radio" name="option-itho_rf_co2_join" value="1"> next power on
   <input id="option-itho_rf_co2_join-0" type="radio" name="option-itho_rf_co2_join" value="0"> off
+</div>
+<div id="rfco2_periodic_section" class="hidden">
+  <p style="margin-top:1em;"><em>The following requires a RFT CO2 remote configured as <strong>send</strong> and successfully joined to the Itho. The same remote is used for all three periodic operations below.</em></p>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_remote_idx" class="pure-input-1-3">RFT CO2 send remote</label>
+    <select id="itho_rf_co2_remote_idx"><option value="0">No RFT CO2 send remote configured</option></select>
+  </div>
+  <div class="pure-control-group">
+    <label class="pure-radio" for="option-itho_rf_co2_status_req-1">Periodic 31DA/31D9 status request</label>
+    <input id="option-itho_rf_co2_status_req-1" type="radio" name="option-itho_rf_co2_status_req" value="1"> on
+    <input id="option-itho_rf_co2_status_req-0" type="radio" name="option-itho_rf_co2_status_req" value="0"> off
+    <span style="margin-left:1em;font-size:0.9em;color:#666;">Uses the Itho status update frequency interval.</span>
+  </div>
+  <div class="pure-control-group">
+    <label class="pure-radio" for="option-itho_rf_co2_keepalive_demand-1">Periodic fan demand keep-alive</label>
+    <input id="option-itho_rf_co2_keepalive_demand-1" type="radio" name="option-itho_rf_co2_keepalive_demand" value="1"> on
+    <input id="option-itho_rf_co2_keepalive_demand-0" type="radio" name="option-itho_rf_co2_keepalive_demand" value="0"> off
+  </div>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_default_demand" class="pure-input-1-3">Default fan demand (0-200)</label>
+    <input id="itho_rf_co2_default_demand" type="number" min="0" max="200" value="50">
+    <span style="margin-left:1em;font-size:0.9em;color:#666;">Used when no last-known sent value is available.</span>
+  </div>
+  <div class="pure-control-group">
+    <label class="pure-radio" for="option-itho_rf_co2_keepalive_co2-1">Periodic CO2 level keep-alive</label>
+    <input id="option-itho_rf_co2_keepalive_co2-1" type="radio" name="option-itho_rf_co2_keepalive_co2" value="1"> on
+    <input id="option-itho_rf_co2_keepalive_co2-0" type="radio" name="option-itho_rf_co2_keepalive_co2" value="0"> off
+  </div>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_default_co2" class="pure-input-1-3">Default CO2 level (ppm)</label>
+    <input id="itho_rf_co2_default_co2" type="number" min="0" max="5000" value="500">
+    <span style="margin-left:1em;font-size:0.9em;color:#666;">Used when no last-known sent value is available.</span>
+  </div>
+  <div class="pure-control-group">
+    <label for="itho_rf_co2_keepalive_freq" class="pure-input-1-3">Keep-alive frequency (seconds)</label>
+    <input id="itho_rf_co2_keepalive_freq" type="number" min="60" max="3600" value="300">
+  </div>
 </div>
 <br>
 `;
@@ -5766,10 +6161,13 @@ var html_index = `
         websock_send('{"fandemand":' + this.value + '}');
       };
     }
-    // RF command buttons
+    // RF command buttons -> use the configured RF CO2 send remote (read at click time)
     ['low','auto','high','timer1','timer2','timer3'].forEach(function(cmd) {
       var btn = $id('rfcmd-' + cmd);
-      if (btn) btn.onclick = function() { websock_send('{"remote":0, "command":"' + cmd + '"}'); };
+      if (btn) btn.onclick = function() {
+        var co2idx = parseInt(localStorage.getItem('itho_rf_co2_remote_idx') || '0');
+        websock_send('{"remote":' + co2idx + ', "command":"' + cmd + '"}');
+      };
     });
   } else if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
     $id('sliderdiv').classList.add('hidden');
@@ -5895,7 +6293,7 @@ var html_remotessetup = `
     </div>
     <div class="pure-control-group">
       <label for="itho_numrfrem">Number of RF remotes</label>
-      <input id="itho_numrfrem" type="number" min="1" max="12" size="6">
+      <input id="itho_numrfrem" type="number" min="1" max="20" size="6">
     <button id="update_num_rf" onclick="update_rf_setup()" class="pure-button button-secondary">Update</button>
     </div>    
   </fieldset>
@@ -5909,6 +6307,41 @@ var html_remotessetup = `
       <button id="itho_update_remote" class="pure-button">Update</button>&nbsp;<button id="itho_remove_remote"
         class="pure-button">Remove</button>
     </div>
+  </fieldset>
+  <fieldset>
+    <br>
+    <legend><br>Itho Spider thermostat:</legend>
+    <p>The add-on can read and set the heating setpoint of an Itho Spider room thermostat, here, via MQTT/REST or from
+      Home Assistant. There are two ways to link a Spider:</p>
+    <ul>
+      <li><strong>Bind as gateway</strong> (preferred): for a Spider that offers gateway pairing (the house symbol in
+        its pairing menu). The Spider keeps its link to the heater or AutoTemp. It asks the add-on for its setpoint every
+        few minutes and when you touch its display, shows a new value on its display and reports a change on its dial
+        straight away.</li>
+      <li><strong>Discovery</strong>: for a Spider without gateway pairing, or if you do not want to change its pairing.
+        Nothing changes on the Spider: the add-on sends a new setpoint as if it came from the Spider's heater, or for a
+        Spider on an AutoTemp, as the Spider to the AutoTemp. A Spider only listens briefly after it transmits, so a new
+        setpoint can take several minutes to arrive. In some setups, for example a Spider on an AutoTemp, the Spider
+        sends its own setpoint again and overrules the new one. For those setups Bind as gateway is the only real
+        option.</li>
+    </ul>
+    <p>Bind as gateway: press the button and within 3 minutes pair the Spider with its gateway (house) symbol, see the
+      Spider manual. Other pairing requests are ignored.</p>
+    <div class="pure-control-group">
+      <label for="spider_gw_bind">Spider gateway</label>
+      <button id="spider_gw_bind" class="pure-button">Bind as gateway</button>
+    </div>
+    <p>Discovery: press Start and set the Spider to the temperature shown (a random value between 21.5 and 24 &deg;C).
+      The add-on recognises the Spider by that value, finds the heater or AutoTemp it is bound to and adds the Spider as
+      a monitor-only RF device. Your heating may switch on during discovery.</p>
+    <div class="pure-control-group">
+      <label for="spider_disc_start">Spider discovery</label>
+      <button id="spider_disc_start" class="pure-button">Start</button>&nbsp;<button id="spider_disc_cancel"
+        class="pure-button">Cancel</button>
+    </div>
+    <p id="spider_disc_status"></p>
+    <table id="SpiderTable" class="pure-table pure-table-bordered" style="text-align: center;"></table>
+    <p id="spider_set_status"></p>
   </fieldset>
 </form>
 <script>
@@ -5937,10 +6370,14 @@ var html_vremotessetup = `
 </style>
 <br>
 <p>The add-on can present itself as one or more virtual remote(s). A virtual remote emulates a physical remote through
-  software.<br>A virtual remote must be joined to the Itho unit before it can be used. Refer to your Itho manual for how to join new remotes to your specific unit.</p>
-<p>With the 'Copy ID' function the ID from an existing physical remote can be copied. If the remote type is supported,
-  the type will be detected automatically. If this physical remote is already joined to the Itho unit a new join is not
-  necessary.</p>
+  software.<br>A virtual remote must be joined to the Itho unit before it can be used. The Itho unit only accepts a join
+  shortly after it gets power (usually within 2 minutes): power cycle the Itho unit and press the 'Join' button of the
+  virtual remote within that time. A restart of only the add-on is not enough. 'Send join command' in the system settings
+  can also do this at the next power on. Refer to your Itho manual for how to join new remotes to your specific unit.</p>
+<p>With the 'Copy ID' function the ID from an existing physical remote can be copied: select a virtual remote, press
+  'Copy ID' and, while the button is green and counts down, press join on the physical remote (not a button on this
+  page). If the remote type is supported, the type will be detected automatically. If this physical remote is already
+  joined to the Itho unit a new join is not necessary.</p>
 <p>There are multiple types of remotes that can be emulated; The RFT CVE (536-0020, 536-0024, 536-0124), RFT AUTO(-N)
   (536-0150), RFT DemandFlow/QualityFlow (536-0146).<br>Pictures of these remotes can be found here: <a
     href='https://github.com/arjenhiemstra/ithowifi/tree/master/remotes'
@@ -6060,6 +6497,12 @@ var html_wizard = `
   .pure-form-aligned .pure-control-group label {
     width: 15em;
   }
+  .pure-form-aligned .pure-control-group .label-spacer {
+    display: inline-block;
+    width: 15em;
+    margin: 0 1em 0 0;
+    vertical-align: middle;
+  }
 </style>
 
 <ul class="wizard-indicators" id="wizard-indicators">
@@ -6091,8 +6534,8 @@ var html_wizard = `
             <span id="passwd-msg" style="color: red;"></span>
           </div>
           <div class="pure-control-group">
-            <label>Show Password</label>
-            <input type="checkbox"
+            <label for="wiz-showpwd">Show Password</label>
+            <input id="wiz-showpwd" type="checkbox"
               onclick="var x=document.getElementById('passwd');x.type=x.type==='password'?'text':'password';">
           </div>
           <div class="pure-control-group">
@@ -6100,13 +6543,13 @@ var html_wizard = `
             <input id="hostname" type="text">
           </div>
           <div class="pure-control-group">
-            <label>&nbsp;</label>
+            <span class="label-spacer">&nbsp;</span>
             <button id="wiz-wifi-connect" type="button" class="pure-button pure-button-primary">Connect</button>
           </div>
           <details id="wiz-wifi-advanced">
             <summary style="cursor:pointer; margin:1em 0; font-weight:bold;">Advanced network settings</summary>
             <div class="pure-control-group">
-              <label class="pure-radio">Use DHCP</label>
+              <label class="pure-radio" for="option-dhcp-on">Use DHCP</label>
               <input id="option-dhcp-on" type="radio" name="option-dhcp" onchange='radio("dhcp", "on")' value="on"> on
               <input id="option-dhcp-off" type="radio" name="option-dhcp" onchange='radio("dhcp", "off")' value="off">
               off
@@ -6284,22 +6727,22 @@ var html_wizard = `
       <div id="wiz-i2c-section">
       <legend><br>I2C commands:</legend>
       <div class="pure-control-group">
-        <label for="option-pwm2i2c" class="pure-radio">CVE fan control (PWM2I2C)</label>
+        <label class="pure-radio" for="option-pwm2i2c-1">CVE fan control (PWM2I2C)</label>
         <input id="option-pwm2i2c-1" type="radio" name="option-itho_pwm2i2c" value="1"> on
         <input id="option-pwm2i2c-0" type="radio" name="option-itho_pwm2i2c" value="0"> off
       </div>
       <div class="pure-control-group">
-        <label for="option-31da" class="pure-radio">Ventilation status (31DA)</label>
+        <label class="pure-radio" for="option-31da-1">Ventilation status (31DA)</label>
         <input id="option-31da-1" type="radio" name="option-itho_31da" value="1"> on
         <input id="option-31da-0" type="radio" name="option-itho_31da" value="0"> off
       </div>
       <div class="pure-control-group">
-        <label for="option-31d9" class="pure-radio">Fan system status (31D9)</label>
+        <label class="pure-radio" for="option-31d9-1">Fan system status (31D9)</label>
         <input id="option-31d9-1" type="radio" name="option-itho_31d9" value="1"> on
         <input id="option-31d9-0" type="radio" name="option-itho_31d9" value="0"> off
       </div>
       <div class="pure-control-group">
-        <label for="option-4210" class="pure-radio">WPU counters (4210)</label>
+        <label class="pure-radio" for="option-4210-1">WPU counters (4210)</label>
         <input id="option-4210-1" type="radio" name="option-itho_4210" value="1"> on
         <input id="option-4210-0" type="radio" name="option-itho_4210" value="0"> off
       </div>
@@ -6312,15 +6755,15 @@ var html_wizard = `
         </div>
         <div class="pure-control-group">
           <label for="itho_numvrem">Number of virtual remotes</label>
-          <input id="itho_numvrem" type="number" min="0" max="12" size="6">
+          <input id="itho_numvrem" type="number" min="0" max="20" size="6">
         </div>
         <div class="pure-control-group">
-          <label for="option-vremotejoin" class="pure-radio">Send join command</label>
+          <label class="pure-radio" for="option-vremotejoin-1">Send join command</label>
           <input id="option-vremotejoin-1" type="radio" name="option-itho_sendjoin" value="1" checked> next power on
           <input id="option-vremotejoin-0" type="radio" name="option-itho_sendjoin" value="0"> off
         </div>
         <div class="pure-control-group">
-          <label for="option-vremotemedium" class="pure-radio">Force medium/auto mode</label>
+          <label class="pure-radio" for="option-vremotemedium-1">Force medium/auto mode</label>
           <input id="option-vremotemedium-1" type="radio" name="option-itho_forcemedium" value="1" checked> on
           <input id="option-vremotemedium-0" type="radio" name="option-itho_forcemedium" value="0"> off
         </div>
@@ -6387,7 +6830,7 @@ var html_wizard = `
       </div>
       <div class="pure-control-group" id="wiz-numrfrem-row">
         <label for="itho_numrfrem">Number of RF remotes</label>
-        <input id="itho_numrfrem" type="number" min="1" max="12" size="6">
+        <input id="itho_numrfrem" type="number" min="1" max="20" size="6">
       </div>
       <div class="pure-control-group" id="wiz-rfremtype-row">
         <label for="wiz-rfremtype">Default remote type</label>
@@ -6448,7 +6891,7 @@ var html_wizard = `
   <form class="pure-form pure-form-aligned">
     <fieldset>
       <div class="pure-control-group">
-        <label for="option-mqtt_active" class="pure-radio">MQTT Active</label>
+        <label class="pure-radio" for="option-mqtt_active-1">MQTT Active</label>
         <input id="option-mqtt_active-1" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 1)'
           value="1"> on
         <input id="option-mqtt_active-0" type="radio" name="option-mqtt_active" onchange='radio("mqtt_active", 0)'
@@ -6476,13 +6919,13 @@ var html_wizard = `
         <input id="mqtt_base_topic" maxlength="120" type="text">
       </div>
       <div class="pure-control-group">
-        <label>&nbsp;</label>
+        <span class="label-spacer">&nbsp;</span>
         <button id="wiz-mqtt-connect" type="button" class="pure-button pure-button-primary">Connect</button>
         <span id="wiz-mqtt-status" style="margin-left:8px;"></span>
       </div>
       <br>
       <div class="pure-control-group">
-        <label for="option-mqtt_ha_active" class="pure-radio">Home Assistant MQTT Discovery</label>
+        <label class="pure-radio" for="option-mqtt_ha_active-1">Home Assistant MQTT Discovery</label>
         <input id="option-mqtt_ha_active-1" type="radio" name="option-mqtt_ha_active"
           onchange='radio("mqtt_ha_active", 1)' value="1"> on
         <input id="option-mqtt_ha_active-0" type="radio" name="option-mqtt_ha_active"
@@ -6555,7 +6998,7 @@ var html_syslog = `
 <div id="rflog_outer" class="hidden">
     <div style="display:inline-block;vertical-align:top;overflow:hidden;padding-bottom:5px;">RF Log:</div>
     <div id="rflog"
-        style="padding:10px;background-color:black;min-height:30vh;max-height:60vh;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa">
+        style="padding:10px;background-color:black;height:40vh;min-height:6em;font: 0.9rem Inconsolata, monospace;border-radius:7px;overflow:auto;color:#aaa;resize:both">
     </div>
     <div style="padding-top:5px;">
         <a href="#" class="pure-button" onclick="$id('rflog').innerHTML=''">Clear</a>
@@ -6579,7 +7022,7 @@ var html_syslog = `
             </select>
         </div>
         <div class="pure-control-group">
-            <label for="option-esplog_active" class="pure-radio">Include ESP-IDF error log</label>
+            <label class="pure-radio" for="option-esplog_active-1">Include ESP-IDF error log</label>
             <input id="option-esplog_active-1" type="radio" name="option-esplog_active"
                 onchange='radio("esplog_active", 1)' value="1"> on
             <input id="option-esplog_active-0" type="radio" name="option-esplog_active"
@@ -6587,7 +7030,7 @@ var html_syslog = `
         </div>
         <br>
         <div class="pure-control-group">
-            <label for="option-webserial_active" class="pure-radio">Webserial active (reboot needed)</label>
+            <label class="pure-radio" for="option-webserial_active-1">Webserial active (reboot needed)</label>
             <input id="option-webserial_active-1" type="radio" name="option-webserial_active"
                 onchange='radio("webserial_active", 1)' value="1"> on
             <input id="option-webserial_active-0" type="radio" name="option-webserial_active"
@@ -6608,10 +7051,29 @@ var html_syslog = `
         <p>- Level1 will show only known Itho commands from all devices</p>
         <p>- Level2 will show all received RF messages from devices joined to the add-on</p>
         <p>- Level3 will show all received RF messages from all devices</p>
+        <p>While RF debug logging is on, an RF status (RFS) line with receive counters is shown every minute.</p>
+        <div class="pure-control-group">
+            <label class="pure-radio" for="option-rfstats_log-1">RF status in syslog (flash)</label>
+            <input id="option-rfstats_log-1" type="radio" name="option-rfstats_log"
+                onchange='radio("rfstats_log", 1)' value="1"> on
+            <input id="option-rfstats_log-0" type="radio" name="option-rfstats_log"
+                onchange='radio("rfstats_log", 0)' value="0"> off
+        </div>
+        <br>
+        <div class="pure-control-group">
+            <label>Old Itho RF protocol capture</label>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'rx'}))">Receive</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'loose'}))">Receive (loose)</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'off'}))">Off</button>
+            <button type="button" class="pure-button" onclick="websock_send(JSON.stringify({legacyrf:'scan'}))">Signal scan (20 s)</button>
+        </div>
+        <p>For older Itho units that only know the pre-RAMSES protocol. While receive is on, the add-on hears only that protocol (normal RF receive is off, for max 30 minutes).
+            Every frame received, and every frame an old protocol remote of the add-on sends, is shown in the RF log and written to the system log.
+            Use "loose" when "Receive" shows nothing while a remote is pressed. The signal scan logs every RF burst for 20 seconds, of any protocol.</p>
         <br>
         <legend><br>Syslog Settings:</legend>
         <div class="pure-control-group">
-            <label for="option-syslog_active" class="pure-radio">Syslog Active</label>
+            <label class="pure-radio" for="option-syslog_active-1">Syslog Active</label>
             <input id="option-syslog_active-1" type="radio" name="option-syslog_active"
                 onchange='radio("syslog_active", 1)' value="1"> on
             <input id="option-syslog_active-0" type="radio" name="option-syslog_active"

@@ -4,6 +4,9 @@
 
 #include "IthoCC1101.h"
 #include "IthoPacket.h"
+#include "spider_protocol.h"
+#include "legacy_protocol.h"
+#include "sys_log.h" // Spider bind/TX logging
 #include <string>
 
 RFStatusCallback_t IthoCC1101::rf31DACallback = nullptr;
@@ -79,6 +82,7 @@ RFStatusCallback_t IthoCC1101::rf31D9Callback = nullptr;
 #define HEADER_31DA 0x18              // message type: I, addr0+addr2
 #define HEADER_2E10 0x14              // message type: I, addr2
 #define HEADER_RQ_BIDIRECTIONAL 0x0C  // message type: RQ, addr0+addr1
+#define HEADER_RP_BIDIRECTIONAL 0x3C  // message type: RP, addr0+addr1
 
 void IthoCC1101::setLowPowerMode(bool lowPower)
 {
@@ -125,6 +129,13 @@ const uint8_t *RFTCO2_Remote_Map[] = {nullptr, ithoMessageCO2JoinCommandBytes, i
 const uint8_t *RFTPIR_Remote_Map[] = {nullptr, ithoMessagePIRJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, ithoMessageRFTPIRonCommandBytes, ithoMessageRFTPIRoffCommandBytes};
 const uint8_t *RFTSpider_Remote_Map[] = {nullptr, ithoMessageSpiderJoinCommandBytes, ithoMessageLeaveCommandBytes, nullptr, ithoMessageSpiderLowCommandBytes, ithoMessageRV_CO2MediumCommandBytes, ithoMessageSpiderHighCommandBytes, nullptr, ithoMessageRV_CO2Timer1CommandBytes, ithoMessageRV_CO2Timer2CommandBytes, ithoMessageRV_CO2Timer3CommandBytes, ithoMessageRV_CO2AutoCommandBytes, ithoMessageRV_CO2AutoNightCommandBytes, nullptr, nullptr, nullptr, ithoMessageJoinReplyCommandBytes, nullptr, nullptr}; // auto night might be wrong
 
+//                                         { IthoUnknown, IthoJoin, IthoLeave, IthoAway, IthoLow, IthoMedium, IthoHigh, IthoFull, IthoTimer1, IthoTimer2, IthoTimer3, IthoAuto, IthoAutoNight, IthoCook30, IthoCook60, IthoTimerUser, IthoJoinReply, IthoPIRmotionOn, IthoPIRmotionOff }
+const uint8_t *ORCON15LF01_Remote_Map[] = {nullptr, orconMessageJoinCommandBytes, ithoMessageLeaveCommandBytes, orconMessageAwayCommandBytes, orconMessageButton1CommandBytes, orconMessageButton2CommandBytes, orconMessageButton3CommandBytes, nullptr, orconMessageTimer1CommandBytes, orconMessageTimer2CommandBytes, orconMessageTimer3CommandBytes, orconMessageAutoCommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+
+// 22F1 fan-mode buttons use scheme 04 (this MVS/VMC-15 family only accepts scheme 04;
+// scheme 07 is ignored). The CO2-sensor join + 31E0 demand are independent of this.
+const uint8_t *ORCONCO2_Remote_Map[] = {nullptr, orconCO2MessageJoinCommandBytes, ithoMessageLeaveCommandBytes, orconMessageAwayCommandBytes, orconMessageButton1CommandBytes, orconMessageButton2CommandBytes, orconMessageButton3CommandBytes, nullptr, orconMessageTimer1CommandBytes, orconMessageTimer2CommandBytes, orconMessageTimer3CommandBytes, orconMessageAutoCommandBytes, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+
 struct ihtoRemoteCmdMap
 {
   RemoteTypes type;
@@ -140,7 +151,9 @@ const struct ihtoRemoteCmdMap ihtoRemoteCmdMapping[]{
     {RFTRV, RFTRV_Remote_Map},
     {RFTCO2, RFTCO2_Remote_Map},
     {RFTPIR, RFTPIR_Remote_Map},
-    {RFTSPIDER, RFTSpider_Remote_Map}};
+    {RFTSPIDER, RFTSpider_Remote_Map},
+    {ORCON15LF01, ORCON15LF01_Remote_Map},
+    {ORCONCO2, ORCONCO2_Remote_Map}};
 
 void IthoCC1101::initSendMessage(uint8_t len)
 {
@@ -272,9 +285,8 @@ void IthoCC1101::initReceive()
 
   writeCommand(CC1101_SCAL);
 
-  // wait for calibration to finish
-  while ((readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) != CC1101_MARCSTATE_IDLE)
-    yield();
+  // wait for calibration to finish (bounded: a chip that does not answer must not hang the task)
+  waitMarcState(CC1101_MARCSTATE_IDLE, 0xFF, CAL_WAIT_MS);
 
   writeRegister(CC1101_FSCAL2, 0x00);
   writeRegister(CC1101_MCSM0, 0x18); // no auto calibrate
@@ -316,8 +328,7 @@ void IthoCC1101::initReceive()
   writeCommand(CC1101_SCAL);
 
   // wait for calibration to finish
-  while ((readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) != CC1101_MARCSTATE_IDLE)
-    yield();
+  waitMarcState(CC1101_MARCSTATE_IDLE, 0xFF, CAL_WAIT_MS);
 
   writeRegister(CC1101_MCSM0, 0x18); // no auto calibrate
 
@@ -329,10 +340,105 @@ void IthoCC1101::initReceive()
 
   writeCommand(CC1101_SRX);
 
-  while ((readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) != CC1101_MARCSTATE_RX)
-    yield();
+  waitMarcState(CC1101_MARCSTATE_RX, 0xFF, CAL_WAIT_MS);
 
-  initReceiveMessage();
+  if (legacyRx)
+    initReceiveLegacy();
+  else
+    initReceiveMessage();
+}
+
+// Pre-RAMSES Itho RF ("message1"): 8 kbaud chips, 25.4 kHz deviation, frame starts 170,170,170,173
+void IthoCC1101::setLegacyModem()
+{
+  writeRegister(CC1101_MDMCFG4, 0x68); // 8.0 kbaud, 270 kHz RX bandwidth (812 kHz drowns in noise)
+  writeRegister(CC1101_MDMCFG3, 0x43);
+  writeRegister(CC1101_DEVIATN, 0x40); // 25.4 kHz
+}
+
+void IthoCC1101::initReceiveLegacy()
+{
+  writeCommand(CC1101_SIDLE);
+  setLegacyModem();
+  // loose: sync on 170,170 of the preamble and keep more bytes, for remotes with another sync or header
+  const bool loose = legacyRx == 2;
+  writeRegister(CC1101_PKTLEN, loose ? LEGACY_RX_LEN_LOOSE : LEGACY_RX_LEN); // the bytes after the sync
+  writeRegister(CC1101_PKTCTRL0, 0x00);                                       // fixed length
+  writeRegister(CC1101_PKTCTRL1, 0x00);
+  writeRegister(CC1101_SYNC1, 170);
+  writeRegister(CC1101_SYNC0, loose ? 170 : 173);
+  writeRegister(CC1101_MDMCFG2, 0x02); // 2-FSK, 16/16 sync bits
+  writeCommand(CC1101_SFRX);
+  writeCommand(CC1101_SRX);
+}
+
+void IthoCC1101::sendLegacyRaw(const uint8_t *first, const uint8_t *rest, uint8_t len, uint8_t repeats)
+{
+  CC1101Packet packet;
+  packet.length = len;
+  for (uint8_t i = 0; i < repeats; i++)
+  {
+    memcpy(packet.data, i == 0 ? first : rest, len);
+    initSendMessage(len);
+    writeCommand(CC1101_SIDLE);
+    setLegacyModem();
+    sendData(&packet);
+    finishTransfer();
+    if (i < repeats - 1)
+      delay(55); // gap between repeats of a real remote
+  }
+  initReceive();
+}
+
+void IthoCC1101::sendLegacyCommand(uint8_t remote_index, const uint8_t sourceId[3], IthoCommand command)
+{
+  uint16_t cmd;
+  switch (command)
+  {
+  case IthoLow:
+    cmd = legacy::CMD_LOW;
+    break;
+  case IthoMedium:
+    cmd = legacy::CMD_MEDIUM;
+    break;
+  case IthoHigh:
+    cmd = legacy::CMD_HIGH;
+    break;
+  case IthoTimer1:
+    cmd = legacy::CMD_TIMER1;
+    break;
+  case IthoTimer2:
+    cmd = legacy::CMD_TIMER2;
+    break;
+  case IthoTimer3:
+    cmd = legacy::CMD_TIMER3;
+    break;
+  case IthoJoin:
+    cmd = legacy::CMD_JOIN;
+    break;
+  case IthoLeave:
+    cmd = legacy::CMD_LEAVE;
+    break;
+  default:
+    return; // the old protocol has no away, auto or cook
+  }
+  // the protocol has 15 ID bits: fold the 3-byte remote ID into them
+  const uint32_t v = (sourceId[0] << 16) | (sourceId[1] << 8) | sourceId[2];
+  uint16_t id = (v ^ (v >> 15)) & 0x7FFF;
+  const uint8_t *src = ithoRF.device[remote_index].sourceID;
+  if (src[0] == 0 && src[1] == 0 && src[2] == 0)
+    id ^= remote_index << 10; // module ID: keep slots apart
+
+  const bool variant2 = ithoRF.device[remote_index].remType == RemoteTypes::RFLEGACY2;
+  uint8_t first[legacy::FRAME_LEN];
+  uint8_t rest[legacy::FRAME_LEN];
+  legacy::buildFrame(id, cmd, ithoRF.device[remote_index].legacyPrev, first, variant2);
+  legacy::buildFrame(id, cmd, legacy::prevCode(cmd), rest, variant2);
+  sendLegacyRaw(first, rest, legacy::FRAME_LEN, legacy::REPEATS);
+  ithoRF.device[remote_index].legacyPrev = legacy::prevCode(cmd);
+  memcpy(legacyTxFrame, first, sizeof(legacyTxFrame));
+  legacyTxRemote = remote_index;
+  legacyTxPending = true;
 }
 
 void IthoCC1101::initReceiveMessage()
@@ -358,19 +464,41 @@ void IthoCC1101::initReceiveMessage()
 
   writeCommand(CC1101_SRX); // switch to RX state
 
-  // Check that the RX state has been entered
-  while (((marcState = readRegisterWithSyncProblem(CC1101_MARCSTATE, CC1101_STATUS_REGISTER)) & CC1101_BITS_MARCSTATE) != CC1101_MARCSTATE_RX)
+  // Check that the RX state has been entered. This ran after every packet and every send as an unbounded loop:
+  // a chip that stopped answering hung TaskCC1101 for good (CC1101 Task timed out, RF dead). Now two bounded tries.
+  for (uint8_t attempt = 0; attempt < 2; attempt++)
   {
-    if (marcState == CC1101_MARCSTATE_RXFIFO_OVERFLOW) // RX_OVERFLOW
-      writeCommand(CC1101_SFRX);                       // flush RX buffer
+    marcState = waitMarcState(CC1101_MARCSTATE_RX, CC1101_MARCSTATE_RXFIFO_OVERFLOW, RX_WAIT_MS);
+    if (marcState == CC1101_MARCSTATE_RX)
+      return;
+    writeCommand(CC1101_SIDLE);
+    writeCommand(CC1101_SFRX); // also the way out of RXFIFO_OVERFLOW
+    writeCommand(CC1101_SRX);
   }
+  rxArmFailed = true; // the task's periodic RX check retries and logs
 }
 
 bool IthoCC1101::receivePacket()
 {
-  readData(&inMessage[inMessageIdx], MAX_RAW);
+  // Runs in task context (TaskCC1101), triggered by the RF ISR's notification —
+  // the FIFO read used to run inside the ISR (up to ~34 ms). The caller is
+  // responsible for serializing radio access against concurrent sends.
+  if (legacyRx)
+  {
+    legacyRssi = readRegisterWithSyncProblem(CC1101_RSSI, CC1101_STATUS_REGISTER);
+    readData(&legacyIn, legacyRx == 2 ? LEGACY_RX_LEN_LOOSE : LEGACY_RX_LEN); // leaves the radio in RX with the legacy settings
+    legacyReady = true;
+    return false;
+  }
+  // The RF interrupt fires on sync-word detect and the packet takes ~34 ms on air, so the status registers read
+  // here still describe the packet being received (diagnostics only).
+  CC1101Packet *pkt = &inMessage[inMessageIdx];
+  pkt->rssi = readRegisterWithSyncProblem(CC1101_RSSI, CC1101_STATUS_REGISTER);
+  pkt->lqi = readRegisterWithSyncProblem(CC1101_LQI, CC1101_STATUS_REGISTER);
+  pkt->freqest = readRegisterWithSyncProblem(CC1101_FREQEST, CC1101_STATUS_REGISTER);
+  readData(pkt, MAX_RAW);
   initReceiveMessage();
-  inMessageIdx = 1 - inMessageIdx; // swap buffer so next ISR writes to the other one
+  inMessageIdx = 1 - inMessageIdx; // swap buffer so the next receive uses the other one
 
   return true;
 }
@@ -378,7 +506,11 @@ bool IthoCC1101::receivePacket()
 void IthoCC1101::decodeBufferedPacket()
 {
   // decode from the buffer the ISR is NOT currently writing to
-  messageDecode(&inMessage[1 - inMessageIdx], &inPacket);
+  CC1101Packet *pkt = &inMessage[1 - inMessageIdx];
+  lastRssi = pkt->rssi;
+  lastLqi = pkt->lqi;
+  lastFreqest = pkt->freqest;
+  messageDecode(pkt, &inPacket);
 }
 
 IthoPacket *IthoCC1101::checkForNewPacket()
@@ -404,6 +536,7 @@ bool IthoCC1101::parseMessage(IthoPacket *packetPtr)
   packetPtr->error = 0;
   packetPtr->remType = RemoteTypes::UNSETTYPE;
   packetPtr->command = IthoUnknown;
+  packetPtr->spiderHeatingJoin = false;
 
   // first byte is the header of the message, this determines the structure of the rest of the message
   // The bits are used as follows <00TTAAPP>
@@ -495,6 +628,16 @@ bool IthoCC1101::parseMessage(IthoPacket *packetPtr)
 #endif
   }
 
+  // Integrity gate: only dispatch to handlers (which change fan state, persist
+  // remotes and feed RF status) when the frame passed the additive checksum
+  // (error stays 0). Field parsing above already ran for every frame, so
+  // rfloglevel sniffing still sees corrupt frames — they simply no longer
+  // mutate device state. Previously, with CRC_FILTER disabled, any bit-flipped
+  // frame was dispatched and acted on. (Real frames all pass this checksum;
+  // verified against live RF traffic.)
+  if (packetPtr->error != 0)
+    return true;
+
   // handle command
   switch (packetPtr->opcode)
   {
@@ -537,8 +680,17 @@ bool IthoCC1101::parseMessage(IthoPacket *packetPtr)
   case IthoPacket::Type::ZONESETPOINT:
     handleZoneSetpoint(packetPtr);
     break;
+  case IthoPacket::Type::SYSTEMMODE:
+    handleSystemMode(packetPtr);
+    break;
   case IthoPacket::Type::DEVICEINFO:
     handleDeviceInfo(packetPtr);
+    break;
+  case IthoPacket::Type::SPIDERSTATUS:
+    handleSpiderStatus(packetPtr);
+    break;
+  case IthoPacket::Type::RELAYDEMAND:
+    handleRelayDemand(packetPtr);
     break;
     // default:
     //   return false;
@@ -626,11 +778,27 @@ void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
     sourceId[2] = ithoRF.device[remote_index].sourceID[2];
   }
 
+  if (ithoRF.device[remote_index].remType == RemoteTypes::RFLEGACY || ithoRF.device[remote_index].remType == RemoteTypes::RFLEGACY2)
+  {
+    sendLegacyCommand(remote_index, sourceId, command);
+    return;
+  }
+
   message.deviceid0[0] = sourceId[0];
   message.deviceid0[1] = sourceId[1];
   message.deviceid0[2] = sourceId[2];
 
-  if (ithoRF.device[remote_index].bidirectional)
+  if ((ithoRF.device[remote_index].remType == RemoteTypes::ORCON15LF01 || ithoRF.device[remote_index].remType == RemoteTypes::ORCONCO2) && command == IthoCommand::IthoJoin)
+  {
+    // Orcon 15RF broadcasts its join offer as: I <remote> 63:262142(NUL) --:-- 1FC9 ...
+    // header 0x1C = I, addr0+addr1 (distinct from the Itho join, which is addr0+addr2).
+    // deviceid0 is already set to sourceId above; addr1 is the NUL broadcast 0xFFFFFE.
+    message.header = HEADER_RFT_BIDIRECTIONAL;
+    message.deviceid1[0] = 0xFF;
+    message.deviceid1[1] = 0xFF;
+    message.deviceid1[2] = 0xFE;
+  }
+  else if (ithoRF.device[remote_index].bidirectional)
   {
 
     if (command == IthoCommand::IthoJoin || command == IthoCommand::IthoLeave)
@@ -642,11 +810,29 @@ void IthoCC1101::sendRFCommand(uint8_t remote_index, IthoCommand command)
     }
     else
     {
-
-      message.header = HEADER_RFT_BIDIRECTIONAL;
-      message.deviceid1[0] = ithoRF.device[remote_index].destinationID[0];
-      message.deviceid1[1] = ithoRF.device[remote_index].destinationID[1];
-      message.deviceid1[2] = ithoRF.device[remote_index].destinationID[2];
+      // Address the bound fan directly only when we actually have a valid target
+      // (non-zero and not our own source ID). Otherwise fall back to a broadcast
+      // command so a cloned / not-yet-bound remote still reaches a fan that trusts
+      // its source ID (the real Itho/Orcon remotes also use the broadcast form).
+      const uint8_t *dst = ithoRF.device[remote_index].destinationID;
+      bool destValid = (dst[0] != 0 || dst[1] != 0 || dst[2] != 0) &&
+                       !(dst[0] == sourceId[0] && dst[1] == sourceId[1] && dst[2] == sourceId[2]);
+      if (destValid)
+      {
+        message.header = HEADER_RFT_BIDIRECTIONAL;
+        message.deviceid1[0] = dst[0];
+        message.deviceid1[1] = dst[1];
+        message.deviceid1[2] = dst[2];
+      }
+      else
+      {
+        message.header = HEADER_REMOTE_CMD;
+        message.deviceid2[0] = sourceId[0];
+        message.deviceid2[1] = sourceId[1];
+        message.deviceid2[2] = sourceId[2];
+        ithoRF.device[remote_index].counter += 1;
+        message.opt0 = ithoRF.device[remote_index].counter;
+      }
     }
   }
   else
@@ -1110,6 +1296,25 @@ void IthoCC1101::send31DA(uint8_t *command)
 
   sendRFMessage(&message);
 }
+// 31DA to one device, the way an Itho fan answers a bound remote (captured 2026-10-22): RP 31DA to its
+// RQ 31DA, and I 31DA addressed to it after a command
+void IthoCC1101::send31DATo(uint8_t *command, const uint8_t to[3], bool reply)
+{
+  RFmessage message;
+  message.header = reply ? HEADER_RP_BIDIRECTIONAL : HEADER_RFT_BIDIRECTIONAL;
+
+  message.deviceid0[0] = defaultID[0];
+  message.deviceid0[1] = defaultID[1];
+  message.deviceid0[2] = defaultID[2];
+
+  message.deviceid1[0] = to[0];
+  message.deviceid1[1] = to[1];
+  message.deviceid1[2] = to[2];
+
+  message.command = &command[0];
+
+  sendRFMessage(&message);
+}
 //<HEADER> <addr0> <addr1> <addr2> <param0> <param1> <OPCODE> <LENGTH> <PAYLOAD> <CHECKSUM>
 // rewrite: uint8_t header, uint32_t deviceid0, uint32_t deviceid1, uint32_t deviceid2, uint8_t opt0, uint8_t opt1, uint8_t opcode*, uint8_t len*, uint8_t* command
 void IthoCC1101::sendRFMessage(RFmessage *message)
@@ -1177,7 +1382,7 @@ void IthoCC1101::sendRFMessage(RFmessage *message)
       sourceId[1] = message->deviceid2[1];
       sourceId[2] = message->deviceid2[2];
     }
-    else if (message->header == HEADER_JOIN_REPLY || message->header == HEADER_REMOTE_1FC9)
+    else if (message->header == HEADER_JOIN_REPLY || message->header == HEADER_REMOTE_1FC9 || message->header == HEADER_RFT_BIDIRECTIONAL)
     {
       sourceId[0] = message->deviceid0[0];
       sourceId[1] = message->deviceid0[1];
@@ -1235,7 +1440,7 @@ void IthoCC1101::sendRFMessage(RFmessage *message)
   CC1101MessageLen = CC1101Message.length;
   IthoPacketLen = ithoPacket.length;
 
-  // send messages
+  // send messages (caller serializes radio access against receivePacket())
   for (int i = 0; i < sendTries; i++)
   {
 
@@ -1268,95 +1473,113 @@ uint8_t IthoCC1101::checksum(IthoPacket *itho, uint8_t len)
   return 0 - val;
 }
 
-uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet)
+// Compile-time encode table (flash/.rodata): each nibble m=(m3 m2 m1 m0) maps to
+// its fixed 10-bit group [m0 ~m0 m1 ~m1 m2 ~m2 m3 ~m3 1 0] — the data bits
+// low-to-nibble-high, each followed by its complement, then the "10" framing.
+namespace
 {
-
-  uint8_t out_bytecounter = 14;   // index of Outbuf, start at offset 14, first part of the message is set manually
-  uint8_t out_bitcounter = 0;     // bit position of current outbuf byte
-  uint8_t out_patterncounter = 0; // bit counter to add 1 0 bit pattern after every 8 bits
-  uint8_t bitSelect = 4;          // bit position of the inData byte (4 - 7, 0 - 3)
-  uint8_t out_shift = 7;          // bit shift inData bit in position of outbuf byte
-
-  // we need to zero the out buffer first cause we are using bitshifts
-  for (unsigned int i = out_bytecounter; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
+  struct EncodeLUT
   {
-    packet->data[i] = 0;
-  }
-
-  for (uint8_t dataByte = 0; dataByte < itho->length; dataByte++)
-  {
-    for (uint8_t dataBit = 0; dataBit < 8; dataBit++)
-    { // process a full dataByte at a time resulting in 20 output bits (2.5 bytes) with the pattern 7x6x5x4x 10 3x2x1x0x 10 7x6x5x4x 10 3x2x1x0x 10 etc
-      if (out_bitcounter == 8)
-      { // check if new byte is needed
-        out_bytecounter++;
-        out_bitcounter = 0;
-      }
-
-      if (out_patterncounter == 8)
-      { // check if we have to start with a 1 0 pattern
-        out_patterncounter = 0;
-        packet->data[out_bytecounter] = packet->data[out_bytecounter] | 1 << out_shift;
-        out_shift--;
-        out_bitcounter++;
-        packet->data[out_bytecounter] = packet->data[out_bytecounter] | 0 << out_shift;
-        if (out_shift == 0)
-          out_shift = 8;
-        out_shift--;
-        out_bitcounter++;
-      }
-
-      if (out_bitcounter == 8)
-      { // check if new byte is needed
-        out_bytecounter++;
-        out_bitcounter = 0;
-      }
-
-      // set the even bit
-      uint8_t bit = (itho->dataDecoded[dataByte] & (1 << bitSelect)) >> bitSelect; // select bit and shift to bit pos 0
-      bitSelect++;
-      if (bitSelect == 8)
-        bitSelect = 0;
-
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | bit << out_shift; // shift bit in corect pos of current outbuf byte
-      out_shift--;
-      out_bitcounter++;
-      out_patterncounter++;
-
-      // set the odd bit (inverse of even bit)
-      bit = ~bit & 0b00000001;
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | bit << out_shift;
-      if (out_shift == 0)
-        out_shift = 8;
-      out_shift--;
-      out_bitcounter++;
-      out_patterncounter++;
-    }
-  }
-  if (out_bitcounter < 8)
-  { // add closing 1 0 pattern to fill last packet->data byte and ensure DC balance in the message
-    for (uint8_t i = out_bitcounter; i < 8; i += 2)
+    uint16_t group[16];
+    constexpr EncodeLUT() : group{}
     {
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | 1 << out_shift;
-      out_shift--;
-      packet->data[out_bytecounter] = packet->data[out_bytecounter] | 0 << out_shift;
-      if (out_shift == 0)
-        out_shift = 8;
-      out_shift--;
+      for (int m = 0; m < 16; m++)
+      {
+        int m0 = m & 1, m1 = (m >> 1) & 1, m2 = (m >> 2) & 1, m3 = (m >> 3) & 1;
+        group[m] = (uint16_t)((m0 << 9) | ((m0 ^ 1) << 8) | (m1 << 7) | ((m1 ^ 1) << 6) |
+                              (m2 << 5) | ((m2 ^ 1) << 4) | (m3 << 3) | ((m3 ^ 1) << 2) | (1 << 1));
+      }
     }
-  }
-
-  return out_bytecounter;
+  };
+  constexpr EncodeLUT kEncodeLUT{};
 }
 
+// Encodes each decoded byte to 20 raw bits via the nibble->group LUT (2 decoded
+// bytes = exactly 5 raw bytes, the same alignment the decoder exploits).
+// Byte-identical to the previous per-bit implementation for every payload
+// (verified: test/test_native_rf_decode fuzzes both against each other, incl.
+// the returned last-index). Writes are bounded so a pathologically long message
+// can't overrun packet->data[] — sendRFMessage appends an end byte + 7 noise
+// bytes after the returned index, so 8 bytes of headroom are reserved. Real
+// messages are far under this; the previous implementation had no such guard.
+uint8_t IthoCC1101::messageEncode(IthoPacket *itho, CC1101Packet *packet)
+{
+  // start at index 14; the first 14 bytes are set manually by createMessageStart
+  for (unsigned int i = 14; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
+    packet->data[i] = 0;
+
+  const int maxIdx = (int)(sizeof(packet->data) / sizeof(packet->data[0])) - 1 - 8;
+  int outIdx = 14;
+  uint64_t acc = 0;
+  int accBits = 0;
+  for (uint8_t k = 0; k < itho->length && outIdx <= maxIdx; k++)
+  {
+    uint32_t bits20 = ((uint32_t)kEncodeLUT.group[itho->dataDecoded[k] >> 4] << 10) |
+                      kEncodeLUT.group[itho->dataDecoded[k] & 0x0F];
+    acc = (acc << 20) | bits20;
+    accBits += 20;
+    while (accBits >= 8 && outIdx <= maxIdx)
+    {
+      packet->data[outIdx++] = (uint8_t)((acc >> (accBits - 8)) & 0xFF);
+      accBits -= 8;
+    }
+  }
+  // closing framing: pad the final partial byte with "1 0" pairs for DC balance
+  if (accBits > 0 && outIdx <= maxIdx)
+  {
+    while (accBits < 8)
+    {
+      acc = (acc << 2) | 0x2;
+      accBits += 2;
+    }
+    packet->data[outIdx++] = (uint8_t)((acc >> (accBits - 8)) & 0xFF);
+  }
+
+  return (uint8_t)(outIdx - 1);
+}
+
+// Compile-time decode table (lands in flash/.rodata, no runtime init).
+// The RAMSES bit encoding maps 1 decoded byte -> 20 raw bits, so 2 decoded
+// bytes occupy exactly 5 raw bytes and every 5-byte boundary re-aligns to a
+// group boundary. Each 10-bit group is [d x d x d x d x b b]: 4 data bits at
+// even positions, 4 "redundancy" bits at odd positions, and 2 trailing framing
+// bits. Only the data bits carry information; the odd/framing bits are NOT a
+// reliable per-frame integrity signal (real Itho/Orcon frames do not carry the
+// (bit,~bit) complement + "10" framing that this firmware's messageEncode
+// emits), so the decoder simply ignores them, as the original did.
+//   decode[c] : for the 8 data/redundancy bits of a group (c), the reversed
+//               data nibble (first data bit -> nibble bit0).
+namespace
+{
+  struct DecodeLUT
+  {
+    uint8_t decode[256];
+    constexpr DecodeLUT() : decode{}
+    {
+      for (int c = 0; c < 256; c++)
+        decode[c] = (uint8_t)(((c >> 7) & 1) | (((c >> 5) & 1) << 1) |
+                              (((c >> 3) & 1) << 2) | (((c >> 1) & 1) << 3));
+    }
+  };
+  constexpr DecodeLUT kDecodeLUT{};
+
+  // Worst case: MAX_RAW raw bytes -> floor(MAX_RAW*8/10) groups -> up to
+  // ceil(groups*4/8) decoded bytes. For MAX_RAW=162 that is index 64 < 82.
+  // This guards the implicit margin if either constant changes.
+  static_assert(((MAX_RAW * 8 / 10) * 4 + 7) / 8 <= MAX_DECODED,
+                "decoded output can exceed dataDecoded[] for this MAX_RAW");
+}
+
+// Reverses messageEncode. Byte-identical to the previous per-bit implementation
+// for every input (verified: test/test_native_rf_decode fuzzes both against
+// each other over all lengths incl. garbage). The previous version's dead
+// odd-bit "check" bookkeeping and the input-buffer clear (unused; the clear only
+// widened the ISR/decoder race window) have been removed.
 void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *packetPtr)
 {
-
   packetPtr->length = 0;
   int lenInbuf = packet->length;
-
   lenInbuf -= STARTBYTE; // correct for sync byte pos
-
   while (lenInbuf >= 5)
   {
     lenInbuf -= 5;
@@ -1371,103 +1594,85 @@ void IthoCC1101::messageDecode(CC1101Packet *packet, IthoPacket *packetPtr)
   {
     packetPtr->dataDecoded[i] = 0;
   }
-  // for (unsigned int i = 0; i < sizeof(packetPtr->dataDecodedChk) / sizeof(packetPtr->dataDecodedChk[0]); i++)
-  // {
-  //   packetPtr->dataDecodedChk[i] = 0;
-  // }
 
-  uint8_t out_i = 0;         // byte index
-  uint8_t out_j = 4;         // bit index
-  uint8_t out_i_chk = 0;     // byte index
-  uint8_t out_j_chk = 4;     // bit index
-  uint8_t in_bitcounter = 0; // process per 10 input bits
+  const uint8_t *in = &packet->data[STARTBYTE];
+  int n = (int)packet->length - STARTBYTE;
+  if (n < 0)
+    n = 0;
+  int blocks = n / 5;
+  int rem = n - blocks * 5;
+  uint8_t *out = packetPtr->dataDecoded;
 
-  for (int i = STARTBYTE; i < packet->length; i++)
+  for (int b = 0; b < blocks; b++, in += 5, out += 2)
   {
+    // byte loads only (Xtensa-safe, no unaligned 32-bit access): the 40-bit
+    // block is hi (bytes 0..3) + lo (byte 4).
+    uint32_t hi = ((uint32_t)in[0] << 24) | ((uint32_t)in[1] << 16) |
+                  ((uint32_t)in[2] << 8) | (uint32_t)in[3];
+    uint32_t lo = in[4];
+    uint8_t c0 = (uint8_t)(hi >> 24);
+    uint8_t c1 = (uint8_t)((hi >> 14) & 0xFF);
+    uint8_t c2 = (uint8_t)((hi >> 4) & 0xFF);
+    uint8_t c3 = (uint8_t)(((hi << 6) | (lo >> 2)) & 0xFF);
+    out[0] = (uint8_t)((kDecodeLUT.decode[c0] << 4) | kDecodeLUT.decode[c1]);
+    out[1] = (uint8_t)((kDecodeLUT.decode[c2] << 4) | kDecodeLUT.decode[c3]);
+  }
 
-    for (int j = 7; j > -1; j--)
+  if (rem)
+  {
+    // tail (1..4 raw bytes): replicate the original bit loop exactly. At any
+    // 5-byte boundary the decoder state is in_bitcounter==0, out_j==4, out at
+    // block-relative byte 0.
+    uint8_t out_i = 0;
+    uint8_t out_j = 4;
+    uint8_t in_bitcounter = 0;
+    for (int i = 0; i < rem; i++)
     {
-      if (in_bitcounter == 0 || in_bitcounter == 2 || in_bitcounter == 4 || in_bitcounter == 6)
-      {                              // select input bits for output
-        uint8_t x = packet->data[i]; // select input byte
-        x = x >> j;                  // select input bit
-        x = x & 0b00000001;
-        x = x << out_j; // set value for output bit
-        packetPtr->dataDecoded[out_i] = packetPtr->dataDecoded[out_i] | x;
-        out_j += 1; // next output bit
-        if (out_j > 7)
-          out_j = 0;
-        if (out_j == 4)
-          out_i += 1;
-      }
-      if (in_bitcounter == 1 || in_bitcounter == 3 || in_bitcounter == 5 || in_bitcounter == 7)
-      {                              // select input bits for check output
-        uint8_t x = packet->data[i]; // select input byte
-        x = x >> j;                  // select input bit
-        x = x & 0b00000001;
-        x = x << out_j_chk; // set value for output bit
-        // packetPtr->dataDecodedChk[out_i_chk] = packetPtr->dataDecodedChk[out_i_chk] | x;
-        out_j_chk += 1; // next output bit
-        if (out_j_chk > 7)
-          out_j_chk = 0;
-        if (out_j_chk == 4)
+      uint8_t byte = in[i];
+      for (int j = 7; j > -1; j--)
+      {
+        if ((in_bitcounter & 1) == 0 && in_bitcounter < 8)
         {
-          // packetPtr->dataDecodedChk[out_i_chk] = ~packetPtr->dataDecodedChk[out_i_chk]; // inverse bits
-          out_i_chk += 1;
+          uint8_t x = (uint8_t)((byte >> j) & 1u);
+          out[out_i] = out[out_i] | (uint8_t)(x << out_j);
+          out_j += 1;
+          if (out_j > 7)
+            out_j = 0;
+          if (out_j == 4)
+            out_i += 1;
         }
+        in_bitcounter += 1;
+        if (in_bitcounter > 9)
+          in_bitcounter = 0;
       }
-      in_bitcounter += 1; // continue cyling in groups of 10 bits
-      if (in_bitcounter > 9)
-        in_bitcounter = 0;
     }
   }
-  // clear packet data
-  for (unsigned int i = 0; i < sizeof(packet->data) / sizeof(packet->data[0]); i++)
-  {
-    packet->data[i] = 0;
-  }
-}
-
-uint8_t IthoCC1101::ReadRSSI()
-{
-  uint8_t rssi = 0;
-  uint8_t value = 0;
-
-  rssi = (readRegister(CC1101_RSSI, CC1101_STATUS_REGISTER));
-
-  if (rssi >= 128)
-  {
-    value = 255 - rssi;
-    value /= 2;
-    value += 74;
-  }
-  else
-  {
-    value = rssi / 2;
-    value += 74;
-  }
-  return (value);
 }
 
 uint8_t IthoCC1101::getChipVersion()
 {
-  // try to find the CC1101 chip
-  uint8_t i = 0;
-  bool flagFound = false;
-  while ((i < 10) && !flagFound)
+  // try to find the CC1101 chip: plain reads, then after a manual reset, then at 1 MHz SPI
+  for (uint8_t attempt = 0; attempt < 3; attempt++)
   {
-    chipVersion = CC1101::getChipVersion();
-    if ((chipVersion == CC1101_VERSION_CURRENT) || (chipVersion == CC1101_VERSION_LEGACY) || (chipVersion == CC1101_VERSION_CLONE))
+    if (attempt == 2)
+      setSpiClock(1000000);
+    if (attempt > 0)
     {
-      flagFound = true;
-    }
-    else
-    {
+      reset();
       delay(10);
-      i++;
+    }
+    for (uint8_t i = 0; i < 10; i++)
+    {
+      chipVersion = CC1101::getChipVersion();
+      if ((chipVersion == CC1101_VERSION_CURRENT) || (chipVersion == CC1101_VERSION_LEGACY) || (chipVersion == CC1101_VERSION_CLONE))
+      {
+        detectAttempt = attempt;
+        return chipVersion;
+      }
+      delay(10);
     }
   }
-
+  detectAttempt = 3; // no known version read
   return chipVersion;
 }
 
@@ -1619,11 +1824,19 @@ String IthoCC1101::LastMessageDecoded(IthoPacket *packetPtr)
     str += String(buf);
     str += ":";
 
-    for (int i = packetPtr->payloadPos; i < packetPtr->payloadPos + packetPtr->len; i++)
+    // Clamp to the decoded buffer. A corrupt/noise frame can carry a len byte
+    // far larger than the payload actually present (parseMessage rejects
+    // len > MAX_PAYLOAD but still sets it, and this logging path runs on every
+    // sniffed frame at rfloglevel 3), which would otherwise read past
+    // dataDecoded[].
+    int payloadEnd = packetPtr->payloadPos + packetPtr->len;
+    if (payloadEnd > (int)sizeof(packetPtr->dataDecoded))
+      payloadEnd = (int)sizeof(packetPtr->dataDecoded);
+    for (int i = packetPtr->payloadPos; i < payloadEnd; i++)
     {
       snprintf(buf, sizeof(buf), "%02X", packetPtr->dataDecoded[i]);
       str += String(buf);
-      if (i < packetPtr->payloadPos + packetPtr->len - 1)
+      if (i < payloadEnd - 1)
       {
         str += ",";
       }
@@ -1744,6 +1957,17 @@ bool IthoCC1101::updateRFDevice(uint8_t remote_index, uint8_t byte0, uint8_t byt
   ithoRF.device[remote_index].hum = 0xEFFF;
   ithoRF.device[remote_index].dewpoint = 0xEFFF;
   ithoRF.device[remote_index].battery = 0xEFFF;
+  ithoRF.device[remote_index].setpoint = 0xEFFF;
+  ithoRF.device[remote_index].setpointCool = 0xEFFF;
+  ithoRF.device[remote_index].spiderFlags = 0xEF;
+  ithoRF.device[remote_index].demand = 0xFF;
+  ithoRF.device[remote_index].ventDemand = 0xFF;
+  ithoRF.device[remote_index].ventZone = 0xFF;
+  ithoRF.device[remote_index].ventFlags = 0xFF;
+  ithoRF.device[remote_index].thermostat = false;
+  ithoRF.device[remote_index].setpointCmd = 0xEFFF;
+  memset(ithoRF.device[remote_index].controllerID, 0, 3);
+  ithoRF.device[remote_index].zone = 0xFF;
 
   if (remote_index > ithoRF.count)
     ithoRF.count = remote_index;
@@ -1789,6 +2013,17 @@ bool IthoCC1101::removeRFDevice(uint8_t byte0, uint8_t byte1, uint8_t byte2)
       item.hum = 0xEFFF;
       item.dewpoint = 0xEFFF;
       item.battery = 0xEFFF;
+      item.setpoint = 0xEFFF;
+      item.setpointCool = 0xEFFF;
+      item.spiderFlags = 0xEF;
+      item.demand = 0xFF;
+      item.ventDemand = 0xFF;
+      item.ventZone = 0xFF;
+      item.ventFlags = 0xFF;
+      item.thermostat = false;
+      item.setpointCmd = 0xEFFF;
+      memset(item.controllerID, 0, 3);
+      item.zone = 0xFF;
       ithoRF.count--;
       return true;
     }
@@ -1816,6 +2051,17 @@ bool IthoCC1101::removeRFDevice(uint8_t remote_index)
   ithoRF.device[remote_index].hum = 0xEFFF;
   ithoRF.device[remote_index].dewpoint = 0xEFFF;
   ithoRF.device[remote_index].battery = 0xEFFF;
+  ithoRF.device[remote_index].setpoint = 0xEFFF;
+  ithoRF.device[remote_index].setpointCool = 0xEFFF;
+  ithoRF.device[remote_index].spiderFlags = 0xEF;
+  ithoRF.device[remote_index].demand = 0xFF;
+  ithoRF.device[remote_index].ventDemand = 0xFF;
+  ithoRF.device[remote_index].ventZone = 0xFF;
+  ithoRF.device[remote_index].ventFlags = 0xFF;
+  ithoRF.device[remote_index].thermostat = false;
+  ithoRF.device[remote_index].setpointCmd = 0xEFFF;
+  memset(ithoRF.device[remote_index].controllerID, 0, 3);
+  ithoRF.device[remote_index].zone = 0xFF;
 
   return true;
 }
@@ -1884,22 +2130,40 @@ void IthoCC1101::handleBind(IthoPacket *packetPtr)
   uint8_t byte1 = tempID >> 8 & 0xFF;
   uint8_t byte2 = tempID & 0xFF;
 
-  // Check for W-type 1FC9 (binding accept from target device during initiator bind)
+  // Binding accept (W-type 1FC9) sent by the target fan in response to our join offer:
+  //   W --- <fan> <us> --:------ 1FC9 006 00 <opcode> <fanID>
+  // Confirm it for whichever of our remotes the accept is addressed to (deviceId1 ==
+  // that remote's source ID). Matching by source ID rather than only the bind-initiator
+  // timer means re-binds and slow (power-cycle) pairings still get confirmed.
   uint8_t msgType = (packetPtr->header >> 4) & 0x3;
-  if (msgType == MESSAGE_TYPE_W_MASK && bindInitiatorActive)
+  if (msgType == MESSAGE_TYPE_W_MASK)
   {
-    // Binding accept: W --- target self --:-- 1FC9 [31D9+31DA]
-    // Verify deviceId1 matches the source ID used for the join offer
-    uint8_t *srcId = ithoRF.device[bindInitiatorRemIndex].sourceID;
-    bool useSrcId = (srcId[0] != 0 || srcId[1] != 0 || srcId[2] != 0);
-    uint32_t ourId = useSrcId
-        ? ((uint32_t)srcId[0] << 16) | ((uint32_t)srcId[1] << 8) | (uint32_t)srcId[2]
-        : ((uint32_t)defaultID[0] << 16) | ((uint32_t)defaultID[1] << 8) | (uint32_t)defaultID[2];
-    if (packetPtr->deviceId1 == ourId)
+    int8_t bindIdx = -1;
+    for (uint8_t i = 0; i < MAX_NUM_OF_REMOTES; i++)
+    {
+      const uint8_t *s = ithoRF.device[i].sourceID;
+      if (s[0] == 0 && s[1] == 0 && s[2] == 0)
+        continue; // skip empty / default-source slots
+      uint32_t sid = ((uint32_t)s[0] << 16) | ((uint32_t)s[1] << 8) | (uint32_t)s[2];
+      if (packetPtr->deviceId1 == sid)
+      {
+        bindIdx = i;
+        break;
+      }
+    }
+    // Remotes that transmit with the firmware default ID only match while a bind is active.
+    if (bindIdx < 0 && bindInitiatorActive)
+    {
+      uint32_t did = ((uint32_t)defaultID[0] << 16) | ((uint32_t)defaultID[1] << 8) | (uint32_t)defaultID[2];
+      if (packetPtr->deviceId1 == did)
+        bindIdx = bindInitiatorRemIndex;
+    }
+    if (bindIdx >= 0)
     {
       packetPtr->command = IthoBindAccept;
       packetPtr->remType = RemoteTypes::UNSETTYPE;
       bindInitiatorActive = false;
+      bindInitiatorRemIndex = bindIdx;
 
       for (auto &item : ithoRF.device)
       {
@@ -1933,7 +2197,28 @@ void IthoCC1101::handleBind(IthoPacket *packetPtr)
     }
   }
 
-  if (checkIthoCommand(packetPtr, ithoMessageLeaveCommandBytes) || checkIthoCommand(packetPtr, ithoMessageAUTORFTLeaveCommandBytes))
+  // Itho Spider heating joins (checked before the ventilation templates). The controller join (home icon)
+  // offers 22C9 and is accepted with 00 01FF <id>; the relay join (3150/0008) needs an accept we do not know.
+  const spider::JoinKind spiderJoin = (msgType == MESSAGE_TYPE_I_MASK && packetPtr->error == 0)
+                                          ? spider::heatingJoinKind(&packetPtr->dataDecoded[packetPtr->payloadPos], packetPtr->len)
+                                          : spider::JoinKind::None;
+  if (spiderJoin == spider::JoinKind::Relay)
+  {
+    // Heater bind (0008/3150, accepted by the heater with 00 3EF0). Not ours to answer: use Spider discovery.
+    N_LOG("RF: Spider %02X:%02X:%02X heater join seen, not answered (use Spider discovery)", byte0, byte1, byte2);
+    return;
+  }
+  if (spiderJoin == spider::JoinKind::Controller)
+  {
+    packetPtr->command = IthoJoin;
+    packetPtr->remType = RemoteTypes::RFTSPIDER;
+    packetPtr->spiderHeatingJoin = true;
+    if (bindAllowed)
+    {
+      addRFDevice(byte0, byte1, byte2, RemoteTypes::RFTSPIDER, true);
+    }
+  }
+  else if (checkIthoCommand(packetPtr, ithoMessageLeaveCommandBytes) || checkIthoCommand(packetPtr, ithoMessageAUTORFTLeaveCommandBytes))
   {
     packetPtr->command = IthoLeave;
     if (bindAllowed)
@@ -2226,20 +2511,9 @@ void IthoCC1101::handleTimer(IthoPacket *packetPtr)
 
 void IthoCC1101::handle31D9(IthoPacket *packetPtr)
 {
-  uint32_t tempID = 0;
-  if (packetPtr->deviceId0 != 0)
-  {
-    tempID = packetPtr->deviceId0;
-  }
-  else if (packetPtr->deviceId2 != 0)
-  {
-    tempID = packetPtr->deviceId2;
-  }
-  else
-  {
-    D_LOG("RFI: deviceId not found");
+  const uint32_t tempID = ithoStatusSourceId(packetPtr->deviceId0, packetPtr->deviceId2);
+  if (tempID == 0)
     return;
-  }
 
   uint8_t byte0 = tempID >> 16 & 0xFF;
   uint8_t byte1 = tempID >> 8 & 0xFF;
@@ -2272,20 +2546,9 @@ void IthoCC1101::handle31D9(IthoPacket *packetPtr)
 
 void IthoCC1101::handle31DA(IthoPacket *packetPtr)
 {
-  uint32_t tempID = 0;
-  if (packetPtr->deviceId0 != 0)
-  {
-    tempID = packetPtr->deviceId0;
-  }
-  else if (packetPtr->deviceId2 != 0)
-  {
-    tempID = packetPtr->deviceId2;
-  }
-  else
-  {
-    D_LOG("RFI: deviceId not found");
+  const uint32_t tempID = ithoStatusSourceId(packetPtr->deviceId0, packetPtr->deviceId2);
+  if (tempID == 0)
     return;
-  }
 
   uint8_t byte0 = tempID >> 16 & 0xFF;
   uint8_t byte1 = tempID >> 8 & 0xFF;
@@ -2321,6 +2584,17 @@ void IthoCC1101::handle31DA(IthoPacket *packetPtr)
 
 void IthoCC1101::handleRemotestatus(IthoPacket *packetPtr)
 {
+  /*
+     message length: 4
+     message opcode: 0x31E0
+     byte[0]    : zone
+     byte[1]    : unknown (0x00)
+     byte[2]    : ventilation demand, 0-200 (0.5 %)
+     byte[3]    : flags
+
+  */
+  if (packetPtr->error > 0)
+    return;
   uint32_t tempID = 0;
   if (packetPtr->deviceId0 != 0)
     tempID = packetPtr->deviceId0;
@@ -2345,6 +2619,20 @@ void IthoCC1101::handleRemotestatus(IthoPacket *packetPtr)
     {
       // store last command
       // item.timestamp = now;
+      if (packetPtr->len == 4)
+      {
+        const uint8_t v = packetPtr->dataDecoded[packetPtr->payloadPos + 2];
+        if (v <= 200)
+        {
+          const uint8_t z = packetPtr->dataDecoded[packetPtr->payloadPos + 0];
+          const uint8_t f = packetPtr->dataDecoded[packetPtr->payloadPos + 3];
+          if (v != item.ventDemand || z != item.ventZone || f != item.ventFlags)
+            remoteStatusChanged = true;
+          item.ventDemand = v;
+          item.ventZone = z;
+          item.ventFlags = f;
+        }
+      }
       return;
     }
   }
@@ -2563,6 +2851,8 @@ void IthoCC1101::handleZoneTemp(IthoPacket *packetPtr)
   {
     if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
+      if (item.temp != tempTemp)
+        remoteStatusChanged = true;
       item.timestamp = now;
       item.temp = tempTemp;
       return;
@@ -2593,10 +2883,103 @@ void IthoCC1101::handleZoneSetpoint(IthoPacket *packetPtr)
   uint8_t byte1 = tempID >> 8 & 0xFF;
   uint8_t byte2 = tempID & 0xFF;
 
+  int32_t tempSetpoint = packetPtr->dataDecoded[packetPtr->payloadPos + 1] << 8 | packetPtr->dataDecoded[packetPtr->payloadPos + 2];
+
+  time_t now;
+  time(&now);
+
+  if (ithoRFDevice *dev = findZoneDevice(tempID, packetPtr->dataDecoded[packetPtr->payloadPos + 0]))
+  { // zone controller (AutoTemp) confirming a zone's setpoint: belongs to that zone's Spider
+    if (dev->setpoint != tempSetpoint)
+      remoteStatusChanged = true;
+    dev->timestamp = now;
+    dev->setpoint = tempSetpoint;
+    return;
+  }
   if (!checkRFDevice(byte0, byte1, byte2))
     return;
-  // int32_t tempZone = packetPtr->dataDecoded[packetPtr->payloadPos + 0];
-  int32_t tempSetpoint = packetPtr->dataDecoded[packetPtr->payloadPos + 1] << 8 | packetPtr->dataDecoded[packetPtr->payloadPos + 2];
+
+  for (auto &item : ithoRF.device)
+  {
+    if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
+    {
+      if (item.setpoint != tempSetpoint)
+        remoteStatusChanged = true;
+      item.timestamp = now;
+      item.setpoint = tempSetpoint;
+      // W 22C9 from a Spider bound to us (gateway): answer with I 22C9 from TaskCC1101, else it repeats the W
+      const bool hasCtl = item.controllerID[0] != 0 || item.controllerID[1] != 0 || item.controllerID[2] != 0;
+      if (item.thermostat && !hasCtl && item.zone == spider::ZONE_NONE && ((packetPtr->header >> 4) & 0x3) == MESSAGE_TYPE_W_MASK)
+      {
+        uint8_t me[3];
+        ownID(item, me);
+        if (packetPtr->deviceId1 == ((uint32_t)me[0] << 16 | (uint32_t)me[1] << 8 | me[2]))
+        {
+          spiderEchoID[0] = byte0;
+          spiderEchoID[1] = byte1;
+          spiderEchoID[2] = byte2;
+          spiderEchoSetpoint = tempSetpoint;
+          spiderEchoPending = true;
+        }
+      }
+      return;
+    }
+  }
+}
+
+void IthoCC1101::handleSystemMode(IthoPacket *packetPtr)
+{
+  /*
+     message length: 8 (W from a Spider to its controller, after each poll and dial change)
+     message opcode: 0x22D0
+     byte[0]    : index
+     byte[1]    : flags (04 and 14 seen in user logs)
+  */
+  if (packetPtr->error > 0 || packetPtr->len < 2 || ((packetPtr->header >> 4) & 0x3) != MESSAGE_TYPE_W_MASK)
+    return;
+  const uint32_t src = packetPtr->deviceId0;
+  const uint8_t id[3]{(uint8_t)(src >> 16), (uint8_t)(src >> 8), (uint8_t)src};
+  const ithoRFDevice *dev = findRFDevice(id);
+  if (!dev || !dev->thermostat || dev->zone != spider::ZONE_NONE)
+    return;
+  const bool hasCtl = dev->controllerID[0] != 0 || dev->controllerID[1] != 0 || dev->controllerID[2] != 0;
+  uint8_t me[3];
+  ownID(*dev, me);
+  if (hasCtl || packetPtr->deviceId1 != ((uint32_t)me[0] << 16 | (uint32_t)me[1] << 8 | me[2]))
+    return; // only a Spider bound to us (gateway)
+  spiderModeID[0] = id[0];
+  spiderModeID[1] = id[1];
+  spiderModeID[2] = id[2];
+  spiderModeIndex = packetPtr->dataDecoded[packetPtr->payloadPos + 0];
+  spiderModeFlags = packetPtr->dataDecoded[packetPtr->payloadPos + 1];
+  spiderModePending = true;
+}
+
+void IthoCC1101::handleSpiderStatus(IthoPacket *packetPtr)
+{
+  /*
+     message length: 26
+     message opcode: 0x01FF (Itho Spider thermostat status, sent by the Spider as RQ/I)
+     byte[2]    : room temperature, 0.5 C units (0x80 = none)
+     byte[3]    : heating setpoint, 0.5 C units
+     byte[4]    : second (cooling) setpoint, 0.5 C units
+     byte[5]    : flags, bit 6 schedule active, bit 5 adjusted on the device
+  */
+  if (packetPtr->error > 0) // Spider frames are often corrupted; never act on a bad checksum
+    return;
+  spider::Status st{};
+  if (!spider::decodeStatus(&packetPtr->dataDecoded[packetPtr->payloadPos], packetPtr->len, st))
+    return;
+  uint32_t tempID = packetPtr->deviceId0 != 0 ? packetPtr->deviceId0 : packetPtr->deviceId2;
+  if (tempID == 0)
+    return;
+
+  uint8_t byte0 = tempID >> 16 & 0xFF;
+  uint8_t byte1 = tempID >> 8 & 0xFF;
+  uint8_t byte2 = tempID & 0xFF;
+
+  if (!checkRFDevice(byte0, byte1, byte2))
+    return;
 
   time_t now;
   time(&now);
@@ -2605,11 +2988,241 @@ void IthoCC1101::handleZoneSetpoint(IthoPacket *packetPtr)
   {
     if (item.destinationID[0] == byte0 && item.destinationID[1] == byte1 && item.destinationID[2] == byte2)
     {
+      const int32_t temp = st.roomTemp != spider::TEMP_NONE ? spider::halfToCenti(st.roomTemp) : item.temp;
+      const int32_t sp = spider::halfToCenti(st.heatSetpoint);
+      const int32_t spc = spider::halfToCenti(st.coolSetpoint);
+      if (temp != item.temp || sp != item.setpoint || spc != item.setpointCool || st.flags != item.spiderFlags)
+        remoteStatusChanged = true;
       item.timestamp = now;
-      item.setpoint = tempSetpoint;
+      item.temp = temp;
+      item.setpoint = sp;
+      item.setpointCool = spc;
+      item.spiderFlags = st.flags;
+      // Bound Spider asking its controller (us) for the setpoint: answer from TaskCC1101 right away
+      if (item.thermostat && item.zone == spider::ZONE_NONE && ((packetPtr->header >> 4) & 0x3) == MESSAGE_TYPE_RQ_MASK)
+      {
+        uint8_t me[3];
+        ownID(item, me);
+        if (packetPtr->deviceId1 == ((uint32_t)me[0] << 16 | (uint32_t)me[1] << 8 | me[2]))
+        {
+          spiderReplyID[0] = byte0;
+          spiderReplyID[1] = byte1;
+          spiderReplyID[2] = byte2;
+          spiderReplyPending = true;
+        }
+      }
       return;
     }
   }
+}
+
+void IthoCC1101::handleRelayDemand(IthoPacket *packetPtr)
+{
+  /*
+     message length: 2
+     message opcode: 0x0008 (relay demand, broadcast by e.g. the Itho Spider thermostat)
+     byte[0]    : domain
+     byte[1]    : demand, 0-200 (0.5 %)
+  */
+  if (packetPtr->error > 0 || packetPtr->len != 2)
+    return;
+  const uint32_t src = packetPtr->deviceId0 != 0 ? packetPtr->deviceId0 : packetPtr->deviceId2;
+  const uint8_t id[3]{(uint8_t)(src >> 16), (uint8_t)(src >> 8), (uint8_t)src};
+  ithoRFDevice *dev = findZoneDevice(src, packetPtr->dataDecoded[packetPtr->payloadPos + 0]); // zone controller: [zone, demand]
+  if (!dev)
+    dev = findRFDevice(id);
+  if (!dev)
+    return;
+  const uint8_t v = packetPtr->dataDecoded[packetPtr->payloadPos + 1];
+  if (v > 200)
+    return;
+  if (v != dev->demand)
+    remoteStatusChanged = true;
+  dev->demand = v;
+  time(&dev->timestamp);
+}
+
+// Spider on zone `zone` of zone controller `ctl` (AutoTemp), whose broadcasts carry only the controller's id
+ithoRFDevice *IthoCC1101::findZoneDevice(uint32_t ctl, uint8_t zone)
+{
+  if (ctl == 0 || zone == spider::ZONE_NONE)
+    return nullptr;
+  for (auto &item : ithoRF.device)
+  {
+    if (item.zone == zone && ((uint32_t)item.controllerID[0] << 16 | (uint32_t)item.controllerID[1] << 8 | item.controllerID[2]) == ctl)
+      return &item;
+  }
+  return nullptr;
+}
+
+ithoRFDevice *IthoCC1101::findRFDevice(const uint8_t id[3])
+{
+  if (id[0] == 0 && id[1] == 0 && id[2] == 0)
+    return nullptr;
+  for (auto &item : ithoRF.device)
+  {
+    if (item.destinationID[0] == id[0] && item.destinationID[1] == id[1] && item.destinationID[2] == id[2])
+      return &item;
+  }
+  return nullptr;
+}
+
+// Id we use towards the Spider: the learned controller (its heater, spoofed) if set, else our own
+void IthoCC1101::ownID(const ithoRFDevice &dev, uint8_t out[3]) const
+{
+  const bool hasCtl = dev.controllerID[0] != 0 || dev.controllerID[1] != 0 || dev.controllerID[2] != 0;
+  const bool hasSource = dev.sourceID[0] != 0 || dev.sourceID[1] != 0 || dev.sourceID[2] != 0;
+  for (int i = 0; i < 3; i++)
+    out[i] = hasCtl ? dev.controllerID[i] : (hasSource ? dev.sourceID[i] : defaultID[i]);
+}
+
+bool IthoCC1101::setThermostat(const uint8_t id[3], bool on, int32_t setpointCmd, const uint8_t ctl[3], uint8_t zone)
+{
+  ithoRFDevice *dev = findRFDevice(id);
+  if (!dev)
+    return false;
+  dev->thermostat = on;
+  dev->setpointCmd = on ? setpointCmd : 0xEFFF;
+  for (int i = 0; i < 3; i++)
+    dev->controllerID[i] = (on && ctl) ? ctl[i] : 0;
+  dev->zone = (on && ctl) ? zone : spider::ZONE_NONE;
+  return true;
+}
+
+bool IthoCC1101::setThermostatSetpoint(const uint8_t id[3], int32_t setpointCmd)
+{
+  ithoRFDevice *dev = findRFDevice(id);
+  if (!dev || !dev->thermostat)
+    return false;
+  dev->setpointCmd = spider::clampSetpoint(setpointCmd);
+  return true;
+}
+
+bool IthoCC1101::consumeSpiderReply(uint8_t id[3])
+{
+  if (!spiderReplyPending)
+    return false;
+  spiderReplyPending = false;
+  id[0] = spiderReplyID[0];
+  id[1] = spiderReplyID[1];
+  id[2] = spiderReplyID[2];
+  return true;
+}
+
+bool IthoCC1101::consumeSpiderEcho(uint8_t id[3], int32_t &setpointCenti)
+{
+  if (!spiderEchoPending)
+    return false;
+  spiderEchoPending = false;
+  id[0] = spiderEchoID[0];
+  id[1] = spiderEchoID[1];
+  id[2] = spiderEchoID[2];
+  setpointCenti = spiderEchoSetpoint;
+  return true;
+}
+
+bool IthoCC1101::consumeSpiderModeAck(uint8_t id[3], uint8_t &index, uint8_t &flags)
+{
+  if (!spiderModePending)
+    return false;
+  spiderModePending = false;
+  id[0] = spiderModeID[0];
+  id[1] = spiderModeID[1];
+  id[2] = spiderModeID[2];
+  index = spiderModeIndex;
+  flags = spiderModeFlags;
+  return true;
+}
+
+// Addressed controller -> Spider message: addr0 = our id, addr1 = the Spider
+void IthoCC1101::sendToSpider(const uint8_t id[3], uint8_t header, const uint8_t *command)
+{
+  const ithoRFDevice *dev = findRFDevice(id);
+  if (!dev)
+    return;
+  uint8_t me[3];
+  ownID(*dev, me);
+  sendToSpiderAs(me, id, header, command);
+}
+
+void IthoCC1101::sendToSpiderAs(const uint8_t from[3], const uint8_t id[3], uint8_t header, const uint8_t *command)
+{
+  RFmessage message;
+  message.header = header;
+  message.deviceid0[0] = from[0];
+  message.deviceid0[1] = from[1];
+  message.deviceid0[2] = from[2];
+  message.deviceid1[0] = id[0];
+  message.deviceid1[1] = id[1];
+  message.deviceid1[2] = id[2];
+  message.command = command;
+  sendRFMessage(&message);
+  D_LOG("RF: Spider TX hdr %02X %02X%02X len %u from %02X:%02X:%02X to %02X:%02X:%02X", header, command[0], command[1], command[2],
+        message.deviceid0[0], message.deviceid0[1], message.deviceid0[2], id[0], id[1], id[2]);
+}
+
+void IthoCC1101::sendSpiderBindAccept(const uint8_t id[3])
+{
+  const ithoRFDevice *dev = findRFDevice(id);
+  if (!dev)
+    return;
+  uint8_t me[3];
+  ownID(*dev, me);
+  uint8_t cmd[3 + spider::BIND_ENTRY_LEN + 1]{0x1F, 0xC9, spider::BIND_ENTRY_LEN};
+  spider::buildBindAccept(&cmd[3], me);
+  sendToSpider(id, HEADER_JOIN_REPLY, cmd);
+}
+
+// RP 01FF (answer to the Spider's RQ) or W 01FF (push); setpoint is the commanded one (useCmd), else the Spider's own
+void IthoCC1101::sendSpiderStatus(const uint8_t id[3], bool reply, bool useCmd)
+{
+  const ithoRFDevice *dev = findRFDevice(id);
+  if (!dev)
+    return;
+  const int32_t sp = useCmd && dev->setpointCmd != 0xEFFF ? dev->setpointCmd : dev->setpoint;
+  if (sp == 0xEFFF)
+    return; // nothing known yet: do not answer with a made-up setpoint
+  uint8_t cmd[3 + spider::STATUS_LEN + 1]{0x01, 0xFF, spider::STATUS_LEN};
+  spider::buildControllerStatus(&cmd[3], sp);
+  sendToSpider(id, reply ? HEADER_RP_BIDIRECTIONAL : HEADER_JOIN_REPLY, cmd);
+}
+
+// RQ 01FF: the Spider answers with RP 01FF holding room temp, setpoint and flags (one frame, decoded as usual)
+void IthoCC1101::sendSpiderRequest(const uint8_t id[3])
+{
+  static const uint8_t cmd[5]{0x01, 0xFF, 0x01, 0x00, 0x00};
+  sendToSpider(id, HEADER_RQ_BIDIRECTIONAL, cmd);
+}
+
+// W 22C9 [zone][setpoint][setpoint + 1 C][01] as the Spider to its zone controller, like a dial change on the Spider
+void IthoCC1101::sendSpiderZoneSetpoint(const uint8_t id[3])
+{
+  const ithoRFDevice *dev = findRFDevice(id);
+  if (!dev || dev->zone == spider::ZONE_NONE || dev->setpointCmd == 0xEFFF)
+    return;
+  uint8_t cmd[3 + spider::ZONE_SETPOINT_ECHO_LEN + 1]{0x22, 0xC9, spider::ZONE_SETPOINT_ECHO_LEN};
+  spider::buildZoneSetpointChange(&cmd[3], dev->zone, dev->setpointCmd);
+  sendToSpiderAs(id, dev->controllerID, HEADER_JOIN_REPLY, cmd);
+}
+
+void IthoCC1101::sendSpiderProbe(const uint8_t id[3], const uint8_t ctl[3])
+{
+  static const uint8_t cmd[5]{0x01, 0xFF, 0x01, 0x00, 0x00};
+  sendToSpiderAs(ctl, id, HEADER_RQ_BIDIRECTIONAL, cmd);
+}
+
+void IthoCC1101::sendSpiderZoneEcho(const uint8_t id[3], int32_t setpointCenti)
+{
+  uint8_t cmd[3 + spider::ZONE_SETPOINT_ECHO_LEN + 1]{0x22, 0xC9, spider::ZONE_SETPOINT_ECHO_LEN};
+  spider::buildZoneSetpointEcho(&cmd[3], setpointCenti);
+  sendToSpider(id, HEADER_RFT_BIDIRECTIONAL, cmd);
+}
+
+void IthoCC1101::sendSpiderModeAck(const uint8_t id[3], uint8_t index, uint8_t flags)
+{
+  uint8_t cmd[3 + spider::SYSTEM_MODE_ACK_LEN + 1]{0x22, 0xD0, spider::SYSTEM_MODE_ACK_LEN};
+  spider::buildSystemModeAck(&cmd[3], index, flags);
+  sendToSpider(id, HEADER_RFT_BIDIRECTIONAL, cmd);
 }
 
 void IthoCC1101::handleDeviceInfo(IthoPacket *packetPtr)

@@ -1,0 +1,41 @@
+# Specs Index
+
+Specs capture *intent* for a change before code exists. They live alongside the code they describe, not as a substitute for it.
+
+## Lifecycle
+
+```
+specs/future/     → not yet started, may change before work begins
+specs/active/      → currently being implemented
+specs/completed/   → shipped; kept as historical record, linked from release notes/ADRs where relevant
+```
+
+Move a spec between folders (don't copy) as its state changes.
+
+## When a spec is required
+
+Every new feature, and every non-trivial bugfix or refactor, gets a spec **before** implementation. Use the matching template from [specs/templates/](templates/):
+
+| Change type | Template |
+|---|---|
+| New feature | [feature-spec.md](templates/feature-spec.md) |
+| Bug fix (non-trivial) | [bugfix-spec.md](templates/bugfix-spec.md) |
+| New/changed REST or MQTT API surface | [api-spec.md](templates/api-spec.md) |
+| Refactor | [refactor-spec.md](templates/refactor-spec.md) |
+
+Every spec must define: **acceptance criteria, risks, architecture impact, test requirements, rollback strategy.**
+
+## Spec ↔ ADR relationship
+
+A spec describes *what* is being built and its immediate risk/test/rollback plan. An ADR records a *durable architectural decision* (task structure, manager shape, API design pattern, config format, hardware abstraction). Not every spec needs an ADR — only specs whose "Architecture Impact" section is non-trivial do. See the trigger table in [docs/adr/README.md](../docs/adr/README.md).
+
+## Active specs
+
+- [boot-phase-gates.md](active/boot-phase-gates.md) — replace the linear boot task chain with FreeRTOS event-group phase gates ([ADR-0010](../docs/adr/ADR-0010-boot-phase-event-group.md))
+- [status-sensor-error-latch.md](active/status-sensor-error-latch.md) — 2401 status sensor errors are judged per poll instead of latching until reboot (#295)
+- [i2c-sniffer-pause-during-slave-receive.md](active/i2c-sniffer-pause-during-slave-receive.md) — the I2C sniffer interrupt stays off while the add-on receives a reply as I2C slave (#295)
+- [rf-spider-thermostat-climate.md](active/rf-spider-thermostat-climate.md): Itho Spider heating thermostat over RF, read/set setpoint and HA climate ([ADR-0011](../docs/adr/ADR-0011-rf-spider-thermostat-role.md))
+
+## Related
+
+[.ai/ai-instructions.md](../.ai/ai-instructions.md) · [.ai/development-workflow.md](../.ai/development-workflow.md) · [docs/adr/README.md](../docs/adr/README.md)

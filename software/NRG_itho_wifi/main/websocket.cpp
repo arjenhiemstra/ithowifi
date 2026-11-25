@@ -1,5 +1,6 @@
 #include "websocket.h"
 #include "managers/SecureWebCommLite.h"
+#include "ithodevice/i2c_service.h"
 
 static std::unordered_map<uint32_t, std::string> g_wsBuffers;
 static SemaphoreHandle_t g_wsBuffersMutex = xSemaphoreCreateMutex();
@@ -8,6 +9,23 @@ AsyncWebServer wsserver(8000);
 WebSerial *webSerial = nullptr;
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+
+// Apply i2c_safe_guard and i2c_sniffer to the running sniffer
+static void applyI2CSnifferState()
+{
+  if (!hardwareManager.i2c_sniffer_capable)
+    return;
+  auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
+  sg->i2c_safe_guard_enabled = (systemConfig.i2c_safe_guard > 0 &&
+                                 currentIthoDeviceID() == 0x1B &&
+                                 systemConfig.syssht30 == 0 &&
+                                 currentItho_fwversion() >= 25);
+  sg->sniffer_enabled = (systemConfig.i2c_sniffer == 1);
+  if (sg->i2c_safe_guard_enabled || sg->sniffer_enabled)
+    i2cSnifferEnable();
+  else if (!sg->sniffer_web_enabled)
+    i2cSnifferDisable();
+}
 
 void websocketInit()
 {
@@ -93,6 +111,27 @@ void jsonWsSend(const char *rootName)
     wifiinfo["wifimac"] = WiFi.macAddress();
     wifiinfo["wificonnstat"] = wifiConfig.wl_status_to_name(WiFi.status());
     wifiinfo["wifiip"] = wifiip;
+    // Negotiated WiFi security of the STA link (confirms WPA2 vs WPA3 in use)
+    {
+      wifi_ap_record_t aprec;
+      const char *authStr = "-";
+      if (WiFi.isConnected() && esp_wifi_sta_get_ap_info(&aprec) == ESP_OK)
+      {
+        switch (aprec.authmode)
+        {
+        case WIFI_AUTH_OPEN: authStr = "Open"; break;
+        case WIFI_AUTH_WEP: authStr = "WEP"; break;
+        case WIFI_AUTH_WPA_PSK: authStr = "WPA-PSK"; break;
+        case WIFI_AUTH_WPA2_PSK: authStr = "WPA2-PSK"; break;
+        case WIFI_AUTH_WPA_WPA2_PSK: authStr = "WPA/WPA2-PSK"; break;
+        case WIFI_AUTH_WPA2_ENTERPRISE: authStr = "WPA2-Enterprise"; break;
+        case WIFI_AUTH_WPA3_PSK: authStr = "WPA3-PSK"; break;
+        case WIFI_AUTH_WPA2_WPA3_PSK: authStr = "WPA2/WPA3-PSK"; break;
+        default: authStr = "Unknown"; break;
+        }
+      }
+      wifiinfo["wifiauth"] = authStr;
+    }
     wifiinfo["apactive"] = wifiModeAP ? "yes" : "no";
     wifiinfo["apremain"] = apremain;
     wifiinfo["apssid"] = apssid;
@@ -105,6 +144,13 @@ void jsonWsSend(const char *rootName)
     // Mask passwords before sending to web UI
     nested["sys_password"] = strlen(systemConfig.sys_password) > 0 ? "********" : "";
     nested["mqtt_password"] = strlen(systemConfig.mqtt_password) > 0 ? "********" : "";
+    // get() caps these for older firmware reading the file
+    if (!nested["itho_numvrem"].isNull())
+      nested["itho_numvrem"] = systemConfig.itho_numvrem;
+    if (!nested["itho_numrfrem"].isNull())
+      nested["itho_numrfrem"] = systemConfig.itho_numrfrem;
+    nested.remove("itho_numvrem_ext");
+    nested.remove("itho_numrfrem_ext");
   }
   else if (strcmp(rootName, "logsettings") == 0)
   {
@@ -318,24 +364,11 @@ void handle_ws_message(JsonObject root)
         sendI2CPWMinit();
       }
 
-      // Apply i2c_safe_guard and i2c_sniffer: update runtime state
-      if (hardwareManager.i2c_sniffer_capable)
-      {
-        auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
-        sg->i2c_safe_guard_enabled = (systemConfig.i2c_safe_guard > 0 &&
-                                       currentIthoDeviceID() == 0x1B &&
-                                       systemConfig.syssht30 == 0 &&
-                                       currentItho_fwversion() >= 25);
-        sg->sniffer_enabled = (systemConfig.i2c_sniffer == 1);
-        if (sg->i2c_safe_guard_enabled || sg->sniffer_enabled)
-          i2cSnifferEnable();
-        else if (!sg->sniffer_web_enabled)
-          i2cSnifferDisable();
-      }
+      applyI2CSnifferState();
 
       // Apply fw_check: trigger firmware update check soon when enabled
       if (systemConfig.fw_check)
-        getFWupdateInfo = millis() - 24UL * 60 * 60 * 1000 - 1;
+        scheduleFirmwareCheck(30UL * 1000);
     }
   }
   if (root["logsettings"].is<JsonObject>())
@@ -370,26 +403,33 @@ void handle_ws_message(JsonObject root)
     {
       chkpartition = true;
     }
-    else if (strcmp(btn, "i2cdebugon") == 0)
+    else if (strcmp(btn, "i2cdebugon") == 0 || strcmp(btn, "i2cdebugoff") == 0 ||
+             strcmp(btn, "i2csnifferon") == 0 || strcmp(btn, "i2csnifferoff") == 0)
     {
-      systemConfig.i2cmenu = 1;
+      const bool on = strcmp(btn + strlen(btn) - 2, "on") == 0;
+      if (strncmp(btn, "i2cdebug", 8) == 0)
+        systemConfig.i2cmenu = on;
+      else
+      {
+        systemConfig.i2c_sniffer = on;
+        applyI2CSnifferState();
+      }
       saveSystemConfigflag = true;
+      systemConfig.get_sys_settings = true;
+      jsonWsSend("systemsettings"); // updates the status on the debug page and the I2C menu
     }
-    else if (strcmp(btn, "i2cdebugoff") == 0)
-    {
-      systemConfig.i2cmenu = 0;
-      saveSystemConfigflag = true;
-    }
-    else if (strcmp(btn, "i2csnifferon") == 0)
-    {
-      systemConfig.i2c_sniffer = 1;
-      saveSystemConfigflag = true;
-    }
-    else if (strcmp(btn, "i2csnifferoff") == 0)
-    {
-      systemConfig.i2c_sniffer = 0;
-      saveSystemConfigflag = true;
-    }
+  }
+
+  // old (pre-RAMSES) Itho RF capture from the system log page
+  if (root["legacyrf"].is<const char *>())
+  {
+    const char *act = root["legacyrf"].as<const char *>();
+    const uint8_t cmd = strcmp(act, "rx") == 0 ? 1 : strcmp(act, "loose") == 0 ? 5
+                                                  : strcmp(act, "off") == 0     ? 2
+                                                  : strcmp(act, "scan") == 0    ? 4
+                                                                                : 0;
+    if (cmd == 0 || !legacyRFRequest(cmd, nullptr, 0, 20)) // 20: scan seconds
+      logMessagejson("Old protocol RF: busy or unknown action", WEBINTERFACE);
   }
 
   // ---------- "ithobutton": can be a string or an integer ----------
@@ -440,32 +480,36 @@ void handle_ws_message(JsonObject root)
       }
       break;
     }
-    case 4210:
-      sendQueryCounters(true);
-      break;
     case 0xCE30:
       if (root["ithotemptemp"].is<int16_t>() &&
           root["ithotemp"].is<int16_t>() &&
           root["ithotimestamp"].is<uint32_t>())
       {
-        setSettingCE30(root["ithotemptemp"].as<int16_t>(),
-                       root["ithotemp"].as<int16_t>(),
-                       root["ithotimestamp"].as<uint32_t>(),
-                       true);
+        const int16_t temptemp = root["ithotemptemp"].as<int16_t>();
+        const int16_t temp = root["ithotemp"].as<int16_t>();
+        const uint32_t until = root["ithotimestamp"].as<uint32_t>();
+        i2cQueueAddCmd([temptemp, temp, until]()
+                       { setSettingCE30(temptemp, temp, until, true); });
       }
       break;
     case 0xC000:
       if (root["itho_c000_speed1"].is<uint8_t>() &&
           root["itho_c000_speed2"].is<uint8_t>())
       {
-        sendCO2speed(root["itho_c000_speed1"].as<uint8_t>(),
-                     root["itho_c000_speed2"].as<uint8_t>());
+        const uint8_t s1 = root["itho_c000_speed1"].as<uint8_t>();
+        const uint8_t s2 = root["itho_c000_speed2"].as<uint8_t>();
+        i2cQueueAddCmd([s1, s2]()
+                       { sendCO2speed(s1, s2);
+                         i2cDebugResult("CO2 speed", "sent"); });
       }
       break;
     case 0x9298:
       if (root["itho_9298_val"].is<uint16_t>())
       {
-        sendCO2value(root["itho_9298_val"].as<uint16_t>());
+        const uint16_t v = root["itho_9298_val"].as<uint16_t>();
+        i2cQueueAddCmd([v]()
+                       { sendCO2value(v);
+                         i2cDebugResult("CO2 value", "sent"); });
       }
       break;
     case 4030:
@@ -481,6 +525,34 @@ void handle_ws_message(JsonObject root)
                        true);
       }
       break;
+    }
+  }
+
+  // ---------- Low level I2C commands (debug page), results via i2cDebugResult ----------
+  if (root["i2cdebug"].is<const char *>())
+  {
+    const std::string cmd = root["i2cdebug"].as<const char *>();
+    i2cQueueAddCmd([cmd]()
+                   { i2cDebugCommand(cmd); });
+  }
+  if (root["i2craw"].is<JsonObject>())
+  {
+    JsonObject raw = root["i2craw"];
+    const uint16_t dest = raw["dest"] | 0;
+    const uint32_t msgClass = raw["class"] | 0x10000;
+    const uint8_t type = raw["type"] | 0;
+    uint8_t buf[i2csvc::MAX_DATA];
+    size_t n = 0;
+    if (dest == 0 || dest > 0xFF || (dest & 1) || msgClass > 0xFFFF || type < i2csvc::TYPE_QUERY || type > i2csvc::TYPE_WRITE ||
+        !i2csvc::parseHex(raw["data"] | "", buf, sizeof(buf), n))
+    {
+      i2cDebugResult("Send", "invalid input");
+    }
+    else
+    {
+      const std::vector<uint8_t> data(buf, buf + n);
+      i2cQueueAddCmd([dest, msgClass, type, data]()
+                     { i2cServiceRaw(dest, msgClass, type, data); });
     }
   }
 
@@ -545,8 +617,12 @@ void handle_ws_message(JsonObject root)
         rfStatusSources[idx].tracked = track;
         if (!track)
         {
-          rfStatusSources[idx].measurements31DA.clear();
-          rfStatusSources[idx].measurements31D9.clear();
+          if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
+          {
+            rfStatusSources[idx].measurements31DA.clear();
+            rfStatusSources[idx].measurements31D9.clear();
+            xSemaphoreGive(rfStatusMutex);
+          }
         }
       }
       if (trackObj["name"].is<const char *>())
@@ -649,6 +725,12 @@ void handle_ws_message(JsonObject root)
       bindInitiatorResult = 0; // reset before join
     ithoExecRFCommand(root["remote"].as<uint8_t>(), cmd, WEB);
   }
+  // Single top-level "command" (a vremote/remote command must not also run as a plain command)
+  else if (root["command"].is<const char *>())
+  {
+    ithoExecCommand(root["command"].as<const char *>(), WEB);
+    sysStatReq = true;
+  }
   // Poll bind initiator result
   if (!root["get_bind_result"].isNull())
   {
@@ -657,12 +739,6 @@ void handle_ws_message(JsonObject root)
     char buf[64]{};
     serializeJson(doc, buf, sizeof(buf));
     notifyClients(buf);
-  }
-  // Single top-level "command"
-  else if (root["command"].is<const char *>())
-  {
-    ithoExecCommand(root["command"].as<const char *>(), WEB);
-    sysStatReq = true;
   }
   // RF CO2 value command
   if (!root["rfco2"].isNull())
@@ -706,20 +782,17 @@ void handle_ws_message(JsonObject root)
       // demand (this avoids the boost-mode side-effect that drops
       // subsequent lower demand values). Otherwise send "auto" first
       // to switch the unit to auto, then the demand.
-      for (int ri = 0; ri < remotes.getMaxRemotes(); ri++)
+      // Target the configured RF CO2 send remote (RFT CO2 or Orcon CO2), not the
+      // first matching slot, so the home-page slider hits the right fan.
+      uint8_t ri = systemConfig.itho_rf_co2_remote_idx;
+      if (rfco2RemoteValid(ri))
       {
-        if (remotes.isEmptySlot(ri)) continue;
-        if (remotes.getRemoteFunction(ri) == RemoteFunctions::SEND &&
-            remotes.getRemoteType(ri) == RemoteTypes::RFTCO2)
+        if (!fanIsInAuto())
         {
-          if (!fanIsInAuto())
-          {
-            ithoExecRFCommand(ri, "auto", WEB);
-            delay(200);
-          }
-          ithoSendRFDemand(ri, (uint8_t)demand, 0, WEB);
-          break;
+          ithoExecRFCommand(ri, "auto", WEB);
+          delay(200);
         }
+        ithoSendRFDemand(ri, (uint8_t)demand, 0, WEB);
       }
     }
     else if (systemConfig.itho_pwm2i2c == 1)
@@ -770,6 +843,7 @@ void handle_ws_message(JsonObject root)
     if (index > 0 && index <= remotes.getMaxRemotes())
     {
       remotes.removeRemote(index - 1);
+      rfManager.radio.removeRFDevice(index - 1); // keep the radio slot in sync with the remote slot
       saveRemotesflag = true;
     }
   }
@@ -811,6 +885,12 @@ void handle_ws_message(JsonObject root)
         {
           rfManager.radio.updateSourceID(id0, id1, id2, idx);
         }
+        else
+        {
+          // A slot that is no longer Send must not keep the sourceID from an earlier Send save:
+          // handleBind() matches a binding accept on sourceID and would store a destid on it.
+          rfManager.radio.updateSourceID(0, 0, 0, idx);
+        }
         // updateRFDevice() resets destinationID to the slot's own ID. Re-apply
         // the persisted destinationID if one is stored, so a joined or
         // explicitly-configured slot doesn't lose its addressing every time
@@ -821,6 +901,14 @@ void handle_ws_message(JsonObject root)
         {
           rfManager.radio.updateDestinationID(destId[0], destId[1], destId[2], idx);
         }
+        // updateRFDevice() also clears the thermostat role; restore it unless the type is no longer a Spider
+        if (rtype != RemoteTypes::RFTSPIDER)
+          remotes.setThermostat(idx, false);
+        else if (remotes.isThermostat(idx))
+        {
+          const uint8_t sid[3]{id0, id1, id2};
+          rfManager.radio.setThermostat(sid, true, remotes.getThermostatSetpoint(idx), remotes.getThermostatCtl(idx), remotes.getThermostatZone(idx));
+        }
       }
     }
     // TX power
@@ -829,6 +917,30 @@ void handle_ws_message(JsonObject root)
       remotes.updateRemoteTxPower(idx, root["tx_power"].as<uint8_t>());
     }
     saveRemotesflag = true;
+  }
+
+  // Itho Spider thermostat: discovery wizard and setpoint (ADR-0011)
+  if (root["spider_discovery"].is<const char *>())
+  {
+    const char *action = root["spider_discovery"];
+    if (strcmp(action, "start") == 0)
+      spiderDiscoveryRequest(true);
+    else if (strcmp(action, "cancel") == 0)
+      spiderDiscoveryRequest(false);
+    else if (strcmp(action, "gateway") == 0)
+      spiderGatewayBindRequest();
+    JsonDocument doc;
+    JsonObject o = doc["spiderdiscovery"].to<JsonObject>();
+    spiderDiscoveryStatus(o);
+    notifyClients(doc.as<JsonObject>());
+  }
+  if (root["spider_setpoint"].is<JsonObject>())
+  {
+    JsonObject sp = root["spider_setpoint"];
+    const char *err = ithoSetSpiderSetpoint(sp["index"] | -1, sp["setpoint"] | -1.0f);
+    JsonDocument doc;
+    doc["spidersetpoint"]["result"] = err ? err : "ok";
+    notifyClients(doc.as<JsonObject>());
   }
 
   // Removing or updating virtual remote

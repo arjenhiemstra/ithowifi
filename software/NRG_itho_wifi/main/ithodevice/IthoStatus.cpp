@@ -1,6 +1,7 @@
 #include "IthoDevice.h"
 #include "devices/error_info_labels.h"
 #include "devices/wpu.h"
+#include "i2c_service.h"
 
 #include "globals.h"
 #include "sys_log.h"
@@ -13,6 +14,7 @@ std::vector<ithoDeviceMeasurements> ithoMeasurements;
 std::vector<ithoDeviceMeasurements> ithoInternalMeasurements;
 std::vector<ithoDeviceMeasurements> ithoCounters;
 SemaphoreHandle_t ithoStatusMutex = xSemaphoreCreateMutex();
+SemaphoreHandle_t rfStatusMutex = xSemaphoreCreateMutex();
 
 rfStatusSource rfStatusSources[MAX_RF_STATUS_SOURCES];
 volatile int rfSelectedSourceForParsing = -1;
@@ -36,7 +38,7 @@ void sendQueryDevicetype(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithotype", "failed");
+      i2cDebugResult("Devicetype", "failed");
     }
 
     return;
@@ -46,7 +48,7 @@ void sendQueryDevicetype(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithotype", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("Devicetype", i2csvc::deviceType(&i2cbuf[6], i2cbuf[5]) + " | " + i2cBufToString(i2cbuf, result));
     }
   }
 
@@ -72,7 +74,7 @@ void sendQueryStatusFormat(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithostatusformat", "failed");
+      i2cDebugResult("Status format", "failed");
     }
     return;
   }
@@ -81,7 +83,7 @@ void sendQueryStatusFormat(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithostatusformat", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("Status format", i2cBufToString(i2cbuf, result));
     }
   }
 
@@ -94,7 +96,7 @@ void sendQueryStatusFormat(bool updateweb)
   const uint8_t endPos = i2cbuf[5];
   if (endPos == 0)
   {
-    W_LOG("I2C: QueryStatusFormat reply has 0 entries, keeping previous status");
+    D_LOG("I2C: QueryStatusFormat reply has 0 entries, keeping previous status");
     return;
   }
 
@@ -103,6 +105,12 @@ void sendQueryStatusFormat(bool updateweb)
   for (uint8_t i = 0; i < endPos; i++)
   {
     parsed.push_back(ithoDeviceStatus());
+
+    // Assign the label immediately so the vector is never published with an
+    // unset (indeterminate) name. sendQueryStatus refreshes these later, but
+    // a reader (web/MQTT/HA-discovery) can hit ithoStatus in the window before
+    // the first sendQueryStatus runs. labelPos there is 1:1 with this index.
+    parsed.back().name = getStatusLabel(i, ithoDeviceptr);
 
     parsed.back().is_signed = getSignedFromDatatype(i2cbuf[6 + i]);
     parsed.back().length = getLengthFromDatatype(i2cbuf[6 + i]);
@@ -152,7 +160,7 @@ void sendQueryStatus(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithostatus", "failed");
+      i2cDebugResult("Status", "failed");
     }
     return;
   }
@@ -161,7 +169,7 @@ void sendQueryStatus(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithostatus", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("Status", i2cBufToString(i2cbuf, result));
     }
   }
 
@@ -183,102 +191,20 @@ void sendQueryStatus(bool updateweb)
         tempVal |= i2cbuf[statusPos + (ithoStat.length - i)] << ((i - 1) * 8);
       }
 
-      if (ithoStat.type == ithoDeviceStatus::is_byte)
-      {
-        if (ithoStat.value.byteval == (byte)tempVal)
-        {
-          ithoStat.updated = 0;
-        }
-        else
-        {
-          ithoStat.updated = 1;
-          ithoStat.value.byteval = (byte)tempVal;
-        }
-      }
-      if (ithoStat.type == ithoDeviceStatus::is_int)
-      {
-        if (ithoStat.is_signed)
-        {
-          // interpret raw bytes as signed integer
-          tempVal = castToSignedInt(tempVal, ithoStat.length);
-        }
-        if (ithoStat.value.intval == tempVal)
-        {
-          ithoStat.updated = 0;
-        }
-        else
-        {
-          ithoStat.updated = 1;
-          ithoStat.value.intval = tempVal;
-        }
-      }
-      if (ithoStat.type == ithoDeviceStatus::is_float)
-      {
-        float t = ithoStat.value.floatval * ithoStat.divider;
-        if (static_cast<uint32_t>(t) == tempVal) // better compare needed of float val, worst case this will result in an extra update of the value, so limited impact
-        {
-          ithoStat.updated = 0;
-        }
-        else
-        {
-          ithoStat.updated = 1;
-          if (ithoStat.is_signed)
-          {
-            // interpret raw bytes as signed integer
-            tempVal = castToSignedInt(tempVal, ithoStat.length);
-          }
-          ithoStat.value.floatval = static_cast<float>(tempVal) / ithoStat.divider;
-        }
-      }
-
+      ithoStatusUpdateField(ithoStat, tempVal, fanSensorErrors.begin()->second);
       statusPos += ithoStat.length;
 
-      if (strcmp("Highest CO2 concentration (ppm)", ithoStat.name) == 0 || strcmp("highest-co2-concentration_ppm", ithoStat.name) == 0)
+      if (!ithoStat.error && systemConfig.syssht30 == 0)
       {
-        if (ithoStat.value.intval == 0x8200)
+        if (ithoStatusIsHumidity(ithoStat.name))
         {
-          ithoStat.type = ithoDeviceStatus::is_string;
-          ithoStat.value.stringval = fanSensorErrors.begin()->second;
+          ithoHum = ithoStat.value.floatval;
+          itho_internal_hum_temp = true;
         }
-      }
-      if (strcmp("Highest RH concentration (%)", ithoStat.name) == 0 || strcmp("highest-rh-concentration_perc", ithoStat.name) == 0)
-      {
-        if (ithoStat.value.intval == 0xEF)
+        if (ithoStatusIsTemperature(ithoStat.name))
         {
-          ithoStat.type = ithoDeviceStatus::is_string;
-          ithoStat.value.stringval = fanSensorErrors.begin()->second;
-        }
-      }
-      if (strcmp("RelativeHumidity", ithoStat.name) == 0 || strcmp("relativehumidity", ithoStat.name) == 0)
-      {
-        if (ithoStat.value.floatval > 1.0 && ithoStat.value.floatval < 100.0)
-        {
-          if (systemConfig.syssht30 == 0)
-          {
-            ithoHum = ithoStat.value.floatval;
-            itho_internal_hum_temp = true;
-          }
-        }
-        else
-        {
-          ithoStat.type = ithoDeviceStatus::is_string;
-          ithoStat.value.stringval = fanSensorErrors.begin()->second;
-        }
-      }
-      if (strcmp("Temperature", ithoStat.name) == 0 || strcmp("temperature", ithoStat.name) == 0)
-      {
-        if (ithoStat.value.floatval > 1.0 && ithoStat.value.floatval < 100.0)
-        {
-          if (systemConfig.syssht30 == 0)
-          {
-            ithoTemp = ithoStat.value.floatval;
-            itho_internal_hum_temp = true;
-          }
-        }
-        else
-        {
-          ithoStat.type = ithoDeviceStatus::is_string;
-          ithoStat.value.stringval = fanSensorErrors.begin()->second;
+          ithoTemp = ithoStat.value.floatval;
+          itho_internal_hum_temp = true;
         }
       }
 
@@ -448,7 +374,14 @@ void parseRF31DA(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
   auto dataStart = 1; // skip domain byte
   auto dataLength = len - 1;
 
+  // Skip this frame's update rather than block the RF task if a reader
+  // (web/MQTT) is mid-serialization. clear()+push_back stays in place, so
+  // no second buffer is allocated.
+  if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return;
+
   src->measurements31DA.clear();
+  src->zoneMeasurements31DA = zoneId;
 
   const int labelLen = 19;
   const char *labels[labelLen];
@@ -506,6 +439,8 @@ void parseRF31DA(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
   if (dataLength > 25)
     addTwoByteMeasurementTo(t, labels[18], payload, 26 + dataStart, true, 0x7F, &fanSensorErrors2, true, 100.0f);
 
+  xSemaphoreGive(rfStatusMutex);
+
   if (src->tracked)
     updateMQTTRFStatus = true;
 }
@@ -533,7 +468,11 @@ void parseRF31D9(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
 
   auto dataStart = 1; // skip domain byte
 
+  if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return;
+
   src->measurements31D9.clear();
+  src->zoneMeasurements31D9 = zoneId;
 
   const int labelLen = 4;
   const char *labels[labelLen];
@@ -550,6 +489,8 @@ void parseRF31D9(const uint8_t *payload, uint8_t len, uint8_t srcId0, uint8_t sr
   status = (payload[0 + dataStart] & 0x20) ? 1 : 0;
   src->measurements31D9.push_back({labels[3], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
 
+  xSemaphoreGive(rfStatusMutex);
+
   if (src->tracked)
     updateMQTTRFStatus = true;
 }
@@ -564,7 +505,7 @@ void sendQuery31DA(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("itho31DA", "failed");
+      i2cDebugResult("31DA", "failed");
     }
     return;
   }
@@ -573,7 +514,7 @@ void sendQuery31DA(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("itho31DA", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("31DA", i2cBufToString(i2cbuf, result));
     }
   }
 
@@ -716,7 +657,7 @@ void sendQuery31D9(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("itho31D9", "failed");
+      i2cDebugResult("31D9", "failed");
     }
     return;
   }
@@ -725,7 +666,7 @@ void sendQuery31D9(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("itho31D9", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("31D9", i2cBufToString(i2cbuf, result));
     }
   }
 
@@ -760,7 +701,7 @@ void sendQuery31D9(bool updateweb)
   ithoInternalMeasurements.push_back(sTemp);
 
   int status = 0;
-  if (i2cbuf[0 + dataStart] == 0x80)
+  if (i2cbuf[0 + dataStart] & 0x80)
   {
     status = 1; // fault
   }
@@ -769,7 +710,7 @@ void sendQuery31D9(bool updateweb)
     status = 0; // no fault
   }
   ithoInternalMeasurements.push_back({labels31D9[1], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
-  if (i2cbuf[0 + dataStart] == 0x40)
+  if (i2cbuf[0 + dataStart] & 0x40)
   {
     status = 1; // frost cycle active
   }
@@ -778,7 +719,7 @@ void sendQuery31D9(bool updateweb)
     status = 0; // frost cycle not active
   }
   ithoInternalMeasurements.push_back({labels31D9[2], ithoDeviceMeasurements::is_int, {.intval = status}, 1});
-  if (i2cbuf[0 + dataStart] == 0x20)
+  if (i2cbuf[0 + dataStart] & 0x20)
   {
     status = 1; // filter dirty
   }
@@ -826,7 +767,7 @@ void sendQueryCounters(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithocounters", "send i2c command failed");
+      i2cDebugResult("Counters", "failed");
     }
     return;
   }
@@ -835,7 +776,7 @@ void sendQueryCounters(bool updateweb)
     if (updateweb)
     {
       updateweb = false;
-      jsonSysmessage("ithocounters", i2cBufToString(i2cbuf, result).c_str());
+      i2cDebugResult("Counters", i2cBufToString(i2cbuf, result));
     }
   }
 

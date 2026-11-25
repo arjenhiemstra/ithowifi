@@ -35,8 +35,6 @@ extern bool onOTA;
 
 extern AsyncWebServer server;
 
-#define MQTT_BUFFER_SIZE 5120
-
 extern int MQTT_conn_state;
 extern int MQTT_conn_state_new;
 extern bool dontReconnectMQTT;

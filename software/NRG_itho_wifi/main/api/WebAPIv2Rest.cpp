@@ -1,5 +1,6 @@
 #include "api/WebAPIv2Rest.h"
 #include "api/WebAPIv2.h"
+#include "api/StreamResponse.h"
 #include "config/SystemConfig.h"
 #include "globals.h"
 #include "generic_functions.h"
@@ -51,37 +52,30 @@ static bool checkRestAuth(AsyncWebServerRequest *request)
   return checkAuthOnly(request);
 }
 
-// Serialize a JSON response via AsyncResponseStream. If heap is
-// exhausted (e.g. during an OTA download), the cbuf::resize inside
-// the stream throws std::bad_alloc which would crash the async_tcp
-// task and wedge the entire network stack. Catch it and fall back
-// to a minimal 503 plain-text response instead.
+// Serialize a JSON response via AsyncResponseStream (503 when the heap is exhausted, see StreamResponse.h)
 static void sendJsonResponse(AsyncWebServerRequest *request, JsonDocument &doc, int statusCode)
 {
-  try
-  {
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
+  sendStreamResponse(request, "application/json", [&doc, statusCode](AsyncResponseStream *response)
+                     {
     response->addHeader("Access-Control-Allow-Origin", "*");
     response->setCode(statusCode);
-    serializeJson(doc, *response);
-    request->send(response);
-  }
-  catch (const std::bad_alloc &)
-  {
-    E_LOG("API: heap exhausted, returning 503 (free:%d block:%u)", ESP.getFreeHeap(), ESP.getMaxAllocHeap());
-    request->send(503, "text/plain", "Service unavailable (low memory)");
-  }
+    serializeJson(doc, *response); }, measureJson(doc));
 }
 
+// Writes the envelope around data instead of copying data into an envelope document
 static void sendSuccess(AsyncWebServerRequest *request, JsonDocument &data, int statusCode = 200)
 {
-  JsonDocument doc;
-  doc["status"] = "success";
-  doc["data"] = data;
+  static const char prefix[] = "{\"status\":\"success\",\"data\":";
   time_t now;
   time(&now);
-  doc["data"]["timestamp"] = now;
-  sendJsonResponse(request, doc, statusCode);
+  data["timestamp"] = now;
+  sendStreamResponse(request, "application/json", [&data, statusCode](AsyncResponseStream *response)
+                     {
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    response->setCode(statusCode);
+    response->print(prefix);
+    serializeJson(data, *response);
+    response->print('}'); }, sizeof(prefix) - 1 + measureJson(data) + 1);
 }
 
 static void sendFail(AsyncWebServerRequest *request, const char *reason, int statusCode = 400)
@@ -283,7 +277,7 @@ static void handleGetVRemotes(AsyncWebServerRequest *request)
   sendSuccess(request, data);
 }
 
-// GET /api/v2/rfstatus?name=X (optional filter)
+// GET /api/v2/rfstatus?id=AA:BB:CC or ?name=X (optional filter, id wins)
 static void handleGetRFStatus(AsyncWebServerRequest *request)
 {
   if (!checkRestAuth(request))
@@ -291,14 +285,15 @@ static void handleGetRFStatus(AsyncWebServerRequest *request)
 
   JsonDocument data;
 
-  if (request->hasParam("name"))
+  if (request->hasParam("id") || request->hasParam("name"))
   {
-    const char *nameFilter = request->getParam("name")->value().c_str();
+    const char *idFilter = request->hasParam("id") ? request->getParam("id")->value().c_str() : nullptr;
+    const char *nameFilter = request->hasParam("name") ? request->getParam("name")->value().c_str() : nullptr;
     for (int i = 0; i < MAX_RF_STATUS_SOURCES; i++)
     {
       if (!rfStatusSources[i].active || !rfStatusSources[i].tracked)
         continue;
-      if (strcmp(rfStatusSources[i].name, nameFilter) != 0)
+      if (!rfStatusSourceMatches(i, nameFilter, idFilter))
         continue;
 
       JsonObject obj = data["rfstatus"].to<JsonObject>();
@@ -309,23 +304,27 @@ static void handleGetRFStatus(AsyncWebServerRequest *request)
       obj["name"] = rfStatusSources[i].name;
       obj["lastSeen"] = static_cast<int32_t>(rfStatusSources[i].lastSeen);
       JsonObject mdata = obj["data"].to<JsonObject>();
-      for (const auto &m : rfStatusSources[i].measurements31D9)
+      if (xSemaphoreTake(rfStatusMutex, pdMS_TO_TICKS(100)) == pdTRUE)
       {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          mdata[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          mdata[m.name] = m.value.floatval;
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          mdata[m.name] = m.value.stringval;
-      }
-      for (const auto &m : rfStatusSources[i].measurements31DA)
-      {
-        if (m.type == ithoDeviceMeasurements::is_int)
-          mdata[m.name] = m.value.intval;
-        else if (m.type == ithoDeviceMeasurements::is_float)
-          mdata[m.name] = m.value.floatval;
-        else if (m.type == ithoDeviceMeasurements::is_string)
-          mdata[m.name] = m.value.stringval;
+        for (const auto &m : rfStatusSources[i].measurements31D9)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            mdata[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            mdata[m.name] = m.value.floatval;
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            mdata[m.name] = m.value.stringval;
+        }
+        for (const auto &m : rfStatusSources[i].measurements31DA)
+        {
+          if (m.type == ithoDeviceMeasurements::is_int)
+            mdata[m.name] = m.value.intval;
+          else if (m.type == ithoDeviceMeasurements::is_float)
+            mdata[m.name] = m.value.floatval;
+          else if (m.type == ithoDeviceMeasurements::is_string)
+            mdata[m.name] = m.value.stringval;
+        }
+        xSemaphoreGive(rfStatusMutex);
       }
       sendSuccess(request, data);
       return;
@@ -392,7 +391,7 @@ static void handleGetSettings(AsyncWebServerRequest *request)
 
   if (resultPtr2410 == nullptr)
   {
-    sendError(request, "I2C command failed");
+    sendError(request, "I2C command failed", 503); // temporary, the client can retry (#390)
     return;
   }
 
@@ -697,6 +696,33 @@ static void handlePostRFDemand(AsyncWebServerRequest *request, JsonVariant &json
   }
 }
 
+// POST /api/v2/rfremote/setpoint
+// Body: {"index":2,"setpoint":20.5}  (discovered Itho Spider thermostat, 5-30 C in 0.5 steps)
+static void handlePostRFSetpoint(AsyncWebServerRequest *request, JsonVariant &json)
+{
+  if (!checkRestAuth(request))
+    return;
+
+  JsonObject body = json.as<JsonObject>();
+  if (body["setpoint"].isNull() || body["index"].isNull())
+  {
+    sendFail(request, "missing required field: setpoint or index");
+    return;
+  }
+  const int idx = body["index"].as<int>();
+  const char *err = ithoSetSpiderSetpoint(idx, body["setpoint"].as<float>());
+  if (err != nullptr)
+  {
+    sendFail(request, err);
+    return;
+  }
+  JsonDocument data;
+  data["result"] = "setpoint sent";
+  data["setpoint"] = remotes.getThermostatSetpoint(idx) / 100.0;
+  data["index"] = idx;
+  sendSuccess(request, data);
+}
+
 // POST /api/v2/rf/config
 // Body: {"index":1,"setting":"setrfdevicesourceid","value":"96,C8,B6"}
 static void handlePostRFConfig(AsyncWebServerRequest *request, JsonVariant &json)
@@ -765,7 +791,7 @@ static void handlePutSettings(AsyncWebServerRequest *request, JsonVariant &json)
   else if (status == ApiResponse::status::FAIL)
     sendFail(request, responseDoc["failreason"] | "setting update failed", responseDoc["code"] | 400);
   else if (status == ApiResponse::status::ERROR)
-    sendError(request, responseDoc["message"] | "I2C error");
+    sendError(request, responseDoc["message"] | "I2C error", responseDoc["code"] | 500);
   else
     sendFail(request, "unable to process setting");
 }
@@ -800,6 +826,8 @@ static void handlePostDebug(AsyncWebServerRequest *request, JsonVariant &json)
 
   JsonDocument params;
   params["debug"] = body["action"];
+  params["data"] = body["data"];
+  params["repeats"] = body["repeats"];
 
   JsonDocument responseDoc;
   auto status = processDebugCommands(params.as<JsonObject>(), responseDoc);
@@ -905,6 +933,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/rfremote/command", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/rfremote/co2", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/rfremote/demand", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/rfremote/setpoint", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/rfremote/config", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/debug", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/wpu/outside_temp", HTTP_OPTIONS, handleOptions);
@@ -1016,6 +1045,25 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
           }
           JsonVariant v = json.as<JsonVariant>();
           handlePostRFDemand(request, v);
+        }
+      });
+
+  server.on(
+      "/api/v2/rfremote/setpoint", HTTP_POST,
+      [](AsyncWebServerRequest *request) {},
+      nullptr,
+      [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+      {
+        if (index + len == total)
+        {
+          JsonDocument json;
+          if (deserializeJson(json, data, len))
+          {
+            sendFail(request, "invalid JSON body");
+            return;
+          }
+          JsonVariant v = json.as<JsonVariant>();
+          handlePostRFSetpoint(request, v);
         }
       });
 

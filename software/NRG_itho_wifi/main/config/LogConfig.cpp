@@ -21,6 +21,7 @@ LogConfig::LogConfig()
     strlcpy(config_struct_version, LOG_CONFIG_VERSION, sizeof(config_struct_version));
     webserial_active = 0;
     rfloglevel = 0;
+    rfstats_log = 0;
 
     configLoaded = false;
 
@@ -60,6 +61,11 @@ bool LogConfig::set(JsonObject obj)
         updated = true;
         rfloglevel = obj["rfloglevel"];
     }
+    if (!obj["rfstats_log"].isNull())
+    {
+        updated = true;
+        rfstats_log = obj["rfstats_log"];
+    }
     if (!obj["logserver"].isNull())
     {
         updated = true;
@@ -85,6 +91,7 @@ void LogConfig::get(JsonObject obj) const
     obj["esplog_active"] = esplog_active;
     obj["webserial_active"] = webserial_active;
     obj["rfloglevel"] = rfloglevel;
+    obj["rfstats_log"] = rfstats_log;
     obj["logserver"] = logserver;
     obj["logport"] = logport;
     obj["logref"] = logref;

@@ -1,4 +1,10 @@
 #include "tasks/task_cc1101.h"
+#include "tasks/boot_phases.h"
+#include "cc1101/spider_protocol.h"
+#include "cc1101/spider_discovery.h"
+#include "mqtt_debug.h"
+
+extern bool updateMQTTRemotesInfo; // task_mqtt.cpp
 
 #define TASK_CC1101_PRIO 5
 
@@ -18,6 +24,506 @@ bool sendJoinReply = false;
 bool send10E0 = false;
 bool sendBindConfirm = false;
 bool sendBatteryStatus = false;
+// Itho Spider thermostat (ADR-0011): all Spider traffic is sent from this task
+static bool sendSpiderBind = false;
+static uint8_t spiderBindID[3]{};
+// A Spider only listens briefly after it transmits (verified 2026-10-15): pending actions are sent
+// right after an I frame from that Spider, per remote slot (ADR-0011)
+struct SpiderPending
+{
+  volatile bool push;  // deliver W 01FF until the Spider reports the setpoint, or pushUntil passes
+  volatile uint32_t pushUntil;
+  uint32_t lastPush;   // last W 01FF after a plain broadcast (rate limit)
+  volatile bool pollWanted;
+  uint32_t lastPoll; // 0 = never polled since boot
+  uint8_t repeatLeft; // extra copies of the W 01FF still to send, 1 s apart
+  uint32_t repeatAt;
+  uint32_t windowAt; // send at this time (Spider polled its controller, answer not seen), 0 = none
+  uint32_t dialUntil; // gateway: RP carries the dialled setpoint until the Spider's 01FF reports it, or until then; 0 = off
+};
+static SpiderPending spiderPending[MAX_NUM_OF_REMOTES]{};
+constexpr uint32_t SPIDER_PUSH_MS = 15 * 60 * 1000; // relay-bound Spiders only listen at their relay poll (5-10 min idle)
+constexpr uint32_t SPIDER_PUSH_GAP_MS = 30 * 1000; // after plain broadcasts; poll windows are always used
+constexpr uint32_t SPIDER_POLL_MS = 5 * 60 * 1000;
+constexpr uint8_t SPIDER_PUSH_REPEATS = 2;      // copies after the first one, like the spider.yaml blueprint
+constexpr uint32_t SPIDER_REPEAT_MS = 1000;
+constexpr uint32_t SPIDER_DIAL_MS = 10 * 60 * 1000; // the RQ 01FF right after a dial change still has the old setpoint
+constexpr uint8_t SPIDER_ZONE_TRIES = 3; // W 22C9 to a zone controller, 1 s apart, until it echoes the setpoint
+
+// Pre-RAMSES "message1" debug requests from the API, run in this task: 1 receive on, 2 receive off, 3 send,
+// 4 RSSI scan, 5 loose receive on
+static volatile uint8_t legacyCmd = 0;
+static uint8_t legacyTxBuf[64];
+static uint8_t legacyTxLen = 0;
+static uint8_t legacyTxRepeats = 1;
+constexpr uint32_t LEGACY_RX_MAX_MS = 30 * 60 * 1000; // legacy receive stops RAMSES receive: switch it off again
+static uint32_t legacyRxSince = 0;
+
+// RF debug view, MQTT debug and the system log: captures must survive a page reload
+static void legacyLog(const char *fmt, ...)
+{
+  char line[200];
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(line, sizeof(line), fmt, args);
+  va_end(args);
+  N_LOG("%s", line);
+  logMessagejson(line, RFLOG);
+  mqttDebugPush(MqttDebugChannel::RF, line);
+}
+
+static int appendHex(char *out, size_t size, int n, const uint8_t *buf, size_t len)
+{
+  for (size_t i = 0; i < len && n >= 0 && n < (int)size; i++)
+    n += snprintf(out + n, size - n, " %02X", buf[i]);
+  return n;
+}
+
+// "low id:271F crc:ok prev:85" style summary of a decoded frame
+static int appendDecoded(char *out, size_t size, int n, const legacy::Decoded &d)
+{
+  if (!d.manchesterOk)
+    return n + snprintf(out + n, size - n, " undecoded (no Manchester pair at chip %u)", d.badChip);
+  char name[32];
+  legacy::cmdLabel(d.cmd, name, sizeof(name));
+  n += snprintf(out + n, size - n, " %s cmd:%04X id:%04X type:%u", name, d.cmd, d.id, d.type);
+  if (d.header != 0x5D)
+    n += snprintf(out + n, size - n, " hdr:%02X", d.header);
+  if (d.crc == d.crcCalc)
+    n += snprintf(out + n, size - n, " crc:ok");
+  else
+    n += snprintf(out + n, size - n, " crc:%02X(expected %02X)", d.crc, d.crcCalc);
+  if (!d.footerOk)
+    n += snprintf(out + n, size - n, " footer:unexpected");
+  if (d.hasPrev)
+    n += snprintf(out + n, size - n, " prev:%u", d.prev);
+  return n;
+}
+
+static void legacyLogRx()
+{
+  const CC1101Packet &p = rfManager.radio.legacyIn;
+  const bool loose = rfManager.radio.legacyRxMode() == 2;
+  char line[200];
+  int n = snprintf(line, sizeof(line), "RF1 rx %ddBm", rfsignal::rssiDbm(rfManager.radio.legacyRssi));
+  int start = 0;
+  if (loose)
+  {
+    start = legacy::findFrameStart(p.data, p.length);
+    if (start < 0)
+      n += snprintf(line + n, sizeof(line) - n, " no 170,173 after the preamble");
+  }
+  if (start >= 0 && n < (int)sizeof(line))
+    n = appendDecoded(line, sizeof(line), n, legacy::decodeFrame(p.data, p.length, start));
+  if (n < (int)sizeof(line))
+    n += snprintf(line + n, sizeof(line) - n, " |");
+  appendHex(line, sizeof(line), n, p.data, p.length);
+  legacyLog("%s", line);
+}
+
+static void legacyLogTx(const char *what, const uint8_t *frame, size_t len)
+{
+  char line[200];
+  int n = snprintf(line, sizeof(line), "RF1 tx %s", what);
+  if (len >= legacy::FRAME_LEN)
+    n = appendDecoded(line, sizeof(line), n, legacy::decodeFrame(frame + 4, len - 4, 0));
+  if (n < (int)sizeof(line))
+    n += snprintf(line + n, sizeof(line) - n, " |");
+  appendHex(line, sizeof(line), n, frame, len);
+  legacyLog("%s", line);
+}
+
+bool legacyRFRequest(uint8_t cmd, const uint8_t *data, uint8_t len, uint8_t repeats)
+{
+  if (legacyCmd != 0 || len > sizeof(legacyTxBuf))
+    return false;
+  if (cmd == 3)
+  {
+    memcpy(legacyTxBuf, data, len);
+    legacyTxLen = len;
+  }
+  legacyTxRepeats = repeats;
+  legacyCmd = cmd;
+  return true;
+}
+
+// Log every burst above the noise floor for `seconds` (cmd 4, seconds in repeats), any protocol
+static void legacyRssiScan(uint8_t seconds)
+{
+  const uint32_t t0 = millis();
+  int32_t sum = 0;
+  uint16_t n = 0;
+  int16_t thr = 0;
+  bool in = false;
+  uint32_t bStart = 0, lastAbove = 0;
+  int16_t bPeak = -200;
+  uint16_t bursts = 0;
+  int16_t rMin = 200, rMax = -200;
+  uint32_t k = 0;
+  legacyLog("RF1 scan start (%us), marcstate 0x%02X", seconds, rfManager.radio.marcState());
+  while (millis() - t0 < seconds * 1000UL)
+  {
+    // a frame that matches the sync word ends RX (fixed length), nothing reads it during the scan
+    if ((++k & 31) == 0 && rfManager.radio.marcState() != CC1101_MARCSTATE_RX)
+      rfManager.radio.restartRx();
+    const int16_t r = rfManager.radio.rssiDbm();
+    const uint32_t now = millis();
+    if (r < rMin)
+      rMin = r;
+    if (r > rMax)
+      rMax = r;
+    if (n < 200)
+    {
+      sum += r;
+      if (++n == 200)
+        thr = sum / 200 + 12;
+    }
+    else if (r > thr)
+    {
+      if (!in)
+      {
+        in = true;
+        bStart = now;
+        bPeak = r;
+      }
+      if (r > bPeak)
+        bPeak = r;
+      lastAbove = now;
+    }
+    else if (in && now - lastAbove > 2)
+    {
+      in = false;
+      if (bursts < 60)
+        legacyLog("RF1 burst +%lu ms len %lu ms peak %d dBm", bStart - t0, lastAbove - bStart + 1, bPeak);
+      bursts++;
+    }
+    delayMicroseconds(500);
+    if ((now & 15) == 0)
+    {
+      vTaskDelay(1);
+      esp_task_wdt_reset(); // the scan runs up to 60 s inside the task loop
+    }
+  }
+  legacyLog("RF1 scan %us: noise %d dBm, threshold %d dBm, min %d max %d, bursts %u, marcstate 0x%02X", seconds, (int)(sum / 200), thr, rMin, rMax, bursts, rfManager.radio.marcState());
+}
+
+static bool spiderConfirmed(const uint8_t sid[3])
+{
+  for (const auto &item : rfManager.radio.getRFdevices().device)
+  {
+    if (memcmp(item.destinationID, sid, 3) == 0)
+      return item.setpointCmd != 0xEFFF && item.setpoint == item.setpointCmd;
+  }
+  return false;
+}
+
+static int32_t spiderSetpoint(const uint8_t sid[3])
+{
+  for (const auto &item : rfManager.radio.getRFdevices().device)
+  {
+    if (memcmp(item.destinationID, sid, 3) == 0)
+      return item.setpoint;
+  }
+  return 0xEFFF;
+}
+
+// Spider discovery (ADR-0011): driven by the web UI, run on received frames in this task
+static spider::Discovery spiderDisc;
+static uint32_t spiderDiscStarted = 0;
+static uint32_t spiderDiscStepAt = 0;
+static volatile uint8_t spiderDiscCmd = 0; // 1 start, 2 cancel
+static const char *spiderDiscResult = "idle";
+static int spiderDiscSlot = -1;
+static bool spiderDiscNotify = false;
+constexpr uint32_t SPIDER_DISC_TIMEOUT_MS = 20 * 60 * 1000; // fallback: some Spiders send 22C9 only every ~15 min
+constexpr uint32_t SPIDER_DISC_HEATER_MS = 12 * 60 * 1000; // relay-bound Spiders poll every 5-10 min when idle
+static uint32_t spiderGwUntil = 0;  // gateway bind window end (accept a Spider's 01FF bind), 0 = off
+static uint32_t spiderGwSpider = 0; // Spider bound in the last gateway bind window
+constexpr uint32_t SPIDER_GW_MS = 3 * 60 * 1000;
+static uint32_t spiderProbeAt = 0; // pending discovery probe (RQ 01FF as the candidate's controller), 0 = none
+static spider::Probe spiderProbe{};
+
+void spiderDiscoveryRequest(bool start)
+{
+  spiderDiscCmd = start ? 1 : 2;
+}
+
+void spiderGatewayBindRequest()
+{
+  spiderDiscCmd = 3;
+}
+
+static void spiderIdStr(uint32_t id, char *out, size_t len)
+{
+  snprintf(out, len, "%02X:%02X:%02X", (unsigned)(id >> 16 & 0xFF), (unsigned)(id >> 8 & 0xFF), (unsigned)(id & 0xFF));
+}
+
+void spiderDiscoveryStatus(JsonObject obj)
+{
+  using S = spider::Discovery::State;
+  const char *st = spiderDiscResult;
+  switch (spiderDisc.state())
+  {
+  case S::WaitSetpoint: st = "wait_setpoint"; break;
+  case S::WaitHeater: st = "wait_heater"; break;
+  default: break;
+  }
+  if (spiderGwUntil != 0)
+    st = "gw_wait";
+  obj["state"] = st;
+  if (spiderDisc.target() != 0)
+    obj["target"] = spiderDisc.target() / 100.0f;
+  obj["candidates"] = spiderDisc.candidates();
+  char buf[10];
+  if (spiderDisc.spider() || spiderGwSpider)
+  {
+    spiderIdStr(spiderDisc.spider() ? spiderDisc.spider() : spiderGwSpider, buf, sizeof(buf));
+    obj["spider"] = buf;
+  }
+  if (spiderDisc.heater())
+  {
+    spiderIdStr(spiderDisc.heater(), buf, sizeof(buf));
+    obj["heater"] = buf;
+  }
+  if (spiderDiscSlot >= 0)
+    obj["slot"] = spiderDiscSlot;
+}
+
+static void spiderDiscoveryPush()
+{
+  JsonDocument doc;
+  JsonObject o = doc["spiderdiscovery"].to<JsonObject>();
+  spiderDiscoveryStatus(o);
+  notifyClients(doc.as<JsonObject>());
+}
+
+// Spider and its heater known: store them on a Monitor slot (fan commands not executed) as thermostat
+static void spiderDiscoveryFinish()
+{
+  const uint32_t s = spiderDisc.spider(), h = spiderDisc.heater();
+  const uint8_t sid[3]{(uint8_t)(s >> 16), (uint8_t)(s >> 8), (uint8_t)s};
+  const uint8_t hid[3]{(uint8_t)(h >> 16), (uint8_t)(h >> 8), (uint8_t)h};
+  int index = remotes.remoteIndex(sid[0], sid[1], sid[2]);
+  if (index < 0)
+  {
+    index = remotes.registerNewRemote(sid[0], sid[1], sid[2], RemoteTypes::RFTSPIDER);
+    if (index < 0)
+    {
+      spiderDiscResult = "noslot";
+      return;
+    }
+    remotes.updateRemoteFunction(index, static_cast<uint8_t>(RemoteFunctions::MONITOR));
+    remotes.updateRemoteName(index, "Spider");
+  }
+  if (spiderDisc.zoneController() && spiderDisc.zoneId() != spider::ZONE_NONE)
+  { // setpoint sent as the Spider to its zone controller (W 22C9), never as the controller to the Spider
+    remotes.setThermostat(index, true);
+    remotes.setThermostatCtl(index, hid);
+    remotes.setThermostatZone(index, spiderDisc.zoneId());
+    if (!rfManager.radio.checkRFDevice(sid[0], sid[1], sid[2]))
+      rfManager.radio.updateRFDevice(index, sid[0], sid[1], sid[2], RemoteTypes::RFTSPIDER, false);
+    rfManager.radio.setThermostat(sid, true, remotes.getThermostatSetpoint(index), hid, spiderDisc.zoneId());
+    remotes.addCapabilities(index, "thermostat", 1);
+    saveRemotesflag = true;
+    spiderDiscSlot = index;
+    spiderDiscResult = "done_zone_set";
+    N_LOG("RFI: Spider %02X:%02X:%02X discovered on zone controller %02X:%02X:%02X zone %u, slot %d", sid[0], sid[1], sid[2], hid[0], hid[1], hid[2], spiderDisc.zoneId(), index);
+    return;
+  }
+  if (spiderDisc.zoneController())
+  { // zone controller (AutoTemp), zone unknown: read only and nothing is sent
+    remotes.setThermostat(index, false); // also clears a role from an earlier run
+    if (!rfManager.radio.checkRFDevice(sid[0], sid[1], sid[2]))
+      rfManager.radio.updateRFDevice(index, sid[0], sid[1], sid[2], RemoteTypes::RFTSPIDER, false);
+    rfManager.radio.setThermostat(sid, false, 0xEFFF);
+    saveRemotesflag = true;
+    spiderDiscSlot = index;
+    spiderDiscResult = "done_zone";
+    N_LOG("RFI: Spider %02X:%02X:%02X discovered on zone controller %02X:%02X:%02X, slot %d (read only)", sid[0], sid[1], sid[2], hid[0], hid[1], hid[2], index);
+    return;
+  }
+  remotes.setThermostat(index, true);
+  remotes.setThermostatCtl(index, hid);
+  remotes.setThermostatZone(index, spider::ZONE_NONE);
+  if (!rfManager.radio.checkRFDevice(sid[0], sid[1], sid[2]))
+  {
+    rfManager.radio.updateRFDevice(index, sid[0], sid[1], sid[2], RemoteTypes::RFTSPIDER, false); // radio slot = remote slot
+  }
+  rfManager.radio.setThermostat(sid, true, remotes.getThermostatSetpoint(index), hid);
+  remotes.addCapabilities(index, "thermostat", 1);
+  saveRemotesflag = true;
+  spiderDiscSlot = index;
+  spiderDiscResult = "done";
+  N_LOG("RFI: Spider %02X:%02X:%02X discovered, controller %02X:%02X:%02X, slot %d", sid[0], sid[1], sid[2], hid[0], hid[1], hid[2], index);
+}
+
+static uint32_t idTo32(const uint8_t id[3]) { return (uint32_t)id[0] << 16 | (uint32_t)id[1] << 8 | id[2]; }
+
+// Called from other tasks (MQTT/web) after a setpoint change: push W 01FF 3x, 1 s apart
+void requestSpiderPush(const uint8_t id[3])
+{
+  const int idx = remotes.remoteIndex(id[0], id[1], id[2]);
+  if (idx < 0 || idx >= MAX_NUM_OF_REMOTES)
+    return;
+  spiderPending[idx].pollWanted = false;
+  spiderPending[idx].pushUntil = millis() + SPIDER_PUSH_MS;
+  spiderPending[idx].lastPush = 0;
+  spiderPending[idx].push = true;
+  const uint8_t *ctl = remotes.getThermostatCtl(idx);
+  if (remotes.getThermostatZone(idx) != spider::ZONE_NONE)
+  { // zone controller (AutoTemp) is always listening: W 22C9 now, repeated until it echoes the setpoint
+    spiderPending[idx].repeatLeft = SPIDER_ZONE_TRIES;
+    spiderPending[idx].repeatAt = millis();
+  }
+  else if (!ctl || idTo32(ctl) == 0)
+  { // bound to us (gateway): W 01FF now, a wired Spider takes it; a battery Spider gets it in our next RP
+    spiderPending[idx].repeatLeft = 1 + SPIDER_PUSH_REPEATS;
+    spiderPending[idx].repeatAt = millis();
+  }
+}
+
+// Called for every clean received frame: confirm a pending setpoint, or use the Spider's
+// listen window right after its own I broadcast to send W 01FF or RQ 01FF.
+
+static void spiderSendProbe(const spider::Probe &pr)
+{
+  spiderProbeAt = 0;
+  const uint8_t sid[3]{(uint8_t)(pr.spider >> 16), (uint8_t)(pr.spider >> 8), (uint8_t)pr.spider};
+  const uint8_t cid[3]{(uint8_t)(pr.ctl >> 16), (uint8_t)(pr.ctl >> 8), (uint8_t)pr.ctl};
+  rfManager.radio.setSendTries(1);
+  disableRF_ISR();
+  rfManager.radio.sendSpiderProbe(sid, cid);
+  enableRF_ISR();
+  rfManager.radio.setSendTries(3);
+  spiderDisc.probeSent(pr.spider);
+  I_LOG("RFI: Spider discovery: asking %02X:%02X:%02X for its setpoint", sid[0], sid[1], sid[2]);
+}
+
+// Send the pending action for a Spider now (it may be listening): W 01FF until confirmed, else a status poll.
+// pollWindow: right after the Spider polled its controller (always listens); else after a plain broadcast,
+// which only some Spiders listen after, so pushes there are rate limited.
+static void spiderSendPending(int idx, const uint8_t sid[3], bool pollWindow)
+{
+  SpiderPending &p = spiderPending[idx];
+  p.windowAt = 0;
+  if (p.push && (int32_t)(millis() - p.pushUntil) >= 0)
+  {
+    p.push = false;
+    W_LOG("RFI: Spider %02X:%02X:%02X did not confirm the setpoint", sid[0], sid[1], sid[2]);
+  }
+  if (p.push && !pollWindow && p.lastPush != 0 && millis() - p.lastPush < SPIDER_PUSH_GAP_MS)
+    return;
+  const bool push = p.push;
+  const bool poll = !push && (p.pollWanted || p.lastPoll == 0 || millis() - p.lastPoll >= SPIDER_POLL_MS);
+  if (!push && !poll)
+    return;
+  rfManager.radio.setSendTries(1);
+  disableRF_ISR();
+  if (push)
+    rfManager.radio.sendSpiderStatus(sid, false);
+  else
+    rfManager.radio.sendSpiderRequest(sid);
+  enableRF_ISR();
+  rfManager.radio.setSendTries(3);
+  if (push)
+  {
+    p.repeatLeft = SPIDER_PUSH_REPEATS;
+    p.repeatAt = millis() + SPIDER_REPEAT_MS;
+    p.lastPush = millis();
+  }
+  else
+  {
+    p.pollWanted = false;
+    p.lastPoll = millis();
+  }
+}
+
+// Called for every clean received frame. A Spider only listens briefly around its own transmissions
+// (verified on air, two Spider types): right after its controller answered its poll (RP 3EF0 / 3EF1),
+// and, for some Spiders, after its plain I broadcasts.
+static void spiderOnFrame(const IthoPacket *packet)
+{
+  const uint8_t type = (packet->header >> 4) & 0x3;
+  uint32_t spider = packet->deviceId0 != 0 ? packet->deviceId0 : packet->deviceId2;
+  bool ctlAnswer = false;
+  if (type == 3 && packet->deviceId1 != 0)
+  { // RP addressed to a Spider by its controller?
+    const uint8_t d[3]{(uint8_t)(packet->deviceId1 >> 16), (uint8_t)(packet->deviceId1 >> 8), (uint8_t)packet->deviceId1};
+    const int i = remotes.remoteIndex(d[0], d[1], d[2]);
+    const uint8_t *c = (i >= 0 && remotes.isThermostat(i)) ? remotes.getThermostatCtl(i) : nullptr;
+    if (c && idTo32(c) == packet->deviceId0)
+    {
+      spider = packet->deviceId1;
+      ctlAnswer = true;
+    }
+  }
+  const uint8_t sid[3]{(uint8_t)(spider >> 16), (uint8_t)(spider >> 8), (uint8_t)spider};
+  const int idx = remotes.remoteIndex(sid[0], sid[1], sid[2]);
+  if (idx < 0 || idx >= MAX_NUM_OF_REMOTES || !remotes.isThermostat(idx))
+    return;
+  const uint8_t *ctl = remotes.getThermostatCtl(idx);
+  SpiderPending &p = spiderPending[idx];
+  if (!ctl || idTo32(ctl) == 0)
+  { // bound to us (gateway): the Spider polls and gets our RP instead
+    if (type == 2 && packet->opcode == IthoPacket::Type::ZONESETPOINT && packet->deviceId0 == spider)
+    { // W 22C9: setpoint changed on the Spider itself, newer than ours; it becomes the commanded setpoint
+      const int32_t sp = spiderSetpoint(sid);
+      if (sp != 0xEFFF)
+      {
+        remotes.setThermostatSetpoint(idx, sp);
+        rfManager.radio.setThermostatSetpoint(sid, sp);
+      }
+      if (p.push)
+        I_LOG("RFI: Spider %02X:%02X:%02X setpoint changed on the Spider, pending setpoint dropped", sid[0], sid[1], sid[2]);
+      p.push = false;
+      p.repeatLeft = 0;
+      p.dialUntil = millis() + SPIDER_DIAL_MS;
+      if (p.dialUntil == 0)
+        p.dialUntil = 1;
+      return;
+    }
+    if (p.dialUntil != 0 && packet->opcode == IthoPacket::Type::SPIDERSTATUS && packet->deviceId0 == spider &&
+        (spiderConfirmed(sid) || (int32_t)(millis() - p.dialUntil) >= 0))
+      p.dialUntil = 0;
+    if (!p.push)
+      return;
+    if (spiderConfirmed(sid))
+    {
+      p.push = false;
+      p.repeatLeft = 0;
+    }
+    else if ((int32_t)(millis() - p.pushUntil) >= 0)
+    {
+      p.push = false;
+      W_LOG("RFI: Spider %02X:%02X:%02X did not confirm the setpoint", sid[0], sid[1], sid[2]);
+    }
+    return;
+  }
+  if (remotes.getThermostatZone(idx) != spider::ZONE_NONE)
+    return; // zone controller: we send to the controller (repeat loop), never to the Spider
+  if ((p.push || p.repeatLeft > 0) && spiderConfirmed(sid))
+  {
+    p.push = false; // Spider reports the commanded setpoint
+    p.repeatLeft = 0;
+  }
+  if (ctlAnswer)
+  {
+    spiderSendPending(idx, sid, true);
+    return;
+  }
+  if (packet->deviceId0 != spider)
+    return;
+  if (type == 0 && packet->deviceId1 == idTo32(ctl))
+  { // Spider polls its controller; send after the answer, or after 300 ms if we miss the answer
+    p.windowAt = millis() + 300;
+    if (p.windowAt == 0)
+      p.windowAt = 1;
+    return;
+  }
+  // Plain broadcasts nobody answers. Not after I 0008: the heater echoes it with 3150 (collision on air).
+  if (type == 1 && packet->opcode != IthoPacket::Type::SPIDERSTATUS && packet->opcode != IthoPacket::Type::RELAYDEMAND)
+    spiderSendPending(idx, sid, false);
+}
 uint8_t bindConfirmRemIndex = 255;
 uint8_t faninfo31DA{0};
 uint8_t timer31DA{0};
@@ -31,42 +537,120 @@ Ticker rf_message;
 Ticker bindInitiatorTimeout;
 
 volatile bool ithoCheck = false;
-SemaphoreHandle_t isrSemaphore = NULL;
+// RF receive counters since boot ("RFS" line every minute while RF logging is on). sync is counted in the ISR.
+volatile uint32_t rfSyncCount = 0;
+rfsignal::Counters rfStats;
+unsigned long rfStatsLastLog = 0;
 
-IRAM_ATTR void ITHOinterrupt()
+// Serializes all radio (SPI) access — the task's receivePacket() vs any send —
+// so a send from a web/MQTT task can't collide with a receive on TaskCC1101,
+// nor two sends with each other. A binary semaphore (not a mutex) is used so the
+// unbalanced enableRF_ISR() at init is a harmless give on an already-available
+// semaphore. The CC1101 lib itself stays free of any RTOS dependency; this
+// guard lives entirely in the app around the lib's send/receive entry points.
+SemaphoreHandle_t radioSem = NULL;
+
+// Receive watchdog: the chip must be in RX whenever nothing is being sent or read. A lost RF interrupt leaves
+// it in IDLE or RXFIFO_OVERFLOW for good (receive silently dead), a hung SPI wait used to hang the task itself.
+constexpr uint32_t RX_CHECK_MS = 1000;
+constexpr uint32_t RX_WARN_INTERVAL_MS = 10 * 60 * 1000; // one warning per 10 min, the RFS line has the counters
+static uint32_t rxCheckAt = 0;
+static uint32_t rxLastActivity = 0; // last packet read from the chip
+static bool rxCheckStrike = false;  // not in RX at the previous check
+static uint32_t rxRestarts = 0;
+static uint32_t rxWarnAt = 0;
+static uint32_t chipTimeoutsSeen = 0;
+
+// Runs in the task loop with nothing else touching the radio. Two checks 1 s apart without a packet read in
+// between: a packet in progress or waiting to be read never looks like that.
+static void rxWatchdog()
 {
-  // Try to take the semaphore
-  if (xSemaphoreTakeFromISR(isrSemaphore, NULL) == pdTRUE)
+  const uint32_t now = millis();
+  if ((int32_t)(now - rxCheckAt) < 0)
+    return;
+  rxCheckAt = now + RX_CHECK_MS;
+
+  const uint32_t timeouts = rfManager.radio.waitTimeouts();
+  if (timeouts != chipTimeoutsSeen)
   {
-    // ISR code here
+    chipTimeoutsSeen = timeouts;
+    if ((int32_t)(now - rxWarnAt) >= 0)
+    {
+      rxWarnAt = now + RX_WARN_INTERVAL_MS;
+      W_LOG("RF: CC1101 did not answer in time (%lu x, state 0x%02X), send or receive aborted", (unsigned long)timeouts, rfManager.radio.lastWaitState());
+    }
+  }
 
-    ithoCheck = rfManager.radio.receivePacket();
-
-    // At the end, give back the semaphore
-    xSemaphoreGiveFromISR(isrSemaphore, NULL);
+  // the radio semaphore keeps sends from other tasks out; the RF interrupt only notifies and can stay on
+  if (radioSem)
+    xSemaphoreTake(radioSem, portMAX_DELAY);
+  const uint8_t state = rfManager.radio.marcState();
+  const bool armFailed = rfManager.radio.rxArmFailed;
+  const bool stuck = state != CC1101_MARCSTATE_RX && (int32_t)(now - rxLastActivity) > (int32_t)RX_CHECK_MS;
+  const bool restart = armFailed || (stuck && rxCheckStrike);
+  if (restart)
+  {
+    rfManager.radio.rxArmFailed = false;
+    rfManager.radio.restartRx();
+    rxRestarts++;
+  }
+  if (radioSem)
+    xSemaphoreGive(radioSem);
+  rxCheckStrike = stuck && !restart;
+  if (restart && (int32_t)(now - rxWarnAt) >= 0)
+  {
+    rxWarnAt = now + RX_WARN_INTERVAL_MS;
+    W_LOG("RF: receive restarted, CC1101 was in state 0x%02X (%lu x since boot)", state, (unsigned long)rxRestarts);
   }
 }
 
+static IRAM_ATTR void ITHOinterrupt(void *)
+{
+  // Just wake TaskCC1101; the FIFO read (receivePacket) now runs in task
+  // context. It used to run here — up to ~34 ms of SPI inside a level-1 ISR.
+  rfSyncCount = rfSyncCount + 1;
+  BaseType_t higherPriorityTaskWoken = pdFALSE;
+  if (xTaskCC1101Handle)
+    vTaskNotifyGiveFromISR(xTaskCC1101Handle, &higherPriorityTaskWoken);
+  portYIELD_FROM_ISR(higherPriorityTaskWoken);
+}
+
+// disable/enable also acquire/release exclusive radio access: every send is
+// bracketed by disableRF_ISR()/enableRF_ISR(), so the semaphore is held for the
+// whole send and blocks a concurrent receive (and vice versa).
 void disableRF_ISR()
 {
-  detachInterrupt(hardwareManager.itho_irq_pin);
+  gpio_isr_handler_remove(static_cast<gpio_num_t>(hardwareManager.itho_irq_pin));
+  gpio_set_intr_type(static_cast<gpio_num_t>(hardwareManager.itho_irq_pin), GPIO_INTR_DISABLE);
+  if (radioSem)
+    xSemaphoreTake(radioSem, portMAX_DELAY);
 }
 
 void enableRF_ISR()
 {
-  attachInterrupt(hardwareManager.itho_irq_pin, ITHOinterrupt, RISING);
-  // If GDO is already HIGH, a packet arrived while the ISR was disabled.
-  // The rising edge was missed, so manually trigger a receive.
-  if (digitalRead(hardwareManager.itho_irq_pin) == HIGH)
+  gpio_set_intr_type(static_cast<gpio_num_t>(hardwareManager.itho_irq_pin), GPIO_INTR_POSEDGE);
+  gpio_isr_handler_add(static_cast<gpio_num_t>(hardwareManager.itho_irq_pin), ITHOinterrupt, nullptr);
+  // If GDO is already HIGH, a packet arrived while the ISR was disabled and the
+  // rising edge was missed. Notify the task to read it (in task context).
+  if (digitalRead(hardwareManager.itho_irq_pin) == HIGH && xTaskCC1101Handle)
   {
-    ithoCheck = rfManager.radio.receivePacket();
+    xTaskNotifyGive(xTaskCC1101Handle);
   }
+  if (radioSem)
+    xSemaphoreGive(radioSem);
 }
 
 void RFDebug(IthoPacket *packet)
 {
   char debugLog[400] = {0};
   strncat(debugLog, rfManager.radio.LastMessageDecoded(packet).c_str(), sizeof(debugLog) - strlen(debugLog) - 1);
+  char sig[64];
+  snprintf(sig, sizeof(sig), " [rssi:%ddBm lqi:%u foff:%ldHz err:%u]", rfManager.radio.lastRssiDbm(),
+           rfManager.radio.lastLinkQuality(), rfManager.radio.lastFreqOffsetHz(), packet->error);
+  strncat(debugLog, sig, sizeof(debugLog) - strlen(debugLog) - 1);
+  // integrity: a checksum-failed frame is decoded/logged but not dispatched
+  if (packet->error == 2)
+    strncat(debugLog, " (crc:FAIL)", sizeof(debugLog) - strlen(debugLog) - 1);
   // log command
   switch (packet->command)
   {
@@ -148,6 +732,7 @@ void RFDebug(IthoPacket *packet)
   D_LOG(debugLog);
 
   logMessagejson(debugLog, RFLOG);
+  mqttDebugPush(MqttDebugChannel::RF, debugLog);
 }
 
 void toggleRemoteLLmode(const char *remotetype)
@@ -245,6 +830,51 @@ void set_send10E0_true()
 {
   send10E0 = true;
 }
+// Fan status (31DA) for RF: the I2C status when available, else the default template. The last one is kept
+// so replies to bound remotes go out at once instead of waiting for a new I2C query.
+static uint8_t last31DA[32]{};
+static uint32_t last31DAAt = 0;
+constexpr uint32_t LAST_31DA_MAX_AGE_MS = 60 * 1000;
+
+static void build31DA(uint8_t *command, bool query)
+{
+  static const uint8_t tmpl[32] = {0x31, 0xDA, 0x1D, 0x00, 0xC8, 0x40, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0xEF, 0xF8, 0x08, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEF, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF};
+  memcpy(command, tmpl, sizeof(tmpl));
+  if (!query)
+    return;
+  uint8_t receive_buffer[256]{};
+  size_t result = sendQuery31DA(&receive_buffer[0]);
+  // 80 82 B1 DA 01 1C C8 40 03 A5 39 EF 7F FF 7F FF 7F FF 7F FF F8 08 EF 98 05 00 00 00 EF EF 7F FF 7F FF 20
+  // 1D:            00,C8,40,04,7B,38,EF,7F,FF,7F,FF,7F,FF,7F,FF,F8,08,EF,98,05,00,00,00,EF,EF,7F,FF,7F,FF
+  if (result > 4)
+  {
+    for (uint8_t i = 4; i < sizeof(tmpl); i++)
+      command[i] = receive_buffer[i + 2];
+    memcpy(last31DA, command, sizeof(tmpl));
+    last31DAAt = millis();
+  }
+  else
+  {
+    E_LOG("I2C: error - sendQuery31DA failed");
+  }
+}
+
+// Answer a bound remote like the fan does: RP 31DA to its RQ 31DA, I 31DA to it after a command.
+// Without this an RFT CO2 shows a join error and an RFT AUTO-N repeats its commands and shows red.
+static void reply31DA(const uint8_t to[3], bool reply)
+{
+  uint8_t command[32];
+  if (last31DAAt != 0 && millis() - last31DAAt < LAST_31DA_MAX_AGE_MS)
+    memcpy(command, last31DA, sizeof(command));
+  else
+    build31DA(command, true);
+  rfManager.radio.setSendTries(1);
+  disableRF_ISR();
+  rfManager.radio.send31DATo(command, to, reply);
+  enableRF_ISR();
+  rfManager.radio.setSendTries(3);
+}
+
 void set_send31D9_true()
 {
   send31D9 = true;
@@ -269,29 +899,31 @@ void startTaskCC1101()
 void TaskCC1101(void *pvParameters)
 {
 
-  D_LOG("SYS: TaskCC1101 started");
   configASSERT((uint32_t)pvParameters == 1UL);
 
-  if (!xTaskMQTTHandle)
-    startTaskMQTT();
+  // Wait BEFORE any logging: sys_log's syslog_queueSemaphore is created in
+  // TaskConfigAndLog, so a D_LOG before PHASE_CONFIG dereferences a null handle.
+  waitPhase(PHASE_CONFIG); // needs systemConfig/logConfig; loads its own remotes config
 
   // reading the chip version is a non-blocking way to check CC1101 connectivity.
   // if the version is greater than 0 there has been succesful communication and we can continue with the init of the chip.
   uint8_t chipVersion = rfManager.radio.getChipVersion();
-  if (chipVersion)
-  {
-    N_LOG("SYS: CC1101 RF module found, chip version: 0x%02X", chipVersion);
-  }
-  else
+  if (chipVersion && rfManager.radio.getDetectAttempt() == 1)
+    W_LOG("SYS: CC1101 answered only after a reset");
+  else if (chipVersion && rfManager.radio.getDetectAttempt() == 2)
+    W_LOG("SYS: CC1101 answered only at 1 MHz SPI, staying at 1 MHz");
+  if (!chipVersion)
   {
     N_LOG("SYS: no CC1101 RF module found");
     systemConfig.itho_rf_support = 0;
-    systemConfig.rfInitOK = false;
+    systemConfig.rfInitOK = false;    
   }
-  if (systemConfig.itho_rf_support)
+  else if (systemConfig.itho_rf_support)
   {
-    isrSemaphore = xSemaphoreCreateBinary();
-    xSemaphoreGive(isrSemaphore);
+    N_LOG("SYS: CC1101 RF module found, chip version: 0x%02X", chipVersion);
+
+    radioSem = xSemaphoreCreateBinary();
+    xSemaphoreGive(radioSem); // created in the available state
 
     // init the RF module
     rfManager.radio.init();
@@ -329,9 +961,9 @@ void TaskCC1101(void *pvParameters)
         continue;
       uint8_t id[3]{};
       remotes.getRemoteIDbyIndex(index, &id[0]);
-      rfManager.radio.setBindAllowed(true);
-      rfManager.radio.addRFDevice(id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteBidirectional(index));
-      rfManager.radio.setBindAllowed(false);
+      // Same slot as the remote: index-based radio calls (bidirectional, source/dest ID, type) rely on it.
+      // addRFDevice() takes the first free slot and shifts everything after a gap in the remotes list.
+      rfManager.radio.updateRFDevice(index, id[0], id[1], id[2], remotes.getRemoteType(index), remotes.getRemoteBidirectional(index));
       // For Send remotes, set the sourceID to the configured ID (what we transmit as)
       if (remotes.getRemoteFunction(index) == RemoteFunctions::SEND)
       {
@@ -343,6 +975,11 @@ void TaskCC1101(void *pvParameters)
       if (destId[0] != 0 || destId[1] != 0 || destId[2] != 0)
       {
         rfManager.radio.updateDestinationID(destId[0], destId[1], destId[2], index);
+      }
+      if (remotes.isThermostat(index))
+      {
+        rfManager.radio.setThermostat(id, true, remotes.getThermostatSetpoint(index), remotes.getThermostatCtl(index), remotes.getThermostatZone(index));
+        remotes.addCapabilities(index, "thermostat", 1); // listed right away, not only after the first RF frame
       }
     }
     systemConfig.rfInitOK = true;
@@ -368,6 +1005,16 @@ void TaskCC1101(void *pvParameters)
     uint8_t joinReplyRemIndex{255};
     // uint8_t remIndex10E0{255};
 
+    setPhase(PHASE_RF); // RF module initialised (reached only when a CC1101 is present)
+    
+    D_LOG("SYS: TaskCC1101 started");
+
+    // Under the task watchdog like the other tasks (dropped in the 2.5.0 refactor): a hang now ends in a
+    // TASK_WDT_RESET with a coredump instead of a dead RF receive. The OTA handler removes the task again.
+    esp_task_wdt_add(NULL);
+    rxCheckAt = millis() + RX_CHECK_MS;
+    rxLastActivity = millis();
+
     for (;;)
     {
       yield();
@@ -376,6 +1023,188 @@ void TaskCC1101(void *pvParameters)
       TaskCC1101Timeout.once_ms(3000, []()
                                 { W_LOG("SYS: warning - CC1101 Task timed out!"); });
 
+      if (!ithoCheck)
+        rxWatchdog();
+
+      if (rfManager.radio.legacyRxMode() != 0 && millis() - legacyRxSince > LEGACY_RX_MAX_MS && legacyCmd == 0)
+        legacyCmd = 2; // timed out, back to RAMSES receive
+      if (legacyCmd != 0)
+      {
+        const uint8_t cmd = legacyCmd;
+        disableRF_ISR();
+        if (cmd == 3)
+          rfManager.radio.sendLegacyRaw(legacyTxBuf, legacyTxBuf, legacyTxLen, legacyTxRepeats);
+        else if (cmd == 4)
+          legacyRssiScan(legacyTxRepeats);
+        else
+          rfManager.radio.setLegacyRx(cmd == 1 ? 1 : (cmd == 5 ? 2 : 0));
+        enableRF_ISR();
+        if (cmd == 3)
+          legacyLogTx("raw", legacyTxBuf, legacyTxLen);
+        else if (cmd == 1 || cmd == 5)
+        {
+          legacyRxSince = millis();
+          legacyLog("RF1: old protocol receive on%s, RAMSES receive off for max 30 min", cmd == 5 ? " (loose)" : "");
+        }
+        else if (cmd == 2)
+          legacyLog("RF1: old protocol receive off");
+        legacyCmd = 0;
+      }
+      if (rfManager.radio.legacyReady)
+      {
+        rfManager.radio.legacyReady = false;
+        legacyLogRx();
+      }
+      if (rfManager.radio.legacyTxPending)
+      {
+        rfManager.radio.legacyTxPending = false;
+        char what[16];
+        snprintf(what, sizeof(what), "remote %u", rfManager.radio.legacyTxRemote);
+        legacyLogTx(what, rfManager.radio.legacyTxFrame, legacy::FRAME_LEN);
+      }
+
+      if (spiderDiscCmd != 0)
+      {
+        spiderGwUntil = 0;
+        spiderGwSpider = 0;
+        if (spiderDiscCmd == 1)
+        {
+          spiderDisc.start(spider::Discovery::pickTarget(esp_random()));
+          spiderProbeAt = 0;
+          spiderDiscStarted = spiderDiscStepAt = millis();
+          spiderDiscSlot = -1;
+          spiderDiscResult = "idle";
+        }
+        else if (spiderDiscCmd == 3)
+        { // gateway bind: accept the next Spider 01FF bind offer (pairing mode on the Spider)
+          spiderDisc.cancel();
+          spiderDiscSlot = -1;
+          spiderGwUntil = millis() + SPIDER_GW_MS;
+          if (spiderGwUntil == 0)
+            spiderGwUntil = 1;
+        }
+        else
+        {
+          spiderDisc.cancel();
+          spiderDiscResult = "cancelled";
+        }
+        spiderDiscCmd = 0;
+        spiderDiscNotify = true;
+      }
+      {
+        using S = spider::Discovery::State;
+        const S st = spiderDisc.state();
+        if ((st == S::WaitSetpoint || st == S::WaitHeater) &&
+            (millis() - spiderDiscStarted > SPIDER_DISC_TIMEOUT_MS || (st == S::WaitHeater && millis() - spiderDiscStepAt > SPIDER_DISC_HEATER_MS)))
+        {
+          spiderDisc.cancel();
+          spiderDiscResult = "timeout";
+          spiderDiscNotify = true;
+        }
+        if (spiderGwUntil != 0 && (int32_t)(millis() - spiderGwUntil) >= 0)
+        {
+          spiderGwUntil = 0;
+          spiderDiscResult = "gw_timeout";
+          spiderDiscNotify = true;
+        }
+      }
+      if (spiderDiscNotify)
+      {
+        spiderDiscNotify = false;
+        spiderDiscoveryPush();
+      }
+      if (spiderProbeAt != 0 && !ithoCheck && (int32_t)(millis() - spiderProbeAt) >= 0)
+      { // candidate polled its controller and we missed the answer: use the window anyway
+        if (spiderDisc.state() == spider::Discovery::State::WaitSetpoint)
+          spiderSendProbe(spiderProbe);
+        spiderProbeAt = 0;
+      }
+      uint8_t spiderID[3];
+      if (!ithoCheck && rfManager.radio.consumeSpiderReply(spiderID))
+      { // answer the bound Spider's RQ 01FF straight away, single try; our setpoint while a push is pending or
+        // just after a dial change (its W 22C9), else the Spider's own, so a change on the Spider is not undone
+        const int ridx = remotes.remoteIndex(spiderID[0], spiderID[1], spiderID[2]);
+        bool useCmd = false;
+        if (ridx >= 0 && ridx < MAX_NUM_OF_REMOTES)
+        {
+          const SpiderPending &p = spiderPending[ridx];
+          useCmd = (p.push && (int32_t)(millis() - p.pushUntil) < 0) || p.dialUntil != 0;
+        }
+        rfManager.radio.setSendTries(1);
+        disableRF_ISR();
+        rfManager.radio.sendSpiderStatus(spiderID, true, useCmd);
+        enableRF_ISR();
+        rfManager.radio.setSendTries(3);
+      }
+      int32_t echoSetpoint = 0;
+      if (!ithoCheck && rfManager.radio.consumeSpiderEcho(spiderID, echoSetpoint))
+      { // acknowledge a setpoint change on a Spider bound to us (W 22C9) like the blueprint, single try
+        rfManager.radio.setSendTries(1);
+        disableRF_ISR();
+        rfManager.radio.sendSpiderZoneEcho(spiderID, echoSetpoint);
+        enableRF_ISR();
+        rfManager.radio.setSendTries(3);
+      }
+      uint8_t modeIndex = 0, modeFlags = 0;
+      if (!ithoCheck && rfManager.radio.consumeSpiderModeAck(spiderID, modeIndex, modeFlags))
+      { // answer the W 22D0 a Spider bound to us sends after each poll and dial change, else it repeats it
+        rfManager.radio.setSendTries(1);
+        disableRF_ISR();
+        rfManager.radio.sendSpiderModeAck(spiderID, modeIndex, modeFlags);
+        enableRF_ISR();
+        rfManager.radio.setSendTries(3);
+      }
+      for (int i = 0; i < MAX_NUM_OF_REMOTES && !ithoCheck; i++)
+      { // Spider polled its controller and we missed the answer: use the window anyway
+        SpiderPending &p = spiderPending[i];
+        if (p.windowAt != 0 && (int32_t)(millis() - p.windowAt) >= 0)
+        {
+          uint8_t sid[3]{};
+          remotes.getRemoteIDbyIndex(i, &sid[0]);
+          spiderSendPending(i, sid, true);
+        }
+      }
+      for (int i = 0; i < MAX_NUM_OF_REMOTES && !ithoCheck; i++)
+      { // scheduled repeats of a setpoint push (1 s apart), stopped once the Spider confirms
+        SpiderPending &p = spiderPending[i];
+        if (p.repeatLeft == 0 || (int32_t)(millis() - p.repeatAt) < 0)
+          continue;
+        uint8_t sid[3]{};
+        remotes.getRemoteIDbyIndex(i, &sid[0]);
+        if (spiderConfirmed(sid))
+        {
+          p.repeatLeft = 0;
+          p.push = false;
+          continue;
+        }
+        const bool zone = remotes.getThermostatZone(i) != spider::ZONE_NONE;
+        rfManager.radio.setSendTries(1);
+        disableRF_ISR();
+        if (zone)
+          rfManager.radio.sendSpiderZoneSetpoint(sid);
+        else
+          rfManager.radio.sendSpiderStatus(sid, false);
+        enableRF_ISR();
+        rfManager.radio.setSendTries(3);
+        p.repeatLeft = p.repeatLeft - 1;
+        p.repeatAt = millis() + SPIDER_REPEAT_MS;
+        if (zone)
+        {
+          I_LOG("RFI: Spider %02X:%02X:%02X setpoint sent to its zone controller", sid[0], sid[1], sid[2]);
+          if (p.repeatLeft == 0)
+            p.push = false;
+        }
+      }
+      if (sendSpiderBind && !ithoCheck)
+      {
+        sendSpiderBind = false;
+        rfManager.radio.setSendTries(1);
+        disableRF_ISR();
+        rfManager.radio.sendSpiderBindAccept(spiderBindID);
+        enableRF_ISR();
+        rfManager.radio.setSendTries(3);
+        I_LOG("RFI: Spider %02X:%02X:%02X heating bind accept sent", spiderBindID[0], spiderBindID[1], spiderBindID[2]);
+      }
       if (send10E0 && !ithoCheck)
       {
         send10E0 = false;
@@ -495,29 +1324,9 @@ void TaskCC1101(void *pvParameters)
       }
       if ((send31DA || send31DAdebug) && !ithoCheck)
       {
-        uint8_t command[] = {0x31, 0xDA, 0x1D, 0x00, 0xC8, 0x40, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0x7F, 0xFF, 0xEF, 0xF8, 0x08, 0xEF, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEF, 0xEF, 0x7F, 0xFF, 0x7F, 0xFF};
-
-        if (send31DA)
-        {
-          send31DA = false;
-
-          uint8_t receive_buffer[256]{};
-          size_t result = sendQuery31DA(&receive_buffer[0]);
-          // 80 82 B1 DA 01 1C C8 40 03 A5 39 EF 7F FF 7F FF 7F FF 7F FF F8 08 EF 98 05 00 00 00 EF EF 7F FF 7F FF 20
-          // 1D:            00,C8,40,04,7B,38,EF,7F,FF,7F,FF,7F,FF,7F,FF,F8,08,EF,98,05,00,00,00,EF,EF,7F,FF,7F,FF
-
-          if (result > 4)
-          {
-            for (uint8_t i = 4; i < sizeof(command); i++)
-            {
-              command[i] = receive_buffer[i + 2];
-            }
-          }
-          else
-          {
-            E_LOG("I2C: error - sendQuery31DA failed");
-          }
-        }
+        uint8_t command[32];
+        build31DA(command, send31DA);
+        send31DA = false;
         if (send31DAdebug)
         {
           send31DAdebug = false;
@@ -540,10 +1349,40 @@ void TaskCC1101(void *pvParameters)
         IthoPacket *packet = rfManager.radio.checkForNewPacket();
         rfManager.radio.parseMessage(packet);
 
+        if (packet->error == 0)
+        { // always fed: Spider-controller pairs are learned from their polls, also outside discovery
+          using S = spider::Discovery::State;
+          const spider::Frame fr{static_cast<uint8_t>((packet->header >> 4) & 0x3), packet->deviceId0, packet->deviceId1,
+                                 packet->deviceId2, static_cast<uint16_t>(packet->opcode), &packet->dataDecoded[packet->payloadPos], packet->len};
+          if (spiderDisc.feed(fr))
+          {
+            spiderDiscStepAt = millis();
+            spiderDiscNotify = true;
+            spiderProbeAt = 0;
+            if (spiderDisc.state() == S::Done)
+              spiderDiscoveryFinish();
+          }
+          spider::Probe pr{};
+          if (spiderDisc.takeProbe(pr))
+          { // send right after the controller's answer, or 300 ms after the Spider's poll if we miss it
+            if (pr.now)
+              spiderSendProbe(pr);
+            else
+            {
+              spiderProbe = pr;
+              spiderProbeAt = millis() + 300;
+              if (spiderProbeAt == 0)
+                spiderProbeAt = 1;
+            }
+          }
+        }
+        if (packet->error == 0)
+          spiderOnFrame(packet);
         uint8_t *lastID = rfManager.radio.getLastID(packet);
         IthoCommand cmd = rfManager.radio.getLastCommand(packet);
         RemoteTypes remtype = rfManager.radio.getLastRemType(packet);
         bool chk = remotes.checkID(*(lastID + 0), *(lastID + 1), *(lastID + 2));
+        rfsignal::count(rfStats, packet->error, chk);
         if (logConfig.rfloglevel >= 2)
         {
           if (chk || logConfig.rfloglevel == 3)
@@ -560,10 +1399,12 @@ void TaskCC1101(void *pvParameters)
           if (cmd == IthoLeave && remotes.remoteLearnLeaveStatus())
           {
             D_LOG("RFI: Leave command received. Trying to remove remote...");
+            // removeRemote() returns a status (1 = removed), not the slot: look the slot up first
+            const int slot = remotes.remoteIndex(*(lastID + 0), *(lastID + 1), *(lastID + 2));
             int index = remotes.removeRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2));
-            if (index >= 0)
+            if (index == 1 && slot >= 0)
             {
-              rfManager.radio.removeRFDevice(index);
+              rfManager.radio.removeRFDevice(slot);
             }
             switch (index)
             {
@@ -589,12 +1430,14 @@ void TaskCC1101(void *pvParameters)
             saveRemotesflag = true;
             bindConfirmRemIndex = remIdx;
             // Auto-switch to RF CO2 control interface if this is an RFTCO2 send remote
-            if (remotes.getRemoteType(remIdx) == RemoteTypes::RFTCO2 &&
+            if ((remotes.getRemoteType(remIdx) == RemoteTypes::RFTCO2 ||
+                 remotes.getRemoteType(remIdx) == RemoteTypes::ORCONCO2) &&
                 remotes.getRemoteFunction(remIdx) == RemoteFunctions::SEND)
             {
               systemConfig.itho_control_interface = 1;
+              systemConfig.itho_rf_co2_remote_idx = remIdx;
               saveSystemConfigflag = true;
-              I_LOG("RFI: RF CO2 join successful, control interface set to RF CO2");
+              N_LOG("RFI: RF CO2 join successful, control interface set to RF CO2, using remote %d", remIdx);
             }
             // Auto-track the Itho device as RF status source for 31DA/31D9 data
             if (remotes.getRemoteFunction(remIdx) == RemoteFunctions::SEND)
@@ -612,6 +1455,14 @@ void TaskCC1101(void *pvParameters)
                 I_LOG("RFI: Auto-tracked Itho device %02X:%02X:%02X as '%s'",
                       *(lastID + 0), *(lastID + 1), *(lastID + 2), src->name);
               }
+              // The joined device only reports its status when asked, standalone mode polls by itself
+              if (systemConfig.itho_rf_standalone != 1 && systemConfig.itho_rf_status_poll == 0 && statusPollRemoteValid(remIdx))
+              {
+                systemConfig.itho_rf_status_poll = 1;
+                systemConfig.itho_rf_status_poll_idx = remIdx;
+                saveSystemConfigflag = true;
+                N_LOG("RFI: RF status request on, using remote %d", remIdx);
+              }
             }
             // Delay the confirm to let the remaining accepts from the target pass
             rf_message.once_ms(300, []()
@@ -620,9 +1471,15 @@ void TaskCC1101(void *pvParameters)
           if (cmd == IthoJoin || (cmd == IthoLow && remtype == RemoteTypes::RFTSPIDER)) // Itho low for the spider because join can be difficult to send
           {
             D_LOG("RFI: Join command received. Trying to join remote...");
-            if (remotes.remoteLearnLeaveStatus())
+            const bool gwBind = spiderGwUntil != 0 && packet->spiderHeatingJoin; // gateway bind button, Spider offers only
+            if (remotes.remoteLearnLeaveStatus() || gwBind)
             {
               int index = remotes.registerNewRemote(*(lastID + 0), *(lastID + 1), *(lastID + 2), remtype);
+              if (index >= 0 && gwBind)
+              { // new slot from the gateway bind: monitor only, like discovery (no fan commands)
+                remotes.updateRemoteFunction(index, static_cast<uint8_t>(RemoteFunctions::MONITOR));
+                remotes.updateRemoteName(index, "Spider");
+              }
 
               if (index == -1)
               {
@@ -631,7 +1488,38 @@ void TaskCC1101(void *pvParameters)
                 D_LOG("RFI: Remote already registered at index:%d, re-binding", index);
               }
 
-              if (index >= 0)
+              if (index >= 0 && packet->spiderHeatingJoin)
+              {
+                // Spider heating join: we become its 01FF controller (ADR-0011), not the ventilation join reply
+                remotes.updateRemoteBidirectional(index, true);
+                remotes.setThermostat(index, true);
+                {
+                  const uint8_t none[3]{};
+                  remotes.setThermostatCtl(index, none); // bound to us now, not to a learned controller
+                  remotes.setThermostatZone(index, spider::ZONE_NONE);
+                }
+                rfManager.radio.updateRFDevice(index, *(lastID + 0), *(lastID + 1), *(lastID + 2), RemoteTypes::RFTSPIDER, true);
+                memcpy(spiderBindID, lastID, 3);
+                rfManager.radio.setThermostat(spiderBindID, true, remotes.getThermostatSetpoint(index));
+                sendSpiderBind = true;
+                saveRemotesflag = true;
+                N_LOG("RFI: Spider %02X:%02X:%02X heating join accepted in slot %d", spiderBindID[0], spiderBindID[1], spiderBindID[2], index);
+                if (gwBind)
+                {
+                  spiderGwUntil = 0;
+                  spiderGwSpider = idTo32(spiderBindID);
+                  spiderDiscSlot = index;
+                  spiderDiscResult = "done_gateway";
+                  spiderDiscNotify = true;
+                }
+              }
+              else if (index < 0 && gwBind)
+              {
+                spiderGwUntil = 0;
+                spiderDiscResult = "noslot";
+                spiderDiscNotify = true;
+              }
+              else if (index >= 0)
               {
                 // Auto-detect bidirectional from remote type (unless monitor mode)
                 bool bidirectional = (remtype == RemoteTypes::RFTAUTON || remtype == RemoteTypes::RFTN ||
@@ -736,20 +1624,17 @@ void TaskCC1101(void *pvParameters)
               {
                 // send31D9 = true;
               }
-              if (cmd == Itho31DA)
-              {
-                // send31DA = true;
+              if (cmd == Itho31DA && ((packet->header >> 4) & 0x3) == 0 && rfManager.radio.isOwnID(packet->deviceId1))
+              { // RQ 31DA from a bound remote (an RFT CO2 asks right after joining)
+                reply31DA(lastID, true);
               }
               if (cmd == IthoDeviceInfo)
               {
                 // send10E0 = true;
               }
-              if (bidirect && (cmd != IthoJoin && cmd != IthoLeave))
-              { // trigger fan status update if there is a bi-directional remote in the known list of remotes
-                // rf_message.once_ms(100, set_send31D9_true);
-                rf_message.once_ms(150, set_send31DA_true);
-                // send31D9 = true;
-                // send31DA = true;
+              if (bidirect && cmd != IthoJoin && cmd != IthoLeave && cmd != Itho31DA && cmd != Itho31D9 && cmd != IthoDeviceInfo)
+              { // acknowledge a bi-directional remote's command with the fan status addressed to it, at once
+                reply31DA(lastID, false);
               }
             }
           }
@@ -806,16 +1691,75 @@ void TaskCC1101(void *pvParameters)
             {
               remotes.addCapabilities(remIndex, "setpoint", item.setpoint);
             }
+            if (item.setpointCool != 0xEFFF)
+            {
+              remotes.addCapabilities(remIndex, "setpoint_cool", item.setpointCool);
+            }
+            if (item.thermostat)
+            {
+              remotes.addCapabilities(remIndex, "thermostat", 1);
+              if (item.setpointCmd != 0xEFFF)
+                remotes.addCapabilities(remIndex, "setpoint_cmd", item.setpointCmd);
+            }
+            if (item.demand != 0xFF)
+            {
+              remotes.addCapabilities(remIndex, "demand", item.demand / 2);
+            }
+            if (item.ventDemand != 0xFF)
+            {
+              remotes.addCapabilities(remIndex, "vent_demand", item.ventDemand);
+              remotes.addCapabilities(remIndex, "vent_demand_zone", item.ventZone);
+              remotes.addCapabilities(remIndex, "vent_demand_flags", item.ventFlags);
+            }
+            if (item.spiderFlags != 0xEF)
+            {
+              remotes.addCapabilities(remIndex, "schedule", (item.spiderFlags & spider::FLAG_SCHEDULE) ? 1 : 0);
+              remotes.addCapabilities(remIndex, "manual", (item.spiderFlags & spider::FLAG_MANUAL) ? 1 : 0);
+            }
             //
           }
         }
+        if (rfManager.radio.consumeRemoteStatusChanged())
+          updateMQTTRemotesInfo = true;
         //} //while
       }
+      if (logConfig.rfloglevel > 0 && millis() - rfStatsLastLog >= 60000)
+      {
+        rfStatsLastLog = millis();
+        rfStats.sync = rfSyncCount;
+        char line[160];
+        snprintf(line, sizeof(line), "RFS: sync:%lu decoded:%lu coalesced:%lu hdrerr:%lu chkerr:%lu known:%lu knownerr:%lu rxrestart:%lu chiptimeout:%lu",
+                 (unsigned long)rfStats.sync, (unsigned long)rfStats.decoded, (unsigned long)rfStats.coalesced,
+                 (unsigned long)rfStats.hdrErr, (unsigned long)rfStats.chkErr, (unsigned long)rfStats.known,
+                 (unsigned long)rfStats.knownErr, (unsigned long)rxRestarts, (unsigned long)rfManager.radio.waitTimeouts());
+        logMessagejson(line, RFLOG);
+        // system log (flash, syslog, webserial) only on request: one line a minute wears the flash
+        if (logConfig.rfstats_log)
+          N_LOG("%s", line);
+      }
       TaskCC1101HWmark = uxTaskGetStackHighWaterMark(NULL);
-      vTaskDelay(25 / portTICK_PERIOD_MS);
+      // Block until the RF ISR notifies that a packet arrived, or a 25 ms tick
+      // to run the periodic work above. On notification, read the FIFO here in
+      // task context (moved out of the ISR); the decode block above processes
+      // it on the next iteration.
+      const uint32_t notified = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(25));
+      if (notified > 1)
+        rfStats.coalesced += notified - 1; // more sync words than reads: those packets were not read
+      if (notified > 0)
+      {
+        if (radioSem)
+          xSemaphoreTake(radioSem, portMAX_DELAY);
+        ithoCheck = rfManager.radio.receivePacket();
+        if (radioSem)
+          xSemaphoreGive(radioSem);
+        rxLastActivity = millis();
+      }
     }
   } // if (systemConfig.itho_rf_support)
-  // else delete task
+  else 
+  {
+    I_LOG("SYS: CC1101 RF module support disabled");
+  }
   TaskHandle_t xTempTask = xTaskCC1101Handle;
   xTaskCC1101Handle = NULL;
   vTaskDelete(xTempTask);

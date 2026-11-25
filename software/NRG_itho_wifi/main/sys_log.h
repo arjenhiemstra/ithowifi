@@ -59,6 +59,7 @@ void LogPrefixESP(Print *_logOutput, int logLevel);
 void printNewline(Print *_logOutput, int logLevel);
 void sys_log(log_prio_level_t log_prio, const char *inputString, ...);
 int esp_vprintf(const char *fmt, va_list args);
+bool syslogPop(log_msg &output);
 
 // void sys_log(log_prio_level_t log_prio, const char *inputString, ...);
 //  void sys_log(log_prio_level_t log_prio, const char *inputString, va_list args);

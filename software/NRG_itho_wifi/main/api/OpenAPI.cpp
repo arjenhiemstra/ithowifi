@@ -19,7 +19,7 @@ void handleOpenAPI(AsyncWebServerRequest *request)
       return request->requestAuthentication();
   }
 
-  AsyncWebServerResponse *response = request->beginResponse_P(
+  AsyncWebServerResponse *response = request->beginResponse(
       200, "application/json", openapi_json_gz, openapi_json_gz_len);
   response->addHeader("Content-Encoding", "gzip");
   response->addHeader("Access-Control-Allow-Origin", "*");

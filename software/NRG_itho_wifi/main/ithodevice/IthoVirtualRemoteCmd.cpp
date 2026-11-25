@@ -7,23 +7,23 @@ void sendRemoteCmd(const uint8_t remoteIndex, const IthoCommand command)
   // command structure:
   //  [I2C addr ][  I2C command   ][len ][    timestamp         ][fmt ][    remote ID   ][cntr]<  opcode  ><len2><   len2 length command      >[chk2][cntr][chk ]
   //  0x82, 0x60, 0xC1, 0x01, 0x01, 0x09, 0xFF, 0xFF, 0xFF, 0xFF, 0x16, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x05, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
-  if (remoteIndex > virtualRemotes.getMaxRemotes())
+  if (remoteIndex >= virtualRemotes.getMaxRemotes())
     return;
 
   const RemoteTypes remoteType = virtualRemotes.getRemoteType(remoteIndex);
   if (remoteType == RemoteTypes::UNSETTYPE)
     return;
 
-  // Track last command per virtual remote so external integrations (HA) can
-  // show per-remote state. Only set for user-facing fan commands.
-  const char *cmdName = IthoRemote::ithoCommandToShortName(static_cast<uint8_t>(command));
-  if (cmdName != nullptr)
-    virtualRemotes.setLastCmd(remoteIndex, cmdName);
-
   // Get the corresponding command / remote type combination
   const uint8_t *remote_command = rfManager.radio.getRemoteCmd(remoteType, command);
   if (remote_command == nullptr)
     return;
+
+  // Track last command per virtual remote so external integrations (HA) can
+  // show per-remote state. Only set for user-facing fan commands this remote type has.
+  const char *cmdName = IthoRemote::ithoCommandToShortName(static_cast<uint8_t>(command));
+  if (cmdName != nullptr)
+    virtualRemotes.setLastCmd(remoteIndex, cmdName);
 
   uint8_t i2c_command[64] = {0};
   uint8_t i2c_command_len = 0;

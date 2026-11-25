@@ -2,7 +2,6 @@
 #include "tasks/task_configandlog.h"
 
 int8_t ithoInitResult = 0;
-bool ithoStatusFormateSuccessful = false;
 
 unsigned long lastI2CinitRequest = 0;
 bool ithoInitResultLogEntry = true;
@@ -135,8 +134,6 @@ void initI2cFunctions()
         sendQueryStatusFormat(false);
       }
       N_LOG("I2C: QueryStatusFormat - items:%lu", static_cast<unsigned long>(ithoStatus.size()));
-      if (ithoStatus.size() > 0)
-        ithoStatusFormateSuccessful = true;
 
       if (systemConfig.itho_2401 == 1)
       {

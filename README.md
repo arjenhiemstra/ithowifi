@@ -18,14 +18,13 @@ or in my Tindie store:
 -   No hardware changes needed to the Itho unit, no warranty void
 -   Control fan speed through the web interface, REST API v2, MQTT, or Home Assistant
 -   Send remote commands via virtual remotes (I2C) or RF remotes (CC1101 wireless)
--   RF standalone mode for devices without I2C connection (e.g. HRU 400 R)
+-   RF standalone mode for devices without I2C connection (e.g. HRU 400)
 -   OTA firmware updates directly from the web interface
 -   Easily integrate in any home automation system through MQTT or REST API
 -   Companion integrations available:
-    - [Home Assistant](https://github.com/arjenhiemstra/ithowifi-ha-integration) (REST API, elementary)
+    - [Home Assistant](https://github.com/arjenhiemstra/ithowifi-ha-integration) (REST API, automatic discovery)
     - [Home Assistant](https://github.com/jasperslits/haithowifi) (MQTT API, feature rich)
     - [Homey](https://homey.app/en-nl/app/nl.monkeysoft.nrgwatch/Itho-Daalderop/) (REST API)
-    - [Homebridge](https://github.com/SanderBaron/homebridge-itho-daalderop-HUE) (Apple HomeKit, REST API / MQTT)
 -   Installation can be done in minutes
 -   Detailed installation manual and setup wizard
 
@@ -43,12 +42,14 @@ or in my Tindie store:
 -   HRU ECO 250R / 250P, HRU ECO 300R / 300P and HRU ECO 300 DUO Zone (with adapter board, PCI-e splitter cable and CC1101)
 -   DemandFlow / QualityFlow
 -   WPU 4G / 5G (heat pump)
+-   WPU 6G: not supported yet (different service connector; the control protocol appears to match the 5G, support may follow)
 -   AutoTemp
 
 ### RF standalone mode (IthiWiFi NON-CVE add-on wuth CC1101):
--   HRU 300V, HRU 375V and HRU 400 R
+-   HRU 300V, HRU 375V and HRU 400
 -   Most Itho devices controllable via RF (CC1101 module required)
 -   Status data received wirelessly via 31DA/31D9 RF messages
+-   Older Itho units that only know the RF protocol from before RAMSES (tested on a CVE ECO 2): send only, with a remote of type "RF (old protocol)" or "RF (old protocol, variant 2)" for remotes with the other command codes
 
 ### HRU models by article number:
 Check the article number on the nameplate/sticker of your Itho. x is any digit. A letter after the number (A, S) does not count.
@@ -63,7 +64,7 @@ Check the article number on the nameplate/sticker of your Itho. x is any digit. 
 | HRU ECO 350 LR / LP / HR / HP | 03-00389, 03-0039x | non-CVE add-on |
 | HRU 300V | 03-00851 | non-CVE add-on + RF module |
 | HRU 375V | 03-00853 | non-CVE add-on + RF module |
-| HRU 400 R | 03-00584 | non-CVE add-on + RF module |
+| HRU 400 | 03-00584, 03-00632 | non-CVE add-on + RF module |
 | HRU ECO LE / HE / LP / HP BAL | 545-426x, 545-427x | non-CVE add-on |
 | HRU 3 (3) | 545-421x to 545-425x | non-CVE add-on |
 | HRU 3 (2) | 545-41xx, 542-0005 | non-CVE add-on |
@@ -102,6 +103,10 @@ More information is available on the wiki and in the manual:
 |Wiki:  |https://github.com/arjenhiemstra/ithowifi/wiki  |
 |Dutch:  |https://github.com/arjenhiemstra/ithowifi/raw/master/handleiding.pdf  |
 |English:  |https://github.com/arjenhiemstra/ithowifi/raw/master/manual.pdf  |
+
+## Developing / contributing:
+
+For firmware architecture, build/test commands, and AI-assisted development guidelines, start at [AGENTS.md](AGENTS.md). Architectural decisions are tracked in [docs/adr/](docs/adr/), and new features/changes should have a spec in [specs/](specs/).
 
 ## Support this project:
 If you like this project and would like to support it, please contribute with code updates, wiki edits, pull requests etc. You could also buy me a coffee as appreciation.

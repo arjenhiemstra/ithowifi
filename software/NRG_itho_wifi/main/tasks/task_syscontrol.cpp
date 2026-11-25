@@ -1,8 +1,10 @@
 
 
 #include "tasks/task_syscontrol.h"
+#include "tasks/boot_phases.h"
 #include "../sys_log.h"
 #include "generic_functions.h"
+#include <esp_heap_caps.h>
 
 #define TASK_SYS_CONTROL_PRIO 6
 // globals
@@ -22,6 +24,13 @@ bool i2c_safe_guard_log = true;
 unsigned long getFWupdateInfo = 0;
 struct firmwareinfo firmwareInfo;
 
+#define FW_CHECK_INTERVAL_MS (24UL * 60 * 60 * 1000)
+#define FW_CHECK_RETRY_MS (10UL * 60 * 1000)
+// Estimate: the TLS handshake takes ~40-45 KB (two 16.7 KB record buffers), keep room for the web server.
+// Byte-addressable heap only: ESP.getFreeHeap() also counts ~60 KB of IRAM that malloc cannot use.
+#define FW_CHECK_MIN_FREE_HEAP 45000
+#define FW_CHECK_MIN_HEAP_BLOCK 17000
+
 // locals
 StaticTask_t xTaskSysControlBuffer;
 StackType_t xTaskSysControlStack[STACK_SIZE_MEDIUM];
@@ -37,6 +46,7 @@ unsigned long query4210tim = 0;
 unsigned long mqttUpdatetim = 0;
 unsigned long lastVersionCheck = 0;
 unsigned long lastIthoStatusFormatCheck = 0;
+bool ithoStatusFormatRetryLogged = false;
 
 void startTaskSysControl()
 {
@@ -57,11 +67,16 @@ void TaskSysControl(void *pvParameters)
   Ticker TaskTimeout;
   Ticker queueUpdater;
 
-  networkManager.initialize(); // Initialize network clients (sets secure client to skip CA verification)
+  waitPhase(PHASE_CONFIG); // needs systemConfig/wifiConfig/logConfig loaded
+
+  networkManager.initialize();
 
   delay(2000);
   wifiInit();
   delay(2000);
+
+  setPhase(PHASE_NET); // networkManager + WiFi are up (MQTT/Web depend on this)
+
   syslog.appName(logConfig.logref);
   syslog.deviceHostname(hostName());
   syslog.server(logConfig.logserver, logConfig.logport);
@@ -70,8 +85,6 @@ void TaskSysControl(void *pvParameters)
   init_vRemote();
 
   initSensor();
-
-  startTaskCC1101();
 
   esp_task_wdt_add(NULL);
 
@@ -127,26 +140,80 @@ void execSystemControlTasks()
       I_LOG("SYS: RF standalone mode - I2C disabled");
       sendHomeAssistantDiscovery = true;
     }
+  }
 
-    // In standalone mode the Itho only reaches us over RF, so the I2C
-    // status-polling loop in the else branch never runs. Reuse the same
-    // configured "Itho status update frequency" to actively request
-    // 31DA + 31D9 over RF — addressed from the first bi-directional
-    // Send remote that's been joined to the unit. Skipped silently when
-    // there is no CC1101, when no qualifying remote is configured, or
-    // when update frequency is set to 0 (off).
+  // RF CO2 control mode can poll the status on the user's selected RFT CO2
+  // send remote. Runs independently of standalone: with its status request on
+  // it replaces the general poll below; in I2C + RF CO2 mode it adds an RF
+  // poll on top of the I2C status traffic.
+  bool rfco2ModeActive = (systemConfig.itho_control_interface == 1
+                          && systemConfig.rfInitOK
+                          && rfco2RemoteValid(systemConfig.itho_rf_co2_remote_idx));
+  // Only skip the general poll when the CO2 poll runs: 31D9 (speed status,
+  // fault, filter) only comes as a reply to a status request
+  const bool rfco2Polls = rfco2ModeActive && systemConfig.itho_rf_co2_status_req == 1;
+  if (rfco2ModeActive)
+  {
+    const uint8_t idx = systemConfig.itho_rf_co2_remote_idx;
+
+    static unsigned long rfco2StatusReqTim = 0;
+    if (systemConfig.itho_rf_co2_status_req == 1
+        && systemConfig.itho_updatefreq > 0
+        && millis() - rfco2StatusReqTim >= systemConfig.itho_updatefreq * 1000UL)
+    {
+      rfco2StatusReqTim = millis();
+      sendRFStatusRequest(idx);
+    }
+
+    static unsigned long rfco2KeepaliveTim = 0;
+    if ((systemConfig.itho_rf_co2_keepalive_demand == 1 || systemConfig.itho_rf_co2_keepalive_co2 == 1)
+        && systemConfig.itho_rf_co2_keepalive_freq > 0
+        && millis() - rfco2KeepaliveTim >= systemConfig.itho_rf_co2_keepalive_freq * 1000UL)
+    {
+      rfco2KeepaliveTim = millis();
+      if (systemConfig.itho_rf_co2_keepalive_demand == 1)
+      {
+        // Last-known demand if we have one, otherwise the user-configured
+        // fallback. ithoFanDemand stays at 0 until something has actually
+        // sent a demand value during this boot.
+        uint8_t v = ithoFanDemand > 0 ? ithoFanDemand : systemConfig.itho_rf_co2_default_demand;
+        ithoSendRFDemand(idx, v, 0, cmdOrigin::KEEPALIVE);
+      }
+      if (systemConfig.itho_rf_co2_keepalive_co2 == 1)
+      {
+        uint16_t v = ithoLastSentCO2level > 0 ? ithoLastSentCO2level : systemConfig.itho_rf_co2_default_co2;
+        ithoSendRFCO2(idx, v, cmdOrigin::KEEPALIVE);
+      }
+    }
+  }
+  if (!rfco2Polls)
+  {
+    // General RF status-request poll. Runs when the user explicitly enables the
+    // dedicated toggle, OR implicitly in RF standalone mode (RF-only device must
+    // actively pull 31DA + 31D9 from the Itho). Unlike the RF CO2 poll above it
+    // is type-agnostic: any bi-directional SEND remote works, so an RFT Spider
+    // (or any two-way remote a CO2 remote can't cover) can drive it. When the
+    // toggle is on it uses the user-selected remote; standalone mode falls back
+    // to the first bi-directional send remote. Skipped silently when disabled,
+    // no qualifying remote is joined/selected, or the update frequency is 0.
     static unsigned long rfStatusReqTim = 0;
-    if (systemConfig.rfInitOK
+    if ((systemConfig.itho_rf_status_poll == 1 || systemConfig.itho_rf_standalone == 1)
+        && systemConfig.rfInitOK
         && systemConfig.itho_updatefreq > 0
         && millis() - rfStatusReqTim >= systemConfig.itho_updatefreq * 1000UL)
     {
       rfStatusReqTim = millis();
-      int idx = findFirstBidirectionalSendRemote();
+      int idx = -1;
+      if (systemConfig.itho_rf_status_poll == 1 && statusPollRemoteValid(systemConfig.itho_rf_status_poll_idx))
+        idx = systemConfig.itho_rf_status_poll_idx;
+      else if (systemConfig.itho_rf_standalone == 1)
+        idx = findFirstBidirectionalSendRemote();
       if (idx >= 0)
         sendRFStatusRequest(static_cast<uint8_t>(idx));
     }
   }
-  else
+
+  if (systemConfig.itho_rf_standalone != 1)
   {
     if (!i2c_init_functions_done)
     {
@@ -203,10 +270,11 @@ void execSystemControlTasks()
     if (systemConfig.itho_sendjoin > 0 && !joinSend && ithoInitResult == 1)
     {
       joinSend = true;
-      i2cQueueAddCmd([]()
-                        { sendRemoteCmd(0, IthoJoin); });
+      const uint8_t joinIdx = systemConfig.itho_sendjoin_idx < systemConfig.itho_numvrem ? systemConfig.itho_sendjoin_idx : 0;
+      i2cQueueAddCmd([joinIdx]()
+                        { sendRemoteCmd(joinIdx, IthoJoin); });
 
-      I_LOG("I2C init: Virtual remote join command send");
+      I_LOG("I2C init: Virtual remote %d join command send", joinIdx);
 
       if (systemConfig.itho_sendjoin == 1)
       {
@@ -306,12 +374,22 @@ void execSystemControlTasks()
     scan.once_ms(10, wifiScan);
   }
 
-  // If the status format is not retrieved correctly during boot but lost during runtime; resend the query.
-  if ((ithoStatus.empty() && systemConfig.itho_2401 == 1) && millis() - lastIthoStatusFormatCheck > 60000 && ithoStatusFormateSuccessful)
+  // If the status format was not retrieved at boot, or is lost during runtime; resend the query every 60 s until it works.
+  // Needs a known device, the query cannot succeed without one (RF standalone, no Itho connected).
+  if ((ithoStatus.empty() && systemConfig.itho_2401 == 1) && currentItho_fwversion() > 0 && millis() - lastIthoStatusFormatCheck > 60000)
   {
     lastIthoStatusFormatCheck = millis();
     sendQueryStatusFormat(false);
-    E_LOG("I2C: error - StatusFormat lost. Resend query result: %s", ithoStatus.size() ? "success" : "failed");
+    if (ithoStatus.size())
+    {
+      ithoStatusFormatRetryLogged = false;
+      N_LOG("I2C: StatusFormat retrieved by retry, items:%lu", static_cast<unsigned long>(ithoStatus.size()));
+    }
+    else if (!ithoStatusFormatRetryLogged)
+    {
+      ithoStatusFormatRetryLogged = true;
+      E_LOG("I2C: error - StatusFormat empty, retrying every 60 s");
+    }
   }
 
   if (!(currentItho_fwversion() > 0) && millis() - lastVersionCheck > 60000)
@@ -353,11 +431,28 @@ void execSystemControlTasks()
     N_LOG("SYS: SHT3x sensor reset: executed");
     jsonSysmessage("i2c_sht_reset", "Done");
   }
-  if (WiFi.status() == WL_CONNECTED && systemConfig.fw_check && (millis() - getFWupdateInfo > 24 * 60 * 60 * 1000)) // 24hr
+  if (WiFi.status() == WL_CONNECTED && systemConfig.fw_check && (millis() - getFWupdateInfo > FW_CHECK_INTERVAL_MS))
   {
     getFWupdateInfo = millis();
-    checkFirmwareUpdate();
+    const bool otaBusy = otaUpdateProgress >= 0 && otaUpdateProgress <= 100;
+    const size_t freeHeap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    const size_t maxBlock = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
+    if (otaBusy || freeHeap < FW_CHECK_MIN_FREE_HEAP || maxBlock < FW_CHECK_MIN_HEAP_BLOCK)
+    {
+      W_LOG("SYS: firmware check postponed, %s (free:%u block:%u)", otaBusy ? "OTA in progress" : "low memory", freeHeap, maxBlock);
+      scheduleFirmwareCheck(FW_CHECK_RETRY_MS);
+    }
+    else
+    {
+      checkFirmwareUpdate();
+    }
   }
+}
+
+// Run the firmware check delayMs from now instead of at the next 24 hour interval
+void scheduleFirmwareCheck(unsigned long delayMs)
+{
+  getFWupdateInfo = millis() - FW_CHECK_INTERVAL_MS + delayMs;
 }
 
 void updateQueue()

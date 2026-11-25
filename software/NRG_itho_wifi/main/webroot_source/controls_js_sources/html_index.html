@@ -87,10 +87,13 @@
         websock_send('{"fandemand":' + this.value + '}');
       };
     }
-    // RF command buttons
+    // RF command buttons -> use the configured RF CO2 send remote (read at click time)
     ['low','auto','high','timer1','timer2','timer3'].forEach(function(cmd) {
       var btn = $id('rfcmd-' + cmd);
-      if (btn) btn.onclick = function() { websock_send('{"remote":0, "command":"' + cmd + '"}'); };
+      if (btn) btn.onclick = function() {
+        var co2idx = parseInt(localStorage.getItem('itho_rf_co2_remote_idx') || '0');
+        websock_send('{"remote":' + co2idx + ', "command":"' + cmd + '"}');
+      };
     });
   } else if (hw_revision.startsWith('NON-CVE ') || itho_pwm2i2c == 0) {
     $id('sliderdiv').classList.add('hidden');

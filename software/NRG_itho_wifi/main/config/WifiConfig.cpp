@@ -321,8 +321,10 @@ void wifiScan()
       case WIFI_AUTH_WPA2_PSK:
       case WIFI_AUTH_WPA_WPA2_PSK:
       case WIFI_AUTH_WPA2_ENTERPRISE:
+      case WIFI_AUTH_WPA3_PSK:
+      case WIFI_AUTH_WPA2_WPA3_PSK:
       case WIFI_AUTH_MAX:
-        sec = 2; // closed network
+        sec = 2; // closed network (incl. WPA3-Personal / WPA2-WPA3 transition)
         break;
       default:
         sec = 0; // unknown network encryption

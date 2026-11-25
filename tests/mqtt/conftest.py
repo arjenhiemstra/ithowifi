@@ -11,6 +11,11 @@ except ImportError:
 DEVICE_IP = os.environ.get("ITHO_DEVICE", "")
 DEVICE_URL = f"http://{DEVICE_IP}"
 REST_URL = f"{DEVICE_URL}/api/v2"
+# Legacy v1 query API (still served at /api.html?get=...). test_mqtt_state.py and
+# test_mqtt_commands.py use this to read speed/command state via query params.
+# It was dropped from conftest in the v1->v2 refactor but those modules still
+# import it, which broke collection of the whole MQTT suite.
+API_URL = f"{DEVICE_URL}/api.html"
 
 # Read MQTT config from the device itself
 MQTT_BROKER = os.environ.get("MQTT_BROKER", "")

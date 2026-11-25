@@ -18,6 +18,15 @@ SystemConfig::SystemConfig()
   itho_rf_co2_join = 0;
   itho_control_interface = 0;
   itho_rf_standalone = 0;
+  itho_rf_status_poll = 0;
+  itho_rf_status_poll_idx = 0;
+  itho_rf_co2_status_req = 0;
+  itho_rf_co2_keepalive_demand = 0;
+  itho_rf_co2_keepalive_co2 = 0;
+  itho_rf_co2_remote_idx = 0;
+  itho_rf_co2_keepalive_freq = 300;
+  itho_rf_co2_default_demand = 50;
+  itho_rf_co2_default_co2 = 500;
   syssht30 = 0;
   mqtt_active = 0;
   strlcpy(mqtt_serverName, "192.168.1.123", sizeof(mqtt_serverName));
@@ -48,6 +57,7 @@ SystemConfig::SystemConfig()
   itho_updatefreq = 10;
   itho_counter_updatefreq = 3600;
   itho_sendjoin = 0;
+  itho_sendjoin_idx = 0;
   itho_pwm2i2c = 1;
   itho_31da = 0;
   itho_31d9 = 0;
@@ -156,6 +166,51 @@ bool SystemConfig::set(JsonObject obj)
   {
     updated = true;
     itho_rf_standalone = obj["itho_rf_standalone"];
+  }
+  if (!obj["itho_rf_status_poll"].isNull())
+  {
+    updated = true;
+    itho_rf_status_poll = obj["itho_rf_status_poll"];
+  }
+  if (!obj["itho_rf_status_poll_idx"].isNull())
+  {
+    updated = true;
+    itho_rf_status_poll_idx = obj["itho_rf_status_poll_idx"];
+  }
+  if (!obj["itho_rf_co2_status_req"].isNull())
+  {
+    updated = true;
+    itho_rf_co2_status_req = obj["itho_rf_co2_status_req"];
+  }
+  if (!obj["itho_rf_co2_keepalive_demand"].isNull())
+  {
+    updated = true;
+    itho_rf_co2_keepalive_demand = obj["itho_rf_co2_keepalive_demand"];
+  }
+  if (!obj["itho_rf_co2_keepalive_co2"].isNull())
+  {
+    updated = true;
+    itho_rf_co2_keepalive_co2 = obj["itho_rf_co2_keepalive_co2"];
+  }
+  if (!obj["itho_rf_co2_remote_idx"].isNull())
+  {
+    updated = true;
+    itho_rf_co2_remote_idx = obj["itho_rf_co2_remote_idx"];
+  }
+  if (!obj["itho_rf_co2_keepalive_freq"].isNull())
+  {
+    updated = true;
+    itho_rf_co2_keepalive_freq = obj["itho_rf_co2_keepalive_freq"];
+  }
+  if (!obj["itho_rf_co2_default_demand"].isNull())
+  {
+    updated = true;
+    itho_rf_co2_default_demand = obj["itho_rf_co2_default_demand"];
+  }
+  if (!obj["itho_rf_co2_default_co2"].isNull())
+  {
+    updated = true;
+    itho_rf_co2_default_co2 = obj["itho_rf_co2_default_co2"];
   }
   if (!obj["api_settings_activated"].isNull())
   {
@@ -320,10 +375,23 @@ bool SystemConfig::set(JsonObject obj)
     updated = true;
     itho_numrfrem = obj["itho_numrfrem"];
   }
+  if (!obj["itho_numvrem_ext"].isNull())
+  {
+    itho_numvrem = obj["itho_numvrem_ext"];
+  }
+  if (!obj["itho_numrfrem_ext"].isNull())
+  {
+    itho_numrfrem = obj["itho_numrfrem_ext"];
+  }
   if (!obj["itho_sendjoin"].isNull())
   {
     updated = true;
     itho_sendjoin = obj["itho_sendjoin"];
+  }
+  if (!obj["itho_sendjoin_idx"].isNull())
+  {
+    updated = true;
+    itho_sendjoin_idx = obj["itho_sendjoin_idx"];
   }
   if (!obj["itho_pwm2i2c"].isNull())
   {
@@ -402,6 +470,15 @@ bool SystemConfig::set(JsonObject obj)
   return updated;
 }
 
+// Older firmware has 12 remote slots and does not cap the number from the config, so it must never read
+// more than 12. A higher number goes in the _ext key, which it ignores.
+static void putNumRemotes(JsonObject obj, const char *key, const char *extKey, uint8_t number)
+{
+  obj[key] = number > 12 ? 12 : number;
+  if (number > 12)
+    obj[extKey] = number;
+}
+
 void SystemConfig::get(JsonObject obj) const
 {
 
@@ -432,9 +509,10 @@ void SystemConfig::get(JsonObject obj) const
     obj["itho_timer3"] = itho_timer3;
     obj["itho_updatefreq"] = itho_updatefreq;
     obj["itho_counter_updatefreq"] = itho_counter_updatefreq;
-    obj["itho_numvrem"] = itho_numvrem;
-    obj["itho_numrfrem"] = itho_numrfrem;
+    putNumRemotes(obj, "itho_numvrem", "itho_numvrem_ext", itho_numvrem);
+    putNumRemotes(obj, "itho_numrfrem", "itho_numrfrem_ext", itho_numrfrem);
     obj["itho_sendjoin"] = itho_sendjoin;
+    obj["itho_sendjoin_idx"] = itho_sendjoin_idx;
     obj["itho_pwm2i2c"] = itho_pwm2i2c;
     obj["itho_31da"] = itho_31da;
     obj["itho_31d9"] = itho_31d9;
@@ -452,6 +530,15 @@ void SystemConfig::get(JsonObject obj) const
     obj["itho_rf_co2_join"] = itho_rf_co2_join;
     obj["itho_control_interface"] = itho_control_interface;
     obj["itho_rf_standalone"] = itho_rf_standalone;
+    obj["itho_rf_status_poll"] = itho_rf_status_poll;
+    obj["itho_rf_status_poll_idx"] = itho_rf_status_poll_idx;
+    obj["itho_rf_co2_status_req"] = itho_rf_co2_status_req;
+    obj["itho_rf_co2_keepalive_demand"] = itho_rf_co2_keepalive_demand;
+    obj["itho_rf_co2_keepalive_co2"] = itho_rf_co2_keepalive_co2;
+    obj["itho_rf_co2_remote_idx"] = itho_rf_co2_remote_idx;
+    obj["itho_rf_co2_keepalive_freq"] = itho_rf_co2_keepalive_freq;
+    obj["itho_rf_co2_default_demand"] = itho_rf_co2_default_demand;
+    obj["itho_rf_co2_default_co2"] = itho_rf_co2_default_co2;
     obj["api_settings_activated"].set(api_settings_activated.as<JsonArrayConst>());
   }
   if (complete || get_mqtt_settings)
@@ -486,7 +573,7 @@ void SystemConfig::get(JsonObject obj) const
     char module_rf_id_str[9];
     snprintf(module_rf_id_str, sizeof(module_rf_id_str), "%02X,%02X,%02X", module_rf_id[0], module_rf_id[1], module_rf_id[2]);
     obj["module_rf_id_str"] = module_rf_id_str;
-    obj["itho_numrfrem"] = itho_numrfrem;
+    putNumRemotes(obj, "itho_numrfrem", "itho_numrfrem_ext", itho_numrfrem);
   }
   obj["mqtt_ha_active"] = mqtt_ha_active;
   obj["version_of_program"] = config_struct_version;

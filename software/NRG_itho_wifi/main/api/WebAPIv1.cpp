@@ -1,5 +1,13 @@
 #include "api/WebAPIv1.h"
+#include "api/StreamResponse.h"
 #include "tasks/task_web.h"
+
+// Stream buffer sized to the serialized length (see StreamResponse.h)
+static void sendJsonStream(AsyncWebServerRequest *request, const JsonDocument &doc)
+{
+  sendStreamResponse(request, "text/html", [&doc](AsyncResponseStream *response)
+                     { serializeJson(doc, *response); }, measureJson(doc));
+}
 
 void handleAPIv1(AsyncWebServerRequest *request)
 {
@@ -61,8 +69,6 @@ void handleAPIv1(AsyncWebServerRequest *request)
       }
       else if (strcmp(q->value().c_str(), "queue") == 0)
       {
-        AsyncResponseStream *response = request->beginResponseStream("text/html");
-
         JsonDocument root;
         JsonObject obj = root.to<JsonObject>(); // Fill the object
         JsonArray arr = root["queue"].to<JsonArray>();
@@ -72,50 +78,43 @@ void handleAPIv1(AsyncWebServerRequest *request)
         obj["ithoSpeed"] = ithoQueue.ithoSpeed;
         obj["ithoOldSpeed"] = ithoQueue.ithoOldSpeed;
         obj["fallBackSpeed"] = ithoQueue.fallBackSpeed;
-        serializeJson(root, *response);
-        request->send(response);
+        sendJsonStream(request, root);
 
         return;
       }
       else if (strcmp(q->value().c_str(), "ithostatus") == 0)
       {
-        AsyncResponseStream *response = request->beginResponseStream("text/html");
         JsonDocument doc;
         JsonObject root = doc.to<JsonObject>();
         getIthoStatusJSON(root);
 
-        serializeJson(root, *response);
-        request->send(response);
         if (doc.overflowed())
         {
           E_LOG("API: error - JsonDocument overflowed (html api)");
         }
+        sendJsonStream(request, doc);
         return;
       }
       else if (strcmp(q->value().c_str(), "lastcmd") == 0)
       {
-        AsyncResponseStream *response = request->beginResponseStream("text/html");
         JsonDocument doc;
 
         JsonObject root = doc.to<JsonObject>();
         getLastCMDinfoJSON(root);
 
-        serializeJson(root, *response);
-        request->send(response);
+        sendJsonStream(request, doc);
 
         return;
       }
       else if (strcmp(q->value().c_str(), "remotesinfo") == 0)
       {
-        AsyncResponseStream *response = request->beginResponseStream("text/html");
         JsonDocument doc;
 
         JsonObject root = doc.to<JsonObject>();
 
         getRemotesInfoJSON(root);
 
-        serializeJson(root, *response);
-        request->send(response);
+        sendJsonStream(request, doc);
 
         return;
       }

@@ -1,6 +1,8 @@
 #include "tasks/task_web.h"
+#include "tasks/boot_phases.h"
 #include "api/OpenAPI.h"
 #include "api/WebAPIv2Rest.h"
+#include "api/StreamResponse.h"
 
 #include "webroot/controls_js_gz.h"
 #include "webroot/edit_html_gz.h"
@@ -52,6 +54,8 @@ void TaskWeb(void *pvParameters)
   configASSERT((uint32_t)pvParameters == 1UL);
   Ticker TaskTimeout;
 
+  waitPhase(PHASE_CONFIG | PHASE_NET); // web server + mDNS need the network up
+
   websocketInit();
 
   webServerInit();
@@ -59,6 +63,7 @@ void TaskWeb(void *pvParameters)
   MDNSinit();
 
   TaskInitReady = true;
+  setPhase(PHASE_WEB); // boot complete
 
   esp_task_wdt_add(NULL);
 
@@ -160,7 +165,7 @@ void webServerInit()
 
   server.on("/general.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    AsyncResponseStream *response = request->beginResponseStream("application/javascript");
+    sendStreamResponse(request, "application/javascript", [](AsyncResponseStream *response) {
     response->addHeader("Server", "Itho WiFi Web Server");
 
     int wizardStep = 0;
@@ -184,13 +189,12 @@ void webServerInit()
     response->print("'; document.addEventListener('DOMContentLoaded', function() { var h = $id('headingindex'); h.textContent = hostname; h.href = 'http://' + hostname + '.local'; var m = $id('main'); m.insertAdjacentHTML('beforeend', ");
     response->print(wizardStep > 0 ? "html_wizard" : "html_index");
     response->print("); execScripts(m); });");
-
-    request->send(response); })
+    }); })
       .setFilter(ON_STA_FILTER);
 
   server.on("/general.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    AsyncResponseStream *response = request->beginResponseStream("application/javascript");
+    sendStreamResponse(request, "application/javascript", [](AsyncResponseStream *response) {
     response->addHeader("Server", "Itho WiFi Web Server");
 
     bool isFirstBoot = (strlen(wifiConfig.ssid) == 0);
@@ -223,8 +227,7 @@ void webServerInit()
     response->print("'; document.addEventListener('DOMContentLoaded', function() { var h = $id('headingindex'); h.textContent = hostname; h.href = 'http://' + hostname + '.local'; var m = $id('main'); m.insertAdjacentHTML('beforeend', ");
     response->print(showWizard ? "html_wizard" : "html_wifisetup");
     response->print("); execScripts(m); });");
-
-    request->send(response); })
+    }); })
       .setFilter(ON_AP_FILTER);
 
   server.on("/favicon.png", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -310,6 +313,9 @@ void webServerInit()
             TaskCC1101Timeout.detach();
             vTaskSuspend(xTaskCC1101Handle);
             esp_task_wdt_delete(xTaskCC1101Handle);
+            // Release the radio again, a send from another task would wait forever. TaskSysControl sends the
+            // RF status request and also does the reboot after the update.
+            enableRF_ISR();
           }
           if (xTaskMQTTHandle != NULL)
           {
@@ -364,6 +370,7 @@ void webServerInit()
         return request->requestAuthentication();
     }
     logMessagejson("Reset requested. Device will reboot in a few seconds...", WEBINTERFACE);
+    request->send(200, "text/plain", "Reset requested. Device will reboot in a few seconds...");
     delay(200);
     shouldReboot = true; });
 

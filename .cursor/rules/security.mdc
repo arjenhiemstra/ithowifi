@@ -1,0 +1,15 @@
+---
+description: Security constraints based on the auth mechanisms actually implemented
+globs: "software/NRG_itho_wifi/main/api/**/*.{cpp,h},software/NRG_itho_wifi/main/managers/SecureWebCommLite.*"
+alwaysApply: false
+---
+
+# Security Rules
+
+- Do not add new plaintext-credential-in-query-string endpoints — `main/api/WebAPIv1.cpp`'s query-param username/password check is legacy, not a pattern to extend.
+- If a new endpoint needs auth, use `SecureWebCommLite` (`main/managers/SecureWebCommLite.h`) rather than inventing a new scheme. Note its own documented limitation: session key is exchanged in plaintext; it protects against casual inspection/replay, not a full threat model — don't claim stronger guarantees than that in docs or UI copy.
+- Never log `sys_password`, `mqtt_password`, or WiFi credentials — check nearby `LogConfig`-guarded log statements before adding new ones near config code.
+- This firmware has no enforced HTTPS. Don't write documentation or code comments implying transport security the code doesn't provide.
+- Never modify vendored crypto/TLS code (`mbedtls` usage inside `software/lib/*`) — out of scope.
+
+Full detail: `.ai/security-rules.md`.

@@ -1,4 +1,5 @@
 #include "i2c_sniffer.h"
+#include "mqtt_debug.h"
 
 #define I2C_SAFE_GAURD_TIMER 15 // delay in ms to execute safe guard commands
 
@@ -6,11 +7,12 @@ typedef enum
 {
     ACK = 0x100,
     START = 0x200,
-    STOP = 0x400
+    STOP = 0x400,
+    RECEIVED = 0x800 // with START: a reply the add-on received during a pause, not sniffed off the bus
 } i2c_state_t;
 
 typedef uint16_t gpdata_t;
-static QueueHandle_t gpio_evt_queue;
+static QueueHandle_t gpio_evt_queue = nullptr;
 
 #define SCL(pin) (1 << pin)
 #define SDA(pin) (1 << pin)
@@ -20,6 +22,7 @@ static QueueHandle_t gpio_evt_queue;
 // Removed: sniffer pin globals, i2c_safe_guard
 
 #include "managers/I2CManager.h"
+#include "managers/HardwareManager.h"
 
 Ticker i2c_sniffer_timer;
 
@@ -34,6 +37,14 @@ static inline IRAM_ATTR void enable_sda_intr(bool en)
 {
     // gpio_set_intr_type() is not IRAM, i.e. too slow
     GPIO.pin[i2cManager.sniffer_sda_pin].int_type = en ? GPIO_INTR_ANYEDGE : GPIO_INTR_DISABLE;
+}
+
+static volatile bool sda_intr_enabled = false;
+static volatile bool sda_intr_paused = false;
+
+static inline IRAM_ATTR void update_sda_intr()
+{
+    enable_sda_intr(sda_intr_enabled && !sda_intr_paused);
 }
 
 static inline IRAM_ATTR uint32_t read_sda_scl_pins()
@@ -78,7 +89,7 @@ static void IRAM_ATTR gpio_sda_handler(void *arg)
                 }
             }
         } while (tm - tm1 < 14900);
-        enable_sda_intr(true);
+        update_sda_intr();
     }
     last = st;
 }
@@ -95,12 +106,13 @@ static void sniffer_task(void *arg)
     last = SCL(i2cManager.sniffer_scl_pin) | SDA(i2cManager.sniffer_sda_pin);
 
     gpio_evt_queue = xQueueCreate(256, sizeof(uint32_t));
-    gpio_install_isr_service(ESP_INTR_FLAG_LEVEL3);
     gpio_config_t config = {BIT64(i2cManager.sniffer_scl_pin) | BIT64(i2cManager.sniffer_sda_pin), GPIO_MODE_INPUT, GPIO_PULLUP_DISABLE, GPIO_PULLDOWN_DISABLE,
                             GPIO_INTR_DISABLE};
     gpio_config(&config);
     gpio_isr_handler_add(i2cManager.sniffer_sda_pin, gpio_sda_handler, (void *)i2cManager.sniffer_sda_pin);
-    enable_sda_intr(!!arg);
+    if (arg)
+        sda_intr_enabled = true;
+    update_sda_intr();
 
     std::string buffer;
 
@@ -124,7 +136,7 @@ static void sniffer_task(void *arg)
             if (x & START)
             {
                 i2cSnifferProcessBuf(buffer);
-                buffer += "[";
+                buffer += (x & RECEIVED) ? "rx[" : "[";
             }
             if (x & STOP)
             {
@@ -192,6 +204,7 @@ void i2cSnifferProcessBuf(std::string &buffer)
                 notifyClients(root.as<JsonObject>());
             }
             D_LOG(buffer.c_str());
+            mqttDebugPush(MqttDebugChannel::I2C, buffer.c_str());
         }
     }
 
@@ -210,7 +223,8 @@ void i2cSnifferInit(bool enabled)
 
 void i2cSnifferEnable()
 {
-    enable_sda_intr(true);
+    sda_intr_enabled = true;
+    update_sda_intr();
     auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
     if (sg->i2c_safe_guard_enabled == true && sg->sniffer_enabled == true)
     {
@@ -220,6 +234,7 @@ void i2cSnifferEnable()
 
 void i2cSnifferDisable()
 {
+    sda_intr_enabled = false;
     enable_sda_intr(false);
     vTaskDelay(1);
     enable_sda_intr(false);
@@ -232,6 +247,39 @@ void i2cSnifferUnload()
     sg->i2c_safe_guard_enabled = false;
     sg->sniffer_enabled = false;
     i2cSnifferDisable();
+}
+
+void i2cSnifferPause()
+{
+    if (!hardwareManager.i2c_sniffer_capable)
+        return;
+    sda_intr_paused = true;
+    enable_sda_intr(false);
+}
+
+void i2cSnifferResume()
+{
+    if (!hardwareManager.i2c_sniffer_capable)
+        return;
+    last = read_sda_scl_pins(); // edges during the pause were not seen
+    sda_intr_paused = false;
+    update_sda_intr();
+}
+
+// A reply the add-on received during a pause, fed to the sniffer task; logged as rx[..] to tell it from bus traffic
+void i2cSnifferLogReceived(const uint8_t *buf, size_t len)
+{
+    auto *sg = static_cast<i2c_safe_guard_t *>(i2cManager.safe_guard);
+    if (!hardwareManager.i2c_sniffer_capable || gpio_evt_queue == nullptr || !sg->sniffer_enabled || len == 0)
+        return;
+    for (size_t i = 0; i < len; i++)
+    {
+        uint32_t ev = buf[i] | ACK | (i == 0 ? START | RECEIVED : 0);
+        if (xQueueSend(gpio_evt_queue, &ev, pdMS_TO_TICKS(10)) != pdTRUE)
+            break;
+    }
+    uint32_t stop = STOP;
+    xQueueSend(gpio_evt_queue, &stop, pdMS_TO_TICKS(10));
 }
 
 void i2cSnifferPullup(bool enable)
