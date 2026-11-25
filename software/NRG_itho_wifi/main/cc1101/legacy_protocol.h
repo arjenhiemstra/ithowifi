@@ -45,7 +45,9 @@ inline uint8_t prevCode(uint16_t cmd)
   return cmd == CMD_JOIN ? PREV_JOIN : (cmd == CMD_LEAVE ? PREV_LEAVE : PREV_COMMAND);
 }
 
-// CRC-8 over the 40 data bits: poly 0x08, init 0, MSB first, xorout 0xEE (the lowest bit is always 0)
+// CRC-8 over the 40 data bits: poly 0x8C, init 0, MSB first, xorout 0x6A. Poly 0x08 / xorout 0xEE
+// gives the same result for half of all ids (every remote captured until 2026-11-21) and was wrong
+// for the other half: those units ignored the add-on's frames.
 inline uint8_t crc(uint64_t data40)
 {
   uint8_t r = 0;
@@ -54,9 +56,9 @@ inline uint8_t crc(uint64_t data40)
     const uint8_t top = r >> 7;
     r <<= 1;
     if (top ^ ((data40 >> i) & 1))
-      r ^= 0x08;
+      r ^= 0x8C;
   }
-  return r ^ 0xEE;
+  return r ^ 0x6A;
 }
 
 // 170,170,170,173, then from the 33rd chip Manchester data (1 = 10, 0 = 01): header 0x5D, 15-bit id,

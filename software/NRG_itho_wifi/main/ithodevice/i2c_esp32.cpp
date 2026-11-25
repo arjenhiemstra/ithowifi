@@ -41,11 +41,10 @@ void i2cSlaveSetPins(gpio_num_t sda, gpio_num_t scl)
 esp_err_t i2cMasterInit(int log_entry_idx)
 {
 
-  esp_err_t result;
-
   if (!checkI2Cbus(log_entry_idx))
-    result = ESP_FAIL;
+    return ESP_FAIL; // bus stuck and could not be cleared, checkI2Cbus logged it
 
+  esp_err_t result;
   i2c_config_t conf = {
       .mode = I2C_MODE_MASTER,
       .sda_io_num = i2cManager.master_sda_pin,

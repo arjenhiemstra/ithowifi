@@ -1,5 +1,5 @@
 // Native unit tests for the pre-RAMSES Itho RF frame builder (main/cc1101/legacy_protocol.h).
-// Vectors are real captures from an RFT remote joined to a CVE ECO 2 (2026-11-07), and Klusjesman's IthoEcoFanRFT tables.
+// Vectors are real captures from RFT remotes joined to a CVE ECO 2, frames verified on that unit, and Klusjesman's IthoEcoFanRFT tables.
 
 #include <unity.h>
 #include <cstdint>
@@ -205,6 +205,22 @@ void test_find_frame_start_in_loose_capture()
   TEST_ASSERT_EQUAL_INT(-1, legacy::findFrameStart(other, sizeof(other)));
 }
 
+void test_crc_for_ids_where_the_old_poly_differs()
+{
+  // id 0x2B2B: poly 0x08/0xEE gives another CRC than poly 0x8C/0x6A. The CVE ECO 2 rejected the
+  // old frames and accepted these (join, high, low verified on air 2026-11-21, variant 2 codes).
+  const uint8_t join[] = {0xAA, 0xAA, 0xAA, 0xAD, 0x33, 0x53, 0x33, 0x34, 0xB3, 0x34, 0xAA, 0xAB, 0x55, 0x55, 0x2A, 0xCC, 0xAA, 0xAB, 0x55};
+  const uint8_t high[] = {0xAA, 0xAA, 0xAA, 0xAD, 0x33, 0x53, 0x33, 0x34, 0xB3, 0x35, 0x54, 0xD5, 0x55, 0x33, 0x2B, 0x4C, 0xAA, 0xAB, 0x4D};
+  const uint8_t low[] = {0xAA, 0xAA, 0xAA, 0xAD, 0x33, 0x53, 0x33, 0x34, 0xB3, 0x35, 0x54, 0xD5, 0x55, 0x52, 0xB3, 0x2C, 0xAA, 0xAB, 0x55};
+  uint8_t frame[legacy::FRAME_LEN];
+  legacy::buildFrame(0x2B2B, legacy::CMD_JOIN, legacy::PREV_COMMAND, frame, true);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(join, frame, legacy::FRAME_LEN);
+  legacy::buildFrame(0x2B2B, legacy::CMD_HIGH, legacy::PREV_JOIN, frame, true);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(high, frame, legacy::FRAME_LEN);
+  legacy::buildFrame(0x2B2B, legacy::CMD_LOW, legacy::PREV_COMMAND, frame, true);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(low, frame, legacy::FRAME_LEN);
+}
+
 int main(int, char **)
 {
   UNITY_BEGIN();
@@ -219,5 +235,6 @@ int main(int, char **)
   RUN_TEST(test_find_frame_start_in_loose_capture);
   RUN_TEST(test_variant2_remote);
   RUN_TEST(test_cmd_label);
+  RUN_TEST(test_crc_for_ids_where_the_old_poly_differs);
   return UNITY_END();
 }
