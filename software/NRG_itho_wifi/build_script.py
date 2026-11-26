@@ -744,19 +744,9 @@ def update_releaseinfo():
         with open(releasefile) as f:
             data = json.load(f)
 
-        if release == "release":
-            # keep every earlier stable release selectable on the Update page (downgrades)
-            for hw in ("2", "NON-CVE 1"):
-                prev = data["hw_rev"][hw].get("latest_fw")
-                versions = data["hw_rev"][hw].setdefault("versions", [])
-                if prev and prev != fwversion and all(v.get("version") != prev for v in versions):
-                    versions.insert(0, {
-                        "version": prev,
-                        "type": "stable",
-                        "link": data["hw_rev"][hw].get("link"),
-                        "release_notes": data["hw_rev"][hw].get("release_notes", release_notes + prev),
-                    })
-
+        # The "versions" lists are frozen since 3.4.0: the Update page reads the GitHub
+        # releases API and uses firmware.json only as fallback. Only the latest fields
+        # are kept up to date, the add-on itself reads those for its update check.
         data["hw_rev"]["2"][latest_link_key] = latest_link
         data["hw_rev"]["2"][latest_fw_key] = fwversion
 
