@@ -168,6 +168,13 @@ void updateSetting(const uint8_t i, const int32_t value, bool webupdate);
 const struct ithoDeviceType *getDevicePtr(const uint8_t deviceGroup, const uint8_t deviceID);
 
 uint8_t checksum(const uint8_t *buf, size_t buflen);
+
+// Heat pump (WPU) fault flags (0x4220), polled with the status
+extern bool updateMQTTwpuFaults;
+bool isWpuDevice();
+bool wpuFaultsPollEnabled();
+void sendQueryWpuFaults();
+bool getWpuFaultsJSON(JsonObject root);
 void sendI2CPWMinit();
 void sendCO2init();
 void sendCO2query(bool updateweb);

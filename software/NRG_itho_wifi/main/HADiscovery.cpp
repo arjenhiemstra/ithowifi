@@ -556,6 +556,36 @@ void addHADiscoveryRemoteFan(JsonObject components, JsonObject compactJson, cons
     }
 }
 
+// Heat pump faults from <base>/wpufaults: a problem binary_sensor and a sensor with the
+// texts of the active faults. Both carry the full JSON (active/reported lists) as attributes.
+static void addHADiscoveryWpuFaults(JsonObject components, const char *name)
+{
+    char topic[160]{};
+    snprintf(topic, sizeof(topic), "%s/wpufaults", systemConfig.mqtt_base_topic);
+
+    std::string uniqueId = normalizeUniqueId(std::string(name) + "_wpu_fault");
+    JsonObject fault = components[uniqueId].to<JsonObject>();
+    fault["name"] = "Fault";
+    fault["p"] = "binary_sensor";
+    fault["uniq_id"] = uniqueId;
+    fault["stat_t"] = topic;
+    // ON/OFF are the binary_sensor defaults; "None" keeps the state unknown until the
+    // first reply ("unknown"), without a "no matching payload" warning in HA.
+    fault["val_tpl"] = "{{ {'fault': 'ON', 'ok': 'OFF'}.get(value_json.state, 'None') }}";
+    fault["dev_cla"] = "problem";
+    fault["json_attr_t"] = topic;
+
+    uniqueId = normalizeUniqueId(std::string(name) + "_wpu_current_fault");
+    JsonObject current = components[uniqueId].to<JsonObject>();
+    current["name"] = "Current fault";
+    current["p"] = "sensor";
+    current["uniq_id"] = uniqueId;
+    current["stat_t"] = topic;
+    current["val_tpl"] = "{{ value_json.fault }}";
+    current["ic"] = "mdi:alert-circle-outline";
+    current["json_attr_t"] = topic;
+}
+
 void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
 {
     JsonDocument statusitemsdoc;
@@ -683,6 +713,9 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
     if (!skipFanEntity)
         addHADiscoveryFan(components, devIds);
     addHADiscoveryFWUpdate(components, devIds);
+    // Heat pump only: fault entities fed by <base>/wpufaults
+    if (dg == 0x00 && did == 0x0D)
+        addHADiscoveryWpuFaults(components, devIds);
 
     // Add RF device sensors
     addHADiscoveryRFSensors(components, compactJson, devIds, systemConfig.mqtt_base_topic);

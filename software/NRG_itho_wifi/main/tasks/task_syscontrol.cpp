@@ -247,6 +247,11 @@ void execSystemControlTasks()
         _updateMQTT = true;
         i2cQueueAddCmd([]()
                           { sendQueryStatus(false); });
+        // Heat pump only: also read the active/reported fault flags (0x4220).
+        // Never true for other devices, see wpuFaultsPollEnabled().
+        if (wpuFaultsPollEnabled())
+          i2cQueueAddCmd([]()
+                            { sendQueryWpuFaults(); });
       }
       if (systemConfig.itho_31da == 1)
       {

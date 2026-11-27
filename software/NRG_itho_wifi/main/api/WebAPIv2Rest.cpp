@@ -867,6 +867,26 @@ static void handlePostOutsideTemp(AsyncWebServerRequest *request, JsonVariant &j
     sendError(request, responseDoc["message"] | "internal error");
 }
 
+// GET /api/v2/wpu/faults
+// Active and reported heat pump faults with texts, from the last 0x4220 poll
+static void handleGetWpuFaults(AsyncWebServerRequest *request)
+{
+  if (!checkRestAuth(request))
+    return;
+  if (!isWpuDevice())
+  {
+    sendFail(request, "connected device is not a heat pump (WPU)");
+    return;
+  }
+  JsonDocument data;
+  if (!getWpuFaultsJSON(data.to<JsonObject>()))
+  {
+    sendError(request, "status busy, try again");
+    return;
+  }
+  sendSuccess(request, data);
+}
+
 // POST /api/v2/wpu/manual_control
 // Body: {"index":1,"datatype":1,"value":1,"checked":1}
 static void handlePostManualControl(AsyncWebServerRequest *request, JsonVariant &json)
@@ -932,6 +952,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/debug", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/wpu/outside_temp", HTTP_OPTIONS, handleOptions);
   server.on("/api/v2/wpu/manual_control", HTTP_OPTIONS, handleOptions);
+  server.on("/api/v2/wpu/faults", HTTP_OPTIONS, handleOptions);
 
   // GET endpoints
   server.on("/api/v2/speed", HTTP_GET, handleGetSpeed);
@@ -942,6 +963,7 @@ void registerRestAPIv2Routes(AsyncWebServer &server)
   server.on("/api/v2/lastcmd", HTTP_GET, handleGetLastCmd);
   server.on("/api/v2/remotes", HTTP_GET, handleGetRemotes);
   server.on("/api/v2/vremotes", HTTP_GET, handleGetVRemotes);
+  server.on("/api/v2/wpu/faults", HTTP_GET, handleGetWpuFaults);
   server.on("/api/v2/rfstatus", HTTP_GET, handleGetRFStatus);
   server.on("/api/v2/settings", HTTP_GET, handleGetSettings);
 

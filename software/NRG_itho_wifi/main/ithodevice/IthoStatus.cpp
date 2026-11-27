@@ -894,3 +894,112 @@ bool loadRFTrackedSources()
   D_LOG("SYS: RF tracked sources loaded");
   return true;
 }
+
+// --- Heat pump (WPU) faults --------------------------------------------------------
+//
+// What it does:
+//   The heat pump answers 0x4220 with two bit masks: faults that are active now, and
+//   faults that were reported earlier but are no longer active. This block polls that
+//   message together with the normal status, keeps the last result, and turns the fault
+//   codes into readable texts (i2csvc::wpuFaultName, which also handles the different
+//   numbering of older list versions).
+//
+// Where the result goes:
+//   - MQTT <base>/wpufaults (retained, only sent when something changes) -> task_mqtt.cpp
+//   - Home Assistant "Fault" and "Current fault" entities                -> HADiscovery.cpp
+//   - REST GET /api/v2/wpu/faults                                        -> WebAPIv2Rest.cpp
+//
+// Other devices:
+//   Everything here only runs when the connected device is a heat pump (device group
+//   0x00, id 0x0D). HRU, Autotemp, CVE, DemandFlow etc. never send or receive 0x4220,
+//   and the normal status JSON is unchanged (existing HA discovery configs keep working).
+
+static std::vector<uint8_t> wpuFaultsActive;
+static std::vector<uint8_t> wpuFaultsReported;
+static bool wpuFaultsValid = false;
+static uint32_t wpuFaultsUpdated = 0; // millis() of the last good reply
+static uint8_t wpuFaultsMissed = 0;   // consecutive queries without a usable reply
+static constexpr uint8_t WPU_FAULTS_MAX_MISSED = 3;
+bool updateMQTTwpuFaults = false;
+
+// True when the identified device is a heat pump. Before identification the device
+// group and id are both 0, so this is false until the device type is known.
+bool isWpuDevice()
+{
+  return currentIthoDeviceGroup() == 0x00 && currentIthoDeviceID() == 0x0D;
+}
+
+// Polling stops after a few queries without a usable reply (firmware without 0x4220),
+// so a unit that does not support it does not get a useless query every status cycle.
+bool wpuFaultsPollEnabled()
+{
+  return isWpuDevice() && wpuFaultsMissed < WPU_FAULTS_MAX_MISSED;
+}
+
+// Query 0x4220 (no data) and store the decoded fault lists. Runs from the I2C queue.
+void sendQueryWpuFaults()
+{
+  uint8_t command[] = {0x82, 0x80, 0x42, 0x20, 0x04, 0x00, 0x00};
+  command[sizeof(command) - 1] = checksum(command, sizeof(command) - 1);
+  uint8_t i2cbuf[512]{};
+
+  const size_t n = sendI2cQuery(&command[0], sizeof(command), &i2cbuf[0], I2C_CMD_QUERY_STATUS);
+  const i2csvc::Reply r = i2csvc::parseReply(i2cbuf, n);
+  std::vector<uint8_t> active, reported;
+  if (!n || !r.payload || !r.ok || !i2csvc::faultFlags(r.payload, r.len, active, reported))
+  {
+    if (wpuFaultsMissed < WPU_FAULTS_MAX_MISSED && ++wpuFaultsMissed == WPU_FAULTS_MAX_MISSED)
+      W_LOG("I2C: heat pump fault flags (4220) not answered, fault polling stopped");
+    return;
+  }
+  wpuFaultsMissed = 0;
+
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return;
+  const bool changed = !wpuFaultsValid || active != wpuFaultsActive || reported != wpuFaultsReported;
+  wpuFaultsActive = std::move(active);
+  wpuFaultsReported = std::move(reported);
+  wpuFaultsValid = true;
+  wpuFaultsUpdated = millis();
+  xSemaphoreGive(ithoStatusMutex);
+
+  // Only publish when the fault lists differ from the previous poll (and after the first
+  // good reply), so a quiet heat pump does not produce an MQTT message every cycle.
+  if (changed)
+    updateMQTTwpuFaults = true;
+}
+
+// Adds [{"code":16,"text":"manual operation active"}, ...] for a list of fault codes
+static void addWpuFaultArray(JsonArray arr, const std::vector<uint8_t> &codes)
+{
+  for (uint8_t c : codes)
+  {
+    JsonObject o = arr.add<JsonObject>();
+    o["code"] = c;
+    const char *text = i2csvc::wpuFaultName(c, itho_fwversion);
+    o["text"] = text ? text : "unknown";
+  }
+}
+
+// Fills root with the last known heat pump faults:
+//   state        "fault" (at least one active), "ok" (none active) or "unknown" (no reply yet)
+//   fault        texts of the active faults, e.g. "manual operation active", or "no fault"
+//   active       [{"code":16,"text":"manual operation active"}, ...]
+//   reported     same format: reported earlier, no longer active
+//   list_version the device list version used to pick the texts
+//   age          seconds since the last good reply (absent before the first reply)
+// Returns false if the status mutex could not be taken (caller may retry).
+bool getWpuFaultsJSON(JsonObject root)
+{
+  if (xSemaphoreTake(ithoStatusMutex, pdMS_TO_TICKS(100)) != pdTRUE)
+    return false;
+  root["state"] = !wpuFaultsValid ? "unknown" : (wpuFaultsActive.empty() ? "ok" : "fault");
+  root["fault"] = wpuFaultsValid ? i2csvc::wpuFaultSummary(wpuFaultsActive, itho_fwversion) : "unknown";
+  addWpuFaultArray(root["active"].to<JsonArray>(), wpuFaultsActive);
+  addWpuFaultArray(root["reported"].to<JsonArray>(), wpuFaultsReported);
+  root["list_version"] = itho_fwversion;
+  if (wpuFaultsValid)
+    root["age"] = (millis() - wpuFaultsUpdated) / 1000UL;
+  xSemaphoreGive(ithoStatusMutex);
+  return true;
+}

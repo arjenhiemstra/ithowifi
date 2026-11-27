@@ -796,6 +796,26 @@
         }
       }
     },
+    "/api/v2/wpu/faults": {
+      "get": {
+        "summary": "Heat pump (WPU) faults with texts from the last poll: state (fault/ok/unknown), fault (texts of the active faults), active and reported lists ([{code,text}]), list_version and age (seconds). Also published retained on MQTT <base>/wpufaults when it changes. Fails on devices that are not a heat pump.",
+        "tags": [
+          "REST API v2"
+        ],
+        "responses": {
+          "200": {
+            "description": "JSend success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/openapi.json": {
       "get": {
         "summary": "OpenAPI specification",

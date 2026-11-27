@@ -116,6 +116,30 @@ void test_fault_flags()
   TEST_ASSERT_FALSE(i2csvc::faultFlags(p, 15, active, reported)); // odd length
 }
 
+void test_wpu_fault_names_per_list_version()
+{
+  // List version 21 and newer (and unknown = 0): table order
+  TEST_ASSERT_EQUAL_STRING("evaporator sensor", i2csvc::wpuFaultName(4));
+  TEST_ASSERT_EQUAL_STRING("discharge sensor", i2csvc::wpuFaultName(6, 21));
+  TEST_ASSERT_EQUAL_STRING("evaporator sensor", i2csvc::wpuFaultName(4, 41));
+  // Before 21: codes 4 and 6 swapped, the rest unchanged
+  TEST_ASSERT_EQUAL_STRING("discharge sensor", i2csvc::wpuFaultName(4, 20));
+  TEST_ASSERT_EQUAL_STRING("evaporator sensor", i2csvc::wpuFaultName(6, 2));
+  TEST_ASSERT_EQUAL_STRING("suction gas sensor", i2csvc::wpuFaultName(5, 2));
+  TEST_ASSERT_EQUAL_STRING("manual operation active", i2csvc::wpuFaultName(16, 9));
+  TEST_ASSERT_NULL(i2csvc::wpuFaultName(44));
+  TEST_ASSERT_NULL(i2csvc::wpuFaultName(200, 9));
+  TEST_ASSERT_EQUAL_STRING("4 (discharge sensor), 16 (manual operation active)", i2csvc::faultList({4, 16}, 18).c_str());
+}
+
+void test_wpu_fault_summary()
+{
+  TEST_ASSERT_EQUAL_STRING("no fault", i2csvc::wpuFaultSummary({}).c_str());
+  TEST_ASSERT_EQUAL_STRING("manual operation active", i2csvc::wpuFaultSummary({16}).c_str());
+  TEST_ASSERT_EQUAL_STRING("high pressure active, fault 99", i2csvc::wpuFaultSummary({17, 99}, 41).c_str());
+  TEST_ASSERT_EQUAL_STRING("discharge sensor", i2csvc::wpuFaultSummary({4}, 18).c_str());
+}
+
 void test_fault_list_unknown_code()
 {
   TEST_ASSERT_EQUAL_STRING("none", i2csvc::faultList({}).c_str());
@@ -179,6 +203,8 @@ int main(int argc, char **argv)
   RUN_TEST(test_device_type);
   RUN_TEST(test_fault_flags);
   RUN_TEST(test_fault_list_unknown_code);
+  RUN_TEST(test_wpu_fault_names_per_list_version);
+  RUN_TEST(test_wpu_fault_summary);
   RUN_TEST(test_fault_history_3222);
   RUN_TEST(test_fault_history_4205);
   RUN_TEST(test_fault_table_lookup);
