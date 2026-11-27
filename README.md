@@ -28,14 +28,14 @@ or in my Tindie store:
 -   Installation can be done in minutes
 -   Detailed installation manual and setup wizard
 
-### CVE models (IthiWiFi CVE add-on - I2C):
+### CVE models (ithowifi CVE add-on - I2C):
 -   CVE ECO 2 (also sold by 'Heatrae Sadia' in the UK)
 -   CVE ECO RFT (SE/SP, HE/HP)
 -   CVE-S ECO / PAK / Optima / CO2
 -   HRU ECO 150E / 150P
 -   HRU ECO 200E / 200P (also sold as 'Elektrodesign EHR 140 Akor BP' and 'Heatrae Sadia Advance Plus')
 
-### NON-CVE models (IthiWiFi NON-CVE add-on - I2C):
+### NON-CVE models (ithowifi NON-CVE add-on - I2C):
 -   HRU ECO 350 LR / LP / HR / HP
 -   HRU ECO LE / HE / LP / HP BAL
 -   HRU 3 (3) and HRU 3 (2)
@@ -45,11 +45,14 @@ or in my Tindie store:
 -   WPU 6G: not supported yet (different service connector; the control protocol appears to match the 5G, support may follow)
 -   AutoTemp
 
-### RF standalone mode (IthiWiFi NON-CVE add-on wuth CC1101):
+### RF standalone mode (ithowifi NON-CVE add-on with CC1101):
 -   HRU 300V, HRU 375V and HRU 400
 -   Most Itho devices controllable via RF (CC1101 module required)
 -   Status data received wirelessly via 31DA/31D9 RF messages
--   Older Itho units that only know the RF protocol from before RAMSES (tested on a CVE ECO 2): send only, with a remote of type "RF (old protocol)" or "RF (old protocol, variant 2)" for remotes with the other command codes
+-   Older Itho units that only know the old Itho RF protocol, such as the CVE ECO 2 with 9 pins in a row instead of the 2x4 header: send only, with a remote of type "RF (old protocol)". The Itho must have its own RF module (the small board for the RFT remote)
+
+### Orcon (ithowifi NON-CVE add-on with CC1101, RF standalone):
+-   Orcon Compact-10, Orcon MVS-15 and Orcon HRC (from firmware 3.3.0): the add-on acts as an Orcon 15RF remote and can emulate an Orcon CO2 sensor
 
 ### HRU models by article number:
 Check the article number on the nameplate/sticker of your Itho. x is any digit. A letter after the number (A, S) does not count.
@@ -101,8 +104,8 @@ More information is available on the wiki and in the manual:
 |  |  |
 |---|---|
 |Wiki:  |https://github.com/arjenhiemstra/ithowifi/wiki  |
-|Dutch:  |https://github.com/arjenhiemstra/ithowifi/raw/master/handleiding.pdf  |
-|English:  |https://github.com/arjenhiemstra/ithowifi/raw/master/manual.pdf  |
+|Manual (Dutch):  |https://www.nrgwatch.nl/pages/manual  |
+|Manual (English):  |https://www.nrgwatch.nl/en/pages/manual  |
 
 ## Developing / contributing:
 
