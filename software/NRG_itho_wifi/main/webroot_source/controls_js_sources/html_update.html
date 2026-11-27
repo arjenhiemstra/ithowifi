@@ -173,7 +173,7 @@
     sel.appendChild(opt);
   }
 
-  // Fallback and hardware revision 1: the static list in firmware.json (frozen since 3.4.0)
+  // Fallback: the static list in firmware.json (frozen since 3.4.0)
   function loadFirmwareJson() {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json', true);
@@ -190,7 +190,7 @@
     xhr.send();
   }
 
-  // Primary: every GitHub release that has a firmware binary attached (hardware revision 2 and non-CVE)
+  // Primary: every GitHub release that has a firmware binary attached
   function loadGithubReleases() {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://api.github.com/repos/arjenhiemstra/ithowifi/releases?per_page=100', true);
@@ -225,7 +225,7 @@
     xhr.send();
   }
 
-  if (hw_revision == '1') loadFirmwareJson(); else loadGithubReleases();
+  loadGithubReleases();
 
   function toggleBetaFW() {
     populateDropdown();
