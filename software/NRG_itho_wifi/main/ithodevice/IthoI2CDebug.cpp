@@ -66,7 +66,12 @@ static void serviceCommand(const char *what, uint16_t msgClass, uint8_t type, co
   if (r.payload && r.ok && (r.msgClass & 0x3FFF) == (msgClass & 0x3FFF) && r.len)
   {
     if (msgClass == 0x10E1)
-      decoded = std::to_string(i2csvc::serialNumber(r.payload, r.len));
+    {
+      bool ascii = r.len >= 4;
+      for (size_t i = 0; i < r.len && ascii; i++)
+        ascii = r.payload[i] >= 0x20 && r.payload[i] < 0x7F;
+      decoded = ascii ? "\"" + i2csvc::asciiText(r.payload, r.len) + "\"" : std::to_string(i2csvc::serialNumber(r.payload, r.len)); // WPU 6G sends text
+    }
     else if (msgClass == 0x10E2)
       decoded = "\"" + i2csvc::asciiText(r.payload, r.len) + "\"";
     else if (msgClass == 0x4220)

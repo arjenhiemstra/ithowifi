@@ -283,7 +283,7 @@ void i2cSlaveDeinit()
 bool checkI2Cbus(int log_entry_idx)
 {
 
-  if (currentIthoDeviceGroup() == 0x00 && currentIthoDeviceID() == 0x0D) // skip i2c check for WPU devices
+  if ((currentIthoDeviceGroup() == 0x00 || currentIthoDeviceGroup() == 0x09) && currentIthoDeviceID() == 0x0D) // skip i2c check for WPU devices (4G/5G and 6G)
     return true;
 
   bool scl_high = digitalRead(i2cManager.master_scl_pin) == HIGH;

@@ -3400,7 +3400,7 @@ function wizardAbort() {
 
 function wizardDetectDeviceCategory(devtype) {
   if (!devtype || devtype === 'Unkown device type' || devtype === 'Generic Itho device') return 'other';
-  if (devtype === 'Heatpump') return 'wpu';
+  if (devtype === 'Heatpump' || devtype === 'Heatpump 6G') return 'wpu';
   if (devtype === 'AWHeatpump') return 'awhp';
   if (devtype === 'HRU 250-300') return 'hru250_300';
   if (devtype === 'HRU 350') return 'hru350';
@@ -4031,6 +4031,7 @@ var html_debug = `
       <option value="HRU 350">HRU 350</option>
       <option value="HRU ECO-fan">HRU ECO-fan</option>
       <option value="Heatpump">Heatpump (WPU)</option>
+      <option value="Heatpump 6G">Heatpump 6G (WPU 6G)</option>
       <option value="AWHeatpump">AWHeatpump (Air to Water Heatpump)</option>
     </select><br><br>
     <button id="button-wizardreactivate" type="button" class="pure-button pure-button-primary">Reactivate wizard</button>

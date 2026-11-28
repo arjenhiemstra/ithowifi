@@ -1,6 +1,7 @@
 #include "IthoDevice.h"
 #include "devices/error_info_labels.h"
 #include "devices/wpu.h"
+#include "devices/wpu6g.h"
 #include "i2c_service.h"
 
 #include "globals.h"
@@ -784,11 +785,17 @@ void sendQueryCounters(bool updateweb)
   //  [I2C addr ][I2C command   ][len payload ][N values][2byte value] ... [2byte value][chk ]
   //  0x80,0x82,  0xC2,0x10,0x01, 0x35,         0x1A,     0x0D,0x26,   ...  0x0A,0xF8,   0xFF
 
-  int valPos = 7; // position of first 2byte value
+  // WPU 4G/5G: 2 bytes per value, WPU 6G (group 9): 4 bytes per value; the width follows from the payload length
+  const bool wpu6g = currentIthoDeviceGroup() == 0x09;
+  const struct ithoLabels *counterLabels = wpu6g ? ithoWPU6GCounterLabels : ithoWPUCounterLabels;
+  const uint8_t counterLabelLength = wpu6g ? ithoWPU6GCounterLabelLength : ithoWPUCounterLabelLength;
+  int valPos = 7; // position of first value
   int Nvalues = i2cbuf[6];
-  if (Nvalues > ithoWPUCounterLabelLength)
+  const int payloadLen = i2cbuf[5];
+  const int width = (Nvalues > 0 && payloadLen > 1) ? (payloadLen - 1) / Nvalues : 2;
+  if (Nvalues > counterLabelLength || (width != 2 && width != 4))
   {
-    E_LOG("SYS: error - WPU Counter array too long. Counters not read.");
+    E_LOG("SYS: error - WPU counter reply not understood (%d values, %d bytes each). Counters not read.", Nvalues, width);
     return;
   }
 
@@ -800,24 +807,23 @@ void sendQueryCounters(bool updateweb)
     ithoCounters.clear();
   }
 
-  uint16_t val;
   for (int i = 0; i < Nvalues; i++)
   {
-    int idx = 2 * i + valPos; // idx: start of value in raw bytes
-    // read 2 raw bytes: uint16_t.
-    val = i2cbuf[idx + 1];
-    val |= (i2cbuf[idx] << 8);
+    int idx = width * i + valPos; // idx: start of value in raw bytes, big endian
+    int32_t val = 0;
+    for (int b = 0; b < width; b++)
+      val = (val << 8) | i2cbuf[idx + b];
 
     ithoCounters.push_back(ithoDeviceMeasurements());
 
     // label
     if (systemConfig.api_normalize == 0)
     {
-      ithoCounters.back().name = ithoWPUCounterLabels[i].labelFull;
+      ithoCounters.back().name = counterLabels[i].labelFull;
     }
     else
     {
-      ithoCounters.back().name = ithoWPUCounterLabels[i].labelNormalized;
+      ithoCounters.back().name = counterLabels[i].labelNormalized;
     }
 
     ithoCounters.back().type = ithoDeviceMeasurements::is_int;

@@ -677,7 +677,7 @@ void generateHADiscoveryJson(JsonObject compactJson, JsonObject outputJson)
     // Skip fan entity for WPU, Autotemp, and DemandFlow — not fully supported
     const uint8_t dg = currentIthoDeviceGroup();
     const uint8_t did = currentIthoDeviceID();
-    bool skipFanEntity = (dg == 0x00 && did == 0x0D) ||                       // WPU
+    bool skipFanEntity = ((dg == 0x00 || dg == 0x09) && did == 0x0D) ||       // WPU 4G/5G and 6G
                          (dg == 0x00 && (did == 0x0F || did == 0x30)) ||       // Autotemp
                          (dg == 0x00 && did == 0x0B);                          // DemandFlow
     if (!skipFanEntity)

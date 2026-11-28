@@ -3399,7 +3399,7 @@ function wizardAbort() {
 
 function wizardDetectDeviceCategory(devtype) {
   if (!devtype || devtype === 'Unkown device type' || devtype === 'Generic Itho device') return 'other';
-  if (devtype === 'Heatpump') return 'wpu';
+  if (devtype === 'Heatpump' || devtype === 'Heatpump 6G') return 'wpu';
   if (devtype === 'AWHeatpump') return 'awhp';
   if (devtype === 'HRU 250-300') return 'hru250_300';
   if (devtype === 'HRU 350') return 'hru350';
