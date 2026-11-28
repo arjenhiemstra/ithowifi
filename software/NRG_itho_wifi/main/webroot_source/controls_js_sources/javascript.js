@@ -20,7 +20,8 @@ var cachedRemotes = null; // last seen `ithoremotes` payload, used to populate t
 localStorage.setItem("statustimer", 0);
 var settingIndex = -1;
 
-var websocketServerLocation = location.protocol.indexOf("https") > -1 ? 'wss://' + window.location.hostname + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
+// same host and port as the page, so one port is enough behind a firewall or reverse proxy (#425)
+var websocketServerLocation = (location.protocol.indexOf("https") > -1 ? 'wss://' : 'ws://') + window.location.host + '/ws';
 
 let messageQueue = [];
 let connectTimeout = null;

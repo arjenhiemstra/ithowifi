@@ -21,7 +21,8 @@ var cachedRemotes = null; // last seen `ithoremotes` payload, used to populate t
 localStorage.setItem("statustimer", 0);
 var settingIndex = -1;
 
-var websocketServerLocation = location.protocol.indexOf("https") > -1 ? 'wss://' + window.location.hostname + ':8000/ws' : 'ws://' + window.location.hostname + ':8000/ws';
+// same host and port as the page, so one port is enough behind a firewall or reverse proxy (#425)
+var websocketServerLocation = (location.protocol.indexOf("https") > -1 ? 'wss://' : 'ws://') + window.location.host + '/ws';
 
 let messageQueue = [];
 let connectTimeout = null;
@@ -5179,6 +5180,7 @@ var html_update = `
   <select id="fw_select" onchange="onFwSelect()" style="min-width:200px;">
     <option value="" disabled selected>Loading...</option>
   </select>
+  <span id="fw_source" style="margin-left:1em;font-size:0.85em;color:#888;"></span>
 </div>
 <br>
 <div class="pure-control-group">
@@ -5319,18 +5321,7 @@ var html_update = `
     }
   }
 
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', 'https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json', true);
-  xhr.timeout = 3000;
-  xhr.onload = function () {
-    if (xhr.status === 200) {
-      try {
-        var data = JSON.parse(xhr.responseText);
-        traverse(data, process);
-      } catch (e) {}
-    }
-  };
-  xhr.onerror = xhr.ontimeout = function () {
+  function fwListFailed() {
     var sel = $id('fw_select');
     sel.innerHTML = '';
     var opt = document.createElement('option');
@@ -5339,8 +5330,61 @@ var html_update = `
     opt.selected = true;
     opt.textContent = on_ap ? 'Not available in AP mode' : 'Check failed, no internet?';
     sel.appendChild(opt);
-  };
-  xhr.send();
+  }
+
+  // Fallback: the static list in firmware.json (frozen since 3.4.0)
+  function loadFirmwareJson() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://raw.githubusercontent.com/arjenhiemstra/ithowifi/master/compiled_firmware_files/firmware.json', true);
+    xhr.timeout = 3000;
+    xhr.onload = function () {
+      if (xhr.status !== 200) { fwListFailed(); return; }
+      try {
+        var data = JSON.parse(xhr.responseText);
+        traverse(data, process);
+        $id('fw_source').textContent = 'List from firmware.json';
+      } catch (e) { fwListFailed(); }
+    };
+    xhr.onerror = xhr.ontimeout = fwListFailed;
+    xhr.send();
+  }
+
+  // Primary: every GitHub release that has a firmware binary attached
+  function loadGithubReleases() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://api.github.com/repos/arjenhiemstra/ithowifi/releases?per_page=100', true);
+    xhr.timeout = 5000;
+    xhr.onload = function () {
+      if (xhr.status !== 200) { loadFirmwareJson(); return; }
+      try {
+        var rel = JSON.parse(xhr.responseText);
+        // no backslashes: this page is embedded as a JS string literal
+        var re = /^nrgitho-v([0-9]+[.][0-9]+[.][0-9]+(?:-[0-9A-Za-z.]+)?)[.]bin$/;
+        for (var i = 0; i < rel.length; i++) {
+          var r = rel[i];
+          if (r.draft || !r.assets) continue;
+          for (var j = 0; j < r.assets.length; j++) {
+            var m = re.exec(r.assets[j].name);
+            if (!m) continue;
+            fwVersions.push({
+              version: m[1],
+              type: (r.prerelease || m[1].indexOf('-') >= 0) ? 'beta' : 'stable',
+              link: r.assets[j].browser_download_url,
+              release_notes: r.html_url
+            });
+            break;
+          }
+        }
+        if (fwVersions.length === 0) { loadFirmwareJson(); return; }
+        $id('fw_source').textContent = 'List from GitHub releases';
+        populateDropdown();
+      } catch (e) { loadFirmwareJson(); }
+    };
+    xhr.onerror = xhr.ontimeout = loadFirmwareJson;
+    xhr.send();
+  }
+
+  loadGithubReleases();
 
   function toggleBetaFW() {
     populateDropdown();

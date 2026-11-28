@@ -395,6 +395,9 @@ void webServerInit()
     delay(200);
     shouldReboot = true; });
 
+  // Websocket on the HTTP port as well (#425); port 8000 stays for older clients
+  server.addHandler(&ws);
+
   // Catch-All Handlers
   // Any request that can not find a Handler that canHandle it
   // ends in the callbacks below.
